@@ -978,6 +978,26 @@ function hideBlockedCommunityAuthorsSql(viewer: string): string {
           )`;
 }
 
+// Hide a Commons post or AI Q&A card whose source row is gone.
+//
+// A community/question item in `feed_items` is only ever a COPY of a row in `feed_community_posts` /
+// `feed_questions`, carrying the same text. When the source row went away but the copy did not, the
+// copy kept rendering the member's words with no author to resolve, so the read path fell back to the
+// pseudonym built from the placeholder id (`user-hub-syst`) — a deleted post reappearing under a
+// generic name (owner report, 2026-08-09). Account deletion now removes the copy too, and schema.sql
+// clears the ones already left behind; this guard is the standing safeguard so no other path can put
+// a member's deleted words back on screen. Announcement items carry neither source id and pass
+// straight through.
+const HIDE_ORPHANED_SOURCE_ROWS_SQL = `
+          AND (
+            f.source_community_post_id IS NULL
+            OR EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+          )
+          AND (
+            f.source_question_id IS NULL
+            OR EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+          )`;
+
 async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams, viewerUserId: string): Promise<number> {
   const count = await client.query<CountRow>(
     `
@@ -994,7 +1014,7 @@ async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryPa
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )${hideBlockedCommunityAuthorsSql('$5')}
+          )${hideBlockedCommunityAuthorsSql('$5')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
       `,
     [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, viewerUserId],
   );
@@ -1076,7 +1096,7 @@ async function resolveEffectiveOffset(
                   AND t.target_role IN ($1, 'member', 'admin', 'all')
                   AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
               )
-              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}
+              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
           `,
     [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id, options.viewerUserId],
   );
@@ -1126,7 +1146,7 @@ async function queryFeedTimelineRows(
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )${hideBlockedCommunityAuthorsSql('$4')}
+          )${hideBlockedCommunityAuthorsSql('$4')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,

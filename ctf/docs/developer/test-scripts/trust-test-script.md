@@ -9,10 +9,10 @@
 | **Plugin** | Trust (`trust`) |
 | **Visibility** | Internal |
 | **Roles to test** | Admin only |
-| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-visibility-control.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
+| **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-member-view.tsx`, `trust-evidence-row.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/*` routes · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-08 (hand-updated: plain-language choice labels — TR-A5b; restricted serves the summary projection — TR-A4b; admin verification page `/admin/trust` — TR-A9b) |
+| **Generated** | 2026-08-10 (hand-updated: the per-member visibility choice was removed — every member reads the summary, TR-A3; the write route is gone, TR-A5; the card's read-only member view, TR-A5b) |
 
 ---
 
@@ -29,7 +29,7 @@
 
 These checks confirm the plugin is alive. If any fail, stop and file a bug before continuing.
 
-1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus`, `trustEvidence` (array), and `trustVisibility`. No numeric score field should appear anywhere in the response.
+1. **API reachable — self read.** As admin, call `GET /api/trust/user/self`. Expect HTTP 200 and a JSON body containing `trustStatus` and `trustEvidence` (array). No numeric score field should appear anywhere in the response, and no `trustVisibility` field — that column was dropped on 2026-08-10.
    web ☐
 
 2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box. Each evidence row must read as a human sentence (the `summary`, e.g. "Accepted 1 SkillsHunt submission"), **never** a raw type slug like `demo_second_owner` or `Engagement-...`. Any date shown must be a real date — **never** the literal "Invalid Date". (Regression guard: the demo seed previously wrote evidence with no `summary`/`createdAt`, which produced both symptoms.)
@@ -87,157 +87,81 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - **Populated state** (if the admin account has seeded upstream activity): evidence list items render (e.g. "Active on N days", "Completed N SocketRelay trades"); no hardcoded checklist items; no progress percentage; no "Trust Score" numeric card.
 - **Empty state** (if no upstream activity for this user): empty-state prompt renders without errors.
 - **Public/unauthenticated state:** marketing/visitor view renders (matches `MobileTrustPublic.tsx` design intent) — no private data shown.
-- In every state: no `MockTrust` data visible; `trustStatus`, `trustVisibility`, and `trustEvidence` fields come from `GET /api/trust/user/self`.
+- In every state: no `MockTrust` data visible; `trustStatus` and `trustEvidence` fields come from `GET /api/trust/user/self`.
 
 **Result:**
 
 ---
 
-### TR-A3 — Cross-user read: public visibility
+### TR-A3 — Cross-user read: every member gets the summary
 
-**Role:** Admin  
-**Surfaces:** Web API  
-**Precondition:** A second seeded member ("Member B") exists with `trust_visibility = public` (the default when no extension row exists).
-
-**Steps:**
-1. As admin, call `GET /api/trust/user/[memberB_userId]`.
-
-**Expected:**
-- HTTP 200.
-- Response contains `trustStatus`, `trustEvidence`, `trustVisibility`.
-- No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
-- A `trust.summary.read` row is written to `trust_admin_audit_trail` (`policy_status = allow`, reason `admin_summary_read` or `public_summary_read`).
-
-**Result:** web ☐
-
----
-
-### TR-A4 — Cross-user read: private visibility refuses a non-owner non-admin
-
-**Role:** Admin (to set up); tested from a non-owner non-admin caller  
-**Surfaces:** Web API  
-**Precondition:** Member B's `trust_visibility` is set to `private` (set it via TR-A5 first, or directly in the DB after seeding).
-
-**Steps:**
-1. Authenticate as a **different** member (not Member B, not admin) and call `GET /api/trust/user/[memberB_userId]`.
-2. Then authenticate as admin and call the same route.
-
-**Expected:**
-- Non-owner, non-admin caller: HTTP 403.
-- Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`.
-- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail`: the refused non-owner read as `policy_status = deny` (reason `forbidden_visibility`), the admin read as `policy_status = allow` (reason `admin_summary_read`).
-
-**Result:** web ☐
-
----
-
-### TR-A4b — Cross-user read: restricted visibility serves the summary, not a refusal
-
-**Role:** Admin (to set up); tested from a non-owner non-admin caller  
+**Role:** Admin (to read as admin); tested from a non-owner non-admin caller  
 **Surfaces:** Web API + Web UI  
-**Precondition:** Member B's `trust_visibility` is set to `restricted`, and Member B has real upstream activity (sign-ins plus participation in at least two plugins) so the summary has something to report.
+**Precondition:** A second seeded member ("Member B") exists with real upstream activity — sign-ins plus participation in at least two plugins — so the summary has something to report.
 
 **Steps:**
 1. Authenticate as a **different** member (not Member B, not admin) and call `GET /api/trust/user/[memberB_userId]`.
-2. Compare the response against Member B's own full panel (read it as admin).
+2. Call the same route as admin and compare the two bodies.
 3. Open Member B's Directory profile as that same non-admin member.
 
 **Expected:**
-- HTTP 200, **not** 403 — this is the point of the setting. `trustDisclosure` is `"summary"`.
-- `trustEvidence` contains headline counts only. Specifically: a sign-in line ("Active on N days") if they have one, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
+- Non-owner non-admin caller: HTTP 200 with `trustDisclosure: "summary"`. **There is no 403 path** — no member setting can refuse this read, and any refusal is a bug.
+- `trustEvidence` contains headline counts only: a sign-in line ("Active on N days") if they have one, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
 - **No item carries a `createdAt` or a `details` field.** The full panel's last-sign-in detail must not appear anywhere in the response.
 - No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
 - The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
-- On the Directory profile the Trust card renders normally with the shorter list, above it the note "This member shares a summary of their participation, not the detail." The "This member limits who can view their trust" refusal note must **not** appear (that is now the `private` state only).
-- The read-only visibility row at the bottom of that card is **not** rendered on a summary card — the note above the list already says the member shares a summary, so repeating it below would be noise. It is still rendered on a full peer card, reading "This member shares everything".
-- The read writes a `trust.summary.read` row with `policy_status = allow` and reason `restricted_summary_read`.
+- Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`. The owner reading their own row gets `full` too.
+- The response carries no `trustVisibility` field, and `trust_user_extension` has no `trust_visibility` column: `SELECT trust_visibility FROM trust_user_extension` must error with "column does not exist". Nothing in the product decides disclosure per member any more.
+- No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
+- On the Directory profile the Trust card renders with the shorter list and the note "This member shares a summary of their participation, not the detail." above it. There is no "Your trust" / "What members see" split on someone else's card, and no row stating what that member chose to share — there is no such choice.
+- Each read writes a `trust.summary.read` row to `trust_admin_audit_trail` with `policy_status = allow` and reason `member_summary_read` (non-owner non-admin), `admin_summary_read`, or `self_summary_read`.
 
 **Result:** web ☐
 
 ---
 
-### TR-A5 — Visibility update (self-scope, valid values)
+### TR-A5 — The visibility route is gone
 
 **Role:** Admin acting as any authenticated user  
 **Surfaces:** Web API  
 **Precondition:** Admin signed in, CSRF header available (same-origin request or replicated in the test client).
 
 **Steps:**
-1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` and the required CSRF header.
-2. Call `GET /api/trust/user/self` and note `trustVisibility`.
-3. `POST /api/trust/visibility` with body `{ "trustVisibility": "restricted" }`.
-4. Call `GET /api/trust/user/self` again.
-5. `POST /api/trust/visibility` with body `{ "trustVisibility": "public" }` to reset.
+1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` and the CSRF header.
+2. Grep the running build for the route: it must not exist under `app/api/trust/`.
+3. Run `SELECT trust_visibility FROM trust_user_extension LIMIT 1` against the database.
 
 **Expected:**
-- Each POST returns HTTP 200 with `{ userId, trustVisibility, updatedAt }` matching the value just sent.
-- Subsequent self-reads reflect the updated visibility.
-- A row is written to `trust_admin_audit_trail` for each mutation (verify by checking the table or an admin audit endpoint if exposed).
+- Step 1: HTTP 404. The route was deleted on 2026-08-10 with the per-member visibility choice; a member does not decide what others see of their trust.
+- Step 3: the query errors — the column was dropped in the same change, not left behind dormant.
+- No `trust.visibility.update` row appears in `trust_admin_audit_trail` — that command no longer exists in any contract.
 
 **Result:** web ☐
 
 ---
 
-### TR-A5b — "What members see" choice in the widget (self surfaces only)
+### TR-A5b — "What members see" section on your own card (read-only)
 
 **Role:** Admin acting as any authenticated user  
 **Surfaces:** Web (desktop + mobile-responsive)  
-**Precondition:** Admin signed in.
+**Precondition:** Admin signed in, with at least one trust signal on your own card.
 
 **Steps:**
-1. Open the account hub (or the community shell right rail) and find the Trust widget's "What members see" section.
-2. Press "Nothing", then reload the page.
-3. Press "A summary" and compare the rows shown under the buttons with what TR-A4b returns for a peer.
-4. Open another member's Directory profile and find their Trust widget (member with `public` visibility).
-5. Reset your own choice to "Everything".
+1. Open the account hub (or the community shell right rail) and find the Trust widget.
+2. Compare the "What members see" rows with what TR-A3 returns for a peer read of your own account.
+3. Open another member's Directory profile and find their Trust widget.
+4. Try `POST /api/trust/visibility` with any body (curl or the browser console).
 
 **Expected:**
-- Your own card body reads as two labeled sections: **"Your trust"** above your signal rows, then **"What members see"**. No third block sits between them — the old standalone effect sentence must not reappear.
-- The "Your trust" rows are your full list and do **not** change when the choice changes. That is correct; the section below is where the effect shows. Do not file the unchanged list as a bug.
-- The choice is three buttons in one row, ordered most open to most private, each completing the section heading: **"Everything"**, **"A summary"**, **"Nothing"**. It must not be a dropdown, and no button is named after a category ("Public"/"Restricted"/"Private" must not appear).
-- The selected button is visibly the selected one (accent fill and border), and the group is reachable by keyboard as a radio group labeled "What members see".
-- Under the buttons the result is rendered as the **actual rows another member receives**, not a description of them: on "Everything", your rows exactly as they appear above; on "A summary", the note "This member shares a summary of their participation, not the detail." followed by the summary rows. No "WHAT MEMBERS SEE" label appears inside that preview — that text is a section heading, and it never appears on a member's screen.
-- On "Nothing" the preview is the single line "Nothing. The Trust card does not appear on your profile for other members." — there is no card copy to show, so a sentence stands in.
-- No sentence anywhere in this section mentions admins. Admin access is a given across the app and must not be restated here.
-- The summary preview must match what the API returns for a peer (cross-check against TR-A4b) — both come from the same projection function, so any disagreement is a bug.
-- Pressing a button POSTs `/api/trust/visibility`, shows "Saving…" while in flight, then a "Saved" confirmation that clears itself after a few seconds. After reload the chosen button is still selected.
-- On failure (e.g. network cut), the selection reverts to the previous button and a short plain-language error appears under it, replacing the confirmation.
-- On **another member's** widget there is no "Your trust" / "What members see" split and no buttons — just plain text stating what they share ("This member shares all their trust signals") and no preview, because the route is self-scope only.
-
-**Result:** web ☐
-
----
-
-### TR-A6 — Visibility update: invalid value rejected
-
-**Role:** Admin (or any authenticated user)  
-**Surfaces:** Web API  
-**Precondition:** Admin signed in.
-
-**Steps:**
-1. `POST /api/trust/visibility` with body `{ "trustVisibility": "semi-public" }` and the CSRF header.
-2. `POST /api/trust/visibility` with the **legacy** body `{ "visibility": "private" }` (the old alias key, no `trustVisibility` key) and the CSRF header.
-
-**Expected:**
-- Step 1: HTTP 400. Body contains an error message indicating the value is invalid.
-- Step 2: HTTP 400. The undocumented legacy `visibility` key is no longer accepted — only `trustVisibility` is read — so a body missing `trustVisibility` is rejected as invalid.
-- `trust_user_extension` row is unchanged after both steps.
-
-**Result:** web ☐
-
----
-
-### TR-A7 — Visibility update: CSRF guard rejects cross-origin mutation
-
-**Role:** Any authenticated user  
-**Surfaces:** Web API  
-**Precondition:** Admin signed in.
-
-**Steps:**
-1. `POST /api/trust/visibility` with body `{ "trustVisibility": "private" }` but **without** the required same-origin CSRF confirmation header.
-
-**Expected:**
-- HTTP 403 or 400. The visibility is not changed.
+- Your own card body reads as two labeled sections: **"Your trust"** above your full signal rows, then **"What members see"**.
+- There is **no control of any kind** in either section — no dropdown, no buttons, no toggle, nothing that saves. A member does not choose what others see; the code decides. Any control appearing here is a bug.
+- Under the "What members see" label is one plain sentence saying any member who opens your profile sees this and only this, and that neither of you can change it.
+- Below that are the **actual rows another member receives**: the note "This member shares a summary of their participation, not the detail." followed by the summary rows (sign-in days, "Took part in N plugins", and any ServiceCredits lines). No dates and no supporting detail appear in that section, even though they appear in "Your trust" above it.
+- Those rows must match what the API returns for a peer (cross-check against TR-A3) — both come from the same projection function, so any disagreement is a bug.
+- With no signals yet on **your own** card: "No trust signals yet", the line "Trust signals appear as you participate in the community", and the three onboarding steps (Complete your profile / Make your first transaction / Use at least one plugin). No "What members see" section — there is nothing to compare.
+- With no signals yet on **another member's** card: "No trust signals yet" and the line "This member has not taken part anywhere yet, so there is nothing to go on". The three onboarding steps must **not** appear, and no sentence may address the reader as if the card were theirs — those steps are a to-do list for the card's owner, not the visitor.
+- On **another member's** widget there is no section split and no "What members see" block: that card already is the member view, so repeating it would print the same list twice. No "this member shares…" row appears either.
+- `POST /api/trust/visibility` returns `404`. The route and the `trust_visibility` column are both gone.
 
 **Result:** web ☐
 
@@ -483,7 +407,7 @@ The following cases must produce consistent data across surfaces since both read
 
 | Case | What must match |
 |---|---|
-| TR-A1 | `GET /api/trust/user/self` returns the same `trustStatus`, `trustVisibility`, and `trustEvidence` content to both the web widget and the Android Trust screen for the same signed-in admin. |
+| TR-A1 | `GET /api/trust/user/self` returns the same `trustStatus` and `trustEvidence` content to both the web widget and the Android Trust screen for the same signed-in admin. |
 | TR-A2 / TR-A16 | Evidence items shown on Android (`Trust.tsx`) and in `TrustWidgetCard` (web) reflect the same underlying snapshot — same counts, same "verb N noun" phrasing. |
 | TR-A8 | After running `POST /api/trust/signal/snapshot` via the web API, the Android screen (on next load/refresh) shows the updated evidence list. |
 

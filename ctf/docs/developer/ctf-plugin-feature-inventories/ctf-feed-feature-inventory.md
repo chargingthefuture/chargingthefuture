@@ -244,7 +244,12 @@ Domain tables:
 
 **Existing (implemented):**
 
-1. `feed_items`
+1. `feed_items` — the timeline table the Commons actually reads. Every announcement, question, and
+   community post is copied into a row here carrying the same `title`/`body` text, linked back by
+   `source_announcement_id` / `source_question_id` / `source_community_post_id`. Because it mixes a
+   member's own words with admin-published announcements, account deletion treats the two
+   differently: the member's post/question copies are deleted (registry `delWhere`, scoped by
+   `created_by_user_id` plus a source-id filter), the announcement copies are retained.
 2. `feed_item_targets` — `target_role`/`target_plugin`/`target_region` are nullable, where `NULL` means "any" (read path treats `NULL` as a wildcard). Uniqueness is a `NULLS NOT DISTINCT` unique index on `(item_id, target_role, target_plugin, target_region)` rather than a primary key, because primary-key columns are implicitly `NOT NULL` and cannot hold the `NULL` wildcard used by default targeting.
 3. `feed_user_read_state`
 4. `feed_user_dismissals`
@@ -355,7 +360,26 @@ All three feed channels (announcements, questions, community) are shipped on web
 ## 11) Change Log
 
 - 2026-08-10: **Announcement replies became moderatable, and their authors can edit or delete them.** `FeedModerationTarget` widened to `post | reply | announcement-reply | question | answer`, so `POST /api/feed/admin/moderation/:target/:id` covers replies on official announcements with no new endpoint. `listCommonsModerationQueue` now unions `announcement_replies` (its `parentId` is the announcement — the field was renamed from `postId` because the two kinds of reply hang off different things), `listCommonsAuthors` counts them in each member's reply total, and `countHiddenCommonsRows` counts hidden ones in the reply total on `/admin/commons`. The Commons moderation screen labels them "Announcement reply" and links them to their announcement. Hide and restore only — still no admin edit anywhere. The member-side edit/delete of one's own announcement reply is documented in the Announcements inventory.
-
+- 2026-08-09: **Account deletion now deletes Commons posts instead of leaving them under a generic
+  name (owner report).** Deleting an account removed `feed_community_posts` / `feed_questions` but
+  the Commons reads `feed_items`, which holds a copy of every post and question carrying the same
+  text. That copy was classified `retain`, so the words stayed on screen; with the source row gone
+  there was no author to resolve, and the read path fell back to the pseudonym built from the
+  placeholder id — every deleted member's posts re-labeled `user-hub-syst`, the same handle each
+  time, which reads as anonymising rather than deleting. Three changes: (1) a new `delWhere()`
+  builder in the account deletion registry deletes only *some* of a member's rows in a shared table,
+  and `feed_items` now uses it —
+  `created_by_user_id = $1 AND (source_community_post_id IS NOT NULL OR source_question_id IS NOT NULL)`
+  — so a member's own post/question copies go and the admin announcement copies stay retained;
+  deleting a copy cascades its targets, read state, and dismissals. (2) `listFeedTimeline` (page,
+  count, and deep-link offset queries alike) hides any community/question item whose source row is
+  missing, so no other path can put deleted words back on screen. (3) `schema.sql` /
+  `schema.demo.sql` clear the copies already left behind by earlier deletions — idempotent, and
+  scoped to rows with a missing source. The engine supports an optional row filter that is only ever
+  ANDed onto the user-column match; both CI validators (`check-deletion-registry.mjs`,
+  `check-deletion-engine.mjs`) were extended to parse `delWhere`, check its columns against
+  `schema.sql`, restrict it to `<column> IS [NOT] NULL` clauses, and assert the generated SQL still
+  scopes by `$1`. Deletion contract updated. No route or API-shape change.
 - 2026-08-09: **Official posts are signed with the operator's name, and the "SH" avatar is gone
   (owner decision).** `hubMessageAuthor` in `app/api/commons/messages/route.ts` labeled every
   non-community item "Survivor Hub" — an institution's name over first-person writing. It now reads

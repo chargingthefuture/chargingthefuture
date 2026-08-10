@@ -1195,6 +1195,24 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_pos
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Clear Commons timeline copies whose source row is gone (owner report, 2026-08-09).
+-- Every community post and AI question is copied into a feed_items row that carries the same text.
+-- Account deletion used to remove the post/question but keep the copy, so a deleted member's words
+-- stayed on the Commons, re-labeled with the fallback handle built from the placeholder author id
+-- ("user-hub-syst") — the same handle every time, so it looked like an anonymised post rather than a
+-- deletion. The deletion registry now removes the copy with the source; this clears the ones already
+-- left behind. Announcement copies carry neither source id and are untouched. Idempotent: a second
+-- run matches nothing. Deleting a feed_items row cascades its targets, read state, and dismissals.
+DELETE FROM feed_items f
+WHERE (
+        f.source_community_post_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+      )
+   OR (
+        f.source_question_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+      );
+
 CREATE TABLE IF NOT EXISTS feed_community_replies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE,
@@ -4400,14 +4418,16 @@ CREATE TABLE IF NOT EXISTS trust_user_extension (
   user_id TEXT PRIMARY KEY,
   trust_status TEXT NOT NULL DEFAULT 'unverified',
   trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
-  trust_visibility TEXT NOT NULL DEFAULT 'public',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_status TEXT NOT NULL DEFAULT 'unverified';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_visibility TEXT NOT NULL DEFAULT 'public';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Dropped 2026-08-10: a member never chose who sees their trust, so the column held a setting
+-- the product does not have. What another member sees is decided in code, in
+-- app/api/trust/user/[userId]/route.ts, the same way for everyone.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility;
 
 CREATE TABLE IF NOT EXISTS trust_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
