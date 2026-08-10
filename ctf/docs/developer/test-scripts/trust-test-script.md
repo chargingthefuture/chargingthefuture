@@ -158,7 +158,8 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - Under the "What members see" label is one plain sentence saying any member who opens your profile sees this and only this, and that neither of you can change it.
 - Below that are the **actual rows another member receives**: the note "This member shares a summary of their participation, not the detail." followed by the summary rows (sign-in days, "Took part in N plugins", and any ServiceCredits lines). No dates and no supporting detail appear in that section, even though they appear in "Your trust" above it.
 - Those rows must match what the API returns for a peer (cross-check against TR-A3) — both come from the same projection function, so any disagreement is a bug.
-- With no signals yet, the card shows the empty state ("No trust signals yet" plus the three onboarding steps) and no "What members see" section — there is nothing to compare.
+- With no signals yet on **your own** card: "No trust signals yet", the line "Trust signals appear as you participate in the community", and the three onboarding steps (Complete your profile / Make your first transaction / Use at least one plugin). No "What members see" section — there is nothing to compare.
+- With no signals yet on **another member's** card: "No trust signals yet" and the line "This member has not taken part anywhere yet, so there is nothing to go on". The three onboarding steps must **not** appear, and no sentence may address the reader as if the card were theirs — those steps are a to-do list for the card's owner, not the visitor.
 - On **another member's** widget there is no section split and no "What members see" block: that card already is the member view, so repeating it would print the same list twice. No "this member shares…" row appears either.
 - `POST /api/trust/visibility` returns `404`. The route and the `trust_visibility` column are both gone.
 

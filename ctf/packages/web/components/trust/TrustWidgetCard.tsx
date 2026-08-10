@@ -45,7 +45,11 @@ function WidgetHeader() {
   );
 }
 
-function EmptyBody() {
+// The empty card has to know whose it is. The three steps are a to-do list — they are things the
+// reader can go and do — so on someone else's profile they were an instruction to the wrong person,
+// and "as you participate" read as if the card described the reader. A visitor to an empty profile
+// gets the one fact that is theirs to act on: this member has not taken part yet.
+function EmptyBody({ isOwnCard }: { isOwnCard?: boolean }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
   return (
@@ -56,18 +60,22 @@ function EmptyBody() {
         </div>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.SUBTLE, marginBottom: 4 }}>No trust signals yet</div>
         <div style={{ fontSize: 11, color: t.FAINT, textAlign: "center", lineHeight: 1.5 }}>
-          Trust signals appear as you participate in the community
+          {isOwnCard
+            ? "Trust signals appear as you participate in the community"
+            : "This member has not taken part anywhere yet, so there is nothing to go on"}
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-        {STEPS.map((label) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${TRUST_HAIRLINE}` }}>
-            <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
-          </div>
-        ))}
-      </div>
+      {isOwnCard && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {STEPS.map((label) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${TRUST_HAIRLINE}` }}>
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -113,7 +121,7 @@ export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, isOwnCa
       <WidgetHeader />
       {hasEvidence
         ? <EvidenceBody evidence={trust.trustEvidence} isOwnCard={isOwnCard} disclosure={disclosure} />
-        : <EmptyBody />}
+        : <EmptyBody isOwnCard={isOwnCard} />}
     </div>
   );
 };
