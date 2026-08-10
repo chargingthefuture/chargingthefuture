@@ -737,6 +737,68 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Edit / Delete on the member's own reply. Pushed to the end of the meta row so the author and time
+   still read first, and kept as quiet text buttons — they are available, not advertised. */
+.announcementReplyOwnerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.announcementReplyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: transparent;
+  color: var(--ctf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.announcementReplyAction:hover:not(:disabled),
+.announcementReplyAction:focus-visible {
+  color: var(--ctf-text);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.announcementReplyAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.announcementReplyActionDanger:hover:not(:disabled),
+.announcementReplyActionDanger:focus-visible {
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.announcementReplyActionPrimary {
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.12);
+}
+
+/* The reply swapped for its editor: the same input as the composer, with Cancel/Save under it. */
+.announcementReplyEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.announcementReplyEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .announcementReplyAuthor {

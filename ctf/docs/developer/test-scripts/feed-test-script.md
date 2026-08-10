@@ -401,6 +401,32 @@
 
 ---
 
+### FD-19 — Edit and delete your own reply on an announcement (added 2026-08-10)
+**Role:** member | **Surface:** web
+
+**Precondition:** Signed in as a member, on the Commons, with an official announcement visible.
+
+**Steps:**
+1. Open the announcement's reply thread and post a reply.
+2. On your own reply, use **Edit**. Change the words and click **Save**.
+3. Reload the Commons and reopen the thread.
+4. Open another member's reply in the same thread and look for Edit / Delete.
+5. On your own reply, use **Delete** and accept the confirmation.
+6. Reload the Commons and reopen the thread.
+
+**Expected:**
+- Step 2: the reply is replaced by an editor holding the original words; saving shows the new words
+  and an "edited" mark next to the time.
+- Step 3: the new words and the "edited" mark are still there — the change was saved, not just shown.
+- Step 4: no Edit or Delete on someone else's reply. Calling
+  `PATCH /api/announcements/<id>/replies/<their-reply-id>` by hand is rejected with 403 and the
+  message "You can only change your own replies."
+- Step 5/6: the reply is gone for everyone and the thread's reply count drops by one.
+
+**Result:** web ☐
+
+---
+
 ### FD-17 — Public community view (signed out)
 **Role:** unauthenticated | **Surface:** web
 
@@ -997,6 +1023,36 @@ second browser window signed in as a different member (or signed out) so you can
 
 **Expected:** Only that one reply is gone. The parent post is still visible and its other replies still
 render. Hiding a reply must not take the post or its siblings with it.
+
+**Result:** web ☐
+
+---
+
+### FD-A26 — Hide a reply on an official announcement, then put it back (added 2026-08-10)
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** An official announcement with at least two member replies.
+
+**Steps:**
+1. As admin, open `/admin/commons`. Find a row with the **Announcement reply** pill — it shows which
+   announcement it belongs to.
+2. Click **Hide** on that reply.
+3. In the member window, reload the Commons and open that announcement's reply thread.
+4. Back in the admin window, switch to the **Hidden only** tab, then click **Put back** and accept the
+   confirmation.
+5. Reload the member window and reopen the thread.
+6. As the reply's author, try to edit it while it is hidden (repeat step 2 first, then use the member
+   window's Edit control on that reply — reload first so the thread is fresh).
+
+**Expected:**
+- Step 2: the row gains a "Hidden" pill and the Hidden-replies counter goes up by one.
+- Step 3: that one reply is gone from the thread and the announcement's reply count drops by one. The
+  announcement itself and the other replies are untouched.
+- Step 4/5: the reply is back in the thread with its original words. Nothing was deleted.
+- Step 6: editing a hidden reply is refused with "A moderator has hidden this reply, so it cannot be
+  edited." A member must not be able to edit their way back into view.
+- Nowhere on the moderation screen is there a control to **edit** a member's reply. That absence is
+  deliberate — confirm it is still absent.
 
 **Result:** web ☐
 

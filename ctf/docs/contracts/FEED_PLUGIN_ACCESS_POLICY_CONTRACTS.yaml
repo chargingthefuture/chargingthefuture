@@ -505,6 +505,59 @@ policies:
       - actor_not_authenticated
 
   - pluginId: feed
+    command: feed.announcement.reply.update
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      contentModeration: required
+      actorMustOwnReply: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_reply_owner
+      - reply_not_found
+      - reply_hidden_by_moderator
+      - content_policy_violation
+
+  - pluginId: feed
+    command: feed.announcement.reply.delete
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      actorMustOwnReply: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_reply_owner
+      - reply_not_found
+
+  - pluginId: feed
     command: feed.community.post.delete
     version: 1.0.0
     requiredRoles:
