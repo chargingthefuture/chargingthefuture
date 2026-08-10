@@ -22,21 +22,30 @@ import { normalizeUuid } from 'lib/feed/repository';
 // Deliberately NOT here: editing someone else's words. A moderator can take a post down or put it
 // back; they cannot rewrite it and leave it attributed to the author.
 
-// The four kinds of member-facing content a moderator can hide. `question` and `answer` joined the set
+// The kinds of member-facing content a moderator can hide. `question` and `answer` joined the set
 // on 2026-07-30: until then neither table had a `moderation_status` column at all, so a flagged answer
 // could be read by an admin and then nothing could be done about it — which is why the flag queue could
-// not be built and member flags reached nobody.
-export type FeedModerationTarget = 'post' | 'reply' | 'question' | 'answer';
+// not be built and member flags reached nobody. `announcement-reply` joined on 2026-08-10 for the same
+// reason: replies on official announcements were the one member-authored surface with no way to take
+// anything down.
+export type FeedModerationTarget = 'post' | 'reply' | 'question' | 'answer' | 'announcement-reply';
 
 const MODERATION_TABLES: Record<FeedModerationTarget, string> = {
   post: 'feed_community_posts',
   reply: 'feed_community_replies',
   question: 'feed_questions',
   answer: 'feed_answers',
+  'announcement-reply': 'announcement_replies',
 };
 
 export function isFeedModerationTarget(value: unknown): value is FeedModerationTarget {
-  return value === 'post' || value === 'reply' || value === 'question' || value === 'answer';
+  return (
+    value === 'post' ||
+    value === 'reply' ||
+    value === 'question' ||
+    value === 'answer' ||
+    value === 'announcement-reply'
+  );
 }
 
 export type FeedModerationOutcome =
@@ -50,7 +59,10 @@ export type FeedModerationOutcome =
 export type FeedModerationQueueRow = {
   target: FeedModerationTarget;
   id: string;
-  postId: string | null;
+  // What the row hangs off: the Commons post for a peer reply, the announcement for an announcement
+  // reply, and null for a top-level post. Named for the relationship rather than the table because
+  // the two kinds of reply point at different things.
+  parentId: string | null;
   authorUserId: string;
   authorUsername: string | null;
   body: string;
@@ -159,7 +171,7 @@ export async function listCommonsModerationQueue(options?: {
   const result = await queryDb<{
     target: string;
     id: string;
-    post_id: string | null;
+    parent_id: string | null;
     author_user_id: string;
     author_username: string | null;
     body: string;
@@ -171,7 +183,7 @@ export async function listCommonsModerationQueue(options?: {
   }>(
     `
       (
-        SELECT 'post' AS target, id, NULL::uuid AS post_id, author_user_id, author_username,
+        SELECT 'post' AS target, id, NULL::uuid AS parent_id, author_user_id, author_username,
                body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
         FROM feed_community_posts
         WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
@@ -181,9 +193,19 @@ export async function listCommonsModerationQueue(options?: {
       )
       UNION ALL
       (
-        SELECT 'reply' AS target, id, post_id, author_user_id, NULL::text AS author_username,
+        SELECT 'reply' AS target, id, post_id AS parent_id, author_user_id, NULL::text AS author_username,
                body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
         FROM feed_community_replies
+        WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
+          AND ($3::text IS NULL OR author_user_id = $3::text)
+        ORDER BY created_at DESC
+        LIMIT $2
+      )
+      UNION ALL
+      (
+        SELECT 'announcement-reply' AS target, id, announcement_id AS parent_id, author_user_id, author_username,
+               body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
+        FROM announcement_replies
         WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
           AND ($3::text IS NULL OR author_user_id = $3::text)
         ORDER BY created_at DESC
@@ -196,9 +218,9 @@ export async function listCommonsModerationQueue(options?: {
   );
 
   return result.rows.map((row) => ({
-    target: row.target === 'reply' ? 'reply' : 'post',
+    target: isFeedModerationTarget(row.target) ? row.target : 'post',
     id: row.id,
-    postId: row.post_id,
+    parentId: row.parent_id,
     authorUserId: row.author_user_id,
     authorUsername: row.author_username,
     body: row.body,
@@ -239,6 +261,9 @@ export async function listCommonsAuthors(limit = 50): Promise<FeedModerationAuth
         UNION ALL
         SELECT author_user_id, NULL::text AS author_username, moderation_status, created_at, 'reply' AS kind
         FROM feed_community_replies
+        UNION ALL
+        SELECT author_user_id, author_username, moderation_status, created_at, 'reply' AS kind
+        FROM announcement_replies
       )
       SELECT
         author_user_id,
@@ -367,13 +392,18 @@ export async function countPendingFlaggedAnswers(): Promise<number> {
 }
 
 // How many Commons rows are currently hidden, for the admin dashboard counter. Counted from the
-// database rather than the loaded page so the number is never a page-capped undercount.
+// database rather than the loaded page so the number is never a page-capped undercount. Replies on
+// official announcements are counted in the same reply total: to a moderator they are one kind of
+// thing — a member's reply that is currently out of view — regardless of what it hangs off.
 export async function countHiddenCommonsRows(): Promise<{ posts: number; replies: number }> {
   const result = await queryDb<{ hidden_posts: string; hidden_replies: string }>(
     `
       SELECT
         (SELECT COUNT(*) FROM feed_community_posts WHERE moderation_status = 'hidden')::text AS hidden_posts,
-        (SELECT COUNT(*) FROM feed_community_replies WHERE moderation_status = 'hidden')::text AS hidden_replies
+        (
+          (SELECT COUNT(*) FROM feed_community_replies WHERE moderation_status = 'hidden')
+          + (SELECT COUNT(*) FROM announcement_replies WHERE moderation_status = 'hidden')
+        )::text AS hidden_replies
     `,
   );
 

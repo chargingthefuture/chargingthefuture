@@ -69,6 +69,9 @@ export type CommonsAnnouncementReply = {
   isMine: boolean;
   body: string;
   sentAtIso: string;
+  // When the author last rewrote it, or null if they never did. The thread shows an "edited" mark
+  // from this, so a reply whose words changed after it was posted does not read as the original.
+  editedAtIso: string | null;
 };
 
 export type CommonsAnnouncementRepliesResponse = {
