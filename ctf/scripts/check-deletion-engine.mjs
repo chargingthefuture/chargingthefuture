@@ -5,6 +5,7 @@
 // The engine (`ctf/packages/web/lib/account/deletion-engine.ts`) is a pure translator from the
 // account deletion registry's three actions into SQL:
 //   - delete       → DELETE FROM <table> WHERE <userColumn> = $1
+//                      (plus ` AND (<rowFilter>)` when the registry narrows the delete)
 //   - soft-delete  → UPDATE <table> SET <softDeleteColumn> = NOW()
 //                      WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL
 //   - retain       → (no statement)
@@ -40,19 +41,21 @@ function parseOwnedTables(src) {
       'OwnedTable object literals are not supported by this check; use del()/soft()/retain() or extend the parser.',
     );
   }
-  if (/\b(?:del|soft|retain)\(\s*"/.test(src)) {
+  if (/\b(?:del|delWhere|soft|retain)\(\s*"/.test(src)) {
     throw new Error(
       'Double-quoted registry literals are not supported by this check; use single-quoted literals or extend the parser.',
     );
   }
 
-  const callRe = /\b(del|soft|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
+  const callRe = /\b(delWhere|del|soft|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
   const owned = [];
   let m;
   while ((m = callRe.exec(src)) !== null) {
     const [, kind, a, b, c] = m;
     if (kind === 'del') {
       owned.push({ action: 'delete', table: a, userColumn: b });
+    } else if (kind === 'delWhere') {
+      owned.push({ action: 'delete', table: a, userColumn: b, rowFilter: c });
     } else if (kind === 'soft') {
       owned.push({ action: 'soft-delete', table: a, userColumn: b, softDeleteColumn: c });
     } else {
@@ -67,8 +70,11 @@ function parseOwnedTables(src) {
 // the `${owned.X}` interpolations into a tiny render function. If the engine's SQL shape changes in
 // a way these patterns no longer match, the check fails closed (the engine must be re-read).
 function extractEngineTemplates(engineSrc) {
-  // delete: `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1`
-  const deleteRe = /`(DELETE FROM \$\{owned\.table\} WHERE \$\{owned\.userColumn\} = \$1)`/;
+  // delete: `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1${rowFilter}`
+  const deleteRe = /`(DELETE FROM \$\{owned\.table\} WHERE \$\{owned\.userColumn\} = \$1\$\{rowFilter\})`/;
+  // ...where rowFilter is built just above it as ` AND (<filter>)`, or '' when there is none. The
+  // shape is asserted here so the filter can never replace the user-column match, only narrow it.
+  const rowFilterRe = /const rowFilter = owned\.rowFilter \? ` AND \(\$\{owned\.rowFilter\}\)` : '';/;
   // soft-delete is built by concatenating two template chunks; capture both and join them.
   const softRe =
     /`(UPDATE \$\{owned\.table\} SET \$\{owned\.softDeleteColumn\} = NOW\(\) )` \+\s*`(WHERE \$\{owned\.userColumn\} = \$1 AND \$\{owned\.softDeleteColumn\} IS NULL)`/;
@@ -81,11 +87,17 @@ function extractEngineTemplates(engineSrc) {
   if (!soft) {
     throw new Error('could not find the engine soft-delete UPDATE template; the engine SQL shape changed — re-read deletion-engine.ts.');
   }
+  if (!rowFilterRe.test(engineSrc)) {
+    throw new Error(
+      'could not find the engine row-filter clause (` AND (${owned.rowFilter})`); the engine SQL shape changed — re-read deletion-engine.ts.',
+    );
+  }
 
   const render = (tpl, owned) =>
     tpl
       .replaceAll('${owned.table}', owned.table)
       .replaceAll('${owned.userColumn}', owned.userColumn ?? '')
+      .replaceAll('${rowFilter}', owned.rowFilter ? ` AND (${owned.rowFilter})` : '')
       .replaceAll('${owned.softDeleteColumn}', owned.softDeleteColumn ?? '');
 
   return {
@@ -141,8 +153,18 @@ function main() {
       fail(`table "${entry.table}" does not scope by its user column via $1: ${sql}`);
     }
 
-    if (entry.action === 'delete' && !sql.startsWith(`DELETE FROM ${entry.table} `)) {
-      fail(`delete table "${entry.table}" produced unexpected SQL: ${sql}`);
+    if (entry.action === 'delete') {
+      if (!sql.startsWith(`DELETE FROM ${entry.table} `)) {
+        fail(`delete table "${entry.table}" produced unexpected SQL: ${sql}`);
+      }
+      // A narrowed delete must ADD a condition, never replace the user-column match — otherwise a
+      // filter typo could turn "this member's rows" into "every row that looks like this".
+      if (entry.rowFilter && !sql.endsWith(` = $1 AND (${entry.rowFilter})`)) {
+        fail(`delete table "${entry.table}" does not AND its row filter onto the user match: ${sql}`);
+      }
+      if (!entry.rowFilter && !sql.endsWith(' = $1')) {
+        fail(`delete table "${entry.table}" has trailing SQL after the user match: ${sql}`);
+      }
     }
     if (entry.action === 'soft-delete') {
       if (!entry.softDeleteColumn) {
