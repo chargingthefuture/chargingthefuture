@@ -27,6 +27,7 @@ check. Examples of drift the registry corrects:
 | Action | Meaning |
 |---|---|
 | `delete` | Hard-delete the user's rows (`DELETE FROM <table> WHERE <userColumn> = $1`). |
+| `delete` with a row filter | Hard-delete only *some* of the user's rows in a table that also holds rows nobody should lose: `... WHERE <userColumn> = $1 AND (<rowFilter>)`. Written with the `delWhere()` builder. The filter only ever narrows the delete — the user-column match stays. |
 | `soft-delete` | Stamp the configured `softDeleteColumn` instead of removing the row. |
 | `retain` | Keep the rows. Used for money/ledger tables (financial integrity), deletion-event and audit-trail tables (the accountability record of the deletion), and shared platform content. |
 
@@ -40,15 +41,23 @@ Conservative-by-default, because deletion is irreversible:
 - **Shared platform content** authored by a user but consumed by others (admin announcements,
   property listings, cohorts, missions) is retained and flagged with a `reviewNote` for an explicit
   product decision rather than silently cascaded.
+- **A member's own words are not "retained under a generic name".** Renaming the author while the
+  text stays on screen is not a deletion. `feed_items` is the case that taught this: it holds both
+  the Commons copy of a member's post and the copy of an admin announcement, and retaining the whole
+  table left deleted members' posts on the Commons re-labeled `user-hub-syst` (owner report,
+  2026-08-09). A table that mixes the two kinds gets a `delWhere()` row filter that separates them,
+  not a blanket `retain`.
 - **Global catalog/aggregate** tables (currencies, taxonomy, GDP metrics, weekly-performance
   aggregates) are not listed — they are not any individual user's data.
 
 ## The CI guard
 
 `ctf/scripts/check-deletion-registry.mjs` parses `ctf/schema.sql` and checks every `table`,
-`userColumn`, and `softDeleteColumn` named in the registry actually exists. It runs in the Schema
-Drift Gate job in `.github/workflows/ci.yml`, so the registry cannot drift from the schema again. It
-is plain Node (no TypeScript import), so it runs on any Node version, including the Node 20 runners.
+`userColumn`, and `softDeleteColumn` named in the registry actually exists. A `delWhere()` row filter
+is checked the same way: it must be made only of `<column> IS [NOT] NULL` clauses joined by AND/OR,
+and every column in it must exist on that table. It runs in the Schema Drift Gate job in
+`.github/workflows/ci.yml`, so the registry cannot drift from the schema again. It is plain Node (no
+TypeScript import), so it runs on any Node version, including the Node 20 runners.
 
 To run locally:
 
@@ -61,7 +70,8 @@ node ctf/scripts/check-deletion-registry.mjs
 The registry is data; two small modules turn it into action:
 
 - **`deletion-engine.ts`** — a pure translator. `planTable` / `planDeletion` turn a registry entry
-  into the exact SQL to run (`DELETE FROM <table> WHERE <userColumn> = $1`, or an idempotent
+  into the exact SQL to run (`DELETE FROM <table> WHERE <userColumn> = $1`, with
+  ` AND (<rowFilter>)` appended when the registry narrows it, or an idempotent
   `UPDATE ... SET <softDeleteColumn> = NOW() WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL`,
   or nothing for `retain`). Because it is pure, its output is checked without a database by
   `ctf/scripts/check-deletion-engine.mjs` (run in CI). `executeEntry` runs the plan against an open

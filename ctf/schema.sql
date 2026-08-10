@@ -1197,6 +1197,24 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_pos
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Clear Commons timeline copies whose source row is gone (owner report, 2026-08-09).
+-- Every community post and AI question is copied into a feed_items row that carries the same text.
+-- Account deletion used to remove the post/question but keep the copy, so a deleted member's words
+-- stayed on the Commons, re-labeled with the fallback handle built from the placeholder author id
+-- ("user-hub-syst") — the same handle every time, so it looked like an anonymised post rather than a
+-- deletion. The deletion registry now removes the copy with the source; this clears the ones already
+-- left behind. Announcement copies carry neither source id and are untouched. Idempotent: a second
+-- run matches nothing. Deleting a feed_items row cascades its targets, read state, and dismissals.
+DELETE FROM feed_items f
+WHERE (
+        f.source_community_post_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+      )
+   OR (
+        f.source_question_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+      );
+
 CREATE TABLE IF NOT EXISTS feed_community_replies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE,

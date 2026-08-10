@@ -61,8 +61,13 @@ function parseSchemaColumns(sql) {
 // reliably across versions). The registry must use the single-quoted builder helpers, each of
 // which this parser understands:
 //   del('table', 'user_col', '...')
+//   delWhere('table', 'user_col', '<row filter>', '...')
 //   soft('table', 'user_col', 'soft_col', '...')
 //   retain('table', '...')
+//
+// The `delWhere` row filter is checked too, not waved through: it must be made only of
+// `<column> IS [NOT] NULL` clauses joined by AND/OR, and every column in it must exist on that
+// table in schema.sql. Anything else fails the build rather than reaching the database.
 //
 // This parser is deliberately strict and FAILS CLOSED: if the registry ever switches to a shape
 // this parser does not understand — a raw `{ table: ... }` object literal, or double-quoted
@@ -74,7 +79,7 @@ function parseRegistry(src) {
       'OwnedTable object literals are not supported by this validator; use del()/soft()/retain() or extend parseRegistry().',
     );
   }
-  if (/\b(?:del|soft|retain)\(\s*"/.test(src)) {
+  if (/\b(?:del|delWhere|soft|retain)\(\s*"/.test(src)) {
     throw new Error(
       'Double-quoted registry literals are not supported by this validator; use single-quoted literals or extend parseRegistry().',
     );
@@ -83,6 +88,9 @@ function parseRegistry(src) {
   const refs = [];
 
   const reDel = /\bdel\(\s*'([^']+)'\s*,\s*'([^']+)'/g;
+  // delWhere('table', 'user_column', '<row filter>', 'note') — the filter is captured so its
+  // columns can be checked against schema.sql like any other column reference.
+  const reDelWhere = /\bdelWhere\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'/g;
   const reSoft = /\bsoft\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'/g;
   const reRetain = /\bretain\(\s*'([^']+)'/g;
   // pseudo('table', 'user_column', ['cleared', 'columns'], 'note') — the third argument is an array,
@@ -92,6 +100,9 @@ function parseRegistry(src) {
   let m;
   while ((m = reDel.exec(src)) !== null) {
     refs.push({ table: m[1], userColumn: m[2], action: 'delete' });
+  }
+  while ((m = reDelWhere.exec(src)) !== null) {
+    refs.push({ table: m[1], userColumn: m[2], rowFilter: m[3], action: 'delete' });
   }
   while ((m = reSoft.exec(src)) !== null) {
     refs.push({ table: m[1], userColumn: m[2], softDeleteColumn: m[3], action: 'soft-delete' });
@@ -199,6 +210,26 @@ function main() {
       for (const column of ref.clearColumns ?? []) {
         if (!cols.has(column)) {
           fail(`table "${ref.table}" does not have cleared column "${column}" (declared for pseudonymize).`);
+        }
+      }
+    }
+    if (ref.rowFilter) {
+      // The filter reaches the database as literal SQL, so it is held to a grammar small enough to
+      // read at a glance: `<column> IS NULL` / `<column> IS NOT NULL`, joined by AND/OR, nothing
+      // else. No subqueries, no comparisons against values, no parameters of its own.
+      const clauseRe = /^([a-z_][a-z0-9_]*)\s+IS\s+(?:NOT\s+)?NULL$/i;
+      const clauses = ref.rowFilter.split(/\s+(?:AND|OR)\s+/i);
+      for (const clause of clauses) {
+        const parsed = clause.trim().match(clauseRe);
+        if (!parsed) {
+          fail(
+            `table "${ref.table}" has a row filter clause this validator does not accept: "${clause.trim()}". ` +
+              `Only "<column> IS NULL" / "<column> IS NOT NULL" joined by AND/OR are allowed.`,
+          );
+          continue;
+        }
+        if (!cols.has(parsed[1])) {
+          fail(`table "${ref.table}" does not have column "${parsed[1]}" (used in its delete row filter).`);
         }
       }
     }
