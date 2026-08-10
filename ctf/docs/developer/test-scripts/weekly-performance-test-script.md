@@ -82,13 +82,19 @@ admits `admin` or the `operations` role, matching `requiredRoles: [admin, operat
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Read the week history (current week back through prior weeks) and the current week.
-2. Pick a week to review (web admin picker, or the History tab on Android).
+2. Scroll the list to the bottom and read the oldest week it offers.
+3. Pick a week to review (web admin picker, or the History tab on Android).
+4. Pick the oldest week — the launch week — and look for the comparison chart.
 **Expected:** Weeks use an ISO Monday start. The list is **continuous — it never skips a week**:
 every week from the current one back to the earliest tracked week (or a year, whichever is longer)
-appears, newest first, even for weeks with no activity (they read zero). Labels are a friendly range
-(e.g. "Jul 13–19, 2026") on desktop **and** the mobile-responsive week selector — never a raw ISO
-date. Picking a week shows that week's live metrics; the current week is marked **Live**. There is no
-"set active week" action and no per-week status.
+appears, newest first, even for weeks with no activity (they read zero). The list **stops at the
+launch week**: the oldest entry is "Jun 8–14, 2026" (the week containing the 12 June 2026 launch),
+and no earlier week — Apr or May 2026, or anything from 2025 — is offered on either the desktop
+sidebar or the mobile week selector. Labels are a friendly range (e.g. "Jul 13–19, 2026") on
+desktop **and** the mobile-responsive week selector — never a raw ISO date. Picking a week shows
+that week's live metrics; the current week is marked **Live**. The launch week shows its own
+numbers but no week-over-week comparison, since there is no earlier week to compare against. There
+is no "set active week" action and no per-week status.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A3 · Metrics and week-over-week comparison
