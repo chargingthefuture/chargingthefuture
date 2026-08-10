@@ -9,19 +9,19 @@
 //   is a stub and no snapshot table exists — so we render the real
 //   `trustEvidence` list instead of fabricating bucket values.
 // - There is no "request verification" endpoint (verification is admin-only).
-// - The visibility control (`trust-visibility-control.tsx`) is live only on self
-//   surfaces (`editable`), because POST /api/trust/visibility is self-scope only;
-//   when the card shows another member's trust the row stays read-only.
+// - Nothing on this card is a setting. A member does not choose what other members see of their
+//   trust; the code decides, in `app/api/trust/user/[userId]/route.ts`, the same way for everyone.
 //
-// On the member's own card the body is two labeled sections — "Your trust" (these signals, always
-// all of them) then "What members see" (the choice and a preview of the result). Before the labels
-// the two ran together and read as one jumbled block, which is what made the setting hard to place.
+// On the member's own card the body is two labeled sections — "Your trust" (their signals, all of
+// them) then "What members see" (the rows another member actually receives). That comparison is the
+// card's whole job on the account page: this is yours, that is theirs. On another member's card
+// there is one list and no comparison to draw.
 import React from "react";
 import { ShieldCheck } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import type { TrustUserExtension, TrustPeerView, TrustPeerEvidenceItem, TrustDisclosure } from "../../lib/trust/types";
 import { getTrustTokens } from "./trust-shared";
-import { TrustVisibilityControl } from "./trust-visibility-control";
+import { TrustMemberView } from "./trust-member-view";
 import { TrustEvidenceRow, TrustSummaryNote, TrustSectionLabel, TRUST_HAIRLINE } from "./trust-evidence-row";
 
 // Accent-with-alpha card tints have no exact shell-token equivalent (the token helper carries solid
@@ -45,7 +45,11 @@ function WidgetHeader() {
   );
 }
 
-function EmptyBody({ visibility, editable, evidence }: { visibility: string; editable?: boolean; evidence: readonly TrustPeerEvidenceItem[] }) {
+// The empty card has to know whose it is. The three steps are a to-do list — they are things the
+// reader can go and do — so on someone else's profile they were an instruction to the wrong person,
+// and "as you participate" read as if the card described the reader. A visitor to an empty profile
+// gets the one fact that is theirs to act on: this member has not taken part yet.
+function EmptyBody({ isOwnCard }: { isOwnCard?: boolean }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
   return (
@@ -56,41 +60,44 @@ function EmptyBody({ visibility, editable, evidence }: { visibility: string; edi
         </div>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.SUBTLE, marginBottom: 4 }}>No trust signals yet</div>
         <div style={{ fontSize: 11, color: t.FAINT, textAlign: "center", lineHeight: 1.5 }}>
-          Trust signals appear as you participate in the community
+          {isOwnCard
+            ? "Trust signals appear as you participate in the community"
+            : "This member has not taken part anywhere yet, so there is nothing to go on"}
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
-        {STEPS.map((label) => (
-          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${TRUST_HAIRLINE}` }}>
-            <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
-          </div>
-        ))}
-      </div>
-
-      <TrustVisibilityControl visibility={visibility} bordered editable={editable} evidence={evidence} />
+      {isOwnCard && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {STEPS.map((label) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 9px", background: "rgba(255,255,255,0.02)", borderRadius: 8, border: `1px solid ${TRUST_HAIRLINE}` }}>
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.12)", flexShrink: 0 }} />
+              <span style={{ fontSize: 11, color: t.MUTED }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function EvidenceBody({ evidence, visibility, editable, disclosure }: { evidence: TrustPeerEvidenceItem[]; visibility: string; editable?: boolean; disclosure: TrustDisclosure }) {
+function EvidenceBody({ evidence, isOwnCard, disclosure }: { evidence: TrustPeerEvidenceItem[]; isOwnCard?: boolean; disclosure: TrustDisclosure }) {
   return (
     <div style={{ padding: "4px 14px 14px", borderTop: `1px solid ${TRUST_HAIRLINE}` }}>
       {disclosure === "summary" && <div style={{ marginTop: 12 }}><TrustSummaryNote /></div>}
       {/* The label only makes sense on your own card, where a second section follows it. On another
           member's card there is one list and nothing to tell it apart from. */}
-      {editable && <div style={{ marginTop: 12 }}><TrustSectionLabel>Your trust</TrustSectionLabel></div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: editable ? "7px 0 10px" : "12px 0 10px" }}>
+      {isOwnCard && <div style={{ marginTop: 12 }}><TrustSectionLabel>Your trust</TrustSectionLabel></div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: isOwnCard ? "7px 0 10px" : "12px 0 10px" }}>
         {evidence.map((item, idx) => (
           <TrustEvidenceRow key={idx} item={item} />
         ))}
       </div>
-      {/* On a peer's summary card the note above already says the member shares a summary, so the
-          read-only row would repeat it. Keep the row for a full peer card and for the owner. */}
-      {(editable || disclosure === "full") && (
+      {/* Only on your own card: the same rows another member receives, so you can see the difference
+          between the list above and what anyone else gets. Another member's card is already that
+          view, so showing it there would repeat the list directly above it. */}
+      {isOwnCard && (
         <div style={{ paddingTop: 7, borderTop: `1px solid ${TRUST_HAIRLINE}` }}>
-          <TrustVisibilityControl visibility={visibility} bordered={false} editable={editable} evidence={evidence} />
+          <TrustMemberView evidence={evidence} bordered={false} />
         </div>
       )}
     </div>
@@ -101,20 +108,20 @@ export interface TrustWidgetCardProps {
   // Either the owner's own extension or the peer view the cross-user route returns. The peer view
   // carries `trustDisclosure`; an extension does not, and is always the full record.
   trust: TrustUserExtension | TrustPeerView;
-  // True only when the card renders the signed-in member's own trust — the
-  // visibility route is self-scope, so other-member cards stay read-only.
-  editable?: boolean;
+  // True only when the card renders the signed-in member's own trust. Nothing here is editable —
+  // this decides whether the "Your trust" / "What members see" comparison is drawn.
+  isOwnCard?: boolean;
 }
 
-export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, editable }) => {
+export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, isOwnCard }) => {
   const hasEvidence = trust.trustEvidence.length > 0;
   const disclosure: TrustDisclosure = "trustDisclosure" in trust ? trust.trustDisclosure : "full";
   return (
     <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <WidgetHeader />
       {hasEvidence
-        ? <EvidenceBody evidence={trust.trustEvidence} visibility={trust.trustVisibility} editable={editable} disclosure={disclosure} />
-        : <EmptyBody visibility={trust.trustVisibility} editable={editable} evidence={trust.trustEvidence} />}
+        ? <EvidenceBody evidence={trust.trustEvidence} isOwnCard={isOwnCard} disclosure={disclosure} />
+        : <EmptyBody isOwnCard={isOwnCard} />}
     </div>
   );
 };

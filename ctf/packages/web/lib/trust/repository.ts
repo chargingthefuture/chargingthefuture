@@ -3,7 +3,6 @@ import type {
   TrustSignalMetrics,
   TrustStatus,
   TrustUserExtension,
-  TrustVisibility,
 } from './types';
 import {
   applyAdminVerification,
@@ -13,7 +12,6 @@ import {
   getTrustUserExtension as getTrustUserExtensionDb,
   insertTrustSignalSnapshot,
   setTrustDerivedEvidence,
-  updateTrustVisibility as updateTrustVisibilityDb,
 } from './db';
 
 export async function getTrustUserExtension(userId: string): Promise<TrustUserExtension> {
@@ -71,13 +69,6 @@ export async function refreshTrustSignalSnapshot(userId: string): Promise<TrustS
     snapshotId: snapshot.id,
     generatedAt: snapshot.createdAt,
   };
-}
-
-export async function setTrustVisibility(
-  userId: string,
-  visibility: TrustVisibility,
-): Promise<TrustUserExtension> {
-  return updateTrustVisibilityDb(userId, visibility);
 }
 
 // Apply an admin verification decision: set status and append an admin evidence note.
