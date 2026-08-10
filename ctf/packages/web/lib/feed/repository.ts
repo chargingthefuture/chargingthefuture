@@ -15,6 +15,7 @@ import {
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
+  FEED_MODERATION_STATUS,
   FEED_SYSTEM_ACTOR_ID,
   FEED_QUESTION_CATEGORIES,
   FEED_REACTION_EMOJIS,
@@ -195,6 +196,7 @@ type AnnouncementReplyRow = {
   author_user_id: string;
   author_username: string | null;
   body: string;
+  edited_at: Date | null;
   created_at: Date;
 };
 
@@ -2605,7 +2607,7 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
 
   const result = await queryDb<AnnouncementReplyRow>(
     `
-      SELECT id, announcement_id, author_user_id, author_username, body, created_at
+      SELECT id, announcement_id, author_user_id, author_username, body, edited_at, created_at
       FROM announcement_replies
       WHERE announcement_id = $1::uuid
         AND moderation_status = 'accepted'
@@ -2620,8 +2622,84 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
     body: row.body,
     authorUserId: row.author_user_id,
     authorUsername: row.author_username,
+    editedAtIso: row.edited_at ? toIso(row.edited_at) : null,
     createdAtIso: toIso(row.created_at),
   }));
+}
+
+// Rewrite the member's own reply on an announcement. Author-only: ownership is checked here rather
+// than in the route so no caller can skip it. The new body passes the same moderation as a fresh
+// reply — an edit must not be a way to post something the original body would have been blocked for.
+// A reply a moderator has hidden cannot be edited back into view; that decision is the moderator's
+// to reverse.
+export async function editAnnouncementReply(
+  actorId: string,
+  replyId: string,
+  bodyInput: string,
+): Promise<{ body: string; editedAtIso: string }> {
+  const normalizedId = normalizeUuid(replyId);
+  if (normalizedId === null) {
+    throw new Error('reply_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const body = normalizeMultilineText(bodyInput);
+    if (!passesFeedModeration(body)) {
+      throw new Error('content_policy_violation');
+    }
+
+    const existing = await client.query<{ author_user_id: string; moderation_status: string }>(
+      'SELECT author_user_id, moderation_status FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      [normalizedId],
+    );
+    if (existing.rows.length === 0) {
+      throw new Error('reply_not_found');
+    }
+    if (existing.rows[0].author_user_id !== actorId) {
+      throw new Error('not_reply_owner');
+    }
+    if (existing.rows[0].moderation_status === FEED_MODERATION_STATUS.hidden) {
+      throw new Error('reply_hidden');
+    }
+
+    const updated = await client.query<{ edited_at: Date }>(
+      `
+        UPDATE announcement_replies
+        SET body = $2, edited_at = NOW(), updated_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING edited_at
+      `,
+      [normalizedId, body],
+    );
+
+    return { body, editedAtIso: toIso(updated.rows[0].edited_at) };
+  });
+}
+
+// Delete the member's own reply on an announcement. Author-only, and a real delete rather than a
+// hide: these are the member's own words and their own decision to take back. A moderator taking
+// someone else's reply down uses the reversible hide instead (lib/feed/moderation).
+export async function deleteAnnouncementReply(actorId: string, replyId: string): Promise<'ok'> {
+  const normalizedId = normalizeUuid(replyId);
+  if (normalizedId === null) {
+    throw new Error('reply_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const existing = await client.query<{ author_user_id: string }>(
+      'SELECT author_user_id FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      [normalizedId],
+    );
+    if (existing.rows.length === 0) {
+      throw new Error('reply_not_found');
+    }
+    if (existing.rows[0].author_user_id !== actorId) {
+      throw new Error('not_reply_owner');
+    }
+
+    await client.query('DELETE FROM announcement_replies WHERE id = $1::uuid', [normalizedId]);
+    return 'ok' as const;
+  });
 }
 
 // Read a member's last-seen marker for the Hub home channel. Returns null when the member

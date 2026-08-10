@@ -59,8 +59,8 @@ async function parseModerationBody(
   return { data: { hidden: body.hidden, next, reason } };
 }
 
-// POST: hide or un-hide one piece of member-facing content — a Commons post or reply, or a question or
-// answer in the Q&A.
+// POST: hide or un-hide one piece of member-facing content — a Commons post, a reply on a post or on
+// an official announcement, or a question or answer in the Q&A.
 //
 // Hiding rather than deleting is the whole point. Deletion is unrecoverable and takes the member's
 // own words plus the reply thread with it; hiding is reversible, so a moderator making a fast
@@ -88,7 +88,11 @@ export async function POST(
   const { target, id } = await params;
   if (!isFeedModerationTarget(target)) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Target must be post, reply, question, or answer.' },
+      {
+        ok: false,
+        code: FEED_ERROR_CODE.invalidPayload,
+        message: 'Target must be post, reply, announcement-reply, question, or answer.',
+      },
       { status: 400 },
     );
   }

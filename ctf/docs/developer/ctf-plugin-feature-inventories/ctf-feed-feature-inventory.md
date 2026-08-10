@@ -191,12 +191,15 @@ Admin routes:
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
   is what you use to *pick* someone, so it is dead weight once you have.
-- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review,
-  newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
+- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review
+  — including replies on official announcements — newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
   `countHiddenCommonsRows` in `lib/feed/moderation.ts`). Hidden rows are included by default so a
   moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
   `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
 - `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
+  `:target` is one of `post` / `reply` / `announcement-reply` / `question` / `answer`
+  (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official announcement,
+  stored in `announcement_replies`.
   Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
   `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
   moderator's prose about a member would become a permanent unreviewable note on a survivor's
@@ -350,6 +353,8 @@ All three feed channels (announcements, questions, community) are shipped on web
 ---
 
 ## 11) Change Log
+
+- 2026-08-10: **Announcement replies became moderatable, and their authors can edit or delete them.** `FeedModerationTarget` widened to `post | reply | announcement-reply | question | answer`, so `POST /api/feed/admin/moderation/:target/:id` covers replies on official announcements with no new endpoint. `listCommonsModerationQueue` now unions `announcement_replies` (its `parentId` is the announcement — the field was renamed from `postId` because the two kinds of reply hang off different things), `listCommonsAuthors` counts them in each member's reply total, and `countHiddenCommonsRows` counts hidden ones in the reply total on `/admin/commons`. The Commons moderation screen labels them "Announcement reply" and links them to their announcement. Hide and restore only — still no admin edit anywhere. The member-side edit/delete of one's own announcement reply is documented in the Announcements inventory.
 
 - 2026-08-09: **Official posts are signed with the operator's name, and the "SH" avatar is gone
   (owner decision).** `hubMessageAuthor` in `app/api/commons/messages/route.ts` labeled every
