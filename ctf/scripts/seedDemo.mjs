@@ -686,17 +686,16 @@ async function seedTrust(c) {
   // createdBy? }) that buildTrustEvidence emits and every renderer reads — a `summary` string is the
   // human-readable line and `createdAt` is an ISO timestamp. Writing the old { type, date, source }
   // shape left `summary`/`createdAt` undefined, which rendered a raw type slug plus "Invalid Date".
-  // trust_status must be one of the real statuses (unverified | verified | flagged) — 'peer_verified'
-  // is not a valid status. These rows are a placeholder for a first raw read; the snapshot route and
-  // the self read recompute them from real seeded activity.
+  // These rows are a placeholder for a first raw read; the snapshot route and the self read
+  // recompute them from real seeded activity. There is no status column: the platform does not vet
+  // members, so a seeded 'verified' row would have been asserting something the product never does.
   await c.query(
     `INSERT INTO trust_user_extension
-     (user_id, trust_status, trust_evidence, updated_at)
-     VALUES ($1, 'verified',
+     (user_id, trust_evidence, updated_at)
+     VALUES ($1,
        '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
        NOW())
      ON CONFLICT (user_id) DO UPDATE SET
-       trust_status = EXCLUDED.trust_status,
        trust_evidence = EXCLUDED.trust_evidence,
        updated_at = NOW()`,
     [OWNER],
@@ -705,12 +704,11 @@ async function seedTrust(c) {
   if (OWNER2) {
     await c.query(
       `INSERT INTO trust_user_extension
-       (user_id, trust_status, trust_evidence, updated_at)
-       VALUES ($1, 'verified',
+       (user_id, trust_evidence, updated_at)
+       VALUES ($1,
          '[{"type":"engagement-lighthouse-matches","summary":"Accepted 1 LightHouse match","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
          NOW())
        ON CONFLICT (user_id) DO UPDATE SET
-         trust_status = EXCLUDED.trust_status,
          trust_evidence = EXCLUDED.trust_evidence,
          updated_at = NOW()`,
       [OWNER2],

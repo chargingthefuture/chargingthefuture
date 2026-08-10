@@ -472,7 +472,7 @@ export function LighthouseHost({
         const res = await fetch("/api/trust/user/self");
         if (res.ok) {
           const data = await res.json() as TrustUserExtension & { allowed?: boolean };
-          if (typeof data.trustStatus === "string") setTrust(data);
+          if (Array.isArray(data.trustEvidence)) setTrust(data);
         }
       } catch {
         // Trust widget is supplementary; ignore failures.

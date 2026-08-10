@@ -4,7 +4,6 @@ import type {
   TrustEvidenceItem,
   TrustSignalMetrics,
   TrustSignalSnapshot,
-  TrustStatus,
   TrustUserExtension,
 } from './types';
 
@@ -30,17 +29,15 @@ function coerceTrustEvidence(value: unknown): TrustEvidenceItem[] {
 export async function getTrustUserExtension(userId: string): Promise<TrustUserExtension> {
   const result = await queryDb<{
     user_id: string;
-    trust_status: string;
     trust_evidence: TrustEvidenceItem[];
     updated_at: Date;
   }>(
-    `SELECT user_id, trust_status, trust_evidence, updated_at FROM trust_user_extension WHERE user_id = $1`,
+    `SELECT user_id, trust_evidence, updated_at FROM trust_user_extension WHERE user_id = $1`,
     [userId]
   );
   if (!result.rows.length) {
     return {
       userId,
-      trustStatus: 'unverified',
       trustEvidence: [],
       updatedAt: new Date().toISOString(),
     };
@@ -48,7 +45,6 @@ export async function getTrustUserExtension(userId: string): Promise<TrustUserEx
   const row = result.rows[0];
   return {
     userId: row.user_id,
-    trustStatus: row.trust_status as TrustUserExtension['trustStatus'],
     trustEvidence: coerceTrustEvidence(row.trust_evidence),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -413,16 +409,14 @@ export async function insertTrustSignalSnapshot(
   };
 }
 
-// Replace the user's derived evidence with the freshly computed items and bump updated_at. This
-// does NOT touch trust_status, which only an admin sets. Upserts the
-// extension row so a first-time member gets defaults.
+// Replace the user's derived evidence with the freshly computed items and bump updated_at. Upserts
+// the extension row so a first-time member gets defaults.
 export async function setTrustDerivedEvidence(
   userId: string,
   evidence: TrustEvidenceItem[],
 ): Promise<TrustUserExtension> {
   const result = await queryDb<{
     user_id: string;
-    trust_status: string;
     trust_evidence: TrustEvidenceItem[];
     updated_at: Date;
   }>(
@@ -430,44 +424,12 @@ export async function setTrustDerivedEvidence(
      VALUES ($1, $2::jsonb, NOW())
      ON CONFLICT (user_id) DO UPDATE
        SET trust_evidence = EXCLUDED.trust_evidence, updated_at = NOW()
-     RETURNING user_id, trust_status, trust_evidence, updated_at`,
+     RETURNING user_id, trust_evidence, updated_at`,
     [userId, JSON.stringify(evidence)]
   );
   const row = result.rows[0];
   return {
     userId: row.user_id,
-    trustStatus: row.trust_status as TrustStatus,
-    trustEvidence: coerceTrustEvidence(row.trust_evidence),
-    updatedAt: row.updated_at.toISOString(),
-  };
-}
-
-// Admin sets a target user's trust status (verified | flagged) and appends one admin evidence item.
-// The append is done in SQL so concurrent admin edits don't clobber each other's evidence.
-export async function applyAdminVerification(
-  targetUserId: string,
-  status: TrustStatus,
-  adminEvidence: TrustEvidenceItem,
-): Promise<TrustUserExtension> {
-  const result = await queryDb<{
-    user_id: string;
-    trust_status: string;
-    trust_evidence: TrustEvidenceItem[];
-    updated_at: Date;
-  }>(
-    `INSERT INTO trust_user_extension (user_id, trust_status, trust_evidence, updated_at)
-     VALUES ($1, $2, $3::jsonb, NOW())
-     ON CONFLICT (user_id) DO UPDATE
-       SET trust_status = EXCLUDED.trust_status,
-           trust_evidence = COALESCE(trust_user_extension.trust_evidence, '[]'::jsonb) || $3::jsonb,
-           updated_at = NOW()
-     RETURNING user_id, trust_status, trust_evidence, updated_at`,
-    [targetUserId, status, JSON.stringify([adminEvidence])]
-  );
-  const row = result.rows[0];
-  return {
-    userId: row.user_id,
-    trustStatus: row.trust_status as TrustStatus,
     trustEvidence: coerceTrustEvidence(row.trust_evidence),
     updatedAt: row.updated_at.toISOString(),
   };
