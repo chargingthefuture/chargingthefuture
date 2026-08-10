@@ -293,6 +293,15 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-10: **Account & Data names the Commons service by its member-facing name (owner report).**
+  The service row on `/account/data` (web and the Android screen, both fed by
+  `GET /api/account/services`) still read "Feed & Announcements" — the internal name of the tables —
+  even though the surface those tables belong to is called the Commons everywhere a member sees it.
+  The row now reads **"Commons: Feed & Announcements"**, keeping the old wording after the colon so
+  a member who remembers the previous label still recognises the row, and its one-line summary now
+  says "Your Commons posts…" instead of "Your community posts…". Copy-only, in the `name` and
+  `dataSummary` fields of the `feed-announcements` entry in `lib/account/deletion-registry.ts`; the
+  slug, the table list, and every delete/export behavior are unchanged.
 - 2026-08-03: **The member block now has a real starting point and a first enforcing surface (§1.6).**
   The reusable `BlockMemberButton` had been built, exported, and attached to nothing, so the only way
   to block anyone was the manage-list at `/account/blocks` — which needs you to already know who you

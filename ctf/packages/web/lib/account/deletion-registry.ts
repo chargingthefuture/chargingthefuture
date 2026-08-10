@@ -199,8 +199,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   },
   {
     slug: 'feed-announcements',
-    name: 'Feed & Announcements',
-    dataSummary: 'Your community posts, replies, questions, answers, ratings, and read/dismiss state.',
+    // The member-facing name of this service is the Commons — the home screen these tables feed.
+    // The old "Feed & Announcements" wording is kept after the colon so a member who remembers the
+    // old label still recognises the row.
+    name: 'Commons: Feed & Announcements',
+    dataSummary: 'Your Commons posts, replies, questions, answers, ratings, and read/dismiss state.',
     serviceScopeSupported: true,
     tables: [
       del('feed_answer_ratings', 'user_id', 'Your ratings on answers.'),
