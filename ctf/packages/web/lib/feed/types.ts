@@ -101,6 +101,10 @@ export type FeedAnnouncementReply = {
   body: string;
   authorUserId: string;
   authorUsername: string | null;
+  // When the author last rewrote this reply, or null if they never did. Kept separate from
+  // createdAtIso so the thread still reads in the order it was written while still being honest
+  // that the words changed after they were posted.
+  editedAtIso: string | null;
   createdAtIso: string;
 };
 

@@ -2394,6 +2394,10 @@ CREATE TABLE IF NOT EXISTS announcement_replies (
   author_username TEXT,
   body TEXT NOT NULL,
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  moderation_reason TEXT,
+  moderated_by_user_id TEXT,
+  moderated_at TIMESTAMPTZ,
+  edited_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -2403,6 +2407,15 @@ ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a moderator hid the reply, who hid it, and when. Added 2026-08-10 with announcement-reply
+-- moderation: the shared hide/restore writer sets all three, so a table without them could not be
+-- moderated at all — an admin could see a bad reply on an announcement and had no way to take it down.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ;
+-- Set when the author rewrites their own reply, so the thread can mark it "edited" rather than
+-- silently showing different words under the same timestamp.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
