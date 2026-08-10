@@ -18,7 +18,8 @@ function FeedbackForm({ value, onChange, onSubmit, submitting, success, error }:
   const t = getPeerProgrammingTokens(theme);
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}` }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, marginBottom: 12 }}>Session Feedback</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: t.TEXT, marginBottom: 4 }}>Session Feedback</div>
+      <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 12 }}>Your cohort has ended. Tell us how it went.</div>
       <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <textarea
           value={value}
@@ -40,17 +41,33 @@ function FeedbackForm({ value, onChange, onSubmit, submitting, success, error }:
   );
 }
 
+// Whether to show the "Session Feedback" box. Feedback is about a cohort that is over, so the form
+// only appears once the viewer's own cohort has ended. While it is still running there is nothing to
+// look back on, and members were sending "session feedback" for a session that had not happened yet.
+// The open cohort must be the viewer's own — someone listening in on another cohort is not reviewing
+// their own experience.
+function shouldShowFeedback(room: Room | null, myCohortId: string | null): boolean {
+  if (!room?.ended || !room.cohortId) return false;
+  return room.cohortId === myCohortId;
+}
+
 function AssignedCohort({ room, memberCount, onJoin }: { room: Room; memberCount: number; onJoin: () => void }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
+  // An ended cohort is over: say so rather than showing the green "Active" badge, and drop the
+  // "Join Session" button that would open a call for a cohort nobody is meeting in any more.
+  const ended = Boolean(room.ended);
+  const badge = ended
+    ? { text: "Ended", color: "#94A3B8", background: "#94A3B820", border: "1px solid #94A3B840" }
+    : { text: "Active", color: "#22C55E", background: "#22C55E20", border: "1px solid #22C55E40" };
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}30` }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>{room.name || `Cohort ${room.cohortId}`}</div>
-            <span style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E40", fontSize: 11, padding: "2px 8px", borderRadius: 12 }}>
-              {room.status === "active" ? "Active" : room.status || "Active"}
+            <span style={{ background: badge.background, color: badge.color, border: badge.border, fontSize: 11, padding: "2px 8px", borderRadius: 12 }}>
+              {badge.text}
             </span>
           </div>
           {room.topic && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 10 }}>Topic: {room.topic}</div>}
@@ -58,9 +75,11 @@ function AssignedCohort({ room, memberCount, onJoin }: { room: Room; memberCount
               inside the Session tab. Showing members here keeps this in step with the roster below. */}
           <div style={{ fontSize: 12, color: t.MUTED }}>{memberCount} member{memberCount !== 1 ? "s" : ""}</div>
         </div>
-        <button type="button" onClick={onJoin} style={{ padding: "10px 20px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-          Join Session
-        </button>
+        {ended ? null : (
+          <button type="button" onClick={onJoin} style={{ padding: "10px 20px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            Join Session
+          </button>
+        )}
       </div>
     </div>
   );
@@ -218,6 +237,7 @@ export function PeerProgrammingCohortsTab({
   // True member count for the viewer's own cohort, from the cohort summary (the roster `members` is
   // capped for display, so it is not a reliable count). Falls back to the roster length.
   const myCohortMemberCount = cohorts.find((c) => c.id === myCohortId)?.memberCount ?? members.length;
+  const showFeedback = shouldShowFeedback(room, myCohortId);
   return (
     <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
@@ -259,7 +279,7 @@ export function PeerProgrammingCohortsTab({
           isAdmin={isAdmin}
         />
 
-        <FeedbackForm {...feedback} />
+        {showFeedback ? <FeedbackForm {...feedback} /> : null}
       </div>
     </div>
   );
