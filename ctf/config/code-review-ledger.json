@@ -116,20 +116,38 @@
       "partial": false
     },
     {
+      "name": "commons",
+      "type": "plugin",
+      "lastReviewedAt": "2026-08-11T07:43:20.794Z",
+      "lastRunIssues": 4,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/app/api/commons",
+        "ctf/packages/web/lib/commons"
+      ]
+    },
+    {
       "name": "community-shell",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-09T07:27:54.981Z",
+      "lastRunIssues": 6,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/components/community-shell"
+      ]
     },
     {
       "name": "concierge",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-07T07:49:14.262Z",
+      "lastRunIssues": 3,
       "cursor": 0,
-      "partial": false
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/concierge"
+      ]
     },
     {
       "name": "contributions",
@@ -309,18 +327,6 @@
       ]
     },
     {
-      "name": "commons",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-25T08:27:58.413Z",
-      "lastRunIssues": 6,
-      "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/commons",
-        "ctf/packages/web/lib/commons"
-      ]
-    },
-    {
       "name": "identity",
       "type": "module",
       "lastReviewedAt": "2026-07-24T09:00:54.256Z",
@@ -452,6 +458,17 @@
         "ctf/packages/web/app/api/peer-programming",
         "ctf/packages/web/components/peer-programming",
         "ctf/packages/web/lib/peer-programming"
+      ]
+    },
+    {
+      "name": "platform",
+      "type": "module",
+      "lastReviewedAt": "2026-08-10T08:10:26.615Z",
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false,
+      "paths": [
+        "ctf/packages/web/lib/platform"
       ]
     },
     {
