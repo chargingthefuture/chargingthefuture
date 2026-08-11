@@ -1,1167 +1,774 @@
 # Commons (Feed & Announcements) — Manual Test Script
-> Generated from the feature inventory and command/access/audit contracts for the `feed` plugin; this is the runnable checklist for a real-device session. To regenerate: `pnpm --dir ctf test-script:generate -- feed`
+
+> Generated from the feature inventory and contracts for the `feed` plugin; this is the runnable checklist for a human tester on a real device. To regenerate: `pnpm --dir ctf test-script:generate -- feed`
 
 | Field | Value |
 |---|---|
 | **Plugin** | Commons (Feed & Announcements) |
-| **Visibility** | Member |
+| **Visibility** | member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop + mobile-responsive browser); Android surface was removed 2026-07-20 — web only |
+| **Surfaces** | web (desktop + mobile-responsive) — Android surface removed 2026-07-20 |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md` |
-| **Generated** | 2026-07-25 (commit 95cb98b2) |
+| **Generated** | 2026-08-11 (commit 9f75d551a) |
 
 ---
 
 ## How to run this
 
-- Mark each result ✅ pass / ❌ fail / ⛔ blocked.
-- A ❌ becomes a row in the Bug Reporting plugin — record case ID, surface, steps to reproduce, and actual result.
-- Run **Core smoke** at the start of every session before any other cases.
-- "Web" means a desktop or mobile-responsive browser; there is no Android surface for this plugin.
+- Mark each surface checkbox as you go: ✅ pass / ❌ fail / ⛔ blocked
+- A ❌ on any check becomes a row in the Bug Reporting plugin — record the case ID, surface, steps, and what you actually saw
+- Run **Core smoke** at the start of every test session before anything else
+- The seed command must complete without errors before you start; if it errors, stop and fix it first
 
 ---
 
 ## Core smoke (every session)
 
-1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. web ☐
+**CS-1. Commons loads for a signed-in member**
+Open the app as a seeded member. Navigate to the home/Hub page.
+Confirm the Commons chat area is visible, contains at least one message, and does not show an unhandled error.
+web ☐
 
-2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
+**CS-2. Timeline has content across all three channels**
+Still signed in as a member. In the Commons, confirm you can see items that came from at least two different types: an announcement (has a shield/official badge or is from the operator), a community post (from a member), or a Q&A item.
+web ☐
 
-3. **Admin page loads.** Sign in as an admin. Navigate to `/admin/feed-announcements`. The page renders with a feed config panel and an announcement list. No 404 or 500. web ☐
+**CS-3. Admin surface loads**
+Sign in as an admin. Navigate to `/admin/feed-announcements`.
+Confirm the page header reads **Commons: Feed & Announcements Admin** (not "Feed Announcements" or "Feed & Announcements Admin" without the "Commons:" prefix).
+web ☐
 
-4. **`/apps/feed-announcements` is gone.** With any authenticated session navigate to `/apps/feed-announcements`. Expect a 404 — the member-facing app shell was removed. web ☐
-
-5. **Public community route works unauthenticated.** Sign out completely. `GET /api/feed/public/community` returns `{ isPublic: true, posts: [...] }` (or `isPublic: false` if the community channel is disabled in config). No authentication error. web ☐
+**CS-4. Signed-out public view**
+Sign out completely. Navigate to the home page.
+Confirm community posts are visible to a signed-out visitor. Confirm you cannot post without signing in.
+web ☐
 
 ---
 
 ## Member walkthrough
 
-### FD-1 — Timeline loads across all channels
-**Role:** member | **Surface:** web
+### FD-1. Channel filter — all / announcements / questions / community
 
-**Precondition:** Signed in as a member. Seed has run (`pnpm --dir ctf seed:demo`).
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member. At least one seeded announcement, one question, and one community post exist.
 
 **Steps:**
-1. Navigate to the Commons home.
-2. Observe the default feed — all channels.
-3. Use the channel filter to switch to **Announcements**.
-4. Switch to **Questions**.
-5. Switch to **Community**.
-6. Switch back to **All**.
+1. Go to the Commons / Hub home.
+2. If channel filter tabs or controls are visible, select "Announcements only."
+3. Confirm only announcement-type items appear.
+4. Select "Questions."
+5. Confirm only Q&A items appear.
+6. Select "Community."
+7. Confirm only peer community posts appear.
+8. Select "All."
+9. Confirm items from multiple types appear together.
 
-**Expected:**
-- Default view shows items from multiple channel types (announcement cards, question cards, community posts) in reverse-chronological order.
-- Each filter shows only items of that type; no items from other channels appear.
-- API check (optional): `GET /api/feed/items?mentions=me` returns only items that @-mention the
-  signed-in caller (same behavior as the Hub "@ Mentions" toggle); any other `mentions` value
-  returns 400.
-- Switching back to All restores the blended view.
-- No loading spinner stays permanently; empty state message shows if a channel has no items.
+**Expected:** Each filter shows only the matching item type. "All" shows everything. No filter crashes the page or shows an error state.
 
 **Result:** web ☐
 
 ---
 
-### FD-1b — Member block hides a person's Commons posts and replies (added 2026-08-05)
+### FD-2. Mark a feed item as read
 
-**Role:** two members (A and B) · **Surfaces:** web
-
-**Precondition:** B has authored at least one community post and one reply on someone else's post. A blocks B (from B's Directory profile or `/account/blocks`).
-
-**Steps:**
-1. As A, open the Commons and scroll the timeline.
-2. As A, open a post that B replied to.
-3. As B, open the Commons and look for A's posts.
-4. As an admin, open the Commons moderation admin and check the full post list.
-
-**Expected:**
-- Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
-- A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
-- Step 4: admin/moderation views are never filtered.
-- Neither member gets any signal that a block exists.
-
-**Result:** web ☐
-
----
-
-### FD-2 — Announcement card renders correctly
-**Role:** member | **Surface:** web
-
-**Precondition:** At least one published announcement exists (seed provides this).
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member. At least one unread feed item is visible.
 
 **Steps:**
-1. In the Announcements channel (or All), locate an announcement card.
-2. Confirm the card uses the accent color `#84CC16` and Lucide icons (Megaphone or equivalent), not emoji icons.
-3. Confirm there is no "GetStream ⚡" badge anywhere on the card.
-4. If the announcement has a linked plugin slug, confirm the card body contains an "Open \<Plugin\>:" link pointing to `https://app.chargingthefuture.com/apps/<slug>`.
-5. Confirm the name on the card reads **Farah** — not "Survivor Hub" — and that the shield "Official" badge still sits beside it (added 2026-08-09). The name says who wrote it, the badge says it is official; both must be present.
-6. Confirm the round avatar on the card reads **F**, the first letter of that name, and that no card anywhere in the stream shows the old fixed **SH** glyph. Scroll a peer post into view and confirm its avatar is likewise the first letter of its author's handle.
-
-**Expected:**
-- Card matches the design spec: `#84CC16` accent, Lucide icons, no badge.
-- Linked-plugin line is present when a plugin is attached; absent when no plugin is linked.
-
-**Result:** web ☐
-
----
-
-### FD-3 — Mark a feed item read
-**Role:** member | **Surface:** web
-
-**Precondition:** At least one unread feed item exists.
-
-**Steps:**
-1. Open the Commons and find an unread feed item (visual indicator or default state).
-2. Interact with it in a way that triggers read-marking (open, click, or scroll to it — whatever the UI exposes).
+1. Identify a feed item that is visually unread (bold, dot, or highlighted — whatever the unread indicator is).
+2. Open or click it so the app registers a read event.
 3. Reload the page.
+4. Find the same item.
 
-**Expected:**
-- After reload the item no longer shows as unread.
-- No error is thrown; the action is idempotent (triggering it again on the same item does not error).
-- If you inspect the network call, the read-mark response carries a `readAt` timestamp — the value the
-  database stored, not a client guess. The announcement read-mark endpoint
-  (`POST /api/announcements/:id/read`) reports its stored `readAt` the same way.
+**Expected:** After reload the item no longer shows the unread indicator. The action is idempotent — doing it twice does not cause an error.
 
 **Result:** web ☐
 
 ---
 
-### FD-4 — Dismiss an announcement
-**Role:** member | **Surface:** web
+### FD-3. Dismiss an announcement
 
-**Precondition:** At least one published announcement is visible and not yet dismissed.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member. At least one published announcement is visible in the feed.
 
 **Steps:**
-1. Find a published announcement in the feed.
-2. Use the dismiss control on the card (X button or equivalent).
-3. Confirm the card disappears from the feed.
+1. Find a published announcement card.
+2. Click/tap the dismiss control (X, "dismiss", or equivalent).
+3. Confirm the announcement disappears from view.
 4. Reload the page.
+5. Confirm the announcement does not reappear.
 
-**Expected:**
-- The announcement is removed from the timeline immediately.
-- After reload it remains hidden (dismissal is persisted per user).
-- Every announcement has a dismiss control — there is no mandatory/non-dismissable announcement.
-- (API-level, if inspecting the response) the `dismissedAt` value in the dismiss response is the
-  timestamp the database stored, not one the route computed — it matches the persisted row.
+**Expected:** The announcement is gone after dismiss and stays gone after reload. No 409 "cannot dismiss" error appears — every announcement is dismissable.
 
 **Result:** web ☐
 
 ---
 
-### FD-5 — Submit a question (LLM Q&A channel)
-**Role:** member | **Surface:** web
+### FD-4. First-visit notice appears once, then is gone
 
-**Precondition:** Signed in as a member.
+**Role:** member (a fresh member who has not yet seen the notice)  
+**Surfaces:** web  
+**Precondition:** Use a seeded member account that has not visited the Commons before, or clear the `feed_commons_notice_seen` entry for the test account. If neither is practical, skip and note as blocked.
 
 **Steps:**
-1. Find the question submission form in the Questions channel or Commons.
-2. Type a natural-language question, e.g., "Find housing within 10 miles of 90210".
-3. Optionally select a category (housing, services, general, safety, or benefits).
-4. Submit the question.
+1. Sign in as that member and navigate to the Commons.
+2. Confirm a first-visit notice card appears above or near the message list. It should be short — something about the room being public and the assistant not being a substitute for professional help.
+3. Dismiss or acknowledge the notice.
+4. Reload the page.
+5. Confirm the notice does not appear again.
 
-**Expected:**
-- The question appears in the Questions channel feed as a new item.
-- An LLM-generated answer card appears below or inline, showing a body, confidence score, and source attribution (model ID visible or shown on demand).
-- No raw error is shown to the user.
+**Expected:** Notice appears once on first visit. It is compact — it does not push the message list off screen. After dismissal it does not reappear on reload.
 
 **Result:** web ☐
 
 ---
 
-### FD-6 — Rate an LLM answer
-**Role:** member | **Surface:** web
+### FD-5. Post a community message (member cap)
 
-**Precondition:** At least one question with an LLM-generated answer is visible (from seed or FD-5).
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member.
 
 **Steps:**
-1. Locate a question card with an LLM-generated answer.
-2. Click the "Helpful" rating option.
-3. Click the "Not Helpful" option on a different answer (or toggle it on the same one).
-4. Click "Flag" on a third answer if available.
+1. Go to the Commons composer.
+2. Type a message under 1,200 characters with no HTML tags.
+3. Submit it.
+4. Confirm the message appears in the chat.
+5. Now type a message that is longer than 1,200 characters (paste repeated text to go over).
+6. Confirm the composer shows a character counter in the last 150 characters, and past the limit shows **exactly how many characters to remove**.
+7. Confirm the send button is disabled while over the limit.
+8. Try to force-submit if possible.
 
-**Expected:**
-- Each rating registers without error.
-- The UI reflects the selected rating (button state, count, or confirmation).
-- Rating the same answer a second time does not duplicate or error — idempotent per user per answer.
+**Expected:** Short post succeeds and appears immediately. Over-limit: counter appears, send button is disabled, and if a submit is forced the API returns a 400 that names the overage rather than a generic error. The typed text is NOT destroyed on a failed send.
 
 **Result:** web ☐
 
 ---
 
-### FD-7 — Create a community post
-**Role:** member | **Surface:** web
+### FD-6. Post with raw HTML is rejected
 
-**Precondition:** Signed in as a member.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member.
 
 **Steps:**
-1. Open the Commons community channel or the Hub home.
-2. Type a community post in the composer (fewer than 1,200 characters, no HTML tags, no more than 3 links).
-3. Submit the post.
-4. Confirm the post appears immediately in the feed under the author's handle (`@username` or `user-<first 8 of user id>` if no username is set).
-5. Now paste a post that is exactly 1,201 characters long.
-6. Watch the line under the composer as you approach and pass the limit, then press send.
-7. Delete one character and check the line again.
+1. In the Commons composer, type a message containing `<b>bold</b>`.
+2. Submit it.
 
-**Expected:**
-- The valid post appears in the feed attributed to the correct member handle.
-- From roughly 1,050 characters the composer shows "N characters left"; past 1,200 it turns red and
-  reads **"1 character over the limit — remove it to post."** (at 1,201), naming the exact number to
-  cut rather than a raw "1,201 / 1,200" count.
-- The send button is **disabled** while over, so the post cannot be attempted at all.
-- **The message is never lost.** If a send does fail (force one by shrinking the cap, or by going
-  offline), the text comes back into the composer rather than being cleared — unless you have already
-  started typing something new, which is never overwritten.
-- Indentation and double spaces do not count against you: the counter measures the same
-  whitespace-normalized text the server measures, so a post padded with spaces or blank lines is not
-  falsely reported as over.
-- As an **admin**, the cap is 4,000 and the counter reflects that — it must not warn at 1,200.
-- An `@comic` question shows no counter (it goes to the AI Assistant on a different route with its
-  own limit).
+**Expected:** The server rejects the post with an error. The post does not appear in the Commons. The composer text is preserved so the member can edit and resubmit.
 
 **Result:** web ☐
 
 ---
 
-### FD-8 — Member post with raw HTML is blocked
-**Role:** member | **Surface:** web
+### FD-7. Edit a post (delete + repost flow)
 
-**Precondition:** Signed in as a member.
+**Role:** member (author)  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member who has at least one community post visible in the Commons.
 
 **Steps:**
-1. In the community composer, type a message containing `<b>bold</b>`.
-2. Submit.
+1. Find your own post in the Commons.
+2. Click/tap the **Edit** button next to it.
+3. Confirm the post's text is loaded into the composer.
+4. Confirm the original post is removed from the timeline.
+5. Modify the text slightly and send.
+6. Confirm the new post appears in the Commons with the updated text and a new timestamp.
+7. Confirm there is no inherited reaction count or reply thread on the new post.
 
-**Expected:**
-- The post is rejected. The UI shows a moderation or validation error. No HTML is stored or rendered.
+**Expected:** Edit loads the old text, removes the old post, and a fresh send creates a new post. The new post has no reactions or replies from the deleted post.
 
 **Result:** web ☐
 
 ---
 
-### FD-9 — Community post preserves paragraph breaks
-**Role:** member | **Surface:** web
+### FD-8. Delete your own post
 
-**Precondition:** Signed in as a member.
+**Role:** member (author)  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member who has at least one community post.
 
 **Steps:**
-1. In the community composer, type a two-paragraph message with a blank line between paragraphs, e.g.:
-   ```
-   First paragraph.
+1. Find your own community post.
+2. Click/tap **Delete**.
+3. Confirm the post disappears from the timeline.
+4. Reload.
+5. Confirm the post is not visible to you or to another member account (if you can switch).
 
-   Second paragraph.
-   ```
-2. Submit the post.
-3. Observe the post as rendered in the feed.
-
-**Expected:**
-- The rendered post shows two distinct paragraphs with visible spacing or line breaks between them — it does not collapse into one run-on line.
+**Expected:** Post is gone after delete and does not reappear. Any replies that were under the post are also gone.
 
 **Result:** web ☐
 
 ---
 
-### FD-10 — Reply to a community post
-**Role:** member | **Surface:** web
+### FD-9. Cannot delete another member's post
 
-**Precondition:** At least one community post exists.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as member A. Member B has a community post visible.
+
+**Steps:**
+1. Find a community post authored by someone else.
+2. Confirm there is no Delete or Edit button on that post for you.
+3. If you can craft a direct API call, attempt `DELETE /api/commons/messages/<their-postId>` with your credentials.
+
+**Expected:** No delete affordance appears on another member's post. A direct API call returns 403.
+
+**Result:** web ☐
+
+---
+
+### FD-10. Reply to a community post
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member. At least one community post exists.
 
 **Steps:**
 1. Find a community post in the Commons.
-2. Use the reply control to post a threaded reply.
-3. Confirm the reply appears inline under the original post.
+2. Use the reply control to reply to it.
+3. Type a short reply body and submit.
+4. Confirm the reply appears threaded under or near the original post.
 
-**Expected:**
-- Reply is stored and shown under the correct parent post.
-- The reply is attributed to the replying member.
-- No error is thrown.
+**Expected:** Reply is created, appears in the thread, and is attributed to your member handle. No error.
 
 **Result:** web ☐
 
 ---
 
-### FD-11 — Signal-style quoted reply
-**Role:** member | **Surface:** web
+### FD-11. Emoji reaction — add, verify, toggle off
 
-**Precondition:** At least one community post exists. The UI exposes a "Quote reply" or similar action.
-
-**Steps:**
-1. In the Commons chat, select the quote/reply action on an existing community post.
-2. Type a response in the composer and submit.
-3. Observe the new post in the feed.
-
-**Expected:**
-- The new post shows a quoted snippet of the original post (author handle + ~120-char preview) above the reply body.
-- Tapping the quoted snippet scrolls to the original post and briefly highlights it. If the original is outside the loaded window, the tap is a no-op but the snippet still shows.
-
-**Result:** web ☐
-
----
-
-### FD-12 — Delete your own community post
-**Role:** member | **Surface:** web
-
-**Precondition:** Signed in as a member with at least one of their own community posts visible.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member. At least one community post by another member exists (you cannot react to your own post).
 
 **Steps:**
-1. Find one of your own posts in the Commons.
-2. Use the Delete control.
-3. Confirm the post disappears from the feed.
-4. Reload the page.
-
-**Expected:**
-- The post and its replies and reactions are removed from the feed.
-- After reload the post is gone.
-- Attempting to delete another member's post shows a 403 error or no delete option is presented.
-
-**Result:** web ☐
-
----
-
-### FD-13 — Edit a community post (delete + repost)
-**Role:** member | **Surface:** web
-
-**Precondition:** Signed in as a member with at least one of their own community posts visible.
-
-**Steps:**
-1. Find one of your own posts in the Commons.
-2. Click the **Edit** button next to Delete.
-3. Confirm the post's text is loaded back into the composer.
-4. Confirm the original post is deleted (disappears from the feed).
-5. Modify the text and submit.
-
-**Expected:**
-- The original post is removed immediately when Edit is clicked.
-- The composer is pre-filled with the original text.
-- Submitting creates a new post (new timestamp, no inherited reactions or replies).
-- Any active quote/reply target is cleared when Edit is activated.
-
-**Result:** web ☐
-
----
-
-### FD-14 — React to a community post
-**Role:** member | **Surface:** web
-
-**Precondition:** At least one community post exists that was not created by the signed-in member.
-
-**Steps:**
-1. Find a community post by another member.
+1. Find a community post authored by someone else.
 2. Open the reaction picker.
-3. Confirm the picker shows exactly these emojis: 👍 ❤️ 😂 🎉 🙏 😢 👋 (seven total, in that order).
-4. Tap 👍 to react.
-5. Confirm the 👍 chip appears with a count of 1 and is highlighted.
-6. Tap 👍 again to toggle it off.
-7. Confirm the chip count returns to 0 (or the chip is removed).
-8. Try to submit an emoji not in the set (e.g., 🚀) via the API directly (`POST /api/commons/messages/:postId/reactions` with `{ emoji: "🚀" }`).
+3. Confirm the available emojis are exactly: 👍 ❤️ 😂 🎉 🙏 😢 👋 (seven total).
+4. Click 👍.
+5. Confirm the reaction count on that post increases by 1 and the 👍 appears highlighted/selected ("reacted by me").
+6. Click 👍 again.
+7. Confirm the reaction is removed (count decreases, highlight gone).
 
-**Expected:**
-- Picker shows exactly 7 emojis in the specified order.
-- First tap adds the reaction; second tap removes it.
-- The out-of-set emoji request returns 400.
+**Expected:** Reaction adds on first click, removes on second click (toggle). Emoji outside the set of seven is not offered.
 
 **Result:** web ☐
 
 ---
 
-### FD-15 — Cannot react to your own post
-**Role:** member | **Surface:** web
+### FD-12. Reaction on announcement
 
-**Precondition:** Signed in as a member with at least one of their own community posts visible.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** At least one published announcement is in the Commons.
 
 **Steps:**
-1. Find one of your own community posts.
-2. Attempt to react to it (open picker and tap an emoji, or call `POST /api/commons/messages/:postId/reactions`).
+1. Find a published announcement card.
+2. Open the reaction picker on it.
+3. Add ❤️.
+4. Confirm the reaction appears.
+5. Toggle it off.
 
-**Expected:**
-- The reaction is rejected. The UI does not show the picker on your own post, or the server returns an error (400/403) if called directly.
+**Expected:** Reactions work on announcements the same as on community posts, using the same fixed emoji set.
 
 **Result:** web ☐
 
 ---
 
-### FD-16 — Unread "New messages" divider
-**Role:** member | **Surface:** web
+### FD-13. Reply to an announcement
 
-**Precondition:** The seeded data includes community posts. Sign out and sign back in, or open the Commons from a fresh session.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** A published announcement exists.
 
 **Steps:**
-1. Open the Commons hub home chat.
-2. Observe whether a "New messages" divider appears above posts that arrived since the last visit.
-3. Scroll past the divider.
-4. Close and reopen the Commons.
+1. Find a published announcement in the Commons.
+2. Use the reply control to reply to it.
+3. Submit a short reply.
+4. Confirm the reply appears threaded under the announcement.
+5. Confirm the reply is attributed to your handle.
 
-**Expected:**
-- A single "New messages" divider appears before the first post newer than the last-seen marker.
-- After viewing, the divider does not reappear on the next open (the marker has advanced).
-- If the divider fails to render, the chat still loads and functions normally (best-effort).
+**Expected:** Reply posts successfully and threads under the announcement. No error.
 
 **Result:** web ☐
 
 ---
 
-### FD-19 — Edit and delete your own reply on an announcement (added 2026-08-10)
-**Role:** member | **Surface:** web
+### FD-14. Edit your own announcement reply
 
-**Precondition:** Signed in as a member, on the Commons, with an official announcement visible.
+**Role:** member (author of an announcement reply)  
+**Surfaces:** web  
+**Precondition:** You have an existing reply on an announcement.
 
 **Steps:**
-1. Open the announcement's reply thread and post a reply.
-2. On your own reply, use **Edit**. Change the words and click **Save**.
-3. Reload the Commons and reopen the thread.
-4. Open another member's reply in the same thread and look for Edit / Delete.
-5. On your own reply, use **Delete** and accept the confirmation.
-6. Reload the Commons and reopen the thread.
+1. Find your reply on an announcement.
+2. Click **Edit** on your reply.
+3. Change the text.
+4. Save.
+5. Confirm the reply shows the updated text and an "edited" mark.
 
-**Expected:**
-- Step 2: the reply is replaced by an editor holding the original words; saving shows the new words
-  and an "edited" mark next to the time.
-- Step 3: the new words and the "edited" mark are still there — the change was saved, not just shown.
-- Step 4: no Edit or Delete on someone else's reply. Calling
-  `PATCH /api/announcements/<id>/replies/<their-reply-id>` by hand is rejected with 403 and the
-  message "You can only change your own replies."
-- Step 5/6: the reply is gone for everyone and the thread's reply count drops by one.
+**Expected:** Edit saves the new text, marks the reply as edited, and does not change the author attribution.
 
 **Result:** web ☐
 
 ---
 
-### FD-17 — Public community view (signed out)
-**Role:** unauthenticated | **Surface:** web
+### FD-15. Delete your own announcement reply
 
-**Precondition:** Signed out completely.
+**Role:** member (author of an announcement reply)  
+**Surfaces:** web  
+**Precondition:** You have an existing reply on an announcement.
 
 **Steps:**
-1. Navigate to the Commons home (or call `GET /api/feed/public/community`).
-2. Observe what is shown.
-3. Send more than 30 requests to `GET /api/feed/public/community` within one minute from the same IP.
+1. Find your reply.
+2. Click **Delete**.
+3. Confirm the reply is removed from the thread.
 
-**Expected:**
-- Community posts are visible without signing in (`isPublic: true` and a `posts` array).
-- **No** announcements, AI answers, replies, per-user state, or author user IDs appear in the response.
-- Authors are anonymized as "Community member" (no real handle or user ID).
-- After 30 requests per minute the route returns 429 with a `Retry-After` header.
+**Expected:** Reply disappears. This is a hard delete (your own words, your own decision). The announcement itself remains.
 
 **Result:** web ☐
 
 ---
 
-### FD-18 — Signed-in member handle attribution
-**Role:** member | **Surface:** web
+### FD-16. Submit a Q&A question
 
-**Precondition:** Two member accounts: one with a username set, one without.
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member.
 
 **Steps:**
-1. Sign in as the member **without** a username.
+1. Find the question submission UI (a compose or ask field in the Questions channel).
+2. Type a natural-language question, e.g. "Find me housing near 90210."
+3. Optionally select a category (housing, services, general, safety, benefits).
+4. Submit.
+5. Confirm the question appears in the Questions feed.
+
+**Expected:** Question is created and visible. If an LLM answer is generated, it appears inline with a confidence score and source attribution. No error.
+
+**Result:** web ☐
+
+---
+
+### FD-17. Rate an answer — helpful / not helpful / flagged
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** At least one Q&A answer exists in the seeded data.
+
+**Steps:**
+1. Find an answer in the Questions feed.
+2. Click/tap **Helpful**.
+3. Confirm the rating is recorded (button state changes or count updates).
+4. Find another answer and click **Flagged**.
+5. Confirm the flag is recorded.
+
+**Expected:** All three rating options are available. Ratings submit without error. A flagged answer registers a flag count visible to admins (verified in FD-A6).
+
+**Result:** web ☐
+
+---
+
+### FD-18. Quoted reply (Signal-style) and tap-to-jump
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** At least one community post exists.
+
+**Steps:**
+1. In the Commons, use the reply/quote control on a community post to create a quoted reply.
+2. Confirm the reply shows a snippet of the quoted post above the reply body.
+3. Click/tap the quoted snippet.
+4. Confirm the view scrolls to or highlights the original post (if it is in the loaded window).
+
+**Expected:** Quote snippet appears in the reply. Tapping it jumps to the original. If the original is outside the loaded window, the tap is a no-op (the snippet still shows the text — this is acceptable and not a bug).
+
+**Result:** web ☐
+
+---
+
+### FD-19. Paragraph breaks are preserved
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Signed in as a seeded member.
+
+**Steps:**
+1. In the Commons composer, type a message with two clear paragraphs separated by pressing Enter twice.
+2. Submit.
+3. Confirm the message renders with the paragraph break intact — not as one run-on line.
+
+**Expected:** Multi-paragraph post renders with visible line breaks. The `white-space: pre-wrap` rule applies so content does not collapse.
+
+**Result:** web ☐
+
+---
+
+### FD-20. Signed-out public read of community posts
+
+**Role:** unauthenticated visitor  
+**Surfaces:** web  
+**Precondition:** `feed_render_config.is_public` is TRUE (the default). At least one community post exists.
+
+**Steps:**
+1. Sign out completely.
+2. Navigate to the home page.
+3. Confirm community posts are visible without signing in.
+4. Confirm no per-user state is shown (no read indicators, no dismissals, no author user IDs).
+5. Confirm announcements and AI answers are NOT shown in the signed-out view (community posts only).
+6. Confirm there is no compose/post input for a signed-out visitor.
+
+**Expected:** Signed-out visitor sees community posts only (not announcements or Q&A answers), with no author IDs, no per-user state, and no ability to post.
+
+**Result:** web ☐
+
+---
+
+### FD-21. Member handle display — named vs unnamed
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** One seeded member has a username set; another does not.
+
+**Steps:**
+1. Sign in as a member with a username.
 2. Post a community message.
-3. Observe the author label on the post.
-4. Sign in as the member **with** a username.
+3. Confirm the post is attributed to your username.
+4. Sign in as a member without a username.
 5. Post a community message.
-6. Observe the author label on the post.
+6. Confirm the post is attributed to a stable pseudonym (format `user-<first 8 of user id>`), not to the generic "Community member" label.
+7. Confirm the Commons shows a nudge prompting the unnamed member to set a username.
 
-**Expected:**
-- The member without a username is shown as `user-<first 8 chars of their user ID>`, not "Community member".
-- The member with a username is shown as `@<username>`.
-- A nudge to set a username appears in the Commons for the member without one.
+**Expected:** Named member → username shown. Unnamed member → stable `user-XXXXXXXX` handle shown. No two unnamed members collapse to the same label.
 
 **Result:** web ☐
 
 ---
 
-### Account deletion clears reactions and Hub read-state
+### FD-22. Blocked member's posts do not appear
 
-**Expected:** Deleting the account removes the member's post reactions, announcement reactions, and
-`feed_commons_last_seen` row along with the per-user state the script already covers.
-
-### FD-25 — Account deletion removes the posts themselves, not just the author's name
-
-**Role:** member (or an admin on a throwaway account) | **Surface:** web
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Member A has blocked Member B (or B has blocked A). Member B has community posts in the Commons.
 
 **Steps:**
-1. From the account under test, post two messages in the Commons and note their exact text.
-2. Delete the Commons data from Account & Data (or delete the whole account, on a throwaway
-   account).
-3. Reload the Commons in a signed-in session and scroll to where those messages were.
-4. Run the deletion a second time and reload again.
+1. Sign in as Member A.
+2. Navigate to the Commons.
+3. Confirm Member B's community posts and replies are not visible.
+4. Confirm announcements and AI Q&A items still appear normally.
 
-**Expected:**
-- The message text is **gone**. It must not still be on screen under a substituted author name —
-  in particular not the fallback handle `user-hub-syst`, which is what a leftover timeline copy
-  with no author resolves to.
-- Official announcements from the operator are untouched and still read normally.
-- Replies and reactions that hung off those messages are gone with them.
-- The second deletion finds nothing left to remove and changes nothing on screen.
+**Expected:** Blocked member's posts and replies are hidden. Announcements and AI items (which have no member author) are unaffected.
 
 **Result:** web ☐
+
+---
+
+### FD-23. "New messages" divider appears after being away
+
+**Role:** member  
+**Surfaces:** web  
+**Precondition:** Member has previously visited the Commons. New posts have been added since their last visit (use the seed data or post as a second account).
+
+**Steps:**
+1. Sign in as a member who has been away.
+2. Navigate to the Commons.
+3. Confirm a "New messages" divider appears somewhere in the message list, separating older messages from ones posted since the last visit.
+
+**Expected:** A single divider appears at the right position. If no new messages exist, no divider appears. A read/write error on the `feed_commons_last_seen` table must not break the chat (best-effort).
+
+**Result:** web ☐
+
+---
 
 ## Admin walkthrough
 
-### FD-A1 — Admin page renders with real data
-**Role:** admin | **Surface:** web
+### FD-A1. Admin surface header and landing tile name
 
-**Precondition:** Signed in as an admin. Seed has run.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** Signed in as admin.
 
 **Steps:**
-1. Navigate to `/admin/feed-announcements`. Reach it from `/admin` — the tile is named
-   **Commons: Feed & Announcements**.
-2. Observe the header. It reads **Commons: Feed & Announcements Admin** and includes an icon.
-3. Confirm the feed config panel shows current values from the database (render mode, enabled channels, `is_public` flag).
-4. Confirm an announcement list is shown.
+1. Navigate to the `/admin` landing page.
+2. Find the tile for this service.
+3. Confirm the tile is named **Commons: Feed & Announcements**.
+4. Click it and confirm the page header reads **Commons: Feed & Announcements Admin**.
+5. Confirm a separate tile named **Commons Moderation** also exists on the landing page.
 
-**Expected:**
-- Page loads with no placeholder or mock data.
-- Config values reflect what the seed inserted.
-- Announcement list is populated.
+**Expected:** Tile name matches "Commons: Feed & Announcements" exactly. Page header matches "Commons: Feed & Announcements Admin" exactly. Two distinct Commons admin tiles are present.
 
 **Result:** web ☐
 
 ---
 
-### FD-A2 — Create an announcement draft
-**Role:** admin | **Surface:** web
+### FD-A2. Create, edit, and publish an announcement draft
 
-**Precondition:** Signed in as an admin on `/admin/feed-announcements`.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** Signed in as admin. On `/admin/feed-announcements`.
 
 **Steps:**
-1. Fill in the "New announcement" form with a title and body.
-2. Optionally select a linked plugin from the picker.
-3. Submit (POST).
-4. Confirm the new draft appears in the announcement list with status **draft**.
+1. Click **New announcement** (or equivalent create action).
+2. Enter a title and body text. Include two paragraphs in the body.
+3. Save as draft.
+4. Confirm the draft appears in the announcement list with status "draft."
+5. Click **Edit** on the draft.
+6. Change the title text.
+7. Click **Save changes**.
+8. Confirm the list now shows the updated title, still in "draft" status.
+9. Click **Publish** on the draft.
+10. Confirm the status changes to "published."
+11. Navigate to the Commons as a member (or open a second session) and confirm the announcement appears in the Commons feed.
 
-**Expected:**
-- Draft is created and listed with status `draft`.
-- If a linked plugin was selected, it is shown in the list row.
-- No 503 or CSRF error.
-- The form does **not** reset on a failed submit — it retains the typed content.
+**Expected:** Draft create, edit, and publish all succeed. Published announcement appears in the Commons. Paragraph breaks in the body are preserved. The Edit button appears on drafts only — a published announcement does not show an Edit button.
 
 **Result:** web ☐
 
 ---
 
-### FD-A3 — Edit a draft announcement
-**Role:** admin | **Surface:** web
+### FD-A3. Archive a published announcement
 
-**Precondition:** At least one draft announcement exists (from FD-A2 or seed).
-
-**Steps:**
-1. On `/admin/feed-announcements`, find a draft row.
-2. Click the **Edit** action.
-3. Confirm the form switches to "Edit announcement" with a "Save changes" button and a "Cancel" button, pre-filled with the draft's title and body.
-4. Change the title text.
-5. Click "Save changes".
-6. Confirm the draft row updates with the new title.
-7. Click Edit again and then Cancel — confirm edit mode is cleared.
-
-**Expected:**
-- Edit is offered on draft rows only (not published or archived).
-- Save calls PUT and the list reflects the update.
-- Cancel returns to the normal create form without saving.
-
-**Result:** web ☐
-
----
-
-### FD-A4 — Publish a draft announcement
-**Role:** admin | **Surface:** web
-
-**Precondition:** At least one draft announcement exists.
-
-**Steps:**
-1. Find a draft in the announcement list.
-2. Click Publish.
-3. Confirm the announcement status changes to **published** in the list.
-4. As a member (open a second browser window or incognito), navigate to the Commons and check the Announcements channel.
-
-**Expected:**
-- Status in admin list changes to `published`.
-- The announcement appears in the member-visible Announcements channel (not silently excluded).
-- If a linked plugin slug was set, the announcement body in the member feed contains "Open \<Plugin\>: https://app.chargingthefuture.com/apps/\<slug\>".
-
-**Result:** web ☐
-
----
-
-### FD-A5 — Archive a published announcement
-**Role:** admin | **Surface:** web
-
+**Role:** admin  
+**Surfaces:** web  
 **Precondition:** At least one published announcement exists.
 
 **Steps:**
-1. Find a published announcement in the admin list.
-2. Click Archive.
-3. Confirm the status changes to **archived** in the list.
-4. As a member, refresh the Commons — confirm the archived announcement is no longer visible.
+1. On `/admin/feed-announcements`, find a published announcement.
+2. Click **Archive**.
+3. Confirm the status changes to "archived."
+4. Check the Commons as a member and confirm the archived announcement is no longer visible.
 
-**Expected:**
-- Status changes to `archived`.
-- Archived announcement disappears from the member feed.
+**Expected:** Archive succeeds. Announcement disappears from the member-facing Commons.
 
 **Result:** web ☐
 
 ---
 
-### FD-A6 — Admin cannot edit a non-draft announcement
-**Role:** admin | **Surface:** web
+### FD-A4. Attach a plugin link to an announcement
 
-**Precondition:** At least one published or archived announcement exists.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one non-admin-only plugin exists in the registry.
 
 **Steps:**
-1. Find a published or archived row in the admin announcement list.
-2. Confirm there is no **Edit** action on that row (only draft rows show Edit).
+1. Create a new announcement draft.
+2. In the "Link a plugin" picker, select a visible plugin (e.g. Chyme or Skills Economy).
+3. Save and publish.
+4. In the Commons as a member, find the announcement.
+5. Confirm the announcement body contains a line reading **Open \<Plugin Name\>: https://app.chargingthefuture.com/apps/\<slug\>**.
 
-**Expected:**
-- No Edit button appears on published or archived rows. If the `PUT /api/feed/admin/announcements/:id` endpoint is called directly on a non-draft ID it returns an error (the `draftStateGuard` contract rejects it).
+**Expected:** The link-out line appears exactly once in the announcement body. Publishing again does not add a duplicate line.
 
 **Result:** web ☐
 
 ---
 
-### FD-A7 — Update feed render config
-**Role:** admin | **Surface:** web
+### FD-A5. Update global feed render config
 
-**Precondition:** Signed in as an admin on `/admin/feed-announcements`.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** Signed in as admin. On `/admin/feed-announcements`.
 
 **Steps:**
-1. In the feed config panel, change the render mode (e.g., toggle between card-only and card+toast if the UI exposes both).
-2. Save the change.
-3. Reload the admin page.
+1. Find the feed configuration panel.
+2. Change the render mode (e.g. from "card" to "card+toast" if both are offered).
+3. Save.
+4. Confirm the saved value is reflected back in the panel on reload.
 
-**Expected:**
-- The new render mode is reflected after reload (persisted to `feed_render_config`).
-- No CSRF error.
+**Expected:** Config update persists. No error on save.
 
 **Result:** web ☐
 
 ---
 
-### FD-A8 — Disable a channel via config
-**Role:** admin | **Surface:** web
+### FD-A6. Flagged answers queue
 
-**Precondition:** Signed in as an admin. At least one channel is enabled.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one Q&A answer has been flagged by a member (do step FD-17 first, or use seeded flagged answers).
 
 **Steps:**
-1. In the admin config panel, disable the **Community** channel.
-2. Save.
-3. As a member, open the Commons and switch to the Community channel filter.
+1. Navigate to `/admin/commons` or the Commons Moderation admin surface.
+2. Find the **Flagged answers** tab.
+3. Confirm flagged answers appear, ordered most-flagged first.
+4. Confirm each row shows the parent question, the answer text, whether it is from the AI assistant or a member, and its flag/not-helpful counts.
+5. Confirm the tab label shows the count of pending (still-visible) flagged answers.
 
-**Expected:**
-- The Community channel is empty or not accessible to the member while disabled.
-- Re-enabling the channel and saving restores community posts to the feed.
+**Expected:** Flagged answers are visible and ordered by flag count. The pending count is on the tab label. Hiding an answer removes it from the member-facing Q&A but leaves the parent question up so the member can get another answer.
 
 **Result:** web ☐
 
 ---
 
-### FD-A9 — Admin community post uses higher character cap
-**Role:** admin | **Surface:** web
+### FD-A7. Relabel a question category
 
-**Precondition:** Signed in as an admin.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one question exists with a category (seeded).
 
 **Steps:**
-1. In the Commons composer (or via `POST /api/commons/messages`), compose a community post of 2,000 characters (well above the 1,200-character member cap).
-2. Submit.
+1. On the admin Q&A management surface, find a question.
+2. Change its category to a different valid value (e.g. from "housing" to "general").
+3. Save.
+4. Confirm the new category is displayed.
+5. Attempt to save with an invalid category string (if the UI allows free entry). Expect a 400.
 
-**Expected:**
-- The post is accepted and appears in the feed (admin cap is 4,000 characters).
-- The same 2,000-character body submitted by a **member** session would be rejected with a validation error.
+**Expected:** Valid relabel saves and displays. Invalid category is rejected. An audit entry is written (not user-visible, but the action should not fail silently).
 
 **Result:** web ☐
 
 ---
 
-### FD-A10 — Admin relabels a question category
-**Role:** admin | **Surface:** web
+### FD-A8. Commons moderation — hide and restore a post
 
-**Precondition:** At least one question exists (from seed or FD-5).
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one community post exists from a member.
 
 **Steps:**
-1. Call `PATCH /api/feed/admin/questions/:questionId` with body `{ "category": "safety" }` and the `x-ctf-csrf: '1'` header, using a valid question ID from the seed.
-2. Confirm the response is 200.
-3. Try the same with `{ "category": "unknown_category" }`.
-4. Try with a non-UUID question ID.
+1. Navigate to `/admin/commons` → **Commons Moderation**.
+2. Find a member community post in the queue.
+3. Select a moderation reason from the picker (e.g. "Off topic").
+4. Click **Hide**.
+5. Confirm the post shows as hidden in the moderation queue and the hidden count increases.
+6. Open the Commons as a member (second session or different account) and confirm the post is no longer visible.
+7. Back in admin, find the hidden post.
+8. Click **Put back** (or restore).
+9. Confirm a confirmation step is required before restoring.
+10. Confirm the post is restored (moderation status cleared, reason/actor/timestamp cleared).
+11. Check the Commons as a member — the post should be visible again.
 
-**Expected:**
-- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row.
-- Invalid category returns 400.
-- Non-UUID ID returns 400.
-- Unknown but valid-format UUID returns 404.
+**Expected:** Hide removes the post from member view. Restore requires a deliberate confirmation and puts it back. After restore, no stored reason or actor remains on the row. Hiding does not require confirmation; restoring does.
 
 **Result:** web ☐
 
 ---
 
-### FD-A24 — The public-rooms notice on a member's first visit
-**Role:** new member | **Surface:** web
+### FD-A9. Moderating by member (author filter)
 
-**Precondition:** An account that has never opened the Commons, or delete that member's row from
-`feed_commons_notice_seen`.
-
-**Steps:**
-1. Sign in as that member and open the Commons.
-2. Read the card at the top of the stream, then click **Got it**.
-3. Reload the Commons.
-4. Sign in as a member who has already dismissed it and open the Commons.
-5. Sign out entirely and open the Commons.
-6. Check `SELECT * FROM feed_commons_notice_seen`.
-
-**Expected:**
-- Step 1: a short card titled **Before you post** appears at the top of the stream — **not a modal**. A
-  box demanding a click over a support channel trains people to dismiss it unread, and these members
-  have every reason to distrust one.
-- **It is short and it does not scroll.** Check at phone width: the card fits without its own scrollbar,
-  the Commons header stays on screen, and the message list below it is still the part that scrolls. The
-  first build put the FULL notice in this card — it filled the screen, pushed the header off, and left
-  the member scrolling the conversation past it into empty space. The card is a heads-up (this room is
-  public, the assistant is not); the long version arrives on the rotation, where length is free because
-  an announcement scrolls with the chat instead of sitting on top of it.
-- Step 2/3: gone, and it stays gone.
-- Step 4: not shown.
-- Step 5: not shown to a signed-out visitor — they cannot post, so there is nothing yet to disclose.
-- Step 6: one row per member per notice.
-- The point of this case: the cadence alone cannot protect a member who posts something identifying on
-  their first visit, before any rotation reaches them. If this card stops appearing for new members, that
-  protection is gone even though the periodic notice still looks fine.
-### FD-A21 — A flagged answer reaches an admin, and can be hidden
-**Role:** member + admin | **Surface:** web
-
-**Precondition:** A question in the Commons with at least one answer.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one member has multiple community posts.
 
 **Steps:**
-1. As a member, open the answer and rate it **flagged**.
-2. As a second member, flag the same answer.
-3. As admin, open `/admin/commons` and look at the tab row.
-4. Open the **Flagged answers** tab.
-5. Click **Hide answer**.
-6. As a member, reload the Commons and find the question.
-7. Back in the admin tab, click **Put back** and accept the confirmation.
+1. On `/admin/commons`, find the **By member** tab or author roster.
+2. Confirm the roster lists aggregate counts per member, ordered by volume — no post bodies are shown in the roster view.
+3. Click a member in the roster.
+4. Confirm you now see that member's full Commons footprint (posts and replies).
+5. Confirm the roster itself is no longer shown once you have selected a member.
 
-**Expected:**
-- Step 3: the tab reads **Flagged answers (1)** — the count of flagged answers still visible. Before
-  this shipped, a flag went nowhere at all: the count was aggregated by an admin route that no screen
-  ever called.
-- Step 4: the answer is listed with **2 flags**, the parent question above it, and a pill saying whether
-  it came from the assistant or a member. Ordering is by flag count, not date — triage, not a feed.
-- Step 5/6: the answer is gone from the member's view of that question, and **the question is still
-  there**. That matters: the member who asked keeps their question and can still get a better answer.
-- Step 7: the answer is visible again, and the pending count returns to 1.
-- Check the audit log: the transition carries `previousStatus`, `newStatus`, and the reason. Not the
-  answer body.
+**Expected:** Roster shows aggregates only (no bodies). Selecting a member switches to their footprint view. The roster disappears once a member is selected (it was used to pick someone; it is not needed after that).
 
 **Result:** web ☐
 
 ---
 
-### FD-A23 — The other two notices, on their own cadences
-**Role:** admin | **Surface:** web
+### FD-A10. Hide a Q&A answer from the moderation surface
 
-**Precondition:** As FD-A19. For the time-cadence case you need either database access to
-`feed_commons_guidance_milestones` or a local build with `FEED_COMMONS_SIGNAL_INTERVAL_DAYS` lowered.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one Q&A answer is visible in the flagged answers tab or moderation queue.
 
 **Steps:**
-1. Post until the Commons post count reaches a multiple of 75.
-2. Read the stream.
-3. Delete the `signal_vs_noise` row from `feed_commons_guidance_milestones`, then post once.
-4. Post several more times in the same day.
-5. Check `SELECT notice_key, milestone_count FROM feed_commons_guidance_milestones`.
+1. In the flagged answers queue, find a visible answer.
+2. Set `hidden: true` (hide it).
+3. Confirm the answer is no longer visible to a member on the Q&A channel.
+4. Confirm the parent question is still visible.
+5. Restore the answer and confirm it reappears.
 
-**Expected:**
-- Step 2: **Where things are public, and where the work happens** appears. Two things to verify in it:
-  - It says the group chat **and the main Chyme room** are public — anyone can read and listen signed
-    out, and you sign in to comment or speak. Check this against the app by opening `/apps/chyme` in a
-    signed-out window: you should get the guest listen view, not a redirect. (Reading only the
-    authenticated branch of `app/apps/[pluginSlug]/page.tsx` makes Chyme look gated. It is not — the
-    public-visitor registry serves `ChymePublicShell`.)
-  - The AI Assistant paragraph says the owner sees the question when checking an answer, rather than
-    promising nobody ever reads them. If that drifts back to an absolute promise, the notice is claiming
-    more privacy than the code gives.
-- Step 3: **Who I interact with is not a vouch** appears on the very next post — a time-cadence notice is
-  delivered by a post, not by a clock, so nothing is published into a silent room.
-- Step 4: no repeats. Every post that day computes the same period and loses the claim.
-- Step 5: rows are keyed by `notice_key` — the three notices never share a period row and never block
-  each other.
-- Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
-  uses "Target" rather than "TI" as a label.
+**Expected:** Hiding an answer suppresses it without deleting the question. Restore brings it back. No admin can edit the answer's text — hide and restore only.
 
 **Result:** web ☐
 
 ---
 
-### FD-A25 — Notice text renders as paragraphs, never chopped mid-sentence
-**Role:** any member | **Surface:** web (check at phone width — that is where it showed)
+### FD-A11. Moderate a reply on an announcement
 
-**Precondition:** A published standing notice visible in the Commons, and a member who has not dismissed
-the first-visit card.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** At least one member reply exists on a published announcement.
 
 **Steps:**
-1. Open the Commons at phone width and read the first-visit card top to bottom.
-2. Read a published notice in the stream (the announcement card).
-3. Look specifically at the ends of lines within a paragraph.
-4. Find an announcement that carries a trailing "Open <Plugin>: <url>" block and read it.
+1. On `/admin/commons`, find a reply listed under the announcement thread (labeled "Announcement reply").
+2. Confirm the row links to its parent announcement.
+3. Hide the reply.
+4. Check the Commons — the reply is gone from the announcement thread.
+5. Restore it from admin.
 
-**Expected:**
-- Sentences wrap where the column runs out and **nowhere else**. No sentence is cut mid-clause with the
-  rest starting a new line ("whether or / not they have an account"). This is what reached members once:
-  the copy was authored as source-wrapped lines joined with `\n`, and `white-space: pre-wrap` turned
-  every one of those into a hard break.
-- Paragraphs are separated by real spacing, not by an empty line of text.
-- Step 4: the "Open <Plugin>" lines stay on **separate** lines. They are a deliberate list, not wrapped
-  prose, and the renderer must keep them apart while joining prose that was only source-wrapped.
-- Run `pnpm --dir ctf check:notice-formatting` — it fails if any notice body is built by joining lines
-  with a single `\n`, which is the authoring mistake behind all of this.
-- Run `pnpm --dir ctf preview:member-copy` — it renders every standing notice and the first-visit card
-  to PNGs at phone width in `ctf/artifacts/copy-preview/`, marks the phone fold, and **exits non-zero if
-  the first-visit card is taller than the screen**. Attach those PNGs to any PR that changes
-  member-facing copy. Both defects here — chopped sentences, and a card that swallowed the screen — were
-  obvious at a glance and invisible to every automated check, because none of them look at the output.
+**Expected:** Announcement replies appear in the moderation queue labeled "Announcement reply." Hide and restore work the same as for community posts.
 
 **Result:** web ☐
 
 ---
 
-### FD-A19 — Commons guidance notice posts itself every 50 posts
-**Role:** admin + member | **Surface:** web
+### FD-A12. Membership event emit
 
-**Precondition:** You can read the total row count of `feed_community_posts`. Pick a starting count
-where you can reach the next multiple of 50 without posting hundreds of times — or temporarily lower
-`FEED_COMMONS_GUIDANCE_INTERVAL` in a local build to make this practical.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** Signed in as admin.
 
 **Steps:**
-1. Note `SELECT COUNT(*) FROM feed_community_posts`.
-2. Post in the Commons until the total lands exactly on a multiple of the interval.
-3. Read the Commons stream at that point.
-4. Post one more time and read the stream again.
-5. Check `SELECT milestone_count, announcement_id FROM feed_commons_guidance_milestones`.
-6. Hide one of the posts you made, then post again up to the next multiple.
+1. From the admin surface or via a direct API call, emit a membership event: `POST /api/feed/membership/events` with body `{ "userId": "<a seeded member id>", "pluginId": "feed", "eventType": "join" }` and the `x-ctf-csrf: '1'` header.
+2. Confirm the response is `{ ok: true, streamEmitted: <boolean> }`.
+3. Emit the same event again to confirm idempotency does not crash (a duplicate is fine even though the command is not idempotent by contract).
+4. Attempt the same call without the CSRF header and confirm it is rejected.
 
-**Expected:**
-- Step 3: an announcement titled **What the Commons is for** appears inline in the Commons stream. It
-  is attributed to the system, **not** to you and not to any member — nobody should look like they are
-  personally telling people off every 50 posts.
-- Step 4: no second copy. The notice fires on the milestone itself, not on every post past it.
-- Step 5: one row for that milestone, with `announcement_id` filled in, so the exact announcement a
-  milestone produced can be found later.
-- Step 6: hidden posts still count. The milestone means "the Commons has seen this much traffic";
-  moderating after the fact must not shift where the next notice falls.
-- Read the copy and check all five of these survive. Each was corrected into place by the owner, and
-  losing any one of them changes what the notice does:
-  1. The Commons is a **support channel** — ask in the open, get an answer. It is **not** where trades
-     are arranged or recorded; those live in their own apps and are what count toward the economy. If
-     the notice ever implies otherwise it teaches members to do business in a public thread instead of
-     in the app that records it.
-  2. **Why it is open**, stated as the benefit: a public question is answered once where the next person
-     finds it, by whoever is awake across the timezones, so nobody waits on the owner alone. The copy
-     deliberately does **not** explain the harassment history behind the no-DM policy (cut 2026-07-30) —
-     the rule stands on the benefit, and the notice does not owe the community that account.
-  3. **"You can say what is happening to you."** This is the anti-scare guarantee. Without it, "no
-     storytelling" reads to a newly targeted person as *your experience is unwelcome here*, which is the
-     opposite of true and would cost the app exactly the members it is for. The line it draws is the
-     retelling that asks for nothing, contrasted with Quora — where you narrate into a void.
-  4. Content is removed for **repeatedly going nowhere**, never for who someone is suspected of being.
-  5. Traffickers are **"not allowed"** — as a fact, not "not tolerated" as a feeling.
-  6. The Weaver perk is **the private room**, not the Commons. Check the notice does not claim Weavers
-     post without restriction *here* — the topic rule applies to the Commons for everyone, and an earlier
-     draft got this wrong. Promising members something the app does not do is worse than any tone problem.
-  7. **It reads as a pitch, not a telling-off.** It opens on the Quora contrast (there you write into a
-     void; here you ask and someone answers) and the rules follow as consequences of that promise. If an
-     edit ever makes it lead with the rules, it will read as annoyed and cost the app the members it is
-     for — the firmness on traffickers is not the same thing as a scolding tone toward everyone else.
+**Expected:** Valid call returns `{ ok: true }`. Missing CSRF header returns a 4xx. An audit entry is written on both success and failure (not directly verifiable from the UI, but the call must not fail silently).
 
 **Result:** web ☐
 
 ---
 
-### FD-A20 — The notice cannot post twice for one milestone
-**Role:** admin | **Surface:** web
+### FD-A13. Admin community post — higher character cap
 
-**Precondition:** As FD-A19, sitting one post below a multiple of the interval.
-
-**Steps:**
-1. With two browser sessions signed in as two different members, submit a Commons post from both at
-   essentially the same moment — the two requests should straddle the milestone boundary.
-2. Read the Commons stream.
-3. Check `SELECT COUNT(*) FROM feed_commons_guidance_milestones WHERE milestone_count = <the multiple>`.
-4. Now force a failure: post while the database is briefly unreachable, or otherwise cause the post to
-   fail. Then post successfully up to the same milestone.
-
-**Expected:**
-- Step 2/3: exactly **one** notice and exactly **one** milestone row. The UNIQUE constraint on
-  `milestone_count` is what guarantees this — both requests compute the same count and try to claim it,
-  and only one insert survives.
-- Step 4: the milestone is still served. A post that rolled back must not leave a claimed milestone
-  behind, because that would silently suppress that notice forever. This is why the claim shares the
-  post's transaction rather than running after it commits.
-- In every case, a failure in the notice must never cost a member their post. If the notice cannot be
-  published, the post still succeeds.
-### FD-A22 — A hidden question stops being answerable and stops feeding training
-**Role:** member + admin | **Surface:** web
-
-**Precondition:** A question in the Commons with LLM consent granted and no answer yet.
+**Role:** admin  
+**Surfaces:** web  
+**Precondition:** Signed in as admin.
 
 **Steps:**
-1. As admin, open `/admin/commons`, find that question and hide it.
-2. As the member who asked, reload the Commons.
-3. Attempt to generate an answer for it (`POST /api/feed/questions/<id>/answer`).
-4. As admin, run the training export (`GET /api/comic/training/export` / the questions export) and search
-   it for the hidden question's text.
-5. Put the question back and repeat step 4.
+1. In the Commons composer (as admin), type a message that is between 1,201 and 4,000 characters.
+2. Confirm the send button is **not** disabled (the 1,200-character member cap does not apply).
+3. Submit the post.
+4. Confirm it appears in the Commons.
+5. Type a message over 4,000 characters.
+6. Confirm the send button is disabled and the counter shows how many characters to remove.
 
-**Expected:**
-- Step 2: the question is gone from the timeline.
-- Step 3: refused as **not found** — not "forbidden". A hidden question must not confirm it exists.
-- Step 4: the hidden question does **not** appear in the export. This is the check that matters: hiding
-  something is a judgment it does not belong, and exporting it into training data would launder it back
-  in, with the model then answering in the register of the thing that was removed.
-- Step 5: it appears again once restored.
+**Expected:** Admin can post up to 4,000 characters. Over 4,000 is blocked. The raw-HTML block still applies to admins.
 
 **Result:** web ☐
-
----
-
-### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
-**Role:** admin | **Surface:** web
-
-**Precondition:** Several visible Commons posts, at least two of them off topic (Quora-style discussion
-with nothing to do with the economy — this is the common case).
-
-**Steps:**
-1. Open `/admin/commons`. Note the **Hide reason** picker above the list and what it defaults to.
-2. Without changing the picker, click **Hide** on two different off-topic posts in a row.
-3. Read the Hidden pill on each.
-4. Change the reason to **Abusive** and hide a third post.
-5. Click **Put back** on one of the off-topic posts and accept the confirmation.
-6. Hide that same post again.
-
-**Expected:**
-- Step 1: the picker defaults to **Off topic — not about the economy**. It is one picker for the whole
-  list, not one per row — a sweep of twenty posts must not mean twenty identical selections.
-- Step 2/3: both hidden pills read `Hidden · Off topic — not about the economy`. The reason was not
-  re-selected between them.
-- Step 4: that pill reads `Hidden · Abusive`, and the earlier two are unchanged.
-- Step 5: the post returns to the member Commons **and** its stored reason is cleared — when it next
-  appears in the list it carries no reason text. A visible post must never show a standing accusation.
-- Step 6: it is hidden again with whatever reason the picker currently holds.
-- Check the audit log: each real transition carries `previousStatus`, `newStatus`, and `reason`. Never
-  the post body.
-
-**Result:** web ☐
-
----
-
-### FD-A18 — Moderate by member
-**Role:** admin | **Surface:** web
-
-**Precondition:** At least two members have posted in the Commons, one of them several times.
-
-**Steps:**
-1. Open `/admin/commons` and switch to the **By member** tab.
-2. Read the ordering and the per-member counts.
-3. Click the member with the most posts.
-4. Read the banner above the list, then hide one of their posts.
-5. Click **Back to members**.
-
-**Expected:**
-- Step 2: members are ordered by how much they have posted, each showing post count, reply count, how
-  many are already hidden, and first/last posted dates. **No post bodies appear on this tab** — deciding
-  whether to look at someone should not require reading everything they wrote.
-- Step 3/4: the list narrows to that member's entire footprint, posts and replies, and the banner names
-  them with their counts. Hiding works exactly as on the Recent tab and the view stays on that member
-  afterwards — it must not bounce you back to the full list mid-sweep.
-- Step 5: the roster is still populated (a single-member request returns an empty roster by design;
-  the surface must not blank the list you came from).
-- There is deliberately **no bulk "hide everything from this member"** control. Confirm it is absent:
-  one click clearing a member's whole history on a wrong hunch is the failure being avoided.
-
-**Result:** web ☐
-
----
-
-### FD-A14 — Hide a Commons post, then put it back
-**Role:** admin + member | **Surface:** web
-
-**Precondition:** At least one member-authored Commons post exists with at least one reply. Have a
-second browser window signed in as a different member (or signed out) so you can watch the member view.
-
-**Steps:**
-1. As admin, open `/admin/commons` (it is listed as **Commons Moderation** on the admin landing page).
-2. Find the post in the Recent list. Click **Hide**.
-3. In the member window, reload the Commons.
-4. Sign out entirely and load the public Commons view, if public viewing is enabled.
-5. Back in the admin window, switch to the **Hidden only** tab.
-6. Click **Put back** and accept the confirmation.
-7. Reload the member window again.
-8. Click **Hide** twice in a row on any post — once to hide it, then hide it again without reloading.
-
-**Expected:**
-- Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
-- Step 3: the post is **gone** from the member timeline — and so are its replies, since the whole item
-  drops out. This is the check that matters: before this feature the status column was ignored, so a
-  hidden post stayed visible.
-- Step 4: it is absent from the signed-out public list too, not just the member view.
-- Step 5: the hidden post is listed there — hiding must not be a one-way door.
-- Step 6/7: the post is back in the member timeline, replies and all. Nothing was deleted.
-- Step 8: the second hide reports "Already in that state — nothing changed." Check the server log: the
-  no-op writes **no** second `feed.community.moderation.hide` audit entry. The trail must never claim a
-  transition that did not happen.
-- Nowhere in this surface is there a control to **edit** the post. That absence is deliberate — confirm
-  it is still absent.
-
-**Result:** web ☐
-
----
-
-### FD-A15 — Hide a Commons reply on its own
-**Role:** admin + member | **Surface:** web
-
-**Precondition:** A visible Commons post with at least two replies.
-
-**Steps:**
-1. As admin, open `/admin/commons` and find one **Reply** row (it carries a "Reply" pill and shows which
-   post it belongs to).
-2. Click **Hide** on that reply only.
-3. In the member window, reload the Commons and open the parent post's replies.
-
-**Expected:** Only that one reply is gone. The parent post is still visible and its other replies still
-render. Hiding a reply must not take the post or its siblings with it.
-
-**Result:** web ☐
-
----
-
-### FD-A26 — Hide a reply on an official announcement, then put it back (added 2026-08-10)
-**Role:** admin + member | **Surface:** web
-
-**Precondition:** An official announcement with at least two member replies.
-
-**Steps:**
-1. As admin, open `/admin/commons`. Find a row with the **Announcement reply** pill — it shows which
-   announcement it belongs to.
-2. Click **Hide** on that reply.
-3. In the member window, reload the Commons and open that announcement's reply thread.
-4. Back in the admin window, switch to the **Hidden only** tab, then click **Put back** and accept the
-   confirmation.
-5. Reload the member window and reopen the thread.
-6. As the reply's author, try to edit it while it is hidden (repeat step 2 first, then use the member
-   window's Edit control on that reply — reload first so the thread is fresh).
-
-**Expected:**
-- Step 2: the row gains a "Hidden" pill and the Hidden-replies counter goes up by one.
-- Step 3: that one reply is gone from the thread and the announcement's reply count drops by one. The
-  announcement itself and the other replies are untouched.
-- Step 4/5: the reply is back in the thread with its original words. Nothing was deleted.
-- Step 6: editing a hidden reply is refused with "A moderator has hidden this reply, so it cannot be
-  edited." A member must not be able to edit their way back into view.
-- Nowhere on the moderation screen is there a control to **edit** a member's reply. That absence is
-  deliberate — confirm it is still absent.
-
-**Result:** web ☐
-
----
-
-### FD-A16 — Only an admin can moderate
-**Role:** member | **Surface:** web
-
-**Steps:**
-1. Signed in as an ordinary member, navigate to `/admin/commons`.
-2. With the browser dev tools, `POST /api/feed/admin/moderation/post/<any-post-id>` with body
-   `{"hidden":true}` and the `x-ctf-csrf: 1` header.
-3. Repeat the POST with the header omitted.
-4. Repeat as admin but with the body `{}` (no `hidden` field).
-
-**Expected:** Step 1: redirected away, no moderation UI. Step 2: rejected, and the post stays visible.
-Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an error, never a silent
-"restore", so a malformed request can never put hidden content back in front of members.
-
-**Result:** web ☐
-
----
-
-### FD-A11 — Membership event emit
-**Role:** admin | **Surface:** web
-
-**Precondition:** Signed in as an admin.
-
-**Steps:**
-1. Call `POST /api/feed/membership/events` with `{ "userId": "<a valid userId>", "pluginId": "feed", "eventType": "join" }` and `x-ctf-csrf: '1'`.
-2. Confirm the response contains `{ ok: true, streamEmitted: <boolean> }`.
-3. Repeat with `eventType: "leave"`.
-4. Try omitting `userId` — expect 400.
-5. Try without admin credentials — expect 403.
-6. Check the audit log after the valid calls in step 1 and step 3.
-
-**Expected:**
-- Valid payloads return `ok: true`.
-- Missing required fields return 400.
-- Non-admin caller is rejected with 403.
-- Each valid call writes one `feed.membership.event.emit` audit row that records the acting admin,
-  the target member (`userId`), the plugin, and the event type. A call that fails to emit still
-  writes the audit row with a failure result — the admin-only command never runs without leaving a
-  trail.
-
-**Result:** web ☐
-
----
-
-### FD-A12 — Member cannot reach admin routes
-**Role:** member | **Surface:** web
-
-**Precondition:** Signed in as a non-admin member.
-
-**Steps:**
-1. `GET /api/feed/admin/config` — note the response code.
-2. `POST /api/feed/admin/announcements` with a valid body — note the response code.
-3. Navigate to `/admin/feed-announcements` in the browser.
-
-**Expected:**
-- All three return 401 or 403 (no data is returned).
-- The admin page redirects or shows an access-denied state.
-
-**Result:** web ☐
-
----
-
-### FD-A13 — CSRF protection on state-changing routes
-**Role:** admin | **Surface:** web
-
-**Precondition:** Signed in as an admin.
-
-**Steps:**
-1. Call `POST /api/feed/admin/announcements/:id/publish` **without** the `x-ctf-csrf: '1'` header.
-2. Call `POST /api/feed/items/:itemId/dismiss` **without** the `x-ctf-csrf: '1'` header.
-
-**Expected:**
-- Both requests are rejected (400 or 403). No state is changed.
-
-**Result:** web ☐
-
----
-
-### Account deletion clears replies and AI-log rows
-
-**Expected:** Deleting the account removes the member's replies to announcements and any AI-answer
-log rows carrying their id (most already cascade away with their deleted questions and answers).
-Admin-authored announcements and feed items are unaffected.
 
 ---
 
 ## Parity check (web ↔ android)
 
-Android was removed 2026-07-20 (PR #1742, rule 105). All cases are web-only. No cross-surface parity checks apply.
+Android was removed on 2026-07-20 (rule 105, PR #1742). The Commons is web-only. There are no Android surfaces to compare against.
 
-The following cases are the highest-signal functional checks that must remain consistent across **desktop browser** and **mobile-responsive browser** (both are "web" surfaces):
+If a future session adds Android support, the following cases would need parity checks:
+- FD-5 (community post creation)
+- FD-10 (threaded reply)
+- FD-16 (Q&A question submit)
+- FD-17 (answer rating)
+- FD-2 (mark read)
+- FD-3 (dismiss announcement)
 
-| Case | Behavior that must match on both viewport sizes |
-|---|---|
-| FD-2 | Announcement card renders with correct accent color and icons |
-| FD-7 | Community post composer enforces 1,200-char / 3-link limit |
-| FD-9 | Paragraph breaks preserved in rendered posts |
-| FD-14 | Reaction picker shows all 7 emojis and toggles correctly |
-| FD-A4 | Published announcement appears in member feed |
+Until then, all result lines carry only `web ☐`.
 
 ---
 
 ## Known gaps — do not file these as bugs
 
-1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
+1. **LLM provider failover** — the Q&A inference runs against a single configured provider. If the provider is down, answers will not generate. Provider failover and confidence-thresholding policy are not yet contractualized. Do not file a bug if the LLM is unavailable during testing.
 
-2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.
+2. **Deprecated ANNOUNCEMENTS_PLUGIN contracts** — separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files still exist in the repo. Their presence is intentional historical reference and is a known cleanup item, not a defect.
+
+3. **`GET /api/feed/admin/questions` orphaned route** — this route exists and is documented in `orphan-route-allowlist.json` as a burn-down entry. Its `flagged_count` field is superseded by the flagged-answers queue (FD-A6). The route having no caller in the UI is a known debt item, not a bug to file.
+
+4. **Tap-to-jump for quoted replies on older messages** — if the quoted post is outside the currently loaded window, the tap is a no-op (the snippet still shows the text). This is accepted behavior, not a bug.
+
+5. **Posts saved before the paragraph-break fix (2026-07-16)** — messages stored before that fix were already flattened in storage and will render as single paragraphs regardless of how the screen applies `white-space: pre-wrap`. Re-posting is the only way to recover the formatting. Do not file a bug for old seeded content that looks flat.
+
+6. **`feed_timeline_projection` table** — defined in schema but has no runtime reader or writer. It is a reserved slot for a future materialized timeline read model. Its emptiness is not a defect.
