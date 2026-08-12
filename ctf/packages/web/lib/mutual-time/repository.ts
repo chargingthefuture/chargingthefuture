@@ -51,6 +51,7 @@ type EventRow = {
   result_can_make_it: number | null;
   created_at: Date;
   closed_at: Date | null;
+  auto_closed: boolean;
 };
 
 const EVENT_COLUMNS = `
@@ -68,7 +69,8 @@ const EVENT_COLUMNS = `
   result_slot_start,
   result_can_make_it,
   created_at,
-  closed_at
+  closed_at,
+  auto_closed
 `;
 
 function normalizeMeetingPlugin(raw: unknown): MutualTimeMeetingPlugin {
@@ -195,7 +197,10 @@ async function computeWinner(
 }
 
 // Close an event (idempotent) and stamp the computed winner. Runs inside the caller's transaction.
-async function closeAndComputeTx(client: PoolClient, row: EventRow): Promise<EventRow> {
+// `autoClosed` records which of the two ways it happened: the survey reaching its close time on its
+// own, or an admin pressing Close. The admin-landing dot reads it — an admin who closed a survey by
+// hand already knows the time; one whose survey closed itself has to be told.
+async function closeAndComputeTx(client: PoolClient, row: EventRow, autoClosed: boolean): Promise<EventRow> {
   if (row.status === 'closed') {
     return row;
   }
@@ -203,11 +208,12 @@ async function closeAndComputeTx(client: PoolClient, row: EventRow): Promise<Eve
   const updated = await client.query<EventRow>(
     `
       UPDATE mutual_time_events
-      SET status = 'closed', closed_at = NOW(), result_slot_start = $2, result_can_make_it = $3
+      SET status = 'closed', closed_at = NOW(), result_slot_start = $2, result_can_make_it = $3,
+          auto_closed = $4
       WHERE id = $1
       RETURNING ${EVENT_COLUMNS}
     `,
-    [row.id, winner ? winner.slotStart.toISOString() : null, winner ? winner.canMakeIt : null],
+    [row.id, winner ? winner.slotStart.toISOString() : null, winner ? winner.canMakeIt : null, autoClosed],
   );
   return updated.rows[0];
 }
@@ -292,7 +298,8 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
       [createdByUserId],
     );
     for (const row of due.rows) {
-      await closeAndComputeTx(client, row);
+      // Reached its close time on its own — nobody pressed anything.
+      await closeAndComputeTx(client, row, true);
     }
 
     // One query, no N+1: the distinct voter count is a correlated subquery per row so the whole list
@@ -323,7 +330,7 @@ export async function closeEvent(actorUserId: string, eventId: string): Promise<
     if (!row) {
       throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.notFound, 'Event not found.');
     }
-    const closed = await closeAndComputeTx(client, row);
+    const closed = await closeAndComputeTx(client, row, false);
     const count = await voterCountFor(client, closed.id, false);
     return mapEvent(closed, count, new Date());
   });
@@ -341,7 +348,7 @@ export async function getPublicEvent(slug: string): Promise<MutualTimePublicEven
       return null;
     }
     if (row.status === 'open' && row.closes_at && row.closes_at <= new Date()) {
-      row = await closeAndComputeTx(client, row);
+      row = await closeAndComputeTx(client, row, true);
     }
     const now = new Date();
     const count = await voterCountFor(client, row.id, row.status !== 'closed');

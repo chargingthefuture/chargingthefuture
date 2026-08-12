@@ -469,6 +469,26 @@ Result: web ☐ mobile ☐
 
 ---
 
+### MT-A5c — The admin landing dot appears when there is something to act on
+
+**Role:** Admin (the creator of the surveys under test)
+**Surfaces:** Web, Mobile
+**Precondition:** One open survey with no close date and no votes yet, and one approved member who can vote.
+
+**Steps:**
+1. Open `/admin` and look at the Mutual Time tile while the survey has no votes.
+2. Have the approved member open the shared link, pick a window, and save.
+3. Reload `/admin` and look at the tile again.
+4. Click the Mutual Time tile, then go back to `/admin`.
+5. Create a second survey with a close time about five minutes out, have the member vote on it, click the Mutual Time tile to clear the dot, and wait for the close time to pass. Reload `/admin`.
+6. On a third survey with votes, press "Close and choose the time" yourself, then reload `/admin`.
+
+**Expected:** Step 1 shows no dot — nobody has picked anything, and that is not news. Step 3 shows the dot. Step 4 clears it. Step 5 shows the dot again: the survey reached its close time and chose a time without you, which you have to be told even if you have already seen the votes. Step 6 shows no dot — you closed that one yourself. A second admin's surveys never raise your dot.
+
+Result: web ☐ mobile ☐
+
+---
+
 ### MT-A6 — Auto-close at the configured close time
 
 **Role:** Admin (observing); approved member (verifying the result link)

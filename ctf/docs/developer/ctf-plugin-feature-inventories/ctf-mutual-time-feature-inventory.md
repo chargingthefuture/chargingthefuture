@@ -65,6 +65,13 @@ to the meeting surface; members who did not vote can still come listen in.
    with a set close time auto-closes when that time passes. Only windows still ahead of the moment of
    closing can win, so closing a long-open survey can never stamp a time that has already been and
    gone; if every vote had passed, the link says so and no time is chosen.
+4. **A dot on the admin landing when there is something to act on.** The Mutual Time tile on `/admin`
+   carries the shared "new to review" dot (see the non-plugin inventory §1.14) in two cases, both for
+   the surveys this admin created: somebody picked times on one of their still-open surveys, or one of
+   their surveys reached its close time and chose a time without them. That is the cue to open the
+   dashboard and decide when to go live. A survey nobody has voted on raises nothing — it simply stays
+   open until someone picks — and a survey the admin closed by hand raises nothing either. Opening the
+   tile clears the dot.
 
 ## API Surface and Route Map
 
@@ -97,8 +104,9 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
      from the current moment instead),
      `window_days` (default 7), `opens_at` (nullable — null opens immediately), `closes_at` (nullable —
      null closes manually), `status` (`open|closed`), `result_slot_start` (winning UTC slot, nullable),
-     `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable). Indexed by slug
-     (unique) and by creator.
+     `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable), `auto_closed`
+     (boolean, default `FALSE` — `TRUE` when the survey closed itself at `closes_at` rather than an
+     admin pressing Close; the admin-landing dot keys on it). Indexed by slug (unique) and by creator.
 2. `mutual_time_votes`
    - One row per (event, voter, slot): `event_id` (FK → `mutual_time_events(id)` `ON DELETE CASCADE`),
      `voter_user_id`, `slot_start_utc` (the one-hour window start), `created_at`. Unique on
@@ -171,7 +179,9 @@ keeps that half reproducible; its stamped result stands.
 2. **A survey with no close time still needs a person to end it.** The rolling window keeps an
    unattended survey usable indefinitely, but nothing chooses a time on its own: the admin presses
    "Close and choose the time" (owner decision, 2026-08-12 — a default close date was considered and
-   turned down). The dashboard's status pill is the only prompt that a survey is still waiting.
+   turned down). The admin-landing dot is the prompt that there is something to look at; the dashboard
+   itself has no per-survey "new since you last looked" marker, because opening the tile clears the
+   dot before the dashboard renders. Which survey is new has to be read off the voter counts.
 3. **Full 24h candidate grid.** To let anyone in any timezone find a free hour, the candidate grid spans
    all 24 hours (48 half-hour starts/day). Members see them grouped by their local Night/Morning/
    Afternoon/Evening; a future refinement could let the admin bound the daily hours.
@@ -282,6 +292,24 @@ keeps that half reproducible; its stamped result stands.
   it usable in the meantime. The seed's open event is anchored to the day it runs and its votes are
   replaced each run; the closed event keeps its fixed past window. No schema change, no contract change,
   no API-shape change beyond the added `viewer.expiredPicks` count.
+
+- 2026-08-12: **The admin landing tells the admin when a survey needs them (owner request).** Until now
+  an admin had to open `/apps/mutual-time` and check by eye to learn that anyone had voted, or that a
+  survey with a close time had chosen its own time — and that is exactly what tells them when to go
+  live and run the meeting. Mutual Time is now wired into the shared admin-landing dot
+  (`lib/admin/area-attention.ts`, non-plugin inventory §1.14) with two signals, both limited to the
+  surveys this admin created: votes cast on one of their still-open surveys since they last opened the
+  area (counting only picks still ahead of now, matching the rolling window), and one of their surveys
+  having passed its close time and chosen a time on its own. The second query treats "past `closes_at`
+  but still stored as open" the same as "already closed", because a survey only flips when someone next
+  reads it — otherwise a survey nobody had opened since its close time would never raise the dot. A
+  survey nobody has voted on raises nothing and stays open until someone picks; a survey the admin
+  closed by hand raises nothing either (owner decision, same date). This is the first area signal
+  scoped to one admin, so the registry now accepts `{ sql, scopedToAdmin: true }` entries that also get
+  the admin's user id as `$2`; existing string entries are untouched. One schema addition,
+  `mutual_time_events.auto_closed` (boolean, default `FALSE`, set by `closeAndComputeTx`), so the two
+  ways a survey ends can be told apart — an admin who pressed Close does not need telling.
+  `schema.demo.sql` regenerated. No contract or API-shape change.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 
