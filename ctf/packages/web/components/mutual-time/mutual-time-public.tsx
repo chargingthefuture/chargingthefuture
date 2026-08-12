@@ -47,6 +47,9 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
   }, []);
 
   const [canVote, setCanVote] = useState(initialViewer.canVote);
+  // Saved picks of theirs that have since gone by. The window rolls forward, so a pick made last week
+  // for a time that has passed is no longer on offer and no longer counts — the vote form says so.
+  const [expiredPicks, setExpiredPicks] = useState(initialViewer.expiredPicks ?? 0);
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
@@ -70,6 +73,8 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
           setPicks={setPicks}
           canVote={canVote}
           setCanVote={setCanVote}
+          expiredPicks={expiredPicks}
+          setExpiredPicks={setExpiredPicks}
           isSignedIn={isSignedIn}
           signInUrl={signInUrl}
           verifyUrl={verifyUrl}
@@ -132,6 +137,8 @@ function EventBody({
   setPicks,
   canVote,
   setCanVote,
+  expiredPicks,
+  setExpiredPicks,
   isSignedIn,
   signInUrl,
   verifyUrl,
@@ -147,6 +154,8 @@ function EventBody({
   setPicks: (next: string[]) => void;
   canVote: boolean;
   setCanVote: (v: boolean) => void;
+  expiredPicks: number;
+  setExpiredPicks: (v: number) => void;
   isSignedIn: boolean;
   signInUrl: string;
   verifyUrl?: string;
@@ -170,6 +179,8 @@ function EventBody({
           setPicks={setPicks}
           setEvent={setEvent}
           setCanVote={setCanVote}
+          expiredPicks={expiredPicks}
+          setExpiredPicks={setExpiredPicks}
           showTz={showTz}
           setShowTz={setShowTz}
           setTz={setTz}
@@ -218,7 +229,14 @@ function ResultView({ event, tz, canVote, t }: { event: MutualTimePublicEvent; t
             )}
           </>
         ) : (
-          <div style={{ fontSize: 15, color: t.SUBTLE }}>This survey closed with no votes, so no time was chosen.</div>
+          // Two ways to end up here: nobody voted at all, or everyone's picks were for times that had
+          // gone by before the survey was closed. Naming which one happened saves the organizer
+          // guessing why there is no time on the page.
+          <div style={{ fontSize: 15, color: t.SUBTLE }}>
+            {event.voterCount > 0
+              ? 'This survey closed after the times members picked had already passed, so no time was chosen. Start a new survey to find one.'
+              : 'This survey closed with no votes, so no time was chosen.'}
+          </div>
         )}
       </div>
     </>
@@ -348,6 +366,8 @@ function VoteView({
   setPicks,
   setEvent,
   setCanVote,
+  expiredPicks,
+  setExpiredPicks,
   showTz,
   setShowTz,
   setTz,
@@ -360,6 +380,8 @@ function VoteView({
   setPicks: (next: string[]) => void;
   setEvent: (next: MutualTimePublicEvent) => void;
   setCanVote: (v: boolean) => void;
+  expiredPicks: number;
+  setExpiredPicks: (v: number) => void;
   showTz: boolean;
   setShowTz: (v: boolean) => void;
   setTz: (v: string) => void;
@@ -408,6 +430,7 @@ function VoteView({
           setCanVote(refreshed.viewer.canVote);
           setPicks(refreshed.viewer.picks);
           setSavedPicks(refreshed.viewer.picks);
+          setExpiredPicks(refreshed.viewer.expiredPicks ?? 0);
         }
       } catch {
         /* count refresh is best-effort */
@@ -429,6 +452,21 @@ function VoteView({
       {saved && (
         <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Check size={14} /> Your picks are saved.
+        </div>
+      )}
+
+      {/* The times on offer roll forward, so a pick made a while ago can fall behind the current
+          moment. Rather than let it sit in the list as a vote that can no longer win, it is dropped
+          and the member is told, in the one place where they can do something about it. */}
+      {expiredPicks > 0 && !saved && (
+        <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <Clock size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            {expiredPicks === 1
+              ? 'One time you picked earlier has now passed, so it no longer counts.'
+              : `${expiredPicks} times you picked earlier have now passed, so they no longer count.`}{' '}
+            Pick from the days below and save again.
+          </span>
         </div>
       )}
 

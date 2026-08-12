@@ -37,14 +37,32 @@ const VOTERS = [
   'mutual-time-seed-voter-005',
 ];
 
-// Fixed candidate window so the seed is deterministic (window_start_date + i*30min, one-hour windows).
-const WINDOW_START = '2026-07-21';
 const WINDOW_DAYS = 7;
+const DAY_MS = 86400000;
 
-// Build a candidate slot ISO from a day offset and a UTC time-of-day (half-hour aligned).
+// Midnight UTC today, the anchor for the open event. While a survey is open the times on offer roll
+// forward from the current moment, so seeded votes must sit ahead of now or they count for nothing —
+// they are placed on the days after this one. The closed event keeps a fixed past date: it is history,
+// its winner is already stamped, and a fixed date keeps that half of the seed reproducible.
+const TODAY_START = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z').getTime();
+const OPEN_WINDOW_START = new Date(TODAY_START).toISOString().slice(0, 10);
+const CLOSED_WINDOW_START = '2026-07-21';
+
+// Build a candidate slot ISO from a window anchor, a day offset, and a UTC time-of-day (half-hour
+// aligned).
+function slotFrom(baseMs, dayOffset, hourUtc, minute = 0) {
+  return new Date(baseMs + dayOffset * DAY_MS + hourUtc * 3600000 + minute * 60000).toISOString();
+}
+
+// Open-event slots: day offset 1 upward, so every seeded pick is still ahead of now whenever the seed
+// runs, and every one of them falls inside the rolling seven-day window.
 function slot(dayOffset, hourUtc, minute = 0) {
-  const base = Date.parse(`${WINDOW_START}T00:00:00.000Z`);
-  return new Date(base + dayOffset * 86400000 + hourUtc * 3600000 + minute * 60000).toISOString();
+  return slotFrom(TODAY_START, dayOffset + 1, hourUtc, minute);
+}
+
+// Closed-event slots: the fixed historical window.
+function closedSlot(dayOffset, hourUtc, minute = 0) {
+  return slotFrom(Date.parse(`${CLOSED_WINDOW_START}T00:00:00.000Z`), dayOffset, hourUtc, minute);
 }
 
 // Open event: votes cluster so overlap is visible but no winner is stored until it is closed.
@@ -62,20 +80,20 @@ const OPEN_EVENT = {
   ],
 };
 
-// Closed event: winner is slot(1, 17, 0), which 4 of 5 voters picked.
+// Closed event: winner is closedSlot(1, 17, 0), which 4 of 5 voters picked.
 const CLOSED_EVENT = {
   slug: 'q3-onboarding-seed',
   title: 'Q3 onboarding',
   description: 'Kickoff for the new cohort.',
   meetingPlugin: 'peer-programming',
-  resultSlot: slot(1, 17, 0),
+  resultSlot: closedSlot(1, 17, 0),
   resultCanMakeIt: 4,
   votes: [
-    [VOTERS[0], [slot(1, 17, 0)]],
-    [VOTERS[1], [slot(1, 17, 0), slot(3, 20, 0)]],
-    [VOTERS[2], [slot(1, 17, 0)]],
-    [VOTERS[3], [slot(1, 17, 0)]],
-    [VOTERS[4], [slot(3, 20, 0)]],
+    [VOTERS[0], [closedSlot(1, 17, 0)]],
+    [VOTERS[1], [closedSlot(1, 17, 0), closedSlot(3, 20, 0)]],
+    [VOTERS[2], [closedSlot(1, 17, 0)]],
+    [VOTERS[3], [closedSlot(1, 17, 0)]],
+    [VOTERS[4], [closedSlot(3, 20, 0)]],
   ],
 };
 
@@ -98,7 +116,7 @@ async function seedEvent(client, ev, closed) {
       ev.title,
       ev.description,
       ev.meetingPlugin,
-      WINDOW_START,
+      closed ? CLOSED_WINDOW_START : OPEN_WINDOW_START,
       WINDOW_DAYS,
       closed ? 'closed' : 'open',
       closed ? ev.resultSlot : null,
@@ -106,6 +124,12 @@ async function seedEvent(client, ev, closed) {
       closed ? new Date().toISOString() : null,
     ],
   );
+  // Re-running the seed on a later day would otherwise leave the earlier run's votes behind as picks
+  // whose time has gone by, so the open event's votes are replaced each run. The closed event's votes
+  // are historical evidence for a stamped result — they are left alone.
+  if (!closed) {
+    await client.query(`DELETE FROM mutual_time_votes WHERE event_id = $1`, [eventId]);
+  }
   for (const [voter, slots] of ev.votes) {
     for (const iso of slots) {
       await client.query(

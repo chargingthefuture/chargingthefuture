@@ -10,7 +10,7 @@ with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
 
 - **In scope:** owner/admin event creation and manual close; a public shareable link with three viewer
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
-  at a set close time.
+  at a set close time; a rolling seven-day window of times while the survey is open.
 - **Out of scope:** any ServiceCredits/money (there are none here); a public directory of events (events
   are shared as direct links, never listed); recurring events; native Android (web + mobile-responsive
   only, per rule 105 — Mutual Time is not on the Chyme keep-list).
@@ -27,6 +27,8 @@ to the meeting surface; members who did not vote can still come listen in.
    up to 3 one-hour windows they're free — in their own timezone, auto-detected and changeable (for a
    VPN or travel). Slots are shown as date chips with Morning/Afternoon/Evening groups; a member can
    revise or clear their picks any time while voting is open.
+   The days on offer are always the next seven days counted from the moment they open the link, so a
+   survey that has been open for a while still shows upcoming days, never days that have gone by.
 2. **See the chosen time.** After the survey closes, the same link shows the winning time in the
    viewer's own timezone, how many members can make it, and a "Go to <plugin>" link to the meeting.
 3. **Listen-in for everyone.** A signed-out or not-yet-approved visitor can still open the link: they
@@ -45,6 +47,11 @@ to the meeting surface; members who did not vote can still come listen in.
    every other screen has. A signed-out visitor sees the shared back chevron next to the event name,
    and only when there is somewhere in-app to go back to.
 7. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+8. **Told when a pick of theirs has gone by.** Because the days on offer roll forward, a time a member
+   picked last week can fall behind the current moment. Their expired picks stop counting and are taken
+   off their list, and the voting form tells them so — "One time you picked earlier has now passed, so
+   it no longer counts. Pick from the days below and save again." — instead of dropping the vote
+   silently. Their remaining upcoming picks are untouched.
 
 ## Admin Features
 
@@ -55,7 +62,9 @@ to the meeting surface; members who did not vote can still come listen in.
    (scheduled / open / closed), Copy-link, View, "Close and choose the time", and — once closed — the
    chosen time and how many can make it.
 3. **Close and choose:** closing runs the most-overlap algorithm and stamps the winning window. A survey
-   with a set close time auto-closes when that time passes.
+   with a set close time auto-closes when that time passes. Only windows still ahead of the moment of
+   closing can win, so closing a long-open survey can never stamp a time that has already been and
+   gone; if every vote had passed, the link says so and no time is chosen.
 
 ## API Surface and Route Map
 
@@ -67,11 +76,13 @@ All routes under `ctf/packages/web/app/api/mutual-time/`:
 - `POST /api/mutual-time/events/[eventId]/close` — close a survey now and compute the winner. Admin-only
   (and the creator). CSRF-guarded.
 - `GET /api/mutual-time/event/[slug]` — **public** read of one event (title, description, status,
-  candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`
-  and their own picks; never returns anyone else's votes.
+  candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`,
+  their own upcoming picks, and `viewer.expiredPicks` (how many of their picks were for times that have
+  since passed); never returns anyone else's votes.
 - `POST /api/mutual-time/event/[slug]/vote` — save (replace) the signed-in, Unlock-approved member's
   picks (up to 3 half-hour-snapped one-hour windows). CSRF-guarded. Rejected if the event is not open or
-  a pick is not a valid candidate slot.
+  a pick is not a valid candidate slot — which now includes a pick whose time passed while the form sat
+  open (same error code, wording that names the reason).
 
 ## Data Model and Storage Contracts
 
@@ -81,7 +92,9 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. `mutual_time_events`
    - One row per event, keyed by `id`, with a unique shareable `slug`. Columns: `created_by_user_id`
      (the admin creator), `title` (nullable), `description` (nullable), `meeting_plugin`
-     (`chyme|peer-programming|beacon`), `window_start_date` (UTC date the 7-day candidate window begins),
+     (`chyme|peer-programming|beacon`), `window_start_date` (UTC date recorded at creation; it anchors
+     the candidate window only for a closed survey — while a survey is open the window rolls forward
+     from the current moment instead),
      `window_days` (default 7), `opens_at` (nullable — null opens immediately), `closes_at` (nullable —
      null closes manually), `status` (`open|closed`), `result_slot_start` (winning UTC slot, nullable),
      `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable). Indexed by slug
@@ -90,8 +103,13 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
    - One row per (event, voter, slot): `event_id` (FK → `mutual_time_events(id)` `ON DELETE CASCADE`),
      `voter_user_id`, `slot_start_utc` (the one-hour window start), `created_at`. Unique on
      `(event_id, voter_user_id, slot_start_utc)`; indexed by `(event_id, slot_start_utc)` and by voter.
-     Candidate slots are computed from the event window (`window_start_date` + `window_days`, 48
-     half-hour starts/day) and never stored — only cast votes are stored.
+     Candidate slots are computed from the event window (`window_days` × 48 half-hour starts/day) and
+     never stored — only cast votes are stored. The window is anchored by
+     `candidateWindowStartMs` in `lib/mutual-time/repository.ts`: the next half-hour from now while the
+     survey is open, the opening moment while it is scheduled, and `window_start_date` once it is
+     closed. A stored vote whose `slot_start_utc` has passed stays in the table but is ignored
+     everywhere — it is left out of the voter count, out of the winner computation, and out of the
+     member's own pick list.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -138,17 +156,26 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 Deterministic seed at `ctf/scripts/seedMutualTime.mjs` (pnpm `seed:mutual-time`). Seeds two events — one
 open ("Weekly check-in", no close date, spread of votes) and one closed ("Q3 onboarding", with a
 computed winning time) — plus sample votes, using fixed slugs + `ON CONFLICT DO NOTHING` so it is
-idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed deterministic.
+idempotent. The open event is anchored to the day the seed runs — its votes land on the days after it,
+inside the rolling window, so the sample overlap is always still ahead and its votes are replaced on
+each run rather than piling up. The closed event keeps a fixed past window (`2026-07-21`, 7 days), which
+keeps that half reproducible; its stamped result stands.
 
 ## Gaps and Known Technical Debt
 
-1. **Target meeting week is derived, not configured.** The candidate window is a fixed 7 days starting
-   from when voting opens (or creation). Letting the admin pick the target week separately from the
-   survey open/close times is a documented follow-up.
-2. **Full 24h candidate grid.** To let anyone in any timezone find a free hour, the candidate grid spans
+1. **Target meeting week is derived, not configured.** The candidate window is 7 days, rolling forward
+   from the current moment while the survey is open (from the opening moment while it is scheduled).
+   Letting the admin pick a specific target week separately from the survey open/close times is a
+   documented follow-up — until then, an admin who needs a fixed week sets a close time and closes
+   before it passes.
+2. **A survey with no close time still needs a person to end it.** The rolling window keeps an
+   unattended survey usable indefinitely, but nothing chooses a time on its own: the admin presses
+   "Close and choose the time" (owner decision, 2026-08-12 — a default close date was considered and
+   turned down). The dashboard's status pill is the only prompt that a survey is still waiting.
+3. **Full 24h candidate grid.** To let anyone in any timezone find a free hour, the candidate grid spans
    all 24 hours (48 half-hour starts/day). Members see them grouped by their local Night/Morning/
    Afternoon/Evening; a future refinement could let the admin bound the daily hours.
-3. **No reminder/notification** when a time is chosen — members re-open the link to see the result. A
+4. **No reminder/notification** when a time is chosen — members re-open the link to see the result. A
    push/notification tie-in is a possible follow-up.
 
 ## Change Log
@@ -234,6 +261,27 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   history there is nothing in-app behind them and their browser's own back still works. No hand-rolled
   back control — both pieces are the shared ones. `MutualTimePublic` was also split into `EventHeader`
   and `EventBody` to stay under the complexity limit.
+- 2026-08-12: **The days on offer now roll forward, so an open survey never goes out of date.** Reported
+  by the owner: a survey created with no close time kept offering the same seven days after they had
+  gone by, members could still pick a time in the past, and closing it would stamp that past time as
+  the chosen one. Nothing about the survey ended by itself. The candidate window is no longer frozen at
+  creation. One function, `candidateWindowStartMs` in `lib/mutual-time/repository.ts`, now decides where
+  the window starts — the next half-hour from now while the survey is open, the opening moment while it
+  is scheduled, the stored `window_start_date` once it is closed — and the public read, the vote guard,
+  and the winner computation all go through it, so what a voter sees, what the server accepts, and what
+  can win are the same set of times. `slots.ts` gained `generateSlotsFrom` and `rollingWindowStartMs`
+  and lost `generateCandidateSlots`. Votes for times that have passed stay in the table but are ignored:
+  left out of `computeWinner` (`slot_start_utc > NOW()`), out of the open-survey voter count, and out of
+  `getViewerPicks`, which now also returns how many of the member's picks expired so the form can say so
+  ("One time you picked earlier has now passed…") rather than dropping them silently — the owner chose
+  telling the voter over rolling their picks forward or letting past picks keep counting. A survey
+  closed after all its votes had passed now says that on the link instead of "closed with no votes".
+  Saving a pick that has just passed returns the same `MUTUAL_TIME_INVALID_SLOT` code with wording that
+  says which of the two it is. Auto-close was deliberately left alone (owner decision, same date): a
+  survey with no close time still waits for the admin to close it, and the rolling window is what keeps
+  it usable in the meantime. The seed's open event is anchored to the day it runs and its votes are
+  replaced each run; the closed event keeps its fixed past window. No schema change, no contract change,
+  no API-shape change beyond the added `viewer.expiredPicks` count.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 

@@ -48,7 +48,11 @@ export type MutualTimePublicEvent = {
 // What one member's vote-state adds on top of the public event when they load the page.
 export type MutualTimeViewerState = {
   canVote: boolean; // signed in AND unlock-approved
-  picks: string[]; // this viewer's current picks (ISO UTC starts)
+  picks: string[]; // this viewer's current picks (ISO UTC starts) — upcoming ones only
+  // How many of this viewer's saved picks were for times that have now gone by. Those picks have
+  // rolled out of the window and no longer count, and the page says so rather than dropping them
+  // silently.
+  expiredPicks: number;
 };
 
 export type MutualTimeAuditEvent = {

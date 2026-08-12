@@ -31,13 +31,16 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
     const userId = identity?.isAuthenticated ? identity.userId : null;
     let canVote = false;
     let picks: string[] = [];
+    let expiredPicks = 0;
     if (userId) {
       const tier = await getUnlockAccessTier(userId).catch(() => null);
       canVote = tier === 'approved_full' || Boolean(identity?.isAdmin);
-      picks = await getViewerPicks(slug, userId).catch(() => []);
+      const viewerPicks = await getViewerPicks(slug, userId).catch(() => ({ picks: [], expiredCount: 0 }));
+      picks = viewerPicks.picks;
+      expiredPicks = viewerPicks.expiredCount;
     }
 
-    return NextResponse.json({ ok: true, event, viewer: { canVote, picks } }, { status: 200 });
+    return NextResponse.json({ ok: true, event, viewer: { canVote, picks, expiredPicks } }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'mutual-time', op: 'public_event', extra: { slug } });
     return NextResponse.json(
