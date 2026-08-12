@@ -67,8 +67,9 @@ export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | n
 // nothing is fabricated, and a member with no upstream rows simply yields zeroes (and therefore no
 // evidence — see buildTrustEvidence).
 //
-// Signals used in the `cross_plugin_engagement_v3` model:
-//   - login_events             → how often / how recently the member logs in (the universal "seen" signal)
+// Signals used in the `cross_plugin_engagement_v5` model:
+//   - login_events             → how many days the member has signed in on, all-time, plus their
+//                                current unbroken run of days (the universal "seen" signal)
 //   - socket_relay_*            → completed SocketRelay trades + requests opened
 //   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
 //   - lighthouse_matches       → accepted/completed LightHouse matches
@@ -98,14 +99,19 @@ function numCol<T extends Record<string, unknown>>(result: { rows: T[] }, key: k
   return Number(raw ?? 0);
 }
 
-// Map the login aggregate row into its three metric fields. Extracted so the login guards don't
-// count against computeTrustSignalMetrics' complexity.
-function buildLoginMetrics(loginAgg: {
-  rows: { login_days: string; login_events: string; last_login_at: Date | null }[];
-}): { loginDays: number; loginEvents: number; lastLoginAt: string | null } {
+// Map the login aggregate rows into their metric fields. Extracted so the login guards don't
+// count against computeTrustSignalMetrics' complexity. The streak arrives from its own query
+// because it is a windowed read, not an aggregate over the same rows.
+function buildLoginMetrics(
+  loginAgg: {
+    rows: { login_days: string; login_events: string; last_login_at: Date | null }[];
+  },
+  streakAgg: { rows: { streak_days: string }[] },
+): { loginDays: number; loginStreakDays: number; loginEvents: number; lastLoginAt: string | null } {
   const loginRow = loginAgg.rows[0];
   return {
     loginDays: Number(loginRow?.login_days ?? 0),
+    loginStreakDays: Number(streakAgg.rows[0]?.streak_days ?? 0),
     loginEvents: Number(loginRow?.login_events ?? 0),
     lastLoginAt: loginRow?.last_login_at ? loginRow.last_login_at.toISOString() : null,
   };
@@ -114,6 +120,7 @@ function buildLoginMetrics(loginAgg: {
 export async function computeTrustSignalMetrics(userId: string): Promise<TrustSignalMetrics> {
   const [
     loginAgg,
+    loginStreakAgg,
     completedTrades,
     requestsOpened,
     scReceived,
@@ -137,6 +144,36 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
          MAX(created_at) AS last_login_at
        FROM login_events
        WHERE user_id = $1`,
+      [userId]
+    ),
+    // The member's CURRENT run of consecutive sign-in days, in UTC. Read separately from the
+    // aggregate above because it answers a different question: `login_days` says how much history a
+    // member has built up, this says whether they are still around right now — the thing a member
+    // needs to know when they are choosing who to ask for help they need soon.
+    //
+    // How it works: take the distinct UTC days the member signed in, number them newest-first, and
+    // add that number to the day. Consecutive days all land on the same value (day 10 + 1, day 9 + 2,
+    // day 8 + 3 …), so the run containing the newest day is every row whose value equals
+    // `newest day + 1`; the first missed day breaks the sequence and everything older falls out.
+    //
+    // The final guard is what makes it a CURRENT streak rather than the longest one they ever had:
+    // if the newest sign-in day is older than yesterday the count is 0 and no line is shown. Yesterday
+    // still counts so a member does not read as gone simply because they have not signed in yet today.
+    // A member with no sign-ins at all yields no rows, the subqueries are NULL, and the count is 0.
+    queryDb<{ streak_days: string }>(
+      `WITH signin_days AS (
+         SELECT DISTINCT (created_at AT TIME ZONE 'UTC')::date AS signin_day
+         FROM login_events
+         WHERE user_id = $1
+       ),
+       runs AS (
+         SELECT signin_day + (ROW_NUMBER() OVER (ORDER BY signin_day DESC))::int AS run_key
+         FROM signin_days
+       )
+       SELECT COUNT(*) AS streak_days
+       FROM runs
+       WHERE run_key = (SELECT MAX(signin_day) + 1 FROM signin_days)
+         AND (SELECT MAX(signin_day) FROM signin_days) >= ((NOW() AT TIME ZONE 'UTC')::date - 1)`,
       [userId]
     ),
     // A "completed trade" is a closed fulfillment in which the member was either the requester or
@@ -234,7 +271,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
   ]);
 
   return {
-    ...buildLoginMetrics(loginAgg),
+    ...buildLoginMetrics(loginAgg, loginStreakAgg),
     socketRelayCompletedTrades: numCol(completedTrades, 'completed'),
     socketRelayRequestsOpened: numCol(requestsOpened, 'opened'),
     serviceCreditsDistinctPayers: numCol(scReceived, 'payers'),
@@ -292,7 +329,21 @@ function pushCleanRecordEvidence(
   }
 }
 
-// Login-frequency signal, which additionally carries the most-recent sign-in in `details`.
+// Sign-in signals — two lines that answer two different questions, which is why neither replaces
+// the other:
+//   "Active on 162 days"      — how much history the member has here. Cumulative, never resets.
+//   "Active 12 days in a row" — whether they are still around. Only present while the run is
+//                               unbroken to today or yesterday, so its absence is not a mark
+//                               against anyone; it simply says nothing about right now.
+//
+// The second line exists because the first cannot answer the question a member actually has when
+// they need somewhere to stay soon: not just "is this person established" but "will they see my
+// message". A long history and a member who stopped signing in months ago look identical on the
+// cumulative line alone.
+//
+// Deliberately plain wording, and no goal, target, or "keep it going" framing anywhere near it: this
+// is a fact about the member for someone else to read, not a habit the platform is pushing them to
+// keep. The number going back to nothing after a quiet week costs the member nothing.
 function pushLoginEvidence(
   evidence: TrustEvidenceItem[],
   nowIso: string,
@@ -304,6 +355,16 @@ function pushLoginEvidence(
       type: 'engagement-login-frequency',
       summary: `Active on ${n} ${n === 1 ? 'day' : 'days'}`,
       details: metrics.lastLoginAt ? `Most recent sign-in ${metrics.lastLoginAt}` : undefined,
+      createdAt: nowIso,
+      createdBy: 'trust-signal',
+    });
+  }
+
+  if (metrics.loginStreakDays > 0) {
+    const n = metrics.loginStreakDays;
+    evidence.push({
+      type: 'engagement-login-streak',
+      summary: `Active ${n} ${n === 1 ? 'day' : 'days'} in a row`,
       createdAt: nowIso,
       createdBy: 'trust-signal',
     });

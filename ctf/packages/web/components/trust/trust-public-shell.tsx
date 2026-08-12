@@ -13,7 +13,8 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 // Static description of the signals Trust aggregates (marketing copy). Every item must map to a
 // signal `buildTrustEvidence` actually emits — never identity verification (there is none), never a
 // numeric score (none is produced), and never anything the code cannot back. Mapping:
-//   How often you sign in     → the "Active on N days" signal from login_events
+//   How often you sign in     → the two login_events signals: "Active on N days" (all-time) and
+//                               "Active N days in a row" (the run the member is on right now)
 //   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you,
 //                               plus the undisputed completed-transfer line
 //   Community connections     → Foundation connections-as-provider + ongoing recurring activities

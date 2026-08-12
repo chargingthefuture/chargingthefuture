@@ -12,6 +12,7 @@ const NOW = '2026-06-29T00:00:00.000Z';
 function zeroMetrics(): TrustSignalMetrics {
   return {
     loginDays: 0,
+    loginStreakDays: 0,
     loginEvents: 0,
     lastLoginAt: null,
     socketRelayCompletedTrades: 0,
@@ -78,9 +79,34 @@ describe('buildTrustEvidence', () => {
     expect(login?.details).toContain('2026-06-28');
   });
 
+  it('reports the all-time day count and the current run of days as two separate lines', () => {
+    const ev = buildTrustEvidence({ ...zeroMetrics(), loginDays: 162, loginStreakDays: 12 }, NOW);
+    expect(ev.map((e) => e.summary)).toEqual(['Active on 162 days', 'Active 12 days in a row']);
+  });
+
+  it('omits the run-of-days line when the run has been broken, keeping the all-time count', () => {
+    const ev = buildTrustEvidence({ ...zeroMetrics(), loginDays: 162, loginStreakDays: 0 }, NOW);
+    expect(ev.map((e) => e.summary)).toEqual(['Active on 162 days']);
+    expect(ev.some((e) => e.type === 'engagement-login-streak')).toBe(false);
+  });
+
+  it('uses the singular for a one-day run', () => {
+    const ev = buildTrustEvidence({ ...zeroMetrics(), loginDays: 1, loginStreakDays: 1 }, NOW);
+    expect(ev.find((e) => e.type === 'engagement-login-streak')?.summary).toBe('Active 1 day in a row');
+  });
+
+  it('carries no supporting detail on the run-of-days line', () => {
+    const streak = buildTrustEvidence(
+      { ...zeroMetrics(), loginDays: 30, loginStreakDays: 4, lastLoginAt: '2026-06-28' },
+      NOW,
+    ).find((e) => e.type === 'engagement-login-streak');
+    expect(streak?.details).toBeUndefined();
+  });
+
   it('never surfaces the privacy-excluded plugins (Mood, ClickLog, Unlock)', () => {
     const everything: TrustSignalMetrics = {
       loginDays: 3,
+      loginStreakDays: 3,
       loginEvents: 3,
       lastLoginAt: '2026-06-28',
       socketRelayCompletedTrades: 3,

@@ -16,14 +16,21 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
 ## User Features
 
 1. View their own trust signals — one plain line for each thing they have done — on profile, account, and directory surfaces. No badge, no score, no status.
-2. See, on their own Trust card (account hub, community right rail, own Directory profile), both
+2. See two separate sign-in lines on any member's trust card, their own included: "Active on 162
+   days" counts every day that member has ever signed in on and never goes down, and "Active 12 days
+   in a row" counts the run they are on right now. The second line appears only while the run is
+   unbroken up to today or yesterday and disappears the moment a day is missed — so a member looking
+   for someone who can reply soon can tell an established member who is still around from an
+   established member who has not been here in months. Nobody is asked to keep a run going, nothing
+   reminds a member about it, and losing it takes nothing else away.
+3. See, on their own Trust card (account hub, community right rail, own Directory profile), both
    what they have and what everyone else gets. The card body is two labeled sections: **"Your
    trust"** — every signal the member has — then **"What members see"**, which renders the exact rows
    any other member receives, using the same components that member's screen uses. Members cannot
    change this and there is no control on the card: what a member sees of someone else is decided in
    code, the same way for everyone, so trust cannot be hidden by the person it describes. The second
    section is there so a member is never guessing what is on show about them.
-3. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
+4. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
 
 ## Admin Features
 
@@ -41,23 +48,45 @@ Trust still writes `trust_admin_audit_trail` rows for panel reads and snapshot r
 
 - `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension so the member's own read never errors. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
 - `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel at one of two disclosure levels, reported on the response as `trustDisclosure`, and the level is decided here in code rather than by any member setting: the owner (self) and admins receive `full`; **every other member receives `summary`** — headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). No read is refused; there is no `403` visibility path, because hiding a member's participation from other members would defeat the point of the panel.
-- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v4`) from real cross-plugin engagement — login frequency from `login_events`; SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
+- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v5`) from real cross-plugin engagement — sign-in history from `login_events` (all-time days plus the member's current unbroken run of days); SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
 
 ## Data Model and Storage Contracts
 
 - `trust_user_extension` — Per-user extension: `user_id`, `trust_evidence` (JSONB array, default `[]`), `updated_at`. Two columns were dropped on 2026-08-10, each with the feature that wrote it: `trust_visibility` (the per-member visibility choice) and `trust_status` (the admin verification decision) — both `ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS …` in `schema.sql` and `schema.demo.sql`. No numeric trust-score column exists, and no status column: the qualitative signal is derived from cross-plugin engagement and nothing about a member is certified. `trust_evidence` is rewritten wholesale by the snapshot route; nothing appends to it.
 - `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the snapshot route and by the trust panel reads (`trust.summary.read` on `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`).
-- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login*, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, default `cross_plugin_engagement_v4`), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
+- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login* including the v5 `loginStreakDays`, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, written as `cross_plugin_engagement_v5`; the column default in `schema.sql` is still the original `cross_plugin_engagement_v1` and is never used, because every insert passes the current model explicitly), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
-## Trust Signal Model (`cross_plugin_engagement_v4`)
+## Trust Signal Model (`cross_plugin_engagement_v5`)
 
 Trust derives a **qualitative, non-numeric** signal by counting **real rows** in already-seeded
 upstream plugins — it fabricates nothing. The snapshot route (`POST /api/trust/signal/snapshot`)
 computes these counts for the caller, persists them to `trust_signal_snapshot`, and turns them into
 human-readable evidence items on `trust_user_extension`. Real signals that feed the model:
 
-- **Login frequency/recency** — from `login_events`: distinct login days (`loginDays`), total events
-  (`loginEvents`), and the most recent sign-in (`lastLoginAt`). Evidence: "Active on N days".
+- **Sign-in history, all-time** — from `login_events`: the number of separate days the member signed
+  in on, counted over their whole time here (`loginDays`), plus total events (`loginEvents`) and the
+  most recent sign-in (`lastLoginAt`, shown only to the member and admins). Cumulative: a gap between
+  sign-ins never reduces it. Evidence: "Active on N days".
+- **Sign-in run, current (v5)** — from the same `login_events` rows: the member's unbroken run of
+  consecutive sign-in days in UTC, counted back from their most recent sign-in
+  (`loginStreakDays`). It counts only while that run reaches today or yesterday; once a day is
+  missed it is 0 and **no line is shown at all**, so a quiet week is never displayed as a mark
+  against anyone. Evidence: "Active N days in a row".
+
+  This line exists because the all-time count cannot answer the question a member has when they need
+  somewhere to stay soon: a member with a long history who stopped signing in months ago and one who
+  is here every day read identically on "Active on N days" alone. The run answers "will they see my
+  message", which is the platform's real advantage over asking the same question on Quora — a member
+  can see both that someone is established and that someone is reachable.
+
+  It is deliberately not a goal, target, or streak-to-defend: nothing prompts the member about it,
+  nothing warns them it is about to end, and losing it costs them nothing. The platform does not push
+  people to log in daily; it just reports what happened for another member to read.
+
+  Privacy note: this is the one place a peer learns something about *when* a member was last here —
+  a still-running count means they signed in within the last day. That narrowing of the summary rule
+  is deliberate (owner decision, 2026-08-12) and stays coarse: a count of days, never a clock time
+  and never a date.
 - **Completed SocketRelay trades** — from `socket_relay_fulfillments`: closed fulfillments where the
   member was the requester or fulfiller (`socketRelayCompletedTrades`). Closing a fulfillment is how
   a SocketRelay exchange is finished, so a `closed` row is a genuinely completed trade. Evidence:
@@ -169,6 +198,26 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-08-12: **Second sign-in line: the member's current run of days, alongside the all-time count**
+  (model `cross_plugin_engagement_v5`, owner request). "Active on 162 days" is cumulative — distinct
+  sign-in days over a member's whole history — and on its own it cannot tell a reader whether that
+  member is still here. Someone who needs housing soon has two questions, not one: can I trust this
+  person, and can they answer me today. Trust now emits both facts as separate lines: the existing
+  "Active on N days", then "Active N days in a row" from a new `loginStreakDays` metric — the
+  unbroken run of consecutive UTC sign-in days counted back from the member's most recent sign-in,
+  read from the same `login_events` rows with a windowed query (no new table, no schema change). The
+  run counts only while it reaches today or yesterday; once a day is missed it is 0 and the line is
+  simply absent, so a quiet week is never rendered as a mark against a member. Nothing prompts,
+  warns, or rewards a member about the run — it is a fact for someone else to read, not a habit the
+  platform pushes. Peers see both lines: `peer-summary.ts` passes the run through and places it
+  directly under the all-time count. This deliberately narrows the summary rule that a peer never
+  learns when a member last signed in — a live run means "within the last day" — and stays coarse: a
+  day count, never a clock time or a date (owner decision, 2026-08-12; recorded in the module comment
+  and the Signal Model section). Bumped `TRUST_SNAPSHOT_MODEL` to v5; extended `TrustSignalMetrics`;
+  updated the command contract (`trust.signal.snapshot.refresh` v1.4.0 — `login_events` was already
+  in `dataAccess`, so no table was added), the deletion contract's metric bundle, and the demo seed.
+  Eight unit tests added across `trust-evidence.test.ts` and `peer-summary.test.ts`. Web-only; Trust
+  is not on the Android keep-list (rule 105).
 - 2026-08-10: **Verification review removed; the marketing page stops advertising a signal that does
   not exist.** Owner directive: there should be NO verification review. The platform does not vet
   people, so an admin had nothing to certify, and the decision was a record almost nobody could see —
