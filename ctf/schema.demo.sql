@@ -6276,7 +6276,11 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   result_slot_start TIMESTAMPTZ NULL,
   result_can_make_it INTEGER NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  closed_at TIMESTAMPTZ NULL
+  closed_at TIMESTAMPTZ NULL,
+  -- TRUE when the survey closed itself at closes_at rather than an admin pressing Close. It is what
+  -- the admin-landing dot keys on: a survey that chose its own time needs the admin told, where one
+  -- they closed by hand does not.
+  auto_closed BOOLEAN NOT NULL DEFAULT FALSE
 );
 -- Column reconciliation (all added nullable / with safe defaults so they never fail on a populated table).
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS title TEXT;
@@ -6290,6 +6294,7 @@ ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NO
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS auto_closed BOOLEAN NOT NULL DEFAULT FALSE;
 -- "Where we'll meet" vocabulary. Beacon was added after the table shipped, so an existing database
 -- still carries the two-value check from the original CREATE TABLE. Drop + re-add keeps it idempotent
 -- and brings a legacy database up to date (same idiom as currencies_kind_check). NOT VALID so the ADD

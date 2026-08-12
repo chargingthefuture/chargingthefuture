@@ -38,6 +38,8 @@ Run the seed first: `pnpm --dir ctf seed:mutual-time`
 
 5. **Approved member can reach the vote surface.** Sign in as an approved member, open the shareable link for the open event. Slot chips are visible and at least one is selectable. web ☐ mobile ☐
 
+6. **The days on offer start from now.** On that same open event, read the day chips left to right. The first one is today or tomorrow in your timezone and they run seven days forward — no day that has already been is ever offered, no matter how long ago the event was created. web ☐ mobile ☐
+
 ---
 
 ## Member walkthrough
@@ -269,8 +271,9 @@ Result: web ☐ mobile ☐
 1. Construct a POST to `/api/mutual-time/event/<slug>/vote` with the `x-ctf-csrf: '1'` header and a body containing a `slots` array with one entry set to an arbitrary timestamp that is not in the event's candidate window (e.g., a date outside the 7-day window).
 2. Send the request.
 3. Send a second request whose `slots` array contains a non-string element (e.g. `[null]` or `[123]`).
+4. Send a third request whose `slots` array contains a half-hour-aligned time from yesterday.
 
-**Expected:** Step 2 returns HTTP 400 with code `invalidSlot` (well-formed but unknown slot). Step 3 returns HTTP 400 with code `invalidPayload` (malformed list — element is not a string). No vote is stored in either case.
+**Expected:** Step 2 returns HTTP 400 with code `invalidSlot` (well-formed but unknown slot). Step 3 returns HTTP 400 with code `invalidPayload` (malformed list — element is not a string). Step 4 returns HTTP 400 with the same `invalidSlot` code, and its message names the reason: the pick has already passed. No vote is stored in any of the three cases.
 
 Result: web ☐
 
@@ -306,6 +309,25 @@ Result: web ☐ mobile ☐
 4. Still signed out, open the app first, then navigate to the link, and look next to the event name again.
 
 **Expected:** Signed in, the standard top bar is there — back chevron, calendar icon, "Mutual Time", and the bug / settings / account controls — and the chevron returns to the screen you came from. Signed out in a fresh tab, there is no back chevron (there is nowhere in the app to go back to) and the browser's own back still works. Signed out after moving through the app, the back chevron appears next to the event name and returns to the previous page. No screen shows two back controls.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-14 — The days on offer roll forward, and a pick that has passed is called out
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web, Mobile
+**Precondition:** An open event with no close date. You need to move a saved vote into the past, which needs one direct database write (there is no UI for it).
+
+**Steps:**
+1. Open `/mutual-time/<open-event-slug>` and note the first day chip — it should be today or tomorrow in your timezone, never a day that has already been.
+2. Pick two windows and save.
+3. In the database, move one of your two rows back in time: `UPDATE mutual_time_votes SET slot_start_utc = NOW() - INTERVAL '2 hours' WHERE event_id = '<id>' AND voter_user_id = '<you>' AND slot_start_utc = '<one of your picks>';`
+4. Reload the link and read the top of the voting form and the "Your picks" list.
+5. Pick a replacement window and save again.
+
+**Expected:** Step 1 shows seven days starting from now — no past day appears, however long ago the event was created. Step 4 shows the line "One time you picked earlier has now passed, so it no longer counts. Pick from the days below and save again."; the moved pick is gone from "Your picks" and the other one is still there. Step 5 saves normally and the notice goes away.
 
 Result: web ☐ mobile ☐
 
@@ -425,6 +447,43 @@ Result: web ☐ mobile ☐
 2. Confirm.
 
 **Expected:** The event closes without an error. The dashboard and public link show a graceful "no time could be chosen" or equivalent message — no unhandled exception, no blank result slot.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A5b — Closing a survey whose votes have all passed chooses no time
+
+**Role:** Admin
+**Surfaces:** Web, Mobile
+**Precondition:** A fresh event with votes from at least one member. As in MT-14, moving votes into the past needs one direct database write.
+
+**Steps:**
+1. Move every vote on the event into the past: `UPDATE mutual_time_votes SET slot_start_utc = NOW() - INTERVAL '2 hours' WHERE event_id = '<id>';`
+2. On the dashboard, look at the event's voter count.
+3. Click "Close and choose the time", then open the public link.
+
+**Expected:** Step 2 shows 0 voters while the survey is open — picks that have passed no longer count. Step 3 closes the survey and the public link says the survey closed after the times members picked had already passed, so no time was chosen. No past time is ever stamped as the winner.
+
+Result: web ☐ mobile ☐
+
+---
+
+### MT-A5c — The admin landing dot appears when there is something to act on
+
+**Role:** Admin (the creator of the surveys under test)
+**Surfaces:** Web, Mobile
+**Precondition:** One open survey with no close date and no votes yet, and one approved member who can vote.
+
+**Steps:**
+1. Open `/admin` and look at the Mutual Time tile while the survey has no votes.
+2. Have the approved member open the shared link, pick a window, and save.
+3. Reload `/admin` and look at the tile again.
+4. Click the Mutual Time tile, then go back to `/admin`.
+5. Create a second survey with a close time about five minutes out, have the member vote on it, click the Mutual Time tile to clear the dot, and wait for the close time to pass. Reload `/admin`.
+6. On a third survey with votes, press "Close and choose the time" yourself, then reload `/admin`.
+
+**Expected:** Step 1 shows no dot — nobody has picked anything, and that is not news. Step 3 shows the dot. Step 4 clears it. Step 5 shows the dot again: the survey reached its close time and chose a time without you, which you have to be told even if you have already seen the votes. Step 6 shows no dot — you closed that one yourself. A second admin's surveys never raise your dot.
 
 Result: web ☐ mobile ☐
 
@@ -560,6 +619,7 @@ The following cases must behave identically in a desktop browser and a phone-wid
 
 ## Known gaps — do not file these as bugs
 
-1. **Target meeting week is derived, not configured.** The candidate window is always 7 days from when voting opens. There is no admin control to pick a specific target week separately from the survey open/close times. This is a documented follow-up item.
+1. **Target meeting week is derived, not configured.** The candidate window is always 7 days, rolling forward from the current moment while the survey is open. There is no admin control to pick a specific target week separately from the survey open/close times. This is a documented follow-up item.
+1b. **A survey with no close time waits for the admin.** Nothing chooses a time on its own. The rolling window keeps an unattended survey usable, but it stays open until an admin presses "Close and choose the time" (owner decision, 2026-08-12).
 2. **Full 24-hour candidate grid.** All 48 half-hour starts per day are candidates. The admin cannot restrict the daily hour range. A future refinement may add daily hour bounds.
 3. **No reminder or notification when a time is chosen.** Members must re-open the link themselves to see the result. A push/notification tie-in is a possible follow-up, not a current feature.
