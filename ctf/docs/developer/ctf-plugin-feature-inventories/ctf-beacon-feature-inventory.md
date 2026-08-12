@@ -78,7 +78,9 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - **Recording = Stream Video recording.** Recording is enabled on the call; when it is ready Stream
   delivers the URL via webhook. Beacon stores the URL and posts the replay to the Commons.
 - **Commons integration** reuses the existing feed/announcement path: a "🔴 Live now" entry on go-live
-  (linking to `/apps/beacon`) and a "▶️ Watch the replay" entry when the recording is ready.
+  and a "▶️ Watch the replay" entry when the recording is ready. Both carry the full web address
+  `https://app.chargingthefuture.com/apps/beacon`, so the reader can tap straight through instead of
+  having to work out the domain from a bare path.
 
 ## User Features (viewer surface, `/apps/beacon`)
 
@@ -258,6 +260,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-08-12: **The Commons notices link straight to Beacon.** The auto-posted "🔴 Live now" and
+  "▶️ Watch the replay" entries said "at `/apps/beacon`" — a piece of a web address, which nobody can
+  tap and which only works for a reader who already knows the domain. Both now carry the full address
+  `https://app.chargingthefuture.com/apps/beacon`, matching the announcement link lines in
+  `lib/feed/repository.ts`. Copy-only change in `postBeaconLiveNotice` / `postBeaconReplayNotice`
+  (`lib/beacon/repository.ts`); no schema, contract, route, or API change.
 - 2026-08-10: **A broadcast run from a phone now reaches viewers and produces a replay.** The public
   HLS feed and the recording are started by `startBeaconBroadcastEgress`, reached through
   `POST /api/beacon/[id]/start-broadcast` — and the only thing that called it was the in-browser

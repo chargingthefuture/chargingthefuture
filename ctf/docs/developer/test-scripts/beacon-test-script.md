@@ -92,9 +92,10 @@ the member's real account.
 **Precondition:** an event has ended and its recording is ready.
 **Steps:**
 1. After the event ends, check the Commons feed.
-**Expected:** A "🔴 Live now" entry appeared on go-live (linking to `/apps/beacon`), and a
-"▶️ Watch the replay" entry appears once the recording is ready. The replay is posted only once
-(never double-posted).
+**Expected:** A "🔴 Live now" entry appeared on go-live, and a "▶️ Watch the replay" entry appears
+once the recording is ready. Both entries show the full web address
+`https://app.chargingthefuture.com/apps/beacon` — a tappable link, not a bare `/apps/beacon` path —
+and tapping it opens the Beacon viewer. The replay is posted only once (never double-posted).
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

@@ -224,7 +224,11 @@ export async function insertBeaconAudit(input: {
   );
 }
 
-const BEACON_APP_PATH = '/apps/beacon';
+// Commons notices carry the full web address, not a bare `/apps/beacon` path. A member reading the
+// post in the mobile feed or in Commons can tap it and land on the broadcast; a path fragment only
+// works if the reader already knows the domain and types it in. Same shape as the announcement link
+// lines in `lib/feed/repository.ts`.
+const BEACON_APP_URL = 'https://app.chargingthefuture.com/apps/beacon';
 
 // Auto-post a "live now" notice to the Commons on go-live. Idempotent: if the event already carries a
 // live-post id we skip. Returns the post id (or null when nothing was posted). A Commons failure is
@@ -234,7 +238,7 @@ export async function postBeaconLiveNotice(event: BeaconEvent): Promise<string |
     return event.commonsLivePostId;
   }
   try {
-    const body = `🔴 Live now: ${event.title}. Watch the broadcast at ${BEACON_APP_PATH} — no sign-in needed to watch; sign in to chat.`;
+    const body = `🔴 Live now: ${event.title}. Watch the broadcast at ${BEACON_APP_URL} — no sign-in needed to watch; sign in to chat.`;
     const post = await createFeedCommunityPost(event.hostUserId, { body, category: 'event' });
     await setBeaconLivePostId(event.id, post.postId);
     return post.postId;
@@ -253,7 +257,7 @@ export async function postBeaconReplayNotice(event: BeaconEvent): Promise<string
     return null;
   }
   try {
-    const body = `▶️ Watch the replay: ${event.title}. The recording is available at ${BEACON_APP_PATH}.`;
+    const body = `▶️ Watch the replay: ${event.title}. The recording is available at ${BEACON_APP_URL}.`;
     const post = await createFeedCommunityPost(event.hostUserId, { body, category: 'event' });
     await setBeaconRecordingPostId(event.id, post.postId);
     return post.postId;
