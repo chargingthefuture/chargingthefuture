@@ -397,6 +397,30 @@ export async function getViewerPicks(
   };
 }
 
+// Check one submitted pick against the candidate grid and return it in the canonical ISO form. Its own
+// function so the three ways a pick can be wrong are named in one place — and so the save transaction
+// below stays inside the complexity limit (rule 116).
+//   - a wrong element type is a malformed payload (invalidPayload), distinct from a well-formed string
+//     that is not a candidate (invalidSlot);
+//   - a well-formed time that has gone by gets the same invalidSlot code with wording that says so,
+//     because that one the voter can fix by picking again.
+function normalizePick(raw: unknown, candidates: Set<string>): string {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidPayload, 'Picks must be a list of time slots.');
+  }
+  const iso = normalizeSlotIso(raw);
+  if (!iso || !candidates.has(iso)) {
+    const passed = iso !== null && Date.parse(iso) <= Date.now();
+    throw new MutualTimeError(
+      MUTUAL_TIME_ERROR_CODE.invalidSlot,
+      passed
+        ? 'One of your picks has already passed. Pick a time that is still ahead.'
+        : 'One of your picks is not a valid time slot.',
+    );
+  }
+  return iso;
+}
+
 // Replace this member's picks for an event (up to MUTUAL_TIME_MAX_PICKS). Rejects when the event is not
 // currently open (scheduled or closed) or a pick is not a valid candidate slot.
 export async function saveVote(slug: string, userId: string, rawSlots: unknown): Promise<string[]> {
@@ -426,24 +450,7 @@ export async function saveVote(slug: string, userId: string, rawSlots: unknown):
     const candidates = candidateSlotSet(candidateWindowStartMs(row, new Date()), row.window_days);
     const picks = new Set<string>();
     for (const raw of rawSlots) {
-      // The payload must be a list of non-empty strings; a wrong element type is a malformed payload
-      // (invalidPayload), distinct from a well-formed string that is not a valid candidate (invalidSlot).
-      if (typeof raw !== 'string' || raw.trim().length === 0) {
-        throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidPayload, 'Picks must be a list of time slots.');
-      }
-      const iso = normalizeSlotIso(raw);
-      if (!iso || !candidates.has(iso)) {
-        // Same error code either way; the wording tells the voter which of the two it is, because
-        // "that time has passed" is fixable by them and "not a valid slot" is not.
-        const passed = iso !== null && Date.parse(iso) <= Date.now();
-        throw new MutualTimeError(
-          MUTUAL_TIME_ERROR_CODE.invalidSlot,
-          passed
-            ? 'One of your picks has already passed. Pick a time that is still ahead.'
-            : 'One of your picks is not a valid time slot.',
-        );
-      }
-      picks.add(iso);
+      picks.add(normalizePick(raw, candidates));
     }
 
     await client.query(`DELETE FROM mutual_time_votes WHERE event_id = $1 AND voter_user_id = $2`, [row.id, userId]);
