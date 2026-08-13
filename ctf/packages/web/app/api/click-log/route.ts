@@ -6,7 +6,7 @@ import {
   getIncidentCount,
   getPreferences,
 } from 'lib/click-log/repository';
-import { MAX_NOTES_LENGTH, MAX_SCHEME_SUGGESTION_LENGTH } from 'lib/click-log/constants';
+import { MAX_NOTES_LENGTH, MAX_SCHEME_SUGGESTION_LENGTH, MAX_TAGS_PER_KIND } from 'lib/click-log/constants';
 import { canViewIncidents } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import type { IncidentMetadata } from 'lib/click-log/types';
@@ -103,21 +103,29 @@ function buildMetadata(
   };
 }
 
-// Validate an optional incident tag against its canonical slug list (lib/click-log/tags.ts).
-// Absent means untagged; an unknown slug is rejected so trend reporting only ever aggregates
-// known values. Returns a discriminated result so the caller keeps TypeScript narrowing.
-function parseTag(
+// Validate an optional incident tag list against its canonical slug list
+// (lib/click-log/tags.ts). Absent/null/[] all mean untagged; an unknown slug is rejected so
+// trend reporting only ever aggregates known values; duplicates are collapsed; each kind is
+// capped at MAX_TAGS_PER_KIND. Returns a discriminated result so the caller keeps narrowing.
+function parseTagList(
   raw: unknown,
   isValid: (slug: string) => boolean,
   fieldName: string,
-): { error: NextResponse } | { data: string | undefined } {
+): { error: NextResponse } | { data: string[] } {
   if (raw === undefined || raw === null) {
-    return { data: undefined };
+    return { data: [] };
   }
-  if (typeof raw !== 'string' || !isValid(raw)) {
-    return { error: badRequest(`Invalid ${fieldName}`) };
+  if (!Array.isArray(raw)) {
+    return { error: badRequest(`Invalid ${fieldName}: expected a list of tag slugs`) };
   }
-  return { data: raw };
+  const unique = [...new Set(raw)];
+  if (unique.some((slug) => typeof slug !== 'string' || !isValid(slug))) {
+    return { error: badRequest(`Invalid ${fieldName}: unknown tag slug`) };
+  }
+  if (unique.length > MAX_TAGS_PER_KIND) {
+    return { error: badRequest(`Invalid ${fieldName}: at most ${MAX_TAGS_PER_KIND} tags`) };
+  }
+  return { data: unique as string[] };
 }
 
 // Validate the optional per-incident owner-share choice. undefined means the caller left the
@@ -132,35 +140,36 @@ function parseSharedFlag(raw: unknown): { error: NextResponse } | { data: boolea
   return { data: raw };
 }
 
-// Validate both optional tags plus the tags-require-location rule (owner decision, 2026-08-02):
-// a tagged incident must carry a location, because without it the trend data a tag feeds is not
-// detailed enough. Applies when either or both tags are set.
+// Validate both optional tag lists plus the tags-require-location rule (owner decision,
+// 2026-08-02): a tagged incident must carry a location, because without it the trend data a
+// tag feeds is not detailed enough. Applies when either list is non-empty. Lists since
+// 2026-08-13: a real incident routinely chains several schemes, so each kind takes up to
+// MAX_TAGS_PER_KIND slugs.
 function parseIncidentTags(
   body: unknown,
   metadata: IncidentMetadata,
-): { error: NextResponse } | { data: { problemTag?: string; schemeTag?: string } } {
-  const problemResult = parseTag(
-    (body as { problemTag?: unknown })?.problemTag,
+): { error: NextResponse } | { data: { problemTags: string[]; schemeTags: string[] } } {
+  const problemResult = parseTagList(
+    (body as { problemTags?: unknown })?.problemTags,
     isValidProblemTag,
-    'problemTag',
+    'problemTags',
   );
   if ('error' in problemResult) {
     return problemResult;
   }
-  const schemeResult = parseTag(
-    (body as { schemeTag?: unknown })?.schemeTag,
+  const schemeResult = parseTagList(
+    (body as { schemeTags?: unknown })?.schemeTags,
     isValidSchemeTag,
-    'schemeTag',
+    'schemeTags',
   );
   if ('error' in schemeResult) {
     return schemeResult;
   }
-  const tagged = problemResult.data !== undefined || schemeResult.data !== undefined;
+  const tagged = problemResult.data.length > 0 || schemeResult.data.length > 0;
   if (tagged && (metadata.latitude === undefined || metadata.longitude === undefined)) {
     return { error: badRequest('Location is required when tagging an incident') };
   }
-  // An absent tag stays undefined here; createIncident stores undefined as NULL.
-  return { data: { problemTag: problemResult.data, schemeTag: schemeResult.data } };
+  return { data: { problemTags: problemResult.data, schemeTags: schemeResult.data } };
 }
 
 // Resolve the effective owner-share flag: an explicit per-incident choice wins; otherwise the
@@ -212,7 +221,7 @@ function parseSuggestionText(raw: unknown): { error: NextResponse } | { data: st
 // any other scheme tag are rejected so nothing shared can ride along unnoticed.
 async function parseSchemeSuggestion(
   body: unknown,
-  schemeTag: string | undefined,
+  schemeTags: string[],
   userId: string,
 ): Promise<{ error: NextResponse } | { data: { suggestion: string; quoraUrl: string | undefined } | undefined }> {
   const rawSuggestion = (body as { schemeSuggestion?: unknown })?.schemeSuggestion;
@@ -220,7 +229,7 @@ async function parseSchemeSuggestion(
   if ('error' in urlResult) {
     return urlResult;
   }
-  if (schemeTag !== NOT_LISTED_SCHEME_SLUG) {
+  if (!schemeTags.includes(NOT_LISTED_SCHEME_SLUG)) {
     if (rawSuggestion !== undefined || urlResult.data !== undefined) {
       return { error: badRequest('Scheme suggestions are only accepted with the "Not listed" scheme tag') };
     }
@@ -267,14 +276,14 @@ export async function POST(req: NextRequest) {
   if ('error' in sharedResult) {
     return sharedResult.error;
   }
-  // Optional tags: which known problem happened and/or which named scheme was used. One or
-  // both may be present; both are optional; a tagged incident must carry a location.
+  // Optional tag lists: which known problems happened and/or which named schemes were used.
+  // Either, both, or neither may be non-empty; a tagged incident must carry a location.
   const tagsResult = parseIncidentTags(body, metadata);
   if ('error' in tagsResult) {
     return tagsResult.error;
   }
   // "Not listed" scheme suggestion: required description + optional Quora link, Weavers-only.
-  const suggestionResult = await parseSchemeSuggestion(body, tagsResult.data.schemeTag, userId);
+  const suggestionResult = await parseSchemeSuggestion(body, tagsResult.data.schemeTags, userId);
   if ('error' in suggestionResult) {
     return suggestionResult.error;
   }

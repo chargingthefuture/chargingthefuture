@@ -29,7 +29,7 @@ const SEED_USER_IDS = [
   'user-00000003',
 ];
 
-// problem_tag / scheme_tag are optional coarse tags; slugs must exist in
+// problem_tags / scheme_tags are optional coarse tag lists; slugs must exist in
 // packages/web/lib/click-log/tags.ts. Coverage: tagged-with-both, problem-only,
 // scheme-only, and untagged incidents. Every tagged incident carries a location,
 // matching the API rule that tags require latitude/longitude.
@@ -37,40 +37,40 @@ const INCIDENTS = [
   {
     user_id: SEED_USER_IDS[0],
     metadata: { latitude: 37.7749, longitude: -122.4194, notes: 'Test incident with location and notes' },
-    problem_tag: 'parked-cars-outside-home',
-    scheme_tag: 'scapegoating-by-proxy',
+    problem_tags: ['parked-cars-outside-home'],
+    scheme_tags: ['scapegoating-by-proxy', 'staged-public-scenes'],
   },
   {
     user_id: SEED_USER_IDS[1],
     metadata: { latitude: 40.7128, longitude: -74.0060 },
-    problem_tag: 'mail-tampering',
-    scheme_tag: null,
+    problem_tags: ['mail-tampering'],
+    scheme_tags: [],
   },
   {
     user_id: SEED_USER_IDS[2],
     metadata: { latitude: 34.0522, longitude: -118.2437, notes: 'Incident with notes and location' },
-    problem_tag: null,
-    scheme_tag: 'mail-mirage',
+    problem_tags: [],
+    scheme_tags: ['mail-mirage'],
   },
   {
     user_id: SEED_USER_IDS[0],
     metadata: {},
-    problem_tag: null,
-    scheme_tag: null,
+    problem_tags: [],
+    scheme_tags: [],
   },
   {
     user_id: SEED_USER_IDS[1],
     metadata: { latitude: 51.5074, longitude: -0.1278, notes: 'London incident' },
-    problem_tag: null,
-    scheme_tag: null,
+    problem_tags: [],
+    scheme_tags: [],
   },
   // "Not listed" scheme with a suggestion (see SUGGESTIONS below): the suggestion row is what
   // the proposeSchemeSuggestions pipeline drains into a private triage issue.
   {
     user_id: SEED_USER_IDS[2],
     metadata: { latitude: 41.8781, longitude: -87.6298 },
-    problem_tag: null,
-    scheme_tag: 'other-scheme',
+    problem_tags: [],
+    scheme_tags: ['other-scheme'],
   },
 ];
 
@@ -96,10 +96,10 @@ async function seed() {
     for (const incident of INCIDENTS) {
       const id = deterministicId(incident.user_id, incident.metadata);
       await queryDb(
-        `INSERT INTO click_log_incidents (id, user_id, metadata, problem_tag, scheme_tag, created_at)
+        `INSERT INTO click_log_incidents (id, user_id, metadata, problem_tags, scheme_tags, created_at)
          VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (id) DO NOTHING`,
-        [id, incident.user_id, JSON.stringify(incident.metadata), incident.problem_tag, incident.scheme_tag]
+        [id, incident.user_id, JSON.stringify(incident.metadata), incident.problem_tags, incident.scheme_tags]
       );
     }
     for (const s of SUGGESTIONS) {

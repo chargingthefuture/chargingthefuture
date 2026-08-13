@@ -5,8 +5,8 @@ import type { IncidentEditFields } from "./click-log-incident-editor";
 
 // Per-incident edit state and the PUT call, extracted from the shell (mirroring
 // click-log-use-owner-share) so ClickLogShell stays under the rule-116 function-length limit.
-// Only the note and tags are sent — the date and location are immutable, so the body never
-// carries coordinates. "" tags from the pickers become null (= untagged) for the API.
+// Only the note and tag lists are sent — the date and location are immutable, so the body
+// never carries coordinates. Empty picker arrays mean untagged.
 export function useIncidentEdit({
   onError,
   onBusy,
@@ -27,8 +27,8 @@ export function useIncidentEdit({
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
           notes: fields.notes,
-          problemTag: fields.problemTag || null,
-          schemeTag: fields.schemeTag || null,
+          problemTags: fields.problemTags,
+          schemeTags: fields.schemeTags,
         }),
       });
       if (!res.ok) {

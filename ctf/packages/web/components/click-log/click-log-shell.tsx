@@ -46,17 +46,17 @@ async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
 function buildCreateBody(args: {
   metadata: Record<string, unknown>;
   sharedWithOwner: boolean;
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   schemeSuggestion: string;
   schemeQuoraUrl: string;
 }): Record<string, unknown> {
-  const notListed = args.schemeTag === NOT_LISTED_SCHEME_SLUG;
+  const notListed = args.schemeTags.includes(NOT_LISTED_SCHEME_SLUG);
   return {
     metadata: args.metadata,
     sharedWithOwner: args.sharedWithOwner,
-    ...(args.problemTag ? { problemTag: args.problemTag } : {}),
-    ...(args.schemeTag ? { schemeTag: args.schemeTag } : {}),
+    ...(args.problemTags.length > 0 ? { problemTags: args.problemTags } : {}),
+    ...(args.schemeTags.length > 0 ? { schemeTags: args.schemeTags } : {}),
     ...(notListed && args.schemeSuggestion.trim() ? { schemeSuggestion: args.schemeSuggestion.trim() } : {}),
     ...(notListed && args.schemeQuoraUrl.trim() ? { schemeQuoraUrl: args.schemeQuoraUrl.trim() } : {}),
   };
@@ -96,9 +96,9 @@ export function ClickLogShell() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
-  // Optional tags for the incident being logged ("" = untagged). Slugs from lib/click-log/tags.
-  const [problemTag, setProblemTag] = useState("");
-  const [schemeTag, setSchemeTag] = useState("");
+  // Optional tags for the incident being logged ([] = untagged). Slugs from lib/click-log/tags.
+  const [problemTags, setProblemTags] = useState<string[]>([]);
+  const [schemeTags, setSchemeTags] = useState<string[]>([]);
   // "Not listed" scheme-suggestion state. canSuggestScheme comes from GET /api/click-log
   // (Weavers of the Commons badge holders only); when false the option is hidden entirely.
   const [canSuggestScheme, setCanSuggestScheme] = useState(false);
@@ -183,8 +183,8 @@ export function ClickLogShell() {
           buildCreateBody({
             metadata,
             sharedWithOwner: share.formShare,
-            problemTag,
-            schemeTag,
+            problemTags,
+            schemeTags,
             schemeSuggestion,
             schemeQuoraUrl,
           }),
@@ -193,8 +193,8 @@ export function ClickLogShell() {
       await throwIfNotOk(res, "Failed to log incident");
       setShowForm(false);
       setNote("");
-      setProblemTag("");
-      setSchemeTag("");
+      setProblemTags([]);
+      setSchemeTags([]);
       setSchemeSuggestion("");
       setSchemeQuoraUrl("");
       setGeo({});
@@ -254,8 +254,8 @@ export function ClickLogShell() {
         geoStatus={geoStatus}
         geoError={geoError}
         shareWithOwner={share.formShare}
-        problemTag={problemTag}
-        schemeTag={schemeTag}
+        problemTags={problemTags}
+        schemeTags={schemeTags}
         schemeSuggestion={{
           canSuggestScheme,
           suggestion: schemeSuggestion,
@@ -264,13 +264,13 @@ export function ClickLogShell() {
           onQuoraUrlChange: setSchemeQuoraUrl,
         }}
         onShareChange={share.setFormShare}
-        onProblemTagChange={setProblemTag}
-        onSchemeTagChange={setSchemeTag}
+        onProblemTagsChange={setProblemTags}
+        onSchemeTagsChange={setSchemeTags}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setProblemTag(""); setSchemeTag(""); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
+        onCancel={() => { setShowForm(false); setNote(""); setProblemTags([]); setSchemeTags([]); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
       />
 
       <ShareDefaultToggle

@@ -11,19 +11,19 @@ import { ClickLogIncidentEditor, type IncidentEditFields } from "./click-log-inc
 // Extracted so the row component stays under the complexity limit.
 function IncidentTagChips({ incident, tokens }: { incident: ClickLogIncident; tokens: ClickLogTokens }) {
   const t = tokens;
-  if (!incident.problem_tag && !incident.scheme_tag) return null;
+  if (incident.problem_tags.length === 0 && incident.scheme_tags.length === 0) return null;
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
-      {incident.problem_tag && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}25`, color: t.ACCENT }}>
-          {problemTagLabel(incident.problem_tag)}
+      {incident.problem_tags.map((slug) => (
+        <span key={slug} style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: `${t.ACCENT}12`, border: `1px solid ${t.ACCENT}25`, color: t.ACCENT }}>
+          {problemTagLabel(slug)}
         </span>
-      )}
-      {incident.scheme_tag && (
-        <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED }}>
-          Scheme: {schemeTagLabel(incident.scheme_tag)}
+      ))}
+      {incident.scheme_tags.map((slug) => (
+        <span key={slug} style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED }}>
+          Scheme: {schemeTagLabel(slug)}
         </span>
-      )}
+      ))}
     </div>
   );
 }

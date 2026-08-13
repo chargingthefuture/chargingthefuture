@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, MapPin } from "lucide-react";
-import { MAX_NOTES_LENGTH } from "../../lib/click-log/constants";
+import { MAX_NOTES_LENGTH, MAX_TAGS_PER_KIND } from "../../lib/click-log/constants";
 import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS, NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
 import { getClickLogTokens, type ClickLogTokens } from "./click-log-shared";
@@ -27,34 +27,34 @@ export type SchemeSuggestionProps = {
 // Module-level so the form component stays under the complexity limit.
 function isSubmitDisabled(
   submitting: boolean,
-  problemTag: string,
-  schemeTag: string,
+  problemTags: string[],
+  schemeTags: string[],
   locationAdded: boolean,
   suggestion: string,
 ): boolean {
   if (submitting) return true;
-  if (Boolean(problemTag || schemeTag) && !locationAdded) return true;
-  return schemeTag === NOT_LISTED_SCHEME_SLUG && suggestion.trim().length === 0;
+  if ((problemTags.length > 0 || schemeTags.length > 0) && !locationAdded) return true;
+  return schemeTags.includes(NOT_LISTED_SCHEME_SLUG) && suggestion.trim().length === 0;
 }
 
 // The two optional tag pickers plus the tags-need-location hint and the "Not listed"
 // suggestion fields. Extracted so the note form stays under the complexity limit.
 function ClickLogTagFields({
-  problemTag,
-  schemeTag,
+  problemTags,
+  schemeTags,
   locationAdded,
   schemeSuggestion,
   tokens,
-  onProblemTagChange,
-  onSchemeTagChange,
+  onProblemTagsChange,
+  onSchemeTagsChange,
 }: {
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   locationAdded: boolean;
   schemeSuggestion: SchemeSuggestionProps;
   tokens: ClickLogTokens;
-  onProblemTagChange: (value: string) => void;
-  onSchemeTagChange: (value: string) => void;
+  onProblemTagsChange: (values: string[]) => void;
+  onSchemeTagsChange: (values: string[]) => void;
 }) {
   const t = tokens;
   // Non-Weavers never see the catch-all option — picking a named scheme stays open to everyone.
@@ -64,22 +64,24 @@ function ClickLogTagFields({
   return (
     <>
       <ClickLogTagPicker
-        label="Which problem happened? (optional)"
+        label="Which problems happened? (optional — pick all that apply)"
         searchPlaceholder="Search problems…"
-        value={problemTag}
+        values={problemTags}
         options={CLICK_LOG_PROBLEM_TAGS}
+        maxSelected={MAX_TAGS_PER_KIND}
         tokens={t}
-        onChange={onProblemTagChange}
+        onChange={onProblemTagsChange}
       />
       <ClickLogTagPicker
-        label="Which scheme was used? (optional)"
+        label="Which schemes were used? (optional — pick all that apply)"
         searchPlaceholder="Search schemes…"
-        value={schemeTag}
+        values={schemeTags}
         options={schemeOptions}
+        maxSelected={MAX_TAGS_PER_KIND}
         tokens={t}
-        onChange={onSchemeTagChange}
+        onChange={onSchemeTagsChange}
       />
-      {schemeTag === NOT_LISTED_SCHEME_SLUG && (
+      {schemeTags.includes(NOT_LISTED_SCHEME_SLUG) && (
         <ClickLogSchemeSuggestionFields
           suggestion={schemeSuggestion.suggestion}
           quoraUrl={schemeSuggestion.quoraUrl}
@@ -90,7 +92,7 @@ function ClickLogTagFields({
       )}
       {/* A tagged incident must carry a location — without it the trend data a tag feeds is not
           detailed enough (owner decision, 2026-08-02). The server enforces the same rule. */}
-      {(problemTag || schemeTag) && !locationAdded && (
+      {(problemTags.length > 0 || schemeTags.length > 0) && !locationAdded && (
         <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
           Tags need a location: add your location below before submitting, so the trend data is
           detailed enough.
@@ -137,15 +139,15 @@ function ClickLogNoteForm({
   geoStatus,
   geoError,
   shareWithOwner,
-  problemTag,
-  schemeTag,
+  problemTags,
+  schemeTags,
   schemeSuggestion,
   tokens,
   onNoteChange,
   onAddLocation,
   onShareChange,
-  onProblemTagChange,
-  onSchemeTagChange,
+  onProblemTagsChange,
+  onSchemeTagsChange,
   onSubmit,
   onCancel,
 }: {
@@ -155,15 +157,15 @@ function ClickLogNoteForm({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   schemeSuggestion: SchemeSuggestionProps;
   tokens: ClickLogTokens;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
   onShareChange: (value: boolean) => void;
-  onProblemTagChange: (value: string) => void;
-  onSchemeTagChange: (value: string) => void;
+  onProblemTagsChange: (values: string[]) => void;
+  onSchemeTagsChange: (values: string[]) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }) {
@@ -172,8 +174,8 @@ function ClickLogNoteForm({
   // matching the server rules), so Submit waits for them.
   const submitDisabled = isSubmitDisabled(
     submitting,
-    problemTag,
-    schemeTag,
+    problemTags,
+    schemeTags,
     locationAdded,
     schemeSuggestion.suggestion,
   );
@@ -192,13 +194,13 @@ function ClickLogNoteForm({
           used. One, both, or neither may be picked; both feed trend reporting. Type-and-search
           filtered pickers, mimicking the Directory / SkillsHunt skill pickers. */}
       <ClickLogTagFields
-        problemTag={problemTag}
-        schemeTag={schemeTag}
+        problemTags={problemTags}
+        schemeTags={schemeTags}
         locationAdded={locationAdded}
         schemeSuggestion={schemeSuggestion}
         tokens={t}
-        onProblemTagChange={onProblemTagChange}
-        onSchemeTagChange={onSchemeTagChange}
+        onProblemTagsChange={onProblemTagsChange}
+        onSchemeTagsChange={onSchemeTagsChange}
       />
       {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
           trend data (day + rounded location + tags + count) is ever shared — never notes. */}
@@ -240,12 +242,12 @@ export function ClickLogLogPanel({
   geoStatus,
   geoError,
   shareWithOwner,
-  problemTag,
-  schemeTag,
+  problemTags,
+  schemeTags,
   schemeSuggestion,
   onShareChange,
-  onProblemTagChange,
-  onSchemeTagChange,
+  onProblemTagsChange,
+  onSchemeTagsChange,
   onToggleForm,
   onNoteChange,
   onAddLocation,
@@ -260,12 +262,12 @@ export function ClickLogLogPanel({
   geoStatus: GeoStatus;
   geoError: string | null;
   shareWithOwner: boolean;
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   schemeSuggestion: SchemeSuggestionProps;
   onShareChange: (value: boolean) => void;
-  onProblemTagChange: (value: string) => void;
-  onSchemeTagChange: (value: string) => void;
+  onProblemTagsChange: (values: string[]) => void;
+  onSchemeTagsChange: (values: string[]) => void;
   onToggleForm: () => void;
   onNoteChange: (value: string) => void;
   onAddLocation: () => void;
@@ -296,15 +298,15 @@ export function ClickLogLogPanel({
           geoStatus={geoStatus}
           geoError={geoError}
           shareWithOwner={shareWithOwner}
-          problemTag={problemTag}
-          schemeTag={schemeTag}
+          problemTags={problemTags}
+          schemeTags={schemeTags}
           schemeSuggestion={schemeSuggestion}
           tokens={t}
           onNoteChange={onNoteChange}
           onAddLocation={onAddLocation}
           onShareChange={onShareChange}
-          onProblemTagChange={onProblemTagChange}
-          onSchemeTagChange={onSchemeTagChange}
+          onProblemTagsChange={onProblemTagsChange}
+          onSchemeTagsChange={onSchemeTagsChange}
           onSubmit={onSubmit}
           onCancel={onCancel}
         />

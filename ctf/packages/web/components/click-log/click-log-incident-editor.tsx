@@ -2,31 +2,30 @@
 
 import { useState } from "react";
 import type { ClickLogIncident } from "../../lib/click-log/types";
-import { MAX_NOTES_LENGTH } from "../../lib/click-log/constants";
+import { MAX_NOTES_LENGTH, MAX_TAGS_PER_KIND } from "../../lib/click-log/constants";
 import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS, NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
 import { formatIncidentTime, hasLocation, type ClickLogTokens } from "./click-log-shared";
 import { ClickLogTagPicker } from "./click-log-tag-picker";
 
-// What an edit can change. Tags use "" for "no tag" (picker convention); the shell converts to
-// null for the API.
-export type IncidentEditFields = { notes: string; problemTag: string; schemeTag: string };
+// What an edit can change. Tag lists use [] for untagged (picker convention).
+export type IncidentEditFields = { notes: string; problemTags: string[]; schemeTags: string[] };
 
 // The tag pickers of the edit form, or — on an incident logged without a location — the
 // explanation of why there are none. Extracted so the editor stays under the complexity limit.
 function EditorTagSection({
   incident,
-  problemTag,
-  schemeTag,
+  problemTags,
+  schemeTags,
   tokens,
-  onProblemTagChange,
-  onSchemeTagChange,
+  onProblemTagsChange,
+  onSchemeTagsChange,
 }: {
   incident: ClickLogIncident;
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   tokens: ClickLogTokens;
-  onProblemTagChange: (value: string) => void;
-  onSchemeTagChange: (value: string) => void;
+  onProblemTagsChange: (values: string[]) => void;
+  onSchemeTagsChange: (values: string[]) => void;
 }) {
   const t = tokens;
   if (!hasLocation(incident)) {
@@ -44,32 +43,34 @@ function EditorTagSection({
   // editing offers it only on an incident that already carries it — keep it or remove it, but
   // never newly pick it here. The server enforces the same rule.
   const schemeOptions =
-    incident.scheme_tag === NOT_LISTED_SCHEME_SLUG
+    incident.scheme_tags.includes(NOT_LISTED_SCHEME_SLUG)
       ? CLICK_LOG_SCHEME_TAGS
       : CLICK_LOG_SCHEME_TAGS.filter((tag) => tag.slug !== NOT_LISTED_SCHEME_SLUG);
   return (
     <>
       <ClickLogTagPicker
-        label="Which problem happened? (optional)"
+        label="Which problems happened? (optional — pick all that apply)"
         searchPlaceholder="Search problems…"
-        value={problemTag}
+        values={problemTags}
         options={CLICK_LOG_PROBLEM_TAGS}
+        maxSelected={MAX_TAGS_PER_KIND}
         tokens={t}
-        onChange={onProblemTagChange}
+        onChange={onProblemTagsChange}
       />
       <ClickLogTagPicker
-        label="Which scheme was used? (optional)"
+        label="Which schemes were used? (optional — pick all that apply)"
         searchPlaceholder="Search schemes…"
-        value={schemeTag}
+        values={schemeTags}
         options={schemeOptions}
+        maxSelected={MAX_TAGS_PER_KIND}
         tokens={t}
-        onChange={onSchemeTagChange}
+        onChange={onSchemeTagsChange}
       />
     </>
   );
 }
 
-// Inline editor for one history row (owner decision, 2026-08-13): the note and the two tags can
+// Inline editor for one history row (owner decision, 2026-08-13): the note and the tag lists can
 // be changed after logging; the date and location cannot — they anchor the trend data, and a
 // location can't be truthfully added after the fact.
 export function ClickLogIncidentEditor({
@@ -87,8 +88,8 @@ export function ClickLogIncidentEditor({
 }) {
   const t = tokens;
   const [notes, setNotes] = useState(incident.metadata.notes ?? "");
-  const [problemTag, setProblemTag] = useState(incident.problem_tag ?? "");
-  const [schemeTag, setSchemeTag] = useState(incident.scheme_tag ?? "");
+  const [problemTags, setProblemTags] = useState<string[]>(incident.problem_tags);
+  const [schemeTags, setSchemeTags] = useState<string[]>(incident.scheme_tags);
   return (
     <div style={{ padding: "14px 16px", borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.ACCENT}40` }}>
       {/* The immutable half of the row, shown so it is clear what editing covers. */}
@@ -107,15 +108,15 @@ export function ClickLogIncidentEditor({
       />
       <EditorTagSection
         incident={incident}
-        problemTag={problemTag}
-        schemeTag={schemeTag}
+        problemTags={problemTags}
+        schemeTags={schemeTags}
         tokens={t}
-        onProblemTagChange={setProblemTag}
-        onSchemeTagChange={setSchemeTag}
+        onProblemTagsChange={setProblemTags}
+        onSchemeTagsChange={setSchemeTags}
       />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button
-          onClick={() => onSave({ notes, problemTag, schemeTag })}
+          onClick={() => onSave({ notes, problemTags, schemeTags })}
           disabled={busy}
           style={{ padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", background: t.ACCENT, border: "none", color: "#fff", opacity: busy ? 0.6 : 1 }}
         >
