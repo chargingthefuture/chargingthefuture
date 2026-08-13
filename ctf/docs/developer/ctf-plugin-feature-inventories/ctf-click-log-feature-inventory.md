@@ -168,6 +168,39 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-13: **Incident note limit raised 200 → 2,000 characters (owner request).**
+  `MAX_NOTES_LENGTH` in `lib/click-log/constants.ts` — the single constant read by the log
+  form's textarea, the server-side length check on create, and (once the edit feature merges)
+  the editor and its server check. 200 characters forced summaries of multi-part incidents to
+  be too thin to be useful later; the owner's cross-country bus trip, which chained five
+  schemes in one journey, did not fit. Notes remain private to the member — the limit change
+  does not touch what is shared. The "Not listed" scheme-description cap
+  (`MAX_SCHEME_SUGGESTION_LENGTH`) stays at 200 on purpose: that text is shared with the owner
+  and drained into triage issues, where shorter is better. No schema change (`metadata` is
+  JSONB with no length constraint); no contract shape change.
+
+- 2026-08-13: **Five new scheme tags and two new problem tags from the owner's cross-country bus
+  trip (owner-named).** Schemes: `engineered-delay` (The Engineered Delay — a driver or employee
+  stalls on purpose so a connection is missed and hours are lost), `altered-ticket` (The Altered
+  Ticket — a booking is rewritten from the inside: legs added, ticket canceled mid-route, the
+  contact email changed so no updated itinerary ever arrives, and the record claims the member
+  made the change themselves), `pretext-search` (The Pretext Search — an ordinary precaution such
+  as TSA-approved luggage locks is declared evidence of drug trafficking to force a public
+  search; nothing is found and the loud story continues anyway), `planted-witness` (The Planted
+  Witness — a scripted approach that will not disengage, then a false assault claim confirmed by
+  a second operative posing as a witness, ending in denied service and a false police report),
+  and `incident-replay` (The Replay — operatives reenact words from a past private incident of
+  the member's, showing their history is known and recasting a resolved dispute as the member's
+  fault). Problems: `travel-sabotage` ("Trips sabotaged — delays, missed connections, canceled
+  tickets") and `false-accusations` ("Falsely accused of violence / crimes to bystanders") — the
+  problem list's first additions since it was created from the landing page's list, mirrored to
+  the landing page's `LOOK_MA_ITEMS` in the same delivery so the two stay one-for-one. Already
+  covered by existing tags and deliberately not duplicated: the loud "she's carrying drugs" talk
+  (`staged-narratives`), the officers' conduct (`police-harassment`), the public scene
+  (`staged-public-scenes`), and the look-alike groundwork the owner connects it to
+  (`scapegoating-by-proxy`). List-data only: no schema, route, contract, or UI change. Public
+  `/schemes` and `/look-ma` pages mirror the additions in their own landing-page PR.
+
 - 2026-08-07: **Recorded a further owner refinement to the pendulum comment (documentation
   only).** The groundwork for turning someone into an operative is laid long before that person
   knows anything is happening — the same con played on others is played on them. The windfall is
