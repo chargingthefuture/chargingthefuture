@@ -85,6 +85,34 @@ describe('summarizeTrustEvidenceForPeer', () => {
     expect(summary.map((line) => line.summary)).toEqual(['Active on 162 days', 'Took part in 1 plugin']);
   });
 
+  it('keeps the current run of sign-in days directly under the all-time count', () => {
+    const summary = summarizeTrustEvidenceForPeer([
+      item('engagement-chyme-rooms', 'Joined 1 Chyme room'),
+      item('engagement-login-streak', 'Active 12 days in a row'),
+      item('engagement-service-credits-payers', 'Received ServiceCredits from 4 community members'),
+      item('engagement-login-frequency', 'Active on 162 days'),
+    ]);
+
+    expect(summary.map((line) => line.summary)).toEqual([
+      'Active on 162 days',
+      'Active 12 days in a row',
+      'Took part in 1 plugin',
+      'Received ServiceCredits from 4 community members',
+    ]);
+  });
+
+  it('lists each sign-in line once', () => {
+    const summary = summarizeTrustEvidenceForPeer([
+      item('engagement-login-frequency', 'Active on 162 days'),
+      item('engagement-login-streak', 'Active 12 days in a row'),
+    ]);
+
+    expect(summary).toEqual([
+      { type: 'engagement-login-frequency', summary: 'Active on 162 days' },
+      { type: 'engagement-login-streak', summary: 'Active 12 days in a row' },
+    ]);
+  });
+
   it('returns nothing for a member with no evidence', () => {
     expect(summarizeTrustEvidenceForPeer([])).toEqual([]);
   });

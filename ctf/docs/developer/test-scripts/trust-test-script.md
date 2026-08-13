@@ -106,7 +106,8 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - Non-owner non-admin caller: HTTP 200 with `trustDisclosure: "summary"`. **There is no 403 path** — no member setting can refuse this read, and any refusal is a bug.
-- `trustEvidence` contains headline counts only: a sign-in line ("Active on N days") if they have one, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
+- `trustEvidence` contains headline counts only: the sign-in lines ("Active on N days", and "Active N days in a row" directly under it when the member's run is still going) if they have them, a single breadth line reading "Took part in N plugins", and any ServiceCredits count lines.
+- Each sign-in line appears at most **once** — a duplicate "Active N days in a row" is a bug.
 - **No item carries a `createdAt` or a `details` field.** The full panel's last-sign-in detail must not appear anywhere in the response.
 - No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
 - The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
@@ -181,7 +182,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - HTTP 200. Response contains `snapshotId`, `generatedAt`, `metrics` object, `trustEvidence` array.
-- `metrics` contains fields like `loginDays`, `loginEvents`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`, `serviceCreditsDistinctPayers`, `serviceCreditsCompletedReceived` — all numbers, none of them a "trust score".
+- `metrics` contains fields like `loginDays`, `loginStreakDays`, `loginEvents`, `socketRelayCompletedTrades`, `socketRelayRequestsOpened`, `serviceCreditsDistinctPayers`, `serviceCreditsCompletedReceived` — all numbers, none of them a "trust score".
 - Per-plugin participation fields present (e.g. `lighthouseMatchesAccepted`, `chymeRoomsJoined`, etc.) — zero is acceptable for plugins where the admin has no activity; a zero field produces no evidence item.
 - The response carries no status field of any kind — the snapshot recomputes evidence and nothing else.
 - `trustEvidence` items each follow the "verb N noun" pattern (e.g. "Active on 5 days", "Completed 3 SocketRelay trades") — no item contains a raw count from ClickLog, Mood, GentlePulse, Unlock, or the Foundation seeker side.
@@ -327,6 +328,27 @@ The following cases must produce consistent data across surfaces since both read
 | TR-A8 | After running `POST /api/trust/signal/snapshot` via the web API, the Android screen (on next load/refresh) shows the updated evidence list. |
 
 ---
+
+## Sign-in run of days (2026-08-12; model `cross_plugin_engagement_v5`)
+
+Trust reports sign-in activity as two lines that answer different questions. To test:
+
+1. As a member who has signed in today and on each of the previous days without a gap, recompute the
+   signal (open the Trust panel / call `POST /api/trust/signal/snapshot`).
+2. `metrics.loginDays` is the count of every separate day that member has ever signed in on;
+   `metrics.loginStreakDays` is the current unbroken run. The run is always less than or equal to the
+   all-time count.
+3. Evidence shows **"Active on N days"** followed immediately by **"Active N days in a row"**. The
+   second line carries no `details` field at either disclosure level.
+4. A member whose most recent sign-in was **the day before yesterday or earlier** gets
+   `loginStreakDays: 0` and **no** "in a row" line at all — while still keeping their full "Active on
+   N days" count. An "in a row" line reading 0, or an all-time count that dropped, is a bug.
+5. A member whose most recent sign-in was **yesterday** still has a run: yesterday counts, so a member
+   who has not signed in yet today does not read as gone.
+6. Days are counted in UTC, so a sign-in at 23:00 and one at 01:00 the next morning are two days.
+7. Nothing anywhere prompts, reminds, warns, or congratulates a member about the run, and no surface
+   shows a target, goal, or "don't lose it" message. Any such copy is a bug — the run is a fact for
+   another member to read, not a habit the platform pushes.
 
 ## Known gaps — do not file these as bugs
 
