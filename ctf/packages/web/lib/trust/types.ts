@@ -4,8 +4,13 @@
 // actual rows in the upstream plugins' tables. No numeric trust score is ever produced — these are
 // raw counts used to build qualitative evidence, then persisted for audit/freshness.
 export interface TrustSignalMetrics {
-  // Distinct calendar days the member logged in (from login_events).
+  // Distinct calendar days the member logged in, over their whole history (from login_events).
+  // Cumulative and never resets: a gap between sign-ins does not reduce it.
   loginDays: number;
+  // The member's CURRENT run of consecutive sign-in days (UTC), counted back from their most recent
+  // sign-in — but only when that sign-in was today or yesterday. An older last sign-in yields 0, so
+  // this is a "still around" signal rather than a record of the longest run they ever had.
+  loginStreakDays: number;
   // Total recorded login events (from login_events).
   loginEvents: number;
   // Most recent login timestamp, if any (ISO string).

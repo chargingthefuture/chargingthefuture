@@ -8,7 +8,12 @@
 //
 // Two rules define it:
 //   1. No timestamps and no supporting detail. A viewer learns "Active on 162 days", never when the
-//      member last signed in, and never a per-item date they could assemble into a timeline.
+//      member last signed in, and never a per-item date they could assemble into a timeline. The
+//      sign-in-streak line is the one deliberate narrowing of that (owner decision, 2026-08-12): a
+//      run of days that is still unbroken tells a viewer the member has signed in within the last
+//      day. That is the point of it — someone who needs housing soon has to know who can actually
+//      answer them — and it is still coarse: a day count, never a clock time, and never a date they
+//      could line up against anything else.
 //   2. Per-plugin participation collapses into one breadth line. "Accepted 24 SkillsHunt
 //      submissions" and "Joined 1 Chyme room" become "Took part in 6 plugins", so a peer sees that
 //      the member is active without seeing what they have been doing or where.
@@ -46,6 +51,7 @@ const PLUGIN_BY_EVIDENCE_TYPE: Record<string, string> = {
 // added upstream stays out of the summary view until it is deliberately classified here.
 const PASSTHROUGH_EVIDENCE_TYPES: readonly string[] = [
   'engagement-login-frequency',
+  'engagement-login-streak',
   'engagement-service-credits-payers',
   'engagement-service-credits-clean',
 ];
@@ -77,10 +83,17 @@ export function summarizeTrustEvidenceForPeer(
 ): TrustPeerEvidenceItem[] {
   const summary: TrustPeerEvidenceItem[] = [];
 
-  // Sign-in activity leads: it is the one signal every participating member has.
+  // Sign-in activity leads: it is the one signal every participating member has. All-time first,
+  // then the current run of days directly under it — the two read as a pair, and putting the run
+  // anywhere else leaves a viewer comparing an all-time number against something further down.
   const login = evidence.find((item) => item.type === 'engagement-login-frequency');
   if (login) {
     summary.push(toSummaryLine(login));
+  }
+
+  const streak = evidence.find((item) => item.type === 'engagement-login-streak');
+  if (streak) {
+    summary.push(toSummaryLine(streak));
   }
 
   const pluginCount = countDistinctPlugins(evidence);
@@ -91,8 +104,11 @@ export function summarizeTrustEvidenceForPeer(
     });
   }
 
+  // The remaining passthrough signals, in their stored order. The two sign-in lines are skipped
+  // here because they were already placed above — without this they would appear twice.
+  const alreadyPlaced = ['engagement-login-frequency', 'engagement-login-streak'];
   for (const item of evidence) {
-    if (item.type !== 'engagement-login-frequency' && PASSTHROUGH_EVIDENCE_TYPES.includes(item.type)) {
+    if (!alreadyPlaced.includes(item.type) && PASSTHROUGH_EVIDENCE_TYPES.includes(item.type)) {
       summary.push(toSummaryLine(item));
     }
   }
