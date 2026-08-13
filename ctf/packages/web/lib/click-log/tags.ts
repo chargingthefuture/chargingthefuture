@@ -72,6 +72,11 @@ export const CLICK_LOG_PROBLEM_TAGS: readonly ClickLogTag[] = [
   { slug: 'estranged-family-forcing', label: 'Estranged family force into your life' },
   { slug: 'dog-commands', label: 'Dogs commanded to bark / whimper at you' },
   { slug: 'banking-blocked', label: 'Bank / finance accounts falsely blocked' },
+  // Added 2026-08-13 from the owner's cross-country bus trip (see the scheme cluster of the same
+  // date below). New problem tags are also added to the landing page's public problems list
+  // (`chargingthefuture/landing-page` → `LOOK_MA_ITEMS`) so the two lists stay one-for-one.
+  { slug: 'travel-sabotage', label: 'Trips sabotaged — delays, missed connections, canceled tickets' },
+  { slug: 'false-accusations', label: 'Falsely accused of violence / crimes to bystanders' },
 ] as const;
 
 // Known taxonomy gap, recorded 2026-08-04 (owner raised it about `color-sensitization`, and it
@@ -243,6 +248,47 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // Distinct from `thats-a-nice`, which is strangers commenting on what the member owns or wears.
   // Here the display is on them, and the member is meant to notice.
   { slug: 'color-sensitization', label: 'Color Sensitization' },
+  // The next five schemes were named by the owner (2026-08-13) from a single cross-country bus
+  // trip (Utah to New York City) that ran several of them in sequence — recorded together
+  // because they chain: the engineered delay creates the extra stop, the stop stages the search
+  // and the accusation, the accusation justifies denying service, and the ticket tampering
+  // stretches a two-day trip toward a week. The through-line the owner names: waste the
+  // member's time, drain their money, and stage absurd scenes so bystanders read the member as
+  // the problem.
+  //
+  // A driver or employee stalls on purpose — a long "break" at a rest stop — so the member
+  // misses a connection and waits hours for the next one. Nothing overt happens; the play is
+  // pure stolen time, and it compounds with `altered-ticket` below.
+  { slug: 'engineered-delay', label: 'The Engineered Delay' },
+  // Someone with inside access rewrites the member's booking: legs added, the ticket canceled
+  // mid-route ("just fueling and cleaning" — then your ticket is gone), and the contact email
+  // on the ticket changed so the member never receives the updated itinerary. The carrier's
+  // record says the member called in the change themselves — impersonation on the record, so
+  // the member is arguing against their own file. In the owner's case this turned three stops
+  // into nearly a dozen.
+  { slug: 'altered-ticket', label: 'The Altered Ticket' },
+  // An ordinary precaution is declared evidence of crime to force a public search. The owner's
+  // case: TSA-approved locks on luggage called "a sign of drug trafficking" by officers in
+  // fake utility-style clothing, with a dog sniff or bag search demanded — in front of the
+  // crowd. Nothing is found, and the loud story continues anyway (see `staged-narratives`).
+  // Ties to `scapegoating-by-proxy`: if look-alike operatives run drugs while dressed like the
+  // member, and other operatives are told NOT to lock their bags, the member's normal
+  // precaution is manufactured into something that "stands out". The absurdity is the point —
+  // it is built to trigger the member and the bystanders at once.
+  { slug: 'pretext-search', label: 'The Pretext Search' },
+  // An operative approaches with scripted talk and will not disengage while the member backs
+  // away — then tells staff the member assaulted them, and a second operative confirms it as a
+  // "witness". Staff deny service on the false claim; police arrive on a false report. In the
+  // owner's case the same pair had followed them across the whole leg (the member had footage
+  // of the earlier harassment), staff refused to pull their own security camera, and the
+  // member was kept off the bus for something that never happened.
+  { slug: 'planted-witness', label: 'The Planted Witness' },
+  // Operatives reenact words from a past private incident of the member's — in the owner's
+  // case, lines from a former-employer dispute ("stay apart, keep apart") where a coworker's
+  // false claim was eventually admitted to be a lie. Proof-of-surveillance theater: it shows
+  // the member their history is known, and it recasts a resolved incident as if the member had
+  // been the problem all along.
+  { slug: 'incident-replay', label: 'The Replay' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
