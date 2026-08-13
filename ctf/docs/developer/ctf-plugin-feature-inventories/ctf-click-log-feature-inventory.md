@@ -196,6 +196,17 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   with `other_scheme_only_if_already_set`, audit event). No schema change — the generated
   `metadata_hash` column recomputes on update. Android: out of scope (web-only per rule 105).
 
+- 2026-08-13: **Incident note limit raised 200 → 2,000 characters (owner request).**
+  `MAX_NOTES_LENGTH` in `lib/click-log/constants.ts` — the single constant read by the log
+  form's textarea, the server-side length check on create, and (once the edit feature merges)
+  the editor and its server check. 200 characters forced summaries of multi-part incidents to
+  be too thin to be useful later; the owner's cross-country bus trip, which chained five
+  schemes in one journey, did not fit. Notes remain private to the member — the limit change
+  does not touch what is shared. The "Not listed" scheme-description cap
+  (`MAX_SCHEME_SUGGESTION_LENGTH`) stays at 200 on purpose: that text is shared with the owner
+  and drained into triage issues, where shorter is better. No schema change (`metadata` is
+  JSONB with no length constraint); no contract shape change.
+
 - 2026-08-13: **Five new scheme tags and two new problem tags from the owner's cross-country bus
   trip (owner-named).** Schemes: `engineered-delay` (The Engineered Delay — a driver or employee
   stalls on purpose so a connection is missed and hours are lost), `altered-ticket` (The Altered

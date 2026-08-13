@@ -244,3 +244,5 @@ of these, it is already tracked, not a new bug:
 > _Documentation note (2026-08-07): recorded an owner refinement in the pendulum comment — the recruit's windfall is arranged long in advance to read as merit-based, binding them to the network before they know anything. Comment only; no tag added, removed, or renamed, and no test steps changed._
 
 > _Tag list update (2026-08-13): added schemes "The Engineered Delay", "The Altered Ticket", "The Pretext Search", "The Planted Witness", and "The Replay", and problems "Trips sabotaged — delays, missed connections, canceled tickets" and "Falsely accused of violence / crimes to bystanders". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Limit change (2026-08-13): the incident note maximum length was raised from 200 to 2,000 characters (`MAX_NOTES_LENGTH`). CL-4's over-length note case still applies at the new limit — no test steps changed._
