@@ -136,6 +136,24 @@ non-quora.com link. After submitting, the incident logs with the "Not listed" sc
 description is stored for the owner's scheme-naming queue, not shown in the trends dashboard.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-9 · Edit an incident's note and tags (date and location immutable)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On a history row of an incident logged WITH a location, tap the pencil icon.
+2. Change the note, change or remove the problem/scheme tags with the pickers, save.
+3. Open the editor again on an incident logged WITHOUT a location.
+4. Try to add a tag to it (there should be no way to).
+**Expected:** The editor opens inline in place of the row, stating that the date and location
+stay as logged — there is no way to change either. Saving updates the note and tag chips on the
+row and the change survives a refresh. On the location-less incident the editor shows no tag
+pickers at all and explains that tags need a location and the location can't be changed after
+logging; only the note is editable. The scheme picker never offers "Not listed" unless the
+incident already carries it (keeping or removing it is allowed). The server enforces all of it:
+a tag on a location-less incident, or newly picking "Not listed", is rejected with a specific
+message, and an edit that duplicates another incident's exact note returns a readable
+"change the note slightly" error.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**

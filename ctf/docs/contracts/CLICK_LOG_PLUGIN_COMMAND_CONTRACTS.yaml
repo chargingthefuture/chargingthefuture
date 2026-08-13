@@ -95,6 +95,51 @@ commands:
     purpose: Delete an incident by id
     retentionClass: user_event
   - pluginId: click-log
+    command: click-log.incident.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        notes:
+          type:
+            - string
+            - 'null'
+        problemTag:
+          type:
+            - string
+            - 'null'
+        schemeTag:
+          type:
+            - string
+            - 'null'
+      required: [id]
+      # Edits an incident's note and tags in place (owner decision, 2026-08-13). The date
+      # (created_at) and location (metadata latitude/longitude) are IMMUTABLE — the body
+      # carries no coordinates and the SQL never touches them. Each field is nullable to
+      # clear it: notes null/empty removes the note, a null/empty tag untags.
+      # Tags follow the same rules as create: slugs validated against the canonical lists in
+      # packages/web/lib/click-log/tags.ts, and a tag may only be set on an incident that
+      # carries a location (tags-require-location, owner decision 2026-08-02). Since the
+      # location is immutable, an incident logged without one can never gain tags — only its
+      # note can be edited; the client explains this instead of showing pickers.
+      # The catch-all 'other-scheme' ("Not listed") may be KEPT or REMOVED on an incident that
+      # already carries it, but never newly picked on edit — its required description intake
+      # happens at logging time (click-log.incident.create); a 400 explains this.
+      # An edit whose resulting metadata duplicates another of the member's incidents violates
+      # the UNIQUE (user_id, metadata_hash) dedupe and returns a readable 409.
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+    dataAccess:
+      - click_log_incidents (select, update — own row only; metadata notes key and the two tag
+        columns; never coordinates or created_at)
+    purpose: Edit the note and tags of an own incident after logging (date and location immutable)
+    retentionClass: user_event
+  - pluginId: click-log
     command: click-log.incident.share.set
     version: 1.0.0
     inputSchema:

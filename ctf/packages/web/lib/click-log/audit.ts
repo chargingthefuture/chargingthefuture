@@ -12,6 +12,7 @@ type ClickLogCommand =
   | 'click-log.incident.create'
   | 'click-log.incident.list'
   | 'click-log.incident.delete'
+  | 'click-log.incident.update'
   | 'click-log.incident.share.set'
   | 'click-log.preferences.fetch'
   | 'click-log.preferences.update'

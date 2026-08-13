@@ -32,6 +32,20 @@ policies:
         mustBeOwnedBy: authenticatedUserId
     consentRequirements: []
   - pluginId: click-log
+    command: click-log.incident.update
+    version: 1.0.0
+    # Deliberately no admin override: the note is the member's private content, so only the
+    # incident's owner may edit it (mirrors click-log.incident.share.set).
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+      # The catch-all 'other-scheme' scheme tag may only be kept (already on the incident),
+      # never newly picked on edit — the suggestion intake it requires happens at create.
+      - attribute: schemeTag
+        conditionalRequirement: other_scheme_only_if_already_set
+    consentRequirements: []
+  - pluginId: click-log
     command: click-log.incident.share.set
     version: 1.0.0
     # Deliberately no admin override: whether an incident is shared with the owner is the

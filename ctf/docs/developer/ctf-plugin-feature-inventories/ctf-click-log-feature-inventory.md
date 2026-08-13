@@ -33,6 +33,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   flow to the owner's private triage queue, and a real one becomes a pull request adding the
   scheme to the canonical list.
 - View incident count and history
+- Edit an own incident after logging (pencil icon on each history row): the note can be changed
+  or removed, and the problem/scheme tags can be added, changed, or removed — using the same
+  type-and-search pickers as the log form. The date and location cannot be changed: they anchor
+  the trend data, and a location can't be truthfully added after the fact. Because tags require
+  a location, an incident logged without one can never gain tags — the editor says so plainly
+  and offers only the note. The "Not listed" scheme can be kept or removed on an incident that
+  already carries it, but not newly picked on edit (its required description is written when
+  logging).
 - Delete own incidents
 - Choose whether an incident is shared with the owner for trend tracking: a global "share new
   incidents by default" setting plus a per-incident override (in the log form and on each history
@@ -66,6 +74,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTag` / `schemeTag` strings (each validated against the canonical slug lists in `lib/click-log/tags.ts`; an unknown slug is a 400). When either or both tags are present, `metadata.latitude`/`metadata.longitude` are required (400 otherwise). When `schemeTag` is `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields with any other `schemeTag` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id. Returns `{ success: true }`.
 - `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). Returns `{ success, sharedWithOwner }`.
+- `PUT /api/click-log/[id]` — Edit an incident's note and tags in place. Body `{ notes, problemTag, schemeTag }`, each nullable to clear. Only the incident's owner may call it (no admin override — the note is the member's private content). The date and location are immutable: the body carries no coordinates and the SQL never touches them. Tags follow the create rules (canonical slugs; tags require the incident to carry a location — since location is immutable, a location-less incident can only edit its note, 400 otherwise). `other-scheme` ("Not listed") may be kept or removed but not newly picked on edit (400 — its description intake happens at create). An edit whose metadata duplicates another of the member's incidents returns a readable 409 (the `metadata_hash` dedupe). Returns `{ success: true }`.
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ buckets, tagTrends }` — `buckets` of day / ~11 km location cell / count, plus `tagTrends` of tag kind (`problem` | `scheme`) / tag slug / count.
@@ -103,6 +112,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 - Auth required for all actions
 - Users can only view/delete their own incidents; admins can view/delete any incident
+- Editing an incident (`click-log.incident.update`) is owner-only with no admin override
+  (`canEditIncident` — the note is the member's private content, mirroring the share toggle).
+  Only the note and tags are editable; the date and location are immutable by contract and by
+  the SQL itself (the UPDATE replaces only the metadata `notes` key and the two tag columns).
 - The "Not listed" scheme-suggestion text is the one deliberate exception to "tags carry no free
   text": it is a separate field explicitly labeled as shared with the owner (submission is the
   consent act), stored apart from `metadata.notes` (which keeps its absolute never-shared
@@ -167,6 +180,21 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 - No advanced search/filtering on incident history.
 
 ## Change Log
+
+- 2026-08-13: **Incidents are editable after logging: note and tags only, date and location
+  immutable (owner request).** New `PUT /api/click-log/[id]` (command
+  `click-log.incident.update` 1.0.0) plus a pencil icon on each history row opening an inline
+  editor with the same type-and-search tag pickers as the log form. Rules: owner-only with no
+  admin override (`canEditIncident` — the note is private member content); the date and
+  location never change (the SQL replaces only the metadata `notes` key and the two tag
+  columns, so the coordinates and `created_at` are untouchable); tags still require a location,
+  and since location is immutable an incident logged without one can only edit its note (the
+  editor explains this instead of showing pickers); "Not listed" can be kept or removed but not
+  newly picked on edit, because its required description intake happens at logging time; an
+  edit that makes the metadata identical to another of the member's incidents hits the
+  `metadata_hash` dedupe and returns a readable 409. Contracts updated (command, access policy
+  with `other_scheme_only_if_already_set`, audit event). No schema change — the generated
+  `metadata_hash` column recomputes on update. Android: out of scope (web-only per rule 105).
 
 - 2026-08-13: **Incident note limit raised 200 → 2,000 characters (owner request).**
   `MAX_NOTES_LENGTH` in `lib/click-log/constants.ts` — the single constant read by the log
