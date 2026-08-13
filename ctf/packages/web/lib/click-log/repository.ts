@@ -6,6 +6,7 @@ import {
   CreateSchemeSuggestionInput,
   SharedIncidentTagTrend,
   SharedIncidentTrendBucket,
+  UpdateIncidentInput,
 } from './types';
 
 export async function getIncidentById(id: string): Promise<ClickLogIncident | null> {
@@ -25,6 +26,29 @@ export async function createIncident(input: CreateIncidentInput): Promise<ClickL
     [userId, metadata, sharedWithOwner, problemTag ?? null, schemeTag ?? null]
   );
   return result.rows[0];
+}
+
+// Edits an incident's note and tags in place. Owner-scoped only (the user_id condition — no
+// admin variant: the note is the member's private content). The date (created_at) and location
+// (metadata latitude/longitude) are immutable by design, so the SQL only replaces the 'notes'
+// key inside metadata and never touches the coordinate keys. A null note removes the key; the
+// generated metadata_hash column recomputes automatically, so an edit that makes this row's
+// metadata identical to another of the member's rows violates UNIQUE (user_id, metadata_hash) —
+// the route maps that to a readable 409.
+export async function updateIncident(input: UpdateIncidentInput): Promise<boolean> {
+  const { id, userId, notes, problemTag, schemeTag } = input;
+  const result = await queryDb(
+    `UPDATE click_log_incidents
+     SET metadata = CASE
+           WHEN $3::text IS NULL THEN metadata - 'notes'
+           ELSE jsonb_set(metadata, '{notes}', to_jsonb($3::text), true)
+         END,
+         problem_tag = $4,
+         scheme_tag = $5
+     WHERE id = $1 AND user_id = $2`,
+    [id, userId, notes, problemTag, schemeTag]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 // Flips the owner-share flag on a single incident. Owner-scoped only: the member who logged the

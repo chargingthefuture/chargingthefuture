@@ -25,6 +25,17 @@ export type CreateIncidentInput = {
   schemeTag?: string;
 };
 
+// Edit of an existing incident (owner decision, 2026-08-13): the note and the two tags may be
+// changed after logging; the date and location are immutable, so they are absent here. null
+// clears a field (note removed / tag removed).
+export type UpdateIncidentInput = {
+  id: string;
+  userId: string;
+  notes: string | null;
+  problemTag: string | null;
+  schemeTag: string | null;
+};
+
 // Per-member ClickLog preferences (click_log_preferences). shareWithOwner is the global default
 // applied when a new incident is logged without an explicit per-incident choice.
 export type ClickLogPreferences = {

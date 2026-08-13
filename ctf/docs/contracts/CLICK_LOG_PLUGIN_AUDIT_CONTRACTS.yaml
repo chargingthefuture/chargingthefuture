@@ -21,6 +21,13 @@ auditEvents:
     dataClassesAccessed: [user_event]
     targetContext: user
   - pluginId: click-log
+    command: click-log.incident.update
+    commandVersion: 1.0.0
+    eventId: click-log.incident.update
+    policyDecision: allow
+    dataClassesAccessed: [user_event]
+    targetContext: user
+  - pluginId: click-log
     command: click-log.incident.share.set
     commandVersion: 1.0.0
     eventId: click-log.incident.share.set
