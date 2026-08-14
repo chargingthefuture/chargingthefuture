@@ -5,6 +5,12 @@
 - Plugin name: `Trust`
 - Plugin slug: `trust`
 - Owned surfaces: `/api/trust/*` routes, `trust_*` tables, `packages/mobile/src/features/trust` (Android), the trust evidence card embedded in profile/account/directory surfaces (web).
+- **Trust has no screen of its own.** The member-facing card lives inside the account hub, the
+  community right rail, and Directory profiles — there is no `/apps/trust` page to build, and one
+  should not be added without a reason the embedded card cannot serve. `/apps/trust` exists only as a
+  route: a signed-in member who opens Trust from the apps list is redirected to `/account`, where the
+  card is. A signed-out visitor or a not-yet-verified member is denied before that redirect and keeps
+  seeing the Trust public landing page.
 - Not owned: canonical user profile (Directory), identity (Clerk), moderation backend (handled out-of-plugin via Retool tooling), and all upstream engagement/participation data (owned by the plugins Trust reads from, e.g. SocketRelay, login/auth, and other activity sources).
 - Derived, read-mostly model: Trust owns no primary participation data. It derives a **qualitative** trust signal — never a numeric score — by aggregating engagement/contribution signals from across the platform's seeded plugins (not just Directory), and persists only the per-user extension (evidence) and the admin audit trail.
 - Humane-by-design: Trust deliberately avoids reducing a person to a number. It shows a plain list of what a member has actually done — no badge, no status, no ranked numeric score.
@@ -228,6 +234,24 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   and each page render otherwise costs one indexed freshness lookup.
 
   No UI change, no copy change, no schema change, no contract change.
+- 2026-08-13: **Opening Trust from the apps list now lands on the account hub instead of a debug
+  page.** Trust is listed in the apps grid (`isVisible: true`, `implemented_shell`) but the dynamic
+  plugin route `app/apps/[pluginSlug]/page.tsx` had no branch for the `trust` slug, so a signed-in
+  member who tapped it fell through to `GenericPluginView` — the baseline-access check page showing
+  their user id, username handle, availability state, and a link home. That is a routing test, not a
+  product surface, and it exposed a raw identifier to the member for no reason.
+
+  Trust is the only visible plugin that hit this: `contributions`, `recurring-activity`, and
+  `mutual-time` also have no branch in the dynamic route, but each has its own static
+  `app/apps/<slug>/page.tsx` segment that takes precedence, so they were never affected.
+
+  Fixed by redirecting the `trust` slug to `/account`, where the member's trust card already ships.
+  The branch sits **after** the access gate on purpose: a signed-out visitor and a not-yet-verified
+  member are denied earlier and still get the Trust public landing page, which was already correct.
+  Flipped `requiresExplicitWebShell` to `true` for `trust` in `ctf/config/plugin-parity-contracts.json`
+  so the parity gate now holds the branch in place instead of letting it be dropped silently.
+  No new UI, no copy change, no schema change, no API change. Web-only; Trust is not on the Android
+  keep-list (rule 105).
 - 2026-08-12: **Second sign-in line: the member's current run of days, alongside the all-time count**
   (model `cross_plugin_engagement_v5`, owner request). "Active on 162 days" is cumulative — distinct
   sign-in days over a member's whole history — and on its own it cannot tell a reader whether that

@@ -35,7 +35,20 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box. Each evidence row must read as a human sentence (the `summary`, e.g. "Accepted 1 SkillsHunt submission"), **never** a raw type slug like `demo_second_owner` or `Engagement-...`. Any date shown must be a real date — **never** the literal "Invalid Date". (Regression guard: the demo seed previously wrote evidence with no `summary`/`createdAt`, which produced both symptoms.)
    web ☐
 
-3. **The card on the account hub is current, not a frozen snapshot.** Sign in, then open
+3. **Opening Trust from the apps list lands on the account hub.** Signed in as an approved member,
+   open the apps list and tap **Trust** (or go straight to `/apps/trust`). You should end up on
+   `/account` with your trust card on it. You must **not** see a page headed "Plugin baseline access
+   confirmed" listing your user id, username handle, and availability state — that is the generic
+   routing-check view and reaching it from Trust is the bug this step guards.
+   web ☐
+
+4. **Signed-out Trust still shows the public landing page.** In a private window with no session,
+   open `/apps/trust`. You should get the Trust public landing page, not a redirect to the account
+   page and not a sign-in wall. Repeat as a member who has not finished verification: they should
+   also get the landing page, with the "Finish verifying" action.
+   web ☐
+
+5. **The card on the account hub is current, not a frozen snapshot.** Sign in, then open
    `/account`. The evidence rows' dates should be today's — not a date from a previous week. Open
    the sign-in row's detail: "Most recent sign-in" should be today or yesterday for a member who has
    been signing in. A card whose every row carries the same old date, on a member who has used the
@@ -44,19 +57,19 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
    three must agree with each other and with `GET /api/trust/user/self`.
    web ☐
 
-4. **Repeat renders do not write a snapshot each time.** Reload `/account` several times inside a
+6. **Repeat renders do not write a snapshot each time.** Reload `/account` several times inside a
    five-minute window and count `trust_signal_snapshot` rows for that member before and after. The
    count should rise by at most one — the recompute is throttled, so opening the page repeatedly (or
    opening account, home, and the apps launcher in turn) must not append a row per render.
    web ☐
 
-5. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
+7. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
   
 
-6. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
+8. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
    web ☐
 
-7. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: How often you sign in, ServiceCredits activity, Community connections, Cohort completion record. Every line must map to a signal `buildTrustEvidence` really emits — "Quora social proof" was removed on 2026-08-10 because no such signal exists (the onboarding Quora check belongs to Unlock). "Admin-reviewed verification" does NOT appear either (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
+9. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: How often you sign in, ServiceCredits activity, Community connections, Cohort completion record. Every line must map to a signal `buildTrustEvidence` really emits — "Quora social proof" was removed on 2026-08-10 because no such signal exists (the onboarding Quora check belongs to Unlock). "Admin-reviewed verification" does NOT appear either (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
    web ☐
 
 ---
