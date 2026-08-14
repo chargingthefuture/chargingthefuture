@@ -70,7 +70,12 @@ const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES |
 // Budget for code the slice imports from OUTSIDE itself, sent as read-only reference. Separate from
 // the source budget so pulling in a dependency never costs the slice its own coverage. Set to 0 to
 // turn the dependency context off.
-const DEPS_MAX_BYTES = Number(process.env.CODE_REVIEW_DEPS_MAX_BYTES || '70000');
+//
+// 70000 was calibrated when extracted declarations were, through a bug, only their signatures. Now
+// that they carry their bodies — which is the whole point, since the reasoning a reviewer needs is
+// inside the function — the same set of dependencies costs more. Measured on the commons slice: at
+// 70000 two files are dropped, at 90000 all 16 fit.
+const DEPS_MAX_BYTES = Number(process.env.CODE_REVIEW_DEPS_MAX_BYTES || '90000');
 // The model's findings JSON must fit in one response. 4000 was too small for a whole-plugin
 // review: the JSON truncated mid-string and JSON.parse threw, failing the whole run. Give it ample
 // room (Sonnet allows far more), overridable for cost tuning.
