@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import type { ClickLogTag } from "../../lib/click-log/tags";
-import type { ClickLogTokens } from "./click-log-shared";
+import { ShareLink } from "../shared/share-link";
+import type { ClickLogTagReference, ClickLogTokens } from "./click-log-shared";
 
 // Multi-select tag picker for the log form (problems or schemes), mimicking the Directory /
 // SkillsHunt picker style: a type-and-search keyword box that filters a flat chip list, a row
@@ -61,12 +62,38 @@ function SelectedTagChips({ selected, tokens, onRemove }: {
   );
 }
 
+// The picker question with its optional "read the full list" link on the right. The link always
+// goes through the shared ShareLink popup (rule 130) — so the member reads the page in a new tab
+// (or copies the link for later) instead of losing the incident they are mid-way through logging.
+function TagPickerHeader({ label, reference, tokens }: {
+  label: string;
+  reference: ClickLogTagReference | undefined;
+  tokens: ClickLogTokens;
+}) {
+  const t = tokens;
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
+      <div style={{ fontSize: 12, color: t.MUTED }}>{label}</div>
+      {reference && (
+        <ShareLink
+          url={reference.url}
+          label={reference.label}
+          title={reference.title}
+          iconSize={12}
+          triggerStyle={{ flexShrink: 0, fontSize: 11, fontWeight: 600, color: t.ACCENT, whiteSpace: "nowrap" }}
+        />
+      )}
+    </div>
+  );
+}
+
 export function ClickLogTagPicker({
   label,
   searchPlaceholder,
   values,
   options,
   maxSelected,
+  reference,
   tokens,
   onChange,
 }: {
@@ -77,6 +104,8 @@ export function ClickLogTagPicker({
   options: readonly ClickLogTag[];
   // Cap on picks of this kind (MAX_TAGS_PER_KIND); adding past it is ignored and a hint shows.
   maxSelected: number;
+  // Link to the public page listing these tags in full; omit to show no link.
+  reference?: ClickLogTagReference;
   tokens: ClickLogTokens;
   onChange: (values: string[]) => void;
 }) {
@@ -106,7 +135,7 @@ export function ClickLogTagPicker({
 
   return (
     <div style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 6 }}>{label}</div>
+      <TagPickerHeader label={label} reference={reference} tokens={t} />
 
       <SelectedTagChips selected={selected} tokens={t} onRemove={(slug) => onChange(values.filter((v) => v !== slug))} />
       {atCap && (

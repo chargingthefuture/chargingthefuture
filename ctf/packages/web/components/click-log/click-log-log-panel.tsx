@@ -4,7 +4,12 @@ import { AlertTriangle, MapPin } from "lucide-react";
 import { MAX_NOTES_LENGTH, MAX_TAGS_PER_KIND } from "../../lib/click-log/constants";
 import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS, NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
-import { getClickLogTokens, type ClickLogTokens } from "./click-log-shared";
+import {
+  CLICK_LOG_PROBLEM_REFERENCE,
+  CLICK_LOG_SCHEME_REFERENCE,
+  getClickLogTokens,
+  type ClickLogTokens,
+} from "./click-log-shared";
 import { ClickLogTagPicker } from "./click-log-tag-picker";
 import { ClickLogSchemeSuggestionFields } from "./click-log-scheme-suggestion-fields";
 
@@ -69,6 +74,7 @@ function ClickLogTagFields({
         values={problemTags}
         options={CLICK_LOG_PROBLEM_TAGS}
         maxSelected={MAX_TAGS_PER_KIND}
+        reference={CLICK_LOG_PROBLEM_REFERENCE}
         tokens={t}
         onChange={onProblemTagsChange}
       />
@@ -78,6 +84,7 @@ function ClickLogTagFields({
         values={schemeTags}
         options={schemeOptions}
         maxSelected={MAX_TAGS_PER_KIND}
+        reference={CLICK_LOG_SCHEME_REFERENCE}
         tokens={t}
         onChange={onSchemeTagsChange}
       />

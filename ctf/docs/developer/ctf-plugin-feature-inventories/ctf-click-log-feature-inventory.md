@@ -26,6 +26,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   requires a location — the form disables Submit (with an explanation) until location is added,
   and the server enforces the same rule — because tagged trend data needs location to be
   detailed enough. Tags show as chips on the history rows and feed trend reporting.
+- Read the full problems list and the full schemes list while tagging: each picker carries a
+  "Full list" link beside its question — the problems picker points at
+  `https://www.chargingthefuture.com/look-ma`, the schemes picker at
+  `https://www.chargingthefuture.com/schemes`. Both open in the shared share-link popup (the same
+  control used everywhere else in the app), which shows the whole address, opens it in a new tab,
+  or copies it — so reading the long description of a problem or a scheme never replaces the page
+  and never loses the incident the member is part-way through logging. The same links appear in
+  the pickers of the after-the-fact edit form.
 - Suggest a new scheme via the "Not listed" scheme tag (Weavers of the Commons badge holders
   only — members without the badge do not see the option). Picking it requires a written
   description of the scheme (up to 200 characters) that is explicitly shared with the owner —
@@ -185,6 +193,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-14: **Both tag pickers now link to the public list that describes their tags in full
+  (owner request).** The chip labels are short by necessity, so a member who does not recognize
+  one had nowhere to read the long version. Each picker question now carries a "Full list" link:
+  problems → `https://www.chargingthefuture.com/look-ma`, schemes →
+  `https://www.chargingthefuture.com/schemes`. Both go through the shared `ShareLink` popup
+  (rule 130) rather than a plain link, so the page opens in a new tab or the address is copied —
+  the incident being logged is never replaced. Applied in the log form and the history editor;
+  UI only, no schema, API, or contract change.
 - 2026-08-13: **Incidents now hold several tags of each kind: `problem_tags` / `scheme_tags`
   arrays replace the singular columns (owner decision).** The owner's cross-country bus trip
   chained five schemes in one incident, and no real incident is ever just one tag — so the
