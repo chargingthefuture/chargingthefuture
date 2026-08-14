@@ -258,6 +258,20 @@ function renderPluginShellC(
     return <MoodShell />;
   }
 
+  if (selectedPlugin.slug === 'trust') {
+    // Trust has no screen of its own. A member's trust card — their own signals, and under it the
+    // exact rows other members receive — is built into the account hub, and that is the only place
+    // it ships. Without this branch a signed-in member who tapped Trust in the apps list fell
+    // through to GenericPluginView below and got the baseline-access debug page: their user id, the
+    // availability state, and a link home. That page is a routing check, not a product surface.
+    //
+    // Deliberately placed AFTER the access gate rather than beside the knowledge redirect above.
+    // A signed-out visitor and a not-yet-verified member are denied before this point and keep
+    // getting the Trust public landing page, which is correct and is what they see today; only a
+    // member who actually passed the gate is sent to the hub, where they have a card to look at.
+    redirect('/account');
+  }
+
   if (selectedPlugin.slug === 'weekly-performance') {
     // Weekly Performance has no member view — the dashboard lives on the admin page only.
     // Non-admins never reach this branch (the admin-only gate above 404s them).
