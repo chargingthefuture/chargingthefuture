@@ -46,6 +46,12 @@ Trust still writes `trust_admin_audit_trail` rows for panel reads and snapshot r
 
 ## API Surface and Route Map
 
+- **Server-rendered self surfaces** (`app/account/page.tsx`, `app/page.tsx`, `app/apps/page.tsx`) — these
+  render the member's own trust card without going through the API, and they call
+  `readTrustSelfExtensionOrStored(userId)`, the same throttled recompute-then-fall-back path the self
+  route uses. They must never call `getTrustUserExtension` directly: that is a plain read of the last
+  written row, and using it froze the card at whatever some other surface last recomputed (see the
+  2026-08-13 change-log entry). One recompute per throttle window per member covers all of them.
 - `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension so the member's own read never errors. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
 - `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel at one of two disclosure levels, reported on the response as `trustDisclosure`, and the level is decided here in code rather than by any member setting: the owner (self) and admins receive `full`; **every other member receives `summary`** — headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). No read is refused; there is no `403` visibility path, because hiding a member's participation from other members would defeat the point of the panel.
 - `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v5`) from real cross-plugin engagement — sign-in history from `login_events` (all-time days plus the member's current unbroken run of days); SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
@@ -198,6 +204,30 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-08-13: **The trust card on server-rendered pages was frozen — it now recomputes like the API
+  does.** Found on the owner's own account hub: every evidence row was dated 2026-08-06 and the
+  sign-in detail read "Most recent sign-in 2026-08-06", eight days later. The member had signed in
+  every day in between, so the card was not merely behind — it was another week's picture of their
+  participation, presented as current.
+
+  Cause: only `GET /api/trust/user/self` recomputed. The three pages that render the member's own
+  card server-side — the account hub, the home page, and the apps launcher — each called
+  `getTrustUserExtension`, a plain read of the last written row. Nothing on those pages triggered a
+  recompute, so the card showed whatever some other surface (Directory profile detail or the
+  LightHouse host view, the two that fetch the self API from the browser) had last written. A member
+  who does not open those two surfaces never refreshes, and the card can sit unchanged indefinitely.
+  This is also why the new sign-in-run line did not appear for a member signing in daily: the stored
+  snapshot predated the feature and nothing recomputed it.
+
+  Fixed with one shared helper rather than three page-level patches:
+  `readTrustSelfExtensionOrStored(userId)` in `lib/trust/repository.ts` does exactly what the self
+  route did — recompute on the existing throttle, fall back to the last stored extension if the
+  recompute throws — and the three pages plus the self route all call it, so the route and the pages
+  cannot drift into showing one member two different panels. Writes stay bounded: the throttle
+  allows at most one recompute per window per member no matter how many of those pages they open,
+  and each page render otherwise costs one indexed freshness lookup.
+
+  No UI change, no copy change, no schema change, no contract change.
 - 2026-08-12: **Second sign-in line: the member's current run of days, alongside the all-time count**
   (model `cross_plugin_engagement_v5`, owner request). "Active on 162 days" is cumulative — distinct
   sign-in days over a member's whole history — and on its own it cannot tell a reader whether that

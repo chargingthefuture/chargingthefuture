@@ -8,7 +8,7 @@ import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import type { UnlockAccessTier } from '../lib/unlock/types';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
-import { getTrustUserExtension } from '../lib/trust/repository';
+import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
@@ -109,7 +109,9 @@ async function resolveTrust(
   if (!userId) {
     return buildFallbackTrust(fallbackUserId);
   }
-  return getTrustUserExtension(userId).catch(() => buildFallbackTrust(userId));
+  // Recomputes on the shared throttle rather than reading whatever was last written, so the card
+  // here agrees with the account hub instead of showing an older snapshot of the same member.
+  return readTrustSelfExtensionOrStored(userId).catch(() => buildFallbackTrust(userId));
 }
 
 export default async function HomePage() {

@@ -4,7 +4,7 @@ import type { TrustUserExtension } from '../../lib/trust/types';
 import { evaluatePluginAccess } from '../../lib/auth/server-authz';
 import { getGdpShellStats } from '../../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../../lib/plugins/repository';
-import { getTrustUserExtension } from '../../lib/trust/repository';
+import { readTrustSelfExtensionOrStored } from '../../lib/trust/repository';
 import { getHostedSignInUrl } from '../../lib/auth/provider-env';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
@@ -51,7 +51,7 @@ export default async function AppsPage() {
     : buildShellUser('guest', null);
 
   const trust = authDecision && authDecision.allowed
-    ? await getTrustUserExtension(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
+    ? await readTrustSelfExtensionOrStored(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
     : buildFallbackTrust(currentUser.userId);
 
   const signInUrl = getHostedSignInUrl() ?? '/sign-in';
