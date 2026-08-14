@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { countActiveDirectoryProfiles } from 'lib/directory/repository';
+import { countActiveDirectoryProfiles } from 'lib/shared/directory-interface';
 import { countTotalMembers } from 'lib/engagement/login-activity';
 import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 import { projectOpenValueIndex } from 'lib/gdp/projection';

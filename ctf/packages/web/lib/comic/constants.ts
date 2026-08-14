@@ -38,7 +38,7 @@ export const COMIC_MAX_PAGE_SIZE = 100;
 export const COMIC_MESSAGE_RATE_LIMIT = 12;
 export const COMIC_MESSAGE_RATE_WINDOW_MINUTES = 60;
 
-export const COMIC_CHANNELS = ['hub', 'feed'] as const;
+export const COMIC_CHANNELS = ['commons', 'feed'] as const;
 export const COMIC_TURN_ROLES = ['user', 'bot', 'human'] as const;
 // 'rasa' is retained as a historical engine value only (the Rasa NLU integration was removed
 // 2026-06-14); no new turn is written with it. Mirrors the schema engine CHECK constraint.

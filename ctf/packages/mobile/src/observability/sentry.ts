@@ -1,20 +1,24 @@
 import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
 
-// Crash reporting for the native Android app (the Chyme keep-list surface, rule 105). The DSN and
-// provider flag have been passed through app config as `mobileSentryDsn` / `mobileObservabilityProvider`
-// (from EXPO_SENTRY_DSN / MOBILE_OBSERVABILITY_PROVIDER) since the config was written, but the
-// integration that consumed them was lost when the app was narrowed from the full plugin set to the
-// keep-list — so native crashes went unreported (owner report; restored 2026-08-03). Init is a no-op
-// when the DSN is absent or the provider is not 'sentry', so a local dev build without secrets runs
-// exactly as before.
+// Crash reporting for the native Android app (the Chyme keep-list surface, rule 105). The DSN has
+// been carried through app config as `mobileSentryDsn` (from EXPO_SENTRY_DSN, which already exists in
+// Infisical) all along, but the code that consumed it was lost when the app was narrowed from the
+// full plugin set to the keep-list — so the DSN sat unused and native crashes went unreported (owner
+// report; restored 2026-08-03).
+//
+// Turning it on takes no new secret: reporting starts whenever a DSN is present, and the existing
+// shared OBSERVABILITY_PROVIDER key can switch it off by naming a different provider. A build with no
+// DSN — a local dev build — runs exactly as before.
 export function initMobileSentry(): void {
   const extra = (Constants.expoConfig?.extra ?? {}) as {
     mobileSentryDsn?: string;
     mobileObservabilityProvider?: string;
   };
   const dsn = (extra.mobileSentryDsn ?? '').trim();
-  const provider = (extra.mobileObservabilityProvider ?? 'noop').trim().toLowerCase();
+  // Default to on when a DSN is configured: requiring a second opt-in switch is how this stayed
+  // silently off. Setting OBSERVABILITY_PROVIDER to anything other than 'sentry' turns it off.
+  const provider = (extra.mobileObservabilityProvider ?? 'sentry').trim().toLowerCase();
   if (!dsn || provider !== 'sentry') return;
   Sentry.init({
     dsn,

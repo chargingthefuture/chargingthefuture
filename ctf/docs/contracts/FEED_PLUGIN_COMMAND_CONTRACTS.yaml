@@ -33,6 +33,7 @@ contracts:
       - feed_item_targets
       - feed_render_config
       - feed_questions
+      - member_blocks
     purpose: timeline_discovery
     retentionClass: derived_short_lived
     idempotency: true
@@ -519,6 +520,65 @@ contracts:
     idempotency: true
 
   - pluginId: feed
+    command: feed.announcement.reply.update
+    version: 1.0.0
+    description: >-
+      Rewrite the requesting member's own reply on an official announcement. Author-only — the server
+      rejects an edit of any reply the caller does not own, and refuses a reply a moderator has hidden
+      so an edit cannot be a way back into view. The new body passes the same length and content checks
+      as creating a reply. Sets edited_at, which the thread shows as an "edited" mark.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+      replyId:
+        type: string
+        required: true
+      body:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      replyId:
+        type: string
+      body:
+        type: string
+      editedAtIso:
+        type: string
+    dataAccess:
+      - announcement_replies
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: feed
+    command: feed.announcement.reply.delete
+    version: 1.0.0
+    description: >-
+      Delete the requesting member's own reply on an official announcement. Author-only — the server
+      rejects a delete of any reply the caller does not own. A real delete rather than a hide: these
+      are the member's own words and their own decision to take back. A moderator taking someone
+      else's reply down uses the reversible feed.community.moderation.hide instead.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+      replyId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      replyId:
+        type: string
+    dataAccess:
+      - announcement_replies
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: feed
     command: feed.community.post.delete
     version: 1.0.0
     description: >-
@@ -607,14 +667,16 @@ contracts:
 
   - pluginId: feed
     command: feed.community.moderation.list
-    version: 1.0.1
+    version: 1.0.2
     description: >-
       List member-authored Commons posts and replies for admin review, newest first, with the count of
       rows currently hidden. Hidden rows are included by default so a moderator can see what has been
       taken down and put it back; `hidden=1` narrows to only those. Admin only, read-only. Deliberately
       Commons-only: Q&A answers are moderated through their own queue (feed.qa.moderation.flagged.list),
-      which is flag-driven rather than a full listing. v1.0.1 removes feed_questions/feed_answers from
+      which is flag-driven rather than a full listing. v1.0.1 removed feed_questions/feed_answers from
       dataAccess — the query never read them, and the listing was never meant to include Q&A rows.
+      v1.0.2 adds announcement_replies: replies on official announcements are member-authored Commons
+      content too, and until then were the one such surface with no way to take anything down.
     inputSchema:
       hidden:
         type: boolean
@@ -630,6 +692,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - announcement_replies
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -638,7 +701,8 @@ contracts:
     command: feed.community.moderation.hide
     version: 1.0.0
     description: >-
-      Hide one member-authored Commons post or reply from every reader by setting
+      Hide one member-authored Commons post or reply — including a reply on an official announcement
+      — from every reader by setting
       `moderation_status = 'hidden'`. This is NOT deletion: the row is retained and the change is
       reversible via feed.community.moderation.restore. There is deliberately no admin edit command —
       a moderator may remove content from view but may never rewrite a member's words while leaving
@@ -661,6 +725,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - announcement_replies
       - feed_questions
       - feed_answers
     purpose: content_moderation
@@ -693,6 +758,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
+      - announcement_replies
       - feed_questions
       - feed_answers
     purpose: content_moderation

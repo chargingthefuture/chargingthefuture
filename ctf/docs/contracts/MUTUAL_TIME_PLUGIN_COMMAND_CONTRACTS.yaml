@@ -20,7 +20,7 @@ contracts:
       meetingPlugin:
         type: string
         required: true
-        enum: [chyme, peer-programming]
+        enum: [chyme, peer-programming, beacon]
       opensAt:
         type: string
         required: false
@@ -41,7 +41,7 @@ contracts:
   - pluginId: mutual-time
     command: mutual-time.vote.save
     version: 1.0.0
-    description: Save (replace) the signed-in, Unlock-approved member's picks for an event — up to 3 one-hour windows snapped to the half-hour. Rejected when the event is not open or a pick is not a valid candidate slot.
+    description: Save (replace) the signed-in, Unlock-approved member's picks for an event — up to 3 one-hour windows snapped to the half-hour. Rejected when the event is not open or a pick is not a valid candidate slot; while a survey is open the candidate window rolls forward from the current moment, so a pick whose time has passed is no longer valid.
     inputSchema:
       slots:
         type: array
@@ -82,7 +82,7 @@ contracts:
   - pluginId: mutual-time
     command: mutual-time.event.read
     version: 1.0.0
-    description: Public read of one event by its shareable slug (title, description, status, candidate slots, and result after close). Never returns who voted or their picks; a signed-in approved member's own picks are added for hydration only.
+    description: Public read of one event by its shareable slug (title, description, status, candidate slots, and result after close). Candidate slots roll forward from the current moment while the survey is open. Never returns who voted or their picks; a signed-in approved member's own upcoming picks, plus a count of their picks whose time has passed, are added for hydration only.
     inputSchema: {}
     outputSchema:
       ok:

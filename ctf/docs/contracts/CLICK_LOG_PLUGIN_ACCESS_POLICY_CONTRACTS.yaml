@@ -1,16 +1,17 @@
 policies:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.1.0
+    version: 2.0.0
     requiredRoles: [user]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
-      # The "Not listed" scheme flow (schemeTag = 'other-scheme') additionally requires the
-      # Weavers of the Commons badge (contributor_access_eligibility: eligible and not revoked)
-      # — spam control on the scheme-suggestion intake. Enforced in the create route; members
-      # without the badge get a 403 and the client hides the option.
-      - attribute: schemeTag
+      # The "Not listed" scheme flow (schemeTags contains 'other-scheme') additionally requires
+      # the Weavers of the Commons badge (contributor_access_eligibility: eligible and not
+      # revoked) — spam control on the scheme-suggestion intake. Enforced in the create route;
+      # members without the badge get a 403 and the client hides the option. (2.0.0: schemeTags
+      # is a list — see the command contract.)
+      - attribute: schemeTags
         conditionalRequirement: weavers_badge_when_other_scheme
     # The schemeSuggestion text is member content explicitly shared with the owner; the field
     # states this in the form, so submission is the consent act.
@@ -30,6 +31,21 @@ policies:
     attributePolicies:
       - attribute: id
         mustBeOwnedBy: authenticatedUserId
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.update
+    version: 2.0.0
+    # Deliberately no admin override: the note is the member's private content, so only the
+    # incident's owner may edit it (mirrors click-log.incident.share.set).
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+      # The catch-all 'other-scheme' scheme tag may only be kept (already on the incident),
+      # never newly picked on edit — the suggestion intake it requires happens at create.
+      # (2.0.0: schemeTags is a list — see the command contract.)
+      - attribute: schemeTags
+        conditionalRequirement: other_scheme_only_if_already_set
     consentRequirements: []
   - pluginId: click-log
     command: click-log.incident.share.set

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
+import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 
 const TERMINAL_STATUSES = new Set(["completed", "canceled"]);
 
@@ -203,16 +204,19 @@ function deriveTrackingCardModel(request: TripRequest): TrackingCardModel {
   };
 }
 
-function TrackingCardHeader({ route, status, settlementLabel }: { route: string; status: string; settlementLabel: string }) {
+function TrackingCardHeader({ route, status, settlementLabel, acceptedLabel }: { route: string; status: string; settlementLabel: string; acceptedLabel: string | null }) {
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
       <div style={{ width: 48, height: 48, borderRadius: 12, background: `${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <Car size={24} style={{ color: t.ACCENT }} />
       </div>
       <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>{route}</div>
       <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12, marginLeft: "auto" }}>{settlementLabel}</Badge>
+      {acceptedLabel && (
+        <Badge style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{acceptedLabel}</Badge>
+      )}
       <Badge style={{ ...statusBadgeStyle(status), fontSize: 12 }}>{status}</Badge>
     </div>
   );
@@ -300,7 +304,7 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
 
   return (
     <div style={{ padding: "24px", borderRadius: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}30`, marginBottom: 16 }}>
-      <TrackingCardHeader route={model.route} status={model.status} settlementLabel={ttSettlementLabel(request.priceCurrency, request.priceAmount)} />
+      <TrackingCardHeader route={model.route} status={model.status} settlementLabel={ttSettlementLabel(request.priceCurrency, request.priceAmount)} acceptedLabel={acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)} />
       <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
       {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
       {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}

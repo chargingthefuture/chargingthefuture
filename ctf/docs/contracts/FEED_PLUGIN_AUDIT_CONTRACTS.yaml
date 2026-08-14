@@ -394,6 +394,55 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: feed
+    command: feed.announcement.reply.update
+    commandVersion: 1.0.0
+    purpose: community_engagement
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        replyOwnershipCheck: pass_or_fail
+        contentModerationCheck: pass_or_fail
+    dataClassesAccessed:
+      - announcement_reply_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      replyId: reply_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.announcement.reply.delete
+    commandVersion: 1.0.0
+    purpose: community_engagement
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        replyOwnershipCheck: pass_or_fail
+    dataClassesAccessed:
+      - announcement_reply_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      replyId: reply_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
     command: feed.community.post.delete
     commandVersion: 1.0.0
     purpose: community_engagement

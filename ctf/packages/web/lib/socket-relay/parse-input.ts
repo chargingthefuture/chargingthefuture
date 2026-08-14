@@ -25,6 +25,20 @@ export function parseTags(body: Record<string, unknown>): string[] {
   return typeof body.category === 'string' && body.category.trim() ? [body.category] : [];
 }
 
+// Accepted-currencies multi-select (split settlements): keep only non-empty strings, trimmed and
+// deduped. Codes are validated against the active currency catalog in the repository, where unknown
+// or inactive codes are dropped rather than rejected.
+export function parseAcceptedCurrencies(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+        .map((code) => code.trim()),
+    ),
+  );
+}
+
 export function parseRequestInput(body: Record<string, unknown>): SocketRelayRequestInput {
   // Value type (issue #420): a non-empty currency code names how the request is settled; an absent/blank
   // code means none was chosen. Amount is only kept as a positive finite number; anything else is null
@@ -44,5 +58,6 @@ export function parseRequestInput(body: Record<string, unknown>): SocketRelayReq
     isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : false,
     priceCurrency,
     priceAmount,
+    acceptedCurrencies: parseAcceptedCurrencies(body.acceptedCurrencies),
   };
 }

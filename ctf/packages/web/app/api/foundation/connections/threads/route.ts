@@ -70,6 +70,14 @@ function mapCreateThreadError(error: unknown): NextResponse {
     );
   }
 
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  if (code === 'blocked_pair') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This provider is not available to you.' },
+      { status: 403 },
+    );
+  }
+
   reportError(error, { area: 'foundation', op: 'connections_threads' });
   return NextResponse.json(
     { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Thread create unavailable.' },

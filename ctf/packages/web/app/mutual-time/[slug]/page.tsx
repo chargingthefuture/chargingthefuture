@@ -25,10 +25,13 @@ export default async function MutualTimePublicPage({ params }: { params: Promise
 
   let canVote = false;
   let picks: string[] = [];
+  let expiredPicks = 0;
   if (userId) {
     const tier = await getUnlockAccessTier(userId).catch(() => null);
     canVote = tier === 'approved_full' || Boolean(identity?.isAdmin);
-    picks = await getViewerPicks(slug, userId).catch(() => []);
+    const viewerPicks = await getViewerPicks(slug, userId).catch(() => ({ picks: [], expiredCount: 0 }));
+    picks = viewerPicks.picks;
+    expiredPicks = viewerPicks.expiredCount;
   }
 
   const signInUrl = getHostedSignInUrl() ?? '/sign-in';
@@ -36,7 +39,7 @@ export default async function MutualTimePublicPage({ params }: { params: Promise
   return (
     <MutualTimePublic
       initialEvent={event}
-      initialViewer={{ canVote, picks }}
+      initialViewer={{ canVote, picks, expiredPicks }}
       isSignedIn={isSignedIn}
       signInUrl={signInUrl}
       verifyUrl="/plugin/unlock"

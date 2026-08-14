@@ -31,7 +31,7 @@ export function CommonsFirstVisitNotice() {
     let canceled = false;
     void (async () => {
       try {
-        const res = await fetch('/api/hub/first-visit-notice', { cache: 'no-store' });
+        const res = await fetch('/api/commons/first-visit-notice', { cache: 'no-store' });
         const data = (await res.json().catch(() => null)) as
           | { ok?: boolean; show?: boolean; title?: string; body?: string }
           | null;
@@ -53,9 +53,13 @@ export function CommonsFirstVisitNotice() {
     // on a later visit, which is a far smaller harm than a card that will not go away.
     setNotice(null);
     try {
-      await fetch('/api/hub/first-visit-notice', {
+      await fetch('/api/commons/first-visit-notice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // The route checks the Origin header, not this one, so the dismiss records either way today.
+        // Sent anyway because every other state-changing POST in the Commons sends it, and the
+        // header-based check is what most other routes use — a later switch to it would otherwise
+        // turn this into a dismiss that silently never sticks.
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: '{}',
       });
     } catch {

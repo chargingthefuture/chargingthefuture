@@ -1,0 +1,31 @@
+{
+  "$comment": [
+    "Explicit slice manifest for the code-review sweep (ctf/scripts/reviewCodebaseSlice.mjs).",
+    "The sweep names a slice after the folders that share a name across the source layers. Two things",
+    "cannot be derived from that name, so they are declared here instead of guessed:",
+    "",
+    "  contractPrefix — which ctf/docs/contracts/<PREFIX>_* files govern this slice. The default is the",
+    "    slice name upper-snake-cased, which is wrong wherever a surface is served by another plugin's",
+    "    contracts. Getting this wrong means the reviewer is handed NO contracts and then invents what",
+    "    the contract must say (that is what produced issue #2207, which asserted a plugin id the feed",
+    "    contracts pin the other way).",
+    "",
+    "  aliases — folder names this slice used to have. Findings are deduped against issues titled",
+    "    'Code review (<slice>): ...', so a rename hides every earlier decision and dismissed findings",
+    "    come back. #2207 is #1876 refiled 17 days later, purely because api/hub became api/commons.",
+    "",
+    "Only slices that need one of these appear here; everything else uses the derived default.",
+    "Add an entry when you rename a slice folder, or when a slice's contracts live under another name."
+  ],
+  "slices": {
+    "commons": {
+      "contractPrefix": "FEED",
+      "aliases": ["hub"],
+      "note": "Member-facing surface over the feed plugin: its routes call lib/feed and it is governed by the FEED_* contracts. `commons` is not a registered plugin slug."
+    },
+    "community-shell": {
+      "contractPrefix": "FEED",
+      "note": "The shell that renders the Commons/feed surfaces; no contracts of its own."
+    }
+  }
+}

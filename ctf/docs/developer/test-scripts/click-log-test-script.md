@@ -136,6 +136,42 @@ non-quora.com link. After submitting, the incident logs with the "Not listed" sc
 description is stored for the owner's scheme-naming queue, not shown in the trends dashboard.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-9 · Edit an incident's note and tags (date and location immutable)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On a history row of an incident logged WITH a location, tap the pencil icon.
+2. Change the note, change or remove the problem/scheme tags with the pickers, save.
+3. Open the editor again on an incident logged WITHOUT a location.
+4. Try to add a tag to it (there should be no way to).
+**Expected:** The editor opens inline in place of the row, stating that the date and location
+stay as logged — there is no way to change either. Saving updates the note and tag chips on the
+row and the change survives a refresh. On the location-less incident the editor shows no tag
+pickers at all and explains that tags need a location and the location can't be changed after
+logging; only the note is editable. The scheme picker never offers "Not listed" unless the
+incident already carries it (keeping or removing it is allowed). The server enforces all of it:
+a tag on a location-less incident, or newly picking "Not listed", is rejected with a specific
+message, and an edit that duplicates another incident's exact note returns a readable
+"change the note slightly" error.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-10 · Open the full problems / schemes list from the tag pickers
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the log form and half-fill it: write a note and pick a tag or two, but do not submit.
+2. Tap the "Full list" link beside "Which problems happened?".
+3. Read the address shown, tap "Copy link", then tap "Open in new tab".
+4. Come back to the ClickLog tab and do the same with the "Full list" link beside
+   "Which schemes were used?".
+5. Repeat step 2 inside the edit form of an existing incident that has a location.
+**Expected:** Each link opens the shared share-link popup, not the page itself. The popup shows
+the whole address as selectable text — `https://www.chargingthefuture.com/look-ma` for problems,
+`https://www.chargingthefuture.com/schemes` for schemes — with "Copy link" (which confirms
+"Copied!") and "Open in new tab". Opening the page leaves the ClickLog tab as it was: the note
+you wrote and the tags you picked are still there, and nothing was submitted. Escape or a tap
+outside closes the popup and returns focus to the link. The same two links appear in the edit
+form's pickers.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -220,3 +256,13 @@ of these, it is already tracked, not a new bug:
 > _Scheme list update (2026-08-04): added "Color Sensitization". List-data only — no test steps changed._
 
 > _Documentation note (2026-08-04): recorded a known taxonomy gap in the scheme tag list — it mixes operations with an arc, ambient tactics without one, and one entry that is a shape over time. Comment only; no tag added, removed, or renamed, and no test steps changed._
+
+> _Scheme list update (2026-08-07): added "Psyop Marketing" and "The Acquire and Fold". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Documentation note (2026-08-07): recorded an owner refinement in the pendulum comment — the recruit's windfall is arranged long in advance to read as merit-based, binding them to the network before they know anything. Comment only; no tag added, removed, or renamed, and no test steps changed._
+
+> _Tag list update (2026-08-13): added schemes "The Engineered Delay", "The Altered Ticket", "The Pretext Search", "The Planted Witness", and "The Replay", and problems "Trips sabotaged — delays, missed connections, canceled tickets" and "Falsely accused of violence / crimes to bystanders". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Limit change (2026-08-13): the incident note maximum length was raised from 200 to 2,000 characters (`MAX_NOTES_LENGTH`). CL-4's over-length note case still applies at the new limit — no test steps changed._
+
+> _Multi-tag change (2026-08-13): incidents now hold up to 10 problem tags and 10 scheme tags (arrays replace the single tag per kind). CL-7 and CL-9 below: the pickers are multi-select — pick two or more problems and two or more schemes in one incident, confirm every pick shows as its own chip in the selected row, on the history row, and in the editor, and confirm the 11th pick of a kind is refused with the "up to 10" hint. All other rules (tags need a location; "Not listed" keep-or-remove-only on edit) are unchanged._

@@ -92,6 +92,11 @@ const SOCKET_RELAY_ERROR_RESPONSES: Record<string, { code: string; message: stri
   fulfillment_not_active: { code: SOCKET_RELAY_ERROR_CODE.fulfillmentNotActive, message: 'This Direct Line is already resolved.', status: 409 },
   invalid_outcome: { code: SOCKET_RELAY_ERROR_CODE.invalidOutcome, message: 'Choose how to resolve this request.', status: 400 },
   actor_is_owner: { code: SOCKET_RELAY_ERROR_CODE.actorIsOwner, message: 'Request owner cannot claim fulfillment.', status: 403 },
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  blocked_pair: { code: SOCKET_RELAY_ERROR_CODE.blockedPair, message: 'This request is not available to you.', status: 403 },
+  // Soft copy on purpose (owner directive): the message must not read as being turned away or reveal
+  // that the poster ended the earlier Direct Line — it simply notes that one offer per post is the rule.
+  helper_previously_canceled: { code: SOCKET_RELAY_ERROR_CODE.helperPreviouslyCanceled, message: 'You’ve already offered to help with this request — each member can offer once per post.', status: 409 },
   actor_not_participant: { code: SOCKET_RELAY_ERROR_CODE.actorNotParticipant, message: 'Not a fulfillment participant.', status: 403 },
   prohibited_content_detected: { code: SOCKET_RELAY_ERROR_CODE.prohibitedContent, message: 'Message rejected by moderation policy.', status: 400 },
   'invalid payload': { code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },

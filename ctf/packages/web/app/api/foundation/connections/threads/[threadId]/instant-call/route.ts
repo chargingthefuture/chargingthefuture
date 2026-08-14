@@ -88,6 +88,14 @@ function mapRingError(error: unknown): NextResponse {
     );
   }
 
+  // Neutral copy on purpose (mirrors LightHouse): a block must not reveal itself to the blocked person.
+  if (code === 'blocked_pair') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This call is not available right now.' },
+      { status: 403 },
+    );
+  }
+
   reportError(error, { area: 'foundation', op: 'connections_instant_call_ring' });
   return NextResponse.json(
     { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not start the call.' },

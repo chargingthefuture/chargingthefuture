@@ -281,8 +281,18 @@ jobs:
           # ctf/scripts/changed-files.mjs — it drops dialect-only files and nothing else.
           changed_files=$(node ctf/scripts/changed-files.mjs --base "$base_sha")
 
-          if echo "$changed_files" | grep -Eiq '^ctf/.*(stream|getstream)'; then
-            echo "Detected Stream-related code changes in this PR."
+          # Documentation is excluded from the trigger for the same reason: a markdown file consumes
+          # no Stream quota, whatever its name says. The trigger matches file paths, so a document
+          # whose title merely contains the word — ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md
+          # is the one that exposed this — was read as a Stream code change and demanded a quota note
+          # describing a change in consumption that had not happened. Quota notes themselves live
+          # under ctf/docs/quota-impact/ and are the answer to this gate, never the thing that fires
+          # it. Code under ctf/ is unaffected: every real Stream change still has to carry its note.
+          stream_changes=$(echo "$changed_files" | grep -Ev '^ctf/docs/' | grep -Ei '^ctf/.*(stream|getstream)' || true)
+
+          if [ -n "$stream_changes" ]; then
+            echo "Detected Stream-related code changes in this PR:"
+            echo "$stream_changes"
 
             quota_notes=$(echo "$changed_files" | grep -E '^ctf/docs/quota-impact/.+\.md$' | grep -Ev '^ctf/docs/quota-impact/TEMPLATE\.md$' || true)
 
@@ -528,6 +538,12 @@ jobs:
 
       - name: Check lockfile/package.json sync
         run: bash ctf/scripts/check-lockfile-sync.sh
+
+      # Strict plugin isolation (owner decision 2026-08-03): one plugin's code must not import
+      # another plugin's code. Cross-plugin capability use goes through the narrow
+      # lib/shared/*-interface.ts modules only.
+      - name: Run plugin boundary gate
+        run: node ctf/scripts/check-plugin-boundaries.mjs
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --dir ctf

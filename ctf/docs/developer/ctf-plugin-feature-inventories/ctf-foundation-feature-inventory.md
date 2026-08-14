@@ -178,6 +178,14 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 ## Change Log
 
 
+- 2026-08-05: **Member blocks enforced (issue #809 task 4).** Provider search
+  (`GET /api/foundation/providers/search`) now hides a provider who is blocked (either direction)
+  relative to the browsing member; `createConnectionThread` and `ringInstantCall` refuse a blocked
+  pair with neutral copy ("This provider is not available to you." / "This call is not available
+  right now.", 403) so the block never reveals itself. A block created after a thread already
+  existed still stops new calls between the pair. `member_blocks` added to the
+  `foundation.search.providers` / `connection.thread.create` / `connection.instant-call.ring`
+  contract `dataAccess`. No schema change.
 - 2026-08-03: **Ongoing work with a provider can be recorded without leaving Foundation.** A one-off
   engagement is often the start of a standing arrangement — the same electrician every quarter. The
   shared "Is this ongoing?" prompt (`components/shared/mark-recurring-control.tsx`) now sits on the

@@ -10,17 +10,22 @@ import { getTrustTokens } from './trust-shared';
 // TrustPublic / MobileTrustPublic mockup values, so the default UI is pixel-identical).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-// Static description of the voluntary signals Trust aggregates (marketing copy). Every item mirrors a
-// real signal in lib/trust (buildTrustEvidence): social proof and participation — never identity
-// verification (there is none) and never a numeric score (none is ever produced). "Admin-reviewed
-// verification" was removed from this list (owner, 2026-07-19): it read as the platform vetting
-// people, which this plugin deliberately never claims. Mapping:
-//   Quora social proof        → the public Quora profile checked at onboarding
-//   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you
+// Static description of the signals Trust aggregates (marketing copy). Every item must map to a
+// signal `buildTrustEvidence` actually emits — never identity verification (there is none), never a
+// numeric score (none is produced), and never anything the code cannot back. Mapping:
+//   How often you sign in     → the two login_events signals: "Active on N days" (all-time) and
+//                               "Active N days in a row" (the run the member is on right now)
+//   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you,
+//                               plus the undisputed completed-transfer line
 //   Community connections     → Foundation connections-as-provider + ongoing recurring activities
 //   Cohort completion record  → completed LevelUp / joined PeerProgramming cohorts
+//
+// "Quora social proof" was listed here until 2026-08-10 and was never real: no Quora signal exists in
+// lib/trust, and the onboarding Quora check belongs to Unlock, not Trust. Advertising a signal the
+// plugin does not compute is the one thing this list must not do. "Admin-reviewed verification" was
+// removed earlier (owner, 2026-07-19) for the same reason — it read as the platform vetting people.
 const MOBILE_SIGNALS = [
-  'Quora social proof',
+  'How often you sign in',
   'ServiceCredits activity',
   'Community connections',
   'Cohort completion record',
@@ -58,10 +63,13 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
           <div style={{ width: 60, height: 60, borderRadius: 30, border: `3px solid ${t.ACCENT}`, background: t.ACCENT + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={26} color={t.ACCENT} />
           </div>
+          {/* No "trust status" line: there is no status. Trust is a list of things you have actually
+              done, so the empty state says that rather than showing a status placeholder. */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: t.MUTED }}>Your trust status</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: t.ACCENT, marginTop: 2 }}>—</div>
-            <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>Sign in to build yours</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>No trust signals yet</div>
+            <div style={{ fontSize: 11, color: t.MUTED, marginTop: 4, lineHeight: 1.5 }}>
+              They appear as you take part — one line for each thing you have done.
+            </div>
           </div>
           <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '13px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', boxSizing: 'border-box', textDecoration: 'none' }}>
             {verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}
@@ -79,10 +87,10 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
  *
  * Real-data-only note: Trust produces no numeric score (see lib/trust —
  * TrustSignalMetrics are coarse counts used to build qualitative evidence, never a
- * score), so the preview card is a non-numeric trust-status empty state (an em-dash),
- * not a score gauge. The signal list is static marketing copy that mirrors the real
- * signals — social proof and participation, no identity verification — so there is no
- * fabricated per-user data. The simulated phone status bar is dropped because the real
+ * score), so the preview card is a plain empty state, not a score gauge and not a
+ * status placeholder. The signal list is static marketing copy, and every line in it
+ * maps to a signal the code really emits — participation only, no identity
+ * verification — so there is no fabricated per-user data. The simulated phone status bar is dropped because the real
  * app renders inside the browser chrome.
  */
 export function TrustPublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {

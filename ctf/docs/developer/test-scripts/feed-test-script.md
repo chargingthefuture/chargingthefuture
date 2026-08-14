@@ -26,7 +26,7 @@
 
 1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. web ☐
 
-2. **Commons home loads.** Sign in as a member. Navigate to the Survivor Hub home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
+2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
 
 3. **Admin page loads.** Sign in as an admin. Navigate to `/admin/feed-announcements`. The page renders with a feed config panel and an announcement list. No 404 or 500. web ☐
 
@@ -44,7 +44,7 @@
 **Precondition:** Signed in as a member. Seed has run (`pnpm --dir ctf seed:demo`).
 
 **Steps:**
-1. Navigate to the Survivor Hub home (the Commons).
+1. Navigate to the Commons home.
 2. Observe the default feed — all channels.
 3. Use the channel filter to switch to **Announcements**.
 4. Switch to **Questions**.
@@ -64,6 +64,28 @@
 
 ---
 
+### FD-1b — Member block hides a person's Commons posts and replies (added 2026-08-05)
+
+**Role:** two members (A and B) · **Surfaces:** web
+
+**Precondition:** B has authored at least one community post and one reply on someone else's post. A blocks B (from B's Directory profile or `/account/blocks`).
+
+**Steps:**
+1. As A, open the Commons and scroll the timeline.
+2. As A, open a post that B replied to.
+3. As B, open the Commons and look for A's posts.
+4. As an admin, open the Commons moderation admin and check the full post list.
+
+**Expected:**
+- Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
+- A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
+- Step 4: admin/moderation views are never filtered.
+- Neither member gets any signal that a block exists.
+
+**Result:** web ☐
+
+---
+
 ### FD-2 — Announcement card renders correctly
 **Role:** member | **Surface:** web
 
@@ -74,6 +96,8 @@
 2. Confirm the card uses the accent color `#84CC16` and Lucide icons (Megaphone or equivalent), not emoji icons.
 3. Confirm there is no "GetStream ⚡" badge anywhere on the card.
 4. If the announcement has a linked plugin slug, confirm the card body contains an "Open \<Plugin\>:" link pointing to `https://app.chargingthefuture.com/apps/<slug>`.
+5. Confirm the name on the card reads **Farah** — not "Survivor Hub" — and that the shield "Official" badge still sits beside it (added 2026-08-09). The name says who wrote it, the badge says it is official; both must be present.
+6. Confirm the round avatar on the card reads **F**, the first letter of that name, and that no card anywhere in the stream shows the old fixed **SH** glyph. Scroll a peer post into view and confirm its avatar is likewise the first letter of its author's handle.
 
 **Expected:**
 - Card matches the design spec: `#84CC16` accent, Lucide icons, no badge.
@@ -330,7 +354,7 @@
 5. Confirm the 👍 chip appears with a count of 1 and is highlighted.
 6. Tap 👍 again to toggle it off.
 7. Confirm the chip count returns to 0 (or the chip is removed).
-8. Try to submit an emoji not in the set (e.g., 🚀) via the API directly (`POST /api/hub/messages/:postId/reactions` with `{ emoji: "🚀" }`).
+8. Try to submit an emoji not in the set (e.g., 🚀) via the API directly (`POST /api/commons/messages/:postId/reactions` with `{ emoji: "🚀" }`).
 
 **Expected:**
 - Picker shows exactly 7 emojis in the specified order.
@@ -348,7 +372,7 @@
 
 **Steps:**
 1. Find one of your own community posts.
-2. Attempt to react to it (open picker and tap an emoji, or call `POST /api/hub/messages/:postId/reactions`).
+2. Attempt to react to it (open picker and tap an emoji, or call `POST /api/commons/messages/:postId/reactions`).
 
 **Expected:**
 - The reaction is rejected. The UI does not show the picker on your own post, or the server returns an error (400/403) if called directly.
@@ -377,13 +401,39 @@
 
 ---
 
+### FD-19 — Edit and delete your own reply on an announcement (added 2026-08-10)
+**Role:** member | **Surface:** web
+
+**Precondition:** Signed in as a member, on the Commons, with an official announcement visible.
+
+**Steps:**
+1. Open the announcement's reply thread and post a reply.
+2. On your own reply, use **Edit**. Change the words and click **Save**.
+3. Reload the Commons and reopen the thread.
+4. Open another member's reply in the same thread and look for Edit / Delete.
+5. On your own reply, use **Delete** and accept the confirmation.
+6. Reload the Commons and reopen the thread.
+
+**Expected:**
+- Step 2: the reply is replaced by an editor holding the original words; saving shows the new words
+  and an "edited" mark next to the time.
+- Step 3: the new words and the "edited" mark are still there — the change was saved, not just shown.
+- Step 4: no Edit or Delete on someone else's reply. Calling
+  `PATCH /api/announcements/<id>/replies/<their-reply-id>` by hand is rejected with 403 and the
+  message "You can only change your own replies."
+- Step 5/6: the reply is gone for everyone and the thread's reply count drops by one.
+
+**Result:** web ☐
+
+---
+
 ### FD-17 — Public community view (signed out)
 **Role:** unauthenticated | **Surface:** web
 
 **Precondition:** Signed out completely.
 
 **Steps:**
-1. Navigate to the Survivor Hub home (or call `GET /api/feed/public/community`).
+1. Navigate to the Commons home (or call `GET /api/feed/public/community`).
 2. Observe what is shown.
 3. Send more than 30 requests to `GET /api/feed/public/community` within one minute from the same IP.
 
@@ -422,7 +472,28 @@
 ### Account deletion clears reactions and Hub read-state
 
 **Expected:** Deleting the account removes the member's post reactions, announcement reactions, and
-`feed_hub_last_seen` row along with the per-user state the script already covers.
+`feed_commons_last_seen` row along with the per-user state the script already covers.
+
+### FD-25 — Account deletion removes the posts themselves, not just the author's name
+
+**Role:** member (or an admin on a throwaway account) | **Surface:** web
+
+**Steps:**
+1. From the account under test, post two messages in the Commons and note their exact text.
+2. Delete the Commons data from Account & Data (or delete the whole account, on a throwaway
+   account).
+3. Reload the Commons in a signed-in session and scroll to where those messages were.
+4. Run the deletion a second time and reload again.
+
+**Expected:**
+- The message text is **gone**. It must not still be on screen under a substituted author name —
+  in particular not the fallback handle `user-hub-syst`, which is what a leftover timeline copy
+  with no author resolves to.
+- Official announcements from the operator are untouched and still read normally.
+- Replies and reactions that hung off those messages are gone with them.
+- The second deletion finds nothing left to remove and changes nothing on screen.
+
+**Result:** web ☐
 
 ## Admin walkthrough
 
@@ -432,8 +503,9 @@
 **Precondition:** Signed in as an admin. Seed has run.
 
 **Steps:**
-1. Navigate to `/admin/feed-announcements`.
-2. Observe the header (should include an icon + ADMIN badge).
+1. Navigate to `/admin/feed-announcements`. Reach it from `/admin` — the tile is named
+   **Commons: Feed & Announcements**.
+2. Observe the header. It reads **Commons: Feed & Announcements Admin** and includes an icon.
 3. Confirm the feed config panel shows current values from the database (render mode, enabled channels, `is_public` flag).
 4. Confirm an announcement list is shown.
 
@@ -587,7 +659,7 @@
 **Precondition:** Signed in as an admin.
 
 **Steps:**
-1. In the Commons composer (or via `POST /api/hub/messages`), compose a community post of 2,000 characters (well above the 1,200-character member cap).
+1. In the Commons composer (or via `POST /api/commons/messages`), compose a community post of 2,000 characters (well above the 1,200-character member cap).
 2. Submit.
 
 **Expected:**
@@ -951,6 +1023,36 @@ second browser window signed in as a different member (or signed out) so you can
 
 **Expected:** Only that one reply is gone. The parent post is still visible and its other replies still
 render. Hiding a reply must not take the post or its siblings with it.
+
+**Result:** web ☐
+
+---
+
+### FD-A26 — Hide a reply on an official announcement, then put it back (added 2026-08-10)
+**Role:** admin + member | **Surface:** web
+
+**Precondition:** An official announcement with at least two member replies.
+
+**Steps:**
+1. As admin, open `/admin/commons`. Find a row with the **Announcement reply** pill — it shows which
+   announcement it belongs to.
+2. Click **Hide** on that reply.
+3. In the member window, reload the Commons and open that announcement's reply thread.
+4. Back in the admin window, switch to the **Hidden only** tab, then click **Put back** and accept the
+   confirmation.
+5. Reload the member window and reopen the thread.
+6. As the reply's author, try to edit it while it is hidden (repeat step 2 first, then use the member
+   window's Edit control on that reply — reload first so the thread is fresh).
+
+**Expected:**
+- Step 2: the row gains a "Hidden" pill and the Hidden-replies counter goes up by one.
+- Step 3: that one reply is gone from the thread and the announcement's reply count drops by one. The
+  announcement itself and the other replies are untouched.
+- Step 4/5: the reply is back in the thread with its original words. Nothing was deleted.
+- Step 6: editing a hidden reply is refused with "A moderator has hidden this reply, so it cannot be
+  edited." A member must not be able to edit their way back into view.
+- Nowhere on the moderation screen is there a control to **edit** a member's reply. That absence is
+  deliberate — confirm it is still absent.
 
 **Result:** web ☐
 

@@ -246,7 +246,7 @@ function MobileEmpty({ retained, tokens }: { retained: AccountService[]; tokens:
       </div>
       <div style={{ fontSize: 19, fontWeight: 800, color: TEXT, marginBottom: 8 }}>No personal data stored yet</div>
       <div style={{ fontSize: 13, color: SUBTLE, lineHeight: 1.6, marginBottom: 20 }}>
-        As you use Survivor Hub apps, any personal data they hold will appear here for you to see and delete.
+        As you use Skills Economy apps, any personal data they hold will appear here for you to see and delete.
       </div>
       {retained.length > 0 ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '12px', borderRadius: 12, background: `${BRAND}05`, border: `1px solid ${BRAND}15`, width: '100%', textAlign: 'left' }}>
@@ -270,12 +270,12 @@ function MobileDanger({ serviceCount, onOpenAccountDelete, tokens }: { serviceCo
           <span style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Delete Entire Account</span>
         </div>
         <div style={{ fontSize: 13, color: '#9CA3AF', lineHeight: 1.6, marginBottom: 14 }}>
-          Removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are settled — not destroyed. Some audit records are retained by design.
+          Removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are held for 7 days, then returned to the community treasury (an active escrow resolves first) — never withdrawable externally. Some audit records are retained by design.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
           {([
             { t: 'All personal data permanently deleted', warn: true },
-            { t: 'ServiceCredits settled via standard process', warn: false },
+            { t: 'ServiceCredits: held 7 days, then returned to the community treasury', warn: false },
             { t: 'Audit records retained (by design)', warn: false },
             { t: 'Profile removed from all directories', warn: true },
           ]).map(({ t, warn }, i) => (

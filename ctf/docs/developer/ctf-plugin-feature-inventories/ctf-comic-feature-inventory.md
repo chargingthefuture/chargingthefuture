@@ -22,9 +22,9 @@
 > **AI Q&A via `@comic`**, **peer-to-peer community posts**) rendered in a single UI.
 > This inventory is **dedicated to the AI portion only**. Announcements and peer-to-peer
 > surfaces live in `ctf-feed-feature-inventory.md` /
-> `ctf-survivor-hub-chat-feature-inventory.md`.
+> `ctf-hub-feature-inventory.md`.
 >
-> **`@comic` already exists** as a defined persona in the Survivor Hub inventory (a
+> **`@comic` already exists** as a defined persona in the Commons (Hub Home) inventory (a
 > hub-owned assistive bot that introduces survivor stories, gives onboarding nudges, and
 > routes users to plugins). This document **extends** that persona from a navigation
 > router into a **conversational Q&A assistant** backed by Rasa + Ollama. It does not
@@ -125,7 +125,7 @@ design that this plan unifies:
    client-side `getActionForText()` keyword→plugin navigation (`ctf-home-bot`, "I'm still
    learning…" fallback, localStorage history). **Navigation only, not Q&A.** The Hub
    consolidation already calls for replacing this hardcoded router with Feed-backed data.
-4. **`@comic` persona + `hub_bots` design** — defined in the Survivor Hub inventory
+4. **`@comic` persona + `hub_bots` design** — defined in the Commons (Hub Home) inventory
    (persona, `hub_bots` table, deterministic seed, DM wiring). **But** the consolidation
    dropped the `hub_*` tables and **none exist in schema** — so the persona is real, its
    backing tables are not.
@@ -133,7 +133,7 @@ design that this plan unifies:
 ## Scope and Boundary
 
 - Subsystem name: `comic`. Bot handle: `@comic`.
-- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → Survivor Hub homepage;
+- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → the Commons homepage;
   Android `packages/mobile/src/features/feed`).
 - Owned data layer: `comic_*` conversation/training/rating tables + (target) a Rasa tracker
   store. `llm_inference_log` and `feed_answer_ratings` are **not** reused (their FKs target the
@@ -178,7 +178,10 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
    contributor's Quora account and seeing a real person writing real things, which is the same look
    Unlock asks for — so gating it behind Unlock would review the same account twice. A **signed-out
    visitor gets a public landing page**, because this is the URL the invitation post links to from
-   Quora and most people opening it have no account yet.
+   Quora and most people opening it have no account yet. Both the signed-in and signed-out versions
+   carry the shared back control (rule 134): the signed-in shell through `MobileScreenHeader`, and
+   the public shell through the standalone `BackChevronButton` in its own header, since that
+   header's signed-in chrome would mean nothing to a visitor with no account.
    The path is `/knowledge`, deliberately **not**
    `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
    surface), and two member-facing paths a word apart would be a standing source of confusion (owner
@@ -255,7 +258,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 - `GET /api/feed/admin/questions`, `GET /api/feed/admin/questions/export` — admin review +
   **Rasa NLU YAML export**.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
-  `POST /api/hub/messages` is a stub).
+  `POST /api/commons/messages` is a stub).
 
 ### Implemented (backend foundation, server-only — `comic.*`)
 Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface), under
@@ -316,6 +319,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
 - `GET /api/comic/admin/training-stats` (`comic.training.stats`) — admin. Read-only at-a-glance
   counts for the dashboard: total non-discarded `comic_training_examples` (with a pending/exported
   breakdown) and the number of distinct rated answered turns. Aggregate counts only — no PII.
+- `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) — admin. Paginated browse of
+  `comic_knowledge_entries` (source, type, title/question, content snippet, active flag, plus
+  total/active counts; `?filter=all|active|inactive`). Backs the `/admin/comic/knowledge` curation
+  page (`comic-knowledge-admin.tsx`), linked from the `/admin` landing as "AI Knowledge Base".
+- `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — admin,
+  CSRF-guarded. Switch one grounding entry on/off for retrieval. Off never deletes: the row stays
+  and retrieval simply skips inactive rows; the entry can be switched back on.
 - `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
   asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
   items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
@@ -335,7 +345,7 @@ app via Ollama (`generateComicDraft`), with a deterministic template fallback wh
 unconfigured or unreachable.
 
 ### Target (`@comic`)
-- Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
+- Mention routing also to ride the Hub message path (`POST /api/commons/messages`) once that stub
   is wired; today the dedicated `POST /api/comic/message` is the server entry point.
 - Auto-reply branch (above-threshold) is **deferred**. There is no model-derived confidence now
   (Rasa removed), so `forceHumanReview()` stays unconditionally true. A confidence/safety gate is
@@ -356,8 +366,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 
 1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `asker_username` text null
    [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
-   user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
+   user id; null for rows created before this was captured], `channel` text [commons|feed], `status` text
    [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
+   `channel` was `hub|feed` until 2026-08-09; existing rows were migrated to `commons` and nothing
+   writes `hub` any more. The CHECK still accepts `hub` for one release so the deploy window cannot
+   fail an insert, and reads fold it to `commons` — see the Commons inventory's change log.
 2. `comic_turns` — one row per turn, including `grounding_entry_ids` (jsonb array, default `[]`;
    the `comic_knowledge_entries` ids injected as grounding when a bot draft was generated —
    added 2026-07-23) (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
@@ -625,7 +638,7 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
 4. Single LLM provider, no failover (carried from feed gap #1).
-5. The Hub message path (`POST /api/hub/messages`) is a stub; `@comic` routing depends on
+5. The Hub message path (`POST /api/commons/messages`) is a stub; `@comic` routing depends on
    wiring it to the Feed/comic data layer first.
 6. `@comic` persona is defined against dropped `hub_*` tables; persona + data layer must be
    reconciled with the Hub consolidation.
@@ -634,7 +647,10 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
    no word overlap against the knowledge base retrieve nothing. The embedding upgrade is
    unblocked (#502, the GPU host with the stronger model, closed 2026-07-22) and is follow-up
    work: serve an embedding model on the same self-hosted engine and rank by vector similarity.
-   Knowledge-base curation is manual (`active` flag); no admin UI for it yet.
+   ~~Knowledge-base curation is manual (`active` flag); no admin UI for it yet.~~ Resolved
+   (2026-08-05): `/admin/comic/knowledge` lists every entry with its active flag and switches
+   entries off/on for retrieval (routes `GET /api/comic/admin/knowledge`,
+   `PUT /api/comic/admin/knowledge/:entryId`).
 
 ## Future Notes (deliberately deferred — do not get bogged down now)
 
@@ -687,7 +703,31 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-07-29 (latest): **Knowledge Library now actually appears in the Apps launcher.** The plugin
+- 2026-08-09 (latest): **The signed-out Knowledge library page had no way back (owner report).**
+  `comic-knowledge-public-shell.tsx` builds its own header — the BookOpen mark and the title — and
+  carried no back control at all, so a visitor who reached `/knowledge` from inside the app was
+  stranded there at phone width, where there is no browser back button in the installed web app.
+  This is the case rule 134 names outright as forbidden. The signed-in shell was never affected; it
+  gets its back control from `MobileScreenHeader`. Fixed by adding the shared `BackChevronButton`
+  to the left of the icon and title, tinted to the plugin accent and sized to match the header —
+  the same placement `mutual-time-public.tsx` already uses for a public shell with its own header.
+  `MobileScreenHeader` would have been the wrong piece here: its right-hand cluster is report-a-bug,
+  account settings, and the account menu, all of which are signed-in chrome a visitor with no
+  account cannot use. Back resolves through the shared `useSmartBack` — the previous in-app page
+  when there is one, the all-apps grid otherwise, and that grid renders for a signed-out visitor
+  too, so the fallback lands somewhere real. No route, schema, or contract change.
+- 2026-08-05: **Knowledge-base curation admin shipped (closes the manual-curation gap).**
+  New page `/admin/comic/knowledge` (`comic-knowledge-admin.tsx`, linked from the `/admin` landing
+  as "AI Knowledge Base") lists `comic_knowledge_entries` newest-first with source, type,
+  title/question, a content snippet, and the active flag, filterable all/active/inactive with
+  active-of-total counts, and switches entries off/on for retrieval. Backed by two new admin routes —
+  `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) and CSRF-guarded
+  `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — over a new
+  `lib/comic/knowledge-admin.ts` module (kept out of the already-large `repository.ts` per rule
+  116). Off never deletes: retrieval skips inactive rows and an entry can be switched back on; the
+  withdrawal and deletion paths are unchanged. Command + access-policy contracts added. No schema
+  change.
+- 2026-07-29: **Knowledge Library now actually appears in the Apps launcher.** The plugin
   was added to `fallbackPluginRegistry` in `lib/plugins/repository.ts` and to the parity contracts,
   but never to the `ctf_plugin_registry` seed in `schema.sql` — and `listPluginRegistry` only falls
   back to the in-code array when that table is empty or unreadable, which never happens in

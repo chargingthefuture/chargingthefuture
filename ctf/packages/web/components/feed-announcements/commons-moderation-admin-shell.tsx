@@ -29,6 +29,16 @@ import { failureText } from 'lib/errors/client-failure';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' };
 
+// What each queue row is, in the words a moderator uses. A reply on an official announcement is
+// labeled as such rather than as a plain reply, because where it appears changes how visible it is.
+const QUEUE_TARGET_LABEL: Record<FeedModerationQueueRow['target'], string> = {
+  post: 'Post',
+  reply: 'Reply',
+  'announcement-reply': 'Announcement reply',
+  question: 'Question',
+  answer: 'Answer',
+};
+
 type TabKey = 'all' | 'hidden' | 'authors' | 'flagged';
 
 type ModerationQueuePayload = {
@@ -364,7 +374,7 @@ function QueueRowCard({
     <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isHidden ? 'rgba(245,158,11,0.35)' : t.BORDER_SOLID}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
         <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${t.ACCENT}1f`, color: t.ACCENT, border: `1px solid ${t.ACCENT}4d` }}>
-          {row.target === 'reply' ? 'Reply' : 'Post'}
+          {QUEUE_TARGET_LABEL[row.target]}
         </span>
         {isHidden ? (
           <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
@@ -386,9 +396,10 @@ function QueueRowCard({
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <HideToggleButton isHidden={isHidden} busy={busy} hideLabel="Hide" onClick={() => onToggle(row, !isHidden)} />
-        {row.target === 'reply' && row.postId ? (
+        {row.parentId && row.target !== 'post' ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: t.MUTED }}>
-            <MessageSquare size={12} /> on post {row.postId.slice(0, 8)}
+            <MessageSquare size={12} /> on {row.target === 'announcement-reply' ? 'announcement' : 'post'}{' '}
+            {row.parentId.slice(0, 8)}
           </span>
         ) : null}
       </div>

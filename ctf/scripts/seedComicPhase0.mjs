@@ -49,7 +49,7 @@ async function upsertConversation(client) {
   await client.query(
     `
       INSERT INTO comic_conversations (id, user_id, channel, status)
-      VALUES ($1::uuid, $2, 'hub', 'open')
+      VALUES ($1::uuid, $2, 'commons', 'open')
       ON CONFLICT (id) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         channel = EXCLUDED.channel,

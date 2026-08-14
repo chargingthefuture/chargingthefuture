@@ -1,5 +1,9 @@
-import { normalizeQuoraProfileUrl } from 'lib/unlock/quora-url';
-import { createOrUpdateUnlockSubmission, getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
+import {
+  createOrUpdateUnlockSubmission,
+  getUnlockStatusForUser,
+  insertUnlockAudit,
+  normalizeQuoraProfileUrl,
+} from 'lib/shared/unlock-interface';
 
 // Contributing to the knowledge library is a route INTO verification, not something gated behind it
 // (owner decision, 2026-07-29).

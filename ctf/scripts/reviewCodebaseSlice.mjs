@@ -14,9 +14,17 @@
 //   2. Pick the slice to review: an in-progress (partial) slice first, then any
 //      never-reviewed slice, then the least-recently-reviewed one. This guarantees every
 //      slice gets at least one pass before any gets a second.
-//   3. Send that slice's source to Claude (up to a per-run byte budget), along with the
-//      plugin's declared contracts as read-only reference, and ask for concrete, high-signal
-//      findings — including mismatches between the layers and code that violates a contract.
+//   3. Send that slice's source to Claude (up to a per-run byte budget), along with two read-only
+//      references — the plugin's declared contracts, and the code the slice imports from OUTSIDE
+//      itself — and ask for concrete, high-signal findings, including mismatches between the layers
+//      and code that violates a contract.
+//
+//      The imported-code reference matters because a slice is a set of same-named folders, which
+//      does not hold for a surface built on another plugin's server code: the Commons slice is
+//      app/api/commons + lib/commons, while every function its routes call lives in lib/feed. The
+//      reviewer used to read those call sites with no way to open the implementations, and filed
+//      confident, wrong findings about validation and error handling that were present one layer
+//      down (issues #2205, #2206, #2208). See ctf/scripts/lib/sliceImports.mjs.
 //   4. File one GitHub issue per finding, labeled `code-review`. Findings the model judges
 //      to have a small, safe, self-contained fix also get `code-review:actionable`, which
 //      the implement workflow can turn into a pull request.
@@ -38,6 +46,7 @@
 //   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first.
 //   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most whole plugins).
 //   CODE_REVIEW_CONTRACTS_MAX_BYTES  Cap on contract reference bytes (default: 60000).
+//   CODE_REVIEW_DEPS_MAX_BYTES  Cap on imported-code reference bytes (default: 70000; 0 disables).
 //   CODE_REVIEW_DRY_RUN    "1" to print findings without filing issues or touching the ledger.
 
 import { execFileSync } from 'node:child_process';
@@ -45,10 +54,12 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectDependencyContext } from './lib/sliceImports.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
 const ledgerPath = join(repoRoot, 'ctf/config/code-review-ledger.json');
+const manifestPath = join(repoRoot, 'ctf/config/code-review-slice-manifest.json');
 
 const REPO = (process.env.GITHUB_REPOSITORY || 'chargingthefuture/chargingthefuture').trim();
 const MODEL = (process.env.CODE_REVIEW_MODEL || 'claude-sonnet-4-6').trim();
@@ -56,6 +67,15 @@ const FORCED_SLICE = (process.env.CODE_REVIEW_SLICE || '').trim();
 const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '8');
 const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '200000');
 const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES || '60000');
+// Budget for code the slice imports from OUTSIDE itself, sent as read-only reference. Separate from
+// the source budget so pulling in a dependency never costs the slice its own coverage. Set to 0 to
+// turn the dependency context off.
+//
+// 70000 was calibrated when extracted declarations were, through a bug, only their signatures. Now
+// that they carry their bodies — which is the whole point, since the reasoning a reviewer needs is
+// inside the function — the same set of dependencies costs more. Measured on the commons slice: at
+// 70000 two files are dropped, at 90000 all 16 fit.
+const DEPS_MAX_BYTES = Number(process.env.CODE_REVIEW_DEPS_MAX_BYTES || '90000');
 // The model's findings JSON must fit in one response. 4000 was too small for a whole-plugin
 // review: the JSON truncated mid-string and JSON.parse threw, failing the whole run. Give it ample
 // room (Sonnet allows far more), overridable for cost tuning.
@@ -69,9 +89,10 @@ const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
 const WONTFIX_REVISIT_DAYS = Number(process.env.CODE_REVIEW_WONTFIX_DAYS || '90');
 
 // A plugin's declared contracts are sent as read-only reference so the reviewer can check
-// the code against them. Looked up by exact filename (prefix = SLICE_NAME upper-snake);
-// modules without contracts simply get none. Sent on every run for the slice, separate from
-// the code byte budget, and capped so they don't crowd out the code.
+// the code against them. Looked up by exact filename; the prefix defaults to the slice name
+// upper-snake-cased, but a slice whose contracts live under another name declares the real prefix
+// in the slice manifest. Modules with genuinely no contracts simply get none. Sent on every run for
+// the slice, separate from the code byte budget, and capped so they don't crowd out the code.
 const CONTRACTS_DIR = 'ctf/docs/contracts';
 const CONTRACT_SUFFIXES = [
   '_PLUGIN_COMMAND_CONTRACTS.yaml',
@@ -104,6 +125,48 @@ if (!process.env.GH_TOKEN && !DRY_RUN) {
 
 function gh(args, options = {}) {
   return execFileSync('gh', args, { encoding: 'utf8', ...options });
+}
+
+// The explicit slice manifest: contract prefixes and former folder names that cannot be derived
+// from the slice name. Missing or malformed, every slice falls back to the derived default, which
+// is what the sweep did before the manifest existed — a bad manifest degrades the review, it does
+// not fail the run.
+function loadSliceManifest() {
+  try {
+    const parsed = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    return parsed && typeof parsed.slices === 'object' && parsed.slices !== null ? parsed.slices : {};
+  } catch {
+    return {};
+  }
+}
+
+const SLICE_MANIFEST = loadSliceManifest();
+
+// Which `ctf/docs/contracts/<PREFIX>_*` files govern this slice. Default: the slice name
+// upper-snake-cased. A slice served by another plugin's contracts declares the real prefix, because
+// silently finding none leaves the reviewer to invent what the contract says.
+function contractPrefixFor(sliceName) {
+  const declared = SLICE_MANIFEST[sliceName]?.contractPrefix;
+  return (typeof declared === 'string' && declared.trim().length > 0
+    ? declared.trim()
+    : sliceName
+  ).toUpperCase().replace(/-/g, '_');
+}
+
+// Every name this slice's issues may be titled with: its current name plus any former folder names.
+// Without the aliases a rename hides all earlier decisions, and findings dismissed under the old
+// name are filed again as new.
+function sliceTitleNames(sliceName) {
+  const aliases = SLICE_MANIFEST[sliceName]?.aliases;
+  const names = [sliceName];
+  if (Array.isArray(aliases)) {
+    for (const alias of aliases) {
+      if (typeof alias === 'string' && alias.trim() && !names.includes(alias.trim())) {
+        names.push(alias.trim());
+      }
+    }
+  }
+  return names;
 }
 
 function isDir(path) {
@@ -284,7 +347,7 @@ function gatherChunk(fileList, cursor, budget) {
 
 // A plugin's declared contracts (by exact filename), as read-only reference text.
 function gatherContracts(sliceName) {
-  const prefix = sliceName.toUpperCase().replace(/-/g, '_');
+  const prefix = contractPrefixFor(sliceName);
   let text = '';
   const files = [];
   for (const suffix of CONTRACT_SUFFIXES) {
@@ -370,7 +433,7 @@ function loadPlainLanguageRules() {
   }
 }
 
-async function askClaude(slice, source, chunkNote, contractsText, existingFindings = []) {
+async function askClaude(slice, source, chunkNote, contractsText, existingFindings = [], depsText = '') {
   const layers = slice.paths.join('\n  ');
   const system = [
     'You are a senior engineer doing a code review of one plugin/module of "Charging the',
@@ -393,6 +456,21 @@ async function askClaude(slice, source, chunkNote, contractsText, existingFindin
     'Also report within-file problems: real bugs, security/correctness issues, missing error',
     'handling, clear dead code, obvious simplifications, and TypeScript type-safety violations',
     '(no `any` without an eslint-disable + reason).',
+    '',
+    'IMPORTED CODE, when shown below, is the code this slice calls that lives outside it — often the',
+    'repository/server functions its routes depend on. It is REFERENCE, not under review:',
+    '  - Read it before claiming a call is unchecked, unvalidated, or unguarded. Much of this slice\'s',
+    '    validation, clamping, and error handling lives in the function being called, not at the call',
+    '    site, and a wrapper that already catches its own errors cannot throw at the caller.',
+    '  - Do NOT file a finding whose fix belongs in an imported file — that file is reviewed as part',
+    '    of its own slice. Report only problems in the slice\'s own files.',
+    '  - Large imported files show only the declarations this slice uses. Absence of code you were not',
+    '    shown is not evidence: if you cannot see the definition you need, do not guess what it does —',
+    '    leave the finding out.',
+    '',
+    'Before reporting any missing check, missing validation, or missing error handling, confirm from',
+    'the code you were actually shown that it is missing everywhere, not just at the line you are',
+    'looking at. A finding that is wrong costs more than a finding that is never filed.',
     '',
     'You may be given an ALREADY-TRACKED list of findings previously raised for this slice. These are',
     'already tracked elsewhere — do NOT report them again, with two narrow exceptions:',
@@ -418,6 +496,14 @@ async function askClaude(slice, source, chunkNote, contractsText, existingFindin
           '',
           'DECLARED CONTRACTS for this plugin (reference — the source of truth for what it may do; not under review):',
           contractsText,
+        ]
+      : []),
+    ...(depsText
+      ? [
+          '',
+          'IMPORTED CODE this slice calls from outside itself (reference — not under review; check the',
+          'slice against it before claiming something is unchecked or unhandled):',
+          depsText,
         ]
       : []),
     ...buildAlreadyTrackedBlock(existingFindings),
@@ -563,7 +649,10 @@ function ensureLabel(name, color, description) {
 // rewrites the title every run, so a text fingerprint would miss a reworded re-flag. The embedded
 // fingerprint is kept only as a cheap exact-match fast path.
 function existingSliceIssues(sliceName) {
-  const titlePrefix = `Code review (${sliceName}):`;
+  // Match this slice's current name AND any former folder name it declares, so a rename does not
+  // hide the decisions already made (issue #2207 was #1876 refiled after api/hub became
+  // api/commons — the code had not changed and the finding had already been rejected).
+  const titlePrefixes = sliceTitleNames(sliceName).map((name) => `Code review (${name}):`);
   try {
     const raw = gh([
       'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'all',
@@ -571,11 +660,13 @@ function existingSliceIssues(sliceName) {
     ]);
     const issues = [];
     for (const issue of JSON.parse(raw)) {
-      if (!(issue.title || '').startsWith(titlePrefix)) continue;
+      const title = issue.title || '';
+      const titlePrefix = titlePrefixes.find((prefix) => title.startsWith(prefix));
+      if (!titlePrefix) continue;
       const fpMatch = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
       issues.push({
         number: issue.number,
-        title: (issue.title || '').slice(titlePrefix.length).trim(),
+        title: title.slice(titlePrefix.length).trim(),
         summary: extractWhat(issue.body || ''),
         state: String(issue.state || '').toLowerCase(),
         stateReason: String(issue.stateReason || '').toLowerCase(),
@@ -754,12 +845,22 @@ async function main() {
 
   const contracts = gatherContracts(slice.name);
   const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
+  // The code this slice calls from outside itself. Without it the reviewer reads call sites whose
+  // implementations it cannot open and guesses at them, which is where its wrong findings come from.
+  const deps = DEPS_MAX_BYTES > 0
+    ? collectDependencyContext(fileList, { repoRoot, maxBytes: DEPS_MAX_BYTES })
+    : { text: '', files: [], skipped: 0 };
+  const depNote = deps.files.length
+    ? ` + ${deps.files.length} imported file(s)${deps.skipped ? ` (${deps.skipped} dropped for budget)` : ''}`
+    : '';
   // The findings already raised for this slice (open + closed). Passed to the reviewer so it doesn't
   // re-report a concern already tracked or already fixed (the main source of re-run churn), and reused
   // below for substance-based dedup. One fetch serves both.
   const sliceIssues = existingSliceIssues(slice.name);
-  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
-  const findings = parseFindings(await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues));
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote}${depNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
+  const findings = parseFindings(
+    await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues, deps.text),
+  );
 
   if (findings.length === 0) {
     console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);

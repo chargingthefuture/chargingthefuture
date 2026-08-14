@@ -30,15 +30,19 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
-  // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from Feed
-  // Announcements, which is an authoring tool for the owner's own announcements — this one carries a
-  // different power, over someone else's words.
+  // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
+  // announcements area below, which is an authoring tool for the owner's own announcements — this
+  // one carries a different power, over someone else's words.
   { href: '/admin/commons', name: 'Commons Moderation' },
-  { href: '/admin/feed-announcements', name: 'Feed Announcements' },
+  // Named for the Commons, the member-facing surface these announcements land on — the same name
+  // the Account & Data screen uses for this service.
+  { href: '/admin/feed-announcements', name: 'Commons: Feed & Announcements' },
   // Review of member-contributed writing for the assistant's library. Its own area rather than a tab
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
   // in the admin directory on its own.
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
+  // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
+  { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },

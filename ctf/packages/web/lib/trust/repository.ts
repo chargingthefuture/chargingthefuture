@@ -1,19 +1,16 @@
 import type {
   TrustEvidenceItem,
   TrustSignalMetrics,
-  TrustStatus,
   TrustUserExtension,
-  TrustVisibility,
 } from './types';
+import { reportError } from 'lib/observability/report';
 import {
-  applyAdminVerification,
   buildTrustEvidence,
   computeTrustSignalMetrics,
   getLatestTrustSnapshotAt,
   getTrustUserExtension as getTrustUserExtensionDb,
   insertTrustSignalSnapshot,
   setTrustDerivedEvidence,
-  updateTrustVisibility as updateTrustVisibilityDb,
 } from './db';
 
 export async function getTrustUserExtension(userId: string): Promise<TrustUserExtension> {
@@ -48,6 +45,32 @@ export async function readTrustSelfExtension(
   return { extension, refreshed: true };
 }
 
+// Read the caller's own panel for a surface that renders it directly, rather than fetching
+// `/api/trust/user/self` from the browser.
+//
+// Why this exists: the account hub, the home page, and the apps launcher all render the member's
+// trust card server-side, and each of them used to call `getTrustUserExtension` — a plain read of
+// whatever was last written. Nothing on those pages recomputed, so the card froze at the moment
+// some other surface last hit the self API. In production that showed as a card whose every row was
+// dated over a week earlier, still reporting a sign-in from that same day: not an out-of-date
+// number, a snapshot of a member's participation from another week. A signal nothing refreshes is
+// worse than no signal, because it reads as current.
+//
+// So the fix is not per-page: it is this one function, doing exactly what the self API route does —
+// recompute on the same throttle, fall back to the last stored extension if the recompute throws —
+// so every self surface stays in step and no future page can quietly reintroduce the frozen read.
+// The throttle is what keeps it cheap: at most one recompute per window per member, no matter how
+// many of these pages they open.
+export async function readTrustSelfExtensionOrStored(userId: string): Promise<TrustUserExtension> {
+  try {
+    const { extension } = await readTrustSelfExtension(userId);
+    return extension;
+  } catch (error) {
+    reportError(error, { area: 'trust', op: 'self_refresh' });
+    return getTrustUserExtensionDb(userId);
+  }
+}
+
 export interface TrustSnapshotResult {
   metrics: TrustSignalMetrics;
   evidence: TrustEvidenceItem[];
@@ -57,7 +80,7 @@ export interface TrustSnapshotResult {
 }
 
 // Compute the caller's trust signal from real cross-plugin engagement, persist one snapshot row,
-// and refresh the derived evidence on their extension. Does NOT change trust_status (admin-only).
+// and refresh the derived evidence on their extension.
 export async function refreshTrustSignalSnapshot(userId: string): Promise<TrustSnapshotResult> {
   const nowIso = new Date().toISOString();
   const metrics = await computeTrustSignalMetrics(userId);
@@ -71,33 +94,4 @@ export async function refreshTrustSignalSnapshot(userId: string): Promise<TrustS
     snapshotId: snapshot.id,
     generatedAt: snapshot.createdAt,
   };
-}
-
-export async function setTrustVisibility(
-  userId: string,
-  visibility: TrustVisibility,
-): Promise<TrustUserExtension> {
-  return updateTrustVisibilityDb(userId, visibility);
-}
-
-// Apply an admin verification decision: set status and append an admin evidence note.
-export async function applyTrustAdminVerification(params: {
-  targetUserId: string;
-  status: TrustStatus;
-  actorUserId: string;
-  note?: string;
-}): Promise<TrustUserExtension> {
-  const { targetUserId, status, actorUserId, note } = params;
-  const summary =
-    status === 'verified'
-      ? 'Verified by an administrator'
-      : 'Flagged for review by an administrator';
-  const adminEvidence: TrustEvidenceItem = {
-    type: 'admin-verification',
-    summary,
-    details: note && note.trim().length > 0 ? note.trim() : undefined,
-    createdAt: new Date().toISOString(),
-    createdBy: actorUserId,
-  };
-  return applyAdminVerification(targetUserId, status, adminEvidence);
 }

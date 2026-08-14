@@ -14,6 +14,7 @@ import { AlertTriangle } from "lucide-react";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { useOwnerShare } from "./click-log-use-owner-share";
+import { useIncidentEdit } from "./click-log-use-incident-edit";
 
 type Geo = { latitude?: number; longitude?: number };
 
@@ -45,20 +46,46 @@ async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
 function buildCreateBody(args: {
   metadata: Record<string, unknown>;
   sharedWithOwner: boolean;
-  problemTag: string;
-  schemeTag: string;
+  problemTags: string[];
+  schemeTags: string[];
   schemeSuggestion: string;
   schemeQuoraUrl: string;
 }): Record<string, unknown> {
-  const notListed = args.schemeTag === NOT_LISTED_SCHEME_SLUG;
+  const notListed = args.schemeTags.includes(NOT_LISTED_SCHEME_SLUG);
   return {
     metadata: args.metadata,
     sharedWithOwner: args.sharedWithOwner,
-    ...(args.problemTag ? { problemTag: args.problemTag } : {}),
-    ...(args.schemeTag ? { schemeTag: args.schemeTag } : {}),
+    ...(args.problemTags.length > 0 ? { problemTags: args.problemTags } : {}),
+    ...(args.schemeTags.length > 0 ? { schemeTags: args.schemeTags } : {}),
     ...(notListed && args.schemeSuggestion.trim() ? { schemeSuggestion: args.schemeSuggestion.trim() } : {}),
     ...(notListed && args.schemeQuoraUrl.trim() ? { schemeQuoraUrl: args.schemeQuoraUrl.trim() } : {}),
   };
+}
+
+// Global share default. Opt-in and member-controlled; a new incident starts from this setting
+// and can be overridden per incident in the log form or the history list. Module-level to keep
+// ClickLogShell under the function-length limit.
+function ShareDefaultToggle({
+  checked,
+  tokens,
+  onChange,
+}: {
+  checked: boolean;
+  tokens: ReturnType<typeof getClickLogTokens>;
+  onChange: (next: boolean) => void;
+}) {
+  const t = tokens;
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ accentColor: t.ACCENT }}
+      />
+      Share new incidents with the owner by default (only trend data — never your notes)
+    </label>
+  );
 }
 
 export function ClickLogShell() {
@@ -69,9 +96,9 @@ export function ClickLogShell() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
-  // Optional tags for the incident being logged ("" = untagged). Slugs from lib/click-log/tags.
-  const [problemTag, setProblemTag] = useState("");
-  const [schemeTag, setSchemeTag] = useState("");
+  // Optional tags for the incident being logged ([] = untagged). Slugs from lib/click-log/tags.
+  const [problemTags, setProblemTags] = useState<string[]>([]);
+  const [schemeTags, setSchemeTags] = useState<string[]>([]);
   // "Not listed" scheme-suggestion state. canSuggestScheme comes from GET /api/click-log
   // (Weavers of the Commons badge holders only); when false the option is hidden entirely.
   const [canSuggestScheme, setCanSuggestScheme] = useState(false);
@@ -107,6 +134,9 @@ export function ClickLogShell() {
 
   // Owner-share consent (global default + per-incident choice) — see click-log-use-owner-share.
   const share = useOwnerShare({ onError: setError, onBusy: setBusy, refresh: fetchIncidents });
+  // Inline per-incident edit (note + tags; date and location immutable) — see
+  // click-log-use-incident-edit.
+  const edit = useIncidentEdit({ onError: setError, onBusy: setBusy, refresh: fetchIncidents });
 
   useEffect(() => {
     void fetchIncidents(true);
@@ -153,8 +183,8 @@ export function ClickLogShell() {
           buildCreateBody({
             metadata,
             sharedWithOwner: share.formShare,
-            problemTag,
-            schemeTag,
+            problemTags,
+            schemeTags,
             schemeSuggestion,
             schemeQuoraUrl,
           }),
@@ -163,8 +193,8 @@ export function ClickLogShell() {
       await throwIfNotOk(res, "Failed to log incident");
       setShowForm(false);
       setNote("");
-      setProblemTag("");
-      setSchemeTag("");
+      setProblemTags([]);
+      setSchemeTags([]);
       setSchemeSuggestion("");
       setSchemeQuoraUrl("");
       setGeo({});
@@ -224,8 +254,8 @@ export function ClickLogShell() {
         geoStatus={geoStatus}
         geoError={geoError}
         shareWithOwner={share.formShare}
-        problemTag={problemTag}
-        schemeTag={schemeTag}
+        problemTags={problemTags}
+        schemeTags={schemeTags}
         schemeSuggestion={{
           canSuggestScheme,
           suggestion: schemeSuggestion,
@@ -234,32 +264,31 @@ export function ClickLogShell() {
           onQuoraUrlChange: setSchemeQuoraUrl,
         }}
         onShareChange={share.setFormShare}
-        onProblemTagChange={setProblemTag}
-        onSchemeTagChange={setSchemeTag}
+        onProblemTagsChange={setProblemTags}
+        onSchemeTagsChange={setSchemeTags}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setProblemTag(""); setSchemeTag(""); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
+        onCancel={() => { setShowForm(false); setNote(""); setProblemTags([]); setSchemeTags([]); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
       />
 
-      {/* Global share default. Opt-in and member-controlled; a new incident starts from this
-          setting and can be overridden per incident in the log form or the list below. */}
-      <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
-        <input
-          type="checkbox"
-          checked={share.shareDefault}
-          onChange={(e) => void share.setDefault(e.target.checked)}
-          style={{ accentColor: t.ACCENT }}
-        />
-        Share new incidents with the owner by default (only trend data — never your notes)
-      </label>
+      <ShareDefaultToggle
+        checked={share.shareDefault}
+        tokens={t}
+        onChange={(next) => void share.setDefault(next)}
+      />
 
       {incidents.length > 0 && (
         <ClickLogIncidentList
           incidents={incidents}
+          editingId={edit.editingId}
+          editBusy={busy}
           onDelete={(id) => void handleDelete(id)}
           onToggleShare={(id, next) => void share.toggleIncident(id, next)}
+          onEdit={edit.start}
+          onSaveEdit={(id, fields) => void edit.save(id, fields)}
+          onCancelEdit={edit.cancel}
         />
       )}
     </>

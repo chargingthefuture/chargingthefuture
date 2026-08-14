@@ -39,6 +39,13 @@ export type OwnedTable = {
   /** Required when `action` is `soft-delete`: the timestamp column to stamp. */
   readonly softDeleteColumn?: string;
   /**
+   * Optional for `delete`: an extra restriction ANDed onto the user-column match, so only SOME of
+   * the member's rows in a shared table are removed. Written by hand in this file (never from user
+   * input) and limited to a tiny grammar — `<column> IS [NOT] NULL` clauses joined by AND/OR — that
+   * `check-deletion-registry.mjs` parses and checks column-by-column against `schema.sql`.
+   */
+  readonly rowFilter?: string;
+  /**
    * Optional for `pseudonymize`: extra columns set to NULL alongside the user column — the
    * denormalized copies of the member's identity (a handle captured at claim time, say), which would
    * otherwise keep naming them after their id is gone.
@@ -65,6 +72,27 @@ const del = (table: string, userColumn: string, note?: string): OwnedTable => ({
   table,
   userColumn,
   action: 'delete',
+  note,
+});
+
+/**
+ * Delete only SOME of a member's rows in a table that also holds rows nobody should lose.
+ *
+ * The case this exists for: `feed_items` is one table carrying two very different things — the
+ * projection of a member's own Commons post or question, and the projection of an admin-published
+ * announcement. Retaining the whole table (what it did until now) left the member's own words on
+ * the Commons after their account was deleted, re-attributed to the fallback handle `user-hub-syst`
+ * because the source row behind them was gone (owner report, 2026-08-09). Deleting the whole table
+ * by author would take the admin announcements down with it. So the row filter names the difference.
+ *
+ * The filter is written here by hand, never from user input, and the CI validator only accepts
+ * `<column> IS [NOT] NULL` clauses joined by AND/OR — each column checked against `schema.sql`.
+ */
+const delWhere = (table: string, userColumn: string, rowFilter: string, note?: string): OwnedTable => ({
+  table,
+  userColumn,
+  action: 'delete',
+  rowFilter,
   note,
 });
 
@@ -199,13 +227,29 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   },
   {
     slug: 'feed-announcements',
-    name: 'Feed & Announcements',
-    dataSummary: 'Your community posts, replies, questions, answers, ratings, and read/dismiss state.',
+    // The member-facing name of this service is the Commons — the home screen these tables feed.
+    // The old "Feed & Announcements" wording is kept after the colon so a member who remembers the
+    // old label still recognizes the row.
+    name: 'Commons: Feed & Announcements',
+    dataSummary: 'Your Commons posts, replies, questions, answers, ratings, and read/dismiss state.',
     serviceScopeSupported: true,
     tables: [
       del('feed_answer_ratings', 'user_id', 'Your ratings on answers.'),
       del('feed_community_post_reactions', 'user_id', 'Your reactions on community posts.'),
       del('feed_answers', 'author_user_id', 'Your answers.'),
+      // The Commons timeline reads `feed_items`, not the post/question tables — every post and
+      // question is copied into a `feed_items` row that carries the same text. Deleting only the
+      // source row left that copy on screen under the fallback handle `user-hub-syst`, which is not
+      // a deletion; a Commons post is ordinary member content with no reason to be kept (it is not a
+      // ServiceCredits movement), so the copy goes with it. Runs before the two source deletes and
+      // cascades each item's targets, read state, and dismissals. Announcement copies are excluded
+      // by the filter and stay, matching the retained `announcements` rows below.
+      delWhere(
+        'feed_items',
+        'created_by_user_id',
+        'source_community_post_id IS NOT NULL OR source_question_id IS NOT NULL',
+        'The Commons timeline copies of your posts and questions.',
+      ),
       del('feed_questions', 'asked_by_user_id', 'Your questions.'),
       del('feed_community_replies', 'author_user_id', 'Your replies.'),
       del('feed_community_posts', 'author_user_id', 'Your community posts.'),
@@ -215,7 +259,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('feed_membership_events', 'user_id', 'Your feed membership events.'),
       del('announcement_user_state', 'user_id', 'Your announcement read/ack state.'),
       del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
-      del('feed_hub_last_seen', 'user_id', 'When you last opened the Hub (unread-badge state).'),
+      del('feed_commons_last_seen', 'user_id', 'When you last opened the Commons (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
       del('announcement_replies', 'author_user_id', 'Your replies to announcements.'),
       // The AI-answer inference log FK-cascades with the member's questions and answers (deleted
@@ -227,7 +271,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('announcements', 'Admin-authored announcements; authorship columns are the publish audit.'),
       retain('announcement_revisions', 'Announcement edit history; admin audit.'),
       retain('announcement_delivery_events', 'Announcement delivery/publish events; admin audit.'),
-      retain('feed_items', 'Admin-authored feed content; authorship columns are the publish audit.'),
+      // Only the ANNOUNCEMENT copies are retained here — the member's own post/question copies are
+      // deleted by the `delWhere` above. Split on purpose: one table, two kinds of content.
+      retain('feed_items', 'Admin-published announcement copies; authorship columns are the publish audit.'),
       retain('feed_render_config', 'Global feed settings and the admin audit of who changed them.'),
     ],
   },

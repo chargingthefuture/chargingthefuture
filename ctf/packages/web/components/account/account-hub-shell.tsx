@@ -43,7 +43,7 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
           <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Your account</h1>
           <p style={{ fontSize: 14, color: tok.SUBTLE, lineHeight: 1.6, margin: 0 }}>
-            You have one identity across Survivor Hub. Here is everywhere it shows up — update each part where it lives.
+            You have one identity across Skills Economy. Here is everywhere it shows up — update each part where it lives.
           </p>
         </header>
 

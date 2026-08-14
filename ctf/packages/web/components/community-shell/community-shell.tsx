@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-import { SlidersHorizontal, Settings } from 'lucide-react';
+import { SlidersHorizontal, Settings, MessagesSquare, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
-import type { HubChannelInfo } from '../../lib/hub/types';
+import type { CommonsChannelInfo } from '../../lib/commons/types';
 import type { PluginSortMode, ShellCurrentUser, ShellSection, ShellStats } from './shell-types';
 import { GATED_CHANNEL_SLUG } from '../../lib/contributor-access/gated-channel-shared';
 import { WeaversBadge } from '../contributor-access/weavers-badge';
@@ -18,12 +18,13 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { GatedChatPanel } from './gated-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
-import { ContributionsBanner, ContributionsGiftTrigger } from '../contributions/contributions-banner';
+import { ContributionsBanner } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { HelpControl } from '../bug-reports/help-control';
 import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
+import { cycleFocusTrap, focusableWithin } from './dialog-focus';
 import { failureText } from 'lib/errors/client-failure';
 
 // Verification state for a signed-in member who has not yet completed Quora verification but reaches
@@ -179,38 +180,54 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
       <div className={styles.mobileBarLogo}>
         <SeMark size={26} />
       </div>
-      {/* Signed out, the bar carries far fewer controls (no gift reminder, help, settings or
-          avatar), so the full "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time
-          visitor sees the product name, not just a symbol. Signed in, the name is dropped again
-          so the mark, gift reminder, tabs and account controls all fit a 390px phone. */}
-      {!isAuthenticated ? (
+      {/* Signed out, the bar carries far fewer controls (no help, settings or avatar), so the full
+          "SE / SKILLS ECONOMY" lockup fits beside the mark and a first-time visitor sees the
+          product name, not just a symbol. Signed in, the bar used to show the mark alone so
+          everything fit a 375px phone (iPhone SE); icon section tabs freed enough room to bring the
+          name back, set on two lines so it fits even the narrowest phone with an admin button
+          present (see .mobileBarWordmarkStacked for the measurements). */}
+      {isAuthenticated ? (
+        <span className={styles.mobileBarWordmarkStacked} aria-hidden="true">
+          <span className={styles.mobileBarWordmarkStackedLine}>Skills</span>
+          <span className={styles.mobileBarWordmarkStackedLine}>Economy</span>
+        </span>
+      ) : (
         <span className={styles.mobileBarWordmark} aria-hidden="true">
           <span className={styles.mobileBarWordmarkInitials}>SE</span>
           <span className={styles.mobileBarWordmarkName}>Skills Economy</span>
         </span>
-      ) : null}
-      {/* Fundraiser gift reminder — sits between the brand mark and the section tabs (owner
-          placement). Renders only on phone widths while a drive is active and the full banner is
-          dismissed or snoozed; the banner itself (when open) stays in the content area below. */}
-      {isAuthenticated ? <ContributionsGiftTrigger /> : null}
+      )}
+      {/* The fundraiser gift reminder used to sit here, between the mark and the tabs. On a 375px
+          phone that made the bar too crowded, so it moved down into the Commons chip row after the
+          🔔 chip (owner directive, 2026-08-09) — see ConciergeChipRail in shell-chat-panel.tsx. */}
+      {/* Section switch. These were word buttons ("Commons" / "Apps") sized by their text, so they
+          stood shorter than the 38px square icon controls beside them and the bar read as two
+          different rows of boxes. They are icons now (owner directive, 2026-08-09) so every control
+          in the bar is the same square. The words are not lost: the icon carries an aria-label and
+          a tooltip, and each destination names itself on arrival — the Apps page heads "All Apps",
+          and the Commons page now leads its channel row with a "Commons" label. */}
       <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
         <button
           type="button"
           role="tab"
           aria-selected={section === 'chat'}
+          aria-label="Commons"
+          title="Commons — the community channels"
           className={sectionTabClass(section === 'chat')}
           onClick={() => onSectionChange('chat')}
         >
-          Commons
+          <MessagesSquare size={18} aria-hidden="true" />
         </button>
         <button
           type="button"
           role="tab"
           aria-selected={section === 'apps'}
+          aria-label="Apps"
+          title="Apps — every app on the platform"
           className={sectionTabClass(section === 'apps')}
           onClick={() => onSectionChange('apps')}
         >
-          Apps
+          <LayoutGrid size={18} aria-hidden="true" />
         </button>
       </div>
       {/* Admins reach /admin straight from the top bar on phones — the left rail
@@ -254,7 +271,7 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
 }
 
 type ChannelSwitchRowProps = {
-  channels: HubChannelInfo[];
+  channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   onLockedChannelClick: () => void;
@@ -271,31 +288,38 @@ function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedCh
   const hasGatedChannel = channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG);
 
   return (
-    <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
-      {channels.map((ch) => (
-        <button
-          key={ch.slug}
-          type="button"
-          role="tab"
-          aria-selected={fallbackSlug === ch.slug}
-          className={channelSwitchClass(fallbackSlug === ch.slug)}
-          onClick={() => onChannelSelect(ch.slug)}
-        >
-          #{ch.slug}
-        </button>
-      ))}
-      {!hasGatedChannel ? (
-        <button
-          type="button"
-          className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
-          onClick={onLockedChannelClick}
-          aria-haspopup="dialog"
-          title="Weavers of the Commons"
-        >
-          <WeaversBadge size={13} />
-          <span>#{GATED_CHANNEL_SLUG}</span>
-        </button>
-      ) : null}
+    <div className={styles.channelSwitchBar}>
+      {/* Page name, sitting left of the channel chips. With the top-bar section switch now icon-only,
+          this is what tells a member which page they landed on — the Commons — the same way the Apps
+          page announces itself with its "All Apps" heading. It is a label, not a control: no chip
+          chrome, and it stays outside the tablist so screen readers still read exactly two tabs. */}
+      <span className={styles.channelSwitchPageLabel}>Commons</span>
+      <div className={styles.channelSwitchRow} role="tablist" aria-label="Channels">
+        {channels.map((ch) => (
+          <button
+            key={ch.slug}
+            type="button"
+            role="tab"
+            aria-selected={fallbackSlug === ch.slug}
+            className={channelSwitchClass(fallbackSlug === ch.slug)}
+            onClick={() => onChannelSelect(ch.slug)}
+          >
+            #{ch.slug}
+          </button>
+        ))}
+        {!hasGatedChannel ? (
+          <button
+            type="button"
+            className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
+            onClick={onLockedChannelClick}
+            aria-haspopup="dialog"
+            title="Weavers of the Commons"
+          >
+            <WeaversBadge size={13} />
+            <span>#{GATED_CHANNEL_SLUG}</span>
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -322,7 +346,7 @@ type ShellMainContentProps = {
   isAdmin: boolean;
   verification: ShellVerification | null;
   loadError: string | null;
-  channels: HubChannelInfo[];
+  channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   onLockedChannelClick: () => void;
@@ -331,6 +355,7 @@ type ShellMainContentProps = {
   currentUser: ShellCurrentUser;
   activeApp: string | null;
   onAppSelect: (slug: string | null) => void;
+  onAppOpen: (slug: string) => void;
   sortMode: PluginSortMode;
   onSortModeChange: (mode: PluginSortMode) => void;
   query: string;
@@ -352,6 +377,7 @@ function ShellMainContent({
   currentUser,
   activeApp,
   onAppSelect,
+  onAppOpen,
   sortMode,
   onSortModeChange,
   query,
@@ -392,6 +418,7 @@ function ShellMainContent({
           plugins={filteredPlugins}
           activeApp={activeApp}
           onAppSelect={onAppSelect}
+          onAppOpen={onAppOpen}
           sortMode={sortMode}
           onSortModeChange={onSortModeChange}
           query={query}
@@ -406,6 +433,32 @@ function ShellMainContent({
 // contributor chip. Same honest copy the Directory braided badge shows (proposal
 // section 3: no "verified", no "vetted"). "Anyone can earn this."
 function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // This dialog says aria-modal, so it has to behave like one for a keyboard member: focus starts
+  // inside it, Escape closes it, Tab cannot walk out into the page behind the backdrop, and focus
+  // returns to whatever opened it. Same handling the AI-consent dialog uses.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    focusableWithin(cardRef.current ?? document.body)[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const root = cardRef.current;
+      if (root) cycleFocusTrap(root, event);
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      opener?.focus?.();
+    };
+  }, [onClose]);
+
   return (
     <div
       className={styles.explainerOverlay}
@@ -419,7 +472,7 @@ function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
         className={styles.explainerBackdrop}
         onClick={onClose}
       />
-      <div className={styles.explainerCard}>
+      <div className={styles.explainerCard} ref={cardRef}>
         <div className={styles.explainerHead}>
           <WeaversBadge size={30} />
           <div className={styles.explainerTitle}>Weavers of the Commons</div>
@@ -451,7 +504,7 @@ export function CommunityShell(props: CommunityShellProps) {
   const [section, setSection] = useState<ShellSection>(initialSection);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
-  const [channels, setChannels] = useState<HubChannelInfo[]>([]);
+  const [channels, setChannels] = useState<CommonsChannelInfo[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
@@ -519,12 +572,12 @@ export function CommunityShell(props: CommunityShellProps) {
 
     let canceled = false;
 
-    async function loadHubData() {
+    async function loadCommonsData() {
       try {
-        const channelsRes = await fetch('/api/hub/channels', { method: 'GET', cache: 'no-store' });
+        const channelsRes = await fetch('/api/commons/channels', { method: 'GET', cache: 'no-store' });
 
         if (channelsRes.ok) {
-          const channelsPayload = (await channelsRes.json()) as { channels: HubChannelInfo[] };
+          const channelsPayload = (await channelsRes.json()) as { channels: CommonsChannelInfo[] };
           if (!canceled) {
             const loadedChannels = channelsPayload.channels ?? [];
             setChannels(loadedChannels);
@@ -538,7 +591,7 @@ export function CommunityShell(props: CommunityShellProps) {
       }
     }
 
-    void loadHubData();
+    void loadCommonsData();
     return () => {
       canceled = true;
     };
@@ -557,21 +610,28 @@ export function CommunityShell(props: CommunityShellProps) {
     );
   }, [normalizedQuery, orderedPlugins]);
 
+  // Tapping a card only highlights it — it does not open anything — so it must not count as a use.
+  // Counting it did, which is why Most Used and Recent had no real data to order by: the link that
+  // actually opens a plugin stops propagation, so nothing was ever recorded and both modes fell
+  // back to the alphabetical tie-break, making the sort control look broken.
   const handleAppSelect = (slug: string | null) => {
     setActiveApp(slug);
-    if (!slug || typeof window === 'undefined') return;
+  };
 
-    setRecentPluginSlugs((previous) => {
-      const next = [slug, ...previous.filter((item) => item !== slug)].slice(0, MAX_RECENT_PLUGINS);
-      window.localStorage.setItem(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  // Fired by the card's "Open plugin →" link — the real signal that a member used a plugin. The
+  // localStorage writes sit outside the state updaters so a double-invoked updater (React strict
+  // mode in development) cannot write twice and inflate the count.
+  const handleAppOpen = (slug: string) => {
+    setActiveApp(slug);
+    if (typeof window === 'undefined') return;
 
-    setPluginUsageCounts((previous) => {
-      const next = { ...previous, [slug]: (previous[slug] ?? 0) + 1 };
-      window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+    const nextRecent = [slug, ...recentPluginSlugs.filter((item) => item !== slug)].slice(0, MAX_RECENT_PLUGINS);
+    setRecentPluginSlugs(nextRecent);
+    window.localStorage.setItem(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(nextRecent));
+
+    const nextCounts = { ...pluginUsageCounts, [slug]: (pluginUsageCounts[slug] ?? 0) + 1 };
+    setPluginUsageCounts(nextCounts);
+    window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(nextCounts));
   };
 
   // Escape closes the contributor-channel explainer; listener attached only while open.
@@ -634,6 +694,7 @@ export function CommunityShell(props: CommunityShellProps) {
           currentUser={currentUser}
           activeApp={activeApp}
           onAppSelect={handleAppSelect}
+          onAppOpen={handleAppOpen}
           sortMode={sortMode}
           onSortModeChange={handleSortModeChange}
           query={query}

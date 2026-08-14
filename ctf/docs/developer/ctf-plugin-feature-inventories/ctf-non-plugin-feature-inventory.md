@@ -153,14 +153,30 @@ member surface to carry it — so a seeker can block a host from the place they 
 also enforces the block: a blocked host's listings are left out of browse, and a stay request between
 a blocked pair is refused with `blocked_pair` (403). See §1.6 of the LightHouse inventory.
 
-Enforcement is not yet everywhere, and that is the open gap on this control. `isBlockedBetween`
-(`lib/blocks/repository.ts`) is the single check every member-to-member surface is meant to consult;
-as of 2026-08-03 it is consulted by the Chyme back-channel and LightHouse only. Foundation threads,
-SocketRelay favors, TrustTransport rides, MutualTime, and the Commons author list do not consult it,
-so a block does not yet hide or stop a person there. Each remaining surface needs its own read-path
-filter and write-path refusal, the same shape as the two that are done. Mobile: Android still has no
-per-member profile menu to host the button (the directory list navigates to Foundation), so on
-Android the block is started from the manage screen rather than from a member's context.
+**Enforcement now covers every member-to-member surface (issue #809 task 4 closed, 2026-08-05).**
+`isBlockedBetween` / `isBlockedBetweenTx` (`lib/blocks/repository.ts`) is the shared check, consulted
+on each surface's read path (hide the person) and write path (refuse the contact, always with neutral
+copy so a block never reveals itself):
+
+- Chyme Back Channel — invite refusal (`back-channel.ts`, since 2026-07-20).
+- LightHouse — browse filter + stay-request refusal (inline SQL that also honors the legacy
+  read-only `lighthouse_blocks` rows, since 2026-08-03).
+- Foundation — provider search hides a blocked provider; `createConnectionThread` and
+  `ringInstantCall` refuse a blocked pair (a block created after the thread exists still stops new
+  calls).
+- SocketRelay — the browse feed hides a blocked owner's posts (owner "Mine" and admin lists stay
+  complete); `claimRequest` refuses a blocked pair before the idempotent-retry branch.
+- TrustTransport — helper discovery (`listAvailableRequests`) hides a blocked requester's rides;
+  `createOffer` and `acceptOffer` refuse a blocked pair.
+- Commons — the timeline hides community posts and replies authored by a blocked pair member
+  (announcements and AI answers have no member author and always show); the deep-link
+  "load around" offset applies the same filter so pagination stays consistent.
+
+MutualTime needs no enforcement and gets none: an event shows only aggregated anonymous voter counts
+— no member identity, no member-to-member contact path — so there is nothing for a block to hide or
+stop. Mobile: Android still has no per-member profile menu to host the button (the directory list
+navigates to Foundation), so on Android the block is started from the manage screen rather than from
+a member's context.
 
 ### 1.7 Admin Account Restrictions (platform-wide member restriction)
 
@@ -212,8 +228,8 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 The admin landing (`/admin`) shows a small amber dot on an area's tile when that area has items an admin has not seen yet — a new pending review, report, or dispute since they last opened it. It answers "where is there something new for me to act on" without opening every area. This is admin-facing and separate from the member notifications center.
 
-1. **What counts as "new to review".** For each area with a real review queue on its admin page, the dot counts rows that are actionable (pending/open/unresolved) AND arrived (`created_at`) after this admin last opened that area. The signal registry (`ctf/packages/web/lib/admin/area-attention.ts`) covers: **unlock** (`unlock_verification_submissions` `review_status='pending'`), **comic / AI Assistant** (`comic_review_queue` `status='pending'`), **bug-reports** (`bug_reports` `status IN ('new','held_for_review')`), **contributions** (`contributions_submissions` `status='pending'`), **safety** (`member_safety_reports` `status='open'`), **skills-hunt** (`skills_hunt_submissions` `status='pending'` and `skills_hunt_submission_reports` `status='open'`), **trust-transport** (`trust_transport_disputes` `status='open'` and `trust_transport_risk_signals` `is_resolved=FALSE`), and **what-works** (`what_works_products` `status='pending'`), plus **peer-programming** (`peer_programming_feedback` — no status column, so the dot flags feedback that arrived since the admin last opened the area), **level-up** (`level_up_disputes` `status='open'` and `level_up_milestone_validations` `status='pending'`), and **service-credits** (`service_credits_disputes` with no matching `service_credits_dispute_adjustments` — an open, unadjusted dispute). All read-only counts on tables owned by those plugins.
-2. **Areas with no dot.** Areas that are read-only dashboards, config editors, authoring, or browse views never get a dot: directory, beacon, lighthouse, foundation, socket-relay, weekly-performance, workforce, feed-announcements, contributor-access.
+1. **What counts as "new to review".** For each area with a real review queue on its admin page, the dot counts rows that are actionable (pending/open/unresolved) AND arrived (`created_at`) after this admin last opened that area. The signal registry (`ctf/packages/web/lib/admin/area-attention.ts`) covers: **unlock** (`unlock_verification_submissions` `review_status='pending'`), **comic / AI Assistant** (`comic_review_queue` `status='pending'`), **bug-reports** (`bug_reports` `status IN ('new','held_for_review')`), **contributions** (`contributions_submissions` `status='pending'`), **safety** (`member_safety_reports` `status='open'`), **skills-hunt** (`skills_hunt_submissions` `status='pending'` and `skills_hunt_submission_reports` `status='open'`), **trust-transport** (`trust_transport_disputes` `status='open'` and `trust_transport_risk_signals` `is_resolved=FALSE`), and **what-works** (`what_works_products` `status='pending'`), plus **peer-programming** (`peer_programming_feedback` — no status column, so the dot flags feedback that arrived since the admin last opened the area), **level-up** (`level_up_disputes` `status='open'` and `level_up_milestone_validations` `status='pending'`), and **service-credits** (`service_credits_disputes` with no matching `service_credits_dispute_adjustments` — an open, unadjusted dispute). All read-only counts on tables owned by those plugins. **mutual-time** is the one area whose signal is not a review queue and is scoped to one admin: a survey belongs to the admin who created it, so its two queries also take that admin's user id (a registry entry written as `{ sql, scopedToAdmin: true }` receives it as `$2`). Its dot means either somebody picked times on one of that admin's still-open surveys — only picks still ahead of now, matching the rolling window — or one of their surveys reached its close time and chose a time on its own (`closes_at` passed, and either still stored as open or already `auto_closed`; a survey the admin closed by hand never raises it). Nobody having picked anything is not news: no votes, no dot, and the survey stays open.
+2. **Areas with no dot.** Areas that are read-only dashboards, config editors, authoring, or browse views never get a dot: directory, beacon, lighthouse, foundation, socket-relay, weekly-performance, workforce, feed-announcements, contributor-access. Mutual Time is the exception to the "review queue" rule above — it is a survey an admin has to act on, and its tile points at `/apps/mutual-time` rather than an `/admin/*` route, but the tile's last path segment (`mutual-time`) is still the slug the signal and the seen-marker are keyed on.
 3. **Clearing a dot.** Opening a tile marks that area seen for the admin, which clears its dot until newer items arrive. `POST /api/admin/area-seen` (admin-only via `evaluatePluginAccess({ requiredRoles: ['admin'] })`, CSRF-guarded `x-ctf-csrf: 1` + same-origin) upserts the per-admin marker; body `{ areaSlug }`. A slug with no signal is accepted and ignored, so the client can call it for any tile. The landing tile grid (`ctf/packages/web/app/admin/admin-area-grid.tsx`) calls it fire-and-forget on click.
 4. **Data model — `admin_area_seen`**: `user_id` (text), `area_slug` (text), `seen_at` (timestamptz, default now), primary key `(user_id, area_slug)`. One row per admin per area, updated to `NOW()` when the admin opens that area. Best-effort: a read/write failure degrades to "no dot" and never breaks the landing.
 
@@ -277,6 +293,29 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-12: **Mutual Time now raises the admin-landing dot (§1.14, owner request).** An admin had no
+  way to know a survey had votes, or that a survey with a close time had chosen its own time, without
+  opening `/apps/mutual-time` and checking — and knowing that is what tells them when to go live and
+  run the meeting. Mutual Time is now the twelfth area in the signal registry
+  (`lib/admin/area-attention.ts`), with two queries: votes cast on one of this admin's still-open
+  surveys since they last opened the area (only picks still ahead of now, matching the rolling window),
+  and one of their surveys having passed its close time and chosen a time without them. It is the first
+  signal scoped to a single admin rather than to all of them — a survey belongs to its creator — so the
+  registry now accepts an entry written as `{ sql, scopedToAdmin: true }`, which receives the admin's
+  user id as `$2`; plain string entries are unchanged and still take only `$1`. Nothing was added for a
+  survey nobody has voted on, on purpose (owner decision): no votes, no dot, and it stays open until
+  someone picks. A survey the admin closed by hand raises nothing either — they were there. Needed one
+  column on the plugin's own table, `mutual_time_events.auto_closed`, so the two ways a survey ends can
+  be told apart; `schema.demo.sql` regenerated.
+- 2026-08-10: **Account & Data names the Commons service by its member-facing name (owner report).**
+  The service row on `/account/data` (web and the Android screen, both fed by
+  `GET /api/account/services`) still read "Feed & Announcements" — the internal name of the tables —
+  even though the surface those tables belong to is called the Commons everywhere a member sees it.
+  The row now reads **"Commons: Feed & Announcements"**, keeping the old wording after the colon so
+  a member who remembers the previous label still recognizes the row, and its one-line summary now
+  says "Your Commons posts…" instead of "Your community posts…". Copy-only, in the `name` and
+  `dataSummary` fields of the `feed-announcements` entry in `lib/account/deletion-registry.ts`; the
+  slug, the table list, and every delete/export behavior are unchanged.
 - 2026-08-03: **The member block now has a real starting point and a first enforcing surface (§1.6).**
   The reusable `BlockMemberButton` had been built, exported, and attached to nothing, so the only way
   to block anyone was the manage-list at `/account/blocks` — which needs you to already know who you
@@ -364,7 +403,7 @@ An owner-curated list of real community comments, shown two ways on the public (
 - 2026-06-25: **Documented non-plugin/infra tables and routes** (inventory-debt burn-down — documentation catch-up, no code change). Added §1.7 admin account restrictions (`account_restrictions_audit` table + `POST /api/admin/account-restrictions/restrict`, `/unrestrict`, `GET /api/admin/account-restrictions/audit`), §1.8 safety report admin review (`GET /api/safety/admin/reports`, `POST /api/safety/admin/reports/[reportId]/review`), §1.9 internal/operator endpoints (`POST /api/internal/account/delete`, `POST /api/internal/product-update`), §1.10 operational probes (`GET /api/health`, `GET /api/plugin/policy-probe`), and §1.11 legacy profile URL redirects (`legacy_profile_redirects` table). Each verified against the route handlers and `schema.sql`. Removed these 2 tables and 9 routes from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-25: **Documented account-level surfaces** (inventory-debt burn-down — documentation catch-up, no code change). Added the per-user theme table `user_ui_preferences` and `GET`/`PUT /api/account/ui-preferences` to §1.5, and a new §1.6 covering member blocking: `GET`/`POST /api/account/blocks` and `DELETE /api/account/blocks/[blockedUserId]` (with the optional safety-escalation path). Each verified against the route handlers and `schema.sql`. Removed these four items from `ctf/scripts/inventory-drift-allowlist.json`.
 - 2026-06-12: Android Account & Data API client (`packages/mobile/src/features/account-data/api.ts`) now calls the backend through the shared authenticated fetch wrapper (`authedFetch`): the signed-in member's Clerk bearer token is attached and the base URL comes from runtime config, replacing the plain fetch against an environment-variable base URL with no auth token. The request-timeout guard is kept. No backend, schema, or contract change.
-- 2026-06-08: Recorded the removal of two off-brand "coming soon" placeholders from the community shell, which the readiness audit (#344) flagged as out of scope and the owner confirmed are not part of the product. The general person-to-person **Direct Messages** list (left sidebar; no backend, dead click handler, fake unread counts) and the permanently disabled **Notifications** bell button (icon rail) are gone, along with their now-unused props, state, fetch call, `/api/hub/dms` route, types, and CSS. The homepage hub's open community channel list and the feed stay exactly as they were. (The code for these removals already landed in #346 for Direct Messages and #350 for Notifications; this entry documents the decision and confirms the channel/feed were preserved.)
+- 2026-06-08: Recorded the removal of two off-brand "coming soon" placeholders from the community shell, which the readiness audit (#344) flagged as out of scope and the owner confirmed are not part of the product. The general person-to-person **Direct Messages** list (left sidebar; no backend, dead click handler, fake unread counts) and the permanently disabled **Notifications** bell button (icon rail) are gone, along with their now-unused props, state, fetch call, `/api/commons/dms` route, types, and CSS. The homepage hub's open community channel list and the feed stay exactly as they were. (The code for these removals already landed in #346 for Direct Messages and #350 for Notifications; this entry documents the decision and confirms the channel/feed were preserved.)
 - 2026-06-01: Added the cross-plugin account/per-service data deletion backend (registry-driven engine + orchestrator, `account_deletion_events` table, `DELETE /api/account/services/:slug` and `DELETE /api/account/full-account`, which now orchestrates the mixed delete/soft-delete/retain plan across every plugin instead of only recording a request). Documented in section 1.2 and `ACCOUNT_DELETION_REGISTRY.md`. No UI (design-gated).
 - 2026-04-01: Completed external-link safety primitive parity implementation across web and Android with full feature feature parity (origin-based detection, safe-open dialogs, copy/open actions).
 - 2026-02-25: Expanded CTF non-plugin parity inventory to full retained/excluded scope; marked weekly performance and skills taxonomy as plugin-owned; removed generic chat/admin activity feed carryover requirements; documented compliance position for audit-evidence-first admin activity feed removal.

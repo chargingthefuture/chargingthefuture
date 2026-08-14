@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { TrustWidgetCard } from "@/components/trust/TrustWidgetCard";
-import type { TrustUserExtension } from "@/lib/trust/types";
+import { TrustWidgetCard } from "@/lib/shared/trust-interface";
+import type { TrustUserExtension } from "@/lib/shared/trust-interface";
 import { CurrencySelect } from "@/components/shared/currency-select";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import type { Currency } from "@/lib/currency/types";
@@ -472,7 +472,7 @@ export function LighthouseHost({
         const res = await fetch("/api/trust/user/self");
         if (res.ok) {
           const data = await res.json() as TrustUserExtension & { allowed?: boolean };
-          if (typeof data.trustStatus === "string") setTrust(data);
+          if (Array.isArray(data.trustEvidence)) setTrust(data);
         }
       } catch {
         // Trust widget is supplementary; ignore failures.

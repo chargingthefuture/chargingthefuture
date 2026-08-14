@@ -27,6 +27,8 @@ export const SOCKET_RELAY_ERROR_CODE = {
   fulfillmentNotActive: 'SOCKET_RELAY_FULFILLMENT_NOT_ACTIVE',
   invalidOutcome: 'SOCKET_RELAY_INVALID_OUTCOME',
   actorIsOwner: 'SOCKET_RELAY_ACTOR_IS_OWNER',
+  blockedPair: 'SOCKET_RELAY_BLOCKED_PAIR',
+  helperPreviouslyCanceled: 'SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED',
   actorNotParticipant: 'SOCKET_RELAY_ACTOR_NOT_PARTICIPANT',
   prohibitedContent: 'SOCKET_RELAY_PROHIBITED_CONTENT',
 } as const;

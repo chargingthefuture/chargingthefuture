@@ -24,21 +24,36 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
   -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
-  -- Optional incident tags (2026-08-02): a member may say which of the 50+ known problems
-  -- happened (problem_tag — slugs mirror the landing-page problems list) and/or which named
-  -- scheme was used (scheme_tag — slugs from the owner's "A post for each gang stalker game"
-  -- Discourse thread). Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API
-  -- validates against them. Real columns (not metadata) so they are excluded from the
-  -- metadata_hash dedupe — mirroring shared_with_owner — and so the shared-trends aggregate can
-  -- project them as coarse categorical values without touching the metadata JSON.
+  -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
+  -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
+  -- and/or which named schemes were used (scheme_tags — slugs from the owner's "A post for each
+  -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
+  -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
+  -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
+  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
+  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
+  -- columns are superseded: backfilled into the arrays below, kept for history, no longer
+  -- read or written by the app.
   problem_tag TEXT,
   scheme_tag TEXT,
+  problem_tags TEXT[] NOT NULL DEFAULT '{}',
+  scheme_tags TEXT[] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tags TEXT[] NOT NULL DEFAULT '{}';
+-- One-time backfill of the superseded singular tag columns into the arrays. Idempotent: only
+-- touches rows whose array is still empty while the singular column has a value, so re-running
+-- schema.sql never overwrites a member's later multi-tag edits.
+UPDATE click_log_incidents SET problem_tags = ARRAY[problem_tag]
+  WHERE problem_tag IS NOT NULL AND problem_tags = '{}';
+UPDATE click_log_incidents SET scheme_tags = ARRAY[scheme_tag]
+  WHERE scheme_tag IS NOT NULL AND scheme_tags = '{}';
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 -- Partial index for the admin trends aggregate, which only ever reads shared rows.
@@ -829,7 +844,7 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   render_mode TEXT NOT NULL,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
-  -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
+  -- Commons consolidation: the blended channel is publicly viewable (read-only)
   -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
   -- as a follow-up; this flag is the canonical config the admin/seed sets.
   is_public BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1197,6 +1212,24 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_pos
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Clear Commons timeline copies whose source row is gone (owner report, 2026-08-09).
+-- Every community post and AI question is copied into a feed_items row that carries the same text.
+-- Account deletion used to remove the post/question but keep the copy, so a deleted member's words
+-- stayed on the Commons, re-labeled with the fallback handle built from the placeholder author id
+-- ("user-hub-syst") — the same handle every time, so it looked like an anonymised post rather than a
+-- deletion. The deletion registry now removes the copy with the source; this clears the ones already
+-- left behind. Announcement copies carry neither source id and are untouched. Idempotent: a second
+-- run matches nothing. Deleting a feed_items row cascades its targets, read state, and dismissals.
+DELETE FROM feed_items f
+WHERE (
+        f.source_community_post_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+      )
+   OR (
+        f.source_question_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+      );
+
 CREATE TABLE IF NOT EXISTS feed_community_replies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE,
@@ -1282,15 +1315,38 @@ ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS use
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Per-member "last seen" marker for the Hub home channel, used to draw a single
+-- Per-member "last seen" marker for the Commons home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.
-CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
+--
+-- Renamed from `feed_hub_last_seen` on 2026-08-09 with the rest of the hub → commons rename. The
+-- rename MUST run before the CREATE TABLE below: otherwise `CREATE TABLE IF NOT EXISTS` would make
+-- an empty `feed_commons_last_seen` first and every member's marker would be stranded in the old
+-- table, resetting the unread divider for everyone. Guarded on both sides so it happens exactly
+-- once and a re-run is a no-op.
+DO $rename_feed_hub_last_seen$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_hub_last_seen'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_commons_last_seen'
+  ) THEN
+    ALTER TABLE feed_hub_last_seen RENAME TO feed_commons_last_seen;
+    -- RENAME TO leaves the primary key named after the old table; rename it too so a later reader
+    -- of \d output is not sent looking for a table that no longer exists.
+    ALTER INDEX IF EXISTS feed_hub_last_seen_pkey RENAME TO feed_commons_last_seen_pkey;
+  END IF;
+END
+$rename_feed_hub_last_seen$;
+
+CREATE TABLE IF NOT EXISTS feed_commons_last_seen (
   user_id TEXT PRIMARY KEY,
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
 -- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
@@ -1579,6 +1635,17 @@ BEGIN
   END IF;
 END
 $trust_transport_requests_price_consistency$;
+-- Accepted currencies (split settlements): every currency the requester can settle the ride in,
+-- independent of the single listed price above — one row per accepted code, mirroring
+-- lighthouse_property_accepted_currencies and socket_relay_request_accepted_currencies.
+CREATE TABLE IF NOT EXISTS trust_transport_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_trust_transport_request_accepted_currencies_request ON trust_transport_request_accepted_currencies(request_id);
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -2332,7 +2399,7 @@ CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
   ON announcement_reactions(announcement_id);
 
 -- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
--- a member can reply to an official Survivor Hub announcement, and the replies group under that
+-- a member can reply to an official announcement, and the replies group under that
 -- announcement as a thread. author_username is captured at reply time so the thread can show the
 -- member's handle without a second lookup. Deleting the announcement cascades its replies.
 CREATE TABLE IF NOT EXISTS announcement_replies (
@@ -2342,6 +2409,10 @@ CREATE TABLE IF NOT EXISTS announcement_replies (
   author_username TEXT,
   body TEXT NOT NULL,
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  moderation_reason TEXT,
+  moderated_by_user_id TEXT,
+  moderated_at TIMESTAMPTZ,
+  edited_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -2351,6 +2422,15 @@ ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a moderator hid the reply, who hid it, and when. Added 2026-08-10 with announcement-reply
+-- moderation: the shared hide/restore writer sets all three, so a table without them could not be
+-- moderated at all — an admin could see a bad reply on an announcement and had no way to take it down.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ;
+-- Set when the author rewrites their own reply, so the thread can mark it "edited" rather than
+-- silently showing different words under the same timestamp.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
@@ -2463,7 +2543,7 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
 
--- Feed + Announcements was consolidated into the Survivor Hub and is no longer a
+-- Feed + Announcements was consolidated into the Commons and is no longer a
 -- navigable app: its data layer (the feed_* tables + /api/feed/*) and its admin
 -- page at /admin/feed-announcements remain, but it is not a plugin tile/route.
 -- Remove any registry row left from when it was seeded as a visible app so the
@@ -4353,16 +4433,19 @@ ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS updated
 -- === TRUST MODULE ===
 CREATE TABLE IF NOT EXISTS trust_user_extension (
   user_id TEXT PRIMARY KEY,
-  trust_status TEXT NOT NULL DEFAULT 'unverified',
   trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
-  trust_visibility TEXT NOT NULL DEFAULT 'public',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_status TEXT NOT NULL DEFAULT 'unverified';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_visibility TEXT NOT NULL DEFAULT 'public';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Dropped 2026-08-10: a member never chose who sees their trust, so the column held a setting
+-- the product does not have. What another member sees is decided in code, in
+-- app/api/trust/user/[userId]/route.ts, the same way for everyone.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility;
+-- Dropped 2026-08-10: admin verification review was removed, so nothing set this and no surface
+-- showed it. The platform does not vet people; Trust reports what a member has actually done.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_status;
 
 CREATE TABLE IF NOT EXISTS trust_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4913,7 +4996,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   asker_username TEXT NULL,
-  channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
+  channel TEXT NOT NULL DEFAULT 'commons' CHECK (channel IN ('commons', 'feed', 'hub')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -4921,7 +5004,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
-ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'commons';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -5204,6 +5287,24 @@ CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_contribution
 
 -- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
 -- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
+-- comic_conversations.channel: 'hub' → 'commons' (2026-08-09, with the rest of the rename).
+--
+-- Order is load-bearing. The old constraint forbids 'commons', so it has to go before the data can
+-- move; the new one is added after. Dropping unconditionally and letting the guarded block below
+-- re-add it keeps this convergent on a fresh DB (where CREATE TABLE already made the constraint
+-- under the same auto-generated name) and on a legacy one, and a re-run is a no-op.
+ALTER TABLE IF EXISTS comic_conversations DROP CONSTRAINT IF EXISTS comic_conversations_channel_check;
+UPDATE comic_conversations SET channel = 'commons' WHERE channel = 'hub';
+ALTER TABLE IF EXISTS comic_conversations ALTER COLUMN channel SET DEFAULT 'commons';
+
+-- 'hub' is still ACCEPTED here, deliberately and temporarily. This file is applied by
+-- update-neon-db.yml on push to main, while the web app redeploys separately — so for a few minutes
+-- the previous release is still serving with the database already migrated. A strict
+-- CHECK (channel IN ('commons', 'feed')) would make any @comic question asked in that window fail
+-- on a constraint violation. No row is written with 'hub' after this ships (the API coerces every
+-- non-'feed' value to 'commons'), and reads normalize a legacy 'hub' to 'commons', so the value is
+-- write-dead already. Drop 'hub' from this list in a follow-up once the deploy has settled — that
+-- change is this one line plus the matching UPDATE above becoming a no-op.
 DO $comic_conversations_channel_check$
 BEGIN
   IF NOT EXISTS (
@@ -5213,7 +5314,7 @@ BEGIN
     BEGIN
       ALTER TABLE comic_conversations
         ADD CONSTRAINT comic_conversations_channel_check
-        CHECK (channel IN ('hub', 'feed'));
+        CHECK (channel IN ('commons', 'feed', 'hub'));
     EXCEPTION WHEN duplicate_object THEN
       NULL;
     END;
@@ -6183,7 +6284,7 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   created_by_user_id TEXT NOT NULL,
   title TEXT NULL,
   description TEXT NULL,
-  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming')),
+  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')),
   window_start_date DATE NOT NULL,
   window_days INTEGER NOT NULL DEFAULT 7 CHECK (window_days BETWEEN 1 AND 14),
   opens_at TIMESTAMPTZ NULL,
@@ -6192,7 +6293,11 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   result_slot_start TIMESTAMPTZ NULL,
   result_can_make_it INTEGER NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  closed_at TIMESTAMPTZ NULL
+  closed_at TIMESTAMPTZ NULL,
+  -- TRUE when the survey closed itself at closes_at rather than an admin pressing Close. It is what
+  -- the admin-landing dot keys on: a survey that chose its own time needs the admin told, where one
+  -- they closed by hand does not.
+  auto_closed BOOLEAN NOT NULL DEFAULT FALSE
 );
 -- Column reconciliation (all added nullable / with safe defaults so they never fail on a populated table).
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS title TEXT;
@@ -6206,6 +6311,13 @@ ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NO
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS auto_closed BOOLEAN NOT NULL DEFAULT FALSE;
+-- "Where we'll meet" vocabulary. Beacon was added after the table shipped, so an existing database
+-- still carries the two-value check from the original CREATE TABLE. Drop + re-add keeps it idempotent
+-- and brings a legacy database up to date (same idiom as currencies_kind_check). NOT VALID so the ADD
+-- can never fail on an existing row and stop the rest of the file from being applied.
+ALTER TABLE IF EXISTS mutual_time_events DROP CONSTRAINT IF EXISTS mutual_time_events_meeting_plugin_check;
+ALTER TABLE IF EXISTS mutual_time_events ADD CONSTRAINT mutual_time_events_meeting_plugin_check CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')) NOT VALID;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_events_slug ON mutual_time_events(slug);
 CREATE INDEX IF NOT EXISTS idx_mutual_time_events_creator ON mutual_time_events(created_by_user_id, created_at DESC);
 

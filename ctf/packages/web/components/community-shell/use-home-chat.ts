@@ -10,10 +10,10 @@ import {
   type RefObject,
   type SetStateAction,
 } from 'react';
-import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
-import { connectHubLive, type HubLiveConnection, type HubTypingUser } from '../../lib/hub/live-stream';
+import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
+import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import { hubSuggestionChips } from '../../lib/concierge/hub-suggestions';
+import { commonsSuggestionChips } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 
@@ -54,7 +54,7 @@ type ChatSetters = {
   setPendingConsentText: Dispatch<SetStateAction<string | null>>;
   setLastSeenAtIso: Dispatch<SetStateAction<string | null>>;
   setConnectionState: Dispatch<SetStateAction<ChatConnectionState>>;
-  setTypingUsers: Dispatch<SetStateAction<HubTypingUser[]>>;
+  setTypingUsers: Dispatch<SetStateAction<CommonsTypingUser[]>>;
   setIsFilterRefreshing: Dispatch<SetStateAction<boolean>>;
 };
 
@@ -107,7 +107,7 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // concierge reply sets its own actionLabel/actionSlug — never from message text.
 function buildChatMessage(
   id: string,
-  from: 'hub' | 'user',
+  from: 'commons' | 'user',
   text: string,
   time: string,
   senderLabel?: string,
@@ -121,8 +121,8 @@ function buildChatMessage(
   };
 }
 
-function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessage {
-  const from = message.userId === currentUserId ? 'user' : 'hub';
+function mapStoredMessage(message: CommonsMessage, currentUserId: string): ChatMessage {
+  const from = message.userId === currentUserId ? 'user' : 'commons';
   return {
     ...buildChatMessage(
       message.id,
@@ -175,7 +175,7 @@ function applyReactionToggle(message: ChatMessage, emoji: string): ChatMessage {
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
-  // A peer post is the same post wherever it arrived from: the POST /api/hub/messages response
+  // A peer post is the same post wherever it arrived from: the POST /api/commons/messages response
   // carries the post id with its created time, while the GET list carries the timeline item id
   // with its published time. Keying on the stable community post id keeps those two copies from
   // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
@@ -303,7 +303,7 @@ async function fetchHistoryIntoState(
   currentUserId: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
 ): Promise<void> {
-  const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${extraParam}`);
+  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`);
   if (readFilterKey() !== expectedKey) {
     return;
   }
@@ -323,7 +323,7 @@ async function readComicInto(setters: ChatSetters): Promise<void> {
 // no divider) and never blocks the chat.
 async function readLastSeenInto(setters: ChatSetters): Promise<void> {
   try {
-    const payload = await requestJson<HubLastSeenResponse>('/api/hub/last-seen');
+    const payload = await requestJson<CommonsLastSeenResponse>('/api/commons/last-seen');
     setters.setLastSeenAtIso(payload.lastSeenAtIso);
   } catch {
     setters.setLastSeenAtIso(null);
@@ -393,7 +393,7 @@ function markSeenOnce(markedSeenRef: RefObject<boolean>): void {
 // chat, and the caller leaves its "already marked" guard set so a transient failure does not retry-spam.
 async function postSeenMarker(): Promise<void> {
   try {
-    await requestJson<HubLastSeenResponse>('/api/hub/last-seen', {
+    await requestJson<CommonsLastSeenResponse>('/api/commons/last-seen', {
       method: 'POST',
       headers: JSON_CSRF_HEADERS,
       body: JSON.stringify({ seenAtIso: new Date().toISOString() }),
@@ -434,7 +434,7 @@ async function runRouteToComic(questionText: string, refreshComic: () => Promise
     await requestJson<ComicMessageResponse>('/api/comic/message', {
       method: 'POST',
       headers: JSON_CSRF_HEADERS,
-      body: JSON.stringify({ body: questionText, channel: 'hub', consentGranted: true }),
+      body: JSON.stringify({ body: questionText, channel: 'commons', consentGranted: true }),
     });
     // Pull the server stream so the pending card reflects the persisted turn.
     await refreshComic().catch(() => undefined);
@@ -471,7 +471,7 @@ function buildPeerMessageBody(text: string, activeReply: ReplyTarget | null): st
 // target and the composer text so the member can retry.
 async function postPeerMessage(text: string, activeReply: ReplyTarget | null, ctx: SendMessageContext): Promise<void> {
   try {
-    const payload = await requestJson<{ ok: true; message: HubMessage }>('/api/hub/messages', {
+    const payload = await requestJson<{ ok: true; message: CommonsMessage }>('/api/commons/messages', {
       method: 'POST',
       headers: JSON_CSRF_HEADERS,
       body: buildPeerMessageBody(text, activeReply),
@@ -572,7 +572,7 @@ function togglePostReaction(postId: string, emoji: string, setters: ChatSetters)
   return toggleMessageReaction(
     (message) => message.communityPostId === postId,
     emoji,
-    `/api/hub/messages/${encodeURIComponent(postId)}/reactions`,
+    `/api/commons/messages/${encodeURIComponent(postId)}/reactions`,
     setters,
   );
 }
@@ -597,7 +597,7 @@ async function runDeleteMessage(postId: string, setters: ChatSetters): Promise<v
   });
 
   try {
-    await requestJson<{ ok: true; postId: string }>(`/api/hub/messages/${encodeURIComponent(postId)}`, {
+    await requestJson<{ ok: true; postId: string }>(`/api/commons/messages/${encodeURIComponent(postId)}`, {
       method: 'DELETE',
       headers: { 'x-ctf-csrf': '1' },
     });
@@ -658,7 +658,7 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
   const reply: ChatMessage = top
     ? {
       id: `concierge-a-${stamp}`,
-      from: 'hub',
+      from: 'commons',
       text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
       time,
       sentAtIso,
@@ -667,7 +667,7 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
     }
     : {
       id: `concierge-a-${stamp}`,
-      from: 'hub',
+      from: 'commons',
       text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
       time,
       sentAtIso,
@@ -757,7 +757,7 @@ type ChatBootstrapContext = {
   refreshLastSeen: () => Promise<void>;
   loadAroundDeepLink: () => Promise<void>;
   refreshHistoryRef: RefObject<() => Promise<void>>;
-  liveConnectionRef: RefObject<HubLiveConnection | null>;
+  liveConnectionRef: RefObject<CommonsLiveConnection | null>;
   setters: ChatSetters;
 };
 
@@ -803,13 +803,13 @@ async function loadInitialChatHistory(ctx: ChatBootstrapContext): Promise<void> 
 // not configured (configured: false) we never attempt a connection and simply poll — Commons must
 // keep working without Stream.
 async function connectLiveWhenConfigured(
-  join: HubJoinResponse,
+  join: CommonsJoinResponse,
   ctx: ChatBootstrapContext,
-): Promise<HubLiveConnection | null> {
+): Promise<CommonsLiveConnection | null> {
   if (!join.configured) {
     return null;
   }
-  return connectHubLive(
+  return connectCommonsLive(
     {
       streamApiKey: join.streamApiKey,
       streamToken: join.streamToken,
@@ -833,7 +833,13 @@ async function connectLiveWhenConfigured(
 // failure, fall back to the frequent poll.
 async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
   try {
-    const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
+    // The join route gates on Origin today, not on this header, so the call works without it. The
+    // header is sent so the join keeps working if the route ever moves to the header-based check
+    // that the rest of the Commons POSTs use, and so no Commons mutation is the odd one out.
+    const join = await requestJson<CommonsJoinResponse>('/api/commons/join', {
+      method: 'POST',
+      headers: { 'x-ctf-csrf': '1' },
+    });
     if (!ctx.controller.active) return;
     ctx.setters.setConnectionState('live');
     ctx.setters.setError(null);
@@ -871,7 +877,7 @@ async function runChatBootstrap(ctx: ChatBootstrapContext): Promise<void> {
 }
 
 // Unmount cleanup: stop the poll and disconnect the live Stream client so we never leak a connection.
-function teardownBootstrap(controller: BootstrapController, liveConnectionRef: RefObject<HubLiveConnection | null>): void {
+function teardownBootstrap(controller: BootstrapController, liveConnectionRef: RefObject<CommonsLiveConnection | null>): void {
   controller.active = false;
   if (controller.pollId) {
     window.clearInterval(controller.pollId);
@@ -903,11 +909,11 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const markedSeenRef = useRef(false);
   // Other members currently typing in the Commons, surfaced as "X is typing…" above the composer.
   // Only populated when the live Stream connection is up; empty in polling-only mode.
-  const [typingUsers, setTypingUsers] = useState<HubTypingUser[]>([]);
+  const [typingUsers, setTypingUsers] = useState<CommonsTypingUser[]>([]);
   // The live Stream connection handle for the current mount (null when not connected / polling only).
   // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
   // re-rendering or re-subscribing.
-  const liveConnectionRef = useRef<HubLiveConnection | null>(null);
+  const liveConnectionRef = useRef<CommonsLiveConnection | null>(null);
   // "@ Mentions" filter: when on, history reads add `mentions=me` so the server returns only
   // peer messages whose body @-mentions the viewer (server-derived handles, searched beyond the
   // loaded page). Mirrored in a ref so refreshHistory (and the poll/live handlers that hold an
@@ -1046,7 +1052,10 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
       setters: settersRef.current,
     });
     return () => teardownBootstrap(controller, liveConnectionRef);
-  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
+    // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
+    // messages carry their own sender name from the server), so listing it here tore down the whole
+    // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
+  }, [currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 
   const routeToComic = useCallback(
     (questionText: string) => runRouteToComic(questionText, refreshComic, settersRef.current),
@@ -1125,8 +1134,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   );
 
   // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
-  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see hub-suggestions).
-  const suggestionChips = useMemo(() => hubSuggestionChips(), []);
+  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
+  const suggestionChips = useMemo(() => commonsSuggestionChips(), []);
 
   // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
   // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local

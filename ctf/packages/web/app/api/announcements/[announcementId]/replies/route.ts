@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { HubAnnouncementRepliesResponse } from 'lib/hub/types';
+import type { CommonsAnnouncementRepliesResponse } from 'lib/commons/types';
 import { FEED_ERROR_CODE, FEED_MAX_COMMUNITY_REPLY_LENGTH } from 'lib/feed/constants';
 import { listAnnouncementReplies, replyToAnnouncement, validateFeedCommunityReplyBody } from 'lib/feed/repository';
 import { feedAuthorHandle } from 'lib/feed/author-handle';
@@ -60,7 +60,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   try {
     const replies = await listAnnouncementReplies(announcementId);
-    const response: HubAnnouncementRepliesResponse = {
+    const response: CommonsAnnouncementRepliesResponse = {
       ok: true,
       announcementId,
       replies: replies.map((reply) => ({
@@ -69,6 +69,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
         isMine: reply.authorUserId === gate.auth.userId,
         body: reply.body,
         sentAtIso: reply.createdAtIso,
+        editedAtIso: reply.editedAtIso,
       })),
     };
     return NextResponse.json(response, { status: 200 });
@@ -136,6 +137,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           isMine: true,
           body: text.trim(),
           sentAtIso: result.createdAtIso,
+          editedAtIso: null,
         },
       },
       { status: 201 },

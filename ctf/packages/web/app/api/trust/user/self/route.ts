@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getTrustUserExtension, readTrustSelfExtension } from 'lib/trust/repository';
-import type { TrustUserExtension } from 'lib/trust/types';
+import { readTrustSelfExtensionOrStored } from 'lib/trust/repository';
 import { logTrustAuditEvent } from 'lib/trust/audit';
 import { resolveRequestId } from 'lib/trust/_lib';
 import { reportError } from 'lib/observability/report';
@@ -27,13 +26,11 @@ export async function GET(request: Request) {
   // Resilience: if the recompute throws (an upstream table is briefly unavailable, the DB hiccups,
   // etc.) fall back to the last stored extension so the panel still renders the most recent good
   // evidence instead of erroring. A failed refresh must never break the member's own read.
-  let extension: TrustUserExtension;
-  try {
-    ({ extension } = await readTrustSelfExtension(decision.userId));
-  } catch (error) {
-    reportError(error, { area: 'trust', op: 'self_refresh' });
-    extension = await getTrustUserExtension(decision.userId);
-  }
+  //
+  // Both the throttle and that fallback live in readTrustSelfExtensionOrStored, which the
+  // server-rendered self surfaces (account hub, home, apps launcher) call too — so this route and
+  // those pages cannot drift into showing the same member two different panels.
+  const extension = await readTrustSelfExtensionOrStored(decision.userId);
 
   // Record the trust.summary.read audit event required by the audit contract. A failed audit write
   // must never break the member's own read, so log-and-continue on error.

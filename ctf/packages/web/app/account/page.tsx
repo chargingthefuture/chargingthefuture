@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { getTrustUserExtension } from 'lib/trust/repository';
+import { readTrustSelfExtensionOrStored } from 'lib/trust/repository';
 import type { TrustUserExtension } from 'lib/trust/types';
 import { AccountHubShell } from '@/components/account/account-hub-shell';
 
@@ -12,9 +12,7 @@ import { AccountHubShell } from '@/components/account/account-hub-shell';
 function buildFallbackTrust(userId: string): TrustUserExtension {
   return {
     userId,
-    trustStatus: 'unverified',
     trustEvidence: [],
-    trustVisibility: 'public',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -39,7 +37,10 @@ export default async function AccountPage() {
     );
   }
 
-  const trust = await getTrustUserExtension(decision.userId).catch(() => buildFallbackTrust(decision.userId));
+  // Recompute before rendering (throttled, with a fallback to the last stored evidence) so the card
+  // shows the member's participation as it is now. A plain read froze this page's card at whatever
+  // the last self-API call had written, which could be weeks earlier.
+  const trust = await readTrustSelfExtensionOrStored(decision.userId).catch(() => buildFallbackTrust(decision.userId));
   const username = decision.username && decision.username !== 'guest' ? decision.username : null;
 
   return <AccountHubShell username={username} trust={trust} />;

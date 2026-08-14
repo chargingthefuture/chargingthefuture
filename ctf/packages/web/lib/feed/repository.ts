@@ -15,6 +15,7 @@ import {
   FEED_MAX_PAGE_SIZE,
   FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
+  FEED_MODERATION_STATUS,
   FEED_SYSTEM_ACTOR_ID,
   FEED_QUESTION_CATEGORIES,
   FEED_REACTION_EMOJIS,
@@ -195,6 +196,7 @@ type AnnouncementReplyRow = {
   author_user_id: string;
   author_username: string | null;
   body: string;
+  edited_at: Date | null;
   created_at: Date;
 };
 
@@ -957,7 +959,46 @@ function resolveFeedTimelineQueryParams(
 }
 
 // Count the timeline items visible under the shared filter, for pagination totals.
-async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams): Promise<number> {
+// Hides a community post authored by a member who is blocked (either direction) relative to the
+// viewer (issue #809 task 4) — the Commons must not show a blocked person's posts. Announcements and
+// AI Q&A items have no member author and pass through (`source_community_post_id IS NULL`). The
+// placeholder holds the viewer id; count and page queries number their arguments differently.
+function hideBlockedCommunityAuthorsSql(viewer: string): string {
+  return `
+          AND (
+            f.source_community_post_id IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM feed_community_posts p
+              JOIN member_blocks mb
+                ON (mb.blocker_user_id = ${viewer} AND mb.blocked_user_id = p.author_user_id)
+                OR (mb.blocker_user_id = p.author_user_id AND mb.blocked_user_id = ${viewer})
+              WHERE p.id = f.source_community_post_id
+            )
+          )`;
+}
+
+// Hide a Commons post or AI Q&A card whose source row is gone.
+//
+// A community/question item in `feed_items` is only ever a COPY of a row in `feed_community_posts` /
+// `feed_questions`, carrying the same text. When the source row went away but the copy did not, the
+// copy kept rendering the member's words with no author to resolve, so the read path fell back to the
+// pseudonym built from the placeholder id (`user-hub-syst`) — a deleted post reappearing under a
+// generic name (owner report, 2026-08-09). Account deletion now removes the copy too, and schema.sql
+// clears the ones already left behind; this guard is the standing safeguard so no other path can put
+// a member's deleted words back on screen. Announcement items carry neither source id and pass
+// straight through.
+const HIDE_ORPHANED_SOURCE_ROWS_SQL = `
+          AND (
+            f.source_community_post_id IS NULL
+            OR EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+          )
+          AND (
+            f.source_question_id IS NULL
+            OR EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+          )`;
+
+async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams, viewerUserId: string): Promise<number> {
   const count = await client.query<CountRow>(
     `
         SELECT COUNT(*)::text AS total
@@ -973,9 +1014,9 @@ async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryPa
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )
+          )${hideBlockedCommunityAuthorsSql('$5')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
       `,
-    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns],
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, viewerUserId],
   );
 
   return Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -1012,6 +1053,7 @@ async function resolveEffectiveOffset(
     aroundCommunityPostId: string | null | undefined;
     aroundAnnouncementId: string | null | undefined;
     params: FeedTimelineQueryParams;
+    viewerUserId: string;
   },
 ): Promise<number> {
   const around = resolveAroundTarget(options.aroundCommunityPostId, options.aroundAnnouncementId);
@@ -1054,9 +1096,9 @@ async function resolveEffectiveOffset(
                   AND t.target_role IN ($1, 'member', 'admin', 'all')
                   AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
               )
-              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))
+              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
           `,
-    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id],
+    [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id, options.viewerUserId],
   );
   const rank = Number.parseInt(rankRes.rows[0]?.rank ?? '0', 10);
   return Math.max(0, rank - Math.floor(options.pageSize / 2));
@@ -1104,7 +1146,7 @@ async function queryFeedTimelineRows(
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )
+          )${hideBlockedCommunityAuthorsSql('$4')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,
@@ -1333,9 +1375,15 @@ async function loadCommunityDetails(
             FROM feed_community_replies
             WHERE post_id = ANY($1::uuid[])
               AND moderation_status = 'accepted'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM member_blocks mb
+                WHERE (mb.blocker_user_id = $2 AND mb.blocked_user_id = feed_community_replies.author_user_id)
+                   OR (mb.blocker_user_id = feed_community_replies.author_user_id AND mb.blocked_user_id = $2)
+              )
             ORDER BY created_at ASC
           `,
-      [communityIds],
+      [communityIds, userId],
     ),
     // Aggregate reactions for every visible community post in one batched query.
     // BOOL_OR(user_id = $2) tells us whether the requesting member reacted with each emoji.
@@ -1489,13 +1537,14 @@ export async function listFeedTimeline(
       };
     }
 
-    const total = await countFeedTimeline(client, params);
+    const total = await countFeedTimeline(client, params, userId);
     const effectiveOffset = await resolveEffectiveOffset(client, {
       offset,
       pageSize: pagination.pageSize,
       aroundCommunityPostId: filters.aroundCommunityPostId,
       aroundAnnouncementId: filters.aroundAnnouncementId,
       params,
+      viewerUserId: userId,
     });
 
     const rows = await queryFeedTimelineRows(client, {
@@ -2460,7 +2509,7 @@ export async function toggleAnnouncementReaction(
       throw new Error('announcement_not_found');
     }
     // Same rule as peer posts: you may not react to an announcement you authored. Members are never
-    // the author of a Survivor Hub announcement, so this only guards the owner reacting to their own.
+    // the author of an official announcement, so this only guards the owner reacting to their own.
     if (announcement.rows[0].created_by_user_id === userId) {
       throw new Error('cannot_react_to_own_post');
     }
@@ -2578,7 +2627,7 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
 
   const result = await queryDb<AnnouncementReplyRow>(
     `
-      SELECT id, announcement_id, author_user_id, author_username, body, created_at
+      SELECT id, announcement_id, author_user_id, author_username, body, edited_at, created_at
       FROM announcement_replies
       WHERE announcement_id = $1::uuid
         AND moderation_status = 'accepted'
@@ -2593,16 +2642,92 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
     body: row.body,
     authorUserId: row.author_user_id,
     authorUsername: row.author_username,
+    editedAtIso: row.edited_at ? toIso(row.edited_at) : null,
     createdAtIso: toIso(row.created_at),
   }));
+}
+
+// Rewrite the member's own reply on an announcement. Author-only: ownership is checked here rather
+// than in the route so no caller can skip it. The new body passes the same moderation as a fresh
+// reply — an edit must not be a way to post something the original body would have been blocked for.
+// A reply a moderator has hidden cannot be edited back into view; that decision is the moderator's
+// to reverse.
+export async function editAnnouncementReply(
+  actorId: string,
+  replyId: string,
+  bodyInput: string,
+): Promise<{ body: string; editedAtIso: string }> {
+  const normalizedId = normalizeUuid(replyId);
+  if (normalizedId === null) {
+    throw new Error('reply_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const body = normalizeMultilineText(bodyInput);
+    if (!passesFeedModeration(body)) {
+      throw new Error('content_policy_violation');
+    }
+
+    const existing = await client.query<{ author_user_id: string; moderation_status: string }>(
+      'SELECT author_user_id, moderation_status FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      [normalizedId],
+    );
+    if (existing.rows.length === 0) {
+      throw new Error('reply_not_found');
+    }
+    if (existing.rows[0].author_user_id !== actorId) {
+      throw new Error('not_reply_owner');
+    }
+    if (existing.rows[0].moderation_status === FEED_MODERATION_STATUS.hidden) {
+      throw new Error('reply_hidden');
+    }
+
+    const updated = await client.query<{ edited_at: Date }>(
+      `
+        UPDATE announcement_replies
+        SET body = $2, edited_at = NOW(), updated_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING edited_at
+      `,
+      [normalizedId, body],
+    );
+
+    return { body, editedAtIso: toIso(updated.rows[0].edited_at) };
+  });
+}
+
+// Delete the member's own reply on an announcement. Author-only, and a real delete rather than a
+// hide: these are the member's own words and their own decision to take back. A moderator taking
+// someone else's reply down uses the reversible hide instead (lib/feed/moderation).
+export async function deleteAnnouncementReply(actorId: string, replyId: string): Promise<'ok'> {
+  const normalizedId = normalizeUuid(replyId);
+  if (normalizedId === null) {
+    throw new Error('reply_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const existing = await client.query<{ author_user_id: string }>(
+      'SELECT author_user_id FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      [normalizedId],
+    );
+    if (existing.rows.length === 0) {
+      throw new Error('reply_not_found');
+    }
+    if (existing.rows[0].author_user_id !== actorId) {
+      throw new Error('not_reply_owner');
+    }
+
+    await client.query('DELETE FROM announcement_replies WHERE id = $1::uuid', [normalizedId]);
+    return 'ok' as const;
+  });
 }
 
 // Read a member's last-seen marker for the Hub home channel. Returns null when the member
 // has never been recorded (so the caller shows every message as new). Best-effort: callers
 // must treat a thrown error as "no marker" and never let it break the chat.
-export async function getHubLastSeen(userId: string): Promise<string | null> {
+export async function getCommonsLastSeen(userId: string): Promise<string | null> {
   const result = await queryDb<{ last_seen_at: Date }>(
-    'SELECT last_seen_at FROM feed_hub_last_seen WHERE user_id = $1 LIMIT 1',
+    'SELECT last_seen_at FROM feed_commons_last_seen WHERE user_id = $1 LIMIT 1',
     [userId],
   );
   return result.rows.length > 0 ? toIso(result.rows[0].last_seen_at) : null;
@@ -2610,16 +2735,16 @@ export async function getHubLastSeen(userId: string): Promise<string | null> {
 
 // Move a member's last-seen marker to now (or to the supplied time, capped at now). Used after
 // the member views the Hub chat so the "New messages" divider reflects where they left off.
-export async function updateHubLastSeen(userId: string, seenAtIso?: string | null): Promise<string> {
+export async function updateCommonsLastSeen(userId: string, seenAtIso?: string | null): Promise<string> {
   const parsed = typeof seenAtIso === 'string' && isValidIsoDatetime(seenAtIso) ? new Date(seenAtIso) : null;
   // Never let a client push the marker into the future; clamp to server NOW().
   const useClientTime = parsed !== null && parsed.getTime() <= Date.now();
   const result = await queryDb<{ last_seen_at: Date }>(
     `
-      INSERT INTO feed_hub_last_seen (user_id, last_seen_at)
+      INSERT INTO feed_commons_last_seen (user_id, last_seen_at)
       VALUES ($1, COALESCE($2::timestamptz, NOW()))
       ON CONFLICT (user_id)
-      DO UPDATE SET last_seen_at = GREATEST(feed_hub_last_seen.last_seen_at, EXCLUDED.last_seen_at)
+      DO UPDATE SET last_seen_at = GREATEST(feed_commons_last_seen.last_seen_at, EXCLUDED.last_seen_at)
       RETURNING last_seen_at
     `,
     [userId, useClientTime && parsed ? parsed.toISOString() : null],

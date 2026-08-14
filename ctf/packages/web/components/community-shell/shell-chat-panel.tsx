@@ -21,19 +21,22 @@ import { NotificationsPanel } from './notifications-panel';
 import { ChatReactionRow } from './chat-reaction-row';
 import { CommonsFirstVisitNotice } from './commons-first-visit-notice';
 import { ComicConsentModal } from './comic-consent-modal';
-import type { HubTypingUser } from '../../lib/hub/live-stream';
-import type { HubSuggestionChip } from '../../lib/concierge/hub-suggestions';
+import { ContributionsGiftTrigger } from '../contributions/contributions-banner';
+import type { CommonsTypingUser } from '../../lib/commons/live-stream';
+import type { CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
+import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 
-// Avatar glyph for a chat sender: "SH" for the Survivor Hub system/AI, otherwise the first letter of
-// the member's handle. Keeps each post attributable instead of every row reading as the same "SH".
+// Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
+// official house account used to get a hardcoded "SH" here; now that official posts are signed with
+// the operator's own name, there is no special case left to make — the same rule covers every row
+// and keeps each post attributable (owner decision, 2026-08-09).
 function avatarFromSender(label: string): string {
   const trimmed = label.trim();
-  if (!trimmed || trimmed.toLowerCase() === 'survivor hub') return 'SH';
   const handle = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
-  return handle.charAt(0).toUpperCase() || 'SH';
+  return handle.charAt(0).toUpperCase() || '?';
 }
 
 // One unified stream entry: either a peer/hub chat message or an AI Assistant (@comic) Q&A item.
@@ -241,7 +244,7 @@ function mentionLabel(handle: string): string {
 
 // "X is typing…" line shown above the composer when the live connection is up and someone else is
 // typing. One name reads "X is typing…", two read "X and Y are typing…", more collapse to a count.
-function computeTypingLabel(typingUsers: HubTypingUser[]): string | null {
+function computeTypingLabel(typingUsers: CommonsTypingUser[]): string | null {
   if (typingUsers.length === 0) return null;
   if (typingUsers.length === 1) return `${typingUsers[0].name} is typing…`;
   if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing…`;
@@ -689,7 +692,7 @@ function StreamEntryView({ entry, showDivider, ownHandle, currentUser, inputRef,
   // The author shown above the bubble. Your own messages are attributed to you (handle when we have
   // it) so every message has a visible author, not just other people's — peer posts were rendering
   // with no name on the sender's own side.
-  const senderName = msg.from === 'user' ? ownHandle : (msg.senderLabel ?? 'Survivor Hub');
+  const senderName = msg.from === 'user' ? ownHandle : (msg.senderLabel ?? OFFICIAL_SENDER_LABEL);
 
   // An official announcement renders as its own distinct card (badge + optional title), not a chat
   // bubble, so it stands apart from peer posts and AI answers.
@@ -792,7 +795,7 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
     <>
       {divider}
       <div className={msg.from === 'user' ? `${styles.chatRow} ${styles.chatRowUser}` : styles.chatRow}>
-        {msg.from === 'hub' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
+        {msg.from === 'commons' ? <div className={styles.chatAvatar} aria-hidden="true">{avatarFromSender(senderName)}</div> : null}
         <div className={styles.chatBubbleGroup} data-post-id={msg.communityPostId ?? undefined}>
           <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
           <QuotedBlock quoted={msg.quotedMessage} onJump={onJumpToQuoted} />
@@ -917,7 +920,7 @@ type ConciergeChipRailProps = {
   mentionsOnly: boolean;
   announcementsOnly: boolean;
   notificationsOpen: boolean;
-  chips: HubSuggestionChip[];
+  chips: CommonsSuggestionChip[];
   onToggleMentions: () => void;
   onToggleAnnouncements: () => void;
   onToggleNotifications: () => void;
@@ -946,6 +949,11 @@ function ConciergeChipRail({
       <MentionsFilterButton active={mentionsOnly && !notificationsOpen} on={mentionsOnly} onClick={onToggleMentions} />
       <AnnouncementsFilterButton active={announcementsOnly && !notificationsOpen} on={announcementsOnly} onClick={onToggleAnnouncements} />
       <NotificationsFilterButton open={notificationsOpen} onClick={onToggleNotifications} />
+      {/* Fundraiser gift reminder — moved here from the top bar, which ran out of room on a 375px
+          phone (owner directive, 2026-08-09). It renders itself as null unless a drive is running
+          and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
+          It stays visible with the notifications feed open, like the three glyph chips before it. */}
+      <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
       {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} />}
     </div>
   );
@@ -1005,7 +1013,7 @@ function NotificationsFilterButton({ open, onClick }: { open: boolean; onClick: 
   );
 }
 
-function SuggestionChips({ chips, onAsk }: { chips: HubSuggestionChip[]; onAsk: (question: string) => void }) {
+function SuggestionChips({ chips, onAsk }: { chips: CommonsSuggestionChip[]; onAsk: (question: string) => void }) {
   return (
     <>
       {chips.map((chip) =>
@@ -1065,7 +1073,7 @@ function ChatComposer({
           dropped and the line is relabeled to name the assistant and its human-in-the-loop review. */}
       <div className={styles.comicComposerHelper}>
         <span className={styles.comicComposerHelperText}>
-          AI Assistant (human in the loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
+          AI Assistant (human-in-the-loop) — type <span className={styles.comicComposerHelperToken}>@comic</span> to ask
         </span>
       </div>
 
@@ -1113,8 +1121,12 @@ function ChatComposer({
       {/* Character count, shown only near and past the limit. */}
       {showComposerCount ? <ComposerCharacterCount composerOverBy={composerOverBy} charsLeft={maxLength - composerLength} /> : null}
 
+      {/* Footnote. While the stream is live it is the guidelines link alone (owner directive,
+          2026-08-09): the sentence that used to sit here repeated the helper line above the message
+          box, and two near-identical explanations cost a line of screen height on every phone. The
+          not-live wording stays — that one reports real connection status, not a description. */}
       <p className={styles.chatFootnote}>
-        {isLive ? 'Human-in-the-loop AI support and community support channel.' : 'Support channel keeps syncing as new messages arrive.'}{' '}
+        {isLive ? null : <>Support channel keeps syncing as new messages arrive.{' '}</>}
         <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
       </p>
     </>

@@ -20,6 +20,15 @@ type ConfigBody = {
   signalInstructions?: string;
 };
 
+const CONFIG_FIELDS = [
+  'creditsPerUsd',
+  'nonMonetaryUnitValueUsd',
+  'perUserCycleCreditCap',
+  'bannerSnoozeMonths',
+  'bannerEnabled',
+  'signalInstructions',
+] as const satisfies readonly (keyof ConfigBody)[];
+
 export async function GET() {
   const gate = await requireContributionsAdminAccess();
   if (!gate.allowed) {
@@ -50,6 +59,7 @@ export async function PUT(request: Request) {
     return parsed.response;
   }
   const body = parsed.body as ConfigBody;
+  const changedKnobs = CONFIG_FIELDS.filter((field) => body[field] !== undefined);
 
   try {
     const config = await updateContributionsConfig({
@@ -66,11 +76,16 @@ export async function PUT(request: Request) {
       actorUserId: gate.auth.userId,
       action: 'contributions.admin.config.update',
       metadata: {
-        creditsPerUsd: config.creditsPerUsd,
-        nonMonetaryUnitValueUsd: config.nonMonetaryUnitValueUsd,
-        perUserCycleCreditCap: config.perUserCycleCreditCap,
-        bannerSnoozeMonths: config.bannerSnoozeMonths,
-        bannerEnabled: config.bannerEnabled,
+        // Only the fields the caller actually sent — an omitted field keeps its current value,
+        // so listing every knob here would misattribute untouched settings as changed.
+        changedKnobs,
+        resultingConfig: {
+          creditsPerUsd: config.creditsPerUsd,
+          nonMonetaryUnitValueUsd: config.nonMonetaryUnitValueUsd,
+          perUserCycleCreditCap: config.perUserCycleCreditCap,
+          bannerSnoozeMonths: config.bannerSnoozeMonths,
+          bannerEnabled: config.bannerEnabled,
+        },
       },
     });
 

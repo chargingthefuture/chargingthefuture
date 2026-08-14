@@ -83,10 +83,29 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
   const [method, setMethod] = useState<GiftCardMethod>('amazon');
   const [cardValue, setCardValue] = useState('');
   const [signalContact, setSignalContact] = useState('');
+  const [amountError, setAmountError] = useState<string | null>(null);
+
+  // Say what is wrong with the amount before a round trip does. The server enforces the same rule and
+  // is the authority; this exists so a member who types 12.50 is told about cents rather than being
+  // handed a rejection after submitting.
+  function amountProblem(): string | null {
+    const trimmed = cardValue.trim();
+    if (!trimmed) return 'Enter the value of the card.';
+    const amount = Number(trimmed);
+    if (!Number.isFinite(amount)) return 'Enter the card value as a number, like 25.';
+    if (!Number.isInteger(amount)) return 'Whole dollars only — no cents. Round to the nearest dollar.';
+    if (amount < 1 || amount > 500) return 'The card value must be between $1 and $500.';
+    return null;
+  }
 
   function handleSubmit() {
-    const amount = Number(cardValue);
-    onSubmit({ method, claimedAmountUsd: Number.isFinite(amount) ? amount : 0, signalContact: signalContact.trim() });
+    const problem = amountProblem();
+    if (problem) {
+      setAmountError(problem);
+      return;
+    }
+    setAmountError(null);
+    onSubmit({ method, claimedAmountUsd: Number(cardValue.trim()), signalContact: signalContact.trim() });
   }
 
   return (
@@ -116,8 +135,23 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
         </div>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <label htmlFor="contrib-path-card-value" style={labelStyle(t)}>Card value (USD, max $500)</label>
-        <input id="contrib-path-card-value" value={cardValue} onChange={(e) => setCardValue(e.target.value)} inputMode="decimal" placeholder="e.g. 25" style={inputStyle(t)} />
+        <label htmlFor="contrib-path-card-value" style={labelStyle(t)}>Card value (whole US dollars, $1 to $500)</label>
+        {/* Numeric, not decimal: cents are not accepted, so the phone keypad should not offer a
+            decimal point the member cannot use. */}
+        <input
+          id="contrib-path-card-value"
+          value={cardValue}
+          onChange={(e) => {
+            setCardValue(e.target.value);
+            if (amountError) {
+              setAmountError(null);
+            }
+          }}
+          inputMode="numeric"
+          placeholder="e.g. 25"
+          style={inputStyle(t)}
+        />
+        {amountError && <div style={{ fontSize: 12, color: '#EF4444', marginTop: 5 }}>{amountError}</div>}
       </div>
       <div style={{ marginBottom: 18 }}>
         <label htmlFor="contrib-path-signal" style={labelStyle(t)}>

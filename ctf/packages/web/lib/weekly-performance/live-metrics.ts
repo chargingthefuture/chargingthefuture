@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { buildLiveGdpReport } from 'lib/gdp/repository';
+import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
 
 // Live weekly numbers — rebuilt around the per-plugin value-metric decision record
 // (ctf/docs/developer/PLUGIN_VALUE_METRICS.md, owner-locked 2026-07-18).

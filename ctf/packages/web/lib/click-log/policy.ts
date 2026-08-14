@@ -19,6 +19,14 @@ export function canToggleIncidentShare(userId: string | null, incidentOwnerId: s
   return userId === incidentOwnerId;
 }
 
+// Only the member who logged an incident may edit its note and tags. Deliberately no admin
+// override: the note is the member's private content. The date and location are immutable —
+// editing covers note and tags only (owner decision, 2026-08-13).
+export function canEditIncident(userId: string | null, incidentOwnerId: string): boolean {
+  if (!userId) return false;
+  return userId === incidentOwnerId;
+}
+
 // The aggregate trends view is owner/admin-only.
 export function canViewSharedTrends(isAdmin: boolean): boolean {
   return isAdmin;

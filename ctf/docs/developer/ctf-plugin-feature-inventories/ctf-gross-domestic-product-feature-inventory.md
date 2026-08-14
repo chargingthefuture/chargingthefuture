@@ -31,7 +31,15 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 ### 1.1 GDP Transparency Overview
 
 1. Authenticated survivor-facing GDP summary dashboard.
-2. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
+2. An as-of anchor under the headline Community Value Index: "Cumulative since June 12, 2026" — the
+   soft launch date (owner decision, 2026-08-06; the Render production deploy came slightly earlier,
+   2026-05-25). The index sums all recognized exchanges from launch onward and never resets to a
+   calendar year. The date is one platform-owned constant, `PLATFORM_LAUNCH_DATE_ISO` in
+   `ctf/packages/web/lib/platform/launch.ts` (GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` in
+   `ctf/packages/web/components/gdp/gdp-shared.ts` re-exports it), so a corrected launch date
+   changes in one place and every surface that counts from launch — GDP here, the Weekly
+   Performance week history — follows together.
+3. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
 3. Per-capita indicators based on population baseline and selected period.
 4. Progress-to-target indicators for $300B total and $210B services goals.
 
@@ -348,6 +356,36 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-10: **Launch date moved to a platform-owned constant; no visible change to GDP.** Weekly
+  Performance needed the same launch date to floor its week history, and a plugin must not import
+  another plugin's code, so `2026-06-12` now lives in `ctf/packages/web/lib/platform/launch.ts` as
+  `PLATFORM_LAUNCH_DATE_ISO`. GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` re-exports it, so the
+  on-screen line still reads "Cumulative since June 12, 2026" and the two surfaces cannot drift
+  apart. No schema, route, or contract change.
+- 2026-08-06: **As-of anchor corrected to the soft launch date: "Cumulative since June 12, 2026"
+  (owner decision).** The first pass anchored to the Render production deploy (2026-05-25); the
+  owner identified 2026-06-12 as the actual soft launch, so the constant in `gdp-shared.ts` now
+  carries that date. One-constant change plus this inventory; no schema, route, or contract change.
+- 2026-08-05: **Dashboard hero now says what period the Community Value Index covers: "Cumulative
+  since May 25, 2026".** The index is all-time — every recognition source sums its full table history
+  with no date filter — but the surface never said so, leaving a reader to guess whether the figure
+  was yearly. Added `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` / `COMMUNITY_VALUE_INDEX_SINCE_LABEL` to
+  `gdp-shared.ts` (single source of truth) and rendered the label under the headline figure in
+  `gdp-dashboard.tsx`. The anchor date is the production go-live on Render: the migration PRs
+  (#98–#117) all merged 2026-05-25, with PR #117's health-check fix bringing `ctf-web` to "Live".
+  If the owner fixes a different public launch date (e.g. from the announcement post), only the
+  constant changes. UI copy only — no schema, route, or contract change.
+- 2026-08-04: **Both Community Value Index figures now appear in the weekly community-stats draft, via a
+  shared script module.** The weekly community-stats draft generator
+  (`ctf/scripts/generate-community-stats.mjs`, run by `.github/workflows/generate-community-stats.yml`)
+  gained a GDP stat provider reporting the real Community Value Index and the projected "value waiting
+  to happen" figure alongside the SocketRelay/Directory/ServiceCredits aggregates, with not-money
+  wording carried into the fact labels and the drafting prompt. To avoid a third hand-copied set of
+  queries, the recognition source SQL and contribution weights moved out of `scripts/recognizeGdp.mjs`
+  into a shared module `ctf/scripts/lib/gdpValueIndex.mjs` (which also carries a script-side mirror of
+  the projection sources in `packages/web/lib/gdp/projection.ts`); `recognizeGdp.mjs` now imports from
+  it with identical queries, weights, and snapshot-write behavior. Operational scripts only — no app
+  code, schema, route, or contract change; the app-side value layer is untouched.
 - 2026-08-04: **SocketRelay favors now count at the value their post names, in both figures.** A
   SocketRelay post can name an offered value (issue #120: optional `price_amount`/`price_currency`
   on `socket_relay_requests`), but both figures still counted every favor as one `FREE` point — the

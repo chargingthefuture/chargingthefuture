@@ -76,7 +76,8 @@ export function WeaversEarnedPage() {
             <div style={sectionTitle}>What it opens</div>
             <p style={body}>
               The same standing that earns this badge will open the members-only channel in the
-              Commons when it launches — a space for the members who keep this community running.
+              Commons and the private room in Chyme when they launch — spaces for the members who
+              keep this community running.
             </p>
           </section>
         </div>

@@ -6,7 +6,7 @@
   server libraries, the operational scripts, the shared packages, and the native app's modules. Several
   Stream-named files are in the diff (`lib/chyme/stream.ts`, `lib/foundation/stream.ts`,
   `lib/lighthouse/stream.ts`, `lib/trust-transport/stream.ts`, `lib/beacon/stream.ts`,
-  `lib/shared/stream-video.ts`, `lib/hub/live-stream.ts`, and the native `StreamChatSearch` /
+  `lib/shared/stream-video.ts`, `lib/commons/live-stream.ts`, and the native `StreamChatSearch` /
   `StreamVideoPanel`), and in every one the change is error handling only: a stated `no-trace:` reason on
   a deliberate silence, or a `reportError` call added where a failure was being swallowed. No Stream call
   is added, removed, retried, moved, or re-timed.
@@ -18,7 +18,7 @@
 
 - Chat / Activity Feeds / Video / AI Moderation: **none functionally.** The four `channel.create()` →
   `channel.watch()` fallbacks keep exactly the same two calls in the same order; they only now say in the
-  code why the failed create is expected. `lib/hub/live-stream.ts` reports the reason when a Stream Chat
+  code why the failed create is expected. `lib/commons/live-stream.ts` reports the reason when a Stream Chat
   connection fails and still falls back to polling as before. The native panels only gained error
   reporting.
 
@@ -51,7 +51,7 @@
   error reporting for caught failures at all**; `ctf/packages/mobile/src/observability/report.ts` adds it
   (a log line always, Sentry when a DSN is configured), and the Chyme back-channel join failure and the
   Stream chat search failure now report instead of vanishing. On the web, a failed Stream Chat connect in
-  `lib/hub/live-stream.ts` now reports rather than silently falling back to polling.
+  `lib/commons/live-stream.ts` now reports rather than silently falling back to polling.
 
 ## Validation
 

@@ -30,7 +30,7 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false, acceptedCurrencies: [] };
 
 type MemberLocation = { city: string; state: string; country: string };
 const EMPTY_LOCATION: MemberLocation = { city: "", state: "", country: "" };
@@ -54,6 +54,7 @@ function draftFromRequest(request: SrRequest): PostDraft {
     priceCurrency: request.priceCurrency ?? "FREE",
     priceAmount: request.priceAmount != null ? String(request.priceAmount) : "",
     requiresAmount: request.priceAmount != null,
+    acceptedCurrencies: request.acceptedCurrencies ?? [],
   };
 }
 
@@ -151,6 +152,8 @@ function buildRequestBody(draft: PostDraft) {
     // The chosen value type (default 'FREE'); amount only for priced types.
     priceCurrency: draft.priceCurrency || null,
     priceAmount: parsePriceAmount(draft.priceAmount),
+    // Split settlements: every currency the poster accepts, independent of the single price above.
+    acceptedCurrencies: draft.acceptedCurrencies,
   };
 }
 
@@ -525,6 +528,8 @@ type SocketRelayTabContentProps = {
   requests: SrRequest[];
   allRequests: SrRequest[];
   userId?: string;
+  // Request ids the member cannot claim again (their earlier claim was canceled by the poster).
+  reclaimBlockedIds: Set<string>;
   submitting: boolean;
   search: string;
   category: string;
@@ -556,7 +561,7 @@ type SocketRelayTabContentProps = {
 // The body under the header: whichever tab is active. `requests` is the filtered feed list; suggestions
 // pull from `allRequests` (the full loaded set) so tag autocomplete is not limited to the visible rows.
 function SocketRelayTabContent(props: SocketRelayTabContentProps) {
-  const { tab, requests, allRequests, userId, submitting, search, category } = props;
+  const { tab, requests, allRequests, userId, reclaimBlockedIds, submitting, search, category } = props;
   const { hasMore, loadingMore, onLoadMore, onClaim, onPost, onEdit, onRepost } = props;
   const { draft, editing, onChange, postError, postSuccess, onSubmit, onCancelEdit } = props;
   const { directLines, selectedLine, resolving, onSelect, onBack, onResolve, chatLoading, chatError, chatCredentials } = props;
@@ -567,6 +572,7 @@ function SocketRelayTabContent(props: SocketRelayTabContentProps) {
         <SocketRelayFeed
           requests={requests}
           currentUserId={userId}
+          reclaimBlockedIds={reclaimBlockedIds}
           submitting={submitting}
           filterActive={filterActive}
           hasMore={hasMore}
@@ -641,6 +647,14 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   // The Direct Line list: active conversations plus your own still-open requests as pending
   // placeholders. Canceled/closed lines drop out — one row per request you're waiting on or talking through.
   const directLines = buildDirectLines(sr.fulfillments, sr.myRequests);
+  // Requests this member was canceled off as the helper (the poster chose "didn't work — reopen for
+  // others"). The server refuses a re-claim on these, so the feed replaces the "I can help" button
+  // with a plain note instead of offering an action that would fail.
+  const reclaimBlockedIds = new Set(
+    sr.fulfillments
+      .filter((f) => f.status === "canceled" && f.fulfillerUserId === userId)
+      .map((f) => f.requestId),
+  );
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "feed", label: "Feed" },
@@ -668,6 +682,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         requests={visible}
         allRequests={sr.requests}
         userId={userId}
+        reclaimBlockedIds={reclaimBlockedIds}
         submitting={sr.submitting}
         search={sr.search}
         category={sr.category}

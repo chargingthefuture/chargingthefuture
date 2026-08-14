@@ -163,7 +163,7 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 5. Plugin remains hidden from end-user plugin registry navigation.
 6. **Unlock is the single source of truth for full app access (hard cutover, 2026-06-09).** The old v2 `isApproved` flag — which came from an `x-ctf-user-approved` header the middleware never set, so it defaulted to true for everyone — has been removed entirely from the request identity, the bearer-token identity, and the access decision. The central gate `evaluatePluginAccess` now resolves the Unlock tier via `getUnlockAccessTier` (Unleash flag, then DB tier with lazy expiry) and enforces a single `minUnlockTier` option:
    - `approved_full` (default): only fully-approved members or admins may enter. Every plugin route, the Chyme service routes, and all admin pages use this. A not-yet-verified member is denied with reason `unlock_required` and sent into the Unlock flow.
-   - `support_only`: approved or `locked_support_only` members may enter. Used by the Hub general channel (`/api/hub/**`), which is the support surface for not-yet-verified members — they can read and post there to ask for help (for example, finding their Quora profile link).
+   - `support_only`: approved or `locked_support_only` members may enter. Used by the Commons general channel (`/api/commons/**`), which is the support surface for not-yet-verified members — they can read and post there to ask for help (for example, finding their Quora profile link).
    - `any_authenticated`: any signed-in member may enter regardless of tier. Used by the Unlock submission/status routes (so a gated member can always submit) and the account/profile/deletion routes (so a gated member can always see and delete their own data, i.e. exercise the right to be forgotten).
 7. Admins always pass the tier check.
 8. **Chyme is no longer granted to not-yet-unlocked members.** Chyme requires `approved_full`; degraded members are pointed at the Hub general channel and the Unlock flow instead. Chyme's anonymous public visitor shell (for signed-out browsing) is unchanged.
@@ -199,6 +199,11 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-09: **"Survivor Hub" retired from the Unlock copy (owner decision).** The web submission
+  view said "To unlock full access to Survivor Hub", and the mobile screen said "Survivor Hub uses
+  Quora profile verification". Both now say **Skills Economy** — the product's actual name in the
+  brand hierarchy, which "Survivor Hub" never was. This finishes the sweep the 2026-08-03 approved-
+  card fix started on this surface. Copy only; no route, schema, or contract change.
 - 2026-08-03: **Approved card drops "Hub" (owner report).** The verification approved card said
   "Welcome to the Survivor Hub!" with a "Continue to Hub" button. Per the brand lexicon, the card
   title now reads "Welcome to Skills Economy (SE)" (the first-meeting form of the product name,

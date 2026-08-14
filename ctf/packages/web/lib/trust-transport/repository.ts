@@ -1,6 +1,7 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
-import { createTransfer } from 'lib/service-credits/repository';
+import { createTransfer } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
 import {
   getAccountRestrictionStatus,
@@ -32,6 +33,7 @@ import type {
 } from './types';
 import { ensureTrustTransportTripChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { isBlockedBetween, isBlockedBetweenTx } from 'lib/blocks/repository';
 
 // Cross-plugin presence: a TrustTransport ride request marks its requester (the rider) as active.
 // A request counts as active presence unless its status is terminal, so the live hooks clear presence
@@ -55,6 +57,36 @@ const TRUST_TRANSPORT_TERMINAL_STATUSES = new Set([
 
 function isTrustTransportRequestActive(status: string | null | undefined): boolean {
   return !TRUST_TRANSPORT_TERMINAL_STATUSES.has((status ?? '').toLowerCase());
+}
+
+// Offer presence mirrors the request hook: same slug/deep link, but the ref is the offer row and the
+// label is the driver-side one the derive path already emits (lib/presence/derive.ts). Best-effort —
+// the presence helpers swallow and report their own failures.
+const TRUST_TRANSPORT_OFFER_REF_TYPE = 'offer';
+const TRUST_TRANSPORT_OFFER_LABEL = 'Offering rides';
+
+async function syncTrustTransportOfferPresence(
+  providerUserId: string,
+  offerId: string,
+  status: string | null | undefined,
+): Promise<void> {
+  if (isTrustTransportRequestActive(status)) {
+    await recordMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+      label: TRUST_TRANSPORT_OFFER_LABEL,
+      deepLink: TRUST_TRANSPORT_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+    });
+  }
 }
 
 // Keep the requester's TrustTransport presence in step with a request's current status. Best-effort:
@@ -218,6 +250,9 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     status: row.status,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    // The accepted-currencies set lives in a join table and is loaded separately by
+    // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
+    acceptedCurrencies: [],
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     tripId: row.trip_id ?? null,
@@ -229,6 +264,79 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
   };
+}
+
+type AcceptedCurrencyRow = { request_id: string; currency_code: string };
+
+// Ordered so ServiceCredits leads (currencies.sort_order = 0) — the platform's preferred currency
+// wherever multiple options appear — and clients can render the set in server order.
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT rac.request_id::text AS request_id, rac.currency_code
+  FROM trust_transport_request_accepted_currencies rac
+  JOIN currencies c ON c.code = rac.currency_code
+  WHERE rac.request_id = ANY($1::uuid[])
+  ORDER BY c.sort_order, rac.currency_code
+`;
+
+function acceptedCodesByRequest(rows: AcceptedCurrencyRow[]): Map<string, string[]> {
+  const codesByRequest = new Map<string, string[]>();
+  for (const row of rows) {
+    const codes = codesByRequest.get(row.request_id) ?? [];
+    codes.push(row.currency_code);
+    codesByRequest.set(row.request_id, codes);
+  }
+  return codesByRequest;
+}
+
+// Load each request's accepted currencies from trust_transport_request_accepted_currencies and attach
+// them to the mapped requests (split settlements — a ride can accept several currencies, e.g.
+// ServiceCredits and USD, independent of its single listed price).
+async function attachAcceptedCurrencies(requests: TrustTransportRequest[]): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
+// inside createRequest.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  requests: TrustTransportRequest[],
+): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a request. Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, requestId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  for (const row of valid.rows) {
+    await client.query(
+      `INSERT INTO trust_transport_request_accepted_currencies (request_id, currency_code)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (request_id, currency_code) DO NOTHING`,
+      [requestId, row.code],
+    );
+  }
 }
 
 function mapOfferRow(row: OfferRow): TrustTransportOffer {
@@ -345,7 +453,8 @@ export async function createRequest(
     );
 
     if ((existing.rowCount ?? 0) > 0) {
-      return mapRequestRow(existing.rows[0]);
+      const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(existing.rows[0])]);
+      return replayed;
     }
 
     const created = await client.query<RequestRow>(
@@ -385,7 +494,10 @@ export async function createRequest(
       [created.rows[0].id, actorUserId],
     );
 
-    return mapRequestRow(created.rows[0]);
+    await replaceAcceptedCurrencies(client, created.rows[0].id, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(created.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the request is durably committed: a new open request makes the
@@ -408,7 +520,8 @@ export async function getRequestById(requestId: string): Promise<TrustTransportR
     return null;
   }
 
-  return mapRequestRow(result.rows[0]);
+  const [request] = await attachAcceptedCurrencies([mapRequestRow(result.rows[0])]);
+  return request;
 }
 
 export async function listRequests(options?: { page?: number; pageSize?: number; requesterUserId?: string }) {
@@ -444,7 +557,7 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   );
 
   return {
-    items: result.rows.map(mapRequestRow),
+    items: await attachAcceptedCurrencies(result.rows.map(mapRequestRow)),
     page,
     pageSize,
     total,
@@ -477,10 +590,20 @@ export async function listAvailableRequests(options: {
   const offset = (page - 1) * pageSize;
   const excludeUserId = options.excludeUserId;
 
+  // Blocked pairs are hidden from discovery (issue #809 task 4): a helper never sees a blocked
+  // requester's ride, in either block direction, mirroring the LightHouse browse filter.
+  const hideBlockedRequestersSql = `
+     AND NOT EXISTS (
+       SELECT 1
+       FROM member_blocks
+       WHERE (blocker_user_id = $1 AND blocked_user_id = trust_transport_requests.requester_user_id)
+          OR (blocker_user_id = trust_transport_requests.requester_user_id AND blocked_user_id = $1)
+     )`;
+
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1`,
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}`,
     [excludeUserId],
   );
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -494,11 +617,18 @@ export async function listAvailableRequests(options: {
   }>(
     `SELECT id, mode, price_amount, price_currency, created_at
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}
      ORDER BY created_at DESC
      OFFSET $2 LIMIT $3`,
     [excludeUserId, offset, pageSize],
   );
+
+  // Attach each open request's accepted-currencies set (split settlements) so a driver sees the whole
+  // offer (e.g. ServiceCredits + USD). Mode/settlement/age only — still no locations before acceptance.
+  const requestIds = result.rows.map((row) => row.id);
+  const acceptedRows =
+    requestIds.length > 0 ? (await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds])).rows : [];
+  const codesByRequest = acceptedCodesByRequest(acceptedRows);
 
   return {
     items: result.rows.map((row) => ({
@@ -506,6 +636,7 @@ export async function listAvailableRequests(options: {
       mode: row.mode,
       priceCurrency: row.price_currency,
       priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+      acceptedCurrencies: codesByRequest.get(row.id) ?? [],
       createdAtIso: toIso(row.created_at),
     })),
     page,
@@ -552,13 +683,20 @@ export async function createOffer(
     throw new Error('policy_denied');
   }
 
+  // Block check (issue #809 task 4): a block in either direction means these two members must not
+  // reach each other — the driver cannot offer on a blocked requester's ride, and vice versa. The
+  // route maps blocked_pair to neutral copy so the block never reveals itself.
+  if (await isBlockedBetween(providerUserId, request.requesterUserId)) {
+    throw new Error('blocked_pair');
+  }
+
   if (request.status !== 'open') {
     throw new Error('invalid_transition');
   }
 
   const note = normalizeNullableText(input.note);
 
-  return withDbTransaction(async (client) => {
+  const offer = await withDbTransaction(async (client) => {
     const existing = await client.query<OfferRow>(
       `SELECT id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at
        FROM trust_transport_offers
@@ -589,6 +727,12 @@ export async function createOffer(
 
     return mapOfferRow(created.rows[0]);
   });
+
+  // Best-effort presence write after the offer is durably committed: an open offer makes the driver
+  // active in TrustTransport ("Offering rides"). Never breaks offer creation.
+  await syncTrustTransportOfferPresence(offer.providerUserId, offer.id, offer.status);
+
+  return offer;
 }
 
 export async function acceptOffer(requestId: string, offerId: string, actorUserId: string, idempotencyKey: string): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
@@ -621,6 +765,12 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
 
     const offer = offerResult.rows[0];
 
+    // Block check (issue #809 task 4): a block created after the offer was made still stops the pair
+    // from being joined into a trip. Neutral blocked_pair mapping at the route.
+    if (await isBlockedBetweenTx(client, actorUserId, offer.provider_user_id)) {
+      throw new Error('blocked_pair');
+    }
+
     const existingTrip = await client.query<TripRow>(
       `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
@@ -644,11 +794,12 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
       };
     }
 
-    await client.query(
+    const offerStatusResult = await client.query<{ id: string; provider_user_id: string; status: string }>(
       `UPDATE trust_transport_offers
        SET status = CASE WHEN id = $1::uuid THEN 'accepted' ELSE 'rejected' END,
            updated_at = NOW()
-       WHERE request_id = $2::uuid`,
+       WHERE request_id = $2::uuid
+       RETURNING id, provider_user_id, status`,
       [offerId, requestId],
     );
 
@@ -676,8 +827,16 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     return {
       trip: mapTripRow(tripResult.rows[0]),
       request: mapRequestRow(requestResult.rows[0]),
+      offerStatuses: offerStatusResult.rows,
     };
   });
+
+  // Best-effort presence sync after the commit: rejected drivers stop "Offering rides"; the accepted
+  // offer stays active while the trip runs. Never breaks the acceptance. (Empty on the idempotent
+  // replay path, which changes no offer rows.)
+  for (const row of created.offerStatuses ?? []) {
+    await syncTrustTransportOfferPresence(row.provider_user_id, row.id, row.status);
+  }
 
   const streamChannelId = await ensureTrustTransportTripChannel({
     tripId: created.trip.id,

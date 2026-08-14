@@ -23,6 +23,37 @@ export function getClickLogTokens(theme: ThemeName): ClickLogTokens {
   return getPluginShellTokens(accent, theme);
 }
 
+// The two public pages that describe every problem and every scheme in full, in the owner's own
+// words. The tag pickers link out to them (owner request, 2026-08-14) so a member who does not
+// recognize a short chip label can read the long version before picking. Both are opened through
+// the shared ShareLink popup — open in a new tab or copy the link — so reading the list never
+// replaces the page of an incident the member is part-way through logging.
+export const CLICK_LOG_PROBLEMS_PAGE_URL = "https://www.chargingthefuture.com/look-ma";
+export const CLICK_LOG_SCHEMES_PAGE_URL = "https://www.chargingthefuture.com/schemes";
+
+// A link to the public page that describes one list of tags in full. Shown next to the picker
+// question and opened through the shared ShareLink popup (rule 130).
+export type ClickLogTagReference = {
+  url: string;
+  // Short text on the trigger, sitting beside the picker question.
+  label: string;
+  // Heading inside the popup, naming the page the link goes to.
+  title: string;
+};
+
+// Shared by the log form and the history editor so both pickers offer the same link and wording.
+export const CLICK_LOG_PROBLEM_REFERENCE: ClickLogTagReference = {
+  url: CLICK_LOG_PROBLEMS_PAGE_URL,
+  label: "Full list",
+  title: "The full problems list on chargingthefuture.com",
+};
+
+export const CLICK_LOG_SCHEME_REFERENCE: ClickLogTagReference = {
+  url: CLICK_LOG_SCHEMES_PAGE_URL,
+  label: "Full list",
+  title: "The full schemes list on chargingthefuture.com",
+};
+
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 // Monday-based weekday index (Mon=0 … Sun=6).

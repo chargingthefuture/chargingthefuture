@@ -450,13 +450,12 @@ Result: web ☐
 **Precondition:** At least one cohort opened from an approved proposal has the `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
 
 **Steps:**
-1. Find the auto-created cohort with the `needs trainer` badge in the cohort list.
-2. Call `POST /api/level-up/cohorts/[cohortId]/claim-trainer` for that cohort.
-3. Reload the cohort list.
+1. Find the auto-created cohort with the `needs trainer` badge in the admin cohort list.
+2. Press its **Claim as trainer** button (added 2026-08-05; a non-admin trainer without admin-page access still claims via `POST /api/level-up/cohorts/[cohortId]/claim-trainer`).
 
 **Expected:**
-- The request succeeds and returns the cohort ID.
-- The `needs trainer` badge disappears from that cohort in the list.
+- The claim succeeds and the cohort list re-pulls itself.
+- The `needs trainer` badge and the Claim button disappear from that cohort in the list.
 - If trainee 2 was enrolled in that cohort before the claim, their enrollment's `assigned_trainer_id` is now set to the claiming trainer (check via milestone release in LU-A8).
 
 Result: web ☐
@@ -469,12 +468,12 @@ Result: web ☐
 **Precondition:** Trainee 1 is enrolled in the seed cohort (LU-3 done). Signed in as seed admin.
 
 **Steps:**
-1. Call `POST /api/level-up/milestones/[milestoneId]/validate` with the seed cohort's first milestone ID, trainee 1's enrollment ID, and a unique idempotency key.
+1. As admin, open `/admin/level-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/level-up/milestones/[milestoneId]/validate` with enrollment ID, cohort ID, and a unique idempotency key — the only path for a non-admin trainer.)
 
 **Expected:**
-- Returns a validation ID and status.
-- A second identical request with the same idempotency key returns the same validation ID without creating a duplicate record.
-- Note: the member LevelUp shell has **no** inline "pending validations" approve panel (the member-shell right panel was removed; enrollments now show under the Progress tab). Validation is performed via this endpoint, which is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
+- The validation succeeds and the queue re-pulls via refresh.
+- A second identical API request with the same idempotency key returns the same validation ID without creating a duplicate record.
+- Note: the member LevelUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
 
@@ -486,7 +485,7 @@ Result: web ☐
 **Precondition:** Milestone 1 validated (LU-A7 done). Trainee 1 enrolled in seed cohort.
 
 **Steps:**
-1. Call `POST /api/level-up/milestones/[milestoneId]/release` for the validated milestone.
+1. As admin, press **Release credits** on the validation's row in the admin queue (added 2026-08-05; API variant: `POST /api/level-up/milestones/[milestoneId]/release`).
 2. Check trainee 1's wallet balance.
 3. Check the trainer's wallet (if accessible).
 
@@ -505,13 +504,17 @@ Result: web ☐
 **Role:** admin · **Surfaces:** web
 **Precondition:** A dispute exists (LU-10 done). Signed in as seed admin.
 
-**Steps:**
-1. Call `POST /api/level-up/disputes/[disputeId]/resolve` with the dispute ID from LU-10, a resolution comment, and an idempotency key.
-2. If the resolution includes a credit adjustment, replay the exact same request (same idempotency key) once more.
+**Steps (UI, since 2026-08-05):**
+1. Open `/admin/level-up` and find the dispute from LU-10 in the **Open disputes** list.
+2. Press **Resolve…**, write a resolution comment, and press **Resolve dispute**.
+3. (API-only variant) A resolution with a credit adjustment still goes through
+   `POST /api/level-up/disputes/[disputeId]/resolve` directly — the form is deliberately
+   comment-only (moving credits from free-typed ids is an error magnet; adjustment cases go
+   through the ServiceCredits admin). If used, replay the same request (same idempotency key) once.
 
 **Expected:**
-- Returns the dispute ID and `status: resolved`.
-- The replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
+- Step 2: the dispute leaves the Open disputes list after the refresh; an empty comment keeps the button disabled.
+- The API replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
 
 Result: web ☐

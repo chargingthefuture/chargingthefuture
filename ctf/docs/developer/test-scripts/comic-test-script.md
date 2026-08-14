@@ -27,7 +27,11 @@ the tests worth running slowly.
 - Step 1 → the **public landing page**, not a redirect to sign-in. It says what the library is, what
   happens to your writing, that you can take it back, and that contributing also verifies you. This
   is the page the invitation post links to from Quora, so a visitor with no account has to be able to
-  read it and decide.
+  read it and decide. The page also carries the standard back chevron to the left of the title
+  (added 2026-08-09) — it looks and behaves like the one on every other screen, and on a phone it is
+  the only way back, since the installed web app has no browser back button. Reach the page from
+  inside the app and it returns you to the page you came from; open it cold from the Quora link and
+  it goes to the apps grid, which a signed-out visitor can also see.
 - Step 2 → the form loads. An unverified member is **not** turned away — contributing is the way in,
   not something behind the gate.
 - Step 3 → send is blocked until the profile field is filled; the receipt then says the Quora profile
@@ -252,7 +256,29 @@ withdrawal by either still reaches it.
 **Steps:** Open the apps launcher, find **Knowledge Library**, and tap it.
 
 **Expected:** It lands on `/knowledge` — `/apps/knowledge` redirects there, so there is one page
-rather than two copies to keep in step. The admin landing also lists **Contributed Writing**.
+rather than two copies to keep in step. The admin landing also lists **Contributed Writing** and
+**AI Knowledge Base**.
+
+**Result:** web ☐
+
+---
+
+## CMC-A6 · Knowledge-base curation: switch an entry off and on (added 2026-08-05)
+**Role:** admin (plus a member session to check retrieval)
+**Precondition:** at least one active `comic_knowledge_entries` row exists (accept a contribution via CMC-A1, or use seeded/imported entries).
+
+**Steps:**
+1. Open `/admin` and tap **AI Knowledge Base** (lands on `/admin/comic/knowledge`).
+2. Read the list; use the `all` / `active` / `inactive` pills.
+3. Switch one entry **off**, then ask the assistant a question whose only grounding is that entry.
+4. Switch the same entry back **on**.
+5. As a non-admin, open `/admin/comic/knowledge` directly and call `PUT /api/comic/admin/knowledge/<id>`.
+
+**Expected:**
+- Step 2: entries list newest-first with source, type, title/question, a content snippet, active state, and an "N of M entries active" summary; the pills filter and the counts follow.
+- Step 3: the toggle saves without a page reload (the row shows "off" and dims); the assistant's draft for that question no longer quotes the switched-off entry (retrieval skips inactive rows). The row is NOT deleted.
+- Step 4: the entry is active again and retrievable — off/on is reversible.
+- Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐
 

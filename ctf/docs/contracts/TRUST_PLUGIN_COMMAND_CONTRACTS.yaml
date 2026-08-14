@@ -2,7 +2,7 @@ contracts:
   - pluginId: trust
     command: trust.summary.read
     version: 1.0.0
-    description: Read a member's trust panel (status, derived evidence, visibility). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]; cross-user reads enforce the subject's trustVisibility.
+    description: Read a member's trust panel (status, derived evidence). Implemented by GET /api/trust/user/self and GET /api/trust/user/[userId]. The disclosure level is fixed in code, not by any member setting - the owner and admins read full, every other member reads the summary projection. No read is refused.
     inputSchema:
       subjectUserId:
         type: string
@@ -16,14 +16,16 @@ contracts:
     outputSchema:
       userId:
         type: string
-      trustStatus:
-        type: string
       trustEvidence:
         type: array
-      trustVisibility:
-        type: string
       updatedAt:
         type: string
+      trustDisclosure:
+        type: string
+        enum:
+          - full
+          - summary
+        description: Which projection the viewer received. summary carries headline counts only — no timestamps, no supporting detail, per-plugin items collapsed to a single breadth line.
     dataAccess:
       - trust_user_extension
       - trust_signal_snapshot
@@ -32,70 +34,9 @@ contracts:
     idempotency: true
 
   - pluginId: trust
-    command: trust.visibility.update
-    version: 1.0.0
-    description: Update the caller's own trust visibility (self-scope only). Implemented by POST /api/trust/visibility.
-    inputSchema:
-      trustVisibility:
-        type: string
-        required: true
-        enum:
-          - public
-          - private
-          - restricted
-    outputSchema:
-      userId:
-        type: string
-      trustVisibility:
-        type: string
-      updatedAt:
-        type: string
-    dataAccess:
-      - trust_user_extension
-      - trust_admin_audit_trail
-    purpose: privacy_safety_preference_update
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: trust
-    command: trust.admin.verification.review
-    version: 1.0.0
-    description: Admin-only decision setting a target user's Trust status to verified or flagged, with an appended admin evidence note. Implemented by POST /api/trust/admin/verification.
-    inputSchema:
-      targetUserId:
-        type: string
-        required: true
-      trustStatus:
-        type: string
-        required: true
-        enum:
-          - verified
-          - flagged
-      note:
-        type: string
-        required: false
-    outputSchema:
-      userId:
-        type: string
-      trustStatus:
-        type: string
-      trustEvidence:
-        type: array
-      updatedAt:
-        type: string
-      reviewedByUserId:
-        type: string
-    dataAccess:
-      - trust_user_extension
-      - trust_admin_audit_trail
-    purpose: trust_verification_moderation
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: trust
     command: trust.signal.snapshot.refresh
-    version: 1.3.0
-    description: Recompute the CALLER's trust signal from real cross-plugin engagement across every applicable plugin (login frequency; SocketRelay trades/requests; ServiceCredits received; accepted/completed/claimed participation in LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, and Contributions; Foundation connections where the member is the provider — provider side only; and the count of DISTINCT members with a confirmed recurring activity, either side, from recurring_activities), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs (never amounts, balances, or sensitive per-row detail) and produces no numeric score. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood, Unlock) and the Foundation seeker side are excluded by design. Never changes trustStatus. Implemented by POST /api/trust/signal/snapshot.
+    version: 1.4.0
+    description: Recompute the CALLER's trust signal from real cross-plugin engagement across every applicable plugin (sign-in history — the all-time count of days the member signed in on, plus their current unbroken run of consecutive sign-in days, which counts only while it reaches today or yesterday; SocketRelay trades/requests; ServiceCredits received; accepted/completed/claimed participation in LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, and Contributions; Foundation connections where the member is the provider — provider side only; and the count of DISTINCT members with a confirmed recurring activity, either side, from recurring_activities), persist a snapshot row, and refresh derived evidence. Reads only coarse COUNTs (never amounts, balances, or sensitive per-row detail) and produces no numeric score. Privacy-sensitive personal-wellbeing/verification plugins (ClickLog, Mood, Unlock) and the Foundation seeker side are excluded by design. Implemented by POST /api/trust/signal/snapshot.
     inputSchema: {}
     outputSchema:
       snapshotId:
@@ -104,13 +45,9 @@ contracts:
         type: string
       metrics:
         type: object
-        description: Real counts derived from upstream plugins (login*, socketRelay*, serviceCredits*, lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelUpCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed).
+        description: Real counts derived from upstream plugins (login* including loginDays and loginStreakDays, socketRelay*, serviceCredits*, lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelUpCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed).
       trustEvidence:
         type: array
-      trustStatus:
-        type: string
-      trustVisibility:
-        type: string
     dataAccess:
       - trust_signal_snapshot
       - trust_user_extension

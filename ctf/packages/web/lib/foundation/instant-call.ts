@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { sendWebPushToUser } from 'lib/notifications/push';
 import { sendExpoPushToUser } from 'lib/notifications/expo-push';
 import { reportError } from 'lib/observability/report';
-import { createTransfer, getOrCreateWallet } from 'lib/service-credits/repository';
+import { createTransfer, getOrCreateWallet } from 'lib/shared/credits-interface';
 import {
   FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS,
   FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
@@ -369,6 +370,12 @@ export async function ringInstantCall(input: {
 
     // Resolve the callee and run the ring pre-check (billing enabled + caller can fund the first block).
     const calleeUserId = await resolveRingTarget(client, input.threadId, input.callerUserId);
+
+    // Block check (issue #809 task 4): a block created after the thread existed still stops new
+    // calls between the pair. The route maps blocked_pair to neutral copy.
+    if (await isBlockedBetweenTx(client, input.callerUserId, calleeUserId)) {
+      throw new Error('blocked_pair');
+    }
 
     const ringExpiresAt = new Date(Date.now() + FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS * 1000);
     const streamCallId = `foundation-call-${randomUUID()}`;
