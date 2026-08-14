@@ -22,7 +22,20 @@ const RESOLVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
 // How many file-local helpers one round of the "what does this declaration call?" pass may add per
 // dependency file. Bounded so a densely-cross-referenced module cannot pull in most of itself.
-const MAX_LOCAL_HELPERS = 12;
+const MAX_LOCAL_HELPERS = Number(process.env.CODE_REVIEW_HELPERS_PER_ROUND || '12');
+
+// How many times to follow calls outward from the requested declarations.
+//
+// Measured on the commons slice against lib/feed/repository.ts, and one round wins: a second round
+// spends the file's share of the budget on helpers two calls deep, which pushed a whole dependency
+// out of the run and still did not reach the private loaders at the end of the chain. A 111 KB
+// module's call graph does not fit at any budget worth paying, so the reviewer is told to leave a
+// finding out when it cannot see a definition rather than to guess. Overridable for tuning.
+const MAX_HELPER_ROUNDS = Number(process.env.CODE_REVIEW_HELPER_ROUNDS || '1');
+
+// Ceiling on a single captured declaration. Real functions in this codebase sit far below it; the
+// value exists so a declaration the scanner fails to terminate cannot spend the whole budget.
+const MAX_DECLARATION_BYTES = 8_000;
 
 // Identifiers that appear in extracted code but are never a file-local helper worth chasing.
 const IDENTIFIER_STOPWORDS = new Set([
@@ -43,12 +56,11 @@ function isFile(path) {
   }
 }
 
-function sizeOf(path) {
-  try {
-    return statSync(path).size;
-  } catch {
-    return Number.MAX_SAFE_INTEGER;
-  }
+// Cut text at the last line boundary at or before `limit`, so a shortened extract still ends on a
+// whole line rather than mid-token.
+function trimToLine(text, limit) {
+  const cut = text.lastIndexOf('\n', limit);
+  return cut > 0 ? text.slice(0, cut) : text.slice(0, limit);
 }
 
 // Try a resolved path as-is, then with each source extension, then as a directory index.
@@ -151,12 +163,16 @@ function declarationEnd(text, startIdx) {
   while (i < text.length) {
     const ch = text[i];
     const next = text[i + 1];
-    if (ch === '/' && next === '/') {
+    // An escaped slash belongs to a regular expression, not a comment. Without this guard a
+    // pattern like /https?:\/\//g reads as "// comment", the rest of its line is skipped, and the
+    // brackets that line closes are never counted — so the declaration never ends and one helper
+    // swallows the whole file.
+    if (ch === '/' && next === '/' && text[i - 1] !== '\\') {
       const nl = text.indexOf('\n', i);
       i = nl === -1 ? text.length : nl;
       continue;
     }
-    if (ch === '/' && next === '*') {
+    if (ch === '/' && next === '*' && text[i - 1] !== '\\') {
       const close = text.indexOf('*/', i + 2);
       i = close === -1 ? text.length : close + 2;
       continue;
@@ -182,15 +198,44 @@ function declarationEnd(text, startIdx) {
       entered = true;
     } else if (ch === '}' || ch === ')' || ch === ']') {
       depth -= 1;
-      if (depth <= 0 && entered && ch === '}') {
-        return i + 1;
+      // A closing brace only ends the declaration when it closes the OUTERMOST group and stands at
+      // the end of its own line. Requiring that is what separates a body from a signature: a return
+      // type such as `Promise<{ items: X[] }>` closes its brace mid-line, with `> {` still to come,
+      // and treating that as the end used to cut the function off at its signature — the body, and
+      // every helper it called, never reached the reviewer at all.
+      if (depth <= 0 && entered && ch === '}' && closesLine(text, i)) {
+        return text[i + 1] === ';' ? i + 2 : i + 1;
       }
     } else if (ch === ';' && depth <= 0) {
       return i + 1;
     }
+    if (i - startIdx > MAX_DECLARATION_BYTES) {
+      // Backstop. This scanner is a heuristic, not a TypeScript parser, so a construct it misreads
+      // could leave brackets unbalanced and run to the end of the file — which is how one helper
+      // once contributed 100 KB of a 111 KB module. Cut at the last line boundary instead, so a
+      // misread costs one truncated declaration rather than the whole budget.
+      const lastNewline = text.lastIndexOf('\n', startIdx + MAX_DECLARATION_BYTES);
+      return lastNewline > startIdx ? lastNewline : startIdx + MAX_DECLARATION_BYTES;
+    }
     i += 1;
   }
   return text.length;
+}
+
+// True when nothing but an optional `;` and whitespace follows this position on its line, so the
+// brace is the last thing on the line rather than a step in a longer type expression.
+function closesLine(text, idx) {
+  let i = idx + 1;
+  if (text[i] === ';') {
+    i += 1;
+  }
+  while (i < text.length && text[i] !== '\n') {
+    if (text[i] !== ' ' && text[i] !== '\t' && text[i] !== '\r') {
+      return false;
+    }
+    i += 1;
+  }
+  return true;
 }
 
 // Walk backward over the comment block directly above a declaration. The "why" comments in this
@@ -268,13 +313,23 @@ export function extractSymbols(fileText, names) {
   if (spans.length === 0) {
     return { text: '', names: [] };
   }
-  const firstPass = spans.map(([s, e]) => fileText.slice(s, e)).join('\n');
-  for (const helper of localHelpersIn(firstPass, fileText, taken)) {
-    const span = findDeclaration(fileText, helper);
-    if (span) {
-      spans.push(span);
-      taken.add(helper);
+  // Follow calls outward from the requested declarations, a round at a time. One round is not
+  // enough in practice: a route calls an exported function, that function delegates to a private
+  // loader, and the answer to "is this actually correct?" sits in what the loader does. Each round
+  // only scans what the previous round added, and both the round count and the per-round helper cap
+  // are bounded, so this widens the extract without letting it walk the whole module.
+  let frontier = spans.map(([start, end]) => fileText.slice(start, end)).join('\n');
+  for (let round = 0; round < MAX_HELPER_ROUNDS && frontier; round += 1) {
+    const added = [];
+    for (const helper of localHelpersIn(frontier, fileText, taken)) {
+      const span = findDeclaration(fileText, helper);
+      if (span) {
+        spans.push(span);
+        taken.add(helper);
+        added.push(fileText.slice(span[0], span[1]));
+      }
     }
+    frontier = added.join('\n');
   }
   // Source order, with overlapping spans merged so a helper declared inside a captured range is
   // not emitted twice.
@@ -302,7 +357,16 @@ export function collectDependencyContext(fileList, options) {
   // ones contribute only what the slice imports. Kept low deliberately: a mid-size module asking for
   // its full text buys far less per byte than the same budget spread over several files' relevant
   // declarations, and crowding out a small type definition is what loses an argument outright.
-  const { repoRoot, maxBytes, wholeFileMaxBytes = 12_000 } = options;
+  // No single dependency may take more than a quarter of the budget. Once declarations carry their
+  // bodies rather than just their signatures, the largest module will happily spend everything —
+  // and the files it pushes out are the small type definitions and helpers that answer a question
+  // in a few hundred bytes. Breadth across the dependency set beats depth in any one file.
+  const {
+    repoRoot,
+    maxBytes,
+    wholeFileMaxBytes = 12_000,
+    perFileMaxBytes = Math.max(8_000, Math.floor(maxBytes / 4)),
+  } = options;
   const sliceFiles = new Set(fileList.map((f) => f.rel));
   const wanted = new Map();
 
@@ -337,18 +401,12 @@ export function collectDependencyContext(fileList, options) {
   // Most-depended-on first, then smallest first, then path for a stable order. Plain alphabetical
   // ordering let one large module spend the budget and push out small, high-value files — the type
   // definitions that settle a question outright are usually the cheapest bytes in the set.
-  const ordered = [...wanted.values()]
-    .map((entry) => ({ ...entry, size: sizeOf(entry.abs) }))
-    .sort((a, b) => (
-      b.importers - a.importers
-      || a.size - b.size
-      || (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0)
-    ));
-  let text = '';
-  const files = [];
-  let skipped = 0;
-
-  for (const entry of ordered) {
+  // Work out what each dependency would actually contribute BEFORE choosing what fits. Ordering by
+  // raw file size gets this wrong in the case that matters: a 17 KB module whose extract is 2 KB
+  // loses its place to a smaller file that contributes more, and the declaration the reviewer
+  // needed never arrives.
+  const candidates = [];
+  for (const entry of wanted.values()) {
     let body;
     try {
       body = readFileSync(entry.abs, 'utf8');
@@ -359,22 +417,43 @@ export function collectDependencyContext(fileList, options) {
     if (body.length > wholeFileMaxBytes && !entry.whole && entry.names.size > 0) {
       const extracted = extractSymbols(body, [...entry.names]);
       if (extracted.text.length === 0) {
-        skipped += 1;
         continue;
       }
       body = extracted.text;
       note = ` (only the declarations this slice imports, plus their local helpers: ${extracted.names.join(', ')})`;
     } else if (body.length > wholeFileMaxBytes) {
       // Wanted whole (namespace/default import) but too big to afford in full.
-      body = `${body.slice(0, wholeFileMaxBytes)}\n... (truncated) ...`;
+      body = `${trimToLine(body, wholeFileMaxBytes)}\n... (truncated) ...`;
       note = ' (truncated)';
     }
-    const header = `\n----- IMPORTED BY THIS SLICE: ${entry.rel}${note} -----\n`;
-    if (text.length + header.length + body.length > maxBytes) {
+    if (body.length > perFileMaxBytes) {
+      body = `${trimToLine(body, perFileMaxBytes)}\n... (this file's share of the reference budget ends here) ...`;
+      note += ' (shortened)';
+    }
+    candidates.push({
+      rel: entry.rel,
+      importers: entry.importers,
+      body,
+      header: `\n----- IMPORTED BY THIS SLICE: ${entry.rel}${note} -----\n`,
+    });
+  }
+
+  // Most-depended-on first, then cheapest contribution first, then path for a stable order.
+  candidates.sort((a, b) => (
+    b.importers - a.importers
+    || a.body.length - b.body.length
+    || (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0)
+  ));
+
+  let text = '';
+  const files = [];
+  let skipped = 0;
+  for (const entry of candidates) {
+    if (text.length + entry.header.length + entry.body.length > maxBytes) {
       skipped += 1;
       continue;
     }
-    text += header + body;
+    text += entry.header + entry.body;
     files.push(entry.rel);
   }
 
