@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, MapPin } from "lucide-react";
-import Link from "next/link";
+import { PluginUserShellButton } from "@/components/shared/plugin-user-shell-button";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import type { SharedIncidentTagTrend, SharedIncidentTrendBucket } from "../../lib/click-log/types";
 import { problemTagLabel, schemeTagLabel } from "../../lib/click-log/tags";
@@ -93,7 +93,7 @@ export function ClickLogAdminTrends() {
         icon={<AlertTriangle size={18} color={ACCENT} />}
         accent={ACCENT}
         backHref="/admin"
-        actions={<Link href="/apps/click-log" style={{ fontSize: 12, color: SUBTLE, textDecoration: "none" }}>Member view</Link>}
+        actions={<PluginUserShellButton href="/apps/click-log" accent={ACCENT} />}
       />
       <div style={{ padding: 16, maxWidth: 560, margin: "0 auto" }}>
         {loading && <div style={{ color: SUBTLE, fontSize: 13, padding: "32px 0", textAlign: "center" }}>Loading trends…</div>}
