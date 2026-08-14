@@ -4,7 +4,13 @@ import { useState } from "react";
 import type { ClickLogIncident } from "../../lib/click-log/types";
 import { MAX_NOTES_LENGTH, MAX_TAGS_PER_KIND } from "../../lib/click-log/constants";
 import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS, NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
-import { formatIncidentTime, hasLocation, type ClickLogTokens } from "./click-log-shared";
+import {
+  CLICK_LOG_PROBLEM_REFERENCE,
+  CLICK_LOG_SCHEME_REFERENCE,
+  formatIncidentTime,
+  hasLocation,
+  type ClickLogTokens,
+} from "./click-log-shared";
 import { ClickLogTagPicker } from "./click-log-tag-picker";
 
 // What an edit can change. Tag lists use [] for untagged (picker convention).
@@ -54,6 +60,7 @@ function EditorTagSection({
         values={problemTags}
         options={CLICK_LOG_PROBLEM_TAGS}
         maxSelected={MAX_TAGS_PER_KIND}
+        reference={CLICK_LOG_PROBLEM_REFERENCE}
         tokens={t}
         onChange={onProblemTagsChange}
       />
@@ -63,6 +70,7 @@ function EditorTagSection({
         values={schemeTags}
         options={schemeOptions}
         maxSelected={MAX_TAGS_PER_KIND}
+        reference={CLICK_LOG_SCHEME_REFERENCE}
         tokens={t}
         onChange={onSchemeTagsChange}
       />
