@@ -10,10 +10,12 @@ export type ClickLogIncident = {
   metadata: IncidentMetadata;
   // Whether the member opted to share this incident with the owner for aggregate trends.
   shared_with_owner: boolean;
-  // Optional coarse tags: which known problem happened / which named scheme was used.
-  // Values are slugs from lib/click-log/tags.ts (validated on create); null when untagged.
-  problem_tag: string | null;
-  scheme_tag: string | null;
+  // Optional coarse tags: which known problems happened / which named schemes were used.
+  // Arrays (owner decision, 2026-08-13): a real incident routinely chains several schemes, so
+  // one tag per kind never fit. Values are slugs from lib/click-log/tags.ts (each validated on
+  // create/edit, capped at MAX_TAGS_PER_KIND per kind); empty arrays when untagged.
+  problem_tags: string[];
+  scheme_tags: string[];
   created_at: string;
 };
 
@@ -21,19 +23,19 @@ export type CreateIncidentInput = {
   userId: string;
   metadata: IncidentMetadata;
   sharedWithOwner: boolean;
-  problemTag?: string;
-  schemeTag?: string;
+  problemTags?: string[];
+  schemeTags?: string[];
 };
 
-// Edit of an existing incident (owner decision, 2026-08-13): the note and the two tags may be
-// changed after logging; the date and location are immutable, so they are absent here. null
-// clears a field (note removed / tag removed).
+// Edit of an existing incident (owner decision, 2026-08-13): the note and the tag lists may be
+// changed after logging; the date and location are immutable, so they are absent here. A null
+// note removes it; an empty tag array means untagged.
 export type UpdateIncidentInput = {
   id: string;
   userId: string;
   notes: string | null;
-  problemTag: string | null;
-  schemeTag: string | null;
+  problemTags: string[];
+  schemeTags: string[];
 };
 
 // Per-member ClickLog preferences (click_log_preferences). shareWithOwner is the global default

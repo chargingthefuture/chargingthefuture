@@ -39,21 +39,25 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
   -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
-  -- Optional incident tags (2026-08-02): a member may say which of the 50+ known problems
-  -- happened (problem_tag — slugs mirror the landing-page problems list) and/or which named
-  -- scheme was used (scheme_tag — slugs from the owner's "A post for each gang stalker game"
-  -- Discourse thread). Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API
-  -- validates against them. Real columns (not metadata) so they are excluded from the
-  -- metadata_hash dedupe — mirroring shared_with_owner — and so the shared-trends aggregate can
-  -- project them as coarse categorical values without touching the metadata JSON.
+  -- Optional incident tags (2026-08-02; arrays since 2026-08-13 — see schema.sql for the full
+  -- note). The singular problem_tag/scheme_tag columns are superseded by the arrays: backfilled,
+  -- kept for history, no longer read or written by the app.
   problem_tag TEXT,
   scheme_tag TEXT,
+  problem_tags TEXT[] NOT NULL DEFAULT '{}',
+  scheme_tags TEXT[] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tags TEXT[] NOT NULL DEFAULT '{}';
+UPDATE click_log_incidents SET problem_tags = ARRAY[problem_tag]
+  WHERE problem_tag IS NOT NULL AND problem_tags = '{}';
+UPDATE click_log_incidents SET scheme_tags = ARRAY[scheme_tag]
+  WHERE scheme_tag IS NOT NULL AND scheme_tags = '{}';
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 -- Partial index for the admin trends aggregate, which only ever reads shared rows.

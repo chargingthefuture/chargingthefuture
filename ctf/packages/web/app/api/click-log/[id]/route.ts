@@ -117,7 +117,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
 // Edits an incident's note and tags (owner decision, 2026-08-13). The date and location are
 // immutable — they anchor the trend data and a location cannot be truthfully added after the
-// fact — so the body carries only { notes, problemTag, schemeTag }, each nullable to clear.
+// fact — so the body carries only { notes, problemTags, schemeTags }; a null note clears it
+// and an absent/empty tag list untags that kind.
 // Only the member who logged the incident may edit it (authorizeEdit — no admin override).
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const csrfDenied = ensureMutationCsrf(request);

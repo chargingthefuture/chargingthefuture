@@ -246,3 +246,5 @@ of these, it is already tracked, not a new bug:
 > _Tag list update (2026-08-13): added schemes "The Engineered Delay", "The Altered Ticket", "The Pretext Search", "The Planted Witness", and "The Replay", and problems "Trips sabotaged — delays, missed connections, canceled tickets" and "Falsely accused of violence / crimes to bystanders". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
 
 > _Limit change (2026-08-13): the incident note maximum length was raised from 200 to 2,000 characters (`MAX_NOTES_LENGTH`). CL-4's over-length note case still applies at the new limit — no test steps changed._
+
+> _Multi-tag change (2026-08-13): incidents now hold up to 10 problem tags and 10 scheme tags (arrays replace the single tag per kind). CL-7 and CL-9 below: the pickers are multi-select — pick two or more problems and two or more schemes in one incident, confirm every pick shows as its own chip in the selected row, on the history row, and in the editor, and confirm the 11th pick of a kind is refused with the "up to 10" hint. All other rules (tags need a location; "Not listed" keep-or-remove-only on edit) are unchanged._
