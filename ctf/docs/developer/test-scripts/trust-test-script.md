@@ -35,13 +35,26 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 2. **Widget renders on the right rail.** Sign in as admin, open a page that embeds the Trust right-rail card (e.g. account hub or community shell). `TrustWidgetCard` should render — ShieldCheck header visible, no crash, no blank white box. Each evidence row must read as a human sentence (the `summary`, e.g. "Accepted 1 SkillsHunt submission"), **never** a raw type slug like `demo_second_owner` or `Engagement-...`. Any date shown must be a real date — **never** the literal "Invalid Date". (Regression guard: the demo seed previously wrote evidence with no `summary`/`createdAt`, which produced both symptoms.)
    web ☐
 
-3. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
-  
-
-4. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
+3. **Opening Trust from the apps list lands on the account hub.** Signed in as an approved member,
+   open the apps list and tap **Trust** (or go straight to `/apps/trust`). You should end up on
+   `/account` with your trust card on it. You must **not** see a page headed "Plugin baseline access
+   confirmed" listing your user id, username handle, and availability state — that is the generic
+   routing-check view and reaching it from Trust is the bug this step guards.
    web ☐
 
-5. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: How often you sign in, ServiceCredits activity, Community connections, Cohort completion record. Every line must map to a signal `buildTrustEvidence` really emits — "Quora social proof" was removed on 2026-08-10 because no such signal exists (the onboarding Quora check belongs to Unlock). "Admin-reviewed verification" does NOT appear either (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
+4. **Signed-out Trust still shows the public landing page.** In a private window with no session,
+   open `/apps/trust`. You should get the Trust public landing page, not a redirect to the account
+   page and not a sign-in wall. Repeat as a member who has not finished verification: they should
+   also get the landing page, with the "Finish verifying" action.
+   web ☐
+
+5. **Android Trust screen loads.** Open the app as admin. Navigate to the Trust screen. It should reach one of the four states (loading → then populated, empty, or public) without a crash.
+  
+
+6. **Unauthenticated call blocked.** Call `GET /api/trust/user/self` with no auth header. Expect HTTP 401 or 403, never 200.
+   web ☐
+
+7. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: How often you sign in, ServiceCredits activity, Community connections, Cohort completion record. Every line must map to a signal `buildTrustEvidence` really emits — "Quora social proof" was removed on 2026-08-10 because no such signal exists (the onboarding Quora check belongs to Unlock). "Admin-reviewed verification" does NOT appear either (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
    web ☐
 
 ---

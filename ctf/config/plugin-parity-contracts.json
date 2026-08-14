@@ -113,7 +113,7 @@
       "slug": "trust",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
-      "requiresExplicitWebShell": false
+      "requiresExplicitWebShell": true
     },
     {
       "slug": "what-works",
