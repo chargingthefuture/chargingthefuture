@@ -1486,6 +1486,25 @@ export async function listPendingMilestoneValidations(limit = 100): Promise<Leve
   }));
 }
 
+type AdminEnrollmentCountRow = {
+  total: string;
+  current_total: string;
+  current_members: string;
+  completed_total: string;
+};
+
+// Shapes the counted row into the panel's KPI numbers. Split out of getAdminPanelData so that
+// function stays inside the rule-116 complexity limit; every missing value reads as 0.
+function mapAdminEnrollmentKpis(row: AdminEnrollmentCountRow | undefined, avgLeadDays: string | undefined) {
+  return {
+    enrollments: Number(row?.total ?? '0'),
+    activeEnrollments: Number(row?.current_total ?? '0'),
+    membersEnrolled: Number(row?.current_members ?? '0'),
+    completions: Number(row?.completed_total ?? '0'),
+    avgDaysToFirstTrainerPayout: roundCurrency(Number(avgLeadDays ?? '0')),
+  };
+}
+
 export async function getAdminPanelData() {
   const [enrollmentCounts, avgLeadDays, openDisputes, pendingValidations] = await Promise.all([
     // One pass over the enrollment rows for every headline number, so the counts can never disagree
@@ -1493,7 +1512,7 @@ export async function getAdminPanelData() {
     // contributes three), `membersEnrolled` is how many distinct people are in a cohort right now —
     // those are different questions and the panel used to answer only the first while labeling it
     // ambiguously, which is how a row count got read as a headcount.
-    queryDb<{ total: string; current_total: string; current_members: string; completed_total: string }>(
+    queryDb<AdminEnrollmentCountRow>(
       `SELECT
          COUNT(*)::text AS total,
          COUNT(*) FILTER (WHERE status IN ('enrolled', 'active'))::text AS current_total,
@@ -1518,13 +1537,7 @@ export async function getAdminPanelData() {
   ]);
 
   return {
-    kpis: {
-      enrollments: Number(enrollmentCounts.rows[0]?.total ?? '0'),
-      activeEnrollments: Number(enrollmentCounts.rows[0]?.current_total ?? '0'),
-      membersEnrolled: Number(enrollmentCounts.rows[0]?.current_members ?? '0'),
-      completions: Number(enrollmentCounts.rows[0]?.completed_total ?? '0'),
-      avgDaysToFirstTrainerPayout: roundCurrency(Number(avgLeadDays.rows[0]?.avg_days ?? '0')),
-    },
+    kpis: mapAdminEnrollmentKpis(enrollmentCounts.rows[0], avgLeadDays.rows[0]?.avg_days),
     openDisputes,
     pendingValidations,
   };
