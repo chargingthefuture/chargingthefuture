@@ -1547,9 +1547,15 @@ CREATE TABLE IF NOT EXISTS level_up_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   user_id TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('active', 'completed', 'dropped', 'pending')),
+  -- 'enrolled' is the value the enrollment insert actually writes; it was missing from this list, so
+  -- on a brand-new database every enrollment failed the check while the long-running database (whose
+  -- table predates this block) accepted them. 'active' stays for the rows written before the value
+  -- changed — both count as a live enrollment everywhere in the code.
+  status TEXT NOT NULL CHECK (status IN ('enrolled', 'active', 'completed', 'dropped', 'pending')),
   credits_deposited INTEGER NOT NULL DEFAULT 0,
   assigned_trainer_id TEXT,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  progress_percent NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cohort_id, user_id)
@@ -1560,6 +1566,11 @@ ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
+-- enrolled_at: when the member joined. It exists on the long-running database (it came over with the
+-- legacy `levelup_enrollments` table) but was never declared here, so a database built from this file
+-- lacked it while three live reads order or measure by it — the admin lead-time number, the trainer
+-- trainee list, and the member's own enrollment list.
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Add unique constraint if not exists (Postgres 15+)

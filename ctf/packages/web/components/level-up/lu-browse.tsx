@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CheckCircle, Search, Users } from "lucide-react";
+import { BookMarked, BookOpen, CheckCircle, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getLevelUpTokens, type Cohort } from "./lu-shared";
 import { LevelUpCohortCard } from "./lu-cohort-card";
@@ -9,6 +9,7 @@ export function LevelUpBrowse({
   cohorts,
   openCount,
   enrolledCount,
+  enrolledCountError,
   escrow,
   search,
   onSearch,
@@ -20,6 +21,7 @@ export function LevelUpBrowse({
   cohorts: Cohort[];
   openCount: number;
   enrolledCount: number;
+  enrolledCountError: string | null;
   escrow: number;
   search: string;
   onSearch: (value: string) => void;
@@ -30,9 +32,13 @@ export function LevelUpBrowse({
 }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
+  // All three cards are about you, not about the whole site: how many cohorts are open to join, how
+  // many you are in, and how many of your credits are held. The middle card used to read just
+  // "Enrolled" next to a people icon, which invited reading it as a count of everyone enrolled
+  // site-wide (owner report). It is your own count, so it says so.
   const stats = [
     { label: "Open Cohorts", value: String(openCount), icon: BookOpen, color: t.ACCENT },
-    { label: "Enrolled", value: String(enrolledCount), icon: Users, color: "#3B82F6" },
+    { label: "My Cohorts", value: enrolledCountError ? "—" : String(enrolledCount), icon: BookMarked, color: "#3B82F6" },
     { label: "In Escrow", value: `${escrow.toLocaleString()} SC`, icon: CheckCircle, color: "#F59E0B" },
   ];
 
@@ -63,6 +69,13 @@ export function LevelUpBrowse({
             style={{ background: "transparent", border: "none", outline: "none", fontSize: 12, color: t.TEXT_BODY, width: 140 }} />
         </div>
       </div>
+
+      {enrolledCountError && (
+        <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", fontSize: 13, color: "#F59E0B" }}>
+          Could not read the cohorts you are in ({enrolledCountError}), so &ldquo;My Cohorts&rdquo; shows a dash and a
+          cohort you already joined may still offer an Enroll button. Refresh to try again.
+        </div>
+      )}
 
       {enrollError && (
         <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 13, color: "#EF4444" }}>

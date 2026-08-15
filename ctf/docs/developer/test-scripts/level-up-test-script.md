@@ -119,7 +119,31 @@ Result: web ☐
 **Expected:**
 - Enrollment succeeds — the button flips to "✓ Enrolled" and **no** "Invalid LevelUp payload." error banner appears.
 - Wallet balance is unchanged and no escrow is held (a free cohort deposits nothing).
-- The Enrolled stat count increases by one.
+- The **My Cohorts** stat count increases by one.
+
+Result: web ☐
+
+---
+
+### LU-3c — Your cohorts survive leaving and coming back
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member who is already enrolled in at least one cohort (complete LU-3 or LU-3b first, then navigate away from LevelUp entirely).
+
+**Steps:**
+1. Open `/apps/level-up` fresh (a full page reload, not a tab switch).
+2. Read the **My Cohorts** card on Browse.
+3. Find the cohort you enrolled in earlier in the cohort list.
+4. Open the **Progress** tab.
+
+**Steps to check the failure case:**
+5. Block or fail `GET /api/level-up/enrollments` (offline, or block the request in the browser tools) and reload.
+
+**Expected:**
+- **My Cohorts** shows the number of cohorts you are in — not 0. It counts only live ones: a cohort you completed or left is not in it.
+- The cohort you already joined shows "✓ Enrolled" and offers no Enroll button.
+- Progress lists each cohort with its milestone count (for example "2/5") and your trainer's name; it does not say "Not enrolled yet". A finished cohort with no milestones reads "Completed" and one you left reads "You left this cohort".
+- In the failure case: **My Cohorts** shows a dash (—) and a note says the cohorts you are in could not be read and to refresh. It never shows "0", which would look like you are not enrolled anywhere.
 
 Result: web ☐
 
@@ -338,7 +362,9 @@ Result: web ☐
 3. Inspect the cohort overview table below.
 
 **Expected:**
-- KPI cards show enrollments, completions, and avg days to first trainer payout (values may be 0 for a fresh seed; they must not be blank or "undefined").
+- KPI cards show **Members in a cohort now**, **Active enrollments**, **Enrollments, all time**, **Completions**, and **Avg days to first trainer credit grant** (values may be 0 for a fresh seed; they must not be blank or "undefined").
+- The three enrollment numbers agree with each other: "Members in a cohort now" is never larger than "Active enrollments", and "Active enrollments" is never larger than "Enrollments, all time".
+- Cross-check against the member side: enroll one member in two cohorts, then reload this page. "Active enrollments" goes up by two and "Members in a cohort now" goes up by one — a row count and a headcount, not the same number under two names.
 - Cohort overview table shows title, track, status, seats open, required deposit, trainer split, and completion bonus for the seed cohort.
 - The page uses the shared dark admin design system (dark tokens, icon header with ADMIN badge).
 

@@ -1274,6 +1274,63 @@ export async function getUserDashboardData(userId: string) {
   };
 }
 
+// The signed-in member's own enrollments, with a milestone tally per row.
+//
+// Why this exists: the member shell used to hold enrollments only in React state, so it knew about an
+// enrollment only if you made it in that same visit. On a fresh page load the member saw "0 enrolled"
+// and an empty Progress tab while the admin panel counted the very same rows — the mismatch the owner
+// reported. This is the read that lets the member side count from the same table the admin counts.
+//
+// `enrolled`/`active` are the two statuses a live enrollment carries (`enrolled` is what
+// `createEnrollmentDraftTx` writes; `active` is the legacy value); `completed` and `dropped` are the
+// terminal ones. All are returned — the caller decides what to show — and `isCurrent` marks the live
+// ones so a count of "cohorts I am in" never quietly includes one I dropped.
+export async function listMemberEnrollments(userId: string) {
+  const result = await queryDb<{
+    enrollment_id: string;
+    cohort_id: string;
+    status: string;
+    title: string;
+    track: string;
+    trainer_name: string | null;
+    milestone_total: number;
+    milestone_completed: number;
+  }>(
+    `SELECT
+       n.id::text AS enrollment_id,
+       n.cohort_id::text AS cohort_id,
+       n.status,
+       c.title,
+       c.track,
+       t.display_name AS trainer_name,
+       COUNT(e.milestone_id)::int AS milestone_total,
+       COUNT(*) FILTER (WHERE v.status IN ('validated', 'released'))::int AS milestone_completed
+     FROM level_up_enrollments n
+     JOIN level_up_cohorts c ON c.id = n.cohort_id
+     LEFT JOIN level_up_trainers t ON t.user_id = n.assigned_trainer_id
+     LEFT JOIN level_up_enrollment_milestone_escrows e ON e.enrollment_id = n.id
+     LEFT JOIN level_up_milestone_validations v
+       ON v.enrollment_id = e.enrollment_id AND v.milestone_id = e.milestone_id
+     WHERE n.user_id = $1
+     GROUP BY n.id, n.cohort_id, n.status, n.enrolled_at, c.title, c.track, t.display_name
+     ORDER BY n.enrolled_at DESC
+     LIMIT 50`,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({
+    enrollmentId: row.enrollment_id,
+    cohortId: row.cohort_id,
+    status: row.status,
+    isCurrent: row.status === 'enrolled' || row.status === 'active',
+    title: row.title,
+    track: row.track,
+    trainerName: row.trainer_name,
+    milestoneTotal: Number(row.milestone_total),
+    milestoneCompleted: Number(row.milestone_completed),
+  }));
+}
+
 export async function getTrainerDashboardData(trainerUserId: string) {
   const [cohorts, pendingValidations, trainees, payouts] = await Promise.all([
     queryDb<{ id: string; title: string; status: string; track: string }>(
@@ -1430,9 +1487,20 @@ export async function listPendingMilestoneValidations(limit = 100): Promise<Leve
 }
 
 export async function getAdminPanelData() {
-  const [enrollments, completions, avgLeadDays, openDisputes, pendingValidations] = await Promise.all([
-    queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM level_up_enrollments`),
-    queryDb<{ total: string }>(`SELECT COUNT(*)::text AS total FROM level_up_enrollments WHERE status = 'completed'`),
+  const [enrollmentCounts, avgLeadDays, openDisputes, pendingValidations] = await Promise.all([
+    // One pass over the enrollment rows for every headline number, so the counts can never disagree
+    // with each other. `enrollments` is every row ever written (a member who joins three cohorts
+    // contributes three), `membersEnrolled` is how many distinct people are in a cohort right now —
+    // those are different questions and the panel used to answer only the first while labeling it
+    // ambiguously, which is how a row count got read as a headcount.
+    queryDb<{ total: string; current_total: string; current_members: string; completed_total: string }>(
+      `SELECT
+         COUNT(*)::text AS total,
+         COUNT(*) FILTER (WHERE status IN ('enrolled', 'active'))::text AS current_total,
+         COUNT(DISTINCT user_id) FILTER (WHERE status IN ('enrolled', 'active'))::text AS current_members,
+         COUNT(*) FILTER (WHERE status = 'completed')::text AS completed_total
+       FROM level_up_enrollments`,
+    ),
     queryDb<{ avg_days: string }>(
       `WITH first_trainer_payout AS (
          SELECT enrollment_id, MIN(created_at) AS first_payout_at
@@ -1451,8 +1519,10 @@ export async function getAdminPanelData() {
 
   return {
     kpis: {
-      enrollments: Number(enrollments.rows[0]?.total ?? '0'),
-      completions: Number(completions.rows[0]?.total ?? '0'),
+      enrollments: Number(enrollmentCounts.rows[0]?.total ?? '0'),
+      activeEnrollments: Number(enrollmentCounts.rows[0]?.current_total ?? '0'),
+      membersEnrolled: Number(enrollmentCounts.rows[0]?.current_members ?? '0'),
+      completions: Number(enrollmentCounts.rows[0]?.completed_total ?? '0'),
       avgDaysToFirstTrainerPayout: roundCurrency(Number(avgLeadDays.rows[0]?.avg_days ?? '0')),
     },
     openDisputes,
