@@ -127,22 +127,47 @@ Weekly performance metrics are derived from upstream plugin tables (feed, login 
 
 Live numbers: weekly numbers are **always** computed live, matching the V2 dashboard, which aggregated on read for any selected week. There is no "close the week" step and no stored snapshot to wait for. `getWeekMetrics` returns `computeLiveWeekMetrics` (`lib/weekly-performance/live-metrics.ts`) for every week, counting the week window directly from upstream tables. The current week is labeled "Live" and keeps moving (silent 60s polling + focus refetch on web); every earlier week is a settled historical window with no "closed" state. The `weekly_performance_metrics` table and the `weekly-performance.metrics.get` route are unchanged; the read is simply always live (the table is no longer consulted for the dashboard).
 
-The metric set mirrors what V2 captured, **minus everything revenue/financial** (revenue, MRR, ARR, CLV) — V3 is free to end users, so those have no meaning. All metrics are non-financial, scoped to `[week_start, week_start + 7 days)`, and each query is table-existence-guarded so a missing table contributes 0 rather than failing the read:
+The shipped metric set is the one locked on 2026-07-18 in `ctf/docs/developer/PLUGIN_VALUE_METRICS.md`, plus the
+daily-active-members adoption row added 2026-08-15. Nothing revenue/financial is included (revenue, MRR, ARR, CLV)
+— V3 is free to end users, so those have no meaning. Every metric is scoped to
+`[week_start, week_start + 7 days)` unless noted, and each query is table-existence-guarded so a missing table
+contributes 0 rather than failing the read. Card order on the dashboard is the order below.
 
-- `members.total` — distinct members seen up to end of week (cumulative, from `login_events`).
-- `members.new` — members whose first recorded activity falls in the week (`login_events` first-seen).
-- `engagement.active_members` — distinct members active during the week (WAU, `login_events`).
-- `engagement.daily_active` — average daily active over the week's 7 days (DAU, `login_events`).
-- `engagement.monthly_active` — distinct members active in the 30 days ending at week end (MAU, `login_events`).
-- `retention.lapsed_members` — churn proxy: members active the prior week who did not return this week (`login_events`).
-- `engagement.questions_asked` — `feed_questions` created in the week.
-- `engagement.answers_posted` — `feed_answers` created in the week.
-- `community.posts_created` — accepted `feed_community_posts` created in the week.
-- `learning.enrollments_started` — `level_up_enrollments` created in the week.
-- `wellbeing.mood_checkins` — `mood_submissions` in the week (aggregate count only).
-- `wellbeing.mood_average` — average `mood_value` in the week (aggregate only — never an individual reading).
+Goals (state metrics — the current-week read stores a snapshot, past weeks report their stored row):
 
-V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key (the namespace dot is treated as a separator, so `engagement.active_members` reads "Engagement Active Members").
+- `goal.gdp_value_index` — Community Value Index, toward the 300B goal (from the GDP plugin's live report).
+- `goal.workforce_recruited` — active, non-deleted Directory profiles, toward the 2,000,000 goal.
+
+Value delivered (each plugin's defining action, windowed on the event's own timestamp):
+
+- `value.foundation_calls_answered` — answered Foundation calls with at least one block charged (aggregate only, rule 132).
+- `value.socket_relay_requests_fulfilled` — SocketRelay fulfillments the requester closed as successful.
+- `value.trust_transport_trips_completed` — trips both sides confirmed complete.
+- `value.lighthouse_stays_completed` — Lighthouse matches now in `completed`.
+- `value.chyme_tips_sent` — completed ServiceCredits transfers originated by Chyme (never self-to-self).
+- `value.service_credits_peer_sends` — completed direct peer sends originated by ServiceCredits.
+- `value.contributions_confirmed_usd` — confirmed real dollars this week (a sum, not a row count).
+- `value.skills_hunt_nominations_accepted` — nominations a moderator accepted.
+- `value.what_works_tools_approved` / `value.what_works_endorsements_given` — approved tools and endorsements given.
+- `value.level_up_completions` / `value.level_up_trainer_payouts` — completed enrollments and trainer payouts.
+- `value.recurring_ties_confirmed` — ties the counterparty confirmed.
+- `value.peer_programming_active_posters` — distinct members who posted in their cohort.
+- `value.beacon_broadcast_engagement` — distinct (member, broadcast) pairs that reacted or replied on a broadcast's Commons replay post.
+
+Adoption (honest non-value rows):
+
+- `adoption.daily_active_members` — average number of distinct members active on a day of the week, from
+  `login_events`. That table holds at most one row per member per UTC day, so one row is one member-day; the
+  count is still taken as distinct (member, day) pairs so an older database without the once-per-day unique
+  index cannot inflate the average. The divisor is the number of days of the window that have already started
+  (1–7), so the live current week averages over the days it has actually had and every past week divides by 7.
+  Aggregate only — never a per-member figure. This is adoption, not value: signing in is not a plugin's defining
+  action and carries no positive weight in value scoring.
+- `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
+- `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
+- `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
+
+V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.daily_active_members` reads "Daily Active Members".
 
 ## 7) Gaps and Known Technical Debt
 
@@ -153,6 +178,23 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-15: **The dashboard reports daily active members again (owner report: "Weekly performance
+  does not have a state on daily active users").** The 2026-07-18 rebuild dropped every sign-in
+  number, so the dashboard could say what members had done but not how many of them turned up, and
+  the only active-user figure left in the plugin was a rolling last-7-days count the
+  `/current-week` route returns and no screen renders. A new adoption row,
+  `adoption.daily_active_members`, is computed per selected week in
+  `lib/weekly-performance/live-metrics.ts` from `login_events`: the average number of distinct
+  members active on a day of that week, divided by the days of the window that have already started
+  so the live current week is not watered down by days that have not happened yet. It reads as
+  "Daily Active Members" in the Adoption section, joins the week-over-week comparison like every
+  other row, and is aggregate only — never a per-member figure. It sits under Adoption rather than
+  Value on purpose: logging in is not a plugin's defining action and still carries no weight in
+  value scoring. Registered as `wp_adoption_daily_active_members` in
+  `ctf/config/canonical_metrics.yaml`, and `login_events` is added to the `dataAccess` lists of
+  `weekly-performance.metrics.get` and `weekly-performance.comparison.get`. No schema, route, or
+  access-policy change. Section 6's metric list, which still described the pre-2026-07-18 set, is
+  replaced with the shipped one.
 - 2026-08-10: **The week history now starts at the launch week (owner report).** The picker listed
   weeks going back a year, so it offered windows from before the platform existed (Apr 2026 and
   earlier) that could only ever read zero. `listWeeks` (`lib/weekly-performance/repository.ts`) now
