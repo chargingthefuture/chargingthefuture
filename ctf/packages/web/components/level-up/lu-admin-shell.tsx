@@ -810,7 +810,13 @@ export function LevelUpAdminShell({
             height for no new information (owner report, 2026-07-27). */}
         {/* KPIs */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-          <StatBlock label="Enrollments" value={String(kpis.enrollments)} />
+          {/* "Enrollments" on its own was read as a headcount, but it counts enrollment rows — one
+              member in three cohorts is three of them (owner report). Each number now says which
+              question it answers: people currently in a cohort, live enrollments, and every
+              enrollment ever written. */}
+          <StatBlock label="Members in a cohort now" value={String(kpis.membersEnrolled)} />
+          <StatBlock label="Active enrollments" value={String(kpis.activeEnrollments)} />
+          <StatBlock label="Enrollments, all time" value={String(kpis.enrollments)} />
           <StatBlock label="Completions" value={String(kpis.completions)} />
           <StatBlock label="Avg days to first trainer credit grant" value={`${kpis.avgDaysToFirstTrainerPayout} days`} />
         </div>

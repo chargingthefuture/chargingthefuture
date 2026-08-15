@@ -17,6 +17,7 @@
 6. Trainers directory (read-only browse): survivor-advocate trainer profiles with headline, bio, tracks, and active-cohort count.
 7. Achievements (grant-only badges): badge definitions with the signed-in user's earned status. Badges are awarded, never bought or spent.
 8. Credits Wallet (grant-only view): the signed-in user's ServiceCredits balance, total earned through LevelUp, escrow held, and a read-only history of credits earned/granted. Exposes no spend or transfer action.
+9. Your own cohorts, on every visit (2026-08-15). Browse shows **My Cohorts** — how many cohorts you are in right now — and Progress lists each one with its milestone count (for example "2/5") and your trainer's name; a cohort you have already joined shows "✓ Enrolled" instead of an Enroll button. Before this the member screen only remembered cohorts you joined during that same visit, so coming back later showed zero and an empty Progress tab. Finished cohorts read "Completed" and ones you left read "You left this cohort", so the count of cohorts you are in never quietly includes them. If the read fails, the count shows a dash and a note explains that it could not be read — it never shows a "0" that would look like you are not enrolled anywhere.
 
 ## Implemented Trainer Features
 
@@ -34,9 +35,10 @@
 
 1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants ServiceCredits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
 2. Dispute resolution endpoint with optional adjustment transfer.
-3. Admin panel with operational KPIs (enrollments, completions, avg days to first trainer payout) plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
+3. Admin panel with operational KPIs plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/level-up/cohorts`.
 4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
 5. Review queues on the admin panel — **actionable since 2026-08-05** (`lu-review-actions.tsx`): **Open disputes** (`level_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/level-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`level_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/level-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
+6. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `level_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
 
 ## Cohort Proposals from Workforce Gaps (issue #904)
 
@@ -99,6 +101,7 @@ deferred. That future model is where `max_concurrent` becomes load-bearing again
 - `POST /api/level-up/admin/cohort-proposals/[proposalId]/approve` — admin-only; opens a cohort from a pending proposal with a chosen term of 1/3/5 months; CSRF-guarded (per `cohort.proposal_approve` contract).
 - `POST /api/level-up/admin/cohort-proposals/[proposalId]/dismiss` — admin-only; removes a pending proposal from the queue; CSRF-guarded (per `cohort.proposal_dismiss` contract).
 - `POST /api/level-up/enroll` — member or admin only; trainer-only accounts are blocked (per `enrollment.create` contract).
+- `GET /api/level-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/level-up/milestones/[milestoneId]/validate`
 - `POST /api/level-up/milestones/[milestoneId]/release`
 - `POST /api/level-up/transfers` — self-transfer (recipient equals actor) is rejected with 400.
@@ -118,7 +121,7 @@ Core tables:
 1. `level_up_cohorts`
 2. `level_up_curriculum_items`
 3. `level_up_milestones`
-4. `level_up_enrollments`
+4. `level_up_enrollments` — one row per member per cohort (unique on `(cohort_id, user_id)`). Columns: `id` (PK), `cohort_id`, `user_id`, `status`, `credits_deposited`, `assigned_trainer_id`, `enrolled_at`, `progress_percent`, `created_at`, `updated_at`. `status` is `enrolled` on insert (`active` on rows written before the value changed) and moves to `completed` or `dropped`; every read that means "a live enrollment" matches `('enrolled', 'active')`, and both `enrolled` and `pending` are in the check constraint. `enrolled_at` was corrected into `ctf/schema.sql` on 2026-08-15 — it had always existed on the long-running database but a freshly built one lacked it while three reads order or measure by it.
 5. `level_up_enrollment_milestone_escrows`
 6. `level_up_milestone_validations`
 7. `level_up_disbursements`
@@ -189,7 +192,9 @@ the design mockup (`MobileLevelUp.tsx` / `MobileLevelUpEmpty.tsx` / `MobileLevel
 `MobileLevelUpPublic.tsx`), covering loading / empty / main states. Real-data-only: binds
 `GET /api/level-up/cohorts` and `GET /api/service-credits/wallet`; `MockLevelUp.tsx` retired.
 Unbacked mockup elements omitted: `trainerName`, `tags`, `milestoneCount` (not returned by cohorts
-list endpoint); active-enrollment banner (no user-enrollment GET endpoint yet).
+list endpoint); active-enrollment banner (no user-enrollment GET endpoint at the time). The web shell
+gained that read on 2026-08-15 (`GET /api/level-up/enrollments`); the Android screen still does not
+call it — LevelUp is off the Android keep-list per rule 105, so the web app is its only surface.
 
 Trainers / Achievements / Credits Wallet (2026-06-07): the three former "coming soon" sidebar sections
 are now real, backed surfaces on web and Android. Web: `lu-trainers.tsx`, `lu-achievements.tsx`,
@@ -228,12 +233,10 @@ that exist today.
 
 0. **The member has no in-app way to OPEN a dispute, and a non-admin trainer has no in-app
    validate/release/claim surface.** (History-checked 2026-08-05: never built on any platform.)
-   The admin side became actionable 2026-08-05 (see Admin Features #5), but the member-side dispute
-   form is blocked on a missing own-enrollments read endpoint — the member shell only knows about
-   enrollments made in the current session (the same missing `GET` noted in the delivery-status
-   "active-enrollment banner" line), so a member who enrolled earlier has no enrollment to attach a
-   dispute to. Order of work when built: add the own-enrollments read route (+ contract), then the
-   dispute form on the Progress tab, then the trainer surface (which can reuse
+   The admin side became actionable 2026-08-05 (see Admin Features #5). The blocker named here — a
+   missing own-enrollments read — was cleared on 2026-08-15 by `GET /api/level-up/enrollments`, which
+   gives the Progress tab a real `enrollmentId` per row to attach a dispute to. Remaining order of
+   work: the dispute form on the Progress tab, then the trainer surface (which can reuse
    `getTrainerDashboardData` behind a trainer-gated read route).
 1. Dispute attachment storage uses URL metadata only (no secure file storage backend). This is a known limitation; full storage integration is a future optimization.
 2. No admin KPI read endpoint exists; the web admin page renders KPIs from server-side `getAdminPanelData()` and the Android admin screen has no KPI cards (no GET route to call). Add a `GET /api/level-up/admin/kpis` route to give the mobile screen the same KPI cards as web.
@@ -243,6 +246,34 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-15: **The admin and the member now count the same enrollment rows (owner report: "admin
+  says 3 people enrolled but the member side says 3 cohorts are open, not members").** Three separate
+  causes, all fixed here.
+  (1) *The member side could not see its own enrollments at all.* No route returned them, so the shell
+  held them in React state only: the Browse count and the Progress tab were correct for a cohort you
+  joined in that same visit and empty on every later visit, and a cohort you were already in still
+  offered an Enroll button. New read `GET /api/level-up/enrollments` (`listMemberEnrollments`, scoped
+  to the caller by user id, capped at 50, newest first) returns each enrollment with its cohort title
+  and track, the assigned trainer's name, the status, an `isCurrent` flag, and a milestone tally. The
+  shell loads it with the cohorts and seeds the already-enrolled set from it; a failure there shows a
+  dash and a plain note instead of a "0". New `enrollment.list` command and access-policy contracts.
+  (2) *The one admin number was labeled ambiguously and counted every row of any status.* The panel's
+  "Enrollments" card was `COUNT(*)` over `level_up_enrollments`, so left and finished enrollments were
+  in it and one member in three cohorts counted three times — a row count that reads as a headcount.
+  `getAdminPanelData()` now does one pass over the table and returns `membersEnrolled` (distinct people
+  with a live enrollment), `activeEnrollments`, `enrollments` (all time), and `completions`; the panel
+  shows each under a label that says which it is. The single pass also means the numbers cannot drift
+  apart from each other.
+  (3) *The member's "Enrolled" card sat under a people icon next to a site-wide "Open Cohorts" count,*
+  which invited reading it as everyone enrolled. It reads **My Cohorts** with a bookmark icon and counts
+  only cohorts you are in right now.
+  Also fixed in `ctf/schema.sql`, both affecting a freshly built database only: `level_up_enrollments`
+  gains the `enrolled_at` column (it exists on the long-running database, came over with the legacy
+  `levelup_enrollments` table, but was never declared here — three live reads order or measure by it),
+  and its `status` check now allows `enrolled`, the value the enrollment insert actually writes (a fresh
+  database rejected every enrollment). The long-running database is unchanged by both: the column is
+  already there and the check lives in the `CREATE TABLE` block that a table which already exists never
+  runs. Web-only; LevelUp has no Android surface to match (rule 105).
 - 2026-08-05: **The admin review queues act (closes "read-only lists" scope, part of the inventory
   audit).** The history check found five live, hardened LevelUp routes with zero UI callers on any
   platform, ever. The admin panel's queues are now actionable via the new `lu-review-actions.tsx`

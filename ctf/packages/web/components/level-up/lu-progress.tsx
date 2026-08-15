@@ -6,6 +6,14 @@ import { getLevelUpTokens, type Enrollment, enrollmentPct } from "./lu-shared";
 
 const STEPS = ["Choose a cohort", "Pay credits into escrow", "Complete milestones", "Trainer validates & credits release"];
 
+// What to say on a cohort that has no milestones to show a bar for. The default line assumes the
+// cohort simply has not started; a finished or left cohort needs its own line so it is not described
+// as still waiting to begin.
+const PLACEHOLDER_NOTE: Record<string, string> = {
+  completed: "Completed",
+  dropped: "You left this cohort",
+};
+
 function EmptyProgress({ onBrowse }: { onBrowse: () => void }) {
   const { theme } = useTheme();
   const t = getLevelUpTokens(theme);
@@ -43,21 +51,21 @@ export function LevelUpProgress({ enrollments, onBrowse }: { enrollments: Enroll
       {enrollments.map((enr) => {
         const pct = enrollmentPct(enr);
         return (
-          <div key={enr.cohortId} style={{ background: t.SURFACE, borderRadius: 12, padding: "18px", border: `1px solid ${t.BORDER_SOLID}` }}>
+          <div key={enr.enrollmentId} style={{ background: t.SURFACE, borderRadius: 12, padding: "18px", border: `1px solid ${t.BORDER_SOLID}` }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: t.TEXT_BODY, marginBottom: 4 }}>{enr.title}</div>
             {enr.trainerName && <div style={{ fontSize: 12, color: t.TEXT_SUBTLE, marginBottom: 12 }}>with {enr.trainerName}</div>}
-            {enr.milestones.length > 0 ? (
+            {enr.milestoneTotal > 0 ? (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: t.TEXT_SUBTLE, marginBottom: 4 }}>
                   <span>Milestones</span>
-                  <span style={{ color: pct === 100 ? t.ACCENT : t.TEXT_BODY }}>{enr.completedCount}/{enr.milestones.length}</span>
+                  <span style={{ color: pct === 100 ? t.ACCENT : t.TEXT_BODY }}>{enr.milestoneCompleted}/{enr.milestoneTotal}</span>
                 </div>
                 <div style={{ height: 6, background: t.BORDER_SOLID, borderRadius: 99 }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: pct === 100 ? t.ACCENT : "#3B82F6", borderRadius: 99 }} />
                 </div>
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>Enrolled — awaiting cohort start</div>
+              <div style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>{PLACEHOLDER_NOTE[enr.status] ?? "Enrolled — awaiting cohort start"}</div>
             )}
           </div>
         );

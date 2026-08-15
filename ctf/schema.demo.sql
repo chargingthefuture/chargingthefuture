@@ -39,9 +39,17 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
   -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
-  -- Optional incident tags (2026-08-02; arrays since 2026-08-13 — see schema.sql for the full
-  -- note). The singular problem_tag/scheme_tag columns are superseded by the arrays: backfilled,
-  -- kept for history, no longer read or written by the app.
+  -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
+  -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
+  -- and/or which named schemes were used (scheme_tags — slugs from the owner's "A post for each
+  -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
+  -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
+  -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
+  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
+  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
+  -- columns are superseded: backfilled into the arrays below, kept for history, no longer
+  -- read or written by the app.
   problem_tag TEXT,
   scheme_tag TEXT,
   problem_tags TEXT[] NOT NULL DEFAULT '{}',
@@ -54,6 +62,9 @@ ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag T
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tags TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tags TEXT[] NOT NULL DEFAULT '{}';
+-- One-time backfill of the superseded singular tag columns into the arrays. Idempotent: only
+-- touches rows whose array is still empty while the singular column has a value, so re-running
+-- schema.sql never overwrites a member's later multi-tag edits.
 UPDATE click_log_incidents SET problem_tags = ARRAY[problem_tag]
   WHERE problem_tag IS NOT NULL AND problem_tags = '{}';
 UPDATE click_log_incidents SET scheme_tags = ARRAY[scheme_tag]
@@ -1534,9 +1545,15 @@ CREATE TABLE IF NOT EXISTS level_up_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   user_id TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('active', 'completed', 'dropped', 'pending')),
+  -- 'enrolled' is the value the enrollment insert actually writes; it was missing from this list, so
+  -- on a brand-new database every enrollment failed the check while the long-running database (whose
+  -- table predates this block) accepted them. 'active' stays for the rows written before the value
+  -- changed — both count as a live enrollment everywhere in the code.
+  status TEXT NOT NULL CHECK (status IN ('enrolled', 'active', 'completed', 'dropped', 'pending')),
   credits_deposited INTEGER NOT NULL DEFAULT 0,
   assigned_trainer_id TEXT,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  progress_percent NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cohort_id, user_id)
@@ -1547,6 +1564,11 @@ ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
+-- enrolled_at: when the member joined. It exists on the long-running database (it came over with the
+-- legacy `levelup_enrollments` table) but was never declared here, so a database built from this file
+-- lacked it while three live reads order or measure by it — the admin lead-time number, the trainer
+-- trainee list, and the member's own enrollment list.
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Add unique constraint if not exists (Postgres 15+)
