@@ -2019,6 +2019,34 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
+  - id: wp_adoption_daily_active_members
+    name: Weekly Daily Active Members
+    description: Average number of distinct members active on a day of the week window — the dashboard's daily-active-members reading. login_events holds at most one row per member per UTC day, so one row is one member-day; the distinct count is used anyway so a database cloned before the once-per-day unique index existed cannot inflate the average. The divisor is the number of days of the window that have already started (1-7), so the live current week averages over the days it has actually had and every past week divides by the full 7. Aggregate only — never a per-member figure. Adoption, not value; signing in is not a plugin's defining action and carries no positive weight in value scoring.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: number
+    unit: per day
+    calculation: |
+      SELECT ROUND(
+               COUNT(DISTINCT (user_id, (created_at AT TIME ZONE 'UTC')::date))::numeric
+                 / GREATEST(LEAST(7, (CURRENT_DATE - :week_start) + 1), 1),
+               2) AS v
+      FROM login_events
+      WHERE created_at >= :week_start
+        AND created_at < :week_end;
+    inputs:
+      - name: login_events.user_id
+        type: string
+      - name: login_events.created_at
+        type: datetime
+    example_values:
+      - 12.43
+      - 18
+    last_updated: "2026-08-15T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
   - id: wp_adoption_directory_findable_members
     name: Weekly Directory Findable Members
     description: Cumulative state count — claimed, active, non-deleted Directory profiles holding at least one skill, created by the end of the week window. Claim time is not stored, so the count reflects each profile's CURRENT claimed/active/skilled state, not its state at the time.
