@@ -34,7 +34,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Skills Coverage (the whole-number percentage of the 650-skill functioning-economy baseline covered by distinct active skills at least one active Directory member has listed, shown as "{listed} of 650 skills" — the same figure the weekly community-stats draft reports, never the size of the pick-list catalog), Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
 2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
@@ -153,7 +153,7 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 
 ### 4.3 Storage and Derivation Rules
 
-1. The sector / skill-level / occupation breakdowns (the report routes) are derived live in `computeWorkforceModel()` from one read of the upstream sources; there is no stored snapshot, no inferred-event history, and no weekly bucketing. The **dashboard** top-line totals come from a separate lightweight read (`getDashboard()`): config + sector demand + three counts (active job titles, active profiles, distinct active skills listed by active members — the Skills Coverage numerator against the 650-skill baseline `WORKFORCE_SKILLS_ECONOMY_BASELINE`). It deliberately skips the expensive per-bucket supply match, because the dashboard returns only top-line numbers — `recruitedTotal` there is the count of all active profiles, identical to the full model, so the two never diverge.
+1. The sector / skill-level / occupation breakdowns (the report routes) are derived live in `computeWorkforceModel()` from one read of the upstream sources; there is no stored snapshot, no inferred-event history, and no weekly bucketing. The **dashboard** top-line totals come from a separate lightweight read (`getDashboard()`): config + sector demand + four counts (active job titles, active profiles, distinct active skills listed by active members, and all active taxonomy skills — the last two are the Skills Coverage numerator and denominator, both live so the figure moves as skills are added/removed). It deliberately skips the expensive per-bucket supply match, because the dashboard returns only top-line numbers — `recruitedTotal` there is the count of all active profiles, identical to the full model, so the two never diverge.
 2. **Demand** per sector = (sector `workforce_share` ÷ sum of shares) × `workforce_total`, where `workforce_total = population × participation_rate`. If no sector carries a positive share, demand is an even split across active sectors. Per-occupation demand = its sector's demand split evenly across the sector's active job titles.
 3. **Supply** is read from Directory: a profile's own sector resolves by spec precedence — taxonomy-derived signals first (the chosen occupation's sector via `job_title_id → sector_id`, else the sector the profile's skills map to through the taxonomy: plurality across the skills' occupations' sectors, ties broken by sector name), then the raw profile `sector_id` field. Only a profile with no occupation, no skills, and no sector lands in the `Unassigned` bucket (rendered only when non-empty; it carries no demand). Members = all active profiles. **Recruited** is the V2 aspirational match — a profile counts toward a sector/skill-level/occupation if it matches by sector, job title, or a skill registered under the job title (see section 5); the top-line recruited total is the count of all active profiles (V2 parity).
 4. **Skill level** is derived live from each job title's name using V2's keyword rule (`lib/workforce/skill-level.ts`) — Foundational / Intermediate / Advanced. No stored skill-level column.
@@ -225,17 +225,17 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 ## 10) Change Log
 
 - 2026-08-16: **Added the Skills Coverage tile to the dashboard overview (fourth hero card).** Shows
-  the whole-number percentage of the 650-skill functioning-economy baseline that has at least one
-  active Directory member behind it (e.g. "24%" with "156 of 650 skills" beneath) — the same
-  coverage figure the weekly community-stats draft reports (`generate-community-stats.mjs`), and the
-  same distinct-listed-skills query: `COUNT(DISTINCT skill_id)` over `directory_profile_skills`
-  joined to active `directory_profiles` and active `skills_taxonomy_skills` (both join sides cast to
-  text — production `directory_profiles.id` is varchar). Deliberately NOT the size of the skills
-  catalog, which already holds all 650 options and would always read 100%. `getDashboard()` gained
-  that one count in its existing lightweight read, and `WorkforceDashboard` gained
-  `skillsListedTotal` + `skillsBaseline` (the new `WORKFORCE_SKILLS_ECONOMY_BASELINE = 650` constant
-  in `lib/workforce/constants.ts`, kept in sync with the script's `FULL_ECONOMY_SKILL_BASELINE`).
-  Percentage is computed in the tile, capped at 100. The dashboard command contract is unchanged —
+  the whole-number percentage of the skills taxonomy with at least one active Directory member
+  behind it (e.g. "24%" with "156 of 650 skills" beneath). Every value is live (owner directive,
+  2026-08-16 — skills may be added and removed, so nothing is hardcoded): the numerator is
+  `COUNT(DISTINCT skill_id)` over `directory_profile_skills` joined to active `directory_profiles`
+  and active `skills_taxonomy_skills` (both join sides cast to text — production
+  `directory_profiles.id` is varchar; the same distinct-listed count the weekly community-stats
+  draft reports), and the denominator is the current `COUNT(*)` of active `skills_taxonomy_skills`.
+  The numerator filters to the same active-skill population as the denominator, so coverage can
+  never exceed 100%. `getDashboard()` gained the two counts in its existing lightweight read, and
+  `WorkforceDashboard` gained `skillsListedTotal` + `skillsCatalogTotal`. Percentage is computed in
+  the tile (0% on an empty catalog, capped at 100). The dashboard command contract is unchanged —
   its `dataAccess` already lists `directory_profile_skills` and `skills_taxonomy_skills`, and its
   output schema is the opaque `dashboard` object. No schema, route, or contract change; web-only
   (the Android Workforce surface was removed per rule 105).

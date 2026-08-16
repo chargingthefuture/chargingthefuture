@@ -12,11 +12,13 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const participationPct = Math.round(dashboard.participationRate * 100);
-  // Skills coverage toward the 650-skill functioning-economy baseline — the same whole-number
-  // percentage the weekly community-stats draft reports. Capped at 100 so a taxonomy larger than
-  // the baseline can never read as more than fully covered.
-  const skillsBaseline = Math.max(1, dashboard.skillsBaseline);
-  const skillsCoveragePct = Math.min(100, Math.round((dashboard.skillsListedTotal / skillsBaseline) * 100));
+  // Skills coverage: every value is live — the numerator is the distinct active skills members have
+  // listed, and the denominator is the current active-skill catalog count, so both move as skills
+  // are added and removed from the taxonomy. 0% when the catalog is empty; capped at 100 as a
+  // guard, though the numerator counts only catalog skills so it cannot exceed the denominator.
+  const skillsCoveragePct = dashboard.skillsCatalogTotal > 0
+    ? Math.min(100, Math.round((dashboard.skillsListedTotal / dashboard.skillsCatalogTotal) * 100))
+    : 0;
 
   const stats = [
     {
@@ -46,10 +48,9 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
     {
       label: 'Skills Coverage',
       // How much of the skills taxonomy has someone behind it: DIFFERENT skills at least one active
-      // Directory member has listed, against the 650-skill functioning-economy baseline (the same
-      // figure the weekly community-stats draft reports) — not the size of the pick-list catalog.
+      // Directory member has listed, out of the live active-skill catalog total.
       value: `${skillsCoveragePct}%`,
-      delta: `${dashboard.skillsListedTotal.toLocaleString()} of ${skillsBaseline.toLocaleString()} skills`,
+      delta: `${dashboard.skillsListedTotal.toLocaleString()} of ${dashboard.skillsCatalogTotal.toLocaleString()} skills`,
       color: '#A855F7',
     },
   ];
