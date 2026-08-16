@@ -23,7 +23,7 @@ export type WorkforceDashboard = {
   sectorsTotal: number; // active Skills Taxonomy sectors
   occupationsTotal: number; // active Skills Taxonomy job titles
   skillsListedTotal: number; // distinct active skills at least one active Directory member has listed
-  skillsBaseline: number; // the 650-skill functioning-economy baseline coverage is measured against
+  skillsCatalogTotal: number; // ALL active Skills Taxonomy skills — live count, moves as skills are added/removed
   generatedAtIso: string;
 };
 
