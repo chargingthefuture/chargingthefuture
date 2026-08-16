@@ -42,7 +42,7 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       value: dashboard.recruitedTotal.toLocaleString(),
       // Recruited mirrors V2 (all active Directory profiles), so it equals the directory headcount;
       // show progress toward the target instead of repeating the same number.
-      delta: `${dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 1 })}% of target`,
+      delta: `${dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 1 })}% of goal`,
       color: '#22C55E',
     },
     {

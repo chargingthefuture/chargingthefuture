@@ -34,7 +34,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+1. Live dashboard: Population, Workforce Total, Recruited (with "% of goal" progress), Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
 2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
@@ -61,7 +61,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 ### 2.1 Workforce Admin Operations
 
 1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
-2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, target, actor, timestamp).
+2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, the record acted on, actor, timestamp).
 3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
 ### 2.2 Workforce Configuration Governance
@@ -224,6 +224,18 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ## 10) Change Log
 
+- 2026-08-16: **Replaced the word "target" with "goal" across all rendered Workforce copy (owner
+  direction — in this product "target" refers only to a person subjected to Specterati harassment;
+  the lexicon already reserved it, `ctf/docs/BRAND_VOICE_LEXICON.md`).** Overview hero "% of target"
+  → "% of goal"; Skill Level Breakdown subtitle "Target shown for context" → "Goal shown for
+  context" and the per-bar "{n} target" → "{n} goal"; sector/skill-level drilldown rows "recruited /
+  {n} target" → "{n} goal"; Sector Opportunities legend "Target (opportunity)" → "Goal
+  (opportunity)"; occupation detail "Headcount target (demand)" / "Annual training target" and the
+  how-computed explainer → goal wording; sidebar Quick Stats "Headcount Target" → "Headcount Goal";
+  admin "Headcount target" stat → "Headcount goal"; the admin audit-trail line's "target
+  {type}/{id}" (the record acted on) → "record {type}/{id}". Display-only — code identifiers, API
+  fields (`target`, `totalHeadcountTarget`, `annualTrainingTarget`, `target_type`/`target_id`), and
+  contracts are unchanged; no schema or route change.
 - 2026-08-16: **Added the Skills Coverage tile to the dashboard overview (fourth hero card).** Shows
   the whole-number percentage of the skills taxonomy with at least one active Directory member
   behind it (e.g. "24%" with "156 of 650 skills" beneath). Every value is live (owner directive,

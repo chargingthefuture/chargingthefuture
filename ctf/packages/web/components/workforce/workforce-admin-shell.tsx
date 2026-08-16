@@ -178,7 +178,7 @@ function AuditTrailPanel() {
                 <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{new Date(event.createdAtIso).toLocaleString()}</span>
               </div>
               <div style={{ fontSize: 11, color: t.MUTED, marginTop: 4 }}>
-                {event.reason} · target {event.targetType}/{event.targetId} · actor {event.actorId}
+                {event.reason} · record {event.targetType}/{event.targetId} · actor {event.actorId}
               </div>
             </div>
           ))}
@@ -265,7 +265,7 @@ export function WorkforceAdminShell({
         {/* Snapshot */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
           <StatBlock label="Workforce total" value={dashboard.workforceTotal} accent={t.ACCENT} />
-          <StatBlock label="Headcount target" value={dashboard.totalHeadcountTarget} accent="#EF4444" />
+          <StatBlock label="Headcount goal" value={dashboard.totalHeadcountTarget} accent="#EF4444" />
           <StatBlock label="Recruited" value={dashboard.recruitedTotal} accent="#22C55E" />
           <StatBlock label="Directory members" value={dashboard.totalMembers} />
         </div>

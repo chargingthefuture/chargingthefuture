@@ -90,7 +90,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
             >
               {g.bucket}
               <div style={{ fontSize: 11, color: t.MUTED }}>
-                {g.recruited.toLocaleString()} recruited / {g.target.toLocaleString()} target
+                {g.recruited.toLocaleString()} recruited / {g.target.toLocaleString()} goal
               </div>
             </div>
             <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -155,7 +155,7 @@ export function WorkforceSectorGaps({ sectorItems }: WorkforceSectorGapsProps) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ width: 12, height: 4, background: t.ACCENT, borderRadius: 2 }} />
-          <span style={{ fontSize: 12, color: t.MUTED }}>Target (opportunity)</span>
+          <span style={{ fontSize: 12, color: t.MUTED }}>Goal (opportunity)</span>
         </div>
       </div>
     </div>
