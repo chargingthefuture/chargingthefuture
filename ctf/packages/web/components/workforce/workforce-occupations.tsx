@@ -124,8 +124,8 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-            <Stat label="Headcount target (demand)" value={occ.target.toLocaleString()} />
-            <Stat label="Annual training target" value={occ.annualTrainingTarget.toLocaleString()} />
+            <Stat label="Headcount goal (demand)" value={occ.target.toLocaleString()} />
+            <Stat label="Annual training goal" value={occ.annualTrainingTarget.toLocaleString()} />
             {/* No "Members" (declared-occupation) card: members join jobless but skilled, so the
                 declared count is ~always 0 and reads as an error. Recruited (matched) carries the
                 story; occ.members stays in the API for consumers that need the declared count. */}
@@ -147,13 +147,13 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
               border: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            How these are computed: the <strong>headcount target</strong> is this occupation&apos;s share of
+            How these are computed: the <strong>headcount goal</strong> is this occupation&apos;s share of
             its sector&apos;s demand — population × participation rate, split across sectors by each
             sector&apos;s workforce share, then divided evenly among the sector&apos;s job titles. The{' '}
-            <strong>annual training target</strong> is a share of that target by skill level (Foundational
+            <strong>annual training goal</strong> is a share of that goal by skill level (Foundational
             10%, Intermediate 15%, Advanced 25%). <strong>Recruited</strong> is the distinct Directory
             members who match this occupation by sector, job title, or a registered skill. The{' '}
-            <strong>training gap</strong> is the target minus recruited.
+            <strong>training gap</strong> is the goal minus recruited.
           </div>
         </>
       )}

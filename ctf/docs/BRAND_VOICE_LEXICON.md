@@ -115,6 +115,11 @@ This document is the canonical source of truth for brand language across:
   "never redeemable for cash"). Real fiat amounts unrelated to credits — a LightHouse listing's
   actual rent and its currency, Contributions' confirmed USD donations — are real money and are
   described as such. Any money-framing of credits anywhere in the repo is an error, not a claim.
+- Do not state GDP in US dollars anywhere in the app except the Workforce overview's Skills
+  Economy Summary card (owner directive, 2026-08-16). That card is the single allowed USD GDP
+  reference, and only as an explicitly speculative baseline — its copy must keep saying the figures
+  are speculative, not actuals, and that the Skills Economy has no intention of forming a nation
+  state. The GDP plugin's Community Value Index stays a unitless index, never a dollar figure.
 
 ## Canonical Capability Names (Public Surfaces)
 

@@ -68,7 +68,7 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
           {item.bucket}
         </span>
         <span style={{ fontSize: 12, color: t.MUTED }}>
-          {item.recruited.toLocaleString()} recruited / {item.target.toLocaleString()} target
+          {item.recruited.toLocaleString()} recruited / {item.target.toLocaleString()} goal
         </span>
         <span
           style={{

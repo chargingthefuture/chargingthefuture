@@ -34,10 +34,18 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+1. Live dashboard: Population, Workforce Total, Recruited (with "% of goal" progress), Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), the Skills Economy Summary statement (below), Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
 2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
+5. Skills Economy Summary: a fixed positive statement on the overview with live numbers — "With
+   only {recruited} people recruited, we have reached {skills coverage}% of the skills potential of
+   an independent nation state like Finland, Estonia, or Singapore — equating to ${GDP potential}
+   in GDP potential. That means each individual contributing ${per person} in GDP, and earning
+   upwards of ${earnings}." Followed by the disclaimer that the figures are speculative, not
+   actuals, that this is the only place in the app where GDP is stated in US dollars, and that the
+   Skills Economy has no intention of forming a nation state — it is a baseline for understanding
+   economics at the scale of upwards of 5 million people.
 
 ### 1.2 Workforce Directory-Coupled Profile Experience
 
@@ -61,7 +69,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 ### 2.1 Workforce Admin Operations
 
 1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
-2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, target, actor, timestamp).
+2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, the record acted on, actor, timestamp).
 3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
 ### 2.2 Workforce Configuration Governance
@@ -204,7 +212,7 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 
 | Surface | Status | Notes |
 |---|---|---|
-| Web dashboard | ✅ Delivered | `workforce-shell.tsx` + `workforce-hero-stats` (incl. Recruitment Progress), `workforce-sector-gaps`, `workforce-skill-distribution`, `workforce-training-gaps`, sidebar, profile panel. Bound to `/dashboard`, `/reports/sector/all`, `/reports/skill-level/all`, `/reports/occupations`, `/profile`. |
+| Web dashboard | ✅ Delivered | `workforce-shell.tsx` + `workforce-hero-stats` (incl. the Skills Economy Summary), `workforce-sector-gaps`, `workforce-skill-distribution`, `workforce-training-gaps`, sidebar, profile panel. Bound to `/dashboard`, `/reports/sector/all`, `/reports/skill-level/all`, `/reports/occupations`, `/profile`. |
 | Web admin | ✅ Delivered | `workforce-admin-shell.tsx` — snapshot counts + the population-model config (population, participation rate, min/max recruitable). |
 | Android dashboard | ➖ Removed (web-only per rule 105 / #1742) | `WorkforceDashboard` with StatGrid (Population / Workforce Total / Headcount Target / Recruited / Directory Members), Sector Gaps, Top Training Gaps; `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard`. |
 | Android admin | ➖ Removed (web-only per rule 105 / #1742) | `AdminWorkforce.tsx` + `admin-api.ts`; mirrors `/admin/workforce` (snapshot + population-model config) against `GET /dashboard`, `GET/PUT /admin/config` only. |
@@ -224,6 +232,35 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ## 10) Change Log
 
+- 2026-08-16: **Replaced the Recruitment Progress bar with the Skills Economy Summary statement
+  (owner direction — at 94 recruited against a 2,000,000 goal the bar sat at 0% and repeated the
+  hero card's numbers; the owner wants a positive summary instead).** The card
+  (`WorkforceEconomySummary` in `workforce-hero-stats.tsx`) renders a fixed statement whose numbers
+  are live: recruited count (`recruitedTotal`), skills-coverage percent (same live calculation as
+  the hero tile, now shared via `computeSkillsCoveragePct`), speculative GDP potential
+  (recruited × `WORKFORCE_BENCHMARK_GDP_PER_PERSON_USD`, a $142,500 modeling constant in
+  `lib/workforce/constants.ts` approximating Singapore's per-person GDP on a purchasing-power
+  basis, the upper benchmark of the three reference economies), per-person GDP contribution (the
+  benchmark itself), and per-person earnings (benchmark × `WORKFORCE_EARNINGS_SHARE_OF_GDP` = 0.5,
+  the lower bound of the compensation share in advanced economies, backing "earning upwards of").
+  The card's second paragraph is the standing disclaimer: figures are speculative, not actuals;
+  this is the only place in the app where GDP is stated in US dollars (owner directive, recorded in
+  `ctf/docs/BRAND_VOICE_LEXICON.md` Prohibited Patterns); the Skills Economy has no intention of
+  forming a nation state — it is a baseline for understanding economics at the scale of upwards of
+  5 million people. Display-only: the dashboard API payload, schema, routes, and contracts are
+  unchanged; `minRecruitable` is no longer read by this card. Web-only (rule 105). Test script
+  WF-1 and the core smoke updated to match.
+  direction — in this product "target" refers only to a person subjected to Specterati harassment;
+  the lexicon already reserved it, `ctf/docs/BRAND_VOICE_LEXICON.md`).** Overview hero "% of target"
+  → "% of goal"; Skill Level Breakdown subtitle "Target shown for context" → "Goal shown for
+  context" and the per-bar "{n} target" → "{n} goal"; sector/skill-level drilldown rows "recruited /
+  {n} target" → "{n} goal"; Sector Opportunities legend "Target (opportunity)" → "Goal
+  (opportunity)"; occupation detail "Headcount target (demand)" / "Annual training target" and the
+  how-computed explainer → goal wording; sidebar Quick Stats "Headcount Target" → "Headcount Goal";
+  admin "Headcount target" stat → "Headcount goal"; the admin audit-trail line's "target
+  {type}/{id}" (the record acted on) → "record {type}/{id}". Display-only — code identifiers, API
+  fields (`target`, `totalHeadcountTarget`, `annualTrainingTarget`, `target_type`/`target_id`), and
+  contracts are unchanged; no schema or route change.
 - 2026-08-16: **Added the Skills Coverage tile to the dashboard overview (fourth hero card).** Shows
   the whole-number percentage of the skills taxonomy with at least one active Directory member
   behind it (e.g. "24%" with "156 of 650 skills" beneath). Every value is live (owner directive,
