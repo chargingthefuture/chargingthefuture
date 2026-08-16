@@ -40,7 +40,8 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
    screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
-   the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐
+   the Skills Economy Summary statement uses that same recruited count and the Skills Coverage
+   percent — no progress bar, no repeated card. → web ☐ mobile ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
    — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐
 4. **Empty state is handled.** If there are no sectors/occupations and no Directory members, the
@@ -54,16 +55,19 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 **Role:** member · **Surfaces:** all · **Seed:** `seed:workforce`
 **Steps:**
 1. Open the Workforce dashboard for a signed-in member.
-2. Read the four hero cards (Population, Workforce Total, Recruited, Skills Coverage) and the Recruitment Progress.
+2. Read the four hero cards (Population, Workforce Total, Recruited, Skills Coverage) and the Skills Economy Summary card beneath them.
 **Expected:** All four cards show numbers. Workforce Total = population × participation rate.
 Recruited = the count of all active Directory members. Skills Coverage shows a whole-number percent
 with "{listed} of {catalog} skills" beneath — both numbers live: listed = the count of DIFFERENT
 skills at least one active Directory member has listed; catalog = the current count of ALL active
 skills in the Skills Taxonomy (not a hardcoded figure — adding or removing a taxonomy skill moves
-it). The percent is listed ÷ catalog, never above 100%. Recruitment Progress reads as a percent of
-the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
-count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
-no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).
+it). The percent is listed ÷ catalog, never above 100%. The Skills Economy Summary is a fixed
+statement with live numbers: the recruited count, the Skills Coverage percent, a speculative GDP
+potential in US dollars (recruited × the $142,500 per-person modeling benchmark), the per-person
+GDP contribution, and the per-person earnings (half the benchmark). Its disclaimer paragraph says
+the figures are speculative, not actuals, that this is the only place in the app where GDP is
+stated in US dollars, and that the Skills Economy has no intention of forming a nation state.
+There is no progress bar, no "Remaining to the goal" countdown, and no "Remaining capacity" line.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WF-2 · Sector opportunities

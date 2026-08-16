@@ -3,22 +3,30 @@
 import type { WorkforceDashboard } from '../../lib/workforce/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
+import {
+  WORKFORCE_BENCHMARK_GDP_PER_PERSON_USD,
+  WORKFORCE_EARNINGS_SHARE_OF_GDP,
+} from '../../lib/workforce/constants';
 
 interface WorkforceHeroStatsProps {
   dashboard: WorkforceDashboard;
+}
+
+// Skills coverage: every value is live — the numerator is the distinct active skills members have
+// listed, and the denominator is the current active-skill catalog count, so both move as skills
+// are added and removed from the taxonomy. 0% when the catalog is empty; capped at 100 as a
+// guard, though the numerator counts only catalog skills so it cannot exceed the denominator.
+function computeSkillsCoveragePct(dashboard: WorkforceDashboard): number {
+  return dashboard.skillsCatalogTotal > 0
+    ? Math.min(100, Math.round((dashboard.skillsListedTotal / dashboard.skillsCatalogTotal) * 100))
+    : 0;
 }
 
 export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const participationPct = Math.round(dashboard.participationRate * 100);
-  // Skills coverage: every value is live — the numerator is the distinct active skills members have
-  // listed, and the denominator is the current active-skill catalog count, so both move as skills
-  // are added and removed from the taxonomy. 0% when the catalog is empty; capped at 100 as a
-  // guard, though the numerator counts only catalog skills so it cannot exceed the denominator.
-  const skillsCoveragePct = dashboard.skillsCatalogTotal > 0
-    ? Math.min(100, Math.round((dashboard.skillsListedTotal / dashboard.skillsCatalogTotal) * 100))
-    : 0;
+  const skillsCoveragePct = computeSkillsCoveragePct(dashboard);
 
   const stats = [
     {
@@ -103,25 +111,31 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
           </div>
         ))}
       </div>
-      <WorkforceRecruitmentProgress dashboard={dashboard} />
+      <WorkforceEconomySummary dashboard={dashboard} />
     </div>
   );
 }
 
-function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
+// Replaced the Recruitment Progress bar (owner direction, 2026-08-16): with recruitment at a
+// fraction of a percent the bar repeated the hero card's numbers and read as failure. The card is
+// now a positive summary statement. The statement text is fixed; only the numbers are live. This
+// is the ONLY place in the app where GDP is stated in US dollars, and only as an explicitly
+// speculative baseline — see the constants for the derivation.
+function WorkforceEconomySummary({ dashboard }: WorkforceHeroStatsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
-  // Progress is toward the recruitment goal (min recruitable, the owner's 2,000,000 target — the
-  // same goal Weekly Performance tracks), not toward theoretical sector capacity. The card shows
-  // the recruited count and the countdown to the goal; "remaining capacity" (max recruitable minus
-  // recruited) is a config ceiling, not progress, and confused the read.
-  const goal = Math.max(0, dashboard.minRecruitable);
   const recruited = Math.max(0, dashboard.recruitedTotal);
-  const goalPct = goal > 0 ? Math.round(((recruited / goal) * 100 + Number.EPSILON) * 100) / 100 : 0;
-  const pct = Math.min(100, Math.max(0, goalPct));
-  // Most of the bar is the gap to fill — the signal that tells LevelUp where to recruit and train.
-  const barPct = pct < 0.5 && pct > 0 ? 0.5 : pct;
-  const remainingToGoal = Math.max(0, goal - recruited);
+  const skillsCoveragePct = computeSkillsCoveragePct(dashboard);
+  const gdpPerPerson = WORKFORCE_BENCHMARK_GDP_PER_PERSON_USD;
+  const gdpPotential = recruited * gdpPerPerson;
+  const earningsPerPerson = Math.round(gdpPerPerson * WORKFORCE_EARNINGS_SHARE_OF_GDP);
+  // "$13.4 million" style for the headline figure so the scale reads at a glance.
+  const gdpPotentialLabel = new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'long',
+    maximumFractionDigits: 1,
+  }).format(gdpPotential);
+  const strong = { color: t.TEXT, fontWeight: 700 as const };
 
   return (
     <div
@@ -132,25 +146,23 @@ function WorkforceRecruitmentProgress({ dashboard }: WorkforceHeroStatsProps) {
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Recruitment Progress</div>
-        <div style={{ fontSize: 13, color: t.ACCENT, fontWeight: 700 }}>
-          {goalPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
-        </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginBottom: 10 }}>
+        Skills Economy Summary
       </div>
-      <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
-        <div style={{ height: '100%', width: `${barPct}%`, background: '#22C55E', borderRadius: 4 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 12, color: t.SUBTLE }}>
-        <span>
-          Recruited:{' '}
-          <span style={{ color: t.TEXT, fontWeight: 600 }}>{recruited.toLocaleString()}</span>
-        </span>
-        <span>
-          Remaining to the {goal.toLocaleString()} goal:{' '}
-          <span style={{ color: t.TEXT, fontWeight: 600 }}>{remainingToGoal.toLocaleString()}</span>
-        </span>
-      </div>
+      <p style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.7, margin: 0 }}>
+        With only <span style={strong}>{recruited.toLocaleString()}</span> people recruited, we have
+        reached <span style={strong}>{skillsCoveragePct}%</span> of the skills potential of an
+        independent nation state like Finland, Estonia, or Singapore — equating to{' '}
+        <span style={strong}>${gdpPotentialLabel}</span> in GDP potential. That means each individual
+        contributing <span style={strong}>${gdpPerPerson.toLocaleString()}</span> in GDP, and earning
+        upwards of <span style={strong}>${earningsPerPerson.toLocaleString()}</span>.
+      </p>
+      <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '10px 0 0' }}>
+        These figures are speculative, not actuals, and this summary is the only place in the app
+        where GDP is stated in US dollars. The Skills Economy has no intention of forming a nation
+        state — this is a baseline for understanding economics at the scale of upwards of 5 million
+        people.
+      </p>
     </div>
   );
 }
