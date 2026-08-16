@@ -673,6 +673,12 @@ function percentRecruited(recruited: number, target: number): number {
   return Math.round(((recruited / target) * 100 + Number.EPSILON) * 100) / 100;
 }
 
+// Parse a `COUNT(*)::text AS total` result into a non-negative integer, treating a missing row or
+// an unparseable value as 0.
+function parseCountTotal(result: { rows: CountRow[] }): number {
+  return Math.max(0, Number.parseInt(result.rows[0]?.total ?? '0', 10) || 0);
+}
+
 // The dashboard returns only top-line totals — it has no per-bucket supply breakdown — so it does NOT
 // need the expensive V2 supply-match work the full model does (the per-member expansion across every
 // occupation in a member's sector, and the DISTINCT profile-skill -> job-title join). Running the full
@@ -720,10 +726,10 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   const sectors = sectorsRes.rows;
   const sectorDemand = buildSectorDemand(sectors, workforceTotal);
   const totalHeadcountTarget = Array.from(sectorDemand.values()).reduce((sum, n) => sum + n, 0);
-  const totalMembers = Math.max(0, Number.parseInt(membersCountRes.rows[0]?.total ?? '0', 10) || 0);
-  const occupationsTotal = Math.max(0, Number.parseInt(occupationsCountRes.rows[0]?.total ?? '0', 10) || 0);
-  const skillsListedTotal = Math.max(0, Number.parseInt(skillsListedCountRes.rows[0]?.total ?? '0', 10) || 0);
-  const skillsCatalogTotal = Math.max(0, Number.parseInt(skillsCatalogCountRes.rows[0]?.total ?? '0', 10) || 0);
+  const totalMembers = parseCountTotal(membersCountRes);
+  const occupationsTotal = parseCountTotal(occupationsCountRes);
+  const skillsListedTotal = parseCountTotal(skillsListedCountRes);
+  const skillsCatalogTotal = parseCountTotal(skillsCatalogCountRes);
   // Top-line recruited mirrors V2 exactly: the count of all active Directory profiles.
   const recruitedTotal = totalMembers;
 
