@@ -14,6 +14,7 @@ import {
   WORKFORCE_DEFAULT_PARTICIPATION_RATE,
   WORKFORCE_DEFAULT_POPULATION,
   WORKFORCE_MAX_PAGE_SIZE,
+  WORKFORCE_SKILLS_ECONOMY_BASELINE,
 } from './constants';
 import type {
   WorkforceConfig,
@@ -685,7 +686,7 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   const config = await getWorkforceConfig();
   const workforceTotal = Math.max(0, Math.round(config.population * config.participationRate));
 
-  const [sectorsRes, occupationsCountRes, membersCountRes] = await Promise.all([
+  const [sectorsRes, occupationsCountRes, membersCountRes, skillsListedCountRes] = await Promise.all([
     queryDb<SectorModelRow>(
       `SELECT id::text AS id, name, workforce_share::text AS workforce_share
        FROM skills_taxonomy_sectors
@@ -699,6 +700,17 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
        FROM directory_profiles
        WHERE is_active = TRUE AND deleted_at IS NULL`,
     ),
+    // Skills coverage: DIFFERENT active skills at least one active member has listed — the same
+    // count the weekly community-stats draft reports against the 650-skill functioning-economy
+    // baseline. directory_profiles.id is varchar on the production (v2-cloned) database while
+    // directory_profile_skills.profile_id is uuid, so the join casts both sides to text.
+    queryDb<CountRow>(
+      `SELECT COUNT(DISTINCT dps.skill_id)::text AS total
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+       WHERE p.is_active = TRUE AND p.deleted_at IS NULL AND s.is_active = TRUE`,
+    ),
   ]);
 
   const sectors = sectorsRes.rows;
@@ -706,6 +718,7 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
   const totalHeadcountTarget = Array.from(sectorDemand.values()).reduce((sum, n) => sum + n, 0);
   const totalMembers = Math.max(0, Number.parseInt(membersCountRes.rows[0]?.total ?? '0', 10) || 0);
   const occupationsTotal = Math.max(0, Number.parseInt(occupationsCountRes.rows[0]?.total ?? '0', 10) || 0);
+  const skillsListedTotal = Math.max(0, Number.parseInt(skillsListedCountRes.rows[0]?.total ?? '0', 10) || 0);
   // Top-line recruited mirrors V2 exactly: the count of all active Directory profiles.
   const recruitedTotal = totalMembers;
 
@@ -722,6 +735,8 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
     maxRecruitable: config.maxRecruitable,
     sectorsTotal: sectors.length,
     occupationsTotal,
+    skillsListedTotal,
+    skillsBaseline: WORKFORCE_SKILLS_ECONOMY_BASELINE,
     generatedAtIso: new Date().toISOString(),
   };
 }
