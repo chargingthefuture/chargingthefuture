@@ -154,7 +154,7 @@ export function WorkforceSidebar({
                 Quick Stats
               </div>
               {[
-                { l: 'Headcount Target', v: dashboard.totalHeadcountTarget.toLocaleString() },
+                { l: 'Headcount Goal', v: dashboard.totalHeadcountTarget.toLocaleString() },
                 { l: 'Recruited', v: dashboard.recruitedTotal.toLocaleString() },
                 { l: 'Skill Gaps', v: gapCount > 0 ? `${gapCount} sectors` : 'None' },
               ].map(({ l, v }) => (

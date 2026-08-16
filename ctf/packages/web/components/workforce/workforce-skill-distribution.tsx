@@ -36,7 +36,7 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
         Skill Level Breakdown
       </div>
       <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 16 }}>
-        Members recruited at each skill level (bar height = people). Target shown for context.
+        Members recruited at each skill level (bar height = people). Goal shown for context.
       </div>
       <div style={{ display: 'flex', gap: 16 }}>
         {skillItems.map((item) => {
@@ -75,7 +75,7 @@ export function WorkforceSkillDistribution({ skillItems }: WorkforceSkillDistrib
               </div>
               <div style={{ fontSize: 11, color: t.MUTED }}>recruited</div>
               <div style={{ fontSize: 11, color: t.ACCENT, marginTop: 4 }}>
-                {item.target.toLocaleString()} target
+                {item.target.toLocaleString()} goal
               </div>
               <div style={{ fontSize: 11, color: t.MUTED }}>
                 gap {item.gap.toLocaleString()}
