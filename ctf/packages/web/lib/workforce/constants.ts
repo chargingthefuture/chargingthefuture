@@ -23,3 +23,10 @@ export const WORKFORCE_DEFAULT_POPULATION = 5_000_000;
 export const WORKFORCE_DEFAULT_PARTICIPATION_RATE = 0.5;
 export const WORKFORCE_DEFAULT_MIN_RECRUITABLE = 2_000_000;
 export const WORKFORCE_DEFAULT_MAX_RECRUITABLE = 5_000_000;
+
+// The number of documented skills a functioning economy needs — the point at which the community can
+// meet its own needs. Coverage toward it is the count of DIFFERENT skills at least one active
+// Directory member has listed, NOT the size of the skills catalog (the catalog already holds all 650
+// options and would always read 100%). Same baseline the weekly community-stats draft uses
+// (ctf/scripts/generate-community-stats.mjs, FULL_ECONOMY_SKILL_BASELINE) — keep the two in sync.
+export const WORKFORCE_SKILLS_ECONOMY_BASELINE = 650;

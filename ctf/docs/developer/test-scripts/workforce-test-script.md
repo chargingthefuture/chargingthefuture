@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the 650-skill baseline, "{n} of 650 skills") |
 
 ## How to run this
 
@@ -35,7 +35,7 @@
 Workforce is a read-only live tracker — these are the can't-ship-broken checks. Member role unless noted.
 
 1. **Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,
-   and Recruited all render as numbers, not a spinner or error. There is NO "Total Headcount
+   Recruited, and Skills Coverage all render as numbers, not a spinner or error. There is NO "Total Headcount
    Target" card on any surface — it duplicated Workforce Total after sector rounding (dropped
    2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
    screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐
@@ -54,9 +54,12 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 **Role:** member · **Surfaces:** all · **Seed:** `seed:workforce`
 **Steps:**
 1. Open the Workforce dashboard for a signed-in member.
-2. Read the three hero cards (Population, Workforce Total, Recruited) and the Recruitment Progress.
-**Expected:** All three cards show numbers. Workforce Total = population × participation rate.
-Recruited = the count of all active Directory members. Recruitment Progress reads as a percent of
+2. Read the four hero cards (Population, Workforce Total, Recruited, Skills Coverage) and the Recruitment Progress.
+**Expected:** All four cards show numbers. Workforce Total = population × participation rate.
+Recruited = the count of all active Directory members. Skills Coverage shows a whole-number percent
+of the 650-skill functioning-economy baseline with "{n} of 650 skills" beneath, where n = the count
+of DIFFERENT skills at least one active Directory member has listed — never the size of the skills
+pick-list catalog (which would always read 100%), and never above 100%. Recruitment Progress reads as a percent of
 the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
 count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
 no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).

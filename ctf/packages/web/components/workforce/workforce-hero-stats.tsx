@@ -12,6 +12,11 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const participationPct = Math.round(dashboard.participationRate * 100);
+  // Skills coverage toward the 650-skill functioning-economy baseline — the same whole-number
+  // percentage the weekly community-stats draft reports. Capped at 100 so a taxonomy larger than
+  // the baseline can never read as more than fully covered.
+  const skillsBaseline = Math.max(1, dashboard.skillsBaseline);
+  const skillsCoveragePct = Math.min(100, Math.round((dashboard.skillsListedTotal / skillsBaseline) * 100));
 
   const stats = [
     {
@@ -37,6 +42,15 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       // show progress toward the target instead of repeating the same number.
       delta: `${dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 1 })}% of target`,
       color: '#22C55E',
+    },
+    {
+      label: 'Skills Coverage',
+      // How much of the skills taxonomy has someone behind it: DIFFERENT skills at least one active
+      // Directory member has listed, against the 650-skill functioning-economy baseline (the same
+      // figure the weekly community-stats draft reports) — not the size of the pick-list catalog.
+      value: `${skillsCoveragePct}%`,
+      delta: `${dashboard.skillsListedTotal.toLocaleString()} of ${skillsBaseline.toLocaleString()} skills`,
+      color: '#A855F7',
     },
   ];
 
