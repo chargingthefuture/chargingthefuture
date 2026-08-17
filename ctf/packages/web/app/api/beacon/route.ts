@@ -3,6 +3,7 @@ import { beaconErrorResponse, ensureBeaconMutationCsrf, requireBeaconAdminAccess
 import { BEACON_ERROR_CODE, BEACON_MAX_TITLE_LENGTH } from 'lib/beacon/constants';
 import { createBeaconEvent, insertBeaconAudit } from 'lib/beacon/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +24,8 @@ export async function POST(request: Request) {
   let body: CreateBody;
   try {
     body = (await request.json()) as CreateBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: BEACON_ERROR_CODE.invalidJson, message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const title = (body.title ?? '').trim();

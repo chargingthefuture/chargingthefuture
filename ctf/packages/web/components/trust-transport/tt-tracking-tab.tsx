@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Car, Navigation, MessageCircle, Check, X, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
+import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 
-const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
+const TERMINAL_STATUSES = new Set(["completed", "canceled"]);
 
 // Offers on the requester's own open request, with Accept. Accepting opens a trip and (per discovery
 // model B) is the point at which the chosen provider gains the pickup/drop-off via the trip.
@@ -165,32 +167,106 @@ function TrackingEmpty({ onBook }: { onBook: () => void }) {
   );
 }
 
-function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionConfirmed }: { request: TripRequest; onChat: (r: TripRequest) => void; onAccepted: () => void; onCancelled: () => void; onCompletionConfirmed: () => void }) {
+// The API returns pickup/dropoff cities; keep the older fromLocation/toLocation names as fallbacks.
+function resolveLocation(city: string | null | undefined, fallback: string | null | undefined) {
+  return city ?? fallback ?? null;
+}
+
+// Show the real pickup → drop-off; fall back to the request title so the route is not always "— → —".
+function formatRoute(pickup: string | null, dropoff: string | null, title: string | undefined) {
+  if (pickup || dropoff) return `${pickup ?? "—"} → ${dropoff ?? "—"}`;
+  return title?.trim() || "Your trip";
+}
+
+interface TrackingCardModel {
+  route: string;
+  status: string;
+  awaitingDriver: boolean;
+  cancellable: boolean;
+  awaitingCompletionConfirmation: boolean;
+}
+
+function deriveTrackingCardModel(request: TripRequest): TrackingCardModel {
+  const pickup = resolveLocation(request.pickupCity, request.fromLocation);
+  const dropoff = resolveLocation(request.dropoffCity, request.toLocation);
+  const status = request.status ?? "Pending";
+  return {
+    route: formatRoute(pickup, dropoff, request.title),
+    status,
+    // An open/pending request has no driver yet — only show the live-map placeholder once a driver is
+    // on the way; otherwise say plainly that we're waiting for a driver.
+    awaitingDriver: /open|pending|request|search|form|wait/i.test(status),
+    cancellable: !TERMINAL_STATUSES.has(status.toLowerCase()),
+    // `request.status` already reads "completed" once the trip hits "delivered" (see
+    // mapRequestStatusFromTrip) — before mutual completion confirmation and settlement happen. Use the
+    // trip's own status to know whether a confirmation is still pending.
+    awaitingCompletionConfirmation: request.tripStatus === "delivered",
+  };
+}
+
+function TrackingCardHeader({ route, status, settlementLabel, acceptedLabel }: { route: string; status: string; settlementLabel: string; acceptedLabel: string | null }) {
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
-  const [cancelling, setCancelling] = useState(false);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: `${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Car size={24} style={{ color: t.ACCENT }} />
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>{route}</div>
+      <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12, marginLeft: "auto" }}>{settlementLabel}</Badge>
+      {acceptedLabel && (
+        <Badge style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}30`, fontSize: 12 }}>{acceptedLabel}</Badge>
+      )}
+      <Badge style={{ ...statusBadgeStyle(status), fontSize: 12 }}>{status}</Badge>
+    </div>
+  );
+}
+
+function TrackingStatusMessage({ awaitingDriver }: { awaitingDriver: boolean }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const message = awaitingDriver
+    ? "Waiting for a driver to accept your request."
+    : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics.";
+  return (
+    <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, textAlign: "center", color: t.SUBTLE, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+      {message}
+    </div>
+  );
+}
+
+function TrackingCompletion({ request, onCompletionConfirmed }: { request: TripRequest; onCompletionConfirmed: () => void }) {
+  return (
+    <CompletionConfirm
+      tripId={request.tripId ?? ""}
+      myConfirmedAtIso={request.requesterCompletionConfirmedAtIso ?? null}
+      otherConfirmedAtIso={request.providerCompletionConfirmedAtIso ?? null}
+      onConfirmed={onCompletionConfirmed}
+    />
+  );
+}
+
+function DirectLineButton({ awaitingDriver, hasMarginBottom, onClick }: { awaitingDriver: boolean; hasMarginBottom: boolean; onClick: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const label = awaitingDriver ? "Direct Line (opens when matched)" : "Direct Line";
+  return (
+    <button type="button" onClick={onClick} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: hasMarginBottom ? 10 : 0 }}>
+      <MessageCircle size={14} /> {label}
+    </button>
+  );
+}
+
+function CancelRequestButton({ requestId, onCancelled }: { requestId: string; onCancelled: () => void }) {
+  const [canceling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const pickup = request.pickupCity ?? request.fromLocation ?? null;
-  const dropoff = request.dropoffCity ?? request.toLocation ?? null;
-  // Show the real pickup → drop-off; fall back to the request title (the API sends pickupCity /
-  // dropoffCity / title, never fromLocation / toLocation), so the route is no longer always "— → —".
-  const route = pickup || dropoff ? `${pickup ?? "—"} → ${dropoff ?? "—"}` : (request.title?.trim() || "Your trip");
-  const status = request.status ?? "Pending";
-  // An open/pending request has no driver yet — nothing is being tracked. Only show the live-map
-  // placeholder once a driver is on the way; otherwise say plainly that we're waiting for a driver.
-  const awaitingDriver = /open|pending|request|search|form|wait/i.test(status);
-  const cancellable = !TERMINAL_STATUSES.has(status.toLowerCase());
-  // `request.status` already reads "completed" once the trip hits "delivered" (see
-  // mapRequestStatusFromTrip) — before mutual completion confirmation and settlement actually happen.
-  // Use the trip's own status to know whether a confirmation is still pending.
-  const awaitingCompletionConfirmation = request.tripStatus === "delivered";
 
   async function handleCancel() {
     if (!window.confirm("Cancel this request? This can't be undone.")) return;
     setCancelling(true);
     setCancelError(null);
     try {
-      const res = await fetch(`/api/trust-transport/orders/${request.id}/cancel`, {
+      const res = await fetch(`/api/trust-transport/orders/${requestId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({}),
@@ -204,46 +280,51 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
     }
   }
 
+  const cursor = canceling ? "default" : "pointer";
+  const opacity = canceling ? 0.6 : 1;
+  return (
+    <>
+      {cancelError && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 8 }}>{cancelError}</div>}
+      <button
+        type="button"
+        onClick={() => void handleCancel()}
+        disabled={canceling}
+        style={{ width: "100%", padding: "12px", borderRadius: 10, background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13, fontWeight: 600, cursor, opacity, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+      >
+        {canceling ? <Loader2 size={14} className="ctf-spin" /> : <X size={14} />} Cancel request
+      </button>
+    </>
+  );
+}
+
+function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionConfirmed }: { request: TripRequest; onChat: (r: TripRequest) => void; onAccepted: () => void; onCancelled: () => void; onCompletionConfirmed: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const model = deriveTrackingCardModel(request);
+
   return (
     <div style={{ padding: "24px", borderRadius: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}30`, marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: `${t.ACCENT}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Car size={24} style={{ color: t.ACCENT }} />
-        </div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>{route}</div>
-        <Badge style={{ background: "rgba(34,197,94,0.10)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12, marginLeft: "auto" }}>{ttSettlementLabel(request.priceCurrency, request.priceAmount)}</Badge>
-        <Badge style={{ ...statusBadgeStyle(status), fontSize: 12 }}>{status}</Badge>
-      </div>
-      <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, textAlign: "center", color: t.SUBTLE, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-        {awaitingDriver
-          ? "Waiting for a driver to accept your request."
-          : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics."}
-      </div>
-      {awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
-      {awaitingCompletionConfirmation && (
-        <CompletionConfirm
-          tripId={request.tripId ?? ""}
-          myConfirmedAtIso={request.requesterCompletionConfirmedAtIso ?? null}
-          otherConfirmedAtIso={request.providerCompletionConfirmedAtIso ?? null}
-          onConfirmed={onCompletionConfirmed}
+      <TrackingCardHeader route={model.route} status={model.status} settlementLabel={ttSettlementLabel(request.priceCurrency, request.priceAmount)} acceptedLabel={acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)} />
+      <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
+      {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
+      {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}
+      {/* A ride is often not a one-off — the same school run every week, the same weekly shop. The
+          prompt appears as soon as a driver has accepted (a trip exists, so there is someone to name),
+          not only once the ride is finished, because that is when the rider knows it is standing.
+          TrustTransport settles each trip on its own, so a declared ServiceCredits value here is
+          recognized as a relationship rather than counted twice — see PER_OCCURRENCE_ORIGIN_PLUGINS. */}
+      {request.tripProviderUserId ? (
+        <MarkRecurringControl
+          counterpartyUserId={request.tripProviderUserId}
+          originPlugin="trust-transport"
+          sector="service"
+          sectorLabel="a regular ride like this one"
+          accent={t.ACCENT}
+          style={{ marginBottom: 12 }}
         />
-      )}
-      <button type="button" onClick={() => onChat(request)} style={{ width: "100%", padding: "12px", borderRadius: 10, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: cancellable ? 10 : 0 }}>
-        <MessageCircle size={14} /> {awaitingDriver ? "Direct Line (opens when matched)" : "Direct Line"}
-      </button>
-      {cancellable && (
-        <>
-          {cancelError && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 8 }}>{cancelError}</div>}
-          <button
-            type="button"
-            onClick={() => void handleCancel()}
-            disabled={cancelling}
-            style={{ width: "100%", padding: "12px", borderRadius: 10, background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13, fontWeight: 600, cursor: cancelling ? "default" : "pointer", opacity: cancelling ? 0.6 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-          >
-            {cancelling ? <Loader2 size={14} className="ctf-spin" /> : <X size={14} />} Cancel request
-          </button>
-        </>
-      )}
+      ) : null}
+      <DirectLineButton awaitingDriver={model.awaitingDriver} hasMarginBottom={model.cancellable} onClick={() => onChat(request)} />
+      {model.cancellable && <CancelRequestButton requestId={request.id} onCancelled={onCancelled} />}
     </div>
   );
 }

@@ -9,6 +9,7 @@
 // base URL comes from runtime config (APP_URL).
 
 import { authedFetch } from '../../auth/authedFetch';
+import { reportError } from '../../observability/report';
 
 // Bound every request so a stalled connection can't trap the screen in a submitting
 // state forever. A timeout is treated like any other failure: the text is kept.
@@ -84,7 +85,9 @@ export async function submitBugReport(
       },
       body: JSON.stringify(payload),
     });
-  } catch {
+  } catch (caught) {
+    // The one report a member files to say something is broken must not fail silently itself.
+    reportError(caught, { area: 'bug-reporting', op: 'submit' });
     return { kind: 'error' };
   }
 

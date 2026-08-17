@@ -1,4 +1,4 @@
-export type ComicChannel = 'hub' | 'feed';
+export type ComicChannel = 'commons' | 'feed';
 
 export type ComicTurnRole = 'user' | 'bot' | 'human';
 

@@ -122,7 +122,7 @@ export type FoundationCallSession = {
   modality: FoundationCallModality;
   streamCallId: string;
   requestedDurationMinutes: number;
-  status: 'created' | 'active' | 'ended' | 'cancelled';
+  status: 'created' | 'active' | 'ended' | 'canceled';
   createdAtIso: string;
 };
 
@@ -163,4 +163,9 @@ export type FoundationCapacityPolicy = {
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
   updatedAtIso: string;
+  // Monotonic version of the policy, incremented once per admin update and recorded in
+  // foundation_capacity_policy_events. null when no update has ever been recorded (fresh default policy).
+  policyVersion: number | null;
+  // When this version became active (the event's activated_at). null for the fresh default policy.
+  activatedAtIso: string | null;
 };

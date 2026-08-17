@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { executeDeletionReclaim, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReclaimBody = {
   treasuryUserId?: string;
@@ -22,10 +23,11 @@ function isAuthorized(request: Request, configuredToken: string): boolean {
   return providedToken.length > 0 && providedToken === configuredToken;
 }
 
-export async function POST(request: Request, context: ReclaimParams) {
-  // Distinguish "not configured" (503 — token missing in the app runtime) from "wrong/no token" (403)
-  // so the calling service can tell a misconfigured deployment from a bad credential, matching the
-  // account/delete route. This is the only presence check; isAuthorized only verifies the token.
+// Presence + token gate. Distinguish "not configured" (503 — token missing in the app runtime) from
+// "wrong/no token" (403) so the calling service can tell a misconfigured deployment from a bad
+// credential, matching the account/delete route. This is the only presence check; isAuthorized only
+// verifies the token. Returns a ready error response, or null when the caller is authorized.
+function authorizeReclaimRequest(request: Request): NextResponse | null {
   const configuredToken = process.env.SERVICE_CREDITS_INTERNAL_TOKEN?.trim() ?? '';
   if (configuredToken.length === 0) {
     return NextResponse.json(
@@ -39,20 +41,61 @@ export async function POST(request: Request, context: ReclaimParams) {
       { status: 403 },
     );
   }
+  return null;
+}
 
+// The five fields required by executeDeletionReclaim, narrowed to non-optional strings once the
+// payload guard has passed — mirrors the narrowing the inline `if (!body.x || ...)` guard produced.
+type ValidatedReclaimBody = ReclaimBody & {
+  treasuryUserId: string;
+  requestedAt: string;
+  idempotencyKey: string;
+  requestId: string;
+  traceId: string;
+};
+
+// Parse + validate the reclaim body. Returns a ready error response (invalid JSON, or a missing
+// required field) or the validated body. Status codes and code strings are unchanged from the inline
+// version.
+async function parseReclaimBody(request: Request): Promise<{ error: NextResponse } | { data: ValidatedReclaimBody }> {
   let body: ReclaimBody;
   try {
     body = (await request.json()) as ReclaimBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (caught) {
+    return { error: NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.', reason: failureReason(caught) }, { status: 400 }) };
   }
 
   if (!body.treasuryUserId || !body.requestedAt || !body.idempotencyKey || !body.requestId || !body.traceId) {
-    return NextResponse.json(
-      { ok: false, code: 'service_credits_invalid_payload', message: 'treasuryUserId, requestedAt, idempotencyKey, requestId, and traceId are required.' },
-      { status: 400 },
-    );
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'service_credits_invalid_payload', message: 'treasuryUserId, requestedAt, idempotencyKey, requestId, and traceId are required.' },
+        { status: 400 },
+      ),
+    };
   }
+
+  return {
+    data: {
+      treasuryUserId: body.treasuryUserId,
+      requestedAt: body.requestedAt,
+      idempotencyKey: body.idempotencyKey,
+      requestId: body.requestId,
+      traceId: body.traceId,
+    },
+  };
+}
+
+export async function POST(request: Request, context: ReclaimParams) {
+  const authError = authorizeReclaimRequest(request);
+  if (authError) {
+    return authError;
+  }
+
+  const parsed = await parseReclaimBody(request);
+  if ('error' in parsed) {
+    return parsed.error;
+  }
+  const body = parsed.data;
 
   const { accountId, deletionRequestId } = await context.params;
 

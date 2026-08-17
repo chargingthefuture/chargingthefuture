@@ -5,13 +5,13 @@
 > removed. Rasa only attached an intent + confidence label to each turn for the reviewer; it never
 > generated answers and never gated auto-publish. Wherever this document describes a "target
 > architecture" of Rasa + Ollama, Rasa orchestration, a Rasa training/retrain loop, a Rasa SQL
-> tracker store, or Rasa-backed routing, treat it as cancelled history, not the plan.
+> tracker store, or Rasa-backed routing, treat it as canceled history, not the plan.
 >
 > Current and intended direction: generation is Ollama only; every `@comic` answer still goes
 > through human review (`policy.forceHumanReview()` is unconditionally `true`). The `engine` enum
 > still lists `rasa` and the `intent`/`nlu_confidence` columns remain, but only for historical rows
 > — nothing writes them now. The training-example export (`GET /api/comic/training/export`) is kept
-> as a portable dataset of asker questions + owner-labelled corrections for whatever model is
+> as a portable dataset of asker questions + owner-labeled corrections for whatever model is
 > trained later. The path to scale is: upgrade the self-hosted Ollama model on a GPU host (issue
 > #502), then build retrieval and a confidence/safety gate, and later fine-tune an open model on the
 > exported, de-identified dataset. A third-party API (e.g. Claude) is off the table for survivor
@@ -22,9 +22,9 @@
 > **AI Q&A via `@comic`**, **peer-to-peer community posts**) rendered in a single UI.
 > This inventory is **dedicated to the AI portion only**. Announcements and peer-to-peer
 > surfaces live in `ctf-feed-feature-inventory.md` /
-> `ctf-survivor-hub-chat-feature-inventory.md`.
+> `ctf-hub-feature-inventory.md`.
 >
-> **`@comic` already exists** as a defined persona in the Survivor Hub inventory (a
+> **`@comic` already exists** as a defined persona in the Commons (Hub Home) inventory (a
 > hub-owned assistive bot that introduces survivor stories, gives onboarding nudges, and
 > routes users to plugins). This document **extends** that persona from a navigation
 > router into a **conversational Q&A assistant** backed by Rasa + Ollama. It does not
@@ -125,7 +125,7 @@ design that this plan unifies:
    client-side `getActionForText()` keyword→plugin navigation (`ctf-home-bot`, "I'm still
    learning…" fallback, localStorage history). **Navigation only, not Q&A.** The Hub
    consolidation already calls for replacing this hardcoded router with Feed-backed data.
-4. **`@comic` persona + `hub_bots` design** — defined in the Survivor Hub inventory
+4. **`@comic` persona + `hub_bots` design** — defined in the Commons (Hub Home) inventory
    (persona, `hub_bots` table, deterministic seed, DM wiring). **But** the consolidation
    dropped the `hub_*` tables and **none exist in schema** — so the persona is real, its
    backing tables are not.
@@ -133,7 +133,7 @@ design that this plan unifies:
 ## Scope and Boundary
 
 - Subsystem name: `comic`. Bot handle: `@comic`.
-- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → Survivor Hub homepage;
+- Surfaced inside: the unified Hub/Feed chat (web `/apps/feed` → the Commons homepage;
   Android `packages/mobile/src/features/feed`).
 - Owned data layer: `comic_*` conversation/training/rating tables + (target) a Rasa tracker
   store. `llm_inference_log` and `feed_answer_ratings` are **not** reused (their FKs target the
@@ -173,7 +173,16 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
 4. Users can rate any answer (`helpful / not_helpful / flagged`) — feeds the training loop.
-5. **Contribute your own writing (`/knowledge`).** The path is `/knowledge`, deliberately **not**
+5. **Contribute your own writing (`/knowledge`).** **Open to any signed-in member, and it is a route
+   INTO verification** (owner decision, 2026-07-29): judging a contribution means opening the
+   contributor's Quora account and seeing a real person writing real things, which is the same look
+   Unlock asks for — so gating it behind Unlock would review the same account twice. A **signed-out
+   visitor gets a public landing page**, because this is the URL the invitation post links to from
+   Quora and most people opening it have no account yet. Both the signed-in and signed-out versions
+   carry the shared back control (rule 134): the signed-in shell through `MobileScreenHeader`, and
+   the public shell through the standalone `BackChevronButton` in its own header, since that
+   header's signed-in chrome would mean nothing to a visitor with no account.
+   The path is `/knowledge`, deliberately **not**
    `/contribute` — the Contributions plugin is a different thing entirely (the fundraiser and donation
    surface), and two member-facing paths a word apart would be a standing source of confusion (owner
    decision, 2026-07-29). The screen is titled "Knowledge library" for the same reason. A member can lend their own public Quora
@@ -190,7 +199,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
      is public and the contributor's; scraping would inherit the exact link-rot fragility that got
      URLs stripped from the corpus in the first place. Only quora.com links are accepted, duplicates
      within one submission are rejected, and a post under 120 characters is refused up front (not a
-     quality judgement — a couple of lines cannot ground an answer, and saying so now saves the wait).
+     quality judgment — a couple of lines cannot ground an answer, and saying so now saves the wait).
    - **Whole export.** For the rarer member whose public writing is nearly all on-topic: they get the
      Quora export (Settings → Privacy → Download your information) and upload the `.zip` exactly as
      it arrived. On the same page they read and tick
@@ -221,7 +230,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
    `importComicKnowledge.mjs` with `ON CONFLICT DO NOTHING`, so two members quoting the same
    widely-shared passage collapse onto one row instead of duplicating it.
 4. **Decline** requires a reason, which the contributor reads on their own page. A decline nobody can
-   understand reads as a judgement on what they lived through.
+   understand reads as a judgment on what they lived through.
 5. **ServiceCredits recognition grant** on accept: a flat 100 credits per accepted contribution
    (flat, not per-post — paying by volume would reward padding, and the reviewer would end up arguing
    about counts with people already having a hard week). **Only a member who has finished Unlock
@@ -249,7 +258,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 - `GET /api/feed/admin/questions`, `GET /api/feed/admin/questions/export` — admin review +
   **Rasa NLU YAML export**.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
-  `POST /api/hub/messages` is a stub).
+  `POST /api/commons/messages` is a stub).
 
 ### Implemented (backend foundation, server-only — `comic.*`)
 Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface), under
@@ -262,7 +271,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
-- `POST /api/comic/contributions` (`comic.contribution.submit`) — signed-in member. Accepts either
+- `POST /api/comic/contributions` (`comic.contribution.submit`) — **any signed-in member**
+  (`requireComicContributionAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
+  the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
+  member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an
+  approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`.
+  Best-effort and run *after* the contribution is stored, so a failure cannot lose the writing.
+  Accepts either
   **`kind=links`** (the default: pasted posts, each with a quora.com URL as provenance — nothing is
   fetched) or **`kind=export`** (a Quora export `.zip`, multipart, 25 MB cap), plus the consent
   payload. **Consent is validated before the
@@ -304,6 +319,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
 - `GET /api/comic/admin/training-stats` (`comic.training.stats`) — admin. Read-only at-a-glance
   counts for the dashboard: total non-discarded `comic_training_examples` (with a pending/exported
   breakdown) and the number of distinct rated answered turns. Aggregate counts only — no PII.
+- `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) — admin. Paginated browse of
+  `comic_knowledge_entries` (source, type, title/question, content snippet, active flag, plus
+  total/active counts; `?filter=all|active|inactive`). Backs the `/admin/comic/knowledge` curation
+  page (`comic-knowledge-admin.tsx`), linked from the `/admin` landing as "AI Knowledge Base".
+- `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — admin,
+  CSRF-guarded. Switch one grounding entry on/off for retrieval. Off never deletes: the row stays
+  and retrieval simply skips inactive rows; the entry can be switched back on.
 - `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
   asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
   items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
@@ -323,7 +345,7 @@ app via Ollama (`generateComicDraft`), with a deterministic template fallback wh
 unconfigured or unreachable.
 
 ### Target (`@comic`)
-- Mention routing also to ride the Hub message path (`POST /api/hub/messages`) once that stub
+- Mention routing also to ride the Hub message path (`POST /api/commons/messages`) once that stub
   is wired; today the dedicated `POST /api/comic/message` is the server entry point.
 - Auto-reply branch (above-threshold) is **deferred**. There is no model-derived confidence now
   (Rasa removed), so `forceHumanReview()` stays unconditionally true. A confidence/safety gate is
@@ -344,8 +366,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
 
 1. `comic_conversations` — a chat thread (`id` uuid pk, `user_id` text, `asker_username` text null
    [the asker's @username snapshotted at ask time, shown in the review dashboard in place of the raw
-   user id; null for rows created before this was captured], `channel` text [hub|feed], `status` text
+   user id; null for rows created before this was captured], `channel` text [commons|feed], `status` text
    [open|closed], `created_at`, `updated_at`). Indexed on `user_id`, `created_at`.
+   `channel` was `hub|feed` until 2026-08-09; existing rows were migrated to `commons` and nothing
+   writes `hub` any more. The CHECK still accepts `hub` for one release so the deploy window cannot
+   fail an insert, and reads fold it to `commons` — see the Commons inventory's change log.
 2. `comic_turns` — one row per turn, including `grounding_entry_ids` (jsonb array, default `[]`;
    the `comic_knowledge_entries` ids injected as grounding when a bot draft was generated —
    added 2026-07-23) (`id` uuid pk, `conversation_id` uuid FK→comic_conversations,
@@ -495,7 +520,7 @@ exported text never has to leave our infrastructure to be used for training.
 `{ trainingExamplesTotal, trainingExamplesByStatus, ratedAnswersTotal }`. The @comic review dashboard
 shows this in the queue header as "Training examples collected: N (… awaiting export · … exported ·
 … rated answers)" so the owner can see at a glance how much data has accumulated. The breakdown is
-by training-example export status; "awaiting export" was previously labelled "pending", which read
+by training-example export status; "awaiting export" was previously labeled "pending", which read
 confusingly next to the review queue's own "N pending" badge (the two count different things — export
 status vs. queued reviews). It is read-only and best-effort — if the count fails to load it is simply
 hidden, never blocking the review queue.
@@ -624,7 +649,7 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
 4. Single LLM provider, no failover (carried from feed gap #1).
-5. The Hub message path (`POST /api/hub/messages`) is a stub; `@comic` routing depends on
+5. The Hub message path (`POST /api/commons/messages`) is a stub; `@comic` routing depends on
    wiring it to the Feed/comic data layer first.
 6. `@comic` persona is defined against dropped `hub_*` tables; persona + data layer must be
    reconciled with the Hub consolidation.
@@ -633,7 +658,10 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
    no word overlap against the knowledge base retrieve nothing. The embedding upgrade is
    unblocked (#502, the GPU host with the stronger model, closed 2026-07-22) and is follow-up
    work: serve an embedding model on the same self-hosted engine and rank by vector similarity.
-   Knowledge-base curation is manual (`active` flag); no admin UI for it yet.
+   ~~Knowledge-base curation is manual (`active` flag); no admin UI for it yet.~~ Resolved
+   (2026-08-05): `/admin/comic/knowledge` lists every entry with its active flag and switches
+   entries off/on for retrieval (routes `GET /api/comic/admin/knowledge`,
+   `PUT /api/comic/admin/knowledge/:entryId`).
 
 ## Future Notes (deliberately deferred — do not get bogged down now)
 
@@ -686,9 +714,81 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-07-29: **One canonical `content_hash` formula — the three copies had drifted, and two of them silently broke the dedupe they promised.** `content_hash` is what stops the same writing being stored in `comic_knowledge_entries` twice, and three places computed it: `importComicKnowledge.mjs` joined the fields with a **NUL** character, while `scrubComicKnowledgeIdentifiers.mjs` and the member-contribution accept path (`app/api/comic/admin/contributions/[id]/review/route.ts`) joined them with a **space** — both carrying a comment claiming they matched the importer. Consequences, both real: (a) every row the identifier scrub rewrote was left holding a hash the importer would never reproduce, so a later re-import saw no conflict and inserted a duplicate of writing already present — the scrub's "cannot resurrect the original" guarantee did not hold; (b) a member contributing a post whose text was already in the library hashed differently, hit no conflict, and was stored a second time. Fix: the formula now lives once, as `contentHashOf` in `ctf/scripts/lib/comicDatasetShared.mjs`, imported by the importer and the scrub. The web route is outside that package and cannot import it, so it keeps a deliberate second copy with a comment naming the canonical definition and requiring both to change together. NUL is kept as the separator because it is what produced every live row's hash (so no stored hash is invalidated) and because it cannot occur in the text — a space join collides `(question "a b", content "c")` with `(question "a", content "b c")`, which the NUL join keeps distinct. Verified: the canonical function reproduces the importer's previous hash for every case, all three sites now agree, and the old space formula does not. **Not fixed here (needs a production pass):** rows the scrub already rewrote carry space-formula hashes and will not dedupe against a re-import until they are recomputed — folded into the corpus-refresh issue.
+- 2026-07-29: **One canonical `content_hash` formula, so the importer and the contribution path agree.** `content_hash` is what stops the same writing being stored twice in `comic_knowledge_entries`, and the places that computed it had drifted: `importComicKnowledge.mjs` joined the fields with a **NUL** character while the member-contribution accept path (`app/api/comic/admin/contributions/[id]/review/route.ts`) joined them with a **space**, under a comment claiming it matched the importer. Effect: a member contributing a post whose text was already in the library hashed differently, hit no conflict, and was stored a second time. The formula now lives once as `contentHashOf` in `ctf/scripts/lib/comicDatasetShared.mjs`, imported by the importer; the web route is outside that package and cannot import it, so it keeps a deliberate second copy with a comment naming the canonical definition and requiring both to change together. NUL is kept because it produced every live row hash (no stored hash is invalidated) and because it cannot occur in the text — a space join collides `(question "a b", content "c")` with `(question "a", content "b c")`, which NUL keeps distinct. Verified: the canonical function reproduces the importer previous hash for every case, both sites now agree, and the old space formula does not. **Known data gap, not fixed here:** the one-time identifier scrub (`scrubComicKnowledgeIdentifiers.mjs`, removed in #1954 after its production run) used the same space formula and *rewrote* `content_hash` on every row it touched, so those production rows hold hashes the importer will not reproduce and will not dedupe against a re-import until recomputed. Tracked in the corpus-refresh issue.
 - 2026-07-29: **`importComicKnowledge.mjs` is plain text again, so its diffs are reviewable.** The NUL separator was stored as a literal NUL byte, which made git classify the source as binary and print "Binary files differ" instead of a diff — a loader script that writes to the knowledge base could be changed without the change being visible in review. Moving the formula into `comicDatasetShared.mjs` (written with the `\u0000` escape rather than a raw byte) removes the last raw NUL from the file. The runtime string, and therefore every hash, is unchanged. This commit's own diff still shows binary because the base version on `main` contains the raw bytes; every diff after it is text.
 - 2026-07-29: **Reconciled the `source_ref` knowledge-import change with the merged member-contribution feature (schema-compatible).** After the member Quora-contribution feature (`comic_contributions`, `comic_contribution_entries`, `comic_knowledge_entries.contribution_id`) and the Quora space rename merged to `main`, this branch was rebased on top. The contribution accept path (`acceptContribution` in `lib/comic/contribution-repository.ts`) promoted rows with a bare `ON CONFLICT (content_hash) DO NOTHING`, which no longer matches the schema once the global `UNIQUE(content_hash)` is replaced by the partial index `uq_comic_knowledge_entries_content_hash` (`WHERE source_ref IS NULL`). Updated that insert and its already-present backfill lookup to key on `... WHERE source_ref IS NULL`: contributed rows carry a null `source_ref`, so they still dedupe against legacy and contribution rows exactly as before, while Markdown-repo rows (`source_ref` set) form a separate identity space and never collide with them. Confirmed the two partial indexes coexist with `contribution_id` and its `ON DELETE CASCADE`. Re-verified end to end on an embedded Postgres including the contribution insert path. **Owner note:** the pedigree101 content now has two ingestion routes — the already-imported legacy seed rows and the Markdown-repo `source_ref` path — so before importing the Markdown, decide which is authoritative for that account and retire the other's rows (`active = FALSE`) so the bot is not grounded on two copies.
+- 2026-08-09 (latest): **The signed-out Knowledge library page had no way back (owner report).**
+  `comic-knowledge-public-shell.tsx` builds its own header — the BookOpen mark and the title — and
+  carried no back control at all, so a visitor who reached `/knowledge` from inside the app was
+  stranded there at phone width, where there is no browser back button in the installed web app.
+  This is the case rule 134 names outright as forbidden. The signed-in shell was never affected; it
+  gets its back control from `MobileScreenHeader`. Fixed by adding the shared `BackChevronButton`
+  to the left of the icon and title, tinted to the plugin accent and sized to match the header —
+  the same placement `mutual-time-public.tsx` already uses for a public shell with its own header.
+  `MobileScreenHeader` would have been the wrong piece here: its right-hand cluster is report-a-bug,
+  account settings, and the account menu, all of which are signed-in chrome a visitor with no
+  account cannot use. Back resolves through the shared `useSmartBack` — the previous in-app page
+  when there is one, the all-apps grid otherwise, and that grid renders for a signed-out visitor
+  too, so the fallback lands somewhere real. No route, schema, or contract change.
+- 2026-08-05: **Knowledge-base curation admin shipped (closes the manual-curation gap).**
+  New page `/admin/comic/knowledge` (`comic-knowledge-admin.tsx`, linked from the `/admin` landing
+  as "AI Knowledge Base") lists `comic_knowledge_entries` newest-first with source, type,
+  title/question, a content snippet, and the active flag, filterable all/active/inactive with
+  active-of-total counts, and switches entries off/on for retrieval. Backed by two new admin routes —
+  `GET /api/comic/admin/knowledge` (`comic.admin.knowledge.list`) and CSRF-guarded
+  `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — over a new
+  `lib/comic/knowledge-admin.ts` module (kept out of the already-large `repository.ts` per rule
+  116). Off never deletes: retrieval skips inactive rows and an entry can be switched back on; the
+  withdrawal and deletion paths are unchanged. Command + access-policy contracts added. No schema
+  change.
+- 2026-07-29: **Knowledge Library now actually appears in the Apps launcher.** The plugin
+  was added to `fallbackPluginRegistry` in `lib/plugins/repository.ts` and to the parity contracts,
+  but never to the `ctf_plugin_registry` seed in `schema.sql` — and `listPluginRegistry` only falls
+  back to the in-code array when that table is empty or unreadable, which never happens in
+  production. So the tile was missing from the member Apps list for three releases while the code
+  looked correct. Added the `knowledge` row (nav rank 66, visible) to `schema.sql` and
+  `schema.demo.sql`, and put a comment above the seed block saying the table — not the in-code array
+  — is what the launcher reads, so the next plugin does not repeat it.
+- 2026-07-29 (later): **Contributing is a route INTO verification, and `/knowledge` gets a public
+  landing page (owner decision).** Judging a contribution means opening the contributor's Quora
+  account and seeing a real person writing real things — exactly the look Unlock verification asks
+  for. Gating contribution behind Unlock reviews the same account twice and makes the most useful
+  thing a new member can do into something they wait for. (This settles a mismatch found the same
+  day: the page was `any_authenticated` while the routes were `approved_full`, so a member could fill
+  in the whole form and only then be refused. Resolved by loosening the routes, not tightening the
+  page — PR #1963, which did the opposite, was closed unmerged.)
+  - **Access:** new `requireComicContributionAccess` (`any_authenticated`) on the three contribution
+    routes; the rest of comic stays `approved_full`.
+  - **Unlock linkage** (`lib/comic/contribution-unlock-link.ts`): the submission may carry a Quora
+    profile URL. With **no URL on file** it opens a normal **pending** Unlock submission, audited
+    `source: comic_knowledge_contribution`. Never an auto-approval — one review now answers both
+    questions instead of one blocking the other. Best-effort, after the contribution is stored, so a
+    failure cannot lose someone's writing; the receipt states whether verification started. A member
+    who already has a URL on file is **never asked again** (owner decision), and the server re-checks
+    rather than trusting the page, so two conflicting URLs cannot reach one account this way.
+  - **Public landing page** (`comic-knowledge-public-shell.tsx`) for signed-out visitors.
+  - `normalizeQuoraProfileUrl` moved to `lib/unlock/quora-url.ts` and re-exported from
+    `app/api/unlock/_lib.ts`: `lib` must not import from `app`. It stays separate from the looser
+    `lib/directory/quora-url.ts` — verification needs the profile itself.
+
+- 2026-07-29: **Third-party identifier scrub applied to production; the one-time tooling is deleted
+  (#1912 closed out).** The first seed import ran before `redact()` covered Quora profile links and
+  @handles, so live rows could carry another person's identity into a model prompt. The dry run
+  scanned 1,575 rows and reported 609 changes; the apply run (workflow_dispatch, 2026-07-29) landed
+  them. Most of the 609 are the URL removal — an **accuracy** decision, not a privacy one: a quarter
+  of the seed's links were already truncated by Quora's own exporter, old app deep links point at
+  routes that no longer exist, and a link to another member's account can rot into something worse
+  than out-of-date if that account is deleted or taken over.
+  `.github/workflows/scrub-comic-knowledge-identifiers.yml` and
+  `ctf/scripts/scrubComicKnowledgeIdentifiers.mjs` are now removed: they were catch-up for rows
+  imported before the fix, and the fix itself lives permanently in the parsers' shared `redact()` and
+  in `lib/comic/redact.ts`. Nothing to re-run.
+  **Note for the record:** the scrub corrected the **database**. The original seed file is still in
+  git history at commit `6f423fe` with 14 profile links naming 9 people. Those are public Quora posts
+  and links to accounts their owners made public — the risk was always accuracy rather than
+  disclosure — but removing them from history would need a force-push rewrite of a public repo, which
+  has not been done.
+
 - 2026-07-29: **Quora space renamed — `space` label updated in the retained seed export (data-only, no schema impact).** The owner renamed their Quora space (subdomain `tiskillsnetwork.quora.com` → `skillseconomy.quora.com`; visible name "TI Skills Network" → "Skills Economy"). In `ctf/scripts/data/comic-knowledge-seed-2.jsonl` the `space` metadata field was changed from `TI Skills Network` to `Skills Economy` on the 70 rows for that space (the parser maps `rec.space` to the knowledge-entry `title` when a row has no explicit title — see `importComicKnowledge.mjs`), so a future re-import grounds under the current space name. Left exact: post `url` values (never imported, and several encode the old subdomain inside the canonical slug — rewriting would corrupt them) and every "TI Skills Network" mention inside verbatim post `content` (a member's own words). Note: this repo file is the retained source-of-record; the rows already imported into `comic_knowledge_entries` are not changed by the seed edit. To bring the live rows in step, a one-time script `ctf/scripts/renameComicSpaceTitle.mjs` plus a manually-triggered workflow (`.github/workflows/rename-comic-space-title.yml`) update the `title` from `TI Skills Network` to `Skills Economy` — matched exactly on `title` so only space-post rows are touched; `content` is left verbatim and `content_hash` is not recomputed (title is not part of the hash), so import idempotency is unaffected. Dry-run by default. The owner ran the apply job green against production, so the live rows now carry the new title; per the one-time-tooling pattern, `ctf/scripts/renameComicSpaceTitle.mjs` and `.github/workflows/rename-comic-space-title.yml` have since been removed. All 225 seed lines re-validated as JSON.
 - 2026-07-29: **Members can contribute their own public Quora writing, with the consent form on the
   page (`/knowledge`).** The path and the screen title avoid the word "contribute" on purpose: the
@@ -763,9 +863,9 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 - 2026-06-21: **Applicable-plugin links on published answers.** A reviewer can now tag the plugins an answer points to, and the published answer renders them as tappable links. (1) Schema: added `linked_plugin_slugs jsonb not null default '[]'` to `comic_turns` (`schema.sql` CREATE + `ALTER … ADD COLUMN IF NOT EXISTS` companion, `schema.demo.sql` regenerated). (2) `ComicReviewResolveInput` gained `linkedPluginSlugs?: string[]`; the resolve route (`POST /api/comic/review/[turnId]/resolve`) parses it (string-array narrowing) and `resolveComicReview` validates the slugs against the visible plugin registry (`listPluginRegistry`) — dropping unknown/hidden slugs, deduping, and capping at 5 — then stores the result on the published answer turn (the reused AI draft for approve, or the freshly inserted human turn for correct / approved human-first). Reject stores nothing. (3) Read path: `listComicAskerStream` now selects `comic_turns.linked_plugin_slugs` on the answer turn and resolves each slug to `{ slug, name }` against one registry fetch per page, exposing `ComicAskerStreamItem.linkedPlugins` (empty for pending). The field is threaded through `/api/comic/conversation` → `useHomeChat` → `ComicStreamItem` to `ComicAnswerCard`, which renders each as a small `next/link` chip to `/apps/<slug>` (nothing when empty). (4) Dashboard: `comic-review-dashboard.tsx` fetches `/api/plugins` and shows an "Applicable plugins" toggle-chip picker in both the default (approve) view and the Edit view; the chosen slugs are sent as `linkedPluginSlugs` on approve and correct. (5) Contract: `comic.review.resolve` bumped to 1.1.0 with the new input and `comic_turns.linked_plugin_slugs` + `ctf_plugin_registry` in dataAccess. Android (RN dashboard + mobile comic card) is deferred — see the parity ticket on the PR.
 - 2026-06-21: **Regenerate a draft + show why the engine is unreachable.** (1) New admin-only `POST /api/comic/review/[turnId]/regenerate` (`regenerateComicDraft`) re-runs the model for a still-pending review and attaches the draft synchronously, so a backlog of draftless questions (the engine was down at ask time) can be cleared once it is healthy; the review dashboard gains a "Regenerate draft"/"Generate draft" button. If the engine is still unreachable it leaves the item human-first and says so. No schema change (writes a bot turn + sets `draft_turn_id`, same as the background path). (2) `pingOllama` now returns a `detail` string naming the failure (`HTTP 401 — check OLLAMA_API_KEY`, `HTTP 404 — check OLLAMA_BASE_URL / endpoint id`, `timeout`, etc.) plus the `provider` (runpod/native), so an "unreachable" status is debuggable — the admin landing badge and the `/admin/comic` queue badge now show the reason. This distinguishes a real outage from a config mistake (a wrong/missing RunPod API key or an out-of-date endpoint id while the RunPod endpoint itself is "Ready").
 
-- 2026-06-21: Surfaced the chat AI engine status on the **main admin landing** (`/admin`), not just the `/admin/comic` dashboard. New client component `app/admin/admin-ai-status-badge.tsx` calls the existing admin-only `GET /api/comic/admin/ai-status` probe once on mount and renders a one-line status bar under the header: green "reachable · Nms", red "asleep or not responding" (a cold or down RunPod serverless endpoint fails the `/health` probe — a retry usually wakes it), grey "not configured", plus the model id. This is so the owner sees whether drafting is live the moment they open admin, instead of inferring it from canned/absent answers. Read-only, best-effort (a failed fetch shows "status unavailable"); reuses the existing endpoint, so no new route, schema, or contract. Reconfirmed behaviour: when the RunPod/Ollama engine is unreachable, `generateAndAttachDraft` attaches no draft (the review stays human-first, shown as "No AI draft … drafting was unavailable"), and the Feed assistant falls back to its approved-sources template — both already documented below.
+- 2026-06-21: Surfaced the chat AI engine status on the **main admin landing** (`/admin`), not just the `/admin/comic` dashboard. New client component `app/admin/admin-ai-status-badge.tsx` calls the existing admin-only `GET /api/comic/admin/ai-status` probe once on mount and renders a one-line status bar under the header: green "reachable · Nms", red "asleep or not responding" (a cold or down RunPod serverless endpoint fails the `/health` probe — a retry usually wakes it), gray "not configured", plus the model id. This is so the owner sees whether drafting is live the moment they open admin, instead of inferring it from canned/absent answers. Read-only, best-effort (a failed fetch shows "status unavailable"); reuses the existing endpoint, so no new route, schema, or contract. Reconfirmed behavior: when the RunPod/Ollama engine is unreachable, `generateAndAttachDraft` attaches no draft (the review stays human-first, shown as "No AI draft … drafting was unavailable"), and the Feed assistant falls back to its approved-sources template — both already documented below.
 - 2026-06-17: Review dashboard now shows the asker's **@username** instead of the raw Clerk user id, and presents an honest **no-draft** state. (1) Added a nullable `asker_username` column to `comic_conversations` (`schema.sql` + `schema.demo.sql`); `routeComicMessage` now takes the actor's username and snapshots it on the conversation at ask time (backfilled on later turns via `COALESCE`). Older rows have no snapshot and fall back to the user id. (2) `listPendingComicReviews` now returns `asked_by_username` and a `has_draft` flag (`q.draft_turn_id IS NOT NULL`); `ComicReviewItem` gained `askedByUsername` and `hasDraft` (web + mobile). When `hasDraft` is false — `draft_turn_id` is null, which means no draft is attached yet (it may still be generating in the background, drafting was unavailable, or the question was safety-held) — the web and Android dashboards no longer show the question text in the "AI draft" slot or offer "Approve & send"; they show a "No AI draft … write the answer" state and route the owner to Edit & approve. Server already blocks approving a draftless item with empty content (`approve_requires_content`). No new endpoints or contracts.
-- 2026-06-14: Added a live Ollama status badge to the `/admin/comic` review dashboard. New admin-only read endpoint `GET /api/comic/admin/ai-status` calls `pingOllama` (`lib/chatbot/ollama.ts`) — a 5s, no-inference liveness probe that hits `GET /health` for a RunPod endpoint or `GET /api/tags` for a native Ollama host (reusing the `OLLAMA_API_KEY` bearer) — and returns `{ ok, ollama: { configured, reachable, latencyMs, model } }`. The dashboard queue header shows one badge (green reachable + latency / red unreachable / grey not configured) so the owner can tell at a glance whether drafting is working. Read-only; best-effort (a failed fetch hides the badge, never blocks the queue). Supersedes the never-merged #498, which also pinged Rasa — Rasa was removed (#503), so only Ollama is shown. No schema or contract change.
+- 2026-06-14: Added a live Ollama status badge to the `/admin/comic` review dashboard. New admin-only read endpoint `GET /api/comic/admin/ai-status` calls `pingOllama` (`lib/chatbot/ollama.ts`) — a 5s, no-inference liveness probe that hits `GET /health` for a RunPod endpoint or `GET /api/tags` for a native Ollama host (reusing the `OLLAMA_API_KEY` bearer) — and returns `{ ok, ollama: { configured, reachable, latencyMs, model } }`. The dashboard queue header shows one badge (green reachable + latency / red unreachable / gray not configured) so the owner can tell at a glance whether drafting is working. Read-only; best-effort (a failed fetch hides the badge, never blocks the queue). Supersedes the never-merged #498, which also pinged Rasa — Rasa was removed (#503), so only Ollama is shown. No schema or contract change.
 - 2026-06-14: Moved the RunPod worker image out of this monorepo into its own repo (`ctf/Runpod`). Deleted `ctf/ops/runpod-ollama/Dockerfile` here; the endpoint now builds from the dedicated repo so pushes to this monorepo's `main` never trigger a ~20 GB image rebuild (the worker repo changes rarely). The handler stays inlined in that one Dockerfile. The RunPod client adapter (`lib/chatbot/ollama.ts`) and the RunPod section of `ctf/docs/developer/OLLAMA.md` remain here and now point at the worker repo. No behavior change.
 - 2026-06-14: Generate the @comic draft in the BACKGROUND so the asker's submit never waits on the model. Previously `routeComicMessage` awaited `generateComicDraft` before returning; with the model moved to a serverless GPU (issue #502, PR #506), a cold start could take tens of seconds and stall the submit. Now the user turn + a `pending` review row commit in one short transaction first and the request returns immediately; the AI draft is generated in a detached background task (`generateAndAttachDraft`) that, only if the review is still `pending`, inserts the bot draft turn and records it on the new `comic_review_queue.draft_turn_id` column (guarded by `FOR UPDATE` + `WHERE status = 'pending'`). The review's `turn_id` is never repointed — it stays the asker's question turn, so the question is inferred stably even when the asker sends another message before the draft lands (fixes the mispairing flagged in CodeRabbit review of #507). A `template`-engine result (Ollama unreachable) is treated as a failed generation and not attached, leaving the item human-first. The admin dashboard reads the draft from `draft_turn_id` (falling back to the question body for human-first); `resolveComicReview` publishes the draft turn on approve. Schema: added the nullable `draft_turn_id UUID` column to `comic_review_queue` (`schema.sql` + `schema.demo.sql`). The human-review guarantee is unchanged and strengthened — the question is enqueued before any AI work, so a slow/failed/absent model never loses it.
 - 2026-06-14: Talk to a RunPod serverless endpoint for drafts (issue #502, PR #506). `lib/chatbot/ollama.ts` detects an `api.runpod.ai` `OLLAMA_BASE_URL`, submits the chat as a RunPod job (`/run`) and polls `/status/<id>` within the same 30s budget, reusing `OLLAMA_API_KEY` as the RunPod bearer; the self-hosted worker image was added at `ctf/ops/runpod-ollama/Dockerfile` (later moved to the dedicated worker repo — see the entry above). Inert unless `OLLAMA_BASE_URL` points at RunPod.
@@ -813,7 +913,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   redundant `version: 1.0.0` line that duplicated `commandVersion: 1.0.0` on each of the seven audit
   events. That duplicate had only been added to satisfy the schema-drift gate, which previously did
   not recognize `commandVersion` as a version key; the gate now accepts it, so the workaround is no
-  longer needed. Each audit event keeps its `eventId`, `command`, and `commandVersion`. No behaviour,
+  longer needed. Each audit event keeps its `eventId`, `command`, and `commandVersion`. No behavior,
   schema, route, or API change.
 - 2026-05-31: **Stood up the self-hosted Rasa NLU service + wired the backend** on
   `feat/rasa-assistant-service` (infra + a SAFE, label-only backend integration; no UI). Added the

@@ -3,9 +3,9 @@
 ## Summary
 
 - Feature/Change: The Commons (Survivor Hub home/community chat) opens a live Stream Chat connection
-  for the first time. Before this change `POST /api/hub/join` returned hardcoded stub credentials
+  for the first time. Before this change `POST /api/commons/join` returned hardcoded stub credentials
   (`'todo-stream-token'`), so the Commons never connected to Stream and consumed no live Chat usage —
-  it ran entirely on a 10-second poll of our own `/api/hub/messages`. This change makes `join` mint
+  it ran entirely on a 10-second poll of our own `/api/commons/messages`. This change makes `join` mint
   real credentials for the shared `ctf-feed-community` channel, and the client opens one live
   `stream-chat` connection per Commons member (per browser tab open on the home screen) to receive
   real-time new-post events and typing indicators. This introduces real, ongoing Stream Chat
@@ -37,7 +37,7 @@
   is composing. Typing events are server-debounced by `channel.keystroke()`, so a member typing a
   sentence sends roughly one `typing.start` and one `typing.stop`, not one per keystroke. Real-time
   new-post delivery replaces poll volume: the 10-second poll slows to a 30-second backstop once a
-  member is live, so per-member background request volume to `/api/hub/messages` drops by about two
+  member is live, so per-member background request volume to `/api/commons/messages` drops by about two
   thirds while connected.
 
 ## Budget Threshold Risk
@@ -59,7 +59,7 @@
   line. The existing footer connection status still reads live vs. syncing.
 - Kill switch / feature flag: the natural kill path is configuration. When `STREAM_API_KEY` /
   `STREAM_API_SECRET` are absent, `resolveStreamCredentials()` returns null, `getFeedStreamCredentials`
-  returns null, and `POST /api/hub/join` returns `{ ok: true, configured: false }` — the client never
+  returns null, and `POST /api/commons/join` returns `{ ok: true, configured: false }` — the client never
   opens a connection and stays on polling. So removing/rotating the Stream credentials (or, for
   demo/recording sessions, the demo-mode routing to the staging Stream app per rule 110) cuts the
   Commons connection load back to zero without breaking the chat. There is no separate per-feature flag
@@ -77,7 +77,7 @@
 ## Validation
 
 - Tests added for degraded mode: none automated. The degraded path is exercised by the
-  `configured: false` branch in `POST /api/hub/join` and the null-connection branch in
+  `configured: false` branch in `POST /api/commons/join` and the null-connection branch in
   `use-home-chat.ts` (`connectHubLive` returns null → the hook stays on the 10-second poll and clears
   the typing state). Verified manually that the web build succeeds and Commons works with the Stream
   environment variables absent (the default in this environment). Typecheck and lint pass.

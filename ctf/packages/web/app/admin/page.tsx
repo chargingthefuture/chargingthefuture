@@ -26,17 +26,29 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic', name: 'AI Assistant' },
   { href: '/admin/beacon', name: 'Beacon' },
   { href: '/admin/bug-reports', name: 'Bug Reports' },
+  { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
-  { href: '/admin/feed-announcements', name: 'Feed Announcements' },
+  // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
+  // announcements area below, which is an authoring tool for the owner's own announcements — this
+  // one carries a different power, over someone else's words.
+  { href: '/admin/commons', name: 'Commons Moderation' },
+  // Named for the Commons, the member-facing surface these announcements land on — the same name
+  // the Account & Data screen uses for this service.
+  { href: '/admin/feed-announcements', name: 'Commons: Feed & Announcements' },
   // Review of member-contributed writing for the assistant's library. Its own area rather than a tab
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
   // in the admin directory on its own.
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
+  // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
+  { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/level-up', name: 'LevelUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
+  // Read-only review of who confirms whose recurring arrangements — the two-sided confirmation rule
+  // stops one member inflating their own standing, not a small group confirming each other's.
+  { href: '/admin/recurring-activity', name: 'Recurring Activity Review' },
   // Mutual Time has no /admin/* route — its admin dashboard (create/manage polls) lives at
   // /apps/mutual-time (MutualTimeAdmin renders there for admins), so this row points there.
   { href: '/apps/mutual-time', name: 'Mutual Time' },

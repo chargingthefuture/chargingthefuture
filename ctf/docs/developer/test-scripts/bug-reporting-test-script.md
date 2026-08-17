@@ -134,6 +134,13 @@ reporter identity — it stays admin-surface only (rule 129).
 
 ---
 
+### Account deletion pseudonymizes the reporter
+
+**Expected:** After a member deletes their account, bug reports they filed remain available for
+triage, but the reporter reads as a deleted member — no raw id survives on the report.
+
+---
+
 ## Parity check (web ↔ android)
 
 For BUG-1, BUG-2, and BUG-3, the android app and the mobile-responsive web layout must behave the

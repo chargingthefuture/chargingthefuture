@@ -10,7 +10,13 @@ import {
   type MutualTimeErrorCode,
   type MutualTimeMeetingPlugin,
 } from './constants';
-import { candidateSlotSet, generateCandidateSlots, normalizeSlotIso } from './slots';
+import {
+  candidateSlotSet,
+  dateUtcMidnightMs,
+  generateSlotsFrom,
+  normalizeSlotIso,
+  rollingWindowStartMs,
+} from './slots';
 import { meetingPluginName, meetingPluginRoute } from './meeting-plugin';
 import { generateEventSlug } from './slug';
 import type {
@@ -45,6 +51,7 @@ type EventRow = {
   result_can_make_it: number | null;
   created_at: Date;
   closed_at: Date | null;
+  auto_closed: boolean;
 };
 
 const EVENT_COLUMNS = `
@@ -62,7 +69,8 @@ const EVENT_COLUMNS = `
   result_slot_start,
   result_can_make_it,
   created_at,
-  closed_at
+  closed_at,
+  auto_closed
 `;
 
 function normalizeMeetingPlugin(raw: unknown): MutualTimeMeetingPlugin {
@@ -113,6 +121,22 @@ function effectiveState(row: EventRow, now: Date): MutualTimeEffectiveState {
   return 'open';
 }
 
+// Where the candidate window starts for this event, right now:
+//   closed    — frozen at the stored window_start_date, so a stamped result keeps its context;
+//   scheduled — the moment voting opens, so a future-dated survey offers days from its open time;
+//   open      — rolling: the next half-hour from now, so the days on offer are always upcoming.
+// Every read, the vote guard, and the winner computation go through this one function, so the grid a
+// voter sees, the picks the server accepts, and the times that can win are always the same set.
+function candidateWindowStartMs(row: EventRow, now: Date): number {
+  if (row.status === 'closed') {
+    return dateUtcMidnightMs(row.window_start_date);
+  }
+  if (row.opens_at && now < row.opens_at) {
+    return rollingWindowStartMs(row.opens_at);
+  }
+  return rollingWindowStartMs(now);
+}
+
 function mapEvent(row: EventRow, voterCount: number, now: Date): MutualTimeEvent {
   return {
     id: row.id,
@@ -134,16 +158,22 @@ function mapEvent(row: EventRow, voterCount: number, now: Date): MutualTimeEvent
   };
 }
 
-async function voterCountFor(client: PoolClient, eventId: string): Promise<number> {
+// How many distinct members have a live vote. While a survey is open, a pick whose time has gone by
+// no longer counts (it has rolled out of the window), so the count reflects who is actually still in
+// the running. A closed survey keeps its full historical count — its result is already stamped.
+async function voterCountFor(client: PoolClient, eventId: string, upcomingOnly: boolean): Promise<number> {
   const result = await client.query<{ c: number }>(
-    `SELECT COUNT(DISTINCT voter_user_id)::int AS c FROM mutual_time_votes WHERE event_id = $1`,
-    [eventId],
+    `SELECT COUNT(DISTINCT voter_user_id)::int AS c FROM mutual_time_votes
+     WHERE event_id = $1 AND ($2::boolean IS FALSE OR slot_start_utc > NOW())`,
+    [eventId, upcomingOnly],
   );
   return result.rows[0]?.c ?? 0;
 }
 
 // The most-overlap winner: the candidate slot the most distinct voters picked; ties go to the earliest
 // slot. Returns null when there are no votes. Simple COUNT/ORDER BY — deterministic and honest.
+// Only slots still ahead of now are eligible: with a rolling window an old pick can no longer be
+// chosen, so closing a long-open survey can never stamp a time that has already been and gone.
 async function computeWinner(
   client: PoolClient,
   eventId: string,
@@ -152,7 +182,7 @@ async function computeWinner(
     `
       SELECT slot_start_utc, COUNT(DISTINCT voter_user_id)::int AS c
       FROM mutual_time_votes
-      WHERE event_id = $1
+      WHERE event_id = $1 AND slot_start_utc > NOW()
       GROUP BY slot_start_utc
       ORDER BY c DESC, slot_start_utc ASC
       LIMIT 1
@@ -167,7 +197,10 @@ async function computeWinner(
 }
 
 // Close an event (idempotent) and stamp the computed winner. Runs inside the caller's transaction.
-async function closeAndComputeTx(client: PoolClient, row: EventRow): Promise<EventRow> {
+// `autoClosed` records which of the two ways it happened: the survey reaching its close time on its
+// own, or an admin pressing Close. The admin-landing dot reads it — an admin who closed a survey by
+// hand already knows the time; one whose survey closed itself has to be told.
+async function closeAndComputeTx(client: PoolClient, row: EventRow, autoClosed: boolean): Promise<EventRow> {
   if (row.status === 'closed') {
     return row;
   }
@@ -175,11 +208,12 @@ async function closeAndComputeTx(client: PoolClient, row: EventRow): Promise<Eve
   const updated = await client.query<EventRow>(
     `
       UPDATE mutual_time_events
-      SET status = 'closed', closed_at = NOW(), result_slot_start = $2, result_can_make_it = $3
+      SET status = 'closed', closed_at = NOW(), result_slot_start = $2, result_can_make_it = $3,
+          auto_closed = $4
       WHERE id = $1
       RETURNING ${EVENT_COLUMNS}
     `,
-    [row.id, winner ? winner.slotStart.toISOString() : null, winner ? winner.canMakeIt : null],
+    [row.id, winner ? winner.slotStart.toISOString() : null, winner ? winner.canMakeIt : null, autoClosed],
   );
   return updated.rows[0];
 }
@@ -264,7 +298,8 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
       [createdByUserId],
     );
     for (const row of due.rows) {
-      await closeAndComputeTx(client, row);
+      // Reached its close time on its own — nobody pressed anything.
+      await closeAndComputeTx(client, row, true);
     }
 
     // One query, no N+1: the distinct voter count is a correlated subquery per row so the whole list
@@ -272,7 +307,8 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
     const result = await client.query<EventRow & { voter_count: number }>(
       `SELECT ${EVENT_COLUMNS},
          (SELECT COUNT(DISTINCT v.voter_user_id)::int
-          FROM mutual_time_votes v WHERE v.event_id = e.id) AS voter_count
+          FROM mutual_time_votes v
+          WHERE v.event_id = e.id AND (e.status = 'closed' OR v.slot_start_utc > NOW())) AS voter_count
        FROM mutual_time_events e
        WHERE e.created_by_user_id = $1
        ORDER BY e.created_at DESC`,
@@ -294,8 +330,8 @@ export async function closeEvent(actorUserId: string, eventId: string): Promise<
     if (!row) {
       throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.notFound, 'Event not found.');
     }
-    const closed = await closeAndComputeTx(client, row);
-    const count = await voterCountFor(client, closed.id);
+    const closed = await closeAndComputeTx(client, row, false);
+    const count = await voterCountFor(client, closed.id, false);
     return mapEvent(closed, count, new Date());
   });
 }
@@ -312,10 +348,10 @@ export async function getPublicEvent(slug: string): Promise<MutualTimePublicEven
       return null;
     }
     if (row.status === 'open' && row.closes_at && row.closes_at <= new Date()) {
-      row = await closeAndComputeTx(client, row);
+      row = await closeAndComputeTx(client, row, true);
     }
     const now = new Date();
-    const count = await voterCountFor(client, row.id);
+    const count = await voterCountFor(client, row.id, row.status !== 'closed');
     const meetingPlugin = row.meeting_plugin as MutualTimeMeetingPlugin;
     return {
       slug: row.slug,
@@ -329,7 +365,7 @@ export async function getPublicEvent(slug: string): Promise<MutualTimePublicEven
       opensAtIso: row.opens_at ? row.opens_at.toISOString() : null,
       closesAtIso: row.closes_at ? row.closes_at.toISOString() : null,
       effectiveState: effectiveState(row, now),
-      candidateSlots: generateCandidateSlots(row.window_start_date, row.window_days),
+      candidateSlots: generateSlotsFrom(candidateWindowStartMs(row, now), row.window_days),
       voterCount: count,
       resultSlotStartIso: row.result_slot_start ? row.result_slot_start.toISOString() : null,
       resultCanMakeIt: row.result_can_make_it,
@@ -337,11 +373,17 @@ export async function getPublicEvent(slug: string): Promise<MutualTimePublicEven
   });
 }
 
-// This viewer's current picks for an event (ISO UTC starts). Empty if they have not voted.
-export async function getViewerPicks(slug: string, userId: string): Promise<string[]> {
-  const result = await queryDb<{ slot_start_utc: Date }>(
+// This viewer's current picks for an event (ISO UTC starts), plus how many of their saved picks have
+// since gone by. Only upcoming picks come back as picks: with a rolling window a time that has passed
+// is no longer on offer and no longer counts, so the form must not show it as a live choice. The
+// expired count is what lets the page say so plainly instead of silently dropping their vote.
+export async function getViewerPicks(
+  slug: string,
+  userId: string,
+): Promise<{ picks: string[]; expiredCount: number }> {
+  const result = await queryDb<{ slot_start_utc: Date; is_expired: boolean }>(
     `
-      SELECT v.slot_start_utc
+      SELECT v.slot_start_utc, (v.slot_start_utc <= NOW()) AS is_expired
       FROM mutual_time_votes v
       JOIN mutual_time_events e ON e.id = v.event_id
       WHERE e.slug = $1 AND v.voter_user_id = $2
@@ -349,7 +391,34 @@ export async function getViewerPicks(slug: string, userId: string): Promise<stri
     `,
     [slug, userId],
   );
-  return result.rows.map((r) => r.slot_start_utc.toISOString());
+  return {
+    picks: result.rows.filter((r) => !r.is_expired).map((r) => r.slot_start_utc.toISOString()),
+    expiredCount: result.rows.filter((r) => r.is_expired).length,
+  };
+}
+
+// Check one submitted pick against the candidate grid and return it in the canonical ISO form. Its own
+// function so the three ways a pick can be wrong are named in one place — and so the save transaction
+// below stays inside the complexity limit (rule 116).
+//   - a wrong element type is a malformed payload (invalidPayload), distinct from a well-formed string
+//     that is not a candidate (invalidSlot);
+//   - a well-formed time that has gone by gets the same invalidSlot code with wording that says so,
+//     because that one the voter can fix by picking again.
+function normalizePick(raw: unknown, candidates: Set<string>): string {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidPayload, 'Picks must be a list of time slots.');
+  }
+  const iso = normalizeSlotIso(raw);
+  if (!iso || !candidates.has(iso)) {
+    const passed = iso !== null && Date.parse(iso) <= Date.now();
+    throw new MutualTimeError(
+      MUTUAL_TIME_ERROR_CODE.invalidSlot,
+      passed
+        ? 'One of your picks has already passed. Pick a time that is still ahead.'
+        : 'One of your picks is not a valid time slot.',
+    );
+  }
+  return iso;
 }
 
 // Replace this member's picks for an event (up to MUTUAL_TIME_MAX_PICKS). Rejects when the event is not
@@ -375,20 +444,13 @@ export async function saveVote(slug: string, userId: string, rawSlots: unknown):
       throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.notOpen, 'Voting is not open for this event.');
     }
 
-    // Validate + dedupe each pick against the candidate grid.
-    const candidates = candidateSlotSet(row.window_start_date, row.window_days);
+    // Validate + dedupe each pick against the candidate grid, built from the same rolling window the
+    // voter was shown. A pick whose time has passed while the form sat open is no longer a candidate,
+    // so it is rejected here rather than quietly stored as a vote for a time nobody can attend.
+    const candidates = candidateSlotSet(candidateWindowStartMs(row, new Date()), row.window_days);
     const picks = new Set<string>();
     for (const raw of rawSlots) {
-      // The payload must be a list of non-empty strings; a wrong element type is a malformed payload
-      // (invalidPayload), distinct from a well-formed string that is not a valid candidate (invalidSlot).
-      if (typeof raw !== 'string' || raw.trim().length === 0) {
-        throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidPayload, 'Picks must be a list of time slots.');
-      }
-      const iso = normalizeSlotIso(raw);
-      if (!iso || !candidates.has(iso)) {
-        throw new MutualTimeError(MUTUAL_TIME_ERROR_CODE.invalidSlot, 'One of your picks is not a valid time slot.');
-      }
-      picks.add(iso);
+      picks.add(normalizePick(raw, candidates));
     }
 
     await client.query(`DELETE FROM mutual_time_votes WHERE event_id = $1 AND voter_user_id = $2`, [row.id, userId]);

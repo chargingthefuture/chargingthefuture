@@ -26,11 +26,17 @@ const manifestPath = join(repoRoot, 'ctf/config/manual-test-script-manifest.json
 
 const BASE = (process.env.TEST_SCRIPT_DRIFT_BASE || 'origin/main').trim();
 
+// Dialect-only edits are excluded. A repo-wide US-spelling sweep rewrites a word in an inventory's
+// prose without changing anything about how the plugin is tested, and demanding a matching
+// test-script edit for that would only produce a fabricated one. changed-files.mjs drops a file
+// whose entire diff disappears when both sides are rewritten to US English, and nothing else — a
+// real edit anywhere in the same file keeps it in the list.
 function changedFiles(base) {
   try {
-    const out = execFileSync('git', ['diff', '--name-only', `${base}...HEAD`], {
+    const out = execFileSync('node', [join(repoRoot, 'ctf/scripts/changed-files.mjs'), '--base', base], {
       cwd: repoRoot,
       encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
     });
     return new Set(out.split('\n').map((s) => s.trim()).filter(Boolean));
   } catch (error) {

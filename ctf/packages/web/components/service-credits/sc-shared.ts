@@ -34,36 +34,46 @@ export type LedgerEntry = {
   createdAt: string;
 };
 
-// Plain-language label + direction for a ledger row. Direction drives the +/- sign and colour:
+export type LedgerDescription = { label: string; direction: "in" | "out" | "neutral" };
+
+// Reference-keyed labels for the "credit" entry type (default: "Credit grant").
+const CREDIT_LABELS_BY_REFERENCE: Record<string, string> = {
+  transfer: "Received credits",
+  treasury_fee: "Fee received",
+  dispute_adjustment: "Dispute resolution credit",
+};
+
+// Reference-keyed labels for the "debit" entry type (default: "Credits removed").
+const DEBIT_LABELS_BY_REFERENCE: Record<string, string> = {
+  treasury_fee: "Treasury fee",
+  dispute_adjustment: "Dispute resolution debit",
+};
+
+// Fixed descriptions for entry types that do not depend on referenceType.
+const FIXED_LEDGER_DESCRIPTIONS: Record<string, LedgerDescription> = {
+  escrow_hold: { label: "Held in escrow", direction: "out" },
+  escrow_release: { label: "Escrow released", direction: "neutral" },
+  escrow_refund: { label: "Escrow refunded", direction: "in" },
+  initial_allocation: { label: "Welcome allocation", direction: "in" },
+  skills_hunt_award: { label: "SkillsHunt award", direction: "in" },
+};
+
+// Plain-language label + direction for a ledger row. Direction drives the +/- sign and color:
 // "in" credits the member, "out" debits, "neutral" for escrow moves that net within the member's own
 // wallet (held/released) where a signed amount would mislead. Keeps wording newcomer-friendly.
 export function describeLedgerEntry(
   entryType: string,
   referenceType: string,
-): { label: string; direction: "in" | "out" | "neutral" } {
-  switch (entryType) {
-    case "credit":
-      if (referenceType === "transfer") return { label: "Received credits", direction: "in" };
-      if (referenceType === "treasury_fee") return { label: "Fee received", direction: "in" };
-      if (referenceType === "dispute_adjustment") return { label: "Dispute resolution credit", direction: "in" };
-      return { label: "Credit grant", direction: "in" };
-    case "debit":
-      if (referenceType === "treasury_fee") return { label: "Treasury fee", direction: "out" };
-      if (referenceType === "dispute_adjustment") return { label: "Dispute resolution debit", direction: "out" };
-      return { label: "Credits removed", direction: "out" };
-    case "escrow_hold":
-      return { label: "Held in escrow", direction: "out" };
-    case "escrow_release":
-      return { label: "Escrow released", direction: "neutral" };
-    case "escrow_refund":
-      return { label: "Escrow refunded", direction: "in" };
-    case "initial_allocation":
-      return { label: "Welcome allocation", direction: "in" };
-    case "skills_hunt_award":
-      return { label: "SkillsHunt award", direction: "in" };
-    default:
-      return { label: entryType.replace(/_/g, " "), direction: "neutral" };
+): LedgerDescription {
+  if (entryType === "credit") {
+    return { label: CREDIT_LABELS_BY_REFERENCE[referenceType] ?? "Credit grant", direction: "in" };
   }
+  if (entryType === "debit") {
+    return { label: DEBIT_LABELS_BY_REFERENCE[referenceType] ?? "Credits removed", direction: "out" };
+  }
+  const fixed = FIXED_LEDGER_DESCRIPTIONS[entryType];
+  if (fixed) return fixed;
+  return { label: entryType.replace(/_/g, " "), direction: "neutral" };
 }
 
 // Public circulation metrics returned by GET /api/service-credits/circulation. Aggregate,

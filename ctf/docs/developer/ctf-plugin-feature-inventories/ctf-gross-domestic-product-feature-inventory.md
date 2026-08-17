@@ -31,7 +31,15 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 ### 1.1 GDP Transparency Overview
 
 1. Authenticated survivor-facing GDP summary dashboard.
-2. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
+2. An as-of anchor under the headline Community Value Index: "Cumulative since June 12, 2026" — the
+   soft launch date (owner decision, 2026-08-06; the Render production deploy came slightly earlier,
+   2026-05-25). The index sums all recognized exchanges from launch onward and never resets to a
+   calendar year. The date is one platform-owned constant, `PLATFORM_LAUNCH_DATE_ISO` in
+   `ctf/packages/web/lib/platform/launch.ts` (GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` in
+   `ctf/packages/web/components/gdp/gdp-shared.ts` re-exports it), so a corrected launch date
+   changes in one place and every surface that counts from launch — GDP here, the Weekly
+   Performance week history — follows together.
+3. Current annual `Total GDP`, `Service GDP`, `Goods/Local GDP` with plain-language explanations.
 3. Per-capita indicators based on population baseline and selected period.
 4. Progress-to-target indicators for $300B total and $210B services goals.
 
@@ -70,6 +78,19 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 2. Canonical-definition status indicator per KPI.
 3. Clear handling for unresolved/blocked metrics (not found/ambiguous).
 4. Human-readable metric definition panel (name, owner, formula summary).
+
+### 1.6 Value Waiting to Happen (projected figure)
+
+1. A panel under the headline figure showing what the posts already on the board would add **if every
+   one of them closed successfully** — a separate number from the Community Value Index above it.
+2. A plain count beside it: how many posts are still open across the whole community.
+3. A per-app breakdown of where that open value sits — rides and deliveries still open in
+   TrustTransport, quotes waiting on an answer in Foundation, favors nobody has done yet in
+   SocketRelay, and recurring activities waiting for the other member to confirm.
+4. A sentence, always shown with the number, saying that most posts never close, that this figure is
+   interest rather than achievement, that it is not part of the Community Value Index, and that (like
+   the index) it is not money, a price, or a redemption value.
+5. The panel disappears entirely when nothing is open, so it never implies activity that does not exist.
 
 ---
 
@@ -153,7 +174,11 @@ Implemented routes (live dashboard):
   request via `buildLiveGdpReport` (`lib/gdp/repository.ts`): the Community Value Index from every
   registered recognition source (folded with the built-in `DEFAULT_CONTRIBUTION_WEIGHTS`), plus
   live `total_members` and the per-source breakdown. No admin, publish, or
-  snapshot step.
+  snapshot step. The same response also carries a separate `projection` block —
+  `{ projectedValueIndex, openPostCount, perSource: [{ pluginSlug, label, valueIndex, openCount }] }`
+  from `projectOpenValueIndex` (`lib/gdp/projection.ts`) — in its OWN field, never inside `metrics` or
+  `sources`, so no caller can fold the projected figure into the index. It is `null` when the projection
+  read fails (the panel is dropped; the rest of the report is unaffected).
 - `GET /api/gdp/countries` — real per-country member distribution for the dashboard's "All Countries" panel. Returns `{ ok, countries: [{ country, members }], unspecified, totalMembers }`. `countries` comes from `listMemberCountsByCountry` (`lib/gdp/repository.ts`), which counts active `directory_profiles` rows that have a `country` set (claimed or not — the same member population as the dashboard's total member count), most members first. `totalMembers` is the **full** active-Directory roster (`countActiveDirectoryProfiles` — `is_active AND NOT deleted`, the same count the dashboard hero shows), and `unspecified` = `totalMembers` minus the sum of the located per-country counts, i.e. the number of active members with no country recorded (never negative; the roster read falls back to the located sum on failure, which zeroes the bucket). The web shell renders that as a single synthetic "Location not set" row so the panel reconciles to the hero's member total, and every share is a percentage of `totalMembers`. This is "location tied to people" — a people-count per country read from the shared member profile, never an invented per-country money figure. No small-count suppression (owner decision, 2026-07-11): every country with a member is shown. Behind the same `requireGdpReadAccess` gate as the report.
 
 The former admin routes — `GET`/`POST /api/gdp/admin/currency-rates` (currency-rate factors) and
@@ -218,8 +243,9 @@ Domain tables:
 2. GDP recognition occurs on eligible spend events only, per canonical metric definitions.
 3. Reclaim/finalization events from deletion workflows are excluded from GDP numerator calculations and tracked as accounting-state movements.
 4. Multi-value composition (issue #121): the platform transacts in ServiceCredits, fiat, crypto, barter, and free (one-way mutual aid at no charge). These are combined into ONE relative figure — the **Community Value Index** — via fixed, built-in **contribution weights** (`DEFAULT_CONTRIBUTION_WEIGHTS`, with USD only as the reference base = 1 and ServiceCredits counting 1:1), applied only in the value layer (`ctf/packages/web/lib/gdp/recognition.ts`). The index is labeled an estimate (`gdp_metric_snapshots.is_estimate`) and is **NOT money**: it is shown with no currency symbol and never as a per-wallet, per-price, exchange, or redemption value for any currency or token (the no-fiat-parity line from issue #120). No value type is "pegged" — ServiceCredits, barter, and free contribute through weights exactly like fiat/crypto, but the output is a community-built index, not dollars. Account-deletion reclaim stays a reserve reallocation per point 1 above — it is not recognized.
-5. Recognition pipeline (issue #121 follow-up): `recognizeCommunityValueIndex` (`recognition.ts`) and the `scripts/recognizeGdp.mjs` job (`pnpm gdp:recognize`) fold every registered source's eligible settled value into the single `gdp_value_index` metric ALONGSIDE the projection target — they do not replace it. No currency is converted to dollars or excluded; each value type's raw volume is also returned for the per-type breakdown. Registered sources (owner-approved, one at a time): (a) **TrustTransport** completed-task earnings (`trust_transport_earnings_ledger`, `credit`/`release` entries; fiat/crypto); (b) **LevelUp** trainer payouts for validated mentorship work — governed mint grants with reason `levelup_trainer_split` in `service_credits_governance_events` (ServiceCredits); (c) **Foundation** paid service calls — `SUM(blocks_charged * rate_credits_locked)` ServiceCredits read from `foundation_call_sessions` (a caller paying a provider for a metered 1:1 consultation call; read from Foundation's own per-call record, not the SC transfer ledger); (d) **Direct ServiceCredits transfers** — a member sending another member credits from the "Send Credits" form (peer-to-peer, not tied to any plugin transaction): `SUM(amount)` of `completed` `service_credits_transfers` rows with `origin_plugin = 'service-credits'`; (e) **Chyme peer tips** — the same read with `origin_plugin = 'chyme'` (the tip backend exists but is not yet wired to a UI, so it reads zero until tipping is connected); (f) **SocketRelay completed favors** — mutual aid carries no per-favor price, so each successfully-completed favor (`socket_relay_fulfillments.close_reason = 'successful'`) counts as one `FREE` exchange by count (the standalone SocketRelay SC transfer route is intentionally not also counted, to avoid double-counting a single favor). LevelUp recognition is the trainer-split slice only; learner-side amounts (escrow returns, completion bonuses, stipends, microgrants) are excluded as incentives/returns, not spend, and the SC ledger is not read directly because its mint-grant entries are tagged `accounting_scope = service_credits_non_gdp`. **Barter** and **Free** are first-class value types (`BARTER`/`FREE` in the `currencies` catalog, `requires_amount=false`), each counted by completed-exchange count once a source registers. (g) **Recurring Activity** (issue #885) — members' self-declared, counterparty-CONFIRMED ongoing peer activities (`recurring_activities`, `status='active'`). Unlike every other source this recognizes *attested recurring activity*, not a settled exchange — a deliberate, owner-approved relaxation for this one plugin — so it lives in its own bucket and never contaminates the settled-value sources. Two firewalled branches: **fiat lines** (currency `<> 'SC'`) are counted by NUMBER, one hidden `RACT` unit each (owner-weight 1) — a fiat line stores NO amount, so the platform never holds a recurring-fiat-payment total; **ServiceCredits lines** are counted by their declared `sc_value` (a declared figure, never an executed transfer, so it never double-counts the direct-SC-transfer source, a different table). This is how recurring off-platform relationships (LightHouse rent, ongoing Foundation services, standing SocketRelay favors) are captured — NOT via a per-plugin settlement table. **Incentives are never recognized** (owner directive): Skills Hunt accept rewards (`skills_hunt_accept_reward`), Unlock verification incentives (`unlock_quora_verification_approval`), and Contributions thank-you grants (`contributions_confirmed`) are incentive mints and stay excluded. The ServiceCredits ledger is **never blindly summed**: each transfer is attributed to its source by `origin_plugin` and only delivered (`completed`) transfers count, so a genuine peer-to-peer send outside any plugin transaction is recognized (source (d)) while plugin-mediated transfers are attributed to their own plugin without double-counting (Foundation, for example, is counted once via its call-session record, never again via its transfers). A value type with no active contribution weight is surfaced and excluded, never silently treated as zero.
-6. Live dashboard read (issue: GDP dashboard activity): `GET /api/gdp/report/current` computes the report **live on every request** via `buildLiveGdpReport` (`lib/gdp/repository.ts`) — there is no weekly publish/snapshot step for the headline figure. It returns live metric rows (`gdp_value_index` = the Community Value Index from `recognizeCommunityValueIndex`; `total_members` = the active Directory roster via `resolveMemberCount` → `countActiveDirectoryProfiles`, the SAME count the Workforce dashboard and the Directory show — `is_active AND NOT deleted`, claimed or not — falling back to the Clerk `users` / `login_events` signup count only if the Directory read fails), the per-source contribution breakdown, and a standing "live" narrative (always synthesized — the optional owner-written weekly narrative and its publications admin were retired 2026-07-11). The read NEVER writes a snapshot; `gdp_metric_snapshots` and the weekly `scripts/recognizeGdp.mjs` job remain only for optional history, not for what the dashboard shows. Web (`gdp-shell.tsx` → `shapeLiveGdpMetrics` / `shapeSourceSectors`) and Android (`packages/mobile/src/features/gdp`) read the same live payload, so the figure is identical across platforms.
+5. Recognition pipeline (issue #121 follow-up): `recognizeCommunityValueIndex` (`recognition.ts`) and the `scripts/recognizeGdp.mjs` job (`pnpm gdp:recognize`) fold every registered source's eligible settled value into the single `gdp_value_index` metric ALONGSIDE the projection target — they do not replace it. No currency is converted to dollars or excluded; each value type's raw volume is also returned for the per-type breakdown. Registered sources (owner-approved, one at a time): (a) **TrustTransport** completed-task earnings (`trust_transport_earnings_ledger`, `credit`/`release` entries; fiat/crypto); (b) **LevelUp** trainer payouts for validated mentorship work — governed mint grants with reason `levelup_trainer_split` in `service_credits_governance_events` (ServiceCredits); (c) **Foundation** paid service calls — `SUM(blocks_charged * rate_credits_locked)` ServiceCredits read from `foundation_call_sessions` (a caller paying a provider for a metered 1:1 consultation call; read from Foundation's own per-call record, not the SC transfer ledger); (d) **Direct ServiceCredits transfers** — a member sending another member credits from the "Send Credits" form (peer-to-peer, not tied to any plugin transaction): `SUM(amount)` of `completed` `service_credits_transfers` rows with `origin_plugin = 'service-credits'`; (e) **Chyme peer tips** — the same read with `origin_plugin = 'chyme'` (the tip backend exists but is not yet wired to a UI, so it reads zero until tipping is connected); (f) **SocketRelay completed favors** — a favor may name an offered value (issue #120: optional `price_amount`/`price_currency` on `socket_relay_requests`), so each successfully-completed favor (`socket_relay_fulfillments.close_reason = 'successful'`, joined to its request) is recognized at the value its post carried: a priced post at `price_amount` in `price_currency`, and a post with no named value or an amount-less type (Free, Barter) as one `FREE` exchange by count (fixed 2026-08-04 — before that every completed favor counted one point regardless of its posted value; the standalone SocketRelay SC transfer route is intentionally not also counted, to avoid double-counting a single favor). LevelUp recognition is the trainer-split slice only; learner-side amounts (escrow returns, completion bonuses, stipends, microgrants) are excluded as incentives/returns, not spend, and the SC ledger is not read directly because its mint-grant entries are tagged `accounting_scope = service_credits_non_gdp`. **Barter** and **Free** are first-class value types (`BARTER`/`FREE` in the `currencies` catalog, `requires_amount=false`), each counted by completed-exchange count once a source registers. (g) **Recurring Activity** (issue #885) — members' self-declared, counterparty-CONFIRMED ongoing peer activities (`recurring_activities`, `status='active'`). Unlike every other source this recognizes *attested recurring activity*, not a settled exchange — a deliberate, owner-approved relaxation for this one plugin — so it lives in its own bucket and never contaminates the settled-value sources. Two firewalled branches: **fiat lines** (currency `<> 'SC'`) are counted by NUMBER, one hidden `RACT` unit each (owner-weight 1) — a fiat line stores NO amount, so the platform never holds a recurring-fiat-payment total; **ServiceCredits lines** are counted by their declared `sc_value`, scaled to a MONTHLY figure by the line's cadence (`CADENCE_MONTHLY_FACTOR`: weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3), so two arrangements moving the same credits over a year count the same — before 2026-08-03 the value was summed as-is, which read a weekly arrangement as a twelfth of what it is (a declared figure, never an executed transfer, so it never double-counts the direct-SC-transfer source, a different table). One exception since 2026-08-03: members can now mark an arrangement as recurring from inside the app they are already in, and that app is recorded on the row as `origin_plugin`. Some of those apps already settle EVERY exchange on-platform and are recognized per occurrence (a Foundation call per minute-block, a TrustTransport trip per trip, a SocketRelay favor per favor), so counting a declared ServiceCredits value from one of them would count the same credits twice; those lines are recognized as a RELATIONSHIP (one `RACT`, like a fiat line) and never again as value (`PER_OCCURRENCE_ORIGIN_PLUGINS`). LightHouse is deliberately excluded from that set — it records the arrangement once and never sees the months that follow, so its declared value is the only record of them — and a line declared in the Recurring Activity plugin itself has no origin and is counted by value as before. This is how the ongoing periods of an off-platform relationship (the months after a LightHouse arrangement is made, ongoing Foundation services, standing SocketRelay favors) are captured — NOT via a per-plugin settlement table. (h) **LightHouse housing arrangements** (2026-08-03) — a match the host accepted (`lighthouse_matches` in `accepted` or `completed`, joined to its listing) contributes ONE month of `monthly_rent` in `rent_currency`: the arrangement actually made. Every month after that belongs to source (g), where the pair declares the ongoing relationship, so the two cover different periods of the same tenancy and no month is counted twice, and no plugin holds a running rent total. A match counts once across both lifecycle states. A listing with no priced rent (0/NULL — the host form's "0 for ServiceCredits / free") records no amount anywhere, so an accepted match on one counts as a single FREE exchange rather than an invented figure. **Incentives are never recognized** (owner directive): Skills Hunt accept rewards (`skills_hunt_accept_reward`), Unlock verification incentives (`unlock_quora_verification_approval`), and Contributions thank-you grants (`contributions_confirmed`) are incentive mints and stay excluded. The ServiceCredits ledger is **never blindly summed**: each transfer is attributed to its source by `origin_plugin` and only delivered (`completed`) transfers count, so a genuine peer-to-peer send outside any plugin transaction is recognized (source (d)) while plugin-mediated transfers are attributed to their own plugin without double-counting (Foundation, for example, is counted once via its call-session record, never again via its transfers). A value type with no active contribution weight is surfaced and excluded, never silently treated as zero.
+6. Projected value — open posts, deliberately isolated (2026-08-03): the Community Value Index counts only value that actually settled, which is correct but means a newly-opened community reads near zero while its board is busy. `projectOpenValueIndex` (`ctf/packages/web/lib/gdp/projection.ts`) measures that busy board as a SEPARATE figure, registered as canonical metric `gdp_projected_value_index`. Isolation is structural, not a convention: (a) `recognition.ts` does not import `projection.ts`, so the index cannot include it; (b) the figure is carried in its own `projection` field of the live report, never in `metrics` (so no downstream reader — the weekly job, `gdp_metric_snapshots`, the Weekly Performance goal snapshot — can pick it up by metric key); (c) nothing here is ever written to a snapshot; (d) each projection source reads rows the recognition sources deliberately skip, so a post is in exactly one figure at a time and moves from the projected one to the real one when it closes. Sources: **TrustTransport** open requests (`trust_transport_requests`, `status IN ('open','accepted','in_progress')` with a `price_currency`; priced types by `price_amount`, Free/Barter one point per post); **Foundation** quotes on the table (`foundation_quote_requests`, `lifecycle_state = 'provider_responded'` with a `quoted_amount`, grouped by `quoted_currency`); **SocketRelay** favors waiting (`socket_relay_requests`, `status IN ('open','claimed')` and not past `expires_at`; a priced post at its posted `price_amount` in `price_currency`, a post with no named value or an amount-less type one `FREE` each — fixed 2026-08-04, before that every open favor counted one point); **LightHouse** homes still available (`lighthouse_properties` with `is_active = true` and NO accepted/completed match, at ONE month of the listed rent — the same unit the recognition source uses, so a home moves from this figure into the real index the moment a host accepts); **Recurring Activity** awaiting confirmation (`recurring_activities`, `status = 'pending'`, fiat by count as `RACT`, ServiceCredits by declared `sc_value`). Deliberately NOT projected: Skills Hunt / Unlock / Contributions posts (their value moves are incentive mints, excluded from the real index and excluded here); feed posts, announcements, and directory profiles (not exchanges); TrustTransport pending offers and LightHouse pending match requests (each sits against a post already counted, so counting them would count one job, or one home, twice). The same `DEFAULT_CONTRIBUTION_WEIGHTS` are applied so the two figures share a scale and can be read side by side, and an unweighted value type is surfaced, never zeroed. Like the index it is **NOT money** — no currency symbol, no price, no redemption value — and it always renders beside the sentence saying most posts never close.
+7. Live dashboard read (issue: GDP dashboard activity): `GET /api/gdp/report/current` computes the report **live on every request** via `buildLiveGdpReport` (`lib/gdp/repository.ts`) — there is no weekly publish/snapshot step for the headline figure. It returns live metric rows (`gdp_value_index` = the Community Value Index from `recognizeCommunityValueIndex`; `total_members` = the active Directory roster via `resolveMemberCount` → `countActiveDirectoryProfiles`, the SAME count the Workforce dashboard and the Directory show — `is_active AND NOT deleted`, claimed or not — falling back to the Clerk `users` / `login_events` signup count only if the Directory read fails), the per-source contribution breakdown, and a standing "live" narrative (always synthesized — the optional owner-written weekly narrative and its publications admin were retired 2026-07-11). The read NEVER writes a snapshot; `gdp_metric_snapshots` and the weekly `scripts/recognizeGdp.mjs` job remain only for optional history, not for what the dashboard shows. Web (`gdp-shell.tsx` → `shapeLiveGdpMetrics` / `shapeSourceSectors`) and Android (`packages/mobile/src/features/gdp`) read the same live payload, so the figure is identical across platforms.
 
 ---
 
@@ -330,6 +356,119 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-10: **Launch date moved to a platform-owned constant; no visible change to GDP.** Weekly
+  Performance needed the same launch date to floor its week history, and a plugin must not import
+  another plugin's code, so `2026-06-12` now lives in `ctf/packages/web/lib/platform/launch.ts` as
+  `PLATFORM_LAUNCH_DATE_ISO`. GDP's `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` re-exports it, so the
+  on-screen line still reads "Cumulative since June 12, 2026" and the two surfaces cannot drift
+  apart. No schema, route, or contract change.
+- 2026-08-06: **As-of anchor corrected to the soft launch date: "Cumulative since June 12, 2026"
+  (owner decision).** The first pass anchored to the Render production deploy (2026-05-25); the
+  owner identified 2026-06-12 as the actual soft launch, so the constant in `gdp-shared.ts` now
+  carries that date. One-constant change plus this inventory; no schema, route, or contract change.
+- 2026-08-05: **Dashboard hero now says what period the Community Value Index covers: "Cumulative
+  since May 25, 2026".** The index is all-time — every recognition source sums its full table history
+  with no date filter — but the surface never said so, leaving a reader to guess whether the figure
+  was yearly. Added `COMMUNITY_VALUE_INDEX_SINCE_DATE_ISO` / `COMMUNITY_VALUE_INDEX_SINCE_LABEL` to
+  `gdp-shared.ts` (single source of truth) and rendered the label under the headline figure in
+  `gdp-dashboard.tsx`. The anchor date is the production go-live on Render: the migration PRs
+  (#98–#117) all merged 2026-05-25, with PR #117's health-check fix bringing `ctf-web` to "Live".
+  If the owner fixes a different public launch date (e.g. from the announcement post), only the
+  constant changes. UI copy only — no schema, route, or contract change.
+- 2026-08-04: **Both Community Value Index figures now appear in the weekly community-stats draft, via a
+  shared script module.** The weekly community-stats draft generator
+  (`ctf/scripts/generate-community-stats.mjs`, run by `.github/workflows/generate-community-stats.yml`)
+  gained a GDP stat provider reporting the real Community Value Index and the projected "value waiting
+  to happen" figure alongside the SocketRelay/Directory/ServiceCredits aggregates, with not-money
+  wording carried into the fact labels and the drafting prompt. To avoid a third hand-copied set of
+  queries, the recognition source SQL and contribution weights moved out of `scripts/recognizeGdp.mjs`
+  into a shared module `ctf/scripts/lib/gdpValueIndex.mjs` (which also carries a script-side mirror of
+  the projection sources in `packages/web/lib/gdp/projection.ts`); `recognizeGdp.mjs` now imports from
+  it with identical queries, weights, and snapshot-write behavior. Operational scripts only — no app
+  code, schema, route, or contract change; the app-side value layer is untouched.
+- 2026-08-04: **SocketRelay favors now count at the value their post names, in both figures.** A
+  SocketRelay post can name an offered value (issue #120: optional `price_amount`/`price_currency`
+  on `socket_relay_requests`), but both figures still counted every favor as one `FREE` point — the
+  projected figure counted open favors with a bare `COUNT(*)`, and the real index counted each
+  successfully-closed favor the same way, so a favor offering 15 ServiceCredits or 30 USD read as 1
+  (owner report, dashboard screenshots: "Value waiting to happen" showed 4 across 4 open SocketRelay
+  posts that included a 15-ServiceCredits and a 30-USD post). Now the projection
+  (`socketRelayOpenFavorSource` in `projection.ts`) and the recognition
+  (`socketRelayFavorSource` in `recognition.ts`, joined `socket_relay_fulfillments` →
+  `socket_relay_requests`; mirrored in `scripts/recognizeGdp.mjs`) both group by
+  `COALESCE(price_currency, 'FREE')` and sum `price_amount` where present, one point per post where
+  not — the same pattern TrustTransport and LightHouse already use, so a favor moves between the two
+  figures at the same size when it closes. Amount-less named types (Free, Barter) still count one
+  point per post. Read-side only; no schema, route, or contract change.
+- 2026-08-03: **Declared recurring ServiceCredits values are now scaled by cadence.** The Recurring
+  Activity source summed `sc_value` as-is, so a weekly 50 credits and a monthly 50 credits both
+  contributed 50 — reading a weekly arrangement as a twelfth of what it actually moves. Each value is
+  now scaled to a monthly figure by the line's cadence (weekly 52/12, biweekly 26/12, monthly 1,
+  quarterly 1/3) in `recognition.ts`, in the projected figure, and in `scripts/recognizeGdp.mjs`. The
+  Community Value Index rises for weekly and biweekly credits arrangements and falls for quarterly ones.
+  Fiat recurring lines are unaffected — they are counted by number of relationships, not by period. This
+  closes the Recurring Activity inventory's Gaps #2.
+- 2026-08-03: **Closed the double-count opening between a declared recurring line and an app that
+  already records every exchange.** Recurring Activity rows carry no link to a source plugin, so nothing
+  stopped a member declaring "weekly Foundation call, 50 credits" while `foundation_call_sessions`
+  already recognized each of those calls — the same credits counted twice. Now that a recurring activity
+  can be declared from inside the app it belongs to, the app is recorded on the row (`origin_plugin`),
+  and the recurring source splits on it: a confirmed ServiceCredits line whose origin already settles
+  every exchange itself (`foundation`, `socket-relay`, `trust-transport`) is counted as a relationship —
+  one `RACT`, exactly like a money line — instead of by its declared value. LightHouse is deliberately
+  not in that set. A line declared in the Recurring Activity plugin has no origin and is counted by value
+  as before, so nothing already recorded changes meaning. Covered by `lib/gdp/recognition.test.ts`.
+- 2026-08-03: **Fixed the live index dropping every confirmed fiat recurring activity.** The two weight
+  maps are documented as mirrors of each other, but `DEFAULT_CONTRIBUTION_WEIGHTS` in
+  `lib/gdp/recognition.ts` had no `RACT` entry while `WEIGHTS` in `scripts/recognizeGdp.mjs` has carried
+  `['RACT', 1]` since the Recurring Activity work landed. `RACT` is the hidden by-count unit every
+  confirmed fiat recurring line contributes, so on the live dashboard — the surface members actually
+  read — those lines were being surfaced as an unweighted type and excluded from the index entirely,
+  contributing zero, while the weekly job counted them one point each. Three places already documented
+  the intended weight of 1 (both code comments and §4.4 below); the live map was simply missed when the
+  weights moved out of the database and into code. Added `['RACT', 1]` so the live index matches the
+  weekly job and the documentation. Effect: the Community Value Index rises by one point per confirmed
+  fiat recurring activity, and `unweightedCurrencies` no longer reports `RACT`. Weight-map entry only —
+  no schema, route, or contract change.
+- 2026-08-03: **Registered LightHouse as a recognition source, and its available homes as a projected
+  one (owner correction).** LightHouse had been left out of both figures on the reasoning that a listed
+  rent is recurring money the product refuses to total. That reasoning was wrong: no plugin holds
+  recurring money — that is exactly why the Recurring Activity plugin exists — so there is nothing
+  stopping LightHouse from recognizing the arrangement it actually settles. A match the host accepted
+  (`lighthouse_matches` in `accepted`/`completed`, joined to its listing) now contributes **one month**
+  of `monthly_rent` in `rent_currency` to the Community Value Index, added to both
+  `lib/gdp/recognition.ts` and the mirrored `scripts/recognizeGdp.mjs` source list. The months after
+  the first stay with Recurring Activity, where the pair declares the ongoing relationship — the two
+  sources cover different periods of one tenancy, so no month is counted twice. A match counts once
+  across both lifecycle states; a listing with no priced rent counts as one FREE exchange, never an
+  invented amount. On the projected side, active listings with no accepted match are counted at the
+  same one-month unit, so a home leaves the projected figure and enters the real index when a host
+  accepts; pending match requests are not counted separately (one home, not one per asker). This is the
+  first source where both figures read the same table, so the projection query carries an explicit
+  `NOT EXISTS` against accepted matches, and `lib/gdp/recognition.test.ts` pins the behavior: accepted
+  arrangements only, no month arithmetic anywhere in the SQL, registered exactly once. Contract
+  `dataAccess` gained `lighthouse_matches` and `lighthouse_properties`; both canonical metrics gained
+  the rent inputs. No schema change.
+- 2026-08-03: **Added a projected figure — "Value waiting to happen" — isolated from the Community
+  Value Index.** The index only counts value that settled, so a community that has just opened reads
+  near zero even when members have posted plenty; this adds a second, clearly-separate number for what
+  the open posts would add if every one closed. New `ctf/packages/web/lib/gdp/projection.ts` reads open
+  rows only (`trust_transport_requests` in a live state with a price type, `foundation_quote_requests`
+  in `provider_responded` with a quoted amount, unexpired `socket_relay_requests` in `open`/`claimed`,
+  `recurring_activities` in `pending`) and folds them with the same `DEFAULT_CONTRIBUTION_WEIGHTS`, so
+  the two figures share a scale. Isolation is structural: `recognition.ts` does not import the new
+  module, the figure travels in its own `projection` field of `GET /api/gdp/report/current` (never in
+  `metrics`, so nothing downstream can read it by metric key), nothing is written to
+  `gdp_metric_snapshots`, and every projection source reads rows the recognition sources skip — so a
+  post is only ever in one figure and moves into the real index when it closes. A failed projection read
+  resolves to `null` and drops the panel without touching the rest of the report. Web only: new
+  `gdp-projection-panel.tsx` renders under the hero, styled apart (dashed border, muted surface) with
+  the open-post count, a per-app breakdown, and the standing sentence that most posts never close and
+  that this is not part of the index and is not money; it renders nothing when the board is empty. New
+  canonical metric `gdp_projected_value_index`; `dashboard.snapshot.get` contract gained the
+  `projection` output and the three open-post tables in `dataAccess`. Unit tests in
+  `lib/gdp/projection.test.ts` cover the fold, the open-post count, unweighted-type surfacing, and an
+  isolation check that the projection SQL never touches a settled table. No schema change.
 - 2026-07-28: **Declared the `unspecified` field in the `countries.read` command contract, and stopped
   the web shell deriving a second copy of it.** `GET /api/gdp/countries` has returned `unspecified`
   (active members with no country recorded) since 2026-07-16, but the contract's `outputSchema` in

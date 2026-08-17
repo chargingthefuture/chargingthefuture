@@ -131,6 +131,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-08-02: **Deletion burn-down batch 4: bug reports join the deletion registry.** On account deletion, `bug_reports` rows are pseudonymized (`user_id` → `deleted_member`): the report stays for triage (it may already be mirrored into a GitHub issue), the reporter's identity does not.
 - 2026-07-18: **"Member view" pill removed from the admin header (owner report: it 404s).** Bug
   reporting has no member page — `/apps/bug-reporting` does not exist; members report through the
   in-app modal — so the pill added in the 2026-07-17 sweep linked to a 404 and is removed. The

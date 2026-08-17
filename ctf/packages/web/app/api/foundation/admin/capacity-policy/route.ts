@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { getCapacityPolicy, insertFoundationAudit, updateCapacityPolicy } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET() {
   const gate = await requireFoundationAdminAccess();
@@ -17,10 +18,45 @@ export async function GET() {
     reportError(error, { area: 'foundation', op: 'admin_capacity_policy' });
     console.error('[Foundation] Capacity policy read failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Capacity policy unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }
+}
+
+type CapacityPolicyPayload = {
+  maxActiveThreadsPerUser?: number;
+  maxMessagesPerMinute?: number;
+  maxSearchesPerMinute?: number;
+  maxQuoteTransitionsPerMinute?: number;
+  maxCallDurationMinutes?: number;
+  quotaState?: 'green' | 'yellow' | 'orange' | 'red';
+};
+
+type ValidatedCapacityPolicyPayload = {
+  maxActiveThreadsPerUser: number;
+  maxMessagesPerMinute: number;
+  maxSearchesPerMinute: number;
+  maxQuoteTransitionsPerMinute: number;
+  maxCallDurationMinutes: number;
+  quotaState: 'green' | 'yellow' | 'orange' | 'red';
+};
+
+// A full capacity policy requires every limit as an integer and a valid quota state; a partial or
+// mistyped body is rejected. Returns the validated payload, or null when the body is incomplete.
+function validateCapacityPolicyPayload(payload: CapacityPolicyPayload): ValidatedCapacityPolicyPayload | null {
+  if (
+    !Number.isInteger(payload.maxActiveThreadsPerUser)
+    || !Number.isInteger(payload.maxMessagesPerMinute)
+    || !Number.isInteger(payload.maxSearchesPerMinute)
+    || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
+    || !Number.isInteger(payload.maxCallDurationMinutes)
+    || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
+  ) {
+    return null;
+  }
+
+  return payload as ValidatedCapacityPolicyPayload;
 }
 
 export async function PUT(request: Request) {
@@ -34,45 +70,23 @@ export async function PUT(request: Request) {
     return gate.response;
   }
 
-  let payload: {
-    maxActiveThreadsPerUser?: number;
-    maxMessagesPerMinute?: number;
-    maxSearchesPerMinute?: number;
-    maxQuoteTransitionsPerMinute?: number;
-    maxCallDurationMinutes?: number;
-    quotaState?: 'green' | 'yellow' | 'orange' | 'red';
-  } = {};
+  let payload: CapacityPolicyPayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: `Invalid JSON payload: ${failureReason(error)}` },
       { status: 400 },
     );
   }
 
-  if (
-    !Number.isInteger(payload.maxActiveThreadsPerUser)
-    || !Number.isInteger(payload.maxMessagesPerMinute)
-    || !Number.isInteger(payload.maxSearchesPerMinute)
-    || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
-    || !Number.isInteger(payload.maxCallDurationMinutes)
-    || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
-  ) {
+  const validatedPayload = validateCapacityPolicyPayload(payload);
+  if (!validatedPayload) {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Full capacity policy payload is required.' },
       { status: 400 },
     );
   }
-
-  const validatedPayload = payload as {
-    maxActiveThreadsPerUser: number;
-    maxMessagesPerMinute: number;
-    maxSearchesPerMinute: number;
-    maxQuoteTransitionsPerMinute: number;
-    maxCallDurationMinutes: number;
-    quotaState: 'green' | 'yellow' | 'orange' | 'red';
-  };
 
   try {
     const policy = await updateCapacityPolicy({
@@ -100,7 +114,7 @@ export async function PUT(request: Request) {
     reportError(error, { area: 'foundation', op: 'admin_capacity_policy' });
     console.error('[Foundation] Capacity policy update failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Capacity policy update unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Capacity policy update unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

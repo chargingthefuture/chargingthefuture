@@ -25,8 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { announcementId } = await params;
 
   try {
-    const dismissedAt = new Date().toISOString();
-    await dismissAnnouncement(gate.auth.userId, announcementId);
+    const { dismissedAtIso } = await dismissAnnouncement(gate.auth.userId, announcementId);
 
     logFeedAudit({
       actorId: gate.auth.userId,
@@ -41,7 +40,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     // The command contract (announcements.dismiss) declares { announcementId, dismissedAt } as output.
-    return NextResponse.json({ ok: true, announcementId, dismissedAt }, { status: 200 });
+    return NextResponse.json({ ok: true, announcementId, dismissedAt: dismissedAtIso }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'announcementid_dismiss' });
     return NextResponse.json(

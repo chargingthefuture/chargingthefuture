@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ArrowUpRight, Check } from 'lucide-react';
 import type {
   Notification,
@@ -113,6 +113,149 @@ async function ensureDeviceSubscribed(): Promise<string | null> {
 // a client-side navigation to the same route would not remount the shell. It returns true when it
 // handled the link (this component then blocks the Link's own navigation), false for a link that
 // should navigate normally (e.g. /apps/<plugin>).
+// The loading / error / empty note that sits above the feed. Returns null once real rows exist.
+function NotificationsFeedStatus({
+  loading,
+  error,
+  count,
+}: {
+  loading: boolean;
+  error: string | null;
+  count: number;
+}) {
+  if (loading && count === 0) {
+    return <p className={styles.notificationsNote}>Loading…</p>;
+  }
+  if (!loading && error && count === 0) {
+    return <p className={styles.notificationsNote} role="status">{error}</p>;
+  }
+  if (!loading && !error && count === 0) {
+    return (
+      <div className={styles.notificationsEmpty}>
+        <p className={styles.notificationsEmptyTitle}>You&apos;re all caught up</p>
+        <p className={styles.notificationsEmptyBody}>
+          Updates you can act on — replies, credits, rides, and calls — show here as they happen.
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
+// A single notification row: dot, summary, time, and an optional in-app "Open" deep link.
+function NotificationRow({
+  item,
+  markRead,
+  onOpenDeepLink,
+}: {
+  item: Notification;
+  markRead: (id: string) => void;
+  onOpenDeepLink?: (linkPath: string) => boolean;
+}) {
+  return (
+    <div
+      className={item.isRead ? styles.notificationRow : `${styles.notificationRow} ${styles.notificationRowUnread}`}
+      onMouseEnter={() => (item.isRead ? undefined : markRead(item.id))}
+    >
+      <span className={item.isRead ? styles.notificationDotRead : styles.notificationDot} aria-hidden="true" />
+      <div className={styles.notificationBody}>
+        <p className={styles.notificationSummary}>{item.summary}</p>
+        <span className={styles.notificationTime}>{formatTime(item.createdAtIso)}</span>
+        {item.linkPath ? (
+          <Link
+            href={item.linkPath}
+            className={styles.announcementChip}
+            onClick={(event) => {
+              markRead(item.id);
+              // Let the shell handle an in-Commons deep link in place (it can't rely on a remount);
+              // if it did, block the Link's own navigation. A plugin link falls through and navigates.
+              if (item.linkPath && onOpenDeepLink?.(item.linkPath)) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <ArrowUpRight size={13} color="currentColor" /> Open
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// Device-push opt-ins — the in-app feed is always on; these control the lock-screen ping only, and
+// all default off. Placed with the feed (not in account settings) so a member manages what pings them
+// right where they see what pinged them. Returns null until preferences have loaded.
+function NotificationsManage({
+  prefs,
+  savingPref,
+  pushNote,
+  manageOpen,
+  setManageOpen,
+  togglePref,
+}: {
+  prefs: NotificationPreferences | null;
+  savingPref: string | null;
+  pushNote: string | null;
+  manageOpen: boolean;
+  setManageOpen: Dispatch<SetStateAction<boolean>>;
+  togglePref: (key: keyof NotificationPreferences) => void;
+}) {
+  if (!prefs) return null;
+  return (
+    <div className={styles.notificationsManage}>
+      <button
+        type="button"
+        className={styles.notificationsManageToggle}
+        onClick={() => setManageOpen((open) => !open)}
+        aria-expanded={manageOpen}
+      >
+        {manageOpen ? 'Hide' : 'Manage what pings your device'}
+      </button>
+      {manageOpen ? (
+        <div className={styles.notificationsManageBody}>
+          <p className={styles.notificationsManageNote}>
+            Everything shows in this list either way. These switches only control whether your
+            device also pings you. All are off unless you turn them on.
+          </p>
+          {pushNote ? (
+            <p className={styles.notificationsManageNote} role="status">{pushNote}</p>
+          ) : null}
+          {PUSH_TOGGLES.map((toggle) => (
+            <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
+              <input
+                type="checkbox"
+                aria-label={toggle.label}
+                checked={prefs[toggle.key]}
+                disabled={savingPref === toggle.key}
+                onChange={() => togglePref(toggle.key)}
+              />
+              <span className={styles.notificationsPrefText}>
+                <span className={styles.notificationsPrefLabel}>{toggle.label}</span>
+                <span className={styles.notificationsPrefDetail}>{toggle.detail}</span>
+              </span>
+            </label>
+          ))}
+          <label className={styles.notificationsPrefRow} aria-label="Keep device pings discreet">
+            <input
+              type="checkbox"
+              aria-label="Keep device pings discreet"
+              checked={prefs.discreetPush}
+              disabled={savingPref === 'discreetPush'}
+              onChange={() => togglePref('discreetPush')}
+            />
+            <span className={styles.notificationsPrefText}>
+              <span className={styles.notificationsPrefLabel}>Keep device pings discreet</span>
+              <span className={styles.notificationsPrefDetail}>
+                The ping just says you have an update — no plugin name or details on your lock screen.
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkPath: string) => boolean }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,23 +267,34 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
   // browser, blocked permission, or push not configured). The opt-in is still saved either way.
   const [pushNote, setPushNote] = useState<string | null>(null);
 
+  // True only while this panel is on screen. Clearing the interval stops new polls, but a poll already
+  // in flight when the member closes the panel still resolves afterwards, and its result belongs to a
+  // panel that no longer exists. Same canceled-flag pattern the rest of the Commons shell uses.
+  const mountedRef = useRef(true);
+
   const load = useCallback(async () => {
     try {
       const payload = await requestJson<NotificationsResponse>('/api/notifications?limit=50');
+      if (!mountedRef.current) return;
       setItems(payload.notifications);
       setError(null);
     } catch (loadError) {
+      if (!mountedRef.current) return;
       setError(loadError instanceof Error ? loadError.message : 'Unable to load notifications.');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     void load();
     // Poll while the panel is open so a device ping that lands here shows without a manual refresh.
     const timer = setInterval(() => void load(), 20_000);
-    return () => clearInterval(timer);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(timer);
+    };
   }, [load]);
 
   useEffect(() => {
@@ -207,109 +361,20 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
         ) : null}
       </div>
 
-      {loading && items.length === 0 ? (
-        <p className={styles.notificationsNote}>Loading…</p>
-      ) : null}
-
-      {!loading && error && items.length === 0 ? (
-        <p className={styles.notificationsNote} role="status">{error}</p>
-      ) : null}
-
-      {!loading && !error && items.length === 0 ? (
-        <div className={styles.notificationsEmpty}>
-          <p className={styles.notificationsEmptyTitle}>You&apos;re all caught up</p>
-          <p className={styles.notificationsEmptyBody}>
-            Updates you can act on — replies, credits, rides, and calls — show here as they happen.
-          </p>
-        </div>
-      ) : null}
+      <NotificationsFeedStatus loading={loading} error={error} count={items.length} />
 
       {items.map((item) => (
-        <div
-          key={item.id}
-          className={item.isRead ? styles.notificationRow : `${styles.notificationRow} ${styles.notificationRowUnread}`}
-          onMouseEnter={() => (item.isRead ? undefined : markRead(item.id))}
-        >
-          <span className={item.isRead ? styles.notificationDotRead : styles.notificationDot} aria-hidden="true" />
-          <div className={styles.notificationBody}>
-            <p className={styles.notificationSummary}>{item.summary}</p>
-            <span className={styles.notificationTime}>{formatTime(item.createdAtIso)}</span>
-            {item.linkPath ? (
-              <Link
-                href={item.linkPath}
-                className={styles.announcementChip}
-                onClick={(event) => {
-                  markRead(item.id);
-                  // Let the shell handle an in-Commons deep link in place (it can't rely on a remount);
-                  // if it did, block the Link's own navigation. A plugin link falls through and navigates.
-                  if (item.linkPath && onOpenDeepLink?.(item.linkPath)) {
-                    event.preventDefault();
-                  }
-                }}
-              >
-                <ArrowUpRight size={13} color="currentColor" /> Open
-              </Link>
-            ) : null}
-          </div>
-        </div>
+        <NotificationRow key={item.id} item={item} markRead={markRead} onOpenDeepLink={onOpenDeepLink} />
       ))}
 
-      {/* Device-push opt-ins — the in-app feed above is always on; these control the lock-screen ping
-          only, and all default off. Placed here (not in account settings) so a member manages what
-          pings them right where they see what pinged them. */}
-      {prefs ? (
-        <div className={styles.notificationsManage}>
-          <button
-            type="button"
-            className={styles.notificationsManageToggle}
-            onClick={() => setManageOpen((open) => !open)}
-            aria-expanded={manageOpen}
-          >
-            {manageOpen ? 'Hide' : 'Manage what pings your device'}
-          </button>
-          {manageOpen ? (
-            <div className={styles.notificationsManageBody}>
-              <p className={styles.notificationsManageNote}>
-                Everything shows in this list either way. These switches only control whether your
-                device also pings you. All are off unless you turn them on.
-              </p>
-              {pushNote ? (
-                <p className={styles.notificationsManageNote} role="status">{pushNote}</p>
-              ) : null}
-              {PUSH_TOGGLES.map((toggle) => (
-                <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
-                  <input
-                    type="checkbox"
-                    aria-label={toggle.label}
-                    checked={prefs[toggle.key]}
-                    disabled={savingPref === toggle.key}
-                    onChange={() => togglePref(toggle.key)}
-                  />
-                  <span className={styles.notificationsPrefText}>
-                    <span className={styles.notificationsPrefLabel}>{toggle.label}</span>
-                    <span className={styles.notificationsPrefDetail}>{toggle.detail}</span>
-                  </span>
-                </label>
-              ))}
-              <label className={styles.notificationsPrefRow} aria-label="Keep device pings discreet">
-                <input
-                  type="checkbox"
-                  aria-label="Keep device pings discreet"
-                  checked={prefs.discreetPush}
-                  disabled={savingPref === 'discreetPush'}
-                  onChange={() => togglePref('discreetPush')}
-                />
-                <span className={styles.notificationsPrefText}>
-                  <span className={styles.notificationsPrefLabel}>Keep device pings discreet</span>
-                  <span className={styles.notificationsPrefDetail}>
-                    The ping just says you have an update — no plugin name or details on your lock screen.
-                  </span>
-                </span>
-              </label>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+      <NotificationsManage
+        prefs={prefs}
+        savingPref={savingPref}
+        pushNote={pushNote}
+        manageOpen={manageOpen}
+        setManageOpen={setManageOpen}
+        togglePref={togglePref}
+      />
     </div>
   );
 }

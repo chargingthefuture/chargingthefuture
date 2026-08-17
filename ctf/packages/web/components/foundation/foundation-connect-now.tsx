@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { PhoneCall, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { useInstantCall } from "./foundation-instant-call";
+import {
+  FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS,
+  FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
+} from "@/lib/foundation/constants";
 
 // Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
 // one joined word per the brand lexicon. The amount is only rendered when the provider has a valid
@@ -146,10 +150,67 @@ export function ConnectNowButton({
 }
 
 // The buyer pre-authorizes a maximum number of blocks at confirm time (issue #808 task 4). The call can
-// never run past this cap in v1. These are the selectable caps; the default is 6 (matches the server
-// default FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS) and the max matches the server hard cap.
-const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, 24];
-const DEFAULT_BLOCK_CAP = 6;
+// never run past this cap in v1.
+//
+// The default and the ceiling are IMPORTED from the server constants rather than repeated here. They
+// matched before, so nothing was broken — but a comment saying "the max matches the server hard cap" is
+// only true until someone changes one side, and then the picker offers a value `normalizeAuthorizedBlocks`
+// throws `invalid_authorized_blocks` on, which the buyer sees as an opaque failure after they have already
+// consented to spend. Deriving the list means the two cannot drift.
+const BLOCK_CAP_OPTIONS = [1, 2, 3, 4, 6, 8, 12, FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS].filter(
+  (n, i, all) => n <= FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS && all.indexOf(n) === i,
+);
+const DEFAULT_BLOCK_CAP = FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS;
+
+type FoundationTokens = ReturnType<typeof getFoundationTokens>;
+type InstantCallController = ReturnType<typeof useInstantCall>;
+
+// "1 ServiceCredit" vs "N ServiceCredits" — ServiceCredits is one joined word per the brand lexicon.
+function serviceCreditsLabel(count: number): string {
+  if (count === 1) {
+    return "1 ServiceCredit";
+  }
+  return `${count} ServiceCredits`;
+}
+
+// "1 block" vs "N blocks".
+function blocksLabel(count: number): string {
+  if (count === 1) {
+    return "1 block";
+  }
+  return `${count} blocks`;
+}
+
+// The "Start call" button is only actionable once the buyer has consented, no ring is already being
+// placed, and the instant-call controller is mounted. Kept as one derivation so the button's disabled
+// state and styling can't drift apart.
+function canStartCall(consented: boolean, starting: boolean, instantCall: InstantCallController): boolean {
+  if (!consented) {
+    return false;
+  }
+  if (starting) {
+    return false;
+  }
+  if (!instantCall) {
+    return false;
+  }
+  return true;
+}
+
+// Styling for the "Start call" button, switched on whether the button is actionable.
+function startCallButtonStyle(t: FoundationTokens, canStart: boolean): CSSProperties {
+  return {
+    width: "100%",
+    padding: "12px 18px",
+    borderRadius: 10,
+    background: canStart ? t.ACCENT : t.BORDER,
+    color: canStart ? "#1a1205" : t.MUTED,
+    fontSize: 14,
+    fontWeight: 700,
+    border: canStart ? "none" : `1px solid ${t.BORDER_HI}`,
+    cursor: canStart ? "pointer" : "not-allowed",
+  };
+}
 
 function ConnectNowDialog({
   provider, rateLabel, intervalMinutes, onClose,
@@ -172,8 +233,9 @@ function ConnectNowDialog({
   // The most the caller can be charged on this call: rate per block times the authorized cap. Shown so the
   // buyer sees the worst-case total before they agree.
   const maxSpend = rate * authorizedBlocks;
-  const maxSpendLabel = maxSpend === 1 ? '1 ServiceCredit' : `${maxSpend} ServiceCredits`;
+  const maxSpendLabel = serviceCreditsLabel(maxSpend);
   const maxMinutes = intervalMinutes * authorizedBlocks;
+  const canStart = canStartCall(consented, starting, instantCall);
 
   // Place the ring through the controller, then close the consent dialog so the controller's call overlay
   // (ringing -> in-call) takes over. The controller owns the lifecycle from here. A failed ring (e.g. not
@@ -270,13 +332,13 @@ function ConnectNowDialog({
           >
             {BLOCK_CAP_OPTIONS.map((n) => (
               <option key={n} value={n}>
-                {n === 1 ? "1 block" : `${n} blocks`} · up to {n * intervalMinutes} min
+                {blocksLabel(n)} · up to {n * intervalMinutes} min
               </option>
             ))}
           </select>
           <div style={{ fontSize: 12.5, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
             The call will not run past this limit. You&apos;ll be charged for at most{" "}
-            <strong style={{ color: t.TITLE }}>{maxSpendLabel}</strong> ({authorizedBlocks === 1 ? "1 block" : `${authorizedBlocks} blocks`}, up to {maxMinutes} min).
+            <strong style={{ color: t.TITLE }}>{maxSpendLabel}</strong> ({blocksLabel(authorizedBlocks)}, up to {maxMinutes} min).
           </div>
         </div>
 
@@ -303,19 +365,10 @@ function ConnectNowDialog({
 
         <button
           type="button"
-          disabled={!consented || starting || !instantCall}
-          aria-disabled={!consented || starting || !instantCall}
+          disabled={!canStart}
+          aria-disabled={!canStart}
           onClick={() => void onStart()}
-          style={{
-            width: "100%",
-            padding: "12px 18px",
-            borderRadius: 10,
-            background: consented && !starting && instantCall ? t.ACCENT : t.BORDER,
-            color: consented && !starting && instantCall ? "#1a1205" : t.MUTED,
-            fontSize: 14, fontWeight: 700,
-            border: consented && !starting && instantCall ? "none" : `1px solid ${t.BORDER_HI}`,
-            cursor: consented && !starting && instantCall ? "pointer" : "not-allowed",
-          }}
+          style={startCallButtonStyle(t, canStart)}
         >
           {starting ? "Starting…" : "Start call"}
         </button>

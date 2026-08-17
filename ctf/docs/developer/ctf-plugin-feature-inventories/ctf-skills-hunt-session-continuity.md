@@ -82,7 +82,7 @@ Implementation contract:
 - Player endpoint: `GET /api/skills-hunt/rounds/{roundId}/missions` returns missions + the requesting user's progress on each.
 - Progress recompute fires inside `reviewSubmission` on accept (same hook as leaderboard rebuild, keeps semantics consistent).
 - Mission completion triggers a notification ("Mission complete: +150 pts") and a service-credits ledger entry of the mission's `bonus_points`.
-- Locked missions render greyed-out; v1 implements only the unconditional active+completed states. Locked-with-condition logic is deferred to a follow-up.
+- Locked missions render grayed-out; v1 implements only the unconditional active+completed states. Locked-with-condition logic is deferred to a follow-up.
 
 ### 2.10 Phase 0/1/2 badge — skipped pending Replit clarification (post-design lock, 2026-05-11)
 Replit's design includes "Phase 0 / Phase 1 / Phase 2" badges on Directory profiles (`Directory.tsx:81`). Owner does not yet know what this concept means. Implementation **skips this badge** until owner clarifies intent with Replit. Render-side: Directory profile detail + list **omits** the Phase badge; everything else in the design is implemented. Reconcile with Replit before adding it back; do not invent a definition.

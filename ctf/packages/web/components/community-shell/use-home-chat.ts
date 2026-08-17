@@ -1,10 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { HubJoinResponse, HubLastSeenResponse, HubMessage, HubMessagesResponse } from '../../lib/hub/types';
-import { connectHubLive, type HubLiveConnection, type HubTypingUser } from '../../lib/hub/live-stream';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from 'react';
+import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
+import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import { hubSuggestionChips } from '../../lib/concierge/hub-suggestions';
+import { commonsSuggestionChips } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 
@@ -14,6 +23,9 @@ import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 const POLL_INTERVAL_FALLBACK_MS = 10_000;
 const POLL_INTERVAL_LIVE_MS = 30_000;
 
+// Shared headers for a JSON POST that also carries the CSRF marker the backend expects.
+const JSON_CSRF_HEADERS = { 'content-type': 'application/json', 'x-ctf-csrf': '1' } as const;
+
 // The peer message the composer is currently replying to (Signal-style quote). Carries the
 // quoted post's id (the reply target) plus a quote preview for the composer banner.
 export type ReplyTarget = {
@@ -22,6 +34,29 @@ export type ReplyTarget = {
 };
 
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
+
+// The active stream filter: mentions and announcements are mutually exclusive; 'all' is the
+// unfiltered blended stream.
+type FilterKey = 'mentions' | 'announcements' | 'all';
+
+// A stable bundle of every state setter. Action helpers live at module scope and take this one
+// argument instead of a long list of setters; the setters never change identity, so the hook holds
+// the bundle in a ref that is written once.
+type ChatSetters = {
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
+  setComicItems: Dispatch<SetStateAction<ComicStreamItem[]>>;
+  setInput: Dispatch<SetStateAction<string>>;
+  setError: Dispatch<SetStateAction<string | null>>;
+  setReplyTarget: Dispatch<SetStateAction<ReplyTarget | null>>;
+  setIsSending: Dispatch<SetStateAction<boolean>>;
+  setConsentGranted: Dispatch<SetStateAction<boolean>>;
+  setConsentModalOpen: Dispatch<SetStateAction<boolean>>;
+  setPendingConsentText: Dispatch<SetStateAction<string | null>>;
+  setLastSeenAtIso: Dispatch<SetStateAction<string | null>>;
+  setConnectionState: Dispatch<SetStateAction<ChatConnectionState>>;
+  setTypingUsers: Dispatch<SetStateAction<CommonsTypingUser[]>>;
+  setIsFilterRefreshing: Dispatch<SetStateAction<boolean>>;
+};
 
 // localStorage key for the one-time AI-processing consent (the llm_consent_granted gate the
 // backend expects). Scoped per user so a shared browser does not leak consent between accounts.
@@ -41,6 +76,11 @@ function stripComicMention(text: string): string {
 
 function consentStorageKey(userId: string): string {
   return `${COMIC_CONSENT_STORAGE_PREFIX}.${userId}`;
+}
+
+// Collapse the repeated "surface an Error message or a fallback" pattern used by every catch block.
+function toErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
 }
 
 function formatTimeLabel(value: string | Date | null | undefined): string {
@@ -67,7 +107,7 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // concierge reply sets its own actionLabel/actionSlug — never from message text.
 function buildChatMessage(
   id: string,
-  from: 'hub' | 'user',
+  from: 'commons' | 'user',
   text: string,
   time: string,
   senderLabel?: string,
@@ -81,8 +121,8 @@ function buildChatMessage(
   };
 }
 
-function mapStoredMessage(message: HubMessage, currentUserId: string): ChatMessage {
-  const from = message.userId === currentUserId ? 'user' : 'hub';
+function mapStoredMessage(message: CommonsMessage, currentUserId: string): ChatMessage {
+  const from = message.userId === currentUserId ? 'user' : 'commons';
   return {
     ...buildChatMessage(
       message.id,
@@ -135,7 +175,7 @@ function applyReactionToggle(message: ChatMessage, emoji: string): ChatMessage {
 }
 
 function getMessageDedupKey(message: ChatMessage): string {
-  // A peer post is the same post wherever it arrived from: the POST /api/hub/messages response
+  // A peer post is the same post wherever it arrived from: the POST /api/commons/messages response
   // carries the post id with its created time, while the GET list carries the timeline item id
   // with its published time. Keying on the stable community post id keeps those two copies from
   // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
@@ -239,6 +279,616 @@ type ComicMessageResponse = {
   holdingResponse?: string;
 };
 
+// The query-string fragment the server expects for each filter mode.
+function filterParamForKey(key: FilterKey): string {
+  if (key === 'mentions') return '&mentions=me';
+  if (key === 'announcements') return '&channel=announcements';
+  return '';
+}
+
+// The "load around" query-string fragment for a deep-linked post/announcement, empty when neither.
+function aroundParamFor(postId: string | null, announcementId: string | null): string {
+  if (postId) return `&aroundPost=${encodeURIComponent(postId)}`;
+  if (announcementId) return `&aroundAnnouncement=${encodeURIComponent(announcementId)}`;
+  return '';
+}
+
+// Read a page of history and merge it into the stream, but ignore a response that raced a mode flip
+// (e.g. a slow read landing after the member changed the filter) so a filtered view never gets
+// polluted with the wrong stream.
+async function fetchHistoryIntoState(
+  extraParam: string,
+  readFilterKey: () => FilterKey,
+  expectedKey: FilterKey,
+  currentUserId: string,
+  setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
+): Promise<void> {
+  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`);
+  if (readFilterKey() !== expectedKey) {
+    return;
+  }
+  const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUserId));
+  setMessages((previous) => mergeMessages(previous, nextMessages));
+}
+
+// Read the comic conversation stream and merge it over the local (optimistic) items.
+async function readComicInto(setters: ChatSetters): Promise<void> {
+  const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
+  const serverItems: ComicStreamItem[] = payload.items.map((item) => ({ ...item }));
+  setters.setComicItems((previous) => mergeComicItems(serverItems, previous));
+}
+
+// Read the member's last-seen marker once on entry so the chat can place the "New messages"
+// divider. Best-effort: a failure leaves the marker null (everything reads as already seen, i.e.
+// no divider) and never blocks the chat.
+async function readLastSeenInto(setters: ChatSetters): Promise<void> {
+  try {
+    const payload = await requestJson<CommonsLastSeenResponse>('/api/commons/last-seen');
+    setters.setLastSeenAtIso(payload.lastSeenAtIso);
+  } catch {
+    setters.setLastSeenAtIso(null);
+  }
+}
+
+// Clear the loaded messages and re-fetch in the current filter mode. The list is cleared first so
+// modes never blend (merge is additive, so a shared list would keep old rows around).
+function runFilterRefresh(setters: ChatSetters, refreshHistory: () => Promise<void>): void {
+  setters.setMessages([]);
+  setters.setIsFilterRefreshing(true);
+  void refreshHistory()
+    .catch(() => {
+      // Best-effort: the poll retries shortly; the empty state covers the gap.
+    })
+    .finally(() => setters.setIsFilterRefreshing(false));
+}
+
+// The stable refs and setters the mutually-exclusive filter toggles read and write.
+type FilterRefs = {
+  mentionsOnlyRef: RefObject<boolean>;
+  announcementsOnlyRef: RefObject<boolean>;
+  setMentionsOnly: Dispatch<SetStateAction<boolean>>;
+  setAnnouncementsOnly: Dispatch<SetStateAction<boolean>>;
+};
+
+// Apply a mutually-exclusive filter selection to the refs + state mirrors, then re-fetch. Mentions
+// and announcements can never both be on, so callers pass the exact pair they want.
+function flipFilter(mentions: boolean, announcements: boolean, refs: FilterRefs, refreshForFilterChange: () => void): void {
+  refs.mentionsOnlyRef.current = mentions;
+  refs.announcementsOnlyRef.current = announcements;
+  refs.setMentionsOnly(mentions);
+  refs.setAnnouncementsOnly(announcements);
+  refreshForFilterChange();
+}
+
+// The composer's "replying to …" target for a peer message, or null when the message is not a peer
+// post (only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to).
+function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
+  if (!message.communityPostId) return null;
+  const author = message.senderLabel ?? 'Community member';
+  const snippet = message.text.trim().slice(0, 120);
+  return { postId: message.communityPostId, quote: { author, snippet, postId: message.communityPostId } };
+}
+
+// Editing IS delete + repost — there is no in-place edit — so load the post's text back into the
+// composer, clear any active reply, and delete the original.
+function runEditMessage(
+  postId: string,
+  text: string,
+  setters: ChatSetters,
+  deleteMessage: (postId: string) => Promise<void>,
+): void {
+  setters.setReplyTarget(null);
+  setters.setInput(text);
+  void deleteMessage(postId);
+}
+
+// Mark "seen" at most once per mount and never push the marker backwards.
+function markSeenOnce(markedSeenRef: RefObject<boolean>): void {
+  if (markedSeenRef.current) return;
+  markedSeenRef.current = true;
+  void postSeenMarker();
+}
+
+// POST the member's last-seen marker. Best-effort: a failure is swallowed so it can never break the
+// chat, and the caller leaves its "already marked" guard set so a transient failure does not retry-spam.
+async function postSeenMarker(): Promise<void> {
+  try {
+    await requestJson<CommonsLastSeenResponse>('/api/commons/last-seen', {
+      method: 'POST',
+      headers: JSON_CSRF_HEADERS,
+      body: JSON.stringify({ seenAtIso: new Date().toISOString() }),
+    });
+  } catch {
+    // Best-effort: leave the guard set so a transient failure does not retry-spam.
+  }
+}
+
+// The optimistic "Reviewing for safety" card shown while an @comic ask awaits human approval.
+function buildOptimisticComicItem(question: string): ComicStreamItem {
+  // Unique per ask (random suffix) so two rapid identical-text asks get distinct React keys and
+  // are tracked independently by the count-aware merge.
+  const localId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    questionTurnId: localId,
+    conversationId: 'optimistic',
+    status: 'pending',
+    question,
+    answer: null,
+    answerTurnId: null,
+    currentUserRating: null,
+    linkedPlugins: [],
+    askedAtIso: new Date().toISOString(),
+    optimistic: true,
+  };
+}
+
+// Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
+// never the unreviewed draft — so we optimistically render the pending card and rely on the polling
+// stream to surface the answer once a human approves it.
+async function runRouteToComic(questionText: string, refreshComic: () => Promise<void>, setters: ChatSetters): Promise<void> {
+  const question = stripComicMention(questionText);
+  const optimisticItem = buildOptimisticComicItem(question);
+  setters.setComicItems((previous) => [...previous, optimisticItem]);
+
+  try {
+    await requestJson<ComicMessageResponse>('/api/comic/message', {
+      method: 'POST',
+      headers: JSON_CSRF_HEADERS,
+      body: JSON.stringify({ body: questionText, channel: 'commons', consentGranted: true }),
+    });
+    // Pull the server stream so the pending card reflects the persisted turn.
+    await refreshComic().catch(() => undefined);
+  } catch (sendError) {
+    // Drop the optimistic card on failure and surface the error.
+    setters.setComicItems((previous) => previous.filter((item) => item.questionTurnId !== optimisticItem.questionTurnId));
+    setters.setError(toErrorMessage(sendError, 'Unable to reach the AI Assistant right now.'));
+  }
+}
+
+// Everything the composer send path needs. Values are read once per send; setters are stable.
+type SendMessageContext = {
+  input: string;
+  isSending: boolean;
+  consentGranted: boolean;
+  replyTarget: ReplyTarget | null;
+  currentUserId: string;
+  routeToComic: (questionText: string) => Promise<void>;
+  notifyStopTyping: () => void;
+  setters: ChatSetters;
+};
+
+// The JSON body for a peer post: with a reply target it carries the reply reference and the quote
+// the sender saw; otherwise just the text.
+function buildPeerMessageBody(text: string, activeReply: ReplyTarget | null): string {
+  return JSON.stringify(
+    activeReply
+      ? { text, replyToPostId: activeReply.postId, quotedMessage: activeReply.quote }
+      : { text },
+  );
+}
+
+// Send a peer-to-peer community post and merge the saved copy in. On failure, restore the reply
+// target and the composer text so the member can retry.
+async function postPeerMessage(text: string, activeReply: ReplyTarget | null, ctx: SendMessageContext): Promise<void> {
+  try {
+    const payload = await requestJson<{ ok: true; message: CommonsMessage }>('/api/commons/messages', {
+      method: 'POST',
+      headers: JSON_CSRF_HEADERS,
+      body: buildPeerMessageBody(text, activeReply),
+    });
+    const savedMessage = mapStoredMessage(payload.message, ctx.currentUserId);
+    ctx.setters.setMessages((previous) => mergeMessages(previous, [savedMessage]));
+  } catch (sendError) {
+    // Restore the reply target so the member can retry the reply.
+    if (activeReply) {
+      ctx.setters.setReplyTarget(activeReply);
+    }
+    // Put the text back in the composer (owner report, 2026-07-27). The input is cleared
+    // optimistically by the caller so the send feels instant; before this, a rejected send — a
+    // message over the length cap, or any network failure — cleared the box and the member's writing
+    // was gone with nothing to retry. Only restore when the member has not started typing something
+    // new in the meantime, so a recovery never overwrites live work.
+    ctx.setters.setInput((current) => (current.trim().length === 0 ? text : current));
+    ctx.setters.setError(toErrorMessage(sendError, 'Unable to send your message right now.'));
+  }
+}
+
+// @comic mention → AI Assistant. Gate the first use behind the consent modal, holding the text.
+async function sendComicFromComposer(text: string, ctx: SendMessageContext): Promise<void> {
+  if (!ctx.consentGranted) {
+    ctx.setters.setPendingConsentText(text);
+    ctx.setters.setConsentModalOpen(true);
+    return;
+  }
+
+  ctx.setters.setIsSending(true);
+  ctx.setters.setError(null);
+  ctx.setters.setInput('');
+  try {
+    await ctx.routeToComic(text);
+  } finally {
+    ctx.setters.setIsSending(false);
+  }
+}
+
+// No mention → peer-to-peer community post via the existing hub path. Capture the active reply
+// target (Signal-style quote) before clearing it, and clear the typing indicator right away.
+async function sendPeerFromComposer(text: string, ctx: SendMessageContext): Promise<void> {
+  const activeReply = ctx.replyTarget;
+  ctx.setters.setIsSending(true);
+  ctx.setters.setError(null);
+  ctx.setters.setInput('');
+  ctx.setters.setReplyTarget(null);
+  ctx.notifyStopTyping();
+  try {
+    await postPeerMessage(text, activeReply, ctx);
+  } finally {
+    ctx.setters.setIsSending(false);
+  }
+}
+
+async function runSendMessage(ctx: SendMessageContext): Promise<void> {
+  const text = ctx.input.trim();
+  if (!text || ctx.isSending) {
+    return;
+  }
+
+  if (mentionsComic(text)) {
+    await sendComicFromComposer(text, ctx);
+    return;
+  }
+
+  await sendPeerFromComposer(text, ctx);
+}
+
+// Toggle the current member's emoji reaction on every message matching the predicate. Optimistically
+// flips the chip (count + reactedByMe), then POSTs; on failure the optimistic change is reverted
+// (toggling the same emoji again undoes it). A fresh history load reconciles to the server aggregate.
+async function toggleMessageReaction(
+  matchesTarget: (message: ChatMessage) => boolean,
+  emoji: string,
+  url: string,
+  setters: ChatSetters,
+): Promise<void> {
+  const flip = (previous: ChatMessage[]): ChatMessage[] =>
+    previous.map((message) => (matchesTarget(message) ? applyReactionToggle(message, emoji) : message));
+
+  setters.setMessages(flip);
+
+  try {
+    await requestJson<{ ok: true; reacted: boolean }>(url, {
+      method: 'POST',
+      headers: JSON_CSRF_HEADERS,
+      body: JSON.stringify({ emoji }),
+    });
+  } catch (reactError) {
+    setters.setMessages(flip);
+    setters.setError(toErrorMessage(reactError, 'Unable to update your reaction right now.'));
+  }
+}
+
+// Toggle the member's reaction on a peer post, keyed on the community post id.
+function togglePostReaction(postId: string, emoji: string, setters: ChatSetters): Promise<void> {
+  return toggleMessageReaction(
+    (message) => message.communityPostId === postId,
+    emoji,
+    `/api/commons/messages/${encodeURIComponent(postId)}/reactions`,
+    setters,
+  );
+}
+
+// Toggle the member's reaction on an official announcement, keyed on the announcement id.
+function toggleAnnouncementReactionFor(announcementId: string, emoji: string, setters: ChatSetters): Promise<void> {
+  return toggleMessageReaction(
+    (message) => message.announcementId === announcementId,
+    emoji,
+    `/api/announcements/${encodeURIComponent(announcementId)}/reactions`,
+    setters,
+  );
+}
+
+// Delete one of the member's own peer posts. Optimistically drops it from the stream, then DELETEs;
+// on failure the post is restored and an error is shown. Server enforces author-only.
+async function runDeleteMessage(postId: string, setters: ChatSetters): Promise<void> {
+  let removed: ChatMessage[] = [];
+  setters.setMessages((previous) => {
+    removed = previous.filter((message) => message.communityPostId === postId);
+    return previous.filter((message) => message.communityPostId !== postId);
+  });
+
+  try {
+    await requestJson<{ ok: true; postId: string }>(`/api/commons/messages/${encodeURIComponent(postId)}`, {
+      method: 'DELETE',
+      headers: { 'x-ctf-csrf': '1' },
+    });
+  } catch (deleteError) {
+    // Restore the optimistically removed post(s) and surface the error.
+    if (removed.length > 0) {
+      setters.setMessages((previous) => mergeMessages(previous, removed));
+    }
+    setters.setError(toErrorMessage(deleteError, 'Unable to delete your post right now.'));
+  }
+}
+
+// Rate an answered AI Assistant card. Optimistically reflects the choice; reverts on failure.
+async function runRateComicAnswer(turnId: string, rating: ComicAnswerRating, setters: ChatSetters): Promise<void> {
+  let previousRating: ComicAnswerRating | null = null;
+  setters.setComicItems((previous) =>
+    previous.map((item) => {
+      if (item.answerTurnId !== turnId) return item;
+      previousRating = item.currentUserRating;
+      return { ...item, currentUserRating: rating };
+    }),
+  );
+
+  try {
+    await requestJson<{ ok: true }>(`/api/comic/answers/${turnId}/rate`, {
+      method: 'POST',
+      headers: JSON_CSRF_HEADERS,
+      body: JSON.stringify({ rating }),
+    });
+  } catch (rateError) {
+    setters.setComicItems((previous) =>
+      previous.map((item) => (item.answerTurnId === turnId ? { ...item, currentUserRating: previousRating } : item)),
+    );
+    setters.setError(toErrorMessage(rateError, 'Unable to record your rating right now.'));
+  }
+}
+
+// Build the member's question message plus the instant local concierge reply for a concierge ask.
+// Purely local — points at the best-matching feature (with an "Open X" button), or a gentle
+// fall-back when nothing matches. Returns an empty array for empty input.
+function buildConciergeMessages(promptText: string): ChatMessage[] {
+  const text = promptText.trim();
+  if (!text) {
+    return [];
+  }
+  const now = new Date();
+  const time = formatTimeLabel(now);
+  // Stamp a real sentAtIso: the home stream sorts by epoch(sentAtIso) and falls back to the array
+  // index when it is missing — without this, concierge messages got a tiny fallback epoch and sorted
+  // to the TOP of the chat instead of the bottom. A real timestamp keeps them newest-last.
+  const sentAtIso = now.toISOString();
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const matches = resolveConcierge(text);
+  const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time, sentAtIso };
+
+  const top = matches[0];
+  const second = matches[1];
+  const reply: ChatMessage = top
+    ? {
+      id: `concierge-a-${stamp}`,
+      from: 'commons',
+      text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
+      time,
+      sentAtIso,
+      actionLabel: `Open ${top.name} →`,
+      actionSlug: top.slug,
+    }
+    : {
+      id: `concierge-a-${stamp}`,
+      from: 'commons',
+      text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
+      time,
+      sentAtIso,
+    };
+
+  return [userMsg, reply];
+}
+
+// Run a concierge ask: append the member's question plus the instant local reply. No-op for empty input.
+function applyConciergeAsk(promptText: string, setters: ChatSetters): void {
+  const next = buildConciergeMessages(promptText);
+  if (next.length === 0) {
+    return;
+  }
+  setters.setMessages((previous) => mergeMessages(previous, next));
+}
+
+// One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the AI
+// assistant, no composer step. The @comic mention is added by the caller. Same consent gate and
+// holding-card flow the composer uses; on first use the consent modal opens holding the mentioned text.
+type AskComicContext = {
+  isSending: boolean;
+  consentGranted: boolean;
+  routeToComic: (questionText: string) => Promise<void>;
+  setters: ChatSetters;
+};
+
+function runAskComic(question: string, ctx: AskComicContext): void {
+  const clean = question.trim();
+  if (!clean || ctx.isSending) return;
+  const mentioned = `@comic ${clean}`;
+  if (!ctx.consentGranted) {
+    ctx.setters.setPendingConsentText(mentioned);
+    ctx.setters.setConsentModalOpen(true);
+    return;
+  }
+  ctx.setters.setIsSending(true);
+  ctx.setters.setError(null);
+  void ctx.routeToComic(mentioned).finally(() => ctx.setters.setIsSending(false));
+}
+
+type ConfirmConsentContext = {
+  userId: string;
+  pendingConsentText: string | null;
+  routeToComic: (questionText: string) => Promise<void>;
+  setters: ChatSetters;
+};
+
+// Consent modal "Not now": close the modal and drop the held text.
+function dismissConsentState(setters: ChatSetters): void {
+  setters.setConsentModalOpen(false);
+  setters.setPendingConsentText(null);
+}
+
+// Consent modal "Confirm": persist consent and send the held @comic question.
+async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(consentStorageKey(ctx.userId), '1');
+  }
+  ctx.setters.setConsentGranted(true);
+  ctx.setters.setConsentModalOpen(false);
+
+  const held = ctx.pendingConsentText;
+  ctx.setters.setPendingConsentText(null);
+  if (!held) return;
+
+  ctx.setters.setIsSending(true);
+  ctx.setters.setError(null);
+  ctx.setters.setInput('');
+  try {
+    await ctx.routeToComic(held);
+  } finally {
+    ctx.setters.setIsSending(false);
+  }
+}
+
+// A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `pollId`
+// holds the running poll so cleanup can clear it.
+type BootstrapController = { active: boolean; pollId: number | undefined };
+
+// Everything the bootstrap needs from the hook: refresh callbacks, the refs the live handler and
+// cleanup reach through, and the state setters.
+type ChatBootstrapContext = {
+  controller: BootstrapController;
+  refreshHistory: () => Promise<void>;
+  refreshComic: () => Promise<void>;
+  refreshLastSeen: () => Promise<void>;
+  loadAroundDeepLink: () => Promise<void>;
+  refreshHistoryRef: RefObject<() => Promise<void>>;
+  liveConnectionRef: RefObject<CommonsLiveConnection | null>;
+  setters: ChatSetters;
+};
+
+// Reset per-mount state so re-entering the chat reads the marker afresh and can mark seen once more.
+function resetChatForMount(setters: ChatSetters, markedSeenRef: RefObject<boolean>): void {
+  setters.setConnectionState('loading');
+  setters.setError(null);
+  setters.setMessages([]);
+  setters.setComicItems([]);
+  markedSeenRef.current = false;
+  setters.setLastSeenAtIso(null);
+}
+
+// Both the live path and the polling-only path keep a poll running. `intervalMs` is short when we
+// are polling-only and long when a healthy live connection is the primary refresh path.
+function startChatPoll(ctx: ChatBootstrapContext, intervalMs: number): void {
+  ctx.controller.pollId = window.setInterval(() => {
+    void ctx.refreshHistory().catch(() => {
+      // Keep polling while the shell is mounted.
+    });
+    void ctx.refreshComic().catch(() => {
+      // The comic stream poll is best-effort; failures must not break hub polling.
+    });
+  }, intervalMs);
+}
+
+// Read the last-seen marker before history settles so the divider can be placed on the first render
+// of the stream, then load the recent page, comic stream, and any deep-link window. Best-effort.
+async function loadInitialChatHistory(ctx: ChatBootstrapContext): Promise<void> {
+  void ctx.refreshLastSeen();
+  try {
+    await Promise.all([ctx.refreshHistory(), ctx.refreshComic().catch(() => undefined)]);
+    // After the recent page loads, pull the deep-link target's window (if any) and merge it in.
+    void ctx.loadAroundDeepLink().catch(() => undefined);
+  } catch (loadError) {
+    if (ctx.controller.active) {
+      ctx.setters.setError(toErrorMessage(loadError, 'Unable to load live chat history.'));
+    }
+  }
+}
+
+// Open the live Stream connection only when the server actually minted credentials. When Stream is
+// not configured (configured: false) we never attempt a connection and simply poll — Commons must
+// keep working without Stream.
+async function connectLiveWhenConfigured(
+  join: CommonsJoinResponse,
+  ctx: ChatBootstrapContext,
+): Promise<CommonsLiveConnection | null> {
+  if (!join.configured) {
+    return null;
+  }
+  return connectCommonsLive(
+    {
+      streamApiKey: join.streamApiKey,
+      streamToken: join.streamToken,
+      streamUserId: join.streamUserId,
+      streamChannelId: join.streamChannelId,
+    },
+    {
+      // A new post (or a recovered connection) pulls fresh history right away, so posts appear
+      // immediately instead of waiting for the next poll.
+      onActivity: () => {
+        void ctx.refreshHistoryRef.current().catch(() => undefined);
+      },
+      onTypingChange: (typing) => {
+        if (ctx.controller.active) ctx.setters.setTypingUsers(typing);
+      },
+    },
+  );
+}
+
+// Join the hub, open the live connection when possible, and start the appropriate poll. On join
+// failure, fall back to the frequent poll.
+async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
+  try {
+    // The join route gates on Origin today, not on this header, so the call works without it. The
+    // header is sent so the join keeps working if the route ever moves to the header-based check
+    // that the rest of the Commons POSTs use, and so no Commons mutation is the odd one out.
+    const join = await requestJson<CommonsJoinResponse>('/api/commons/join', {
+      method: 'POST',
+      headers: { 'x-ctf-csrf': '1' },
+    });
+    if (!ctx.controller.active) return;
+    ctx.setters.setConnectionState('live');
+    ctx.setters.setError(null);
+
+    const live = await connectLiveWhenConfigured(join, ctx);
+
+    if (!ctx.controller.active) {
+      // Unmounted while connecting; tear the connection down rather than leak it.
+      if (live) void live.disconnect();
+      return;
+    }
+
+    if (live) {
+      ctx.liveConnectionRef.current = live;
+      // Live connection drives refreshes; the poll becomes a slow backstop.
+      startChatPoll(ctx, POLL_INTERVAL_LIVE_MS);
+    } else {
+      // Stream not configured, or the live connection failed to open: silently stay on the frequent
+      // poll. The chat is fully functional this way.
+      ctx.setters.setTypingUsers([]);
+      startChatPoll(ctx, POLL_INTERVAL_FALLBACK_MS);
+    }
+  } catch (joinError) {
+    if (!ctx.controller.active) return;
+
+    ctx.setters.setConnectionState('fallback');
+    ctx.setters.setError(toErrorMessage(joinError, 'Live chat is reconnecting.'));
+    startChatPoll(ctx, POLL_INTERVAL_FALLBACK_MS);
+  }
+}
+
+async function runChatBootstrap(ctx: ChatBootstrapContext): Promise<void> {
+  await loadInitialChatHistory(ctx);
+  await joinAndConnect(ctx);
+}
+
+// Unmount cleanup: stop the poll and disconnect the live Stream client so we never leak a connection.
+function teardownBootstrap(controller: BootstrapController, liveConnectionRef: RefObject<CommonsLiveConnection | null>): void {
+  controller.active = false;
+  if (controller.pollId) {
+    window.clearInterval(controller.pollId);
+  }
+  const live = liveConnectionRef.current;
+  liveConnectionRef.current = null;
+  if (live) {
+    void live.disconnect();
+  }
+}
+
 export function useHomeChat(currentUser: ShellCurrentUser) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [comicItems, setComicItems] = useState<ComicStreamItem[]>([]);
@@ -259,11 +909,11 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const markedSeenRef = useRef(false);
   // Other members currently typing in the Commons, surfaced as "X is typing…" above the composer.
   // Only populated when the live Stream connection is up; empty in polling-only mode.
-  const [typingUsers, setTypingUsers] = useState<HubTypingUser[]>([]);
+  const [typingUsers, setTypingUsers] = useState<CommonsTypingUser[]>([]);
   // The live Stream connection handle for the current mount (null when not connected / polling only).
   // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
   // re-rendering or re-subscribing.
-  const liveConnectionRef = useRef<HubLiveConnection | null>(null);
+  const liveConnectionRef = useRef<CommonsLiveConnection | null>(null);
   // "@ Mentions" filter: when on, history reads add `mentions=me` so the server returns only
   // peer messages whose body @-mentions the viewer (server-derived handles, searched beyond the
   // loaded page). Mirrored in a ref so refreshHistory (and the poll/live handlers that hold an
@@ -279,6 +929,30 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // show a loading line instead of a premature empty state.
   const [isFilterRefreshing, setIsFilterRefreshing] = useState(false);
 
+  // Stable bundles so module-scope helpers can update state / read filter refs without long argument
+  // lists. Setters and refs never change identity, so each ref is written once on first render.
+  const settersRef = useRef<ChatSetters>({
+    setMessages,
+    setComicItems,
+    setInput,
+    setError,
+    setReplyTarget,
+    setIsSending,
+    setConsentGranted,
+    setConsentModalOpen,
+    setPendingConsentText,
+    setLastSeenAtIso,
+    setConnectionState,
+    setTypingUsers,
+    setIsFilterRefreshing,
+  });
+  const filtersRef = useRef<FilterRefs>({
+    mentionsOnlyRef,
+    announcementsOnlyRef,
+    setMentionsOnly,
+    setAnnouncementsOnly,
+  });
+
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
   const composerMentionsComic = useMemo(() => mentionsComic(input), [input]);
@@ -286,21 +960,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // The active stream filter, derived from the refs so the poll/live handlers (which hold older
   // callback identities) always read the current mode. Mentions and announcements are mutually
   // exclusive; 'all' is the unfiltered blended stream.
-  const currentFilterKey = (): 'mentions' | 'announcements' | 'all' =>
+  const currentFilterKey = (): FilterKey =>
     mentionsOnlyRef.current ? 'mentions' : announcementsOnlyRef.current ? 'announcements' : 'all';
 
   const refreshHistory = useCallback(async () => {
     const filterKey = currentFilterKey();
-    const filterParam =
-      filterKey === 'mentions' ? '&mentions=me' : filterKey === 'announcements' ? '&channel=announcements' : '';
-    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${filterParam}`);
-    // Ignore a response that raced a mode flip (e.g. a slow read landing after the member changed
-    // the filter) so the filtered view never gets polluted with the wrong stream.
-    if (currentFilterKey() !== filterKey) {
-      return;
-    }
-    const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
-    setMessages((previous) => mergeMessages(previous, nextMessages));
+    await fetchHistoryIntoState(filterParamForKey(filterKey), currentFilterKey, filterKey, currentUser.userId, setMessages);
   }, [currentUser.userId]);
 
   // Deep-link "load around": pull a page centered on a specific message/announcement from the server
@@ -309,16 +974,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // message and current activity. Only applies to the unfiltered stream (a deep link is not a
   // mentions/announcements view), so it no-ops while a filter is active.
   const loadAround = useCallback(async (postId: string | null, announcementId: string | null) => {
-    const aroundParam = postId
-      ? `&aroundPost=${encodeURIComponent(postId)}`
-      : announcementId
-        ? `&aroundAnnouncement=${encodeURIComponent(announcementId)}`
-        : '';
+    const aroundParam = aroundParamFor(postId, announcementId);
     if (!aroundParam || currentFilterKey() !== 'all') return;
-    const payload = await requestJson<HubMessagesResponse>(`/api/hub/messages?limit=50${aroundParam}`);
-    if (currentFilterKey() !== 'all') return;
-    const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUser.userId));
-    setMessages((previous) => mergeMessages(previous, nextMessages));
+    await fetchHistoryIntoState(aroundParam, currentFilterKey, 'all', currentUser.userId, setMessages);
     // currentFilterKey reads refs, so it is intentionally not a dependency.
   }, [currentUser.userId]);
 
@@ -336,103 +994,44 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     refreshHistoryRef.current = refreshHistory;
   }, [refreshHistory]);
 
-  const refreshComic = useCallback(async () => {
-    const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
-    const serverItems: ComicStreamItem[] = payload.items.map((item) => ({ ...item }));
-    setComicItems((previous) => mergeComicItems(serverItems, previous));
-  }, []);
+  const refreshComic = useCallback(() => readComicInto(settersRef.current), []);
 
-  // Read the member's last-seen marker once on entry so the chat can place the "New messages"
-  // divider. Best-effort: a failure leaves the marker null (everything reads as already seen,
-  // i.e. no divider) and never blocks the chat.
-  const refreshLastSeen = useCallback(async () => {
-    try {
-      const payload = await requestJson<HubLastSeenResponse>('/api/hub/last-seen');
-      setLastSeenAtIso(payload.lastSeenAtIso);
-    } catch {
-      setLastSeenAtIso(null);
-    }
-  }, []);
+  const refreshLastSeen = useCallback(() => readLastSeenInto(settersRef.current), []);
 
-  // Move the last-seen marker to now after the member has viewed the chat. Best-effort and at
-  // most once per mount; a failure is swallowed so it can never break the chat.
-  const markSeen = useCallback(() => {
-    if (markedSeenRef.current) return;
-    markedSeenRef.current = true;
-    void (async () => {
-      try {
-        await requestJson<HubLastSeenResponse>('/api/hub/last-seen', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-ctf-csrf': '1',
-          },
-          body: JSON.stringify({ seenAtIso: new Date().toISOString() }),
-        });
-      } catch {
-        // Best-effort: leave markedSeenRef set so a transient failure does not retry-spam.
-      }
-    })();
-  }, []);
+  // Move the last-seen marker to now after the member has viewed the chat. Best-effort and at most
+  // once per mount; a failure is swallowed so it can never break the chat.
+  const markSeen = useCallback(() => markSeenOnce(markedSeenRef), []);
 
-  // Clear the loaded messages and re-fetch in the current filter mode. The list is cleared first so
-  // modes never blend (merge is additive, so a shared list would keep old rows around).
-  const refreshForFilterChange = useCallback(() => {
-    setMessages([]);
-    setIsFilterRefreshing(true);
-    void refreshHistory()
-      .catch(() => {
-        // Best-effort: the poll retries shortly; the empty state covers the gap.
-      })
-      .finally(() => setIsFilterRefreshing(false));
-  }, [refreshHistory]);
+  const refreshForFilterChange = useCallback(
+    () => runFilterRefresh(settersRef.current, refreshHistory),
+    [refreshHistory],
+  );
 
   // Flip the "@ Mentions" filter. Turning it on clears the mutually-exclusive announcements filter.
-  const toggleMentionsOnly = useCallback(() => {
-    const next = !mentionsOnlyRef.current;
-    mentionsOnlyRef.current = next;
-    setMentionsOnly(next);
-    if (next) {
-      announcementsOnlyRef.current = false;
-      setAnnouncementsOnly(false);
-    }
-    refreshForFilterChange();
-  }, [refreshForFilterChange]);
+  const toggleMentionsOnly = useCallback(
+    () => flipFilter(!mentionsOnlyRef.current, false, filtersRef.current, refreshForFilterChange),
+    [refreshForFilterChange],
+  );
 
   // Flip the announcements (📣) filter. Turning it on clears the mutually-exclusive mentions filter.
-  const toggleAnnouncementsOnly = useCallback(() => {
-    const next = !announcementsOnlyRef.current;
-    announcementsOnlyRef.current = next;
-    setAnnouncementsOnly(next);
-    if (next) {
-      mentionsOnlyRef.current = false;
-      setMentionsOnly(false);
-    }
-    refreshForFilterChange();
-  }, [refreshForFilterChange]);
+  const toggleAnnouncementsOnly = useCallback(
+    () => flipFilter(false, !announcementsOnlyRef.current, filtersRef.current, refreshForFilterChange),
+    [refreshForFilterChange],
+  );
 
-  // Force the unfiltered blended stream (used when a deep link must land but a filter is active). Clears
-  // both filters and re-fetches; a no-op when neither filter is on.
+  // Force the unfiltered blended stream (used when a deep link must land but a filter is active).
+  // Clears both filters and re-fetches; a no-op when neither filter is on.
   const showAllStream = useCallback(() => {
     if (!mentionsOnlyRef.current && !announcementsOnlyRef.current) return;
-    mentionsOnlyRef.current = false;
-    announcementsOnlyRef.current = false;
-    setMentionsOnly(false);
-    setAnnouncementsOnly(false);
-    refreshForFilterChange();
+    flipFilter(false, false, filtersRef.current, refreshForFilterChange);
   }, [refreshForFilterChange]);
 
   // Emit a typing event as the member writes in the composer. No-op when there is no live
   // connection (polling-only mode), so the composer can call it unconditionally on every keystroke.
-  const notifyTyping = useCallback(() => {
-    liveConnectionRef.current?.sendTyping();
-  }, []);
+  const notifyTyping = useCallback(() => liveConnectionRef.current?.sendTyping(), []);
 
-  // Tell the channel the member has stopped typing (e.g. after sending). Best-effort; no-op when not
-  // live.
-  const notifyStopTyping = useCallback(() => {
-    liveConnectionRef.current?.stopTyping();
-  }, []);
+  // Tell the channel the member has stopped typing (e.g. after sending). Best-effort; no-op when not live.
+  const notifyStopTyping = useCallback(() => liveConnectionRef.current?.stopTyping(), []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -440,446 +1039,103 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   }, [currentUser.userId]);
 
   useEffect(() => {
-    let active = true;
-    let pollId: number | undefined;
+    const controller: BootstrapController = { active: true, pollId: undefined };
+    resetChatForMount(settersRef.current, markedSeenRef);
+    void runChatBootstrap({
+      controller,
+      refreshHistory,
+      refreshComic,
+      refreshLastSeen,
+      loadAroundDeepLink,
+      refreshHistoryRef,
+      liveConnectionRef,
+      setters: settersRef.current,
+    });
+    return () => teardownBootstrap(controller, liveConnectionRef);
+    // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
+    // messages carry their own sender name from the server), so listing it here tore down the whole
+    // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
+  }, [currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 
-    setConnectionState('loading');
-    setError(null);
-    setMessages([]);
-    setComicItems([]);
-    // Reset per-mount "seen" state so re-entering the chat reads the marker afresh and can
-    // mark seen once more.
-    markedSeenRef.current = false;
-    setLastSeenAtIso(null);
-
-    async function bootstrapChat() {
-      // Read the last-seen marker before history settles so the divider can be placed on the
-      // first render of the stream. Best-effort; failure leaves it null (no divider).
-      void refreshLastSeen();
-      try {
-        await Promise.all([refreshHistory(), refreshComic().catch(() => undefined)]);
-        // After the recent page loads, pull the deep-link target's window (if any) and merge it in.
-        void loadAroundDeepLink().catch(() => undefined);
-      } catch (loadError) {
-        if (active) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load live chat history.');
-        }
-      }
-
-      // Both the live path and the polling-only path keep a poll running. `intervalMs` is short when
-      // we are polling-only and long when a healthy live connection is the primary refresh path.
-      const startPoll = (intervalMs: number) => {
-        pollId = window.setInterval(() => {
-          void refreshHistory().catch(() => {
-            // Keep polling while the shell is mounted.
-          });
-          void refreshComic().catch(() => {
-            // The comic stream poll is best-effort; failures must not break hub polling.
-          });
-        }, intervalMs);
-      };
-
-      try {
-        const join = await requestJson<HubJoinResponse>('/api/hub/join', { method: 'POST' });
-        if (!active) return;
-        setConnectionState('live');
-        setError(null);
-
-        // Try to open the live Stream connection only when the server actually minted credentials.
-        // When Stream is not configured (configured: false) we never attempt a connection and simply
-        // poll — Commons must keep working without Stream.
-        let live: HubLiveConnection | null = null;
-        if (join.configured) {
-          live = await connectHubLive(
-            {
-              streamApiKey: join.streamApiKey,
-              streamToken: join.streamToken,
-              streamUserId: join.streamUserId,
-              streamChannelId: join.streamChannelId,
-            },
-            {
-              // A new post (or a recovered connection) pulls fresh history right away, so posts appear
-              // immediately instead of waiting for the next poll.
-              onActivity: () => {
-                void refreshHistoryRef.current().catch(() => undefined);
-              },
-              onTypingChange: (typing) => {
-                if (active) setTypingUsers(typing);
-              },
-            },
-          );
-        }
-
-        if (!active) {
-          // Unmounted while connecting; tear the connection down rather than leak it.
-          if (live) void live.disconnect();
-          return;
-        }
-
-        if (live) {
-          liveConnectionRef.current = live;
-          // Live connection drives refreshes; the poll becomes a slow backstop.
-          startPoll(POLL_INTERVAL_LIVE_MS);
-        } else {
-          // Stream not configured, or the live connection failed to open: silently stay on the
-          // frequent poll. The chat is fully functional this way.
-          setTypingUsers([]);
-          startPoll(POLL_INTERVAL_FALLBACK_MS);
-        }
-      } catch (joinError) {
-        if (!active) return;
-
-        setConnectionState('fallback');
-        setError(joinError instanceof Error ? joinError.message : 'Live chat is reconnecting.');
-        startPoll(POLL_INTERVAL_FALLBACK_MS);
-      }
-    }
-
-    void bootstrapChat();
-
-    return () => {
-      active = false;
-      if (pollId) {
-        window.clearInterval(pollId);
-      }
-      // Disconnect the live Stream client on unmount so we never leak a connection.
-      const live = liveConnectionRef.current;
-      liveConnectionRef.current = null;
-      if (live) {
-        void live.disconnect();
-      }
-    };
-  }, [currentUser.displayName, currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
-
-  // Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
-  // never the unreviewed draft — so we optimistically render the pending "Reviewing for safety"
-  // card and rely on the polling stream to surface the answer once a human approves it.
   const routeToComic = useCallback(
-    async (questionText: string) => {
-      const question = stripComicMention(questionText);
-      // Unique per ask (random suffix) so two rapid identical-text asks get distinct React keys and
-      // are tracked independently by the count-aware merge.
-      const localId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const optimisticItem: ComicStreamItem = {
-        questionTurnId: localId,
-        conversationId: 'optimistic',
-        status: 'pending',
-        question,
-        answer: null,
-        answerTurnId: null,
-        currentUserRating: null,
-        linkedPlugins: [],
-        askedAtIso: new Date().toISOString(),
-        optimistic: true,
-      };
-      setComicItems((previous) => [...previous, optimisticItem]);
-
-      try {
-        await requestJson<ComicMessageResponse>('/api/comic/message', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-ctf-csrf': '1',
-          },
-          body: JSON.stringify({ body: questionText, channel: 'hub', consentGranted: true }),
-        });
-        // Pull the server stream so the pending card reflects the persisted turn.
-        await refreshComic().catch(() => undefined);
-      } catch (sendError) {
-        // Drop the optimistic card on failure and surface the error.
-        setComicItems((previous) => previous.filter((item) => item.questionTurnId !== optimisticItem.questionTurnId));
-        setError(sendError instanceof Error ? sendError.message : 'Unable to reach the AI Assistant right now.');
-      }
-    },
+    (questionText: string) => runRouteToComic(questionText, refreshComic, settersRef.current),
     [refreshComic],
   );
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || isSending) {
-      return;
-    }
+  const sendMessage = useCallback(
+    () =>
+      runSendMessage({
+        input,
+        isSending,
+        consentGranted,
+        replyTarget,
+        currentUserId: currentUser.userId,
+        routeToComic,
+        notifyStopTyping,
+        setters: settersRef.current,
+      }),
+    [consentGranted, currentUser.userId, input, isSending, notifyStopTyping, replyTarget, routeToComic],
+  );
 
-    // @comic mention → AI Assistant. Gate the first use behind the consent modal.
-    if (mentionsComic(text)) {
-      if (!consentGranted) {
-        setPendingConsentText(text);
-        setConsentModalOpen(true);
-        return;
-      }
-
-      setIsSending(true);
-      setError(null);
-      setInput('');
-      try {
-        await routeToComic(text);
-      } finally {
-        setIsSending(false);
-      }
-      return;
-    }
-
-    // No mention → peer-to-peer community post via the existing hub path. Capture the active
-    // reply target (Signal-style quote) before clearing it, and send its post id + the quote
-    // the sender saw so the server stores the reference and the optimistic copy renders it.
-    const activeReply = replyTarget;
-    setIsSending(true);
-    setError(null);
-    setInput('');
-    setReplyTarget(null);
-    // The member just sent; clear the typing indicator on the live channel right away.
-    notifyStopTyping();
-
-    try {
-      const payload = await requestJson<{ ok: true; message: HubMessage }>('/api/hub/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-ctf-csrf': '1',
-        },
-        body: JSON.stringify(
-          activeReply
-            ? { text, replyToPostId: activeReply.postId, quotedMessage: activeReply.quote }
-            : { text },
-        ),
-      });
-      const savedMessage = mapStoredMessage(payload.message, currentUser.userId);
-      setMessages((previous) => mergeMessages(previous, [savedMessage]));
-    } catch (sendError) {
-      // Restore the reply target so the member can retry the reply.
-      if (activeReply) {
-        setReplyTarget(activeReply);
-      }
-      // Put the text back in the composer (owner report, 2026-07-27). The input is cleared
-      // optimistically above so the send feels instant; before this, a rejected send — a message
-      // over the length cap, or any network failure — cleared the box and the member's writing was
-      // gone with nothing to retry. Only restore when the member has not started typing something
-      // new in the meantime, so a recovery never overwrites live work.
-      setInput((current) => (current.trim().length === 0 ? text : current));
-      setError(sendError instanceof Error ? sendError.message : 'Unable to send your message right now.');
-    } finally {
-      setIsSending(false);
-    }
-  }, [consentGranted, currentUser.userId, input, isSending, notifyStopTyping, replyTarget, routeToComic]);
-
-  // One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the
-  // AI assistant, no composer step. Same consent gate and same holding-card flow the composer uses —
-  // the @comic mention is added here because the server only routes a body that mentions @comic
-  // (an unmentioned body is treated as a peer post and the assistant does nothing). On first use the
-  // consent modal opens holding the mentioned text; confirming sends it via routeToComic.
   const askComic = useCallback(
-    (question: string) => {
-      const clean = question.trim();
-      if (!clean || isSending) return;
-      const mentioned = `@comic ${clean}`;
-      if (!consentGranted) {
-        setPendingConsentText(mentioned);
-        setConsentModalOpen(true);
-        return;
-      }
-      setIsSending(true);
-      setError(null);
-      void routeToComic(mentioned).finally(() => setIsSending(false));
-    },
+    (question: string) => runAskComic(question, { isSending, consentGranted, routeToComic, setters: settersRef.current }),
     [consentGranted, isSending, routeToComic],
   );
 
   // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
-  // Only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to.
   const beginReply = useCallback((message: ChatMessage) => {
-    if (!message.communityPostId) return;
-    const author = message.senderLabel ?? 'Community member';
-    const snippet = message.text.trim().slice(0, 120);
-    setReplyTarget({ postId: message.communityPostId, quote: { author, snippet, postId: message.communityPostId } });
+    const target = buildReplyTarget(message);
+    if (target) setReplyTarget(target);
   }, []);
 
-  const cancelReply = useCallback(() => {
-    setReplyTarget(null);
-  }, []);
+  const cancelReply = useCallback(() => setReplyTarget(null), []);
 
-  // Toggle the current member's emoji reaction on a peer post. Optimistically flips the chip
-  // (count + reactedByMe) right away, then POSTs; on failure the optimistic change is reverted.
-  // The 10s history poll reconciles to the authoritative server aggregate.
+  // Toggle the current member's emoji reaction on a peer post, keyed on the community post id.
   const toggleReaction = useCallback(
-    async (postId: string, emoji: string) => {
-      // Optimistically flip every message backed by this community post.
-      setMessages((previous) =>
-        previous.map((message) =>
-          message.communityPostId === postId ? applyReactionToggle(message, emoji) : message,
-        ),
-      );
-
-      try {
-        await requestJson<{ ok: true; reacted: boolean }>(
-          `/api/hub/messages/${encodeURIComponent(postId)}/reactions`,
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              'x-ctf-csrf': '1',
-            },
-            body: JSON.stringify({ emoji }),
-          },
-        );
-      } catch (reactError) {
-        // Revert the optimistic flip (toggling the same emoji again undoes it).
-        setMessages((previous) =>
-          previous.map((message) =>
-            message.communityPostId === postId ? applyReactionToggle(message, emoji) : message,
-          ),
-        );
-        setError(reactError instanceof Error ? reactError.message : 'Unable to update your reaction right now.');
-      }
-    },
+    (postId: string, emoji: string) => togglePostReaction(postId, emoji, settersRef.current),
     [],
   );
 
-  // Toggle the current member's emoji reaction on an official announcement. Mirrors toggleReaction
-  // but keyed on the announcement id: optimistically flips the chip on every message backed by this
-  // announcement, then POSTs; on failure the optimistic change is reverted. The next fresh history
-  // load reconciles to the authoritative server aggregate.
+  // Toggle the current member's emoji reaction on an official announcement, keyed on the announcement id.
   const toggleAnnouncementReaction = useCallback(
-    async (announcementId: string, emoji: string) => {
-      setMessages((previous) =>
-        previous.map((message) =>
-          message.announcementId === announcementId ? applyReactionToggle(message, emoji) : message,
-        ),
-      );
-
-      try {
-        await requestJson<{ ok: true; reacted: boolean }>(
-          `/api/announcements/${encodeURIComponent(announcementId)}/reactions`,
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              'x-ctf-csrf': '1',
-            },
-            body: JSON.stringify({ emoji }),
-          },
-        );
-      } catch (reactError) {
-        // Revert the optimistic flip (toggling the same emoji again undoes it).
-        setMessages((previous) =>
-          previous.map((message) =>
-            message.announcementId === announcementId ? applyReactionToggle(message, emoji) : message,
-          ),
-        );
-        setError(reactError instanceof Error ? reactError.message : 'Unable to update your reaction right now.');
-      }
-    },
+    (announcementId: string, emoji: string) => toggleAnnouncementReactionFor(announcementId, emoji, settersRef.current),
     [],
   );
 
   // Delete one of the member's own peer posts. The product has no edit — to change a post you
-  // delete and repost — so this removes the post outright. Optimistically drops it from the stream,
-  // then DELETEs; on failure the post is restored and an error is shown. Server enforces author-only.
-  const deleteMessage = useCallback(
-    async (postId: string) => {
-      let removed: ChatMessage[] = [];
-      setMessages((previous) => {
-        removed = previous.filter((message) => message.communityPostId === postId);
-        return previous.filter((message) => message.communityPostId !== postId);
-      });
+  // delete and repost — so this removes the post outright.
+  const deleteMessage = useCallback((postId: string) => runDeleteMessage(postId, settersRef.current), []);
 
-      try {
-        await requestJson<{ ok: true; postId: string }>(
-          `/api/hub/messages/${encodeURIComponent(postId)}`,
-          {
-            method: 'DELETE',
-            headers: { 'x-ctf-csrf': '1' },
-          },
-        );
-      } catch (deleteError) {
-        // Restore the optimistically removed post(s) and surface the error.
-        if (removed.length > 0) {
-          setMessages((previous) => mergeMessages(previous, removed));
-        }
-        setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete your post right now.');
-      }
-    },
-    [],
-  );
-
-  // Edit one of the member's own peer posts. The product has no in-place edit — editing IS delete +
-  // repost — so this loads the post's text back into the composer and deletes the original. The member
-  // tweaks it and sends a fresh post (new timestamp, its own moderation, no inherited reactions or
-  // replies). Clears any active reply so the reposted text starts clean.
+  // Edit one of the member's own peer posts. Editing IS delete + repost — load the text back into the
+  // composer and delete the original; the member tweaks it and sends a fresh post.
   const editMessage = useCallback(
-    (postId: string, text: string) => {
-      setReplyTarget(null);
-      setInput(text);
-      void deleteMessage(postId);
-    },
+    (postId: string, text: string) => runEditMessage(postId, text, settersRef.current, deleteMessage),
     [deleteMessage],
   );
 
   // Consent modal "Confirm": persist consent and send the held @comic question.
-  const confirmConsent = useCallback(async () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(consentStorageKey(currentUser.userId), '1');
-    }
-    setConsentGranted(true);
-    setConsentModalOpen(false);
-
-    const held = pendingConsentText;
-    setPendingConsentText(null);
-    if (!held) return;
-
-    setIsSending(true);
-    setError(null);
-    setInput('');
-    try {
-      await routeToComic(held);
-    } finally {
-      setIsSending(false);
-    }
-  }, [currentUser.userId, pendingConsentText, routeToComic]);
+  const confirmConsent = useCallback(
+    () =>
+      runConfirmConsent({ userId: currentUser.userId, pendingConsentText, routeToComic, setters: settersRef.current }),
+    [currentUser.userId, pendingConsentText, routeToComic],
+  );
 
   // Consent modal "Not now": do not route, and do NOT populate the composer. When the modal was
   // opened from a composer-typed @comic message the text is already in the input (the send path never
   // cleared it), so it stays put on its own. When it was opened from a one-tap suggestion chip the
   // input was empty, so we must leave it empty — dropping the chip's "@comic …" question into the box
   // (the old behavior) looked like a message queued to send that the member never wrote.
-  const dismissConsent = useCallback(() => {
-    setConsentModalOpen(false);
-    setPendingConsentText(null);
-  }, []);
+  const dismissConsent = useCallback(() => dismissConsentState(settersRef.current), []);
 
   // Rate an answered AI Assistant card. Optimistically reflects the choice; reverts on failure.
   const rateComicAnswer = useCallback(
-    async (turnId: string, rating: ComicAnswerRating) => {
-      let previousRating: ComicAnswerRating | null = null;
-      setComicItems((previous) =>
-        previous.map((item) => {
-          if (item.answerTurnId !== turnId) return item;
-          previousRating = item.currentUserRating;
-          return { ...item, currentUserRating: rating };
-        }),
-      );
-
-      try {
-        await requestJson<{ ok: true }>(`/api/comic/answers/${turnId}/rate`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-ctf-csrf': '1',
-          },
-          body: JSON.stringify({ rating }),
-        });
-      } catch (rateError) {
-        setComicItems((previous) =>
-          previous.map((item) => (item.answerTurnId === turnId ? { ...item, currentUserRating: previousRating } : item)),
-        );
-        setError(rateError instanceof Error ? rateError.message : 'Unable to record your rating right now.');
-      }
-    },
+    (turnId: string, rating: ComicAnswerRating) => runRateComicAnswer(turnId, rating, settersRef.current),
     [],
   );
 
   // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
-  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see hub-suggestions).
-  const suggestionChips = useMemo(() => hubSuggestionChips(), []);
+  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
+  const suggestionChips = useMemo(() => commonsSuggestionChips(), []);
 
   // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
   // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local
@@ -887,46 +1143,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const starterPrompts = useMemo(() => conciergeStarterPrompts(5), []);
 
   // Run a concierge ask: show the question as the member's own message, then an instant local reply
-  // that points at the best-matching feature (with an "Open X" button), or a gentle fall-back to the
-  // AI Assistant / community when nothing matches. Purely local — it does not post to the community
-  // and does not touch the @comic or peer-post paths.
-  const sendConciergeAsk = useCallback((promptText: string) => {
-    const text = promptText.trim();
-    if (!text) {
-      return;
-    }
-    const now = new Date();
-    const time = formatTimeLabel(now);
-    // Stamp a real sentAtIso: the home stream sorts by epoch(sentAtIso) and falls back to the array
-    // index when it is missing — without this, concierge messages got a tiny fallback epoch and sorted
-    // to the TOP of the chat instead of the bottom. A real timestamp keeps them newest-last.
-    const sentAtIso = now.toISOString();
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const matches = resolveConcierge(text);
-    const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time, sentAtIso };
-
-    const top = matches[0];
-    const second = matches[1];
-    const reply: ChatMessage = top
-      ? {
-        id: `concierge-a-${stamp}`,
-        from: 'hub',
-        text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
-        time,
-        sentAtIso,
-        actionLabel: `Open ${top.name} →`,
-        actionSlug: top.slug,
-      }
-      : {
-        id: `concierge-a-${stamp}`,
-        from: 'hub',
-        text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
-        time,
-        sentAtIso,
-      };
-
-    setMessages((previous) => mergeMessages(previous, [userMsg, reply]));
-  }, []);
+  // that points at the best-matching feature. Purely local — it does not post to the community and
+  // does not touch the @comic or peer-post paths.
+  const sendConciergeAsk = useCallback((promptText: string) => applyConciergeAsk(promptText, settersRef.current), []);
 
   return {
     messages,

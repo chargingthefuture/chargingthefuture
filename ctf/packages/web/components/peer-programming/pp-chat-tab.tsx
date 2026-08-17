@@ -32,6 +32,85 @@ function MessageRow({ msg }: { msg: Message }) {
   );
 }
 
+// The message composer (input + send). Shown only to cohort members while the cohort is live.
+function ChatComposer({
+  messageInput,
+  onMessageInput,
+  onSend,
+  submitting,
+}: {
+  messageInput: string;
+  onMessageInput: (v: string) => void;
+  onSend: () => void;
+  submitting: boolean;
+}) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
+  const canSend = messageInput.trim().length > 0 && !submitting;
+  return (
+    <div style={{ padding: "8px 24px 20px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 14 }}>
+        <input
+          value={messageInput}
+          onChange={(e) => onMessageInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+          placeholder="Message your cohort…"
+          disabled={submitting}
+          style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }}
+        />
+        <button type="button" aria-label="Send" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, borderRadius: 8, background: canSend ? t.ACCENT : t.BORDER, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
+          <Send size={14} style={{ color: canSend ? "#fff" : t.FAINT }} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// A one-line notice that replaces the composer when the viewer can't post.
+function ChatNotice({ color, children }: { color: string; children: React.ReactNode }) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
+  return (
+    <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color, fontSize: 13 }}>
+      {children}
+    </div>
+  );
+}
+
+// Decides what sits below the message list: a notice (no cohort / ended / listening in) or the
+// composer. Early returns keep each branch flat and behavior-identical to the old nested ternary.
+function ChatFooter({
+  hasCohort,
+  ended,
+  readOnly,
+  messageInput,
+  onMessageInput,
+  onSend,
+  submitting,
+}: {
+  hasCohort: boolean;
+  ended: boolean;
+  readOnly: boolean;
+  messageInput: string;
+  onMessageInput: (v: string) => void;
+  onSend: () => void;
+  submitting: boolean;
+}) {
+  const { theme } = useTheme();
+  const t = getPeerProgrammingTokens(theme);
+  if (!hasCohort) return <ChatNotice color={t.MUTED}>Join a cohort to participate in chat</ChatNotice>;
+  if (ended) return <ChatNotice color={t.SUBTLE}>This cohort has ended — the conversation is read-only.</ChatNotice>;
+  if (readOnly) return <ChatNotice color={t.SUBTLE}>You’re listening in — only cohort members can post here.</ChatNotice>;
+  return (
+    <ChatComposer
+      messageInput={messageInput}
+      onMessageInput={onMessageInput}
+      onSend={onSend}
+      submitting={submitting}
+    />
+  );
+}
+
 export function PeerProgrammingChatTab({
   room,
   messages,
@@ -59,7 +138,6 @@ export function PeerProgrammingChatTab({
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
   const hasCohort = Boolean(room?.cohortId);
-  const canSend = messageInput.trim().length > 0 && !submitting;
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -74,35 +152,15 @@ export function PeerProgrammingChatTab({
         )}
         <div ref={endRef} />
       </div>
-      {!hasCohort ? (
-        <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.MUTED, fontSize: 13 }}>
-          Join a cohort to participate in chat
-        </div>
-      ) : ended ? (
-        <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.SUBTLE, fontSize: 13 }}>
-          This cohort has ended — the conversation is read-only.
-        </div>
-      ) : readOnly ? (
-        <div style={{ padding: "12px 24px", borderTop: `1px solid ${t.BORDER}`, background: "rgba(255,255,255,0.02)", textAlign: "center", color: t.SUBTLE, fontSize: 13 }}>
-          You’re listening in — only cohort members can post here.
-        </div>
-      ) : (
-        <div style={{ padding: "8px 24px 20px", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 14 }}>
-            <input
-              value={messageInput}
-              onChange={(e) => onMessageInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-              placeholder="Message your cohort…"
-              disabled={submitting}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }}
-            />
-            <button type="button" aria-label="Send" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, borderRadius: 8, background: canSend ? t.ACCENT : t.BORDER, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
-              <Send size={14} style={{ color: canSend ? "#fff" : t.FAINT }} />
-            </button>
-          </div>
-        </div>
-      )}
+      <ChatFooter
+        hasCohort={hasCohort}
+        ended={ended}
+        readOnly={readOnly}
+        messageInput={messageInput}
+        onMessageInput={onMessageInput}
+        onSend={onSend}
+        submitting={submitting}
+      />
     </div>
   );
 }

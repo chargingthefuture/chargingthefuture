@@ -3,6 +3,22 @@ import { ensureMutationCsrf, requireFoundationAdminAccess } from 'lib/foundation
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { evaluateRateLimitCommand, insertFoundationAudit } from 'lib/foundation/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
+
+type EvaluatePayload = { userId?: string; commandName?: string; limit?: number; windowSeconds?: number };
+
+type NormalizedEvaluatePayload = { userId: string; commandName: string; limit: number; windowSeconds: number };
+
+// Normalize the request body: trim the identifiers and apply the default limit (20) and window (60s)
+// when a caller omits or mistypes them.
+function normalizeEvaluatePayload(payload: EvaluatePayload): NormalizedEvaluatePayload {
+  return {
+    userId: payload.userId?.trim() ?? '',
+    commandName: payload.commandName?.trim() ?? '',
+    limit: Number.isInteger(payload.limit) ? Number(payload.limit) : 20,
+    windowSeconds: Number.isInteger(payload.windowSeconds) ? Number(payload.windowSeconds) : 60,
+  };
+}
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -15,20 +31,17 @@ export async function POST(request: Request) {
     return gate.response;
   }
 
-  let payload: { userId?: string; commandName?: string; limit?: number; windowSeconds?: number } = {};
+  let payload: EvaluatePayload = {};
   try {
     payload = await request.json();
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: 'Invalid JSON payload.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message: `Invalid JSON payload: ${failureReason(error)}` },
       { status: 400 },
     );
   }
 
-  const userId = payload.userId?.trim() ?? '';
-  const commandName = payload.commandName?.trim() ?? '';
-  const limit = Number.isInteger(payload.limit) ? Number(payload.limit) : 20;
-  const windowSeconds = Number.isInteger(payload.windowSeconds) ? Number(payload.windowSeconds) : 60;
+  const { userId, commandName, limit, windowSeconds } = normalizeEvaluatePayload(payload);
 
   if (!userId || !commandName) {
     return NextResponse.json(
@@ -55,7 +68,7 @@ export async function POST(request: Request) {
     reportError(error, { area: 'foundation', op: 'admin_rate_limits_evaluate' });
     console.error('[Foundation] Rate-limit evaluation failed:', error);
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Rate-limit evaluation unavailable.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: `Rate-limit evaluation unavailable: ${failureReason(error)}` },
       { status: 503 },
     );
   }

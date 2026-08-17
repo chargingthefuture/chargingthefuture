@@ -1,0 +1,167 @@
+# Verbose Error Handling Rules
+
+## Status
+
+Owner directive, restated 2026-08-03 after it kept being ignored: **when something fails, the app must
+say what failed and why.** This was asked for in v3 from the start. It is now a written rule with a CI
+gate (`ctf/scripts/check-error-verbosity.mjs`) so it no longer depends on an agent remembering.
+
+## Intent
+
+A caught error is the only record of what actually went wrong. A route that catches it and answers with
+a fixed sentence — "Something went wrong.", "Could not load.", "Broadcast input unavailable." — deletes
+that record and hands back a dead end. Every one of those costs a round of guessing, usually for a
+person holding a phone who cannot read the server logs. That is the slowdown this rule removes.
+
+Verbose does not mean noisy. It means: one plain sentence saying which step failed, plus the underlying
+reason, plus a stable code. Three facts, one line.
+
+## Mandatory
+
+1. **Never discard the caught value.** No `catch { … }` with no binding, and no `catch (error)` whose
+   body never uses `error`, in any path that answers with an error. If a side path is genuinely
+   non-fatal (an optional notice, a cache warm), it is still bound and still reported — the comment says
+   why it is non-fatal.
+2. **Every 5xx answer reports.** Pass the caught error to `reportError` (or use `failureResponse`, which
+   does it) so the stack and context reach stdout and Sentry. A 4xx caused by the caller's input
+   (invalid JSON, a failed field check) does not have to be reported — it is not an incident — but it
+   still has to explain itself under rule 3.
+3. **Operator surfaces name the reason in the response text.** On any admin, internal, or cron route,
+   the message a person sees carries the underlying reason:
+   `Could not load the draft: relation "x" does not exist`. Not the summary alone.
+4. **Member-facing surfaces keep plain text plus a reference.** Members get the plain sentence — no
+   stack, no SQL, no upstream vendor text — but the response carries a `code` and a short `reference`
+   that also appears in the error report, so a screenshot or a bug report can be tied to the log line.
+5. **Name the step, not the request.** When one handler runs several steps that can each fail (read the
+   row, mint a token, call the vendor, write the audit row), each failure says which step it was. One
+   `try` wrapped around five steps with one message is the anti-pattern this rule exists for.
+6. **Bookkeeping never fails the action.** An audit-trail write, a notice post, or a metric that fails
+   after the real work succeeded is reported and stepped over — it is not reported to the caller as if
+   the action failed.
+7. **Upstream text is passed through, truncated, and never secret.** Include the vendor's own message
+   and HTTP status; cap the echoed reason (the shared helper caps at 300 characters); never include an
+   API key, token, stream key, or connection string, and log a URL path without its query string.
+
+## Mandatory — client surfaces (screens, panels, hooks)
+
+A route that explains itself is worth nothing if the screen replaces the explanation with its own
+fallback sentence. That is where the reason used to disappear a second time.
+
+8. **Show what the route said.** When a response carries `message` (or `reason` / `detail`), that text
+   goes on screen. A screen's own sentence is the fallback for when the body carries nothing — never a
+   replacement for what the route sent.
+9. **A caught value on a screen is still reported.** When the request never answered (network down, a
+   parse throw) there is no server text, so the screen keeps its plain sentence — but the caught value
+   goes to `reportError`. A `catch` that shows a fixed string and drops the value is the client version
+   of a silent catch.
+10. **Operator screens name the reason; member screens do not.** An admin panel appends the reason to
+    its sentence. A member screen keeps its plain copy and sends the reason to the error report, so
+    member-facing wording never turns into vendor or stack text.
+11. **A quotable reference beats a technical message.** When the response carries a `reference`, show
+    it — that is what makes a screenshot or a bug report traceable to the log line.
+12. **Not every literal is a message.** A state machine (`setStatus('unavailable')`) and a local
+    validation of the person's own input (a JSON textarea that does not parse) are not failures to
+    explain with vendor text: report the first, show the parse reason for the second with `reasonText`.
+
+## Mandatory — everything else that catches (libraries, scripts, the native app)
+
+Not every catch answers a request or draws a screen. A server library, an operational script, or a
+native-app module still has to leave a trace when it swallows a failure.
+
+13. **A catch that does work must record the reason.** If the body retries, cleans up, writes a
+    different value, or shows something, the caught value goes to `reportError` (web `lib/**`, the
+    native app) or `console.error` (a script — an operational script that fails silently and exits 0 is
+    the worst case for anyone debugging it).
+14. **A catch whose whole body is one `return` or one assignment is fine as it is.** Producing the
+    alternative value is its job and the caller can see that value: `return null`,
+    `return { ok: false, reason: 'not_a_zip' }`, `reporter = createNoopReporter()`. Carry a short
+    comment saying why the failure is expected.
+15. **An empty catch must say why, in the code, as `no-trace: <reason>`.** Releasing a client that is
+    already gone, a share sheet the member dismissed, a temporary file already deleted — these are
+    real, and the marker makes the decision visible and greppable instead of invisible. A bare
+    `// ignore` is not enough: name the reason.
+
+## How
+
+`ctf/packages/web/lib/errors/failure.ts` (server) and `ctf/packages/web/lib/errors/client-failure.ts`
+(screens — import-safe from a component; the server module pulls in `next/server` and must not be used
+from one):
+
+```ts
+import { failureText, responseFailureText, reasonText } from 'lib/errors/client-failure';
+
+// The request answered with an error — show what the route said.
+if (!res.ok) {
+  setError(await responseFailureText(res, 'Could not load profiles.'));           // operator
+  setError(await responseFailureText(res, 'Could not load your list.', 'member')); // member
+  return;
+}
+
+// The request never answered — keep the sentence, report the value.
+} catch (caught) {
+  setError(failureText(caught, { area: 'directory', op: 'load', fallback: 'Could not load profiles.' }));
+  setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: 'Could not send that.', audience: 'member' }));
+}
+```
+
+Server side:
+
+```ts
+import { failureResponse, failureReason, withReason } from 'lib/errors/failure';
+
+// Operator surface — the reason goes in the text.
+return failureResponse({
+  summary: 'Could not load the draft',
+  error,
+  code: FEED_ERROR_CODE.persistenceUnavailable,
+  area: 'feed',
+  op: 'admin_draft_get',
+});
+
+// Member-facing surface — plain text, reason to the error report, reference in both.
+return failureResponse({
+  summary: 'We could not save that just now. Try again.',
+  error,
+  code: FEED_ERROR_CODE.persistenceUnavailable,
+  area: 'feed',
+  op: 'post_create',
+  audience: 'member',
+});
+
+// Route builds its own shape and only needs the reason string.
+message: withReason('Could not open the broadcast call', error);
+```
+
+## Prohibited
+
+- A fixed error sentence with no reason on an operator surface.
+- One `catch` covering several steps that answers with one message for all of them.
+- `catch {}` / a bound error that is never used, on any answering path.
+- Swallowing a failure and answering `ok: true`.
+- Replacing a specific upstream message with a generic one. In a screen this is the common case: when a
+  route supplies a `message`, show it — a fallback string is for when the request never answered.
+- Putting a secret, token, key, or connection string in a message or an error report.
+
+## CI gate
+
+`pnpm --dir ctf run check:error-verbosity` (job **Error Verbosity Gate** in `.github/workflows/ci.yml`)
+fails on seven things. On routes (`ctf/packages/web/app/api/**/route.ts`): an answering `catch` with no
+binding, a 5xx answer that does not report the error, and an operator-route error message with no
+reason. On screens and hooks (`components/**`, `hooks/**`, `app/**` outside `api`, and the native app's
+`src/**`): a `!res.ok` branch that shows a fixed string instead of the route's message, and a `catch`
+that shows a fixed string and never uses the caught value. On everything else that catches
+(`web/lib/**`, `ctf/scripts/**`, `mobile/src/**`, `shared/src/**`): an empty catch with no
+`no-trace: <reason>` marker, and a catch that does work while neither using nor recording the value.
+
+`ctf/config/error-verbosity-allowlist.json` holds a per-file budget for the failures that existed when
+the gate landed. It is a burn-down list: a budget may shrink, never grow, and a file not listed must be
+clean. Do not add an entry to silence the gate — fix the route.
+
+## Cross-references
+
+- `.claude/rules/113-platform-coding-rules.mdc` — structured error responses, no silent catch.
+- `.claude/rules/108-observability-provider-abstraction-rules.mdc` — all error capture goes through
+  `reportError`. The native app has its own, at
+  `ctf/packages/mobile/src/observability/report.ts` (a device log line plus Sentry, a no-op without a DSN).
+- `.claude/rules/124-brand-voice-and-language-rules.mdc` — plain words in the summary half of the
+  message; the reason half is the machine's own text and is quoted as-is.

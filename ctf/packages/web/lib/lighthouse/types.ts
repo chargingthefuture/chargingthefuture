@@ -1,5 +1,5 @@
 export type LighthouseProfileType = 'seeker' | 'host';
-export type LighthouseMatchStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+export type LighthouseMatchStatus = 'pending' | 'accepted' | 'rejected' | 'canceled' | 'completed';
 
 export type LighthouseProfile = {
   id: string;
@@ -61,14 +61,6 @@ export type LighthouseMatch = {
   createdAtIso: string;
   updatedAtIso: string;
   streamChannelId: string;
-};
-
-export type LighthouseBlock = {
-  id: string;
-  blockerUserId: string;
-  blockedUserId: string;
-  reason: string | null;
-  createdAtIso: string;
 };
 
 export type LighthouseProfileInput = {

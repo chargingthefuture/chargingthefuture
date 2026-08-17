@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createIncident, getIncidentsByUser, getIncidentCount } from 'lib/click-log/repository';
-import { MAX_NOTES_LENGTH } from 'lib/click-log/constants';
+import {
+  createIncident,
+  createSchemeSuggestion,
+  getIncidentsByUser,
+  getIncidentCount,
+  getPreferences,
+} from 'lib/click-log/repository';
+import { MAX_NOTES_LENGTH, MAX_SCHEME_SUGGESTION_LENGTH, MAX_TAGS_PER_KIND } from 'lib/click-log/constants';
 import { canViewIncidents } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import type { IncidentMetadata } from 'lib/click-log/types';
-import { requireClickLogAccess } from './_lib';
+import { isValidProblemTag, isValidSchemeTag, NOT_LISTED_SCHEME_SLUG } from 'lib/click-log/tags';
+import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
+import { ensureMutationCsrf, requireClickLogAccess } from './_lib';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET() {
   const gate = await requireClickLogAccess();
@@ -21,11 +30,232 @@ export async function GET() {
   }
   const incidents = await getIncidentsByUser(userId);
   const count = await getIncidentCount(userId);
+  // Whether this member may pick the "Not listed" scheme tag (Weavers of the Commons badge
+  // holders only — spam control). The client uses this to hide the option entirely; the POST
+  // route independently enforces the same rule.
+  const weavers = await getWeaversBadgeHolders([userId]);
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.list', result: 'success' });
-  return NextResponse.json({ incidents, count });
+  return NextResponse.json({ incidents, count, canSuggestScheme: weavers.has(userId) });
+}
+
+function badRequest(error: string): NextResponse {
+  return NextResponse.json({ error }, { status: 400 });
+}
+
+// Validate a latitude value that is present in the incident metadata.
+function invalidLatitude(latitude: unknown): boolean {
+  return typeof latitude !== 'number' || !Number.isFinite(latitude) || latitude < -90 || latitude > 90;
+}
+
+// Validate a longitude value that is present in the incident metadata.
+function invalidLongitude(longitude: unknown): boolean {
+  return typeof longitude !== 'number' || !Number.isFinite(longitude) || longitude < -180 || longitude > 180;
+}
+
+// Trim notes before validating and storing so trailing/leading whitespace can't push a note past the
+// limit (or be stored unnormalized). Drop an empty trimmed note. Returns undefined when absent.
+function parseNotes(raw: unknown): { error: NextResponse } | { data: string | undefined } {
+  if (raw === undefined) {
+    return { data: undefined };
+  }
+  if (typeof raw !== 'string') {
+    return { error: badRequest('Invalid notes') };
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length > MAX_NOTES_LENGTH) {
+    return { error: badRequest('Notes too long') };
+  }
+  return { data: trimmed.length > 0 ? trimmed : undefined };
+}
+
+// Validate and normalize the optional incident metadata. metadata is optional per the command
+// contract; a client that omits it (or sends an empty body) defaults to {} rather than a 400.
+// Returns a discriminated result so the caller keeps TypeScript narrowing.
+function parseIncidentMetadata(rawBody: unknown): { error: NextResponse } | { data: IncidentMetadata } {
+  const rawMetadata = (rawBody as { metadata?: unknown })?.metadata ?? {};
+  if (typeof rawMetadata !== 'object' || Array.isArray(rawMetadata)) {
+    return { error: badRequest('Invalid metadata') };
+  }
+  const meta = rawMetadata as { latitude?: unknown; longitude?: unknown; notes?: unknown };
+  if (meta.latitude !== undefined && invalidLatitude(meta.latitude)) {
+    return { error: badRequest('Invalid latitude') };
+  }
+  if (meta.longitude !== undefined && invalidLongitude(meta.longitude)) {
+    return { error: badRequest('Invalid longitude') };
+  }
+  const notesResult = parseNotes(meta.notes);
+  if ('error' in notesResult) {
+    return notesResult;
+  }
+  return { data: buildMetadata(meta, notesResult.data) };
+}
+
+// Assemble the incident metadata, including only the fields that were provided so an omitted field is
+// stored as absent rather than as null/undefined.
+function buildMetadata(
+  meta: { latitude?: unknown; longitude?: unknown },
+  notes: string | undefined,
+): IncidentMetadata {
+  return {
+    ...(meta.latitude !== undefined ? { latitude: meta.latitude as number } : {}),
+    ...(meta.longitude !== undefined ? { longitude: meta.longitude as number } : {}),
+    ...(notes !== undefined ? { notes } : {}),
+  };
+}
+
+// Validate an optional incident tag list against its canonical slug list
+// (lib/click-log/tags.ts). Absent/null/[] all mean untagged; an unknown slug is rejected so
+// trend reporting only ever aggregates known values; duplicates are collapsed; each kind is
+// capped at MAX_TAGS_PER_KIND. Returns a discriminated result so the caller keeps narrowing.
+function parseTagList(
+  raw: unknown,
+  isValid: (slug: string) => boolean,
+  fieldName: string,
+): { error: NextResponse } | { data: string[] } {
+  if (raw === undefined || raw === null) {
+    return { data: [] };
+  }
+  if (!Array.isArray(raw)) {
+    return { error: badRequest(`Invalid ${fieldName}: expected a list of tag slugs`) };
+  }
+  const unique = [...new Set(raw)];
+  if (unique.some((slug) => typeof slug !== 'string' || !isValid(slug))) {
+    return { error: badRequest(`Invalid ${fieldName}: unknown tag slug`) };
+  }
+  if (unique.length > MAX_TAGS_PER_KIND) {
+    return { error: badRequest(`Invalid ${fieldName}: at most ${MAX_TAGS_PER_KIND} tags`) };
+  }
+  return { data: unique as string[] };
+}
+
+// Validate the optional per-incident owner-share choice. undefined means the caller left the
+// decision to the member's stored global default.
+function parseSharedFlag(raw: unknown): { error: NextResponse } | { data: boolean | undefined } {
+  if (raw === undefined) {
+    return { data: undefined };
+  }
+  if (typeof raw !== 'boolean') {
+    return { error: badRequest('Invalid sharedWithOwner') };
+  }
+  return { data: raw };
+}
+
+// Validate both optional tag lists plus the tags-require-location rule (owner decision,
+// 2026-08-02): a tagged incident must carry a location, because without it the trend data a
+// tag feeds is not detailed enough. Applies when either list is non-empty. Lists since
+// 2026-08-13: a real incident routinely chains several schemes, so each kind takes up to
+// MAX_TAGS_PER_KIND slugs.
+function parseIncidentTags(
+  body: unknown,
+  metadata: IncidentMetadata,
+): { error: NextResponse } | { data: { problemTags: string[]; schemeTags: string[] } } {
+  const problemResult = parseTagList(
+    (body as { problemTags?: unknown })?.problemTags,
+    isValidProblemTag,
+    'problemTags',
+  );
+  if ('error' in problemResult) {
+    return problemResult;
+  }
+  const schemeResult = parseTagList(
+    (body as { schemeTags?: unknown })?.schemeTags,
+    isValidSchemeTag,
+    'schemeTags',
+  );
+  if ('error' in schemeResult) {
+    return schemeResult;
+  }
+  const tagged = problemResult.data.length > 0 || schemeResult.data.length > 0;
+  if (tagged && (metadata.latitude === undefined || metadata.longitude === undefined)) {
+    return { error: badRequest('Location is required when tagging an incident') };
+  }
+  return { data: { problemTags: problemResult.data, schemeTags: schemeResult.data } };
+}
+
+// Resolve the effective owner-share flag: an explicit per-incident choice wins; otherwise the
+// member's stored global default (which itself defaults to not shared).
+async function resolveSharedWithOwner(explicit: boolean | undefined, userId: string): Promise<boolean> {
+  if (explicit !== undefined) {
+    return explicit;
+  }
+  return (await getPreferences(userId)).shareWithOwner;
+}
+
+// Validate the optional Quora self-link on a scheme suggestion: an https quora.com link (any
+// subdomain). It is the member's own post about a similar incident — a spam signal for the owner.
+function parseQuoraUrl(raw: unknown): { error: NextResponse } | { data: string | undefined } {
+  if (raw === undefined || raw === null || raw === '') {
+    return { data: undefined };
+  }
+  if (typeof raw !== 'string') {
+    return { error: badRequest('Invalid schemeQuoraUrl') };
+  }
+  try {
+    const url = new URL(raw.trim());
+    if (url.protocol !== 'https:' || (url.hostname !== 'quora.com' && !url.hostname.endsWith('.quora.com'))) {
+      return { error: badRequest('schemeQuoraUrl must be an https quora.com link') };
+    }
+    return { data: url.toString() };
+  } catch {
+    return { error: badRequest('Invalid schemeQuoraUrl') };
+  }
+}
+
+// The required "Not listed" description: non-empty after trimming, capped like a note.
+function parseSuggestionText(raw: unknown): { error: NextResponse } | { data: string } {
+  const suggestion = typeof raw === 'string' ? raw.trim() : '';
+  if (suggestion.length === 0 || suggestion.length > MAX_SCHEME_SUGGESTION_LENGTH) {
+    return {
+      error: badRequest(
+        `Describe the scheme (1–${MAX_SCHEME_SUGGESTION_LENGTH} characters) when picking "Not listed"`,
+      ),
+    };
+  }
+  return { data: suggestion };
+}
+
+// The "Not listed" scheme-suggestion rules (owner decision, 2026-08-02): picking the catch-all
+// scheme REQUIRES a description — the intake that lets the owner name new schemes — and that
+// text is explicitly shared with the owner (the form says so; incident notes stay never-shared).
+// Limited to Weavers of the Commons badge holders as spam control. Suggestion fields sent with
+// any other scheme tag are rejected so nothing shared can ride along unnoticed.
+async function parseSchemeSuggestion(
+  body: unknown,
+  schemeTags: string[],
+  userId: string,
+): Promise<{ error: NextResponse } | { data: { suggestion: string; quoraUrl: string | undefined } | undefined }> {
+  const rawSuggestion = (body as { schemeSuggestion?: unknown })?.schemeSuggestion;
+  const urlResult = parseQuoraUrl((body as { schemeQuoraUrl?: unknown })?.schemeQuoraUrl);
+  if ('error' in urlResult) {
+    return urlResult;
+  }
+  if (!schemeTags.includes(NOT_LISTED_SCHEME_SLUG)) {
+    if (rawSuggestion !== undefined || urlResult.data !== undefined) {
+      return { error: badRequest('Scheme suggestions are only accepted with the "Not listed" scheme tag') };
+    }
+    return { data: undefined };
+  }
+  const textResult = parseSuggestionText(rawSuggestion);
+  if ('error' in textResult) {
+    return textResult;
+  }
+  const weavers = await getWeaversBadgeHolders([userId]);
+  if (!weavers.has(userId)) {
+    return {
+      error: NextResponse.json(
+        { error: 'Suggesting a new scheme is limited to Weavers of the Commons badge holders' },
+        { status: 403 },
+      ),
+    };
+  }
+  return { data: { suggestion: textResult.data, quoraUrl: urlResult.data } };
 }
 
 export async function POST(req: NextRequest) {
+  const csrfDenied = ensureMutationCsrf(req);
+  if (csrfDenied) {
+    return csrfDenied;
+  }
   const gate = await requireClickLogAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -34,44 +264,39 @@ export async function POST(req: NextRequest) {
   let body;
   try {
     body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ error: 'Invalid JSON body', reason: failureReason(caught) }, { status: 400 });
   }
-  // metadata is optional per the command contract; default it to {} so a client that
-  // omits it (or sends an empty body) is not rejected with a spurious 400.
-  const rawMetadata = body.metadata ?? {};
-  if (typeof rawMetadata !== 'object' || Array.isArray(rawMetadata)) {
-    return NextResponse.json({ error: 'Invalid metadata' }, { status: 400 });
+  const parsed = parseIncidentMetadata(body);
+  if ('error' in parsed) {
+    return parsed.error;
   }
-  if (rawMetadata.latitude !== undefined) {
-    if (typeof rawMetadata.latitude !== 'number' || !Number.isFinite(rawMetadata.latitude) || rawMetadata.latitude < -90 || rawMetadata.latitude > 90) {
-      return NextResponse.json({ error: 'Invalid latitude' }, { status: 400 });
-    }
+  const metadata = parsed.data;
+  const sharedResult = parseSharedFlag((body as { sharedWithOwner?: unknown })?.sharedWithOwner);
+  if ('error' in sharedResult) {
+    return sharedResult.error;
   }
-  if (rawMetadata.longitude !== undefined) {
-    if (typeof rawMetadata.longitude !== 'number' || !Number.isFinite(rawMetadata.longitude) || rawMetadata.longitude < -180 || rawMetadata.longitude > 180) {
-      return NextResponse.json({ error: 'Invalid longitude' }, { status: 400 });
-    }
+  // Optional tag lists: which known problems happened and/or which named schemes were used.
+  // Either, both, or neither may be non-empty; a tagged incident must carry a location.
+  const tagsResult = parseIncidentTags(body, metadata);
+  if ('error' in tagsResult) {
+    return tagsResult.error;
   }
-  // Trim notes before validating and storing so trailing/leading whitespace can't push
-  // a note past the limit (or be stored unnormalised). Drop an empty trimmed note.
-  let notes: string | undefined;
-  if (rawMetadata.notes !== undefined) {
-    if (typeof rawMetadata.notes !== 'string') {
-      return NextResponse.json({ error: 'Invalid notes' }, { status: 400 });
-    }
-    const trimmed = rawMetadata.notes.trim();
-    if (trimmed.length > MAX_NOTES_LENGTH) {
-      return NextResponse.json({ error: 'Notes too long' }, { status: 400 });
-    }
-    notes = trimmed.length > 0 ? trimmed : undefined;
+  // "Not listed" scheme suggestion: required description + optional Quora link, Weavers-only.
+  const suggestionResult = await parseSchemeSuggestion(body, tagsResult.data.schemeTags, userId);
+  if ('error' in suggestionResult) {
+    return suggestionResult.error;
   }
-  const metadata: IncidentMetadata = {
-    ...(rawMetadata.latitude !== undefined ? { latitude: rawMetadata.latitude } : {}),
-    ...(rawMetadata.longitude !== undefined ? { longitude: rawMetadata.longitude } : {}),
-    ...(notes !== undefined ? { notes } : {}),
-  };
-  const incident = await createIncident({ userId, metadata });
+  const sharedWithOwner = await resolveSharedWithOwner(sharedResult.data, userId);
+  const incident = await createIncident({
+    userId,
+    metadata,
+    sharedWithOwner,
+    ...tagsResult.data,
+  });
+  if (suggestionResult.data) {
+    await createSchemeSuggestion({ incidentId: incident.id, userId, ...suggestionResult.data });
+  }
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
   // Return the incident flat to match the command contract's outputSchema
   // (ClickLogIncident, not a { incident } wrapper). No current caller reads this body,

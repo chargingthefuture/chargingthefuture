@@ -72,10 +72,23 @@ When user deletes Feed usage only:
 
 - Delete immediately:
   - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`,
-    `feed_community_post_reactions`, and `announcement_user_state`
+    `feed_community_post_reactions`, `announcement_user_state`, `announcement_reactions`, and
+    `feed_commons_last_seen` (2026-08-02: the last three now have registry entries — this contract
+    already promised `feed_community_post_reactions` would clear, but no registry entry existed, so
+    the deletion engine never executed that promise until the deletion-coverage gate caught it)
+- Delete immediately (continued):
+  - the member's own `feed_items` rows — the Commons timeline copy of each of their posts and
+    questions, which carries the same text as the source row. Scoped to
+    `created_by_user_id = <member> AND (source_community_post_id IS NOT NULL OR source_question_id
+    IS NOT NULL)`, so the copies of admin-published announcements are untouched. Deleting the copy
+    cascades its `feed_item_targets`, `feed_user_read_state`, and `feed_user_dismissals` rows.
+    (2026-08-09: added after an owner report — deleting an account removed the posts but left the
+    copies, so the member's words stayed on the Commons under the fallback handle `user-hub-syst`.
+    A Commons post is ordinary member content, not a ServiceCredits movement, so nothing requires
+    keeping it.)
 - Anonymize/pseudonymize:
-  - historical authored content (`feed_community_posts`, `feed_community_replies`, `feed_questions`)
-    where hard delete is not policy-allowed
+  - nothing. Authored Commons content is hard-deleted, not renamed: replacing the author with a
+    generic handle leaves the words in place and is not a deletion.
 - Retain for compliance/fraud/finance:
   - policy-required moderation records
   - `llm_inference_log` audit rows
@@ -122,7 +135,7 @@ If user returns after service-scoped deletion:
 ## 9) API and UX Surface
 
 - Member self-delete of their own Commons post (distinct from account/plugin deletion):
-  - `DELETE /api/hub/messages/:postId` — author-only, CSRF-guarded. Hard-deletes the caller's own
+  - `DELETE /api/commons/messages/:postId` — author-only, CSRF-guarded. Hard-deletes the caller's own
     community (peer) post; cascades its replies and reactions and removes the projected `feed_items`
     row (with its targets, read state, and dismissals). The product has no edit — a member corrects a
     post by deleting and reposting, so no edit/version endpoint exists. A delete of a post the caller
@@ -155,4 +168,7 @@ If user returns after service-scoped deletion:
 
 ## Change Log
 
+- 2026-08-09: Account deletion now removes the Commons timeline copy (`feed_items`) of the member's
+  own posts and questions, not only the source rows. Announcement copies stay. The
+  "anonymize/pseudonymize" line is retired — authored Commons content is hard-deleted.
 - 2026-02-25: Created initial draft.

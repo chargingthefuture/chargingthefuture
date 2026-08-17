@@ -51,7 +51,9 @@ function GdpContent({
     return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14, padding: 24 }}>{error}</div>;
   }
   if (!report) return <EmptyReport t={t} />;
-  return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} />;
+  // The projected block rides in its own payload field, so it is read straight off the report and never
+  // derived from the metric rows that make up the Community Value Index.
+  return <GdpDashboard sectors={sectors} countries={countries} metrics={metrics} projection={report.projection} />;
 }
 
 // Read the live headline figure (the Community Value Index) off the report payload and report whether it
@@ -63,6 +65,51 @@ function deriveIsEstimate(rawMetrics: unknown): boolean {
   return (rawMetrics as GdpMetricRow[]).some(
     (m) => m && m.metricKey === COMMUNITY_VALUE_INDEX_METRIC_KEY && m.isEstimate === true,
   );
+}
+
+// True only when the caller passed a signal that has already been aborted. Pulled out so each
+// abort guard stays a single decision point instead of repeating the optional-chain check.
+function isAborted(signal?: AbortSignal): boolean {
+  return signal?.aborted === true;
+}
+
+type ParsedGdpReport = {
+  report: GdpReportPayload | null;
+  isEstimate: boolean;
+  metricRows: GdpMetricRow[];
+};
+
+// Read the report, the estimate flag, and the raw metric rows out of the /api/gdp/report/current
+// payload in one place, so fetchReport just stores the result.
+function parseGdpReportResponse(data: { report?: GdpReportPayload | null }): ParsedGdpReport {
+  const report = data.report ?? null;
+  return {
+    report,
+    isEstimate: deriveIsEstimate(data.report?.metrics),
+    metricRows: Array.isArray(data.report?.metrics) ? data.report.metrics : [],
+  };
+}
+
+// Shape the /api/gdp/countries payload into the panel's rows. Reconciles the located countries with
+// the "Location not set" bucket so their shares are a % of the same member roster the hero shows.
+function buildGdpCountries(data: {
+  countries?: Array<{ country: string; members: number }>;
+  unspecified?: number;
+  totalMembers?: number;
+}): GdpCountry[] {
+  const rows = data.countries ?? [];
+  const located = rows.reduce((sum, r) => sum + r.members, 0);
+  // total is the full member roster; shares are a % of it, so the located countries plus the
+  // "Location not set" bucket reconcile to the same member count the hero shows.
+  const total = data.totalMembers ?? located;
+  // The route owns this bucket (it already floors it at 0 and omits it when the roster read
+  // fails), so read it as sent rather than deriving a second copy here from total - located.
+  const unspecified = data.unspecified ?? 0;
+  const mapped: GdpCountry[] = rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 }));
+  if (unspecified > 0) {
+    mapped.push({ country: "Location not set", members: unspecified, share: total > 0 ? (unspecified / total) * 100 : 0, unspecified: true });
+  }
+  return mapped;
 }
 
 export default function GdpShell() {
@@ -87,15 +134,16 @@ export default function GdpShell() {
       const res = await fetch("/api/gdp/report/current", { signal });
       if (!res.ok) throw new Error("Failed to load GDP report");
       const data = (await res.json()) as { report?: GdpReportPayload | null };
-      if (signal?.aborted) return;
-      setReport(data.report ?? null);
-      setIsEstimate(deriveIsEstimate(data.report?.metrics));
-      setMetricRows(Array.isArray(data.report?.metrics) ? data.report.metrics : []);
+      if (isAborted(signal)) return;
+      const parsed = parseGdpReportResponse(data);
+      setReport(parsed.report);
+      setIsEstimate(parsed.isEstimate);
+      setMetricRows(parsed.metricRows);
     } catch (e: unknown) {
-      if (signal?.aborted) return;
+      if (isAborted(signal)) return;
       setError(e instanceof Error ? e.message : "Failed to load GDP data.");
     } finally {
-      if (initial && !signal?.aborted) setLoading(false);
+      if (initial && !isAborted(signal)) setLoading(false);
     }
   }, []);
 
@@ -104,22 +152,10 @@ export default function GdpShell() {
   const fetchCountries = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await fetch("/api/gdp/countries", { signal });
-      if (!res.ok || signal?.aborted) return;
+      if (!res.ok || isAborted(signal)) return;
       const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; unspecified?: number; totalMembers?: number };
-      const rows = data.countries ?? [];
-      const located = rows.reduce((sum, r) => sum + r.members, 0);
-      // total is the full member roster; shares are a % of it, so the located countries plus the
-      // "Location not set" bucket reconcile to the same member count the hero shows.
-      const total = data.totalMembers ?? located;
-      // The route owns this bucket (it already floors it at 0 and omits it when the roster read
-      // fails), so read it as sent rather than deriving a second copy here from total - located.
-      const unspecified = data.unspecified ?? 0;
-      if (signal?.aborted) return;
-      const mapped: GdpCountry[] = rows.map((r) => ({ country: r.country, members: r.members, share: total > 0 ? (r.members / total) * 100 : 0 }));
-      if (unspecified > 0) {
-        mapped.push({ country: "Location not set", members: unspecified, share: total > 0 ? (unspecified / total) * 100 : 0, unspecified: true });
-      }
-      setCountries(mapped);
+      if (isAborted(signal)) return;
+      setCountries(buildGdpCountries(data));
     } catch {
       // Leave the panel empty.
     }

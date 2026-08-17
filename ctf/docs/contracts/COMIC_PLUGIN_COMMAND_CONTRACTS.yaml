@@ -10,7 +10,10 @@ contracts:
         required: true
       channel:
         type: string
-        enum: [hub, feed]
+        # 'hub' was renamed to 'commons' on 2026-08-09. It is still accepted on input because the
+        # route coerces every non-'feed' value to 'commons' anyway, so an older client that still
+        # sends 'hub' is stored correctly rather than rejected.
+        enum: [commons, feed, hub]
         required: false
       conversationId:
         type: string
@@ -228,12 +231,20 @@ contracts:
       thirdPartyNote:
         type: string
         required: false
+      quoraProfileUrl:
+        type: string
+        required: false
     outputSchema:
       contribution:
         type: object
+      unlockLink:
+        type: string
+        enum: [submitted, already_on_file, invalid_url, not_provided, failed]
     dataAccess:
       - comic_contributions
       - comic_contribution_entries
+      - unlock_verification_submissions
+      - unlock_audit_log
     purpose: assistant_knowledge_contribution
     retentionClass: transactional_long_lived
     idempotency: false
@@ -370,4 +381,60 @@ contracts:
       - comic_answer_ratings
     purpose: assistant_training_stats
     retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.admin.knowledge.list
+    version: 1.0.0
+    description: >-
+      Admin. Browse the assistant's grounding library (comic_knowledge_entries) with each entry's
+      active flag — the read half of knowledge curation (/admin/comic/knowledge). Returns paginated
+      entries with source, type, title/question, a content snippet, and active state, plus total and
+      active counts. Implemented by GET /api/comic/admin/knowledge.
+    inputSchema:
+      page:
+        type: integer
+        required: false
+      pageSize:
+        type: integer
+        required: false
+      filter:
+        type: string
+        enum: [all, active, inactive]
+        required: false
+    outputSchema:
+      items:
+        type: array
+      total:
+        type: integer
+      activeTotal:
+        type: integer
+    dataAccess:
+      - comic_knowledge_entries
+    purpose: assistant_knowledge_curation
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.admin.knowledge.set-active
+    version: 1.0.0
+    description: >-
+      Admin. Switch one grounding entry on or off for retrieval — the write half of knowledge
+      curation. Deactivating never deletes: the row stays (history, withdrawal, deletion contracts
+      all still reach it) and retrieval simply skips inactive rows; the entry can be switched back
+      on. Implemented by PUT /api/comic/admin/knowledge/:entryId (CSRF-guarded).
+    inputSchema:
+      entryId:
+        type: string
+        required: true
+      active:
+        type: boolean
+        required: true
+    outputSchema:
+      entry:
+        type: object
+    dataAccess:
+      - comic_knowledge_entries
+    purpose: assistant_knowledge_curation
+    retentionClass: transactional_long_lived
     idempotency: true

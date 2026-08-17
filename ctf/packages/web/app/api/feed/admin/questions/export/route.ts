@@ -4,6 +4,7 @@ import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { exportQuestionsByCategory } from 'lib/feed/repository';
 import type { FeedQuestionCategory } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 function escapeExample(text: string): string {
   return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&').replace(/\n/g, ' ').trim();
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_questions_export' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to export questions.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to export questions: ${failureReason(error)}` },
       { status: 503 },
     );
   }

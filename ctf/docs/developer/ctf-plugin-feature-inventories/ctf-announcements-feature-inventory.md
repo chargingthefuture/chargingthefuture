@@ -55,6 +55,14 @@ Approved suggestions incorporated:
    announcement as a thread (loaded on demand when the thread is opened) with a "N replies"
    affordance and an inline composer. Reactions and replies are distinct from the Signal-style
    peer-post quote reply — they are self-contained to the announcement.
+6. **Edit your own reply** — a member can rewrite a reply they posted on an announcement. The
+   reply's Edit control swaps it for an editor in place; saving replaces the words and the thread
+   marks the reply "edited" beside its time, so a changed reply never reads as the original. The new
+   words pass the same content check as a fresh reply, and a reply an admin has hidden cannot be
+   edited back into view.
+7. **Delete your own reply** — a member can delete a reply they posted on an announcement. It asks
+   for confirmation first, then removes the reply for everyone and drops the thread's reply count.
+   Only the author sees Edit and Delete; nobody can change or remove anyone else's reply.
 
 ---
 
@@ -103,6 +111,8 @@ Command groups:
 9. `feed.announcement.reaction.toggle`
 10. `feed.announcement.reply.create`
 11. `feed.announcement.reply.list`
+12. `feed.announcement.reply.update`
+13. `feed.announcement.reply.delete`
 
 ### 3.2 HTTP Projection Routes
 
@@ -114,6 +124,8 @@ User routes:
 - `POST /api/announcements/:announcementId/reactions` — toggles the signed-in member's emoji reaction on an official announcement; feed-read gated (`requireFeedReadAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ emoji }` (must be in `FEED_REACTION_EMOJIS`, else 400). Backed by `toggleAnnouncementReaction` against `announcement_reactions`; a second tap of the same emoji removes it. Returns `{ ok, reacted }`. Audit: `feed.announcement.reaction.toggle`.
 - `GET /api/announcements/:announcementId/replies` — lists the accepted replies on an announcement (oldest-first), each author resolved to a display handle with an `isMine` flag; feed-read gated. Returns `{ ok, announcementId, replies }`.
 - `POST /api/announcements/:announcementId/replies` — adds the signed-in member's reply to an announcement; feed-read gated + CSRF. Body `{ body }` (1–`FEED_MAX_COMMUNITY_REPLY_LENGTH` chars, same moderation as a community post, per-member rate limit 20/30min). Backed by `replyToAnnouncement` against `announcement_replies`. Returns `{ ok, reply }`. Audit: `feed.announcement.reply.create`.
+- `PATCH /api/announcements/:announcementId/replies/:replyId` — rewrites the signed-in member's own reply; feed-read gated + CSRF. Body `{ body }` (same length and content checks as creating a reply). Author-only — `editAnnouncementReply` checks ownership and returns 403 `not_reply_owner` otherwise, 403 when the reply is hidden by a moderator, 404 when it no longer exists. Sets `edited_at`. Returns `{ ok, replyId, body, editedAtIso }`. Audit: `feed.announcement.reply.update` (allow on success, deny on a non-owner attempt).
+- `DELETE /api/announcements/:announcementId/replies/:replyId` — deletes the signed-in member's own reply; feed-read gated + CSRF. Author-only via `deleteAnnouncementReply` (403 `not_reply_owner`, 404 when already gone). Returns `{ ok, replyId }`. Audit: `feed.announcement.reply.delete`.
 
 Admin routes:
 
@@ -164,7 +176,10 @@ Domain tables (as they exist in `ctf/schema.sql`):
    `idx_announcement_replies_announcement(announcement_id, created_at)`. Mirrors
    `feed_community_replies`, adding `author_username` (captured at reply time for handle display).
    Columns: `id`, `announcement_id`, `author_user_id`, `author_username`, `body`,
-   `moderation_status`, `created_at`, `updated_at`.
+   `moderation_status`, `moderation_reason`, `moderated_by_user_id`, `moderated_at`, `edited_at`,
+   `created_at`, `updated_at`. The three `moderation_*` columns carry an admin's hide decision (the
+   shared hide/restore writer in `lib/feed/moderation.ts` sets all three); `edited_at` is set when
+   the author rewrites their own reply and is what the thread's "edited" mark reads.
 
 Targeting reuses the shared `feed_item_targets` table (feed and announcements
 are coupled), not a separate `announcement_targets` table. The previously
@@ -187,6 +202,13 @@ references them, so they are removed here to match the real data model.
 3. CSRF and input validation on state-changing web endpoints.
 4. Allow/deny audit events for command execution and admin actions.
 5. Redaction policy for sensitive operational logs.
+   - Replies on announcements are author-owned for edit and delete: only the author can change or
+     remove their own reply, enforced in `editAnnouncementReply` / `deleteAnnouncementReply` rather
+     than in the route, so no caller can skip the check. A denied attempt writes a `deny` audit row.
+   - An admin moderates announcement replies from the Commons moderation screen (`/admin/commons`,
+     moderation target `announcement-reply`): hide and restore only, never edit and never delete.
+     Hidden replies drop out of the thread, the announcement's reply count, and the member-facing
+     list, and count toward the hidden-replies total on that screen.
 6. Deletion and retention behavior aligned with `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
 
 ---
@@ -227,6 +249,7 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 
 ## 11) Change Log
 
+- 2026-08-10: **A member can now edit or delete their own reply on an announcement, and an admin can moderate those replies.** Until now a reply on an official announcement was write-once: a typo stayed, and there was no way to take a bad reply down short of direct SQL — announcement replies were the one member-authored surface with no moderation at all. New route `PATCH`/`DELETE /api/announcements/:announcementId/replies/:replyId` (§3.2), backed by `editAnnouncementReply` and `deleteAnnouncementReply` in `lib/feed/repository.ts`, both author-only. New audit commands `feed.announcement.reply.update` / `feed.announcement.reply.delete` (§3.1). `announcement_replies` gains `moderation_reason`, `moderated_by_user_id`, `moderated_at` (so the shared hide/restore writer can act on it) and `edited_at` (§4.2). `announcement-reply` joins `FeedModerationTarget` in `lib/feed/moderation.ts`: announcement replies now appear in the Commons moderation queue, in the by-member roster, and in the hidden-replies count, and can be hidden and restored from `/admin/commons` — hide and restore only, never an admin edit. The announcement card's thread state moved to `use-announcement-replies.ts`; the card renders Edit/Delete on the member's own replies and an "edited" mark on any reply whose words changed. Android: out of scope (web-only per rule 105).
 - 2026-07-20: **Restricted reactions to non-authored content.** A member may no longer react to a post/announcement they authored. Enforced authoritatively in `toggleCommunityPostReaction` and `toggleAnnouncementReaction` (`cannot_react_to_own_post` → HTTP 403); the client also hides the reaction affordance on the member's own content (the `ChatReactionRow` `readOnly` mode still shows others' reaction counts). Contract `denyConditions` / `attributePolicies` updated for `feed.community.post.reaction.toggle` and `feed.announcement.reaction.toggle`.
 - 2026-07-20: **Added reactions and replies to official announcements.** Members can now react to an announcement with the fixed emoji quick set and reply to it (previously announcements were one-way). New tables `announcement_reactions` (mirrors `feed_community_post_reactions`) and `announcement_replies` (mirrors `feed_community_replies`, plus `author_username`), both FK → `announcements(id)` `ON DELETE CASCADE` (§4.2). New routes `POST /api/announcements/:announcementId/reactions` (toggle), `GET`/`POST /api/announcements/:announcementId/replies` (§3.2), backed by `toggleAnnouncementReaction`, `replyToAnnouncement`, and `listAnnouncementReplies` in `lib/feed/repository.ts`. The Commons timeline (`listFeedTimeline`) now attaches a per-announcement reaction + reply-count aggregate, carried on the hub message (`announcementId`, `reactions`, `replyCount`) and rendered on the official card (`announcement-card.tsx`); the reaction row was extracted to `chat-reaction-row.tsx` for reuse. New `feed.announcement.reaction.toggle` / `feed.announcement.reply.create` / `feed.announcement.reply.list` command contracts (§3.1). Android parity deferred (the downloadable app is Chyme-only; Commons is served by the mobile-responsive web app).
 - 2026-06-25: **Documented the membership-events route** (inventory-debt burn-down — documentation catch-up, no code change). Added `POST /api/announcements/membership/events` (admin-gated join/leave membership event for audience recalculation; the announcements-namespaced twin of the feed membership-events handler) to §3.2 Admin routes. Verified against the route handler. Removed it from `ctf/scripts/inventory-drift-allowlist.json`.

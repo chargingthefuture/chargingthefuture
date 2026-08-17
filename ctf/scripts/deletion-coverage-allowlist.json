@@ -1,0 +1,4 @@
+{
+  "_comment": "Tables that have a user-identifying column but appear in NO account-deletion registry entry, so a member deleting their account leaves those rows behind. BURN-DOWN list: it may only ever shrink. To remove an entry, classify the table in ctf/packages/web/lib/account/deletion-registry.ts (del / soft / pseudonymize / retain-with-reason) and delete it from here — the gate fails if a classified table is still listed. Never add a new table to silence the gate; classify it instead. Seeded 2026-08-02 when the schema->registry direction of the gate was first added. Every entry is UNREVIEWED and needs an owner decision: several are ledger, audit, or abuse-evidence tables where deleting would be the wrong answer, and several are plainly member data that should go.",
+  "unclassifiedTables": {}
+}

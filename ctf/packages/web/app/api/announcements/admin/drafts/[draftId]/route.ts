@@ -5,6 +5,7 @@ import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/fee
 import { logFeedAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ draftId: string }>;
@@ -36,9 +37,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: DraftBody;
   try {
     body = (await request.json()) as DraftBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -90,7 +91,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json(
-      { ok: false, code, message: 'Unable to update draft.' },
+      { ok: false, code, message: `Unable to update draft: ${failureReason(error)}` },
       { status },
     );
   }

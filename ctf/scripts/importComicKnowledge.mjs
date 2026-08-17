@@ -78,6 +78,7 @@ try {
       try {
         rec = JSON.parse(line);
       } catch {
+        // no-trace: the line is counted as invalid and the count is printed in the summary.
         invalid++;
         continue;
       }

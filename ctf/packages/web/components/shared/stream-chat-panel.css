@@ -8,6 +8,18 @@
  * This file is imported after Stream's stylesheet so these rules win; it targets Stream's stable
  * v12 message classes. */
 
+/* Plugin accent → Stream accent variables. Stream's stylesheet defines --str-chat__primary-color and
+ * --str-chat__active-primary-color as element-own custom properties on the `.str-chat` element, and
+ * element-own values beat anything inherited — so setting these variables on the wrapper div (the old
+ * approach) never changed them. This rule re-declares them on the `.str-chat` element itself; the
+ * `.ctf-chat-accented` scope is only present when the panel was given a plugin accent, so a panel
+ * without one keeps Stream's defaults untouched. --ctf-chat-accent inherits from the wrapper. */
+.ctf-chat-accented .str-chat {
+  --str-chat__primary-color: var(--ctf-chat-accent);
+  --str-chat__active-primary-color: var(--ctf-chat-accent);
+  --str-chat__message-send-color: var(--ctf-chat-accent);
+}
+
 .str-chat__theme-dark .str-chat__message-bubble {
   background-color: var(--ctf-chat-other-bg, var(--str-chat__message-bubble-background-color));
 }
@@ -236,6 +248,32 @@
   line-height: 1.5;
   color: #9CA3AF;
   max-width: 320px;
+}
+
+/* Read-only notice (ConversationBody in stream-chat-panel.tsx). Shown in place of the composer when
+ * the conversation has reached a terminal state (rule 100): the transcript stays readable, and the
+ * member is told plainly why they cannot send instead of watching a send fail. */
+.ctf-chat-readonly {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(0, 0, 0, 0.18);
+  color: #9CA3AF;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Why the last message did not send, shown directly above the composer. Sits in the same place as the
+ * read-only notice but reads as a fault (red tint), because it reports something that went wrong
+ * rather than a conversation that is simply over. */
+.ctf-chat-send-error {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(239, 68, 68, 0.28);
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #FCA5A5;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Polls (default stream-chat-react 12.16 Poll components, created from the composer's attachment menu

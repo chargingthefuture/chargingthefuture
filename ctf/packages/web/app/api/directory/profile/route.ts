@@ -5,32 +5,97 @@ import { deleteOwnDirectoryProfile, getOwnProfile, upsertOwnProfile, validatePro
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import type { DirectoryProfileInput } from 'lib/directory/types';
+import { failureReason } from 'lib/errors/failure';
 
 type ProfileBody = Partial<DirectoryProfileInput>;
 
+// Returns the value when it is a string, otherwise the given fallback. Keeps toProfileInput free of
+// per-field type-guard ternaries so it stays within the complexity budget.
+function asString<T>(value: unknown, fallback: T): string | T {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
 function toProfileInput(body: ProfileBody): DirectoryProfileInput {
   return {
-    firstName: typeof body.firstName === 'string' ? body.firstName : '',
-    lastName: typeof body.lastName === 'string' ? body.lastName : null,
-    headline: typeof body.headline === 'string' ? body.headline : null,
-    bio: typeof body.bio === 'string' ? body.bio : null,
-    profileUrl: typeof body.profileUrl === 'string' ? body.profileUrl : null,
-    sectorId: typeof body.sectorId === 'string' ? body.sectorId : null,
-    jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : null,
-    skillIds: Array.isArray(body.skillIds)
-      ? body.skillIds.filter((value): value is string => typeof value === 'string')
-      : [],
-    proposedSkills: Array.isArray(body.proposedSkills)
-      ? body.proposedSkills.filter((value): value is string => typeof value === 'string')
-      : [],
-    venmoAddress: typeof body.venmoAddress === 'string' ? body.venmoAddress : null,
-    moneroAddress: typeof body.moneroAddress === 'string' ? body.moneroAddress : null,
-    bitcoinAddress: typeof body.bitcoinAddress === 'string' ? body.bitcoinAddress : null,
-    serviceCreditsAddress: typeof body.serviceCreditsAddress === 'string' ? body.serviceCreditsAddress : null,
-    city: typeof body.city === 'string' ? body.city : null,
-    state: typeof body.state === 'string' ? body.state : null,
-    country: typeof body.country === 'string' ? body.country : null,
+    firstName: asString(body.firstName, ''),
+    lastName: asString(body.lastName, null),
+    headline: asString(body.headline, null),
+    bio: asString(body.bio, null),
+    profileUrl: asString(body.profileUrl, null),
+    sectorId: asString(body.sectorId, null),
+    jobTitleId: asString(body.jobTitleId, null),
+    skillIds: stringArray(body.skillIds),
+    proposedSkills: stringArray(body.proposedSkills),
+    venmoAddress: asString(body.venmoAddress, null),
+    moneroAddress: asString(body.moneroAddress, null),
+    bitcoinAddress: asString(body.bitcoinAddress, null),
+    serviceCreditsAddress: asString(body.serviceCreditsAddress, null),
+    city: asString(body.city, null),
+    state: asString(body.state, null),
+    country: asString(body.country, null),
   };
+}
+
+// Maps a failed upsert to its response, logging the matching audit entry and reporting unexpected
+// faults. Extracted from handleUpsert to keep that handler within the complexity budget; behavior is
+// unchanged from the inline handling.
+function handleUpsertError(error: unknown, userId: string): NextResponse {
+  const message = error instanceof Error ? error.message : 'unknown';
+
+  // A first-time profile with no valid Quora URL: the Quora profile link is required to appear in
+  // the directory (it is the only social proof), so this is a client validation problem, not a fault.
+  if (message === 'directory_quora_url_required') {
+    logDirectoryAudit({
+      actorId: userId,
+      command: 'directory.profile.upsert',
+      status: 'deny',
+      reason: 'quora_url_required',
+      targetType: 'profile',
+      targetId: userId,
+      result: 'failure',
+      errorCategory: 'validation',
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: DIRECTORY_ERROR_CODE.invalidPayload,
+        message: 'A valid Quora profile URL is required (e.g. https://www.quora.com/profile/Your-Name).',
+      },
+      { status: 400 },
+    );
+  }
+
+  const isSelectorIssue = message.includes('directory_') && message.endsWith('_not_found');
+
+  // A selector-not-found is a client validation problem; anything else is an
+  // unexpected server/persistence failure worth reporting.
+  if (!isSelectorIssue) {
+    reportError(error, { area: 'directory', op: 'upsert_own_profile', extra: { userId } });
+  }
+
+  logDirectoryAudit({
+    actorId: userId,
+    command: 'directory.profile.upsert',
+    status: 'allow',
+    reason: 'profile_ownership_or_admin',
+    targetType: 'profile',
+    targetId: userId,
+    result: 'failure',
+    errorCategory: isSelectorIssue ? 'validation' : 'persistence_error',
+  });
+
+  return NextResponse.json(
+    {
+      ok: false,
+      code: isSelectorIssue ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
+      message: isSelectorIssue ? 'Invalid selector references in profile payload.' : 'Unable to save profile.',
+    },
+    { status: isSelectorIssue ? 400 : 503 },
+  );
 }
 
 export async function GET() {
@@ -65,9 +130,9 @@ async function handleUpsert(request: Request) {
   let body: ProfileBody;
   try {
     body = (await request.json()) as ProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }
@@ -109,58 +174,7 @@ async function handleUpsert(request: Request) {
     // previous one (the URL can never be emptied). The client shows a note when this is set.
     return NextResponse.json({ ok: true, profile, quoraUrlKept }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown';
-
-    // A first-time profile with no valid Quora URL: the Quora profile link is required to appear in
-    // the directory (it is the only social proof), so this is a client validation problem, not a fault.
-    if (message === 'directory_quora_url_required') {
-      logDirectoryAudit({
-        actorId: gate.auth.userId,
-        command: 'directory.profile.upsert',
-        status: 'deny',
-        reason: 'quora_url_required',
-        targetType: 'profile',
-        targetId: gate.auth.userId,
-        result: 'failure',
-        errorCategory: 'validation',
-      });
-      return NextResponse.json(
-        {
-          ok: false,
-          code: DIRECTORY_ERROR_CODE.invalidPayload,
-          message: 'A valid Quora profile URL is required (e.g. https://www.quora.com/profile/Your-Name).',
-        },
-        { status: 400 },
-      );
-    }
-
-    const isSelectorIssue = message.includes('directory_') && message.endsWith('_not_found');
-
-    // A selector-not-found is a client validation problem; anything else is an
-    // unexpected server/persistence failure worth reporting.
-    if (!isSelectorIssue) {
-      reportError(error, { area: 'directory', op: 'upsert_own_profile', extra: { userId: gate.auth.userId } });
-    }
-
-    logDirectoryAudit({
-      actorId: gate.auth.userId,
-      command: 'directory.profile.upsert',
-      status: 'allow',
-      reason: 'profile_ownership_or_admin',
-      targetType: 'profile',
-      targetId: gate.auth.userId,
-      result: 'failure',
-      errorCategory: isSelectorIssue ? 'validation' : 'persistence_error',
-    });
-
-    return NextResponse.json(
-      {
-        ok: false,
-        code: isSelectorIssue ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
-        message: isSelectorIssue ? 'Invalid selector references in profile payload.' : 'Unable to save profile.',
-      },
-      { status: isSelectorIssue ? 400 : 503 },
-    );
+    return handleUpsertError(error, gate.auth.userId);
   }
 }
 

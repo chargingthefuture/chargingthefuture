@@ -1,6 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
-import { recordQuoraUrlChangeStandalone } from 'lib/directory/repository';
+import { recordQuoraUrlChangeStandalone } from 'lib/shared/directory-interface';
+import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
 import type {
   CreateUnlockSubmissionInput,
   ReviewUnlockSubmissionInput,
@@ -46,6 +47,10 @@ type UnlockSubmissionRow = {
   shared_url_account_count?: string;
   // Only present on the admin queue list: how many times this member changed their Quora URL.
   quora_url_change_count?: string;
+  // Only present on the admin queue list: who the member actually is. Null when they have no
+  // directory profile / no handle on file.
+  member_name?: string | null;
+  member_username?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -57,6 +62,27 @@ type UnlockDashboardRow = {
   spam_count: string;
   locked_support_only_count: string;
 };
+
+// Coerce the dashboard count columns (Postgres returns them as text) into numbers, defaulting any
+// missing column to 0 so an empty table still yields a well-formed snapshot. Uses destructuring
+// defaults (which apply when a value is undefined) so the caller stays flat.
+function mapUnlockDashboardSnapshot(row: Partial<UnlockDashboardRow> = {}): UnlockDashboardSnapshot {
+  const {
+    pending_count = '0',
+    approved_count = '0',
+    rejected_count = '0',
+    spam_count = '0',
+    locked_support_only_count = '0',
+  } = row;
+
+  return {
+    pendingCount: Number(pending_count),
+    approvedCount: Number(approved_count),
+    rejectedCount: Number(rejected_count),
+    spamCount: Number(spam_count),
+    lockedSupportOnlyCount: Number(locked_support_only_count),
+  };
+}
 
 function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
   return {
@@ -80,6 +106,8 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     ...(row.quora_url_change_count !== undefined
       ? { quoraUrlChangeCount: Number(row.quora_url_change_count) }
       : {}),
+    ...(row.member_name !== undefined ? { memberName: row.member_name } : {}),
+    ...(row.member_username !== undefined ? { memberUsername: row.member_username } : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -211,6 +239,14 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
   const previousUrl = previous.rows[0]?.quora_profile_url ?? null;
   const previousUrlNormalized = previous.rows[0]?.quora_profile_url_normalized ?? null;
 
+  // A URL an admin has already marked spam is auto-marked spam on submission — even from a new account —
+  // so a known-bad Quora profile never re-enters the review queue. Everything else starts pending. The
+  // caller (submission route) reads the returned reviewStatus and applies the app-wide block for a spam
+  // outcome, mirroring the admin review path.
+  const denylisted = await isSpamQuoraUrl(input.quoraProfileUrlNormalized);
+  const initialReviewStatus = denylisted ? 'spam' : 'pending';
+  const initialAccessTier = denylisted ? 'locked_support_only' : 'pending_readonly';
+
   const result = await queryDb<UnlockSubmissionRow>(
     `INSERT INTO unlock_verification_submissions (
        user_id,
@@ -224,16 +260,16 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        $1,
        $2,
        $3,
-       'pending',
-       'pending_readonly',
+       $5,
+       $6,
        NOW() + (($4::text || ' hours')::interval)
      )
      ON CONFLICT (user_id) DO UPDATE
      SET
        quora_profile_url = EXCLUDED.quora_profile_url,
        quora_profile_url_normalized = EXCLUDED.quora_profile_url_normalized,
-       review_status = 'pending',
-       access_tier = 'pending_readonly',
+       review_status = EXCLUDED.review_status,
+       access_tier = EXCLUDED.access_tier,
        unlock_window_expires_at = NOW() + (($4::text || ' hours')::interval),
        reviewed_by_user_id = NULL,
        reviewed_at = NULL,
@@ -265,7 +301,14 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        reward_revoked_at,
        created_at,
        updated_at`,
-    [input.userId, input.quoraProfileUrl, input.quoraProfileUrlNormalized, String(submissionWindowHours)],
+    [
+      input.userId,
+      input.quoraProfileUrl,
+      input.quoraProfileUrlNormalized,
+      String(submissionWindowHours),
+      initialReviewStatus,
+      initialAccessTier,
+    ],
   );
 
   // Record the captured URL in the shared Quora URL history when it is the first submission or a real
@@ -294,44 +337,61 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
 
   if (filters.reviewStatus) {
     values.push(filters.reviewStatus);
-    whereParts.push(`review_status = $${values.length}`);
+    whereParts.push(`s.review_status = $${values.length}`);
   }
 
   if (filters.accessTier) {
     values.push(filters.accessTier);
-    whereParts.push(`access_tier = $${values.length}`);
+    whereParts.push(`s.access_tier = $${values.length}`);
   }
 
   values.push(Math.min(Math.max(filters.limit ?? 100, 1), 200));
 
   const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  // Who the member is, so the queue does not make an admin reverse-look-up a Clerk id to find out who
+  // they are approving (owner report). The name comes from directory_profiles; the handle comes from
+  // the legacy `public.users` table, which a fresh database may not have — probe first and fall back
+  // to a null handle, the same pattern lib/bug-reports/repository.ts uses for the same reason.
+  const usersTable = await queryDb<{ reg: string | null }>(
+    `SELECT to_regclass('public.users')::text AS reg`,
+  );
+  const hasUsersTable = usersTable.rows[0]?.reg != null;
+
   const result = await queryDb<UnlockSubmissionRow>(
+    // Every column is table-qualified: directory_profiles and users both have an `id`, so an
+    // unqualified list would fail with "column reference is ambiguous" once they are joined.
     `SELECT
-       id,
-       user_id,
-       quora_profile_url,
-       quora_profile_url_normalized,
-       review_status,
-       access_tier,
-       unlock_window_expires_at,
-       reminder_stage,
-       reviewed_by_user_id,
-       reviewed_at,
-       review_note,
-       incentive_granted_at,
-       reward_withheld_at,
-       reward_revoked_at,
-       created_at,
-       updated_at,
+       s.id,
+       s.user_id,
+       s.quora_profile_url,
+       s.quora_profile_url_normalized,
+       s.review_status,
+       s.access_tier,
+       s.unlock_window_expires_at,
+       s.reminder_stage,
+       s.reviewed_by_user_id,
+       s.reviewed_at,
+       s.review_note,
+       s.incentive_granted_at,
+       s.reward_withheld_at,
+       s.reward_revoked_at,
+       s.created_at,
+       s.updated_at,
        (SELECT COUNT(*)
           FROM unlock_verification_submissions dup
          WHERE dup.quora_profile_url_normalized = s.quora_profile_url_normalized) AS shared_url_account_count,
        (SELECT COUNT(*)
           FROM directory_quora_url_history h
-         WHERE h.user_id = s.user_id) AS quora_url_change_count
+         WHERE h.user_id = s.user_id) AS quora_url_change_count,
+       NULLIF(TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')), '') AS member_name,
+       ${hasUsersTable ? 'u.username' : 'NULL::text'} AS member_username
      FROM unlock_verification_submissions s
+     LEFT JOIN directory_profiles dp
+       ON dp.claimed_by_user_id = s.user_id AND dp.deleted_at IS NULL
+     ${hasUsersTable ? 'LEFT JOIN users u ON u.id::text = s.user_id' : ''}
      ${whereClause}
-     ORDER BY created_at DESC
+     ORDER BY s.created_at DESC
      LIMIT $${values.length}`,
     values,
   );
@@ -409,7 +469,28 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
     return null;
   }
 
-  return mapUnlockSubmission(result.rows[0]);
+  const submission = mapUnlockSubmission(result.rows[0]);
+
+  // Keep the persistent spam denylist in step with the decision. Marking spam records the normalized
+  // URL so it survives the member's data deletion and blocks re-entry on a new account; approving or
+  // rejecting removes it (the spam mark is reversible). Best-effort: the verification decision is
+  // already committed above, so a denylist write failure must not fail the review — a later re-review
+  // re-applies it, and the write is idempotent.
+  try {
+    if (input.reviewStatus === 'spam') {
+      await addSpamQuoraUrl({
+        quoraProfileUrlNormalized: submission.quoraProfileUrlNormalized,
+        quoraProfileUrl: submission.quoraProfileUrl,
+        actorUserId: input.actorUserId,
+      });
+    } else {
+      await removeSpamQuoraUrl(submission.quoraProfileUrlNormalized);
+    }
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'sync_spam_denylist', extra: { submissionId: input.submissionId } });
+  }
+
+  return submission;
 }
 
 // Admin correction path: overwrite the stored Quora profile URL (and its normalized form) for a
@@ -566,15 +647,7 @@ export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnaps
      FROM unlock_verification_submissions`,
   );
 
-  const row = result.rows[0];
-
-  return {
-    pendingCount: Number(row?.pending_count ?? 0),
-    approvedCount: Number(row?.approved_count ?? 0),
-    rejectedCount: Number(row?.rejected_count ?? 0),
-    spamCount: Number(row?.spam_count ?? 0),
-    lockedSupportOnlyCount: Number(row?.locked_support_only_count ?? 0),
-  };
+  return mapUnlockDashboardSnapshot(result.rows[0]);
 }
 
 // "Early Commons access" A/B experiment readout. Buckets each member by the experimentBucket recorded

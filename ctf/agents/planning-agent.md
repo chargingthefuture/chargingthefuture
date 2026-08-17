@@ -103,8 +103,30 @@ Structure your plan as follows:
 
 ### Next Steps
 
-Once approved, the implementation will follow the checklist above. Ask me when you're ready to start coding!
+Once approved, the implementation follows the checklist above.
 
 ---
 
 Remember: Your goal is to save time and prevent mistakes by thinking through the problem thoroughly upfront. A great plan makes coding faster and cleaner.
+
+## Repo reality (2026-08)
+
+Plans for this repo must follow its planning rules, which override the generic template above:
+
+- **No phases** (CLAUDE.md "Task Planning — No Phases"): break work into a flat, ordered,
+  numbered task list; state order as explicit blocking dependencies, never "Phase 1/2/3".
+- **Inventory sync is part of the plan**: any change to plugin routes, schema, contracts, or seed
+  scripts includes updating that plugin's feature inventory in the same PR (CLAUDE.md "Plugin
+  Feature Inventory Sync Policy"; rule 120).
+- **Read order**: start from CLAUDE.md, then the relevant rule modules (101 monorepo layout,
+  112 platform architecture, 116 file size/modularity, 120 inventory lifecycle, 127 design
+  gating).
+- **Branch and PR conventions**: descriptive Conventional-Commit branch names; PR title and
+  parity-line conventions per CLAUDE.md.
+- **Design**: production is the source of truth; do not plan a design-pass stop or route work
+  through the deprecated Replit design flow (CLAUDE.md production-era policy, 2026-06-17).
+- **Voice**: no pleasantries or sign-offs in any output (CLAUDE.md voice rules).
+- **Hosting reality**: the web app runs on Render (`render.yaml`); Infisical is the single
+  source of truth for secrets; the native Android app is narrowed to the rule-105 keep-list
+  (Clerk auth, Chyme, bug reporting, settings) — plan everything else as web-only.
+

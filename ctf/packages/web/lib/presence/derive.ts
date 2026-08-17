@@ -39,7 +39,6 @@ interface PresenceSource {
 // not one of these terminal states — mirroring the original backfill rather than guessing the active
 // set. Kept in sync with the live TrustTransport write hooks.
 const TRUST_TRANSPORT_TERMINAL_STATUSES = [
-  'cancelled',
   'canceled',
   'completed',
   'closed',
@@ -158,7 +157,7 @@ export async function refreshOwnPresence(userId: string): Promise<MemberPresence
       // Only a source we read without error is safe to reconcile (deactivate stale rows within).
       reconciledSlugs.add(source.slug);
     } catch {
-      // Missing table or transient failure: skip this source so we neither add nor remove its rows.
+      // no-trace: a missing table or transient failure skips this source, adding and removing nothing.
     }
   }
 
@@ -199,8 +198,8 @@ export async function refreshOwnPresence(userId: string): Promise<MemberPresence
       }
     });
   } catch {
-    // If the index itself is unavailable, fall through: any upsert failure below is reported the
-    // same way and the caller's read handles an empty result. Nothing was deactivated.
+    // no-trace: if the index itself is unavailable we fall through — any upsert failure below is
+    // reported the same way and the caller's read handles an empty result. Nothing was deactivated.
   }
 
   // Run upserts concurrently with per-row error isolation: one failed row must not abort the rest,

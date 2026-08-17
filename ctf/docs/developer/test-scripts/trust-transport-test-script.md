@@ -13,9 +13,12 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
 
 ---
+
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+> 2026-08-03: the spelling migration's rename guard in `ctf/schema.sql` was scoped to the public schema (issue #2030 — the unscoped check matched the demo schema's copy and broke the Neon apply). Database-side fix only; no member-facing behavior changed, so every step below tests exactly as written.
 
 ## How to run this
 
@@ -82,6 +85,33 @@ Result: web ☐
 5. Submit.
 
 **Expected:** Request is created. The settlement badge shows the ServiceCredits label (never a bare `SC` code). No fiat equivalent is displayed alongside the ServiceCredits amount.
+
+Result: web ☐
+
+---
+
+### TT-2a — Split settlement: accepted-currencies checkboxes (added 2026-08-06)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the booking surface, select **Ride**, and enter origin and destination.
+2. Set the settlement type to **ServiceCredits** and enter the whole value of the ride (e.g. 20).
+3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
+   **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
+4. Submit, then open the **Track** tab.
+
+**Expected:**
+- The checkbox list loads from the live currency catalog (ServiceCredits listed first); a failed
+  load shows a Retry control instead of silently hiding the checkboxes.
+- The Track card shows the settlement badge **and** a separate "Accepts ServiceCredits +1" badge —
+  ServiceCredits always named first, the remainder capped as "+N", never a fiat equivalent for a
+  ServiceCredits amount.
+- As a second member on the **Help out** tab, the same request's card also shows the
+  "Accepts ServiceCredits +1" badge next to its settlement badge (still no locations before an
+  offer is accepted).
 
 Result: web ☐
 
@@ -167,7 +197,7 @@ Result: web ☐
 **Precondition:** Signed in as a member. Seed includes a completed (terminal) trip with chat history.
 
 **Steps:**
-1. Open the completed/cancelled trip.
+1. Open the completed/canceled trip.
 2. Navigate to the Chat tab.
 
 **Expected:** Chat messages are visible (read-only). There is no text input field — no new messages can be sent.
@@ -180,7 +210,7 @@ Result: web ☐
 
 **Role:** member fulfilling a trip · **Surfaces:** web, android
 
-**Precondition:** Signed in as the member assigned to fulfil a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfil a trip.
+**Precondition:** Signed in as the member assigned to fulfill a trip (the driver/courier). Seed has a trip assigned to them that is not yet complete. There is no separate "provider" role — any member can fulfill a trip.
 
 **Steps:**
 1. Open the **Help out** tab → "Trips you're helping with"; find your active trip.
@@ -256,7 +286,7 @@ Result: web ☐
 2. Tap/click "Cancel request".
 3. Confirm the explicit confirmation prompt (a `window.confirm` dialog on web, a native `Alert` on android).
 
-**Expected:** The order transitions to a cancelled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
+**Expected:** The order transitions to a canceled terminal state and disappears from the cancellable list (the "Cancel request" control no longer shows). The user sees clear confirmation. The chat tab for this trip now shows read-only mode (no new messages).
 
 Result: web ☐
 
@@ -332,10 +362,31 @@ Result: web ☐
 
 **Steps:**
 1. Open the **Help out** tab.
-2. Confirm the open-requests list shows mode, settlement, and a relative age for each — and nothing else.
+2. Confirm the open-requests list shows mode, settlement (including any "Accepts …" accepted-currencies badge), and a relative age for each — and nothing else.
 3. Tap "Make an offer" on one, optionally add a note and a proposed amount, and send it.
 
-**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate.
+**Expected:** The list never shows a pickup/drop-off location, a title, or the requester's identity — only mode + settlement + age (discovery model B). This is correct behavior, not a missing feature. The offer sends and the card confirms it ("Offer sent..."). Submitting a second offer on the same request updates your existing pending offer rather than creating a duplicate. Member Presence (added 2026-08-04): after sending the offer, the offering member's own Directory profile "Also active in" section lists an "Offering rides" entry; when the requester later accepts a *different* driver's offer, the rejected driver's entry clears (the accepted driver's stays while the trip runs).
+
+Result: web ☐
+
+---
+
+### TT-18b — Member block hides rides and stops offers (added 2026-08-05)
+
+**Role:** two members (requester R, driver D) · **Surfaces:** web
+
+**Precondition:** R has an open ride request. D blocks R (or R blocks D) via `/account/blocks` or the Directory profile.
+
+**Steps:**
+1. As D, open the "help out" discovery list and look for R's request.
+2. As D, attempt `POST /api/trust-transport/requests/<R's request id>/offers` directly.
+3. Undo the block, have D offer, re-create the block, then as R try to accept D's offer.
+
+**Expected:**
+- Step 1: R's request is absent from D's discovery list.
+- Step 2: 403 with the neutral message "This request is not available to you." — never wording that names a block.
+- Step 3: the accept is refused the same way — a block created after the offer still stops the pair from being joined into a trip.
+- Neither member gets any signal that a block exists.
 
 Result: web ☐
 
@@ -373,6 +424,38 @@ TrustTransport trip message; access to the Stream dashboard for the app behind `
 runs via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If
 Stream is down at delete time, the deletion still succeeds and the failure is logged for retry.
 **Result:** web ☐ mobile ☐ — notes:
+
+---
+
+### Deleted driver is pseudonymized, not left as an id
+
+**Expected:** When the driver deletes their account, the rider keeps the trip record but the driver is
+no longer named by their id.
+
+1. Complete or cancel a trip so a `trust_transport_trips` row exists with a provider.
+2. Delete the provider's account.
+3. As the rider, open the trip. The record is still there and the provider reads as a deleted member,
+   never `user_…`.
+
+### TT-R1 — Record a completed ride as a regular one
+
+**Role:** member (requester side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as the requester on a ride a driver has accepted, with no recurring arrangement recorded with that driver. Also have one ride nobody has accepted yet.
+
+**Steps:**
+1. Open the Tracking tab.
+2. Look at the accepted/in-progress ride card, then at the one with no driver.
+3. On the accepted ride, click "Is this ongoing?", pick a cadence, and record it.
+
+**Expected:**
+- The prompt appears as soon as a driver has accepted — a rider knows a school run is weekly before the first one finishes — and stays available on a completed ride.
+- It does NOT appear on a ride nobody has accepted: there is no other member yet to name.
+- The member who drove is already filled in — no member search.
+- With a money currency chosen there is no amount field.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from TrustTransport", awaiting the driver's confirmation.
+
+Result: web ☐
 
 ---
 
@@ -511,6 +594,22 @@ Result: web ☐
 **Expected:** The `x-ctf-csrf: '1'` header is present on the resolve, market-config update, restrict, and restore requests.
 
 Result: web ☐
+
+---
+
+### Account deletion and dispute records
+
+**Expected:** Deleting the account removes the member's own requests, offers, and trips (with the
+provider side of a ridden trip pseudonymized — existing behavior). Disputes over trips are
+retained, matching the earnings ledger: contested value movements stay explainable.
+
+---
+
+### Account deletion pseudonymizes trip events and proofs
+
+**Expected:** After a member deletes their account, status events and pickup/delivery proofs on
+surviving trips remain (disputes rely on them), but the actor/capturer reads as a deleted member —
+no raw id survives.
 
 ---
 

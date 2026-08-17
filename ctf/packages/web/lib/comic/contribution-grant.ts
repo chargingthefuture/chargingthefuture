@@ -16,8 +16,8 @@
 // 2. NEVER GRANT TWICE. `granted_at` is stamped in the database before the mint is attempted, and
 //    the mint itself carries a per-contribution idempotency key, so a retried review, a double-click,
 //    or a crash between the two cannot mint a second grant.
-import { mintGrant } from 'lib/service-credits/repository';
-import { isUserUnlocked } from 'lib/unlock/access';
+import { mintGrant } from 'lib/shared/credits-interface';
+import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { markContributionGranted } from './contribution-repository';
 
 // Recognition for one accepted contribution, whatever its size. Deliberately flat rather than

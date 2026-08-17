@@ -63,18 +63,29 @@ export async function verifyClerkSessionToken(
     return null;
   }
 
+  return buildBearerIdentity(claims);
+}
+
+// Read one claim, preferring the top-level value and falling back to the same key under metadata.
+// Kept as a helper so each field costs the caller no branch complexity.
+function pickClaim(claims: Record<string, unknown>, metadata: Record<string, unknown> | undefined, key: string): string | null {
+  return claimString(claims[key]) ?? claimString(metadata?.[key]);
+}
+
+// Map verified token claims into the identity, or null when there is no subject. Username/role/name
+// come from the verified claims (top-level or under metadata) — never from request headers.
+function buildBearerIdentity(claims: Record<string, unknown>): VerifiedBearerIdentity | null {
   const userId = claimString(claims.sub);
   if (!userId) return null;
 
   const metadata = asRecord(claims.metadata) ?? asRecord(claims.public_metadata);
-  const role = (claimString(claims.role) ?? claimString(metadata?.role))?.toLowerCase() ?? null;
 
   return {
     userId,
-    username: claimString(claims.username) ?? claimString(metadata?.username),
-    firstName: claimString(claims.first_name) ?? claimString(metadata?.first_name),
-    lastName: claimString(claims.last_name) ?? claimString(metadata?.last_name),
-    role,
+    username: pickClaim(claims, metadata, 'username'),
+    firstName: pickClaim(claims, metadata, 'first_name'),
+    lastName: pickClaim(claims, metadata, 'last_name'),
+    role: pickClaim(claims, metadata, 'role')?.toLowerCase() ?? null,
   };
 }
 

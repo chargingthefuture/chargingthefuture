@@ -13,7 +13,7 @@ export type SocketRelayProfileInput = {
   presenceOptIn: boolean;
 };
 
-export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'cancelled';
+export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'canceled';
 
 export type SocketRelayRequest = {
   id: string;
@@ -37,6 +37,10 @@ export type SocketRelayRequest = {
   // null amount; "Free" is never shown as $0.
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the poster accepts for settling (split settlements) — one code per accepted
+  // currency, ServiceCredits first, from socket_relay_request_accepted_currencies. Independent of the
+  // single listed price above, mirroring LightHouse's accepted-currencies model.
+  acceptedCurrencies: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // When this post auto-expires (28 days after it was posted or last re-posted). `isExpired` is the
@@ -57,9 +61,10 @@ export type SocketRelayRequestInput = {
   isPublic: boolean;
   priceCurrency: string | null;
   priceAmount: number | null;
+  acceptedCurrencies: string[];
 };
 
-export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'cancelled';
+export type SocketRelayFulfillmentStatus = 'active' | 'closed' | 'canceled';
 
 // How the requester (the person who posted the request) resolves a claimed request. Only the
 // requester (or an admin) may resolve — a helper can chat but cannot close someone else's request.
@@ -83,6 +88,10 @@ export type SocketRelayFulfillment = {
   // can render real names instead of a raw user id. Null for legacy rows / members with no handle.
   requesterUsername: string | null;
   fulfillerUsername: string | null;
+  // Real names, joined by the admin list only, so an admin sees who the two people are without
+  // reverse-looking-up a Clerk id. Null for a member with no directory profile on file.
+  requesterName?: string | null;
+  fulfillerName?: string | null;
   status: SocketRelayFulfillmentStatus;
   closeReason: string | null;
   createdAtIso: string;

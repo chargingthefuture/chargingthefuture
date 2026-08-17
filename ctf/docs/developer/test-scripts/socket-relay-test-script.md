@@ -12,9 +12,11 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) |
 
 ---
+
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
 
 ## How to run this
 
@@ -22,6 +24,9 @@
 - Mark each result line: ✅ pass · ❌ fail · ⛔ blocked.
 - A ❌ becomes a row in the Bug Reporting plugin: note the case ID, the surface, and what you actually saw versus what was expected.
 - Run **Core smoke** at the start of every session before going further.
+- Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
+  `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
+  inventory was updated only where it names one of those paths. No step below changes.
 
 ---
 
@@ -136,7 +141,36 @@ web ☐
 
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
-- "Accepts ServiceCredits" is true only because the `socket_relay_request_accepted_currencies` record was written; this is not derived from `price_currency` alone.
+- "Accepts ServiceCredits" is true only when a `socket_relay_request_accepted_currencies` row with the ServiceCredits code exists (written by the Accepted-currencies checkboxes — see SR-4a); it is never derived from `price_currency` alone.
+- On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a favor later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
+
+web ☐
+
+---
+
+### SR-4a — Split settlement: accepted-currencies checkboxes (added 2026-08-06)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member.
+
+**Steps:**
+1. Open the post form and fill in title, details, and one tag.
+2. Select "ServiceCredits" as the settlement and enter the whole value of the transaction (e.g. 20).
+3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
+   **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
+4. Submit, then find the new card in the feed.
+5. Edit the post, uncheck United States Dollar, and save.
+
+**Expected:**
+- The checkbox list loads from the live currency catalog (ServiceCredits listed first) and shows a
+  "Loading currencies…" state before it arrives; a failed load shows a Retry control instead of
+  silently hiding the checkboxes.
+- After step 4, the card shows the settlement badge **and** a separate "Accepts ServiceCredits +1"
+  badge — ServiceCredits always named first, the remainder capped as "+N", never a fiat equivalent
+  for a ServiceCredits amount.
+- After step 5, the badge reads "Accepts ServiceCredits" (the stored set was replaced, not appended).
+- Re-opening the edit form shows the saved checkboxes checked.
 
 web ☐
 
@@ -242,7 +276,13 @@ web ☐
 **Expected:**
 - A row appears for each **active** fulfillment the member is participating in (as requester or helper).
 - A row appears for each of the member's own **open, non-expired** requests that have no active fulfillment yet — displayed as "waiting for a helper" placeholder.
-- Cancelled or closed fulfillments do not appear.
+- Live conversations appear first, then your open requests waiting for a helper, then past
+  (closed or canceled) conversations. A canceled claim must still be openable from the Past
+  group — that is how you find out who offered to help before the claim was canceled.
+- Each conversation row names the other person (`Name (@handle)`, or just the handle when there is
+  no name on file). Open one: the header says your role, who the other person is, and — on a
+  past line — that it was canceled or closed. A canceled line must never read "you're talking
+  with the helper".
 - Claimed requests are represented by their active fulfillment row, not an extra pending row.
 - On Android, each pending-request card shows a "No helper yet" note (not a chat), explaining the request is still open on the feed.
 - Tapping an active-fulfillment row opens the chat thread (web); on Android, each active-fulfillment card shows an "Open chat" button that opens the chat (see SR-10a).
@@ -262,9 +302,13 @@ web ☐
 1. As Member A, open the Direct Line for the active fulfillment (web: select the row; Android: tap "Open chat" on the card) and send a message.
 2. As Member B, open the same fulfillment's chat and verify the message is visible.
 3. Member B sends a reply. Member A verifies it appears.
+4. Regression (2026-08-02 owner report): as Member A, start on the Commons (home) page, then navigate into this Direct Line and send another message straight away. Repeat once more arriving via the notification deep link (`/apps/socket-relay?fulfillment=<id>`). Both sends must deliver.
 
 **Expected:**
 - Both participants can send and receive messages.
+- No send fails with **"Message Failed · Unauthorized"** on an active Direct Line — including right after arriving from the Commons or a deep link (step 4). That failure meant the chat connection had been silently switched to another surface's Stream user; each chat identity now keeps its own connection.
+- If **no** member can send on **any** plugin chat, it is almost certainly a Stream channel-type setting rather than this plugin. Run `pnpm --dir ctf/packages/web run check:stream-channel-config` (through Infisical, so it reads the production values) — it names any setting that blocks sending, and `--fix` turns it off. This is what the 2026-08-03 outage turned out to be: "Mark Messages Pending" was on for the `messaging` channel type while the Stream app had no pending-messages feature, so every send was refused.
+- If a send *is* refused anyway, the conversation must say why: a plain-language line appears above the composer naming the reason the chat service gave (for example that the conversation is paused), never only the words "Message Failed · Unauthorized". If the member is not allowed to post at all, the composer is replaced by that explanation instead of accepting text that cannot be sent. Report any occurrence — the reason is also recorded in the runtime logs (`op: send_capability_missing`, `op: send_message`, `op: verify_channel_members`).
 - The chat panel shows the request title and each participant's role ("Your request" / "You're helping").
 - Each participant sees the **other** person by their real `@username` (or a readable name) — **not** a raw `user-xxxxxxxx` id. This holds both right after the claim and when re-opening the chat later (opening the chat must not degrade the counterparty's name).
 - When the message list is empty a branded empty state appears ("No messages yet" or similar) — not Stream's default "No chats here yet…".
@@ -344,11 +388,21 @@ web ☐
 2. Choose "Mark Unsuccessful — Reopen".
 
 **Expected:**
-- The fulfillment is cancelled.
+- The fulfillment is canceled.
 - The request returns to `open` status and reappears in the feed for other members to claim.
 - The 28-day expiry clock is reset, so the re-opened request is claimable again (not immediately expired), even if it had aged close to expiry before the claim.
 - The Direct Line row for this fulfillment disappears.
 - A pending-request placeholder row appears in the Direct Line for the now-open request.
+- The **canceled helper cannot claim this request again**: signed in as that helper, the feed card
+  shows a "You already offered to help" note instead of the "I can help" button, and a direct
+  `POST /api/socket-relay/requests/{id}/fulfill` returns **409**
+  (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`). The copy must read as "one offer per post" — it must
+  **not** say the member was blocked or that the poster reopened the post for others. A different
+  member can still claim the re-opened request normally.
+- The two sides see different closure notices on the ended Direct Line. The requester's read-only
+  notice says the conversation ended **and** that the request is open again on the feed. The canceled
+  helper's notice says only "This conversation ended when the offer was canceled and can't be
+  reopened." — it must **not** mention that the request is open again on the feed.
 
 web ☐
 
@@ -391,9 +445,14 @@ web ☐
 
 ---
 
-### SR-16 — Profile create, update, delete
+### SR-16 — Profile create, update, delete (API only — no UI by design)
 
 **Role:** member · **Surfaces:** web
+
+> No SocketRelay profile screen exists or is planned (recorded 2026-08-04): member identity and
+> location live on the shared Directory profile, and a post's location only defaults from it. This
+> case exercises the API contract directly; the route family is slated for retirement — when it is
+> removed, delete this case.
 
 **Precondition:** Signed in as a member with no existing SocketRelay profile extension (or delete it first).
 
@@ -475,6 +534,28 @@ web ☐
 
 ---
 
+### SR-20 — Member block hides posts and stops a claim (added 2026-08-05)
+
+**Role:** two members (A and B) · **Surfaces:** web
+
+**Precondition:** Member B has an open post. Member A blocks Member B (from B's Directory profile or `/account/blocks`).
+
+**Steps:**
+1. As A, open the SocketRelay feed and look for B's post.
+2. As A, attempt `POST /api/socket-relay/requests/<B's request id>/claim` directly (deep link or API).
+3. As B, open the feed and look for A's posts.
+4. As an admin, open `/admin/socket-relay` and check the requests list.
+
+**Expected:**
+- Steps 1 and 3: neither member sees the other's posts (the block hides in both directions).
+- Step 2: 403 with the neutral message "This request is not available to you." — never wording that names a block.
+- Step 4: the admin list still shows every request (admin views are never filtered).
+- B gets no notification or any other signal that a block exists.
+
+web ☐
+
+---
+
 ### SR-DEL · Account deletion clears the Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 SocketRelay fulfillment message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
@@ -488,6 +569,40 @@ SocketRelay fulfillment message; access to the Stream dashboard for the app behi
 via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
 is down at delete time, the deletion still succeeds and the failure is logged for retry.
 **Result:** web ☐ mobile ☐ — notes:
+
+---
+
+### Deleted counterparty is pseudonymized, not left as an id
+
+**Expected:** When the other party deletes their account, the record stays with its owner but stops
+naming them.
+
+1. As member A, post a request. As member B, claim it. Confirm the Direct Line names B.
+2. Delete member B's account (Account & Data → delete, or the admin path).
+3. As member A, open the same conversation. The row must still be there — it is A's record — and must
+   read **Deleted member**, never `user_…`.
+4. In the SocketRelay admin Fulfillments tab, the same row reads **Deleted member**, not the raw id
+   and not the literal text `deleted_member`.
+
+### SR-R1 — Record a completed favor as a regular one
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in as either party on a fulfillment closed as successful, with no recurring arrangement recorded with that member. Also have one ACTIVE fulfillment and, if possible, one closed as unsuccessful.
+
+**Steps:**
+1. Open the Direct Line and select the active conversation.
+2. Look for "Is this ongoing?" above the resolve bar.
+3. Select the conversation closed as successful, then the unsuccessful or canceled one, and look again.
+4. On one of them, pick a cadence and record it.
+
+**Expected:**
+- The prompt appears on the ACTIVE conversation as well as on one closed successfully — a member usually knows a favor is standing while it is still happening.
+- It does NOT appear on a conversation closed unsuccessfully or canceled.
+- The other participant is already filled in and named — no member search.
+- After recording, the row appears in the Recurring Activity app marked "Recorded from SocketRelay", awaiting the other member.
+
+Result: web ☐
 
 ---
 
@@ -585,6 +700,14 @@ web ☐
 
 ---
 
+### Account deletion pseudonymizes lifecycle events
+
+**Expected:** After a member deletes their account, request lifecycle events they appear on remain
+with the surviving request, but the actor reads as a deleted member — no raw id survives, matching
+the helper pseudonymization on fulfillments.
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce the same observable result on both surfaces. Run them back-to-back on web then Android before marking either checkbox.
@@ -598,7 +721,7 @@ The following cases must produce the same observable result on both surfaces. Ru
 | SR-6 | Expired request: owner sees Re-post; other member does not see card |
 | SR-7 | Claim succeeds; fulfillment visible in Direct Line |
 | SR-8 | No claim button on own request |
-| SR-9 | Direct Line shows pending requests + active fulfillments; cancelled/closed drop out |
+| SR-9 | Direct Line shows pending requests + active fulfillments; canceled/closed drop out |
 | SR-A1 | Four stat cards visible; values match between surfaces |
 | SR-A3 | Confirm dialog appears before delete executes |
 

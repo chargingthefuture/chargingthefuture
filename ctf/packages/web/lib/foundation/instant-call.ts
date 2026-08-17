@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { sendWebPushToUser } from 'lib/notifications/push';
 import { sendExpoPushToUser } from 'lib/notifications/expo-push';
 import { reportError } from 'lib/observability/report';
-import { createTransfer, getOrCreateWallet } from 'lib/service-credits/repository';
+import { createTransfer, getOrCreateWallet } from 'lib/shared/credits-interface';
 import {
   FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS,
   FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
@@ -159,11 +160,11 @@ async function loadProviderBillingSettings(
   };
 }
 
-// Normalise the buyer-set block cap: an integer in 1..FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
+// Normalize the buyer-set block cap: an integer in 1..FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
 // defaulting to FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS when absent. Anything out of range
 // (NaN, <= 0, fractional, or above the hard max) is rejected so a call cannot pre-commit an unbounded or
 // nonsensical spend.
-function normaliseAuthorizedBlocks(value: number | undefined): number {
+function normalizeAuthorizedBlocks(value: number | undefined): number {
   if (value === undefined) {
     return FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS;
   }
@@ -237,7 +238,7 @@ async function assertRingRateLimit(client: PoolClient, callerUserId: string): Pr
 
 // Lazily expire any of THIS caller/callee pair's rings that are past their ~60s window. Run inside the
 // same transaction as a ring/poll so a never-answered ring does not linger. There is no background job;
-// the timeout is realised on the next read or write that touches the row.
+// the timeout is realized on the next read or write that touches the row.
 async function expireStaleRings(client: PoolClient, userId: string): Promise<void> {
   await client.query(
     `
@@ -315,6 +316,39 @@ async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> 
   }
 }
 
+// Resolve and validate the ring target inside the ring transaction: work out who the callee is (the other
+// participant of the thread) and run the ring pre-check. Ringing itself moves no credits, but this rejects
+// early if the call can't even fund the first block. The provider must have opted in with a valid
+// whole-credit rate, and the caller's available balance must cover at least one block at the provider's
+// CURRENT rate. (The rate is only LOCKED at answer; this pre-check uses the live rate purely to avoid
+// placing a ring that could never be answered without an immediate failure.) Returns the callee's user id.
+async function resolveRingTarget(
+  client: PoolClient,
+  threadId: string,
+  callerUserId: string,
+): Promise<string> {
+  const thread = await loadThreadForCaller(client, threadId, callerUserId);
+  // The callee is the other participant. A member can ring the provider; the provider could equally ring
+  // the survivor. Whoever is NOT the caller is the callee.
+  const calleeUserId =
+    thread.survivorUserId === callerUserId ? thread.providerUserId : thread.survivorUserId;
+  if (!calleeUserId || calleeUserId === callerUserId) {
+    throw new Error('thread_not_found');
+  }
+
+  const providerSettings = await loadProviderBillingSettings(client, calleeUserId);
+  const rate = providerSettings.rateCredits;
+  if (!providerSettings.enabled || rate === null || !Number.isInteger(rate) || rate < 1) {
+    throw new Error('billing_misconfigured');
+  }
+  const wallet = await getOrCreateWallet(callerUserId);
+  if (wallet.availableBalance < rate) {
+    throw new Error('insufficient_balance');
+  }
+
+  return calleeUserId;
+}
+
 // Place a ring: the caller (a member who tapped "Connect now") rings the provider on an existing Direct
 // Line thread. Audio-only -> modality 'voice'. The callee learns about it two ways: by polling
 // getIncomingRing (the in-app fallback) and, when they have enabled call alerts, by a Web Push that wakes
@@ -328,34 +362,19 @@ export async function ringInstantCall(input: {
   callerUserId: string;
   authorizedBlocks?: number;
 }): Promise<FoundationInstantCall> {
-  const authorizedBlocks = normaliseAuthorizedBlocks(input.authorizedBlocks);
+  const authorizedBlocks = normalizeAuthorizedBlocks(input.authorizedBlocks);
 
   const call = await withDbTransaction(async (client) => {
     await expireStaleRings(client, input.callerUserId);
     await assertRingRateLimit(client, input.callerUserId);
 
-    const thread = await loadThreadForCaller(client, input.threadId, input.callerUserId);
-    // The callee is the other participant. A member can ring the provider; the provider could equally ring
-    // the survivor. Whoever is NOT the caller is the callee.
-    const calleeUserId =
-      thread.survivorUserId === input.callerUserId ? thread.providerUserId : thread.survivorUserId;
-    if (!calleeUserId || calleeUserId === input.callerUserId) {
-      throw new Error('thread_not_found');
-    }
+    // Resolve the callee and run the ring pre-check (billing enabled + caller can fund the first block).
+    const calleeUserId = await resolveRingTarget(client, input.threadId, input.callerUserId);
 
-    // Ring pre-check: ringing itself moves no credits, but reject early if the call can't even fund the
-    // first block. The provider must have opted in with a valid whole-credit rate, and the caller's
-    // available balance must cover at least one block at the provider's CURRENT rate. (The rate is only
-    // LOCKED at answer; this pre-check uses the live rate purely to avoid placing a ring that could never
-    // be answered without an immediate failure.)
-    const providerSettings = await loadProviderBillingSettings(client, calleeUserId);
-    const rate = providerSettings.rateCredits;
-    if (!providerSettings.enabled || rate === null || !Number.isInteger(rate) || rate < 1) {
-      throw new Error('billing_misconfigured');
-    }
-    const wallet = await getOrCreateWallet(input.callerUserId);
-    if (wallet.availableBalance < rate) {
-      throw new Error('insufficient_balance');
+    // Block check (issue #809 task 4): a block created after the thread existed still stops new
+    // calls between the pair. The route maps blocked_pair to neutral copy.
+    if (await isBlockedBetweenTx(client, input.callerUserId, calleeUserId)) {
+      throw new Error('blocked_pair');
     }
 
     const ringExpiresAt = new Date(Date.now() + FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS * 1000);
@@ -395,7 +414,7 @@ export async function ringInstantCall(input: {
 // Lazily end any of THIS caller/callee pair's ANSWERED calls whose prepaid window has elapsed (issue #808
 // task 4). paid_through_at = answered_at + blocks_charged * interval; once now passes it and the caller has
 // not extended, the prepaid time is used up and the call ends with reason 'paid_window_elapsed'. Mirrors
-// the lazy ring-timeout sweep: there is no background job, the expiry is realised on the next read/action
+// the lazy ring-timeout sweep: there is no background job, the expiry is realized on the next read/action
 // that touches the row. Ending only stops billing -- there is no proration or refund (prepaid blocks, v1).
 async function expirePaidWindows(client: PoolClient, userId: string): Promise<void> {
   await client.query(
@@ -438,7 +457,7 @@ async function loadParticipantCall(
   return row;
 }
 
-// Read the current state of a call for either participant (drives the caller/callee poll). Realises the
+// Read the current state of a call for either participant (drives the caller/callee poll). Realizes the
 // ring timeout lazily.
 export async function getInstantCallState(input: {
   callId: string;
@@ -499,17 +518,29 @@ async function chargeBlock(input: {
 // charge fails for lack of funds (so the call ends cleanly and no credits moved) or an extend hits the cap.
 async function endCallWithReason(callId: string, reason: FoundationCallEndedReason): Promise<FoundationCallRow> {
   return withDbTransaction(async (client) => {
+    // Only move a call to 'ended' from a non-terminal state. The per-block charge runs outside a
+    // transaction, so a concurrent decline/timeout/normal-end could have already set a terminal
+    // ring_status and ended_reason; without this guard that terminal state (and its original reason)
+    // would be clobbered. If the row is already terminal, leave it and return it as-is (issue #1971).
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
         SET ring_status = 'ended', status = 'ended', ended_at = NOW(), updated_at = NOW(),
             ended_reason = $2
         WHERE id = $1::uuid
+          AND ring_status NOT IN ('declined', 'timed_out', 'ended')
         RETURNING ${CALL_ROW_COLUMNS}
       `,
       [callId, reason],
     );
-    return updated.rows[0];
+    if (updated.rows[0]) {
+      return updated.rows[0];
+    }
+    const current = await client.query<FoundationCallRow>(
+      `SELECT ${CALL_ROW_COLUMNS} FROM foundation_call_sessions WHERE id = $1::uuid`,
+      [callId],
+    );
+    return current.rows[0];
   });
 }
 
@@ -697,7 +728,7 @@ export async function declineInstantCall(input: {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
-        SET ring_status = 'declined', status = 'cancelled', ended_at = NOW(),
+        SET ring_status = 'declined', status = 'canceled', ended_at = NOW(),
             ended_by_user_id = $2, updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING ${CALL_ROW_COLUMNS}

@@ -4,8 +4,35 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { getRound, insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRound, SkillsHuntRoundInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RoundBody = Partial<SkillsHuntRoundInput>;
+
+// description is tri-state: absent preserves the current value, an explicit
+// string sets it, anything else clears it to null.
+function mergeRoundDescription(existing: SkillsHuntRound, body: RoundBody): string | null {
+  return body.description === undefined
+    ? existing.description
+    : typeof body.description === 'string'
+      ? body.description
+      : null;
+}
+
+function mergeRoundStatus(existing: SkillsHuntRound, body: RoundBody): SkillsHuntRoundInput['status'] {
+  return body.status === 'draft' || body.status === 'active' || body.status === 'closed' || body.status === 'archived'
+    ? body.status
+    : existing.status;
+}
+
+// rewardPerUserRoundCap is tri-state like description: absent preserves, a
+// number sets it, anything else clears it to null.
+function mergeRoundRewardCap(existing: SkillsHuntRound, body: RoundBody): number | null {
+  return body.rewardPerUserRoundCap === undefined
+    ? existing.rewardPerUserRoundCap
+    : typeof body.rewardPerUserRoundCap === 'number'
+      ? body.rewardPerUserRoundCap
+      : null;
+}
 
 // round.update is a partial update: every field is optional in the contract, so
 // a body that omits a field must preserve the round's existing value rather than
@@ -13,28 +40,15 @@ type RoundBody = Partial<SkillsHuntRoundInput>;
 function mergeRoundInput(existing: SkillsHuntRound, body: RoundBody): SkillsHuntRoundInput {
   return {
     name: typeof body.name === 'string' ? body.name : existing.name,
-    description:
-      body.description === undefined
-        ? existing.description
-        : typeof body.description === 'string'
-          ? body.description
-          : null,
-    status:
-      body.status === 'draft' || body.status === 'active' || body.status === 'closed' || body.status === 'archived'
-        ? body.status
-        : existing.status,
+    description: mergeRoundDescription(existing, body),
+    status: mergeRoundStatus(existing, body),
     startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : existing.startsAtIso,
     endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : existing.endsAtIso,
     scoringConfig:
       body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : existing.scoringConfig,
     rewardCreditsPerAccept:
       typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : existing.rewardCreditsPerAccept,
-    rewardPerUserRoundCap:
-      body.rewardPerUserRoundCap === undefined
-        ? existing.rewardPerUserRoundCap
-        : typeof body.rewardPerUserRoundCap === 'number'
-          ? body.rewardPerUserRoundCap
-          : null,
+    rewardPerUserRoundCap: mergeRoundRewardCap(existing, body),
   };
 }
 
@@ -54,9 +68,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   let body: RoundBody;
   try {
     body = (await request.json()) as RoundBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -99,7 +113,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update round.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to update round: ${failureReason(error)}` },
       { status: 503 },
     );
   }

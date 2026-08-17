@@ -6,6 +6,7 @@ import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 
@@ -23,6 +24,62 @@ function formatRetryApprox(resetAtIso: string | null): string {
   if (hours < 24) return ` You can submit again in about ${hours} hour${hours === 1 ? '' : 's'}.`;
   const days = Math.round(diffMs / 86400000);
   return ` You can submit again in about ${days} day${days === 1 ? '' : 's'}.`;
+}
+
+// Map a thrown createSubmission error message to the HTTP response shape.
+// Unknown messages fall through to a 503 persistence-unavailable response.
+function mapSubmissionCreateError(message: string): { status: number; code: string; responseMessage: string } {
+  if (message === 'skills_hunt_round_not_found') {
+    return { status: 404, code: SKILLS_HUNT_ERROR_CODE.roundNotFound, responseMessage: 'Round not found.' };
+  }
+  if (message === 'skills_hunt_round_not_active') {
+    return { status: 409, code: SKILLS_HUNT_ERROR_CODE.roundNotActive, responseMessage: 'Round is not currently active.' };
+  }
+  if (message.startsWith('skills_hunt_submission_limit_exceeded')) {
+    const sep = message.indexOf(':');
+    const resetAtIso = sep >= 0 ? message.slice(sep + 1) : null;
+    return {
+      status: 429,
+      code: SKILLS_HUNT_ERROR_CODE.submissionLimitExceeded,
+      responseMessage: `You've reached the weekly nomination limit.${formatRetryApprox(resetAtIso)}`,
+    };
+  }
+  if (message === 'skills_hunt_pre_approval_required') {
+    return {
+      status: 403,
+      code: SKILLS_HUNT_ERROR_CODE.preApprovalRequired,
+      responseMessage: 'Your recent submissions need admin pre-approval before you can submit again.',
+    };
+  }
+  if (message === 'skills_hunt_rejection_guard_violation') {
+    return {
+      status: 429,
+      code: SKILLS_HUNT_ERROR_CODE.rejectionGuardViolation,
+      responseMessage: 'Submission blocked by rejection-rate guardrail.',
+    };
+  }
+  if (message === 'skills_hunt_duplicate_submission') {
+    return {
+      status: 409,
+      code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
+      responseMessage: 'Duplicate submission signature for this round.',
+    };
+  }
+  if (message === 'skills_hunt_invalid_quora_url') {
+    return { status: 400, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, responseMessage: 'Invalid Quora profile URL.' };
+  }
+  if (message === 'skills_hunt_url_dead') {
+    return {
+      status: 400,
+      code: SKILLS_HUNT_ERROR_CODE.urlValidationFailed,
+      responseMessage: 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.',
+    };
+  }
+  return {
+    status: 503,
+    code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,
+    responseMessage: 'Unable to create submission.',
+  };
 }
 
 function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSubmissionInput {
@@ -92,9 +149,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   let body: SubmissionBody;
   try {
     body = (await request.json()) as SubmissionBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }
@@ -128,46 +185,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_submissions' });
     const message = error instanceof Error ? error.message : 'unknown';
-
-    let status = 503;
-    let code: string = SKILLS_HUNT_ERROR_CODE.persistenceUnavailable;
-    let responseMessage = 'Unable to create submission.';
-
-    if (message === 'skills_hunt_round_not_found') {
-      status = 404;
-      code = SKILLS_HUNT_ERROR_CODE.roundNotFound;
-      responseMessage = 'Round not found.';
-    } else if (message === 'skills_hunt_round_not_active') {
-      status = 409;
-      code = SKILLS_HUNT_ERROR_CODE.roundNotActive;
-      responseMessage = 'Round is not currently active.';
-    } else if (message.startsWith('skills_hunt_submission_limit_exceeded')) {
-      status = 429;
-      code = SKILLS_HUNT_ERROR_CODE.submissionLimitExceeded;
-      const sep = message.indexOf(':');
-      const resetAtIso = sep >= 0 ? message.slice(sep + 1) : null;
-      responseMessage = `You've reached the weekly nomination limit.${formatRetryApprox(resetAtIso)}`;
-    } else if (message === 'skills_hunt_pre_approval_required') {
-      status = 403;
-      code = SKILLS_HUNT_ERROR_CODE.preApprovalRequired;
-      responseMessage = 'Your recent submissions need admin pre-approval before you can submit again.';
-    } else if (message === 'skills_hunt_rejection_guard_violation') {
-      status = 429;
-      code = SKILLS_HUNT_ERROR_CODE.rejectionGuardViolation;
-      responseMessage = 'Submission blocked by rejection-rate guardrail.';
-    } else if (message === 'skills_hunt_duplicate_submission') {
-      status = 409;
-      code = SKILLS_HUNT_ERROR_CODE.duplicateSubmission;
-      responseMessage = 'Duplicate submission signature for this round.';
-    } else if (message === 'skills_hunt_invalid_quora_url') {
-      status = 400;
-      code = SKILLS_HUNT_ERROR_CODE.invalidPayload;
-      responseMessage = 'Invalid Quora profile URL.';
-    } else if (message === 'skills_hunt_url_dead') {
-      status = 400;
-      code = SKILLS_HUNT_ERROR_CODE.urlValidationFailed;
-      responseMessage = 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.';
-    }
+    const { status, code, responseMessage } = mapSubmissionCreateError(message);
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,

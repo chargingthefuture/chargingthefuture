@@ -24,7 +24,7 @@ export function getSocketRelayTokens(theme: ThemeName): SocketRelayTokens {
 
 export type Tab = "feed" | "post" | "chat";
 
-export type SrRequestStatus = "open" | "claimed" | "closed" | "cancelled";
+export type SrRequestStatus = "open" | "claimed" | "closed" | "canceled";
 
 export type SrRequest = {
   id: string;
@@ -43,6 +43,9 @@ export type SrRequest = {
   claimedFulfillmentId: string | null;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the poster accepts for settling (split settlements), ServiceCredits first.
+  // Optional so older cached payloads without the field keep rendering.
+  acceptedCurrencies?: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // When the post auto-expires (28 days after posting/re-posting); `isExpired` is true only while it is
@@ -62,13 +65,17 @@ export type SrFulfillment = {
   // /api/socket-relay/my-fulfillments; the chat itself renders names from Stream, so these are optional.
   requesterUsername?: string | null;
   fulfillerUsername?: string | null;
-  status: "active" | "closed" | "cancelled";
+  status: "active" | "closed" | "canceled";
   closeReason: string | null;
   createdAtIso: string;
   updatedAtIso: string;
   // Joined from the request by /api/socket-relay/my-fulfillments so the chat can show context.
   requestTitle?: string;
   requestStatus?: SrRequestStatus;
+  // Participants' real names, joined from directory_profiles by the same route. Null for a member
+  // with no profile on file; used with the usernames above to name the other person in the header.
+  requesterName?: string | null;
+  fulfillerName?: string | null;
 };
 
 export type SrListResponse = { ok: boolean; items: SrRequest[]; page: number; pageSize: number; total: number };
@@ -76,27 +83,43 @@ export type SrFulfillmentsResponse = { ok: boolean; items: SrFulfillment[] };
 
 // One row in the Direct Line list. Either a live conversation (an active fulfillment you can chat on)
 // or a pending request you posted that no helper has claimed yet (a placeholder — no chat until it is
-// claimed). Modelled as a discriminated union so the list can render both and only the fulfillment
+// claimed). Modeled as a discriminated union so the list can render both and only the fulfillment
 // kind opens a chat.
 export type SrDirectLine =
   | { kind: "fulfillment"; key: string; fulfillment: SrFulfillment }
   | { kind: "pending"; key: string; request: SrRequest };
 
-// Build the unified Direct Line list: one row per request you are currently waiting on or talking
-// through. Active fulfillments (you posted it and a helper claimed it, or you offered to help) come
-// first as live conversations; then your own still-open, non-expired requests as "waiting for a
-// helper" placeholders. Cancelled/closed fulfillments and claimed/closed requests are left out — a
-// claimed request is already represented by its active fulfillment, so there is no double row.
+// Build the unified Direct Line list, newest activity first within each group:
+//   1. Active fulfillments — live conversations (you posted it and a helper claimed it, or you
+//      offered to help).
+//   2. Your own still-open, non-expired requests — "waiting for a helper" placeholders.
+//   3. Past fulfillments — ones that were closed or canceled.
+//
+// A claimed request is already represented by its active fulfillment, so it is not also listed as a
+// placeholder; that is why group 2 filters to `open`.
+//
+// Group 3 used to be dropped entirely. That erased the only record a member had of who had offered
+// to help: when a claim is canceled the request returns to `open`, the feed shows "no helper yet"
+// again, and the conversation vanished from this list — so the person who offered became
+// unreachable and effectively anonymous (owner report: two people offered help and there was no way
+// left to see who they were). Keeping past lines costs nothing to read: the chat routes gate on
+// participation, not on status, so a participant could always open these — the list simply stopped
+// pointing at them.
 export function buildDirectLines(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrDirectLine[] {
+  const byRecentUpdate = (a: SrFulfillment, b: SrFulfillment) => b.updatedAtIso.localeCompare(a.updatedAtIso);
   const active: SrDirectLine[] = fulfillments
     .filter((f) => f.status === "active")
-    .sort((a, b) => b.updatedAtIso.localeCompare(a.updatedAtIso))
+    .sort(byRecentUpdate)
     .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
   const pending: SrDirectLine[] = myRequests
     .filter((r) => r.status === "open" && !r.isExpired)
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .map((r) => ({ kind: "pending", key: `pending:${r.id}`, request: r }));
-  return [...active, ...pending];
+  const past: SrDirectLine[] = fulfillments
+    .filter((f) => f.status !== "active")
+    .sort(byRecentUpdate)
+    .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
+  return [...active, ...pending, ...past];
 }
 
 export type SrChatCredentials = {
@@ -113,6 +136,17 @@ export const MAX_TAGS_PER_POST = 3;
 // instead of bouncing off the server as an invalid payload.
 export const MAX_TAG_LENGTH = 64;
 const MAX_FILTER_CHIPS = 10;
+
+// The other participant, as a member reads it: name first, then handle, and neither when the person
+// has no profile and no handle on file. Deliberately never falls back to the Clerk id — an id is not
+// an identity to a member, and the point of naming them is so a request owner can tell who offered.
+export function srCounterpartLabel(f: SrFulfillment, viewerIsRequester: boolean): string | null {
+  const name = viewerIsRequester ? f.fulfillerName : f.requesterName;
+  const username = viewerIsRequester ? f.fulfillerUsername : f.requesterUsername;
+  if (name) return username ? `${name} (@${username})` : name;
+  if (username) return `@${username}`;
+  return null;
+}
 
 export function requestTags(r: Pick<SrRequest, "category" | "tags">): string[] {
   if (r.tags && r.tags.length > 0) return r.tags;

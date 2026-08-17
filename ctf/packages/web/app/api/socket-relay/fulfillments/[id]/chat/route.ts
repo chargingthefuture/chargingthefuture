@@ -5,6 +5,31 @@ import { getFulfillmentById } from 'lib/socket-relay/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { reportError } from 'lib/observability/report';
 
+type Fulfillment = NonNullable<Awaited<ReturnType<typeof getFulfillmentById>>>;
+
+// Resolve the fulfillment for a participant, or return the appropriate error response.
+// 404 only when it genuinely does not exist; a non-participant on an existing fulfillment gets 403.
+// Returning 404 for the authorization failure would leak existence (a caller could tell "does not
+// exist" from "exists but not mine"), and it would diverge from the sibling routes that return 403.
+async function loadParticipantFulfillment(
+  id: string,
+  userId: string,
+): Promise<{ error: NextResponse } | { fulfillment: Fulfillment }> {
+  const fulfillment = await getFulfillmentById(id);
+  if (!fulfillment) {
+    return { error: NextResponse.json({ ok: false, message: 'Fulfillment not found' }, { status: 404 }) };
+  }
+  if (fulfillment.requesterUserId !== userId && fulfillment.fulfillerUserId !== userId) {
+    return {
+      error: NextResponse.json(
+        { ok: false, message: 'You are not a participant in this Direct Line' },
+        { status: 403 },
+      ),
+    };
+  }
+  return { fulfillment };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -23,16 +48,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const userId = gate.auth.userId;
 
-  const fulfillment = await getFulfillmentById(id);
-  // 404 only when it genuinely does not exist; a non-participant on an existing fulfillment gets 403.
-  // Returning 404 for the authorization failure would leak existence (a caller could tell "does not
-  // exist" from "exists but not mine"), and it would diverge from the sibling routes that return 403.
-  if (!fulfillment) {
-    return NextResponse.json({ ok: false, message: 'Fulfillment not found' }, { status: 404 });
+  const access = await loadParticipantFulfillment(id, userId);
+  if ('error' in access) {
+    return access.error;
   }
-  if (fulfillment.requesterUserId !== userId && fulfillment.fulfillerUserId !== userId) {
-    return NextResponse.json({ ok: false, message: 'You are not a participant in this Direct Line' }, { status: 403 });
-  }
+  const { fulfillment } = access;
 
   try {
     // Use the handles captured on the fulfillment at claim time so both participants render with a real

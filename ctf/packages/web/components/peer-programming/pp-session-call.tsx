@@ -65,7 +65,7 @@ export function PeerProgrammingSessionCall({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
 
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
@@ -79,12 +79,12 @@ export function PeerProgrammingSessionCall({
         await activeCall.join({ create: true });
         try { await activeCall.camera.enable(); } catch { /* no camera available */ }
         try { await activeCall.microphone.enable(); } catch { /* no mic available */ }
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         reportError(error, {
           area: 'peer-programming',
           op: 'session_join_client',
@@ -96,7 +96,7 @@ export function PeerProgrammingSessionCall({
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }

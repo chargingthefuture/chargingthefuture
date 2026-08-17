@@ -8,7 +8,7 @@ import { Share2, Copy, Check, ExternalLink } from "lucide-react";
 // copies it with clear feedback. Every "share"/"copy link" affordance in the app must use this — never a
 // bare copy button or a raw window.open. See .claude/rules/130-link-sharing-and-copy-url-rules.mdc.
 //
-// Accessibility: the trigger has aria-haspopup/aria-expanded; the popup is a labelled dialog; opening it
+// Accessibility: the trigger has aria-haspopup/aria-expanded; the popup is a labeled dialog; opening it
 // moves focus to the (selectable) URL field; Escape and an outside click close it and return focus to the
 // trigger; copy feedback is announced via aria-live.
 
@@ -52,6 +52,138 @@ async function writeToClipboard(text: string): Promise<boolean> {
   }
 }
 
+// Decide which way the popup opens from the trigger. Vertically: open below when there isn't room
+// above (~190px covers title + URL field + two rows + padding), otherwise above.
+//
+// Horizontally there are three cases, and the third is the one this used to get wrong. Growing
+// rightward from the trigger's left edge is the default. When that would cross the viewport's right
+// edge it flips to grow leftward from the trigger's right edge instead — but that flip was
+// unconditional, and a trigger sitting mid-row on a phone satisfies "would overflow right" while
+// having nowhere near 280px of room to its left, so the popup shot off the LEFT edge and was clipped
+// (owner report: the share popup on a SocketRelay card opened half off-screen). When neither side
+// fits, the popup is pinned to the viewport's left margin instead, expressed as an offset from the
+// trigger because the popup is absolutely positioned inside the trigger's relative wrapper.
+//
+// Kept module-scope so the several ?./??/?: it needs stay out of the effect's complexity count.
+const POPUP_HEIGHT = 190;
+const POPUP_WIDTH = 280;
+const POPUP_MARGIN = 16;
+
+// The horizontal half, split out so each function stays inside the rule-116 complexity limit.
+function computeHorizontalAlign(
+  triggerLeft: number,
+  triggerRight: number,
+): { align: "left" | "right"; offsetPx: number } {
+  if (triggerLeft + POPUP_WIDTH <= window.innerWidth - POPUP_MARGIN) {
+    return { align: "left", offsetPx: 0 };
+  }
+  if (triggerRight - POPUP_WIDTH >= POPUP_MARGIN) {
+    return { align: "right", offsetPx: 0 };
+  }
+  return { align: "left", offsetPx: POPUP_MARGIN - triggerLeft };
+}
+
+function computePopupPosition(rect: DOMRect | undefined): {
+  placement: "top" | "bottom";
+  align: "left" | "right";
+  offsetPx: number;
+} {
+  const triggerTop = rect?.top ?? POPUP_HEIGHT + 1;
+  return {
+    placement: triggerTop < POPUP_HEIGHT + POPUP_MARGIN ? "bottom" : "top",
+    ...computeHorizontalAlign(rect?.left ?? 0, rect?.right ?? 0),
+  };
+}
+
+// The share popover: the selectable URL field plus the "Copy link" and "Open in new tab" actions.
+// Kept module-scope so its placement/copy-state ternaries stay out of the ShareLink complexity count.
+function ShareLinkPopup({
+  dialogId,
+  title,
+  placement,
+  align,
+  offsetPx,
+  absolute,
+  copied,
+  copyFailed,
+  urlRef,
+  onCopy,
+  onOpenNewTab,
+}: {
+  dialogId: string;
+  title: string;
+  placement: "top" | "bottom";
+  align: "left" | "right";
+  offsetPx: number;
+  absolute: string;
+  copied: boolean;
+  copyFailed: boolean;
+  urlRef: React.RefObject<HTMLInputElement | null>;
+  onCopy: () => void;
+  onOpenNewTab: () => void;
+}) {
+  const itemStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+    padding: "8px 10px",
+    background: "transparent",
+    border: "none",
+    borderRadius: 8,
+    color: "var(--ctf-text, #E8EAF0)",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    textAlign: "left",
+  };
+  return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- stopPropagation only prevents the outside-click-close from firing on the popover's own content; it is event management, not a user action. The popover's controls are focusable buttons.
+    <div
+      id={dialogId}
+      role="dialog"
+      aria-label={title}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        position: "absolute",
+        ...(placement === "top"
+          ? { bottom: "calc(100% + 8px)" }
+          : { top: "calc(100% + 8px)" }),
+        ...(align === "right" ? { right: 0 } : { left: offsetPx }),
+        zIndex: 50,
+        width: 280,
+        maxWidth: "80vw",
+        padding: 12,
+        background: "var(--ctf-panel, #161B27)",
+        border: "1px solid var(--ctf-border, #1E2A3A)",
+        borderRadius: 12,
+        boxShadow: "0 12px 28px rgba(0,0,0,0.45)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ctf-text-secondary, #9CA3AF)" }}>{title}</div>
+      <input
+        ref={urlRef}
+        readOnly
+        value={absolute}
+        aria-label="Link URL"
+        onFocus={(e) => e.currentTarget.select()}
+        style={{ width: "100%", padding: "8px 10px", background: "var(--ctf-surface, rgba(255,255,255,0.04))", border: "1px solid var(--ctf-border, rgba(255,255,255,0.08))", borderRadius: 8, fontSize: 12, color: "var(--ctf-text, #E8EAF0)", outline: "none", boxSizing: "border-box" }}
+      />
+      <button type="button" onClick={onCopy} style={itemStyle}>
+        {copied ? <Check size={15} /> : <Copy size={15} />}
+        <span aria-live="polite">{copied ? "Copied!" : copyFailed ? "Copy failed — copy the link above" : "Copy link"}</span>
+      </button>
+      <button type="button" onClick={onOpenNewTab} style={itemStyle}>
+        <ExternalLink size={15} />
+        <span>Open in new tab</span>
+      </button>
+    </div>
+  );
+}
+
 export function ShareLink({
   url,
   label = "Share",
@@ -87,6 +219,9 @@ export function ShareLink({
   // trigger near the right edge of the viewport (the usual header position) would push it off-screen
   // and force the whole page into horizontal scroll — so it flips to grow leftward instead.
   const [align, setAlign] = useState<"left" | "right">("left");
+  // Pixel nudge from the trigger for the case where the popup fits on neither side and has to be
+  // pinned to the viewport margin instead. Zero for the two normal alignments.
+  const [offsetPx, setOffsetPx] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const urlRef = useRef<HTMLInputElement>(null);
@@ -96,17 +231,13 @@ export function ShareLink({
 
   useEffect(() => {
     if (!open) return;
-    // Decide which way to open: if there isn't room for the popup above the trigger, open below.
-    // ~190px covers the popup (title + URL field + two rows + padding).
-    const POPUP_HEIGHT = 190;
-    const POPUP_WIDTH = 280;
+    // Decide which way the popup opens (see computePopupPosition) so it isn't clipped by the header
+    // or pushed off the right edge into horizontal scroll.
     const rect = triggerRef.current?.getBoundingClientRect();
-    const triggerTop = rect?.top ?? POPUP_HEIGHT + 1;
-    setPlacement(triggerTop < POPUP_HEIGHT + 16 ? "bottom" : "top");
-    // And which way to grow: right-align the popup when growing rightward would cross the viewport's
-    // right edge (which forces the page into horizontal scroll on a phone).
-    const triggerLeft = rect?.left ?? 0;
-    setAlign(triggerLeft + POPUP_WIDTH > window.innerWidth - 16 ? "right" : "left");
+    const position = computePopupPosition(rect);
+    setPlacement(position.placement);
+    setAlign(position.align);
+    setOffsetPx(position.offsetPx);
     // Focus the URL field so a keyboard/AT user lands on the link itself.
     urlRef.current?.focus();
     urlRef.current?.select();
@@ -145,22 +276,6 @@ export function ShareLink({
     setOpen(false);
   }
 
-  const itemStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
-    padding: "8px 10px",
-    background: "transparent",
-    border: "none",
-    borderRadius: 8,
-    color: "var(--ctf-text, #E8EAF0)",
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: "pointer",
-    textAlign: "left",
-  };
-
   return (
     <div ref={rootRef} style={{ position: "relative", display: children ? "block" : "inline-flex" }}>
       <button
@@ -190,49 +305,19 @@ export function ShareLink({
       </button>
 
       {open ? (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- stopPropagation only prevents the outside-click-close from firing on the popover's own content; it is event management, not a user action. The popover's controls are focusable buttons.
-        <div
-          id={dialogId}
-          role="dialog"
-          aria-label={title}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute",
-            ...(placement === "top"
-              ? { bottom: "calc(100% + 8px)" }
-              : { top: "calc(100% + 8px)" }),
-            ...(align === "right" ? { right: 0 } : { left: 0 }),
-            zIndex: 50,
-            width: 280,
-            maxWidth: "80vw",
-            padding: 12,
-            background: "var(--ctf-panel, #161B27)",
-            border: "1px solid var(--ctf-border, #1E2A3A)",
-            borderRadius: 12,
-            boxShadow: "0 12px 28px rgba(0,0,0,0.45)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ctf-text-secondary, #9CA3AF)" }}>{title}</div>
-          <input
-            ref={urlRef}
-            readOnly
-            value={absolute}
-            aria-label="Link URL"
-            onFocus={(e) => e.currentTarget.select()}
-            style={{ width: "100%", padding: "8px 10px", background: "var(--ctf-surface, rgba(255,255,255,0.04))", border: "1px solid var(--ctf-border, rgba(255,255,255,0.08))", borderRadius: 8, fontSize: 12, color: "var(--ctf-text, #E8EAF0)", outline: "none", boxSizing: "border-box" }}
-          />
-          <button type="button" onClick={() => void onCopy()} style={itemStyle}>
-            {copied ? <Check size={15} /> : <Copy size={15} />}
-            <span aria-live="polite">{copied ? "Copied!" : copyFailed ? "Copy failed — copy the link above" : "Copy link"}</span>
-          </button>
-          <button type="button" onClick={onOpenNewTab} style={itemStyle}>
-            <ExternalLink size={15} />
-            <span>Open in new tab</span>
-          </button>
-        </div>
+        <ShareLinkPopup
+          dialogId={dialogId}
+          title={title}
+          placement={placement}
+          align={align}
+          offsetPx={offsetPx}
+          absolute={absolute}
+          copied={copied}
+          copyFailed={copyFailed}
+          urlRef={urlRef}
+          onCopy={() => void onCopy()}
+          onOpenNewTab={onOpenNewTab}
+        />
       ) : null}
     </div>
   );

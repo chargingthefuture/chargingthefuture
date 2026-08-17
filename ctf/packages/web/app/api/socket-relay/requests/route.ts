@@ -17,8 +17,9 @@ import {
 import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
-const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'cancelled'];
+const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'canceled'];
 
 // Parse the optional ?status= filter: a comma-separated list of request statuses, keeping only known
 // ones. Returns undefined when nothing valid was asked for, which leaves listRequests full-status.
@@ -46,12 +47,42 @@ export async function GET(request: Request) {
     // Optional ?status=open (comma-separated) scopes the feed to claimable posts so resolved/claimed
     // ones don't crowd out open requests on a page. Absent/unknown values leave the full-status list.
     const statuses = parseStatusFilter(url.searchParams.get('status'));
-    const response = await listRequests({ page, pageSize, statuses });
+    // viewerUserId hides posts from a blocked pair (either direction) for the browsing member
+    // (issue #809 task 4). Owner-scoped and admin lists do not pass a viewer and stay complete.
+    const response = await listRequests({ page, pageSize, statuses, viewerUserId: gate.auth.userId });
     return NextResponse.json({ ok: true, ...response }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });
     return socketRelayErrorResponse(error, 'Request listing unavailable.');
   }
+}
+
+// Validate a parsed request payload. Returns an error response, or null when the payload is acceptable.
+async function validateCreateRequestPayload(
+  input: ReturnType<typeof parseRequestInput>,
+): Promise<NextResponse | null> {
+  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
+  if (hasOverlongTag(input.tags)) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
+      { status: 400 },
+    );
+  }
+
+  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
+    return NextResponse.json(
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
+      { status: 400 },
+    );
+  }
+
+  return null;
+}
+
+// Use the caller-supplied idempotency key when present and non-empty, otherwise derive one.
+function resolveIdempotencyKey(body: Record<string, unknown>, userId: string): string {
+  const raw = body.idempotencyKey;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : `${userId}:${Date.now()}`;
 }
 
 export async function POST(request: Request) {
@@ -68,32 +99,20 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }
 
   const input = parseRequestInput(body);
-  // Answer the one payload problem a caller can act on by itself before the catch-all message below.
-  if (hasOverlongTag(input.tags)) {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: SOCKET_RELAY_TAG_LENGTH_MESSAGE },
-      { status: 400 },
-    );
+  const payloadDeny = await validateCreateRequestPayload(input);
+  if (payloadDeny) {
+    return payloadDeny;
   }
 
-  if (!validateRequestInput(input) || !(await isValidRequestPrice(input.priceCurrency, input.priceAmount))) {
-    return NextResponse.json(
-      { ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message: 'Invalid request payload.' },
-      { status: 400 },
-    );
-  }
-
-  const idempotencyKey = typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
-    ? body.idempotencyKey.trim()
-    : `${gate.auth.userId}:${Date.now()}`;
+  const idempotencyKey = resolveIdempotencyKey(body, gate.auth.userId);
 
   try {
     const item = await createRequest(gate.auth.userId, gate.auth.username ?? null, input, idempotencyKey);

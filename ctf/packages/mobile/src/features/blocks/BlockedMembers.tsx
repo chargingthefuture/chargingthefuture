@@ -186,9 +186,19 @@ function formatBlockedDate(iso: string): string {
   return `on ${date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`;
 }
 
+// makeStyles is split into grouped helpers so no single function exceeds the complexity budget
+// imposed by the many `t.isComic` branches. The merged result is identical to one
+// StyleSheet.create call over all keys.
 function makeStyles(t: ThemeTokens, brand: string) {
-  const danger = t.danger;
-  const r = t.radius;
+  return {
+    ...makeStylesHeader(t, brand),
+    ...makeStylesRows(t, brand),
+    ...makeStylesEmpty(t, brand),
+    ...makeStylesError(t, brand),
+  };
+}
+
+function makeStylesHeader(t: ThemeTokens, brand: string) {
   const rChip = t.radiusChip;
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: t.bg },
@@ -203,6 +213,14 @@ function makeStyles(t: ThemeTokens, brand: string) {
     scrollContent: { padding: 16, paddingBottom: 28 },
     intro: { fontSize: 13, color: t.textSecondary, lineHeight: 20, marginBottom: 18, fontFamily: interFamily('400') },
     list: { gap: t.isComic ? 5 : 7 },
+  });
+}
+
+function makeStylesRows(t: ThemeTokens, brand: string) {
+  const danger = t.danger;
+  const r = t.radius;
+  const rChip = t.radiusChip;
+  return StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: r, backgroundColor: t.surface, borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? `${t.border}35` : t.border },
     rowError: { borderColor: t.isComic ? danger : 'rgba(239,68,68,0.35)' },
     rowPending: { opacity: 0.7 },
@@ -212,6 +230,11 @@ function makeStyles(t: ThemeTokens, brand: string) {
     rowName: { fontSize: 13, fontWeight: t.isComic ? '700' : '600', fontFamily: interFamily(t.isComic ? '700' : '600'), color: t.textPrimary },
     rowMeta: { fontSize: t.isComic ? 10 : 11, color: t.textMuted, lineHeight: 15, marginTop: 1, fontFamily: interFamily('400') },
     rowMetaError: { color: t.isComic ? danger : '#F87171' },
+  });
+}
+
+function makeStylesEmpty(t: ThemeTokens, brand: string) {
+  return StyleSheet.create({
     unblockBtn: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: t.isComic ? 0 : 9, backgroundColor: t.isComic ? t.surface : `${brand}12`, borderWidth: 1.5, borderColor: t.isComic ? brand : `${brand}35`, minWidth: 76, alignItems: 'center' },
     unblockText: { color: brand, fontSize: 13, fontWeight: '600', fontFamily: interFamily('600') },
     emptyWrap: { alignItems: 'center', paddingVertical: 32 },
@@ -219,6 +242,12 @@ function makeStyles(t: ThemeTokens, brand: string) {
     emptyAnchorText: { fontSize: 24, fontFamily: interFamily('400') },
     emptyTitle: { fontSize: 19, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
     emptySub: { fontSize: 13, color: t.textSecondary, lineHeight: 20, textAlign: 'center', fontFamily: interFamily('400') },
+  });
+}
+
+function makeStylesError(t: ThemeTokens, brand: string) {
+  const r = t.radius;
+  return StyleSheet.create({
     errTitle: { fontSize: 16, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
     errSub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', marginBottom: 16, fontFamily: interFamily('400') },
     retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: r, backgroundColor: t.isComic ? `${t.border}15` : `${brand}15`, borderWidth: 1, borderColor: t.isComic ? t.border : `${brand}30` },

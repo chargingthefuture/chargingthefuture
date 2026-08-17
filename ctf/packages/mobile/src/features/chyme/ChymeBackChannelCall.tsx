@@ -19,6 +19,7 @@ import {
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import type { JoinCredentials } from './useChymeBackChannel';
+import { reportError } from '../../observability/report';
 
 const BACK_CHANNEL_CALL_TYPE = 'default';
 
@@ -50,7 +51,7 @@ export const ChymeBackChannelCall: React.FC<{
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: displayName },
@@ -60,23 +61,24 @@ export const ChymeBackChannelCall: React.FC<{
     void (async () => {
       try {
         await activeCall.join({ create: true });
-        try { await activeCall.camera.disable(); } catch { /* no camera */ }
+        try { await activeCall.camera.disable(); } catch { /* no-trace: there is no camera on this device */ }
         // A 1:1 call is a conversation — join un-muted (unlike the room, which joins muted).
-        try { await activeCall.microphone.enable(); } catch { /* mic unavailable */ }
-        if (cancelled) return;
+        try { await activeCall.microphone.enable(); } catch { /* no-trace: the microphone is unavailable on this device */ }
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
-      } catch {
-        if (cancelled) return;
+      } catch (caught) {
+        reportError(caught, { area: 'chyme', op: 'back_channel_join' });
+        if (canceled) return;
         setStatus('error');
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
-        try { await activeCall.leave(); } catch { /* already left */ }
-        try { await videoClient.disconnectUser(); } catch { /* ignore */ }
+        try { await activeCall.leave(); } catch { /* no-trace: the call was already left */ }
+        try { await videoClient.disconnectUser(); } catch { /* no-trace: the client is already disconnected */ }
       })();
     };
   }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamCallId, displayName]);
@@ -171,7 +173,7 @@ const BackChannelCallLive: React.FC<{
             style={styles.hangUpCircle}
             onPress={() => {
               void (async () => {
-                try { await call?.leave(); } catch { /* already left */ }
+                try { await call?.leave(); } catch { /* no-trace: the call was already left */ }
                 onHangUp();
               })();
             }}

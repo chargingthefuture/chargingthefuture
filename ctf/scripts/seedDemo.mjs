@@ -11,9 +11,9 @@
  *   tested. Set DEMO_SECOND_OWNER_ID to a SECOND real Clerk user id and the seed
  *   makes that user the real counterparty to DEMO_OWNER_ID: it gives them a member
  *   profile and wires up both-sided data (open requests each can act on, a shared
- *   Foundation thread, a Lighthouse seeker↔host match, a co-enrolment, etc.), so
+ *   Foundation thread, a Lighthouse seeker↔host match, a co-enrollment, etc.), so
  *   two real accounts can each test both sides. Leave it unset for the original
- *   single-owner behaviour (unchanged).
+ *   single-owner behavior (unchanged).
  *
  *   Access note: the seed grants the approved_full unlock tier to both real owners
  *   (an unlock_verification_submissions row), so neither needs the
@@ -51,6 +51,30 @@ const OWNER2 = (process.env.DEMO_SECOND_OWNER_ID || '').trim() || null;
 if (OWNER2 && OWNER2 === OWNER) {
   throw new Error('DEMO_SECOND_OWNER_ID must be a different Clerk id than DEMO_OWNER_ID');
 }
+
+// Optional tester accounts (issue #2037): a hired tester runs the manual test scripts against the
+// demo schema with two REAL Clerk accounts — one they use as an admin, one as a plain member. The
+// seed gives each the baseline to sign in and participate (approved_full unlock, a wallet, a
+// directory profile). Two things the seed CANNOT do, because only Clerk / Unleash hold them:
+//   - the admin role: set role=admin on the tester-admin account in the Clerk dashboard;
+//   - demo routing: target the `demo-mode` Unleash flag at both ids.
+const TESTER_ADMIN = (process.env.DEMO_TESTER_ADMIN_ID || '').trim() || null;
+const TESTER_MEMBER = (process.env.DEMO_TESTER_MEMBER_ID || '').trim() || null;
+{
+  const ids = [OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER].filter(Boolean);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('DEMO_OWNER_ID, DEMO_SECOND_OWNER_ID, DEMO_TESTER_ADMIN_ID, and DEMO_TESTER_MEMBER_ID must all be different Clerk ids');
+  }
+}
+
+// Every REAL Clerk account the seed must let in: the owner(s) plus any tester accounts.
+const REAL_USERS = [OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER].filter(Boolean);
+
+// Tester directory identities, keyed by id so seedDirectory can render a sensible profile for each.
+const TESTER_PROFILES = [
+  TESTER_ADMIN && { id: TESTER_ADMIN, firstName: 'Demo', lastName: 'TesterAdmin', headline: 'Test Script Runner (admin)', bio: 'Hired tester account used to run the admin sides of the manual test scripts.' },
+  TESTER_MEMBER && { id: TESTER_MEMBER, firstName: 'Demo', lastName: 'TesterMember', headline: 'Test Script Runner (member)', bio: 'Hired tester account used to run the member sides of the manual test scripts.' },
+].filter(Boolean);
 
 // Supporting synthetic users — social/relational data
 const PEER_1 = 'demo-peer-001';
@@ -113,7 +137,9 @@ async function seedUnlock(c) {
   // row makes the demo self-sufficient (the app's DB fallback reads this tier).
   // The second owner still needs the `demo-mode` Unleash flag to be routed to this
   // schema in the first place — only the running app can evaluate that.
-  const realOwners = OWNER2 ? [OWNER, OWNER2] : [OWNER];
+  // Tester accounts (issue #2037) are included: they are real Clerk accounts and need the same
+  // tier row to enter the demo's plugins.
+  const realOwners = REAL_USERS;
   for (const uid of realOwners) {
     await c.query(
       `INSERT INTO unlock_verification_submissions
@@ -127,7 +153,7 @@ async function seedUnlock(c) {
       [uid, `https://quora.com/profile/demo-${uid}`, `quora.com/profile/demo-${uid}`, ADMIN],
     );
   }
-  console.log(`  ✓ unlock (approved_full for ${realOwners.length} demo owner${realOwners.length > 1 ? 's' : ''})`);
+  console.log(`  ✓ unlock (approved_full for ${realOwners.length} real demo account${realOwners.length > 1 ? 's' : ''})`);
 }
 
 async function seedServiceCredits(c) {
@@ -205,6 +231,18 @@ async function seedServiceCredits(c) {
        VALUES ($1, $2, $3, 40, 'completed', $4, NOW())
        ON CONFLICT (id) DO NOTHING`,
       [xfer2, OWNER, OWNER2, `demo-transfer-${OWNER}-${OWNER2}`],
+    );
+  }
+
+  // Tester accounts (issue #2037): a wallet each, so credit-bearing script steps (send, escrow,
+  // Level-Up deposit) work for them without an admin grant first.
+  for (const tester of [TESTER_ADMIN, TESTER_MEMBER].filter(Boolean)) {
+    await c.query(
+      `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
+       VALUES ($1, 300, 0, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         available_balance = EXCLUDED.available_balance, updated_at = NOW()`,
+      [tester],
     );
   }
 
@@ -545,6 +583,30 @@ async function seedDirectory(c) {
     );
   }
 
+  // Tester accounts (issue #2037): a profile each, keyed per id like the second owner's, so the
+  // tester shows up with a readable name everywhere a member name is rendered.
+  for (const tester of TESTER_PROFILES) {
+    await c.query(
+      `INSERT INTO directory_profiles
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, 'United States', true, 'self')
+       ON CONFLICT (id) DO UPDATE SET
+         claimed_by_user_id = EXCLUDED.claimed_by_user_id,
+         first_name = EXCLUDED.first_name,
+         last_name = EXCLUDED.last_name,
+         headline = EXCLUDED.headline,
+         bio = EXCLUDED.bio,
+         updated_at = NOW()`,
+      [sha256id('dir-profile', tester.id), tester.id, tester.firstName, tester.lastName, tester.headline, tester.bio],
+    );
+    await c.query(
+      `INSERT INTO directory_user_extension (user_id, updated_at)
+       VALUES ($1, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()`,
+      [tester.id],
+    );
+  }
+
   console.log('  ✓ directory');
 }
 
@@ -624,17 +686,16 @@ async function seedTrust(c) {
   // createdBy? }) that buildTrustEvidence emits and every renderer reads — a `summary` string is the
   // human-readable line and `createdAt` is an ISO timestamp. Writing the old { type, date, source }
   // shape left `summary`/`createdAt` undefined, which rendered a raw type slug plus "Invalid Date".
-  // trust_status must be one of the real statuses (unverified | verified | flagged) — 'peer_verified'
-  // is not a valid status. These rows are a placeholder for a first raw read; the snapshot route and
-  // the self read recompute them from real seeded activity.
+  // These rows are a placeholder for a first raw read; the snapshot route and the self read
+  // recompute them from real seeded activity. There is no status column: the platform does not vet
+  // members, so a seeded 'verified' row would have been asserting something the product never does.
   await c.query(
     `INSERT INTO trust_user_extension
-     (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
-     VALUES ($1, 'verified',
+     (user_id, trust_evidence, updated_at)
+     VALUES ($1,
        '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-       'public', NOW())
+       NOW())
      ON CONFLICT (user_id) DO UPDATE SET
-       trust_status = EXCLUDED.trust_status,
        trust_evidence = EXCLUDED.trust_evidence,
        updated_at = NOW()`,
     [OWNER],
@@ -643,12 +704,11 @@ async function seedTrust(c) {
   if (OWNER2) {
     await c.query(
       `INSERT INTO trust_user_extension
-       (user_id, trust_status, trust_evidence, trust_visibility, updated_at)
-       VALUES ($1, 'verified',
+       (user_id, trust_evidence, updated_at)
+       VALUES ($1,
          '[{"type":"engagement-lighthouse-matches","summary":"Accepted 1 LightHouse match","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-         'public', NOW())
+         NOW())
        ON CONFLICT (user_id) DO UPDATE SET
-         trust_status = EXCLUDED.trust_status,
          trust_evidence = EXCLUDED.trust_evidence,
          updated_at = NOW()`,
       [OWNER2],
@@ -1010,7 +1070,7 @@ async function seedSocketRelay(c) {
     // owner+idempotency_key), so each can browse and fulfill the other's request.
     const openRelay = [
       [sha256id('sr-open-req', OWNER), OWNER, 'demo-sr-open-owner', 'Need a hand assembling furniture', 'Flat-pack wardrobe — could use a second pair of hands for an hour.'],
-      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community centre', 'Looking for someone headed downtown on Saturday morning.'],
+      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community center', 'Looking for someone headed downtown on Saturday morning.'],
     ];
     for (const [id, uid, idem, title, details] of openRelay) {
       await c.query(
@@ -1053,7 +1113,7 @@ async function seedWhatWorks(c) {
       slug: 'noise-verbal-harassment', emoji: '🎧', title: 'Noise & Verbal Harassment',
       context: 'Slurs through the wall, street harassment, or constant noise meant to wear you down.',
       products: [
-        { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise cancelling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
+        { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise canceling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
         { emoji: '🔇', name: 'Loop Quiet 2', kind: 'Reusable ear plugs', note: 'Discreet and comfortable enough to sleep in. Takes the edge off without total silence.', verified: 4 },
         { emoji: '🎵', name: 'JLab Go Air Pop', kind: 'Budget ANC earbuds', note: 'Cheap, pocketable, and good enough to get me through a shift.', verified: 3 },
       ],
@@ -1239,6 +1299,8 @@ async function main() {
   if (OWNER2) {
     console.log(`Two-sided counterparty (DEMO_SECOND_OWNER_ID): ${OWNER2}`);
   }
+  if (TESTER_ADMIN) console.log(`Tester admin account (DEMO_TESTER_ADMIN_ID): ${TESTER_ADMIN}`);
+  if (TESTER_MEMBER) console.log(`Tester member account (DEMO_TESTER_MEMBER_ID): ${TESTER_MEMBER}`);
 
   try {
     await client.query('BEGIN');
@@ -1274,6 +1336,13 @@ async function main() {
       console.log(
         `Second owner ${OWNER2} wired as the two-sided counterparty. ` +
         `Reminder: target the \`demo-mode\` Unleash flag at ${OWNER2} so the app routes them to the demo schema.`,
+      );
+    }
+    for (const tester of TESTER_PROFILES) {
+      console.log(
+        `Tester account ${tester.id} seeded (${tester.headline}). ` +
+        `Reminder: target the \`demo-mode\` Unleash flag at this id` +
+        (tester.id === TESTER_ADMIN ? ', and set role=admin on it in the Clerk dashboard (the seed cannot set the role).' : '.'),
       );
     }
   } catch (err) {

@@ -17,6 +17,8 @@
 
 ---
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - Mark each surface checkbox as **✅ pass**, **❌ fail**, or **⛔ blocked**.
@@ -247,10 +249,11 @@ Result: web ☐
 **Precondition:** Seeded member is signed in and viewing account/deletion settings (wherever the platform surfaces the deletion flow).
 
 **Steps:**
-1. Navigate to the account deletion initiation screen.
-2. Look for a notice about ServiceCredits.
+1. Navigate to `/account/data` and read the "Delete Entire Account" card (desktop and the phone-width layout).
+2. Open the delete confirmation dialog and read the "What will happen" list.
+3. (If safe on a throwaway account) submit and read the "Deletion queued" screen.
 
-**Expected:** A user-visible notice states that a 7-day reclaim window applies after a full account deletion request and that any remaining credits will be returned to treasury after that window — not withdrawn externally. The notice does not say credits are burned.
+**Expected (shipped 2026-08-05):** Every one of those copy sites states the concrete policy — credits are **held for 7 days** after the request, then **returned to the community treasury**, **never withdrawable externally**, and a return **waits for any active escrow to resolve**. No site says "settled via the standard process" anymore, and none says credits are burned or destroyed. There is no personalized escrow-status readout on this surface — the escrow rule is standing copy, which is correct, not a bug.
 
 Result: web ☐
 
@@ -286,6 +289,30 @@ Result: web ☐
 **Expected:** The refresh icon spins while loading (web) or the pull-to-refresh spinner shows (android), the wallet re-pulls from the server, and after step 3 the new balance appears without closing and reopening the app. Refreshing never clears the current screen to the full-screen loading state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/service-credits`.
+
+Result: web ☐
+
+---
+
+### SC-R1 — Record a send as an ongoing arrangement
+
+**Role:** member
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** Signed in with enough credits to send, and a recipient you have no recurring arrangement with.
+
+**Steps:**
+1. Open the Send panel, enter the recipient's username, an amount, and send.
+2. After "Credits sent successfully!" appears, look just below it.
+3. Click "Is this ongoing?", pick a cadence, leave the currency on ServiceCredits, enter a value, and record it.
+4. Send again to the same member and look below the success line.
+5. Open `/apps/recurring-activity` as the sender, then as the recipient.
+
+**Expected:**
+- The prompt appears only after a successful send — not before sending, and not after a failed one.
+- It names the member the server resolved, even though the box was filled in with a username and has since cleared.
+- After recording, it is replaced by "Recorded — waiting for … to confirm it." with a link to the Recurring Activity hub.
+- On the second send the prompt does not appear at all — an arrangement with that member is already on the books.
+- The sender sees a pending row marked "Recorded from ServiceCredits"; the recipient sees it awaiting confirmation. The transfer itself is unchanged — the balance moved exactly as before, and nothing about recording an arrangement touches it.
 
 Result: web ☐
 
@@ -385,7 +412,7 @@ Result: web ☐
 6. Now set the limit back to 0 (revoke).
 7. Confirm the read-back shows 0.
 
-**Expected:** Set succeeds. Read-back shows the override value. Setting to 0 revokes the limit. The read-back also shows `frozen` status (true or false depending on the member's state) and confirms no behavioural score is shown.
+**Expected:** Set succeeds. Read-back shows the override value. Setting to 0 revokes the limit. The read-back also shows `frozen` status (true or false depending on the member's state) and confirms no behavioral score is shown.
 
 Result: web ☐
 
@@ -536,6 +563,15 @@ Result: web ☐
 **Expected:** The server returns 400 or 403. No mint is applied.
 
 Result: web ☐
+
+---
+
+### Account deletion and the ledger
+
+**Expected:** Deleting the account reclaims and tombstones the wallet (existing flow) and removes
+the member's credit-limit settings row. Ledger history — transfers, escrow holds, disputes and
+their adjustments, governance and treasury events — is retained: past movements stay explainable
+after the account is gone.
 
 ---
 

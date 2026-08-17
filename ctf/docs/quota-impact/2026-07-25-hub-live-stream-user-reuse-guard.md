@@ -3,7 +3,7 @@
 ## Summary
 
 Code-review fix (#1872) to the Commons (Survivor Hub home) live layer,
-`ctf/packages/web/lib/hub/live-stream.ts`. `StreamChat.getInstance(apiKey)` returns a singleton per
+`ctf/packages/web/lib/commons/live-stream.ts`. `StreamChat.getInstance(apiKey)` returns a singleton per
 API key, so a prior connection (after an account switch or a reconnect) could still be authenticated
 as a different user; calling `connectUser` again on that already-connected singleton could fail or
 operate as the wrong user. The connect path now guards on `client.userID`: it disconnects a stale

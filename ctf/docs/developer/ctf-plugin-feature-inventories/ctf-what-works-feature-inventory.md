@@ -113,7 +113,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 - Anonymity: `suggested_by` is stored for moderation/abuse control only and is excluded from every
   reader and admin projection. No survivor identity is rendered anywhere in the plugin. The
   `getProductById` lookup selects an explicit column list that omits `suggested_by`/`reviewed_by`, so
-  those identity fields are never present on the returned object (defence in depth).
+  those identity fields are never present on the returned object (defense in depth).
 - Audit: every command emits one structured audit line via `logWhatWorksAudit`
   (`lib/what-works/audit.ts`) on its success path — reads (`what-works.list.read`,
   `what-works.public.read`, `what-works.problems.list`, the two admin list reads), mutations
@@ -161,6 +161,12 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-08-02: **Deletion burn-down batch 1: WhatWorks gains its first deletion-registry entry.** The
+  plugin had none at all, while its deletion contract promised `DELETE FROM what_works_endorsements
+  WHERE user_id = X` — a promise without an executor. The registry now deletes a member's
+  endorsements with their account and retains the curated problem/tool lists as community content
+  (their `suggested_by`/`reviewed_by` columns are review audit). Caught by the deletion-coverage gate
+  added in #2056. Contract updated to record that the promise is now executed.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

@@ -40,7 +40,7 @@ export type ChatMessageKind = 'announcement' | 'question' | 'community';
 
 export type ChatMessage = {
   id: string;
-  from: 'hub' | 'user';
+  from: 'commons' | 'user';
   text: string;
   time: string;
   // Which feed channel this message came from (Hub messages only). Drives the official

@@ -6,6 +6,7 @@ import type { MutualTimeMeetingPlugin } from './constants';
 const MEETING_PLUGIN_NAMES: Record<MutualTimeMeetingPlugin, string> = {
   chyme: 'Chyme',
   'peer-programming': 'Peer Programming',
+  beacon: 'Beacon',
 };
 
 export function meetingPluginName(plugin: MutualTimeMeetingPlugin): string {

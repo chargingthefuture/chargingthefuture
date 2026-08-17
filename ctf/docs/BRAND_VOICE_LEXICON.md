@@ -85,6 +85,7 @@ This document is the canonical source of truth for brand language across:
 - a plugin's one-to-one transaction chat -> Direct Line (for example LightHouse Direct Line)
 - punch list -> remaining work (or task list)
 - console (as the name of an operator/admin screen) -> dashboard
+- target (when it means a goal, quota, or projected figure) -> goal, number, or the figure itself
 
 ## Prohibited Patterns
 
@@ -100,6 +101,12 @@ This document is the canonical source of truth for brand language across:
   and CSS class names). Exempt: the JavaScript `console.*` logging API, the literal `console`
   service in the Formance stack, and third-party product names that are actually called a console
   (for example the Neon Console). Enforced in chat by `.claude/hooks/check-no-pleasantries.mjs`.
+- Do not use "target" to mean a goal, quota, or projected figure. In this project's vocabulary
+  "target" means a person subjected to Specterati harassment, and the second use makes copy
+  ambiguous for exactly the readers most likely to encounter it. Say "goal", "number", or name the
+  figure directly ("the 5 million", "all 650 skills"). The word stays correct when it refers to the
+  person, and in verb form ("targeting"). Applies to docs, product copy, posts, PR/commit text, and
+  inventories.
 - Do not frame credits as money (see `ctf/docs/DISCLAIMER.md`, the statement of record).
   ServiceCredits and every in-app credit are a non-fiat internal credits unit: never describe them
   as money, cash, currency, a payment, funds, or anything redeemable/withdrawable for fiat value.
@@ -108,23 +115,49 @@ This document is the canonical source of truth for brand language across:
   "never redeemable for cash"). Real fiat amounts unrelated to credits — a LightHouse listing's
   actual rent and its currency, Contributions' confirmed USD donations — are real money and are
   described as such. Any money-framing of credits anywhere in the repo is an error, not a claim.
+- Do not state GDP in US dollars anywhere in the app except the Workforce overview's Skills
+  Economy Summary card (owner directive, 2026-08-16). That card is the single allowed USD GDP
+  reference, and only as an explicitly speculative baseline — its copy must keep saying the figures
+  are speculative, not actuals, and that the Skills Economy has no intention of forming a nation
+  state. The GDP plugin's Community Value Index stays a unitless index, never a dollar figure.
 
 ## Canonical Capability Names (Public Surfaces)
 
-- LightHouse
-- TrustTransport
-- Workforce Recruiter
-- SupportMatch
-- Directory
-- SocketRelay
-- CompareNotes
+This list matches the shipped plugin registry
+(`ctf/packages/web/lib/plugins/repository.ts`) — the registry's `name` field is the
+member-facing name.
+
+- Beacon
+- Bug Reporting
 - Chyme
-- LostMail
+- ClickLog
+- Contributions
+- Directory
+- Foundation
+- GDP
+- Knowledge Library
+- LevelUp
+- LightHouse
+- Mood
 - PeerProgramming
+- Recurring Activity
 - ServiceCredits
 - SkillsHunt
+- Skills Taxonomy
+- SocketRelay
+- Trust
+- TrustTransport
+- Unlock
+- WhatWorks
+- Workforce
 
-When these names are updated, change this lexicon first, then update all copy surfaces.
+Admin-only (not member-visible, kept here for internal copy): Weekly Performance, Mutual Time.
+
+Retired names — do not use in new copy: SupportMatch, CompareNotes, LostMail (never shipped in
+v3), "Workforce Recruiter" (the shipped name is Workforce).
+
+When these names are updated, change this lexicon and the registry together, then update all copy
+surfaces.
 
 ## Plugin Name Joining Convention
 

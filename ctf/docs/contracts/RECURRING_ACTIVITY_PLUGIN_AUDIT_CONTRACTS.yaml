@@ -108,3 +108,24 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: recurring-activity
+    command: recurring-activity.admin.review.read
+    commandVersion: 1.0.0
+    purpose: fraud_pattern_review
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - recurring_activity_metadata
+    targetContext:
+      actorUserId: user_identifier
+      reviewedArrangementCount: count
+      flaggedPatternCounts: counts_by_pattern
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

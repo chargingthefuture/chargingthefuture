@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import type { ClickLogIncident } from "../../lib/click-log/types";
+import { NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
 import { deriveClickLogStats, getClickLogTokens } from "./click-log-shared";
 import { ClickLogLogPanel } from "./click-log-log-panel";
@@ -12,8 +13,80 @@ import { ClickLogLoading } from "./click-log-loading";
 import { AlertTriangle } from "lucide-react";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { useOwnerShare } from "./click-log-use-owner-share";
+import { useIncidentEdit } from "./click-log-use-incident-edit";
 
 type Geo = { latitude?: number; longitude?: number };
+
+// The geolocation failure copy. On iPhone, location commonly fails even when Safari's per-site
+// toggle says Allow — the OS-level Location Services for Safari must also be on — so name that
+// path for a denied permission. Module-level to keep the shell under the function-length limit.
+function geoErrorMessage(err: GeolocationPositionError): string {
+  if (err.code === err.PERMISSION_DENIED) {
+    return "Location is blocked. On iPhone: Settings → Privacy & Security → Location Services → turn it on and set Safari Websites to “While Using the App”, then reload and try again.";
+  }
+  if (err.code === err.TIMEOUT) {
+    return "Location timed out — try again.";
+  }
+  return "Your location is unavailable right now — try again, ideally with Wi-Fi on.";
+}
+
+// Throw the server's structured { error } message (or the fallback) on a failed response.
+// Module-level to keep the shell under the function-length limit.
+async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? fallback);
+  }
+}
+
+// Build the create-incident request body. Unpicked tags are omitted entirely (the API treats
+// absent as untagged), and the suggestion fields ride along only with the "Not listed" scheme
+// (the API rejects them otherwise). Module-level so postIncident stays under the complexity limit.
+function buildCreateBody(args: {
+  metadata: Record<string, unknown>;
+  sharedWithOwner: boolean;
+  problemTags: string[];
+  schemeTags: string[];
+  schemeSuggestion: string;
+  schemeQuoraUrl: string;
+}): Record<string, unknown> {
+  const notListed = args.schemeTags.includes(NOT_LISTED_SCHEME_SLUG);
+  return {
+    metadata: args.metadata,
+    sharedWithOwner: args.sharedWithOwner,
+    ...(args.problemTags.length > 0 ? { problemTags: args.problemTags } : {}),
+    ...(args.schemeTags.length > 0 ? { schemeTags: args.schemeTags } : {}),
+    ...(notListed && args.schemeSuggestion.trim() ? { schemeSuggestion: args.schemeSuggestion.trim() } : {}),
+    ...(notListed && args.schemeQuoraUrl.trim() ? { schemeQuoraUrl: args.schemeQuoraUrl.trim() } : {}),
+  };
+}
+
+// Global share default. Opt-in and member-controlled; a new incident starts from this setting
+// and can be overridden per incident in the log form or the history list. Module-level to keep
+// ClickLogShell under the function-length limit.
+function ShareDefaultToggle({
+  checked,
+  tokens,
+  onChange,
+}: {
+  checked: boolean;
+  tokens: ReturnType<typeof getClickLogTokens>;
+  onChange: (next: boolean) => void;
+}) {
+  const t = tokens;
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 24, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ accentColor: t.ACCENT }}
+      />
+      Share new incidents with the owner by default (only trend data — never your notes)
+    </label>
+  );
+}
 
 export function ClickLogShell() {
   const [loading, setLoading] = useState(true);
@@ -23,6 +96,14 @@ export function ClickLogShell() {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [note, setNote] = useState("");
+  // Optional tags for the incident being logged ([] = untagged). Slugs from lib/click-log/tags.
+  const [problemTags, setProblemTags] = useState<string[]>([]);
+  const [schemeTags, setSchemeTags] = useState<string[]>([]);
+  // "Not listed" scheme-suggestion state. canSuggestScheme comes from GET /api/click-log
+  // (Weavers of the Commons badge holders only); when false the option is hidden entirely.
+  const [canSuggestScheme, setCanSuggestScheme] = useState(false);
+  const [schemeSuggestion, setSchemeSuggestion] = useState("");
+  const [schemeQuoraUrl, setSchemeQuoraUrl] = useState("");
   const [geo, setGeo] = useState<Geo>({});
   const [geoStatus, setGeoStatus] = useState<"idle" | "locating" | "error">("idle");
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -36,15 +117,26 @@ export function ClickLogShell() {
     try {
       const res = await fetch("/api/click-log");
       if (!res.ok) throw new Error("Failed to fetch incidents");
-      const data = (await res.json()) as { incidents: ClickLogIncident[]; count: number };
+      const data = (await res.json()) as {
+        incidents: ClickLogIncident[];
+        count: number;
+        canSuggestScheme?: boolean;
+      };
       setIncidents(data.incidents);
       setTotalCount(typeof data.count === "number" ? data.count : null);
+      setCanSuggestScheme(data.canSuggestScheme === true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch incidents");
     } finally {
       if (initial) setLoading(false);
     }
   }
+
+  // Owner-share consent (global default + per-incident choice) — see click-log-use-owner-share.
+  const share = useOwnerShare({ onError: setError, onBusy: setBusy, refresh: fetchIncidents });
+  // Inline per-incident edit (note + tags; date and location immutable) — see
+  // click-log-use-incident-edit.
+  const edit = useIncidentEdit({ onError: setError, onBusy: setBusy, refresh: fetchIncidents });
 
   useEffect(() => {
     void fetchIncidents(true);
@@ -71,16 +163,7 @@ export function ClickLogShell() {
       },
       (err) => {
         setGeo({});
-        // Surface the specific reason. On iPhone, location commonly fails even when
-        // Safari's per-site toggle says Allow — the OS-level Location Services for
-        // Safari must also be on — so name that path for a denied permission.
-        const message =
-          err.code === err.PERMISSION_DENIED
-            ? "Location is blocked. On iPhone: Settings → Privacy & Security → Location Services → turn it on and set Safari Websites to “While Using the App”, then reload and try again."
-            : err.code === err.TIMEOUT
-              ? "Location timed out — try again."
-              : "Your location is unavailable right now — try again, ideally with Wi-Fi on.";
-        setGeoError(message);
+        setGeoError(geoErrorMessage(err));
         setGeoStatus("error");
       },
       // High accuracy (GPS) is slow and flaky on mobile and an incident log does not
@@ -96,17 +179,28 @@ export function ClickLogShell() {
       const res = await fetch("/api/click-log", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ metadata }),
+        body: JSON.stringify(
+          buildCreateBody({
+            metadata,
+            sharedWithOwner: share.formShare,
+            problemTags,
+            schemeTags,
+            schemeSuggestion,
+            schemeQuoraUrl,
+          }),
+        ),
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to log incident");
-      }
+      await throwIfNotOk(res, "Failed to log incident");
       setShowForm(false);
       setNote("");
+      setProblemTags([]);
+      setSchemeTags([]);
+      setSchemeSuggestion("");
+      setSchemeQuoraUrl("");
       setGeo({});
       setGeoStatus("idle");
       setGeoError(null);
+      share.setFormShare(share.shareDefault);
       flashLogged();
       await fetchIncidents();
     } catch (e) {
@@ -122,10 +216,7 @@ export function ClickLogShell() {
     setError(null);
     try {
       const res = await fetch(`/api/click-log/${id}`, { method: "DELETE", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to delete incident");
-      }
+      await throwIfNotOk(res, "Failed to delete incident");
       await fetchIncidents();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete incident");
@@ -162,15 +253,43 @@ export function ClickLogShell() {
         locationAdded={typeof geo.latitude === "number"}
         geoStatus={geoStatus}
         geoError={geoError}
+        shareWithOwner={share.formShare}
+        problemTags={problemTags}
+        schemeTags={schemeTags}
+        schemeSuggestion={{
+          canSuggestScheme,
+          suggestion: schemeSuggestion,
+          quoraUrl: schemeQuoraUrl,
+          onSuggestionChange: setSchemeSuggestion,
+          onQuoraUrlChange: setSchemeQuoraUrl,
+        }}
+        onShareChange={share.setFormShare}
+        onProblemTagsChange={setProblemTags}
+        onSchemeTagsChange={setSchemeTags}
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
         onSubmit={() => void postIncident({ ...geo, notes: note })}
-        onCancel={() => { setShowForm(false); setNote(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); }}
+        onCancel={() => { setShowForm(false); setNote(""); setProblemTags([]); setSchemeTags([]); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
+      />
+
+      <ShareDefaultToggle
+        checked={share.shareDefault}
+        tokens={t}
+        onChange={(next) => void share.setDefault(next)}
       />
 
       {incidents.length > 0 && (
-        <ClickLogIncidentList incidents={incidents} onDelete={(id) => void handleDelete(id)} />
+        <ClickLogIncidentList
+          incidents={incidents}
+          editingId={edit.editingId}
+          editBusy={busy}
+          onDelete={(id) => void handleDelete(id)}
+          onToggleShare={(id, next) => void share.toggleIncident(id, next)}
+          onEdit={edit.start}
+          onSaveEdit={(id, fields) => void edit.save(id, fields)}
+          onCancelEdit={edit.cancel}
+        />
       )}
     </>
   );

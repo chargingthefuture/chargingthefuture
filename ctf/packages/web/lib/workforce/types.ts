@@ -22,6 +22,8 @@ export type WorkforceDashboard = {
   maxRecruitable: number;
   sectorsTotal: number; // active Skills Taxonomy sectors
   occupationsTotal: number; // active Skills Taxonomy job titles
+  skillsListedTotal: number; // distinct active skills at least one active Directory member has listed
+  skillsCatalogTotal: number; // ALL active Skills Taxonomy skills — live count, moves as skills are added/removed
   generatedAtIso: string;
 };
 
@@ -30,7 +32,6 @@ export type WorkforceProfile = {
   occupationId: string | null;
   occupationName: string | null;
   skillLevel: string;
-  region: string | null;
   recruitedState: boolean;
   recruitedResolvedAtIso: string | null;
   availabilityPreferences: Record<string, unknown>;

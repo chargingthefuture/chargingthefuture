@@ -6,6 +6,7 @@ import {
   setPeerProgrammingSingleOpenCohort,
 } from 'lib/peer-programming/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Admin read + write for the single-standing-cohort mode toggle. The effective mode resolves with
 // precedence: persisted admin setting (if set) → env flag PEER_PROGRAMMING_SINGLE_OPEN_COHORT →
@@ -48,8 +49,8 @@ export async function POST(request: Request) {
   let body: ToggleBody;
   try {
     body = (await request.json()) as ToggleBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   // enabled is true / false = explicit admin choice; null OR a missing key (undefined) both mean

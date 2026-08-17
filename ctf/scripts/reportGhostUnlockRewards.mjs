@@ -84,7 +84,7 @@ main().catch(async (error) => {
   try {
     await pool.end();
   } catch {
-    // ignore
+    // no-trace: the pool is closing during a failure exit and nothing depends on it
   }
   process.exitCode = 1;
 });

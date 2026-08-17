@@ -42,7 +42,7 @@
    Type has drifted: titles 700(web)/800(mobile); buttons 13/15px; hero number 56/48px; letter-spacing
    `em`(web) vs raw points(mobile).
 8. **Small data mismatches:** `LightHouse`(web)/`Lighthouse`(mobile) casing; web emoji map missing
-   ~8 slugs (grey 🔌 fallback) + GDP keyed only under `gross-domestic-product`; web accent table
+   ~8 slugs (gray 🔌 fallback) + GDP keyed only under `gross-domestic-product`; web accent table
    missing `beacon`; mobile has no `control-radius` (10px) so controls are 14px (too round vs web).
 
 ## 3. Execution checklist (resumable — do the first unchecked item)

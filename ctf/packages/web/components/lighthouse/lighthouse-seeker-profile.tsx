@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { CountrySelect } from "@/components/shared/location-select";
 import { getLighthouseTokens, type Profile } from "./shared";
+import { failureText } from 'lib/errors/client-failure';
 
 // Seeker self-service setup. A member fills in their housing needs here so they can request a stay
 // on a listing. Saving upserts the shared lighthouse_profiles row via POST /api/lighthouse/profile.
@@ -54,6 +55,37 @@ function dateInputValue(iso: string | null | undefined): string {
   return match ? match[0] : "";
 }
 
+// Maps a saved profile into the editable form, normalizing missing values to empty strings.
+function profileToForm(p: Profile): SeekerForm {
+  return {
+    housingNeeds: p.housingNeeds ?? "",
+    desiredCountry: p.desiredCountry ?? "",
+    desiredMoveInDateIso: dateInputValue(p.desiredMoveInDateIso),
+    budgetMin: typeof p.budgetMin === "number" ? String(p.budgetMin) : "",
+    budgetMax: typeof p.budgetMax === "number" ? String(p.budgetMax) : "",
+    bio: p.bio ?? "",
+    phoneNumber: p.phoneNumber ?? "",
+    signalUrl: p.signalUrl ?? "",
+    isActive: p.isActive ?? true,
+  };
+}
+
+// Builds the POST body for saving a seeker profile, normalizing empty inputs to null.
+function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budgetMax: number | null) {
+  return {
+    profileType: "seeker",
+    housingNeeds: form.housingNeeds.trim() || null,
+    desiredCountry: form.desiredCountry.trim() || null,
+    desiredMoveInDateIso: form.desiredMoveInDateIso.trim() || null,
+    budgetMin,
+    budgetMax,
+    bio: form.bio.trim() || null,
+    phoneNumber: form.phoneNumber.trim() || null,
+    signalUrl: form.signalUrl.trim() || null,
+    isActive: form.isActive,
+  };
+}
+
 export function LighthouseSeekerProfile() {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -74,17 +106,7 @@ export function LighthouseSeekerProfile() {
           const p = data.profile;
           if (p) {
             setExistingType(p.profileType === "host" ? "host" : "seeker");
-            setForm({
-              housingNeeds: p.housingNeeds ?? "",
-              desiredCountry: p.desiredCountry ?? "",
-              desiredMoveInDateIso: dateInputValue(p.desiredMoveInDateIso),
-              budgetMin: typeof p.budgetMin === "number" ? String(p.budgetMin) : "",
-              budgetMax: typeof p.budgetMax === "number" ? String(p.budgetMax) : "",
-              bio: p.bio ?? "",
-              phoneNumber: p.phoneNumber ?? "",
-              signalUrl: p.signalUrl ?? "",
-              isActive: p.isActive ?? true,
-            });
+            setForm(profileToForm(p));
           }
         }
         // A 404 (no profile yet) is expected for a first-time seeker; the empty form stands.
@@ -115,18 +137,7 @@ export function LighthouseSeekerProfile() {
       const res = await fetch("/api/lighthouse/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({
-          profileType: "seeker",
-          housingNeeds: form.housingNeeds.trim() || null,
-          desiredCountry: form.desiredCountry.trim() || null,
-          desiredMoveInDateIso: form.desiredMoveInDateIso.trim() || null,
-          budgetMin,
-          budgetMax,
-          bio: form.bio.trim() || null,
-          phoneNumber: form.phoneNumber.trim() || null,
-          signalUrl: form.signalUrl.trim() || null,
-          isActive: form.isActive,
-        }),
+        body: JSON.stringify(buildSeekerProfileBody(form, budgetMin, budgetMax)),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string; message?: string };
       if (!res.ok || !data.ok) {
@@ -134,8 +145,8 @@ export function LighthouseSeekerProfile() {
         return;
       }
       setSaved(true);
-    } catch {
-      setError("Could not save your details. Please try again.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'submit', fallback: "Could not save your details. Please try again.", audience: 'member' }));
     } finally {
       setSubmitting(false);
     }

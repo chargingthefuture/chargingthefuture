@@ -15,6 +15,7 @@ import {
 import { logRecurringActivityAuditEvent } from 'lib/recurring-activity/audit';
 import {
   RECURRING_ACTIVITY_CADENCES,
+  RECURRING_ACTIVITY_ORIGIN_PLUGINS,
   RECURRING_ACTIVITY_SECTORS,
   RECURRING_ACTIVITY_VISIBILITY_VALUES,
   type RecurringActivity,
@@ -43,6 +44,119 @@ async function withCounterpartyNames(activities: RecurringActivity[], readerUser
     const otherId = a.ownerUserId === readerUserId ? a.counterpartyUserId : a.ownerUserId;
     return { ...a, counterpartyName: names.get(otherId) ?? null };
   });
+}
+
+// A validation failure carries the audit `reason` and the member-facing `message` so the caller can
+// record the deny audit row and return the 400 in one place.
+type CreateDeny = { reason: string; message: string };
+
+type ValidatedCreateBody = {
+  counterpartyUserId: string;
+  sector: RecurringActivitySector;
+  currencyCode: string;
+  cadence: RecurringActivityCadence;
+  visibility: RecurringActivityVisibility | undefined;
+  scValue: number | null | undefined;
+  // Set when the member declared this from inside another app's inline control rather than from the
+  // Recurring Activity plugin's own form. Validated against the known list so a client cannot store an
+  // arbitrary origin — the value decides how GDP recognizes the line.
+  originPlugin: string | undefined;
+};
+
+// scValue is optional; an empty string / null / undefined means "not provided". A present value must
+// parse to a finite number. Returns a discriminated result so the caller keeps narrowing.
+function parseScValue(raw: unknown): { error: CreateDeny } | { data: number | null | undefined } {
+  if (raw === undefined || raw === null || raw === '') {
+    return { data: undefined };
+  }
+  const parsed = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(parsed)) {
+    return { error: { reason: 'invalid_sc_value', message: 'scValue must be a number.' } };
+  }
+  return { data: parsed };
+}
+
+// The app a declaration was made from, when the member used that app's inline prompt instead of the
+// plugin's own form. Absent is fine; an unrecognized value is not, because the value decides how GDP
+// recognizes the line. Its own parser so the body validator stays one decision per field.
+function parseOriginPlugin(raw: unknown): { error: CreateDeny } | { data: string | undefined } {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) {
+    return { data: undefined };
+  }
+  if (!RECURRING_ACTIVITY_ORIGIN_PLUGINS.includes(value)) {
+    return {
+      error: {
+        reason: 'invalid_origin_plugin',
+        message: `originPlugin must be one of: ${RECURRING_ACTIVITY_ORIGIN_PLUGINS.join(', ')}.`,
+      },
+    };
+  }
+  return { data: value };
+}
+
+// The three fixed-vocabulary fields, checked in one place. Each is a plain list membership test, so
+// keeping them together leaves the validator reading as a sequence of steps rather than a wall of ifs.
+function checkEnumFields(body: Record<string, unknown>): CreateDeny | null {
+  if (!RECURRING_ACTIVITY_SECTORS.includes(body.sector as RecurringActivitySector)) {
+    return { reason: 'invalid_sector', message: `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.` };
+  }
+  if (!RECURRING_ACTIVITY_CADENCES.includes(body.cadence as RecurringActivityCadence)) {
+    return { reason: 'invalid_cadence', message: `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.` };
+  }
+  if (
+    body.visibility !== undefined &&
+    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(body.visibility as RecurringActivityVisibility)
+  ) {
+    return {
+      reason: 'invalid_visibility',
+      message: `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`,
+    };
+  }
+  return null;
+}
+
+// Validate the create-activity body. Returns a discriminated result so the caller keeps TypeScript
+// narrowing on the validated fields and records the deny audit row itself on failure.
+function validateCreateBody(body: Record<string, unknown>): { error: CreateDeny } | { data: ValidatedCreateBody } {
+  const counterpartyUserId = typeof body.counterpartyUserId === 'string' ? body.counterpartyUserId.trim() : '';
+  const sector = body.sector;
+  const currencyCode = typeof body.currencyCode === 'string' ? body.currencyCode.trim() : '';
+  const cadence = body.cadence;
+  const visibility = body.visibility;
+
+  if (!counterpartyUserId) {
+    return { error: { reason: 'missing_counterparty', message: 'counterpartyUserId is required.' } };
+  }
+  if (!currencyCode) {
+    return { error: { reason: 'missing_currency', message: 'currencyCode is required.' } };
+  }
+  const enumDeny = checkEnumFields(body);
+  if (enumDeny) {
+    return { error: enumDeny };
+  }
+
+  const scValueResult = parseScValue(body.scValue);
+  if ('error' in scValueResult) {
+    return scValueResult;
+  }
+
+  const originResult = parseOriginPlugin(body.originPlugin);
+  if ('error' in originResult) {
+    return originResult;
+  }
+
+  return {
+    data: {
+      counterpartyUserId,
+      sector: sector as RecurringActivitySector,
+      currencyCode,
+      cadence: cadence as RecurringActivityCadence,
+      visibility: visibility as RecurringActivityVisibility | undefined,
+      scValue: scValueResult.data,
+      originPlugin: originResult.data,
+    },
+  };
 }
 
 // GET /api/recurring-activity — the caller's own ongoing activities (both sides), newest first.
@@ -98,49 +212,22 @@ export async function POST(request: Request) {
     return denyBadRequest('invalid_json', 'Invalid JSON body.');
   }
 
-  const counterpartyUserId = typeof body.counterpartyUserId === 'string' ? body.counterpartyUserId.trim() : '';
-  const sector = body.sector;
-  const currencyCode = typeof body.currencyCode === 'string' ? body.currencyCode.trim() : '';
-  const cadence = body.cadence;
-  const visibility = body.visibility;
-
-  if (!counterpartyUserId) {
-    return denyBadRequest('missing_counterparty', 'counterpartyUserId is required.');
+  const validated = validateCreateBody(body);
+  if ('error' in validated) {
+    return denyBadRequest(validated.error.reason, validated.error.message);
   }
-  if (!RECURRING_ACTIVITY_SECTORS.includes(sector as RecurringActivitySector)) {
-    return denyBadRequest('invalid_sector', `sector must be one of: ${RECURRING_ACTIVITY_SECTORS.join(', ')}.`);
-  }
-  if (!currencyCode) {
-    return denyBadRequest('missing_currency', 'currencyCode is required.');
-  }
-  if (!RECURRING_ACTIVITY_CADENCES.includes(cadence as RecurringActivityCadence)) {
-    return denyBadRequest('invalid_cadence', `cadence must be one of: ${RECURRING_ACTIVITY_CADENCES.join(', ')}.`);
-  }
-  if (
-    visibility !== undefined &&
-    !RECURRING_ACTIVITY_VISIBILITY_VALUES.includes(visibility as RecurringActivityVisibility)
-  ) {
-    return denyBadRequest('invalid_visibility', `visibility must be one of: ${RECURRING_ACTIVITY_VISIBILITY_VALUES.join(', ')}.`);
-  }
-
-  let scValue: number | null | undefined;
-  if (body.scValue !== undefined && body.scValue !== null && body.scValue !== '') {
-    const parsed = typeof body.scValue === 'number' ? body.scValue : Number(body.scValue);
-    if (!Number.isFinite(parsed)) {
-      return denyBadRequest('invalid_sc_value', 'scValue must be a number.');
-    }
-    scValue = parsed;
-  }
+  const { counterpartyUserId, sector, currencyCode, cadence, visibility, scValue, originPlugin } = validated.data;
 
   try {
     const activity = await createRecurringActivity({
       ownerUserId: userId,
       counterpartyUserId,
-      sector: sector as RecurringActivitySector,
+      sector,
       currencyCode,
-      cadence: cadence as RecurringActivityCadence,
+      cadence,
       scValue,
-      visibility: visibility as RecurringActivityVisibility | undefined,
+      visibility,
+      originPlugin,
     });
     await logRecurringActivityAuditEvent({
       actorUserId: userId,
@@ -155,6 +242,7 @@ export async function POST(request: Request) {
         currencyCode: activity.currencyCode,
         cadence: activity.cadence,
         hasScValue: activity.scValue !== null,
+        originPlugin: activity.originPlugin,
       },
     });
     // Notify the counterparty they were named in a recurring activity to confirm or decline —

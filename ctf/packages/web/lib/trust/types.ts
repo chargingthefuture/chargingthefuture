@@ -1,19 +1,16 @@
 // Trust plugin types for web app
 
-export type TrustStatus = 'unverified' | 'verified' | 'flagged';
-export type TrustVisibility = 'public' | 'private' | 'restricted';
-
-export const TRUST_VISIBILITY_VALUES: readonly TrustVisibility[] = ['public', 'private', 'restricted'];
-
-// Admin-settable trust statuses (the snapshot route never changes status; only an admin can).
-export const TRUST_ADMIN_STATUS_VALUES: readonly TrustStatus[] = ['verified', 'flagged'];
-
 // The coarse, derived metrics computed for one snapshot. Real-data-only: every count comes from
 // actual rows in the upstream plugins' tables. No numeric trust score is ever produced — these are
 // raw counts used to build qualitative evidence, then persisted for audit/freshness.
 export interface TrustSignalMetrics {
-  // Distinct calendar days the member logged in (from login_events).
+  // Distinct calendar days the member logged in, over their whole history (from login_events).
+  // Cumulative and never resets: a gap between sign-ins does not reduce it.
   loginDays: number;
+  // The member's CURRENT run of consecutive sign-in days (UTC), counted back from their most recent
+  // sign-in — but only when that sign-in was today or yesterday. An older last sign-in yields 0, so
+  // this is a "still around" signal rather than a record of the longest run they ever had.
+  loginStreakDays: number;
   // Total recorded login events (from login_events).
   loginEvents: number;
   // Most recent login timestamp, if any (ISO string).
@@ -65,10 +62,34 @@ export interface TrustEvidenceItem {
 
 export interface TrustUserExtension {
   userId: string;
-  trustStatus: TrustStatus;
   trustEvidence: TrustEvidenceItem[];
-  trustVisibility: TrustVisibility;
   updatedAt: string;
+}
+
+// How much of a member's trust panel the viewer is being shown.
+//   full    — every derived evidence item, with its timestamp and supporting detail. The owner and
+//             an admin get this.
+//   summary — headline counts only: no timestamps, no supporting detail, and the per-plugin items
+//             collapsed to a single breadth line. What every other member gets.
+export type TrustDisclosure = 'full' | 'summary';
+
+// One evidence line as a viewer other than the owner sees it. `createdAt` and `details` are optional
+// here because the summary disclosure deliberately carries neither — a peer learns the coarse fact,
+// never the record of when it happened.
+export interface TrustPeerEvidenceItem {
+  type: string;
+  summary: string;
+  details?: string;
+  createdAt?: string;
+}
+
+// The payload `GET /api/trust/user/[userId]` returns. Same shape at both disclosure levels so the
+// widget renders one way; `trustDisclosure` tells the viewer which one they are looking at.
+export interface TrustPeerView {
+  userId: string;
+  trustEvidence: TrustPeerEvidenceItem[];
+  updatedAt: string;
+  trustDisclosure: TrustDisclosure;
 }
 
 export interface TrustSignalSnapshot {

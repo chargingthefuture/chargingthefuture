@@ -90,31 +90,67 @@ export function ProviderDescriptionSettings() {
       {loading ? (
         <div style={{ padding: "16px 0", color: t.MUTED, fontSize: 14 }}>Loading…</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Short description</span>
-            <textarea
-              value={value}
-              onChange={(e) => { setValue(e.target.value); setSaved(false); }}
-              rows={3}
-              placeholder="e.g. I help with resume reviews and mock interviews for tech roles."
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${overLimit ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.12)"}`, color: t.TITLE, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
-            />
-          </label>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button
-              type="button"
-              disabled={saving || overLimit}
-              onClick={() => void save()}
-              style={{ padding: "10px 18px", borderRadius: 10, cursor: saving || overLimit ? "default" : "pointer", background: t.ACCENT, color: "#1a1205", fontSize: 14, fontWeight: 700, border: "none", opacity: saving || overLimit ? 0.6 : 1 }}
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-            {saved ? <span style={{ fontSize: 13, color: t.ACCENT }}>Saved</span> : null}
-            <span style={{ marginLeft: "auto", fontSize: 12, color: overLimit ? "#fca5a5" : t.MUTED }}>{remaining} left</span>
-          </div>
-        </div>
+        <DescriptionEditor
+          value={value}
+          saving={saving}
+          overLimit={overLimit}
+          saved={saved}
+          remaining={remaining}
+          onChangeValue={(next) => { setValue(next); setSaved(false); }}
+          onSave={() => void save()}
+          t={t}
+        />
       )}
+    </div>
+  );
+}
+
+// The editable form: description field, save button, and remaining-character count. Only rendered once
+// the current description has loaded.
+function DescriptionEditor({
+  value,
+  saving,
+  overLimit,
+  saved,
+  remaining,
+  onChangeValue,
+  onSave,
+  t,
+}: {
+  value: string;
+  saving: boolean;
+  overLimit: boolean;
+  saved: boolean;
+  remaining: number;
+  onChangeValue: (next: string) => void;
+  onSave: () => void;
+  t: FoundationTokens;
+}) {
+  const disabled = saving || overLimit;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#D1D5DB" }}>Short description</span>
+        <textarea
+          value={value}
+          onChange={(e) => onChangeValue(e.target.value)}
+          rows={3}
+          placeholder="e.g. I help with resume reviews and mock interviews for tech roles."
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${overLimit ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.12)"}`, color: t.TITLE, fontSize: 14, resize: "vertical", fontFamily: "inherit" }}
+        />
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onSave}
+          style={{ padding: "10px 18px", borderRadius: 10, cursor: disabled ? "default" : "pointer", background: t.ACCENT, color: "#1a1205", fontSize: 14, fontWeight: 700, border: "none", opacity: disabled ? 0.6 : 1 }}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        {saved ? <span style={{ fontSize: 13, color: t.ACCENT }}>Saved</span> : null}
+        <span style={{ marginLeft: "auto", fontSize: 12, color: overLimit ? "#fca5a5" : t.MUTED }}>{remaining} left</span>
+      </div>
     </div>
   );
 }

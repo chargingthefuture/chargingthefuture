@@ -49,7 +49,7 @@ export function UnlockSubmissionView({
           <div style={{ marginBottom: 28 }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: tok.TITLE, marginBottom: 10 }}>Submit your Quora profile URL</div>
             <div style={{ fontSize: 14, color: tok.MUTED, lineHeight: 1.7 }}>
-              To unlock full access to Survivor Hub, submit your Quora profile URL for manual verification. This helps us confirm you are a real person and reduces infiltration risk from bad actors.
+              To unlock full access to Skills Economy, submit your Quora profile URL for manual verification. This helps us confirm you are a real person and reduces infiltration risk from bad actors.
             </div>
           </div>
 

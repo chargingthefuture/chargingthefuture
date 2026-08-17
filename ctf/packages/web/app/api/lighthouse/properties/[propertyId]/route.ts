@@ -10,6 +10,7 @@ import {
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
   params: Promise<{ propertyId: string }>;
@@ -17,103 +18,70 @@ type RouteParams = {
 
 type PropertyBody = Partial<LighthousePropertyInput>;
 
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asStringOr(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
+}
+
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((code): code is string => typeof code === 'string')
+    : null;
+}
+
 function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   return {
-    title: typeof body.title === 'string' ? body.title : '',
-    description: typeof body.description === 'string' ? body.description : '',
-    propertyType: typeof body.propertyType === 'string' ? body.propertyType : null,
-    addressLine: typeof body.addressLine === 'string' ? body.addressLine : null,
-    city: typeof body.city === 'string' ? body.city : null,
-    state: typeof body.state === 'string' ? body.state : null,
-    country: typeof body.country === 'string' ? body.country : null,
-    zipCode: typeof body.zipCode === 'string' ? body.zipCode : null,
-    bedrooms: typeof body.bedrooms === 'number' ? body.bedrooms : null,
-    bathrooms: typeof body.bathrooms === 'number' ? body.bathrooms : null,
-    monthlyRent: typeof body.monthlyRent === 'number' ? body.monthlyRent : null,
-    rentCurrency: typeof body.rentCurrency === 'string' ? body.rentCurrency : null,
-    acceptedCurrencies: Array.isArray(body.acceptedCurrencies)
-      ? body.acceptedCurrencies.filter((code): code is string => typeof code === 'string')
-      : null,
-    availableFromIso: typeof body.availableFromIso === 'string' ? body.availableFromIso : null,
+    title: asStringOr(body.title, ''),
+    description: asStringOr(body.description, ''),
+    propertyType: asString(body.propertyType),
+    addressLine: asString(body.addressLine),
+    city: asString(body.city),
+    state: asString(body.state),
+    country: asString(body.country),
+    zipCode: asString(body.zipCode),
+    bedrooms: asNumber(body.bedrooms),
+    bathrooms: asNumber(body.bathrooms),
+    monthlyRent: asNumber(body.monthlyRent),
+    rentCurrency: asString(body.rentCurrency),
+    acceptedCurrencies: asStringArray(body.acceptedCurrencies),
+    availableFromIso: asString(body.availableFromIso),
     amenities: body.amenities,
     houseRules: body.houseRules,
     photos: body.photos,
-    airbnbProfileUrl: typeof body.airbnbProfileUrl === 'string' ? body.airbnbProfileUrl : null,
-    isActive: typeof body.isActive === 'boolean' ? body.isActive : true,
+    airbnbProfileUrl: asString(body.airbnbProfileUrl),
+    isActive: asBoolean(body.isActive, true),
   };
 }
 
+// Maps a repository error code (thrown as an Error message) to the exact status/body it produced
+// before. Keeping this as a lookup table preserves each response 1:1 while avoiding a long if-chain.
+const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
+  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.', status: 404 },
+  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.', status: 404 },
+  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.', status: 404 },
+  not_owner: { code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
+  policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
+  blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'This listing is not available to you.', status: 403 },
+  duplicate_match: { code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.', status: 409 },
+  'invalid payload': { code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
+};
+
 function lighthouseErrorResponse(error: unknown, fallbackMessage: string) {
   const code = error instanceof Error ? error.message : '';
-
-  if (code === 'profile_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'property_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'match_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'block_not_found') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.blockNotFound, message: 'Lighthouse block not found.' },
-      { status: 404 },
-    );
-  }
-
-  if (code === 'not_owner') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'policy_denied') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'blocked_pair') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'Match blocked by pair policy.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'self_block') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.selfBlock, message: 'Cannot block your own user account.' },
-      { status: 403 },
-    );
-  }
-
-  if (code === 'duplicate_match') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.' },
-      { status: 409 },
-    );
-  }
-
-  if (code === 'invalid payload') {
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.' },
-      { status: 400 },
-    );
+  const mapped = LIGHTHOUSE_ERROR_RESPONSES[code];
+  if (mapped) {
+    return NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status });
   }
 
   return NextResponse.json(
@@ -159,9 +127,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
   let body: PropertyBody;
   try {
     body = (await request.json()) as PropertyBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

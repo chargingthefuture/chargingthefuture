@@ -5,10 +5,10 @@
 - Feature/Change: Two presentation-only changes. (1) The shared `StreamChatPanel` replaces Stream's
   built-in "No chats here yet…" message-list empty state with an on-brand card via a custom
   `EmptyStateIndicator` — a local React component, no Stream call. (2) SocketRelay's Direct Line list
-  now also shows the member's own still-open requests as pending placeholders and hides cancelled/closed
+  now also shows the member's own still-open requests as pending placeholders and hides canceled/closed
   lines; a pending row is not chattable and never opens a Stream channel. No message volume, channel
   count, watch, connection, or API call pattern changes.
-- PR: show pending requests in Direct Line and hide cancelled/closed lines (#1289)
+- PR: show pending requests in Direct Line and hide canceled/closed lines (#1289)
 - Owner: farah
 - Date: 2026-07-01
 

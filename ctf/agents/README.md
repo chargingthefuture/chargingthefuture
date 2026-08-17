@@ -1,7 +1,7 @@
 # Agents Directory
 
 ## Purpose
-Multi-agent review and automation team with 13 agents.
+Multi-agent review and automation team with 14 agent role files.
 
 ## Agent Categories
 - **Orchestration:** `meta-orchestrator.agent.md`

@@ -7,6 +7,28 @@ import type { ShellCurrentUser } from './shell-types';
 import { TrustRightRailCard } from '../shared/trust/TrustRightRailCard';
 import styles from './community-shell.module.css';
 
+// The avatar photo is drawn by writing the URL into a CSS `url("…")` string, so anything that could
+// close that quoted string early would be writing raw CSS into the page. Clerk's own image URLs are
+// plain https links and safe, but the value is checked rather than trusted. Parsing it and using the
+// parser's own output does the escaping: the URL parser percent-encodes quotes, turns backslashes
+// into slashes, and drops control characters, so the result cannot contain a string terminator.
+// (Percent-encoding it again here would corrupt any URL that already contains a %-escape.) Only
+// http(s) is accepted, and the quote/backslash check below is a cheap backstop. Returns null when
+// there is no usable photo, which falls back to the initial monogram.
+function safeImageUrl(rawUrl: string | undefined): string | null {
+  if (!rawUrl) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+  const normalized = parsed.toString();
+  if (normalized.includes('"') || normalized.includes('\\')) return null;
+  return normalized;
+}
+
 type ShellRightRailProps = {
   currentUser: ShellCurrentUser;
   trust: TrustUserExtension;
@@ -22,7 +44,7 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
   // profileAvatar sizing/border-radius/comic-theme border all still apply. Falls back to the initial
   // monogram when there is no photo or the user is signed out.
   const { user } = useUser();
-  const photoUrl = user?.imageUrl;
+  const photoUrl = safeImageUrl(user?.imageUrl);
   const avatar = photoUrl ? (
     <div
       className={styles.profileAvatar}
@@ -38,7 +60,7 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
       <aside className={`${styles.panel} ${styles.rightRail}`}>
         <section className={styles.profileCard}>
           {avatar}
-          <p className={styles.profileName}>Welcome to Survivor Hub</p>
+          <p className={styles.profileName}>Welcome to Skills Economy</p>
           <p className={styles.profileMeta}>Sign in to access full features and connect with your community</p>
           <Link href={signInUrl} className={styles.profileLoginBtn}>Sign In</Link>
         </section>
@@ -49,7 +71,7 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
         </section>
 
         <section>
-          <p className={styles.rightRailSectionTitle}>About Survivor Hub</p>
+          <p className={styles.rightRailSectionTitle}>About Skills Economy</p>
           <p className={styles.sectionDesc}>Not sure where to start? Just say what you need in the chat — housing, work, safety, or someone to talk to — and we&apos;ll point you to the right place.</p>
         </section>
       </aside>
@@ -64,12 +86,8 @@ export function ShellRightRail({ currentUser, trust, isAuthenticated = false, si
             "Welcome, @username" plus the @username meta line below repeated the handle twice. */}
         <p className={styles.profileName}>Welcome back</p>
         <p className={styles.profileMeta}>{currentUser.username ? `@${currentUser.username}` : 'Member'}</p>
-        {/* Per-member claim only: the badge states this member passed admin-reviewed verification.
-            Members who are not (yet) verified get no badge — there is no community-wide
-            verification to fall back on. */}
-        {trust.trustStatus === 'verified' ? (
-          <span className={styles.profileBadge}>Verified member ✓</span>
-        ) : null}
+        {/* No verification badge. The platform does not vet people, so it has nothing to certify;
+            the Trust card below shows what this member has actually done, which is the real claim. */}
       </section>
 
       {/* Trust evidence panel below Welcome card */}

@@ -4,6 +4,7 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { listRoomMessages, sendRoomMessage, validateMessageInput } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
 import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 function parseLimit(url: string): number {
   const queryLimit = new URL(url).searchParams.get('limit');
@@ -94,12 +95,12 @@ export async function POST(request: Request) {
   let body: MessageRequestBody;
   try {
     body = (await request.json()) as MessageRequestBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       {
         ok: false,
         code: CHYME_ERROR_CODE.invalidPayload,
-        message: 'Invalid JSON payload.',
+        message: 'Invalid JSON payload.', reason: failureReason(error),
       },
       { status: 400 },
     );

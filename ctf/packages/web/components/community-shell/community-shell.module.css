@@ -1,6 +1,19 @@
 /* ─── Shell container ─────────────────────────────────────────────────────── */
+/*
+ * The shell is exactly as tall as the part of the screen you can actually see.
+ * `100vh` on a phone means the *large* viewport — the height the page would have
+ * if the browser's address bar were hidden — so the shell was taller than the
+ * visible area and the whole document could scroll by that difference. That is
+ * what produced the awkward double scroll on the signed-out Commons: you scrolled
+ * the message list to its end, the gesture then chained to the document, and only
+ * then did the closing line under the list come into view. `100dvh` (the dynamic
+ * viewport) tracks the visible height, so the document has nothing left to scroll
+ * and the line below the list is always on screen. `100vh` stays first as the
+ * fallback for browsers without `dvh`.
+ */
 .shell {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(circle at 15% 10%, rgba(124, 58, 237, 0.22), transparent 35%),
@@ -22,6 +35,7 @@
 .frame {
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-columns: 72px 240px minmax(520px, 1fr) 280px;
   gap: 0;
@@ -421,6 +435,10 @@
 .chatMessages {
   flex: 1;
   overflow-y: auto;
+  /* Keep the scroll inside the list. Without this, reaching the end of the messages
+     hands the rest of the gesture to the page behind it, which is how the closing
+     line below the list ended up needing a second scroll to reach. */
+  overscroll-behavior: contain;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
@@ -509,7 +527,7 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
-/* Official Survivor Hub announcement card. Emerald treatment + a left accent + a shield "Official"
+/* Official announcement card. Emerald treatment + a left accent + a shield "Official"
    badge so an official post reads as a distinct, must-see message instead of blending into the
    purple peer bubbles or the cyan AI card. Mirrors the comic card's header structure. */
 .announcementCard {
@@ -719,6 +737,68 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Edit / Delete on the member's own reply. Pushed to the end of the meta row so the author and time
+   still read first, and kept as quiet text buttons — they are available, not advertised. */
+.announcementReplyOwnerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.announcementReplyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: transparent;
+  color: var(--ctf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.announcementReplyAction:hover:not(:disabled),
+.announcementReplyAction:focus-visible {
+  color: var(--ctf-text);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.announcementReplyAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.announcementReplyActionDanger:hover:not(:disabled),
+.announcementReplyActionDanger:focus-visible {
+  color: #F87171;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.announcementReplyActionPrimary {
+  color: #34D399;
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.12);
+}
+
+/* The reply swapped for its editor: the same input as the composer, with Cancel/Save under it. */
+.announcementReplyEditor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.announcementReplyEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .announcementReplyAuthor {
@@ -1285,25 +1365,11 @@
   color: var(--ctf-text-shell);
 }
 
-.chatSignInLink {
-  display: inline-block;
-  padding: 12px 24px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #7C3AED 0%, #0EA5E9 100%);
-  color: #fff;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  transition: opacity 0.2s ease;
-  text-align: center;
-}
-
-.chatSignInLink:hover {
-  opacity: 0.9;
-}
-
+/* The signed-out closing line. It is the only child of .chatSuggestions now that the panel's own
+   sign-in button is gone (signing in is offered by the top bar and the right rail), so it takes the
+   full row width and needs no top margin — that margin only existed to separate it from the button. */
 .chatSuggestionsInfo {
-  margin-top: 12px;
+  flex: 1 1 100%;
   text-align: center;
   font-size: 13px;
   color: var(--ctf-text-secondary);
@@ -1675,10 +1741,9 @@
   font-size: 10px;
 }
 
-/* Secondary (outline) sign-in on the right rail. The primary gradient CTA is the larger
-   "Sign In to Get Started" in the chat panel; above 1280px both are visible at once, so the rail
-   one is demoted to an outline to remove the competing-primaries read. (Comic theme overrides this
-   to its own flat-ink CTA treatment below, unchanged.) */
+/* Secondary (outline) sign-in on the right rail. It stays an outline button rather than a second
+   gradient CTA, so the gradient "Sign in" in the top bar reads as the single primary action.
+   (Comic theme overrides this to its own flat-ink CTA treatment below, unchanged.) */
 .profileLoginBtn {
   display: inline-block;
   padding: 8px 16px;
@@ -1809,9 +1874,10 @@
 .mobileBar {
   display: none;
   align-items: center;
-  /* Tightened (owner report, 2026-07-19): with the brand mark, gift reminder, tabs, admin, help,
-     settings, and avatar all present, 8px gaps + 12px padding overflowed a 390px phone and clipped
-     the avatar off the right edge. */
+  /* Tightened (owner report, 2026-07-19): with the brand mark, tabs, admin, help, settings, and
+     avatar all present, 8px gaps + 12px padding overflowed a 390px phone and clipped the avatar off
+     the right edge. The gift reminder was later moved out of this bar entirely (2026-08-09) because
+     even at these gaps the bar was crowded on a 375px phone (iPhone SE). */
   gap: 5px;
   height: 52px;
   padding: 0 8px;
@@ -1830,8 +1896,8 @@
   padding: 6px 12px;
   /* One unified icon-control chrome across the whole phone top bar: the same
      surface fill + border + radius that the plugin header's MobileTopActions uses,
-     so admin, gift, help, settings, and the tabs all read as one system (both
-     default and comic themes derive from the theme tokens). */
+     so admin, help, settings, and the tabs all read as one system (both default and
+     comic themes derive from the theme tokens). */
   border-radius: 10px;
   background: var(--ctf-surface);
   border: 1px solid var(--ctf-border);
@@ -1899,6 +1965,33 @@
   white-space: nowrap;
 }
 
+/* Compact wordmark for the signed-in bar. Turning the section tabs into icons freed room beside the
+   mark, but not enough for the signed-out lockup: measured in Chromium at the app's own Inter, that
+   lockup is 85px wide and an admin on a 375px phone has 65px to spare. Setting the two words on their
+   own lines instead of one is 50px, which fits every phone width with room left over — so the product
+   name reads on the bar for signed-in members too, without risking the avatar being clipped off the
+   right edge again (the 2026-07-19 report). The single-line lockup is unchanged for signed-out
+   visitors, whose bar carries no admin, help, settings or avatar and has the width for it. */
+.mobileBarWordmarkStacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.mobileBarWordmarkStackedLine {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ctf-text-subtle);
+  white-space: nowrap;
+}
+
 .mobileBarTitle {
   font-size: 14px;
   font-weight: 700;
@@ -1908,25 +2001,34 @@
   text-overflow: ellipsis;
 }
 
+/* One gap value governs the whole bar (owner report, 2026-08-09): this row's own 4px, the auth
+   cluster's missing gap, and .mobileBar's 5px used to give three different spacings across one row
+   of identical squares. All three are 5px now, so the boxes are evenly spaced end to end. */
 .mobileBarSections {
   display: flex;
-  gap: 4px;
+  gap: 5px;
   margin-left: auto;
   flex-shrink: 0;
 }
 
 .mobileBarSectionBtn {
-  padding: 6px 9px;
   /* Both section tabs carry the same boxed chrome as the other top-bar controls so
      the pair reads as one segmented control; the active state (below) only changes
-     the tint, not the presence of the box. */
+     the tint, not the presence of the box. They are icon-only now and share the exact
+     38px square of the admin, help and settings buttons, so every box in the bar is
+     one height — text padding used to leave these two visibly shorter than the rest. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border-radius: 10px;
   background: var(--ctf-surface);
   border: 1px solid var(--ctf-border);
-  color: var(--ctf-text-subtle);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--ctf-text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .mobileBarSectionBtnActive {
@@ -1938,7 +2040,17 @@
 .mobileBarAuth {
   display: flex;
   align-items: center;
+  /* Help, settings and the avatar sat flush against each other with no gap at all, while every other
+     pair in the bar had one — the same 5px used everywhere else separates them now. */
+  gap: 5px;
   flex-shrink: 0;
+}
+
+/* The shared avatar slot carries margin-top: 4px for the vertical desktop icon rail, where it
+   separates the avatar from the button above it. In this horizontal row that margin only pushed the
+   avatar 4px below the line of squares beside it, so it is dropped here. */
+.mobileBarAuth .clerkAvatarSlot {
+  margin-top: 0;
 }
 
 /* The phone top bar carries tabs + (admin) + help + settings + avatar in one non-wrapping row.
@@ -2055,7 +2167,7 @@
 }
 
 /* ─── AI Assistant (@comic) — answered card ──────────────────────────────── */
-/* Translated from the locked Survivor Hub design (cyan #0EA5E9 accent, Sparkles, AI Q&A badge). */
+/* Translated from the locked Commons design (cyan #0EA5E9 accent, Sparkles, AI Q&A badge). */
 .comicCard {
   margin-bottom: 16px;
   padding: 20px;
@@ -2417,6 +2529,30 @@
 .notificationsFilterBtnActive {
   background: rgba(245, 158, 11, 0.22);
   border-color: rgba(245, 158, 11, 0.6);
+}
+
+/* ─── Fundraiser gift (🎁) chip ──────────────────────────────────────────── */
+/* Fourth glyph pill, right after the 🔔 chip. It moved down here from the top bar, which had no
+   room left on a 375px phone (iPhone SE). Violet accent so it reads distinct from the sky-blue @,
+   emerald 📣 and amber 🔔, and does not read as a warning the way the earlier rose did. Sized like
+   the other three so the four read as one row. */
+.contributeGiftBtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #A78BFA;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.contributeGiftBtn:hover {
+  background: rgba(167, 139, 250, 0.12);
 }
 
 /* ─── Notifications center panel ─────────────────────────────────────────── */
@@ -2887,7 +3023,6 @@
   color: var(--ctf-cta-text);
 }
 
-:global([data-theme='comic']) .chatSignInLink,
 :global([data-theme='comic']) .profileLoginBtn,
 :global([data-theme='comic']) .mobileBarSignIn,
 :global([data-theme='comic']) .chatSendBtnActive,
@@ -2960,7 +3095,7 @@
    as off-brand against the flat cream/ink comic look (comic has no gradients/glow). Keep the purple
    hue (owner: purple is fine) but flatten the gradient to a solid fill and add the same cream border
    the own-bubble comic treatment uses, so the two bubble types read as one comic system — differing
-   only by fill colour, not by design language. */
+   only by fill color, not by design language. */
 :global([data-theme='comic']) .chatBubbleHub {
   background: #6d28d9;
   border: 1.5px solid var(--ctf-border);
@@ -3067,6 +3202,13 @@
 :global([data-theme='comic']) .announcementsFilterBtnActive {
   background: #7a6a5022;
   border-color: var(--ctf-border-dim);
+}
+
+/* Fundraiser gift chip → the same inkDim chip treatment. */
+:global([data-theme='comic']) .contributeGiftBtn {
+  background: var(--ctf-bg);
+  border: 1px solid var(--ctf-border-dim);
+  color: var(--ctf-border-dim);
 }
 
 :global([data-theme='comic']) .comicComposerHelperToken {
@@ -3213,7 +3355,26 @@
   gap: 8px;
   flex-wrap: wrap;
   flex-shrink: 0;
+}
+
+/* Wrapper holding the page name plus the channel pills on one line. The padding that used to sit
+   on .channelSwitchRow lives here now so the label shares the row's inset. */
+.channelSwitchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
   padding: 10px 16px 0;
+}
+
+/* "Commons" page name. Deliberately unlike a pill — no border, no fill — so it reads as the name of
+   the page rather than another channel a member could tap. */
+.channelSwitchPageLabel {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ctf-text-shell, #E2E8F0);
 }
 
 .channelSwitchBtn {

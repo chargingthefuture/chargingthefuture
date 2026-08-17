@@ -105,7 +105,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   const backChannel = useChymeBackChannel(status === 'joined');
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
 
     const videoClient = new StreamVideoClient({
       apiKey: joinInfo.streamApiKey,
@@ -123,20 +123,20 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
         try {
           await activeCall.camera.disable();
         } catch {
-          /* no camera to disable */
+          /* no-trace: there is no camera to disable on this device */
         }
         try {
           await activeCall.microphone.disable();
         } catch {
-          /* already muted */
+          /* no-trace: the microphone is already muted */
         }
         await activeCall.join({ create: true });
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         // Surface the real Stream error verbatim so a failed join is diagnosable
         // without a repro.
         setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the audio room.');
@@ -145,17 +145,17 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try {
           await activeCall.leave();
         } catch {
-          /* already left */
+          /* no-trace: the call was already left */
         }
         try {
           await videoClient.disconnectUser();
         } catch {
-          /* ignore */
+          /* no-trace: the client is already disconnected */
         }
       })();
     };
@@ -193,18 +193,18 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // refresh. Stream reactions are transient and auto-clear, so they can't carry this — the persistent
   // set rides on each member's presence row (POST /api/chyme/hand). This reads the SAME
   // GET /api/chyme/room the web room already polls, so it adds no Stream/GetStream quota: it is a
-  // database read, not a Stream call. The `cancelled` flag stops any late response from setting state
+  // database read, not a Stream call. The `canceled` flag stops any late response from setting state
   // after unmount, and clearing the interval on unmount / when leaving the room prevents a tight loop
   // and over-polling. While in a call the Android foreground service keeps the JS runtime alive when
   // backgrounded (see the heartbeat note above), so this poll keeps refreshing other members' raised
   // hands rather than going quiet when the member navigates away without closing.
   useEffect(() => {
     if (status !== 'joined') return;
-    let cancelled = false;
+    let canceled = false;
     const poll = () => {
       void getChymeRoom()
         .then((payload) => {
-          if (cancelled) return;
+          if (canceled) return;
           setRaisedHandUserIds(
             new Set((payload.participants ?? []).filter((p) => p.handRaised).map((p) => p.userId)),
           );
@@ -216,43 +216,10 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     poll();
     const intervalId = setInterval(poll, 15000);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearInterval(intervalId);
     };
   }, [status]);
-
-  // The incoming-invite sheet and the full-screen active call are Modals, so they overlay whatever the
-  // room is showing and persist across a room reconnect. Do not ring while already in a call.
-  const backChannelOverlay = (
-    <>
-      {backChannel.incomingInvite && !backChannel.activeCall ? (
-        <ChymeBackChannelInviteSheet
-          visible
-          fromName={backChannel.incomingInvite.fromUsername ? '@' + backChannel.incomingInvite.fromUsername : 'A member'}
-          busy={backChannel.busy}
-          onAccept={() => {
-            const invite = backChannel.incomingInvite;
-            if (invite) void backChannel.accept(invite.callId);
-          }}
-          onDecline={() => {
-            const invite = backChannel.incomingInvite;
-            if (invite) void backChannel.decline(invite.callId);
-          }}
-        />
-      ) : null}
-      {backChannel.activeCall && backChannel.joinCredentials && backChannel.joinCredentials.callId === backChannel.activeCall.callId ? (
-        <ChymeBackChannelCall
-          credentials={backChannel.joinCredentials}
-          displayName={displayName}
-          otherName={backChannel.activeCall.otherUsername ? '@' + backChannel.activeCall.otherUsername : 'Member'}
-          onHangUp={() => {
-            const active = backChannel.activeCall;
-            if (active) void backChannel.hangUp(active.callId);
-          }}
-        />
-      ) : null}
-    </>
-  );
 
   if (status !== 'joined' || !client || !call) {
     return (
@@ -272,7 +239,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
             </>
           )}
         </View>
-        {backChannelOverlay}
+        <ChymeBackChannelOverlay backChannel={backChannel} displayName={displayName} />
       </>
     );
   }
@@ -289,10 +256,47 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
           />
         </StreamCall>
       </StreamVideo>
-      {backChannelOverlay}
+      <ChymeBackChannelOverlay backChannel={backChannel} displayName={displayName} />
     </>
   );
 };
+
+// The incoming-invite sheet and the full-screen active call are Modals, so they overlay whatever the
+// room is showing and persist across a room reconnect. Do not ring while already in a call. Rendered
+// in both the pre-join and joined branches of ChymeAudioRoom, so it lives as its own component.
+const ChymeBackChannelOverlay: React.FC<{
+  backChannel: MobileBackChannelController;
+  displayName: string;
+}> = ({ backChannel, displayName }) => (
+  <>
+    {backChannel.incomingInvite && !backChannel.activeCall ? (
+      <ChymeBackChannelInviteSheet
+        visible
+        fromName={backChannel.incomingInvite.fromUsername ? '@' + backChannel.incomingInvite.fromUsername : 'A member'}
+        busy={backChannel.busy}
+        onAccept={() => {
+          const invite = backChannel.incomingInvite;
+          if (invite) void backChannel.accept(invite.callId);
+        }}
+        onDecline={() => {
+          const invite = backChannel.incomingInvite;
+          if (invite) void backChannel.decline(invite.callId);
+        }}
+      />
+    ) : null}
+    {backChannel.activeCall && backChannel.joinCredentials && backChannel.joinCredentials.callId === backChannel.activeCall.callId ? (
+      <ChymeBackChannelCall
+        credentials={backChannel.joinCredentials}
+        displayName={displayName}
+        otherName={backChannel.activeCall.otherUsername ? '@' + backChannel.activeCall.otherUsername : 'Member'}
+        onHangUp={() => {
+          const active = backChannel.activeCall;
+          if (active) void backChannel.hangUp(active.callId);
+        }}
+      />
+    ) : null}
+  </>
+);
 
 const ChymeAudioRoomLive: React.FC<{
   onOpenChat: () => void;
@@ -368,6 +372,88 @@ const ChymeAudioRoomLive: React.FC<{
   );
 }
 
+type TileStyles = ReturnType<typeof makeTileStyles>;
+
+type SpeakerTileState = {
+  isSelf: boolean;
+  speaking: boolean;
+  publishingAudio: boolean;
+  name: string;
+  isGuest: boolean;
+  clerkUserId: string;
+  handRaised: boolean;
+};
+
+// Derive everything a speaker tile renders from the raw participant, so the tile component itself
+// stays a flat presentational pass. Preserves the web room's rules exactly:
+// - Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
+//   clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
+// - The local member's raised hand is driven by their own toggle so it is reliable and instant.
+//   Everyone else's comes from the server-persisted set (keyed by clerk user id) that the room poll
+//   refreshes. The transient Stream reaction still gives an instant in-call cue before the next poll
+//   lands. Guests never publish and never raise a hand.
+function computeSpeakerTileState(
+  participant: StreamVideoParticipant,
+  localHandRaised: boolean,
+  raisedHandUserIds: ReadonlySet<string>,
+): SpeakerTileState {
+  const isSelf = participant.isLocalParticipant;
+  const isGuest = participant.userId.startsWith('chyme-guest-');
+  const clerkUserId = participant.userId.startsWith('chyme-')
+    ? participant.userId.slice('chyme-'.length)
+    : participant.userId;
+  const handRaised = isSelf
+    ? localHandRaised
+    : (!isGuest && raisedHandUserIds.has(clerkUserId)) || participant.reaction?.type === 'raised_hand';
+  return {
+    isSelf,
+    speaking: participant.isSpeaking,
+    publishingAudio: isPublishingAudio(participant),
+    name: participant.name || participant.userId,
+    isGuest,
+    clerkUserId,
+    handRaised,
+  };
+}
+
+// The avatar cluster: the initials disc (border reflects speaking/self/idle), the mic on/off badge,
+// and the raised-hand badge. Split out so the tile component's complexity stays flat.
+const ChymeTileAvatar: React.FC<{
+  tileStyles: TileStyles;
+  name: string;
+  speaking: boolean;
+  isSelf: boolean;
+  publishingAudio: boolean;
+  handRaised: boolean;
+}> = ({ tileStyles, name, speaking, isSelf, publishingAudio, handRaised }) => (
+  <View style={tileStyles.avatarWrap}>
+    <View
+      style={[
+        tileStyles.avatar,
+        speaking
+          ? tileStyles.avatarSpeaking
+          : isSelf
+            ? tileStyles.avatarSelf
+            : tileStyles.avatarIdle,
+      ]}
+    >
+      <Text style={tileStyles.initials}>{initials(name)}</Text>
+    </View>
+    <View style={[tileStyles.micBadge, publishingAudio ? tileStyles.micBadgeOn : tileStyles.micBadgeOff]}>
+      {publishingAudio ? (
+        <Mic size={12} color="#fff" strokeWidth={2} />
+      ) : (
+        <MicOff size={12} color="#fff" strokeWidth={2} />
+      )}
+    </View>
+    {handRaised && (
+      <View style={tileStyles.handBadge}>
+        <Text style={tileStyles.handIcon}>✋</Text>
+      </View>
+    )}
+  </View>
+);
+
 const ChymeSpeakerTile: React.FC<{
   participant: StreamVideoParticipant;
   localHandRaised: boolean;
@@ -375,52 +461,19 @@ const ChymeSpeakerTile: React.FC<{
   backChannel: MobileBackChannelController;
 }> = ({ participant, localHandRaised, raisedHandUserIds, backChannel }) => {
   const { tileStyles } = useRoomStyles();
-  const isSelf = participant.isLocalParticipant;
-  const speaking = participant.isSpeaking;
-  const publishingAudio = isPublishingAudio(participant);
-  const name = participant.name || participant.userId;
-  // Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
-  // clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
-  const isGuest = participant.userId.startsWith('chyme-guest-');
-  const clerkUserId = participant.userId.startsWith('chyme-')
-    ? participant.userId.slice('chyme-'.length)
-    : participant.userId;
-  // The local member's raised hand is driven by their own toggle so it is reliable and instant.
-  // Everyone else's comes from the server-persisted set (keyed by clerk user id) that the room poll
-  // refreshes, matching the web room. The transient Stream reaction still gives an instant in-call
-  // cue before the next poll lands. Guests never publish and never raise a hand.
-  const handRaised = isSelf
-    ? localHandRaised
-    : (!isGuest && raisedHandUserIds.has(clerkUserId)) || participant.reaction?.type === 'raised_hand';
+  const { isSelf, speaking, publishingAudio, name, isGuest, clerkUserId, handRaised } =
+    computeSpeakerTileState(participant, localHandRaised, raisedHandUserIds);
 
   return (
     <View style={tileStyles.wrapper}>
-      <View style={tileStyles.avatarWrap}>
-        <View
-          style={[
-            tileStyles.avatar,
-            speaking
-              ? tileStyles.avatarSpeaking
-              : isSelf
-                ? tileStyles.avatarSelf
-                : tileStyles.avatarIdle,
-          ]}
-        >
-          <Text style={tileStyles.initials}>{initials(name)}</Text>
-        </View>
-        <View style={[tileStyles.micBadge, publishingAudio ? tileStyles.micBadgeOn : tileStyles.micBadgeOff]}>
-          {publishingAudio ? (
-            <Mic size={12} color="#fff" strokeWidth={2} />
-          ) : (
-            <MicOff size={12} color="#fff" strokeWidth={2} />
-          )}
-        </View>
-        {handRaised && (
-          <View style={tileStyles.handBadge}>
-            <Text style={tileStyles.handIcon}>✋</Text>
-          </View>
-        )}
-      </View>
+      <ChymeTileAvatar
+        tileStyles={tileStyles}
+        name={name}
+        speaking={speaking}
+        isSelf={isSelf}
+        publishingAudio={publishingAudio}
+        handRaised={handRaised}
+      />
       <Text style={tileStyles.name} numberOfLines={1}>
         {name}
       </Text>

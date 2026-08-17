@@ -26,7 +26,12 @@ contracts:
       claimedAmountUsd:
         type: number
         required: false
-        note: Required when kind is gift_card; greater than 0 and at most 500.
+        note: >-
+          Required when kind is gift_card; a whole number of US dollars, from 1 to 500. Fractions are
+          rejected — real gift cards are not sold in parts of a dollar (owner decision, 2026-08-09).
+          This is a claim-shape rule and is not what keeps a credit grant whole; grants are rounded
+          when they are issued, because the credits-per-dollar rate is admin-set and need not divide
+          evenly into a dollar.
       signalContact:
         type: string
         required: false
@@ -34,11 +39,17 @@ contracts:
       quoraPostUrl:
         type: string
         required: false
-        note: Optional for kind quora_comment (the owner can paste it in during review).
+        note: >-
+          Optional for kind quora_comment (the owner can paste it in during review). The web form
+          asks for it and will not submit without it, on purpose — an untrackable claim cannot be
+          confirmed, so the form points the member to the Commons for help finding the link instead.
+          The command stays optional so a claim recorded by the owner during review is still valid.
       githubProfileUrl:
         type: string
         required: false
-        note: Optional for kind github_star (the owner can paste it in during review).
+        note: >-
+          Optional for kind github_star (the owner can paste it in during review). Same as
+          quoraPostUrl: the web form requires it by design, the command does not.
     outputSchema:
       ok:
         type: boolean
@@ -80,7 +91,7 @@ contracts:
         type: boolean
       fundraiser:
         type: object
-        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean — the full banner shows for this member now, i.e. feature on and not snoozed), bannerEnabled (boolean — the banner feature is on at all, independent of the per-member snooze; lets the phone-width UI tell snoozed from turned-off so it can show a small emoji reminder while snoozed), githubStarAlreadyCredited (boolean — true when this member already holds a confirmed, credit-earning github_star; a star is creditable at most once per member ever, so the UI greys out the GitHub-star path)."
+        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean — the full banner shows for this member now, i.e. feature on and not snoozed), bannerEnabled (boolean — the banner feature is on at all, independent of the per-member snooze; lets the phone-width UI tell snoozed from turned-off so it can show a small emoji reminder while snoozed), githubStarAlreadyCredited (boolean — true when this member already holds a confirmed, credit-earning github_star; a star is creditable at most once per member ever, so the UI grays out the GitHub-star path)."
       signalInstructions:
         type: string
         note: Member-safe Signal instructions copy (shown after a gift-card submission).
@@ -146,7 +157,7 @@ contracts:
   - pluginId: contributions
     command: contributions.admin.submission.review
     version: 1.0.0
-    description: Confirm or reject a pending claim, exactly once. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-user-per-cycle cap) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
+    description: Confirm or reject a pending claim, exactly once. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-user-per-cycle cap, then rounded to a whole number of credits) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
     inputSchema:
       submissionId:
         type: string
@@ -158,7 +169,12 @@ contracts:
       confirmedAmountUsd:
         type: number
         required: false
-        note: Required for gift_card confirmation; defaults to non_monetary_unit_value_usd for quora_comment and github_star.
+        note: >-
+          Required for gift_card confirmation, as a whole number of US dollars from 1 to 500 — the
+          same rule the member's claim had to clear, re-checked here because the admin records what
+          was actually redeemed and that can differ from what was claimed. Defaults to
+          non_monetary_unit_value_usd for quora_comment and github_star, which is not held to the
+          whole-dollar rule.
       reviewNote:
         type: string
         required: false

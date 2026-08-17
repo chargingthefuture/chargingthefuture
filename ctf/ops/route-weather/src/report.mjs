@@ -37,7 +37,7 @@ function haversineMiles(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-// Point reached by travelling `distMiles` along `bearingDeg` from a start point.
+// Point reached by traveling `distMiles` along `bearingDeg` from a start point.
 function destinationPoint(lat, lon, bearingDeg, distMiles) {
   const R = 3958.8;
   const br = (bearingDeg * Math.PI) / 180;

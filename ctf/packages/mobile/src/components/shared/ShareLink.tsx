@@ -32,7 +32,7 @@ export function ShareLink({ url, label = 'Share', title = 'Share this link', col
         await Linking.openURL(url);
       }
     } catch {
-      // ignore — nothing to do if the OS can't open it
+      // no-trace: nothing to do if the OS cannot open the link
     }
     setOpen(false);
   }
@@ -41,7 +41,7 @@ export function ShareLink({ url, label = 'Share', title = 'Share this link', col
     try {
       await Share.share({ message: url, url });
     } catch {
-      // ignore — the member dismissed the share sheet
+      // no-trace: the member dismissed the share sheet
     }
     setOpen(false);
   }

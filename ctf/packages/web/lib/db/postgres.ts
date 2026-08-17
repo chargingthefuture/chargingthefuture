@@ -95,7 +95,7 @@ async function getActivePool(): Promise<Pool> {
       return getDemoPool();
     }
   } catch {
-    // No request scope / flag layer unavailable (e.g. seed scripts) → public.
+    // no-trace: no request scope or flag layer (a seed script, say), so the public pool is right.
   }
 
   return getPublicPool();

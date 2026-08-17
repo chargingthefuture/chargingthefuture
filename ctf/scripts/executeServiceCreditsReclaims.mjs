@@ -96,7 +96,7 @@ async function main() {
     try {
       body = JSON.parse(text);
     } catch {
-      /* non-JSON response body */
+      /* no-trace: a non-JSON body leaves `body` null, which the caller already handles */
     }
 
     if (res.ok) {

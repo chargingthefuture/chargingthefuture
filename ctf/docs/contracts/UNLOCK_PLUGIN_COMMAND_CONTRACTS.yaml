@@ -1,8 +1,10 @@
 contracts:
   - pluginId: unlock
     command: unlock.verification.submit
-    version: 1.0.0
-    description: Submit or update Quora profile URL for staged unlock verification.
+    version: 1.1.0
+    description: >-
+      Submit or update Quora profile URL for staged unlock verification. A submitted URL that is on the
+      spam denylist is auto-marked spam and app-blocked instead of entering the pending queue.
     inputSchema:
       quoraProfileUrl:
         type: string
@@ -19,6 +21,9 @@ contracts:
     dataAccess:
       - unlock_verification_submissions
       - unlock_audit_log
+      - unlock_spam_quora_urls
+      - account_restrictions
+      - account_restrictions_audit
     purpose: identity_signal_submission
     retentionClass: transactional_long_lived
     idempotency: true
@@ -62,8 +67,11 @@ contracts:
 
   - pluginId: unlock
     command: unlock.admin.submission.review
-    version: 1.0.0
-    description: Apply admin moderation decision and unlock access tier transition.
+    version: 1.1.0
+    description: >-
+      Apply admin moderation decision and unlock access tier transition. A spam decision also places
+      a platform-wide ('all'-scope) account restriction so the member loses Commons/app access; an
+      approved or rejected decision lifts a restriction previously placed by a spam decision.
     inputSchema:
       submissionId:
         type: integer
@@ -86,7 +94,31 @@ contracts:
     dataAccess:
       - unlock_verification_submissions
       - unlock_audit_log
+      - account_restrictions
+      - account_restrictions_audit
+      - unlock_spam_quora_urls
     purpose: moderation_and_unlock_transition
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.spam_denylist.remove
+    version: 1.0.0
+    description: >-
+      Remove a normalized Quora URL from the spam denylist. Stops future submissions of that URL from
+      being auto-blocked; does not lift the restriction on a member already blocked for it (that is
+      reversed by re-reviewing their submission to approved/rejected).
+    inputSchema:
+      quoraProfileUrlNormalized:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - unlock_spam_quora_urls
+      - unlock_audit_log
+    purpose: moderation_denylist_maintenance
     retentionClass: audit_long_lived
     idempotency: true
 

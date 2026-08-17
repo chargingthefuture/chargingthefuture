@@ -86,6 +86,92 @@ string. Trailing whitespace on a note is trimmed before the length check.
 
 ---
 
+### CL-6 · Owner-sharing is opt-in and member-controlled
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Fresh member: open ClickLog and read the "share new incidents with the owner by default"
+   setting and the share checkbox in the log form.
+2. Log an incident without touching either — then check its row in the history list.
+3. Turn on the global default, log another incident, and check its row.
+4. On any history row, click the Shared/Private pill to flip that one incident.
+**Expected:** Both the global setting and the form checkbox start **off**; an untouched log
+produces a **Private** row. With the default on, a new incident logs as **Shared with owner**;
+the form checkbox is seeded from the default and can be overridden per incident. The per-row
+pill flips a single incident either way at any time, and each change is logged. The copy names
+what is shared in plain words — the global default says "only trend data — never your notes" and
+the per-incident checkbox says "only the date, rough area, and tags"; the word "coarse" appears
+nowhere on screen.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-7 · Tag an incident with a problem and a scheme (location required)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the log form. Under "Which problem happened? (optional)", type a word (e.g. "mail") into
+   the search box and pick the matching chip. Do the same under "Which scheme was used? (optional)".
+2. Try to submit without adding a location.
+3. Add your location, then submit.
+4. Check the new row in the history list.
+**Expected:** Both pickers filter the chip list as you type (same style as the Directory and
+Skills Hunt skill pickers) and show the pick as a removable chip; tapping the active chip again
+clears it. One, both, or neither tag may be picked. With a tag picked and no location, Submit is
+disabled and the form explains that tags need a location; the server enforces the same rule (a
+tagged request without latitude/longitude is rejected). After adding the location the incident
+logs, and its history row shows the problem chip and the "Scheme:" chip. An untagged incident
+still logs fine with no location.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-8 · Suggest a new scheme via "Not listed" (Weavers only, description required)
+**Role:** member (one with the Weavers of the Commons badge, one without) · **Surfaces:** all
+**Steps:**
+1. As a member without the Weavers badge, open the scheme picker and search for "Not listed".
+2. As a Weavers badge holder, pick "Not listed". Read the fields that appear.
+3. Try to submit with location added but the description empty.
+4. Write a short description, optionally add an https quora.com link to your own post, submit.
+**Expected:** Without the badge the "Not listed" option does not appear at all (named schemes
+remain pickable). With the badge, picking it reveals a required "Describe the scheme" field and
+an optional Quora self-link field, both explicitly labeled as shared with the owner, plus a note
+that the incident note above stays private. Submit stays disabled until the description has text
+(and location is added, per CL-7); the server enforces the same rules, including rejecting a
+non-quora.com link. After submitting, the incident logs with the "Not listed" scheme chip; the
+description is stored for the owner's scheme-naming queue, not shown in the trends dashboard.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-9 · Edit an incident's note and tags (date and location immutable)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On a history row of an incident logged WITH a location, tap the pencil icon.
+2. Change the note, change or remove the problem/scheme tags with the pickers, save.
+3. Open the editor again on an incident logged WITHOUT a location.
+4. Try to add a tag to it (there should be no way to).
+**Expected:** The editor opens inline in place of the row, stating that the date and location
+stay as logged — there is no way to change either. Saving updates the note and tag chips on the
+row and the change survives a refresh. On the location-less incident the editor shows no tag
+pickers at all and explains that tags need a location and the location can't be changed after
+logging; only the note is editable. The scheme picker never offers "Not listed" unless the
+incident already carries it (keeping or removing it is allowed). The server enforces all of it:
+a tag on a location-less incident, or newly picking "Not listed", is rejected with a specific
+message, and an edit that duplicates another incident's exact note returns a readable
+"change the note slightly" error.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-10 · Open the full problems / schemes list from the tag pickers
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the log form and half-fill it: write a note and pick a tag or two, but do not submit.
+2. Tap the "Full list" link beside "Which problems happened?".
+3. Read the address shown, tap "Copy link", then tap "Open in new tab".
+4. Come back to the ClickLog tab and do the same with the "Full list" link beside
+   "Which schemes were used?".
+5. Repeat step 2 inside the edit form of an existing incident that has a location.
+**Expected:** Each link opens the shared share-link popup, not the page itself. The popup shows
+the whole address as selectable text — `https://www.chargingthefuture.com/look-ma` for problems,
+`https://www.chargingthefuture.com/schemes` for schemes — with "Copy link" (which confirms
+"Copied!") and "Open in new tab". Opening the page leaves the ClickLog tab as it was: the note
+you wrote and the tags you picked are still there, and nothing was submitted. Escape or a tap
+outside closes the popup and returns focus to the link. The same two links appear in the edit
+form's pickers.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-5 · Refresh the incident list
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -112,6 +198,17 @@ directly).
 **Expected:** The delete succeeds (admins are not limited to their own rows). The authorized request
 is logged; deleting a row that is already gone is logged as a failure result, not a server error.
 **Result:** web ☐ mobile ☐ — notes:
+
+### CL-A3 · Trends dashboard shows tag breakdowns
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. As a member, log a tagged incident with location and mark it shared with the owner (CL-7 + CL-6).
+2. As admin, open the ClickLog Trends dashboard (`/admin/click-log`).
+**Expected:** Alongside the per-day counts, "Top problems" and "Top schemes" sections list per-tag
+counts by their short labels, computed over shared incidents only. Unshared tagged incidents do not
+appear. No notes, exact locations, incident ids, or member identity anywhere on the dashboard; the
+intro copy names day, approximate area, counts, and tags as the only shared data.
+**Result:** web ☐ — notes:
 
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)
@@ -147,3 +244,25 @@ of these, it is already tracked, not a new bug:
 - There is no advanced search or filtering on incident history.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+> _Scheme list update (2026-08-03): added "The Fabricated Flaw" to the canonical scheme tags. List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Scheme list update (2026-08-04): added "The Pot and Kettle", "Staged Road Rage", "The Insurance Bleed", and "Road Sensitization". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Poisoned Well", "The Windfall", "The Jinx", and "The Fake Job". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "The Warm Spell". List-data only — no test steps changed._
+
+> _Scheme list update (2026-08-04): added "Color Sensitization". List-data only — no test steps changed._
+
+> _Documentation note (2026-08-04): recorded a known taxonomy gap in the scheme tag list — it mixes operations with an arc, ambient tactics without one, and one entry that is a shape over time. Comment only; no tag added, removed, or renamed, and no test steps changed._
+
+> _Scheme list update (2026-08-07): added "Psyop Marketing" and "The Acquire and Fold". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Documentation note (2026-08-07): recorded an owner refinement in the pendulum comment — the recruit's windfall is arranged long in advance to read as merit-based, binding them to the network before they know anything. Comment only; no tag added, removed, or renamed, and no test steps changed._
+
+> _Tag list update (2026-08-13): added schemes "The Engineered Delay", "The Altered Ticket", "The Pretext Search", "The Planted Witness", and "The Replay", and problems "Trips sabotaged — delays, missed connections, canceled tickets" and "Falsely accused of violence / crimes to bystanders". List-data only — no test steps changed; CL-7/CL-8 cover tagging and suggestions generically._
+
+> _Limit change (2026-08-13): the incident note maximum length was raised from 200 to 2,000 characters (`MAX_NOTES_LENGTH`). CL-4's over-length note case still applies at the new limit — no test steps changed._
+
+> _Multi-tag change (2026-08-13): incidents now hold up to 10 problem tags and 10 scheme tags (arrays replace the single tag per kind). CL-7 and CL-9 below: the pickers are multi-select — pick two or more problems and two or more schemes in one incident, confirm every pick shows as its own chip in the selected row, on the history row, and in the editor, and confirm the 11th pick of a kind is refused with the "up to 10" hint. All other rules (tags need a location; "Not listed" keep-or-remove-only on edit) are unchanged._

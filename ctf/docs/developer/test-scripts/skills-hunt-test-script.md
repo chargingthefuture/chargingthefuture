@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for the nominee-location fields) |
+| **Generated** | 2026-08-04 (hand-updated: Scouts/Teams leaderboard toggle — SH-8) |
 
 ---
 
@@ -236,14 +236,15 @@ Result: web ☐
 
 **Steps:**
 1. Navigate to the Leaderboard tab on an active or closed round.
-2. Confirm the default individual view shows ranked entries with: rank, handle/name, score.
-3. Switch to team mode (if the UI exposes a toggle).
+2. Confirm the default "Scouts" view shows ranked entries with: rank, handle/name, score.
+3. Switch to the "Teams" pill above the list (added 2026-08-04).
 4. Confirm the team view aggregates by profession/group.
 
 **Expected:**
-- Individual mode: entries ordered by score descending, first_match_count as tie-break, no fabricated numbers.
-- Team mode: aggregated rows by profession (may be limited by taxonomy sign-off — see Known gaps).
-- If the signed-in member is in the top-100 their row is highlighted; if outside top-100, their rank still appears.
+- Individual (Scouts) mode: entries ordered by score descending, first_match_count as tie-break, no fabricated numbers.
+- Teams mode: the title changes to "Team Leaderboard", rows are named by claimed profession (title-cased, e.g. "Electrician"), aggregated accepted points per profession; no "(You)" highlight in this mode.
+- Switching back to Scouts re-fetches and restores the individual list.
+- If the signed-in member is in the top-100 their row is highlighted (Scouts mode); if outside top-100, their rank still appears.
 
 Result: web ☐
 
@@ -714,6 +715,13 @@ Result: web ☐
 
 ---
 
+### Account deletion pseudonymizes filed reports
+
+**Expected:** After a member deletes their account, reports they filed about submissions remain as
+moderation records, but the reporter reads as a deleted member; the resolving admin stays recorded.
+
+---
+
 ## Parity check (web ↔ android)
 
 The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.
@@ -745,4 +753,4 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 
 1. **Admin pre-approval pathway for restricted submitters is disabled.** A user whose rejection rate exceeds the threshold gets a 403 (`SKILLS_HUNT_PRE_APPROVAL_REQUIRED`) but there is no UI for an admin to manually pre-approve them. This is intentional in the current scope.
 2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
-3. **Team leaderboard aggregation by profession is conditional on Skills Taxonomy sign-off.** The team mode endpoint exists but grouping semantics depend on taxonomy structure. If team mode rows look odd or collapse unexpectedly, this is a known dependency gap, not a bug.
+3. **Team leaderboard grouping is by free-text profession, not the taxonomy.** The Teams view (shipped 2026-08-04) groups by each nominee's claimed profession lowercased and trimmed — so "Electrician" and "electrical work" are different teams. If Skills Taxonomy later formalizes grouping semantics the aggregation will change; the raw grouping today is expected behavior, not a bug.

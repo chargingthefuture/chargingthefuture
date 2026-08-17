@@ -27,11 +27,29 @@ export async function GET() {
 
 type InstantCallBody = { enabled?: unknown; rateCredits?: unknown; intervalMinutes?: unknown };
 
+type ValidatedInstantCallBody = { enabled: boolean; rateCredits: number | null; intervalMinutes: number };
+
 function badRequest(message: string): NextResponse {
   return NextResponse.json(
     { ok: false, code: FOUNDATION_ERROR_CODE.invalidPayload, message },
     { status: 400 },
   );
+}
+
+// Validate the instant-call body shape: enabled is required boolean, rateCredits is a number or null,
+// and intervalMinutes is a number. Returns a 400 response on the first shape error, otherwise the
+// narrowed body ready to persist (the repository still enforces the rate/interval value ranges).
+function validateInstantCallBody(body: InstantCallBody): NextResponse | ValidatedInstantCallBody {
+  if (typeof body.enabled !== 'boolean') {
+    return badRequest('enabled must be a boolean.');
+  }
+  if (body.rateCredits !== null && typeof body.rateCredits !== 'number') {
+    return badRequest('rateCredits must be a number or null.');
+  }
+  if (typeof body.intervalMinutes !== 'number') {
+    return badRequest('intervalMinutes must be a number.');
+  }
+  return { enabled: body.enabled, rateCredits: body.rateCredits, intervalMinutes: body.intervalMinutes };
 }
 
 // Save the member's instant-call settings. The repository validates the rate and interval and throws a
@@ -57,21 +75,16 @@ export async function PUT(request: Request) {
     return badRequest('Invalid JSON body.');
   }
 
-  if (typeof body.enabled !== 'boolean') {
-    return badRequest('enabled must be a boolean.');
-  }
-  if (body.rateCredits !== null && typeof body.rateCredits !== 'number') {
-    return badRequest('rateCredits must be a number or null.');
-  }
-  if (typeof body.intervalMinutes !== 'number') {
-    return badRequest('intervalMinutes must be a number.');
+  const validated = validateInstantCallBody(body);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
 
   try {
     const instantCall = await setOwnInstantCallSettings(gate.auth.userId, {
-      enabled: body.enabled,
-      rateCredits: body.rateCredits,
-      intervalMinutes: body.intervalMinutes,
+      enabled: validated.enabled,
+      rateCredits: validated.rateCredits,
+      intervalMinutes: validated.intervalMinutes,
     });
     return NextResponse.json({ ok: true, instantCall }, { status: 200 });
   } catch (error) {

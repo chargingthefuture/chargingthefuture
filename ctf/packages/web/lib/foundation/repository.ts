@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import {
   FOUNDATION_DEFAULT_PAGE,
   FOUNDATION_DEFAULT_PAGE_SIZE,
@@ -121,12 +122,28 @@ export async function searchProviders(input: {
   skillId?: string | null;
   page?: number;
   pageSize?: number;
+  // When set, providers blocked (either direction) relative to this viewer are hidden from the
+  // results (issue #809 task 4). A `IS NULL` arm keeps this a no-op when no viewer is passed.
+  viewerUserId?: string | null;
 }): Promise<{ items: FoundationProviderSearchItem[]; total: number; pagination: { page: number; pageSize: number } }> {
   const paging = normalizePage(input.page, input.pageSize);
   const searchValue = input.query.trim();
 
   const searchPattern = searchValue.length > 0 ? `%${searchValue}%` : '%';
   const skillId = input.skillId && input.skillId.trim().length > 0 ? input.skillId.trim() : null;
+  const viewerUserId = input.viewerUserId && input.viewerUserId.trim().length > 0 ? input.viewerUserId.trim() : null;
+
+  // Mirrors the LightHouse browse filter: hide a provider who is blocked relative to the viewer.
+  const hideBlockedProvidersSql = (viewer: string) => `
+          AND (
+            ${viewer}::text IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM member_blocks
+              WHERE (blocker_user_id = ${viewer} AND blocked_user_id = dp.claimed_by_user_id)
+                 OR (blocker_user_id = dp.claimed_by_user_id AND blocked_user_id = ${viewer})
+            )
+          )`;
 
   // A Foundation provider is a claimed directory profile that has opted in to offer at least one
   // skill (a row in foundation_provider_skills). When a skill is given, restrict to providers who
@@ -149,9 +166,9 @@ export async function searchProviders(input: {
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
-          )
+          )${hideBlockedProvidersSql('$3')}
       `,
-      [searchPattern, skillId],
+      [searchPattern, skillId, viewerUserId],
     ),
     queryDb<FoundationProviderRow>(
       `
@@ -193,11 +210,11 @@ export async function searchProviders(input: {
             OR TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')) ILIKE $1
             OR COALESCE(dp.headline, '') ILIKE $1
             OR COALESCE(dp.bio, '') ILIKE $1
-          )
+          )${hideBlockedProvidersSql('$5')}
         ORDER BY score DESC, dp.updated_at DESC
         LIMIT $2 OFFSET $3
       `,
-      [searchPattern, paging.pageSize, paging.offset, skillId],
+      [searchPattern, paging.pageSize, paging.offset, skillId, viewerUserId],
     ),
   ]);
 
@@ -698,6 +715,12 @@ export async function createConnectionThread(input: {
       throw new Error('policy_denied');
     }
 
+    // Block check (issue #809 task 4): a blocked pair must not be joined into a connection thread.
+    // The route maps blocked_pair to neutral copy so the block never reveals itself.
+    if (await isBlockedBetweenTx(client, input.actorUserId, providerUserId)) {
+      throw new Error('blocked_pair');
+    }
+
     const thread = await getOrCreateConnectionThread(client, {
       actorUserId: input.actorUserId,
       actorDisplayName: input.actorDisplayName,
@@ -917,7 +940,7 @@ type FoundationCallSessionInsertRow = {
   modality: FoundationCallModality;
   stream_call_id: string;
   requested_duration_minutes: number;
-  status: 'created' | 'active' | 'ended' | 'cancelled';
+  status: 'created' | 'active' | 'ended' | 'canceled';
   created_at: Date;
 };
 
@@ -1137,6 +1160,31 @@ function canTransitionQuote(previousState: FoundationQuoteState, targetState: Fo
   return false;
 }
 
+function assertProviderResponsePayload(
+  quote: FoundationQuoteRow,
+  input: {
+    targetState: FoundationQuoteState;
+    actorUserId: string;
+    quotedAmount?: number | null;
+    quotedCurrency?: string | null;
+  },
+): void {
+  // Only the provider attaches a price, and only on the 'provider_responded' transition. The survivor
+  // may move the quote through its lifecycle but can never set the quoted amount/currency.
+  if (input.targetState === 'provider_responded') {
+    if (input.actorUserId !== quote.provider_user_id) {
+      throw new Error('policy_denied');
+    }
+    const amountOk = typeof input.quotedAmount === 'number'
+      && Number.isFinite(input.quotedAmount)
+      && input.quotedAmount >= 0;
+    const currencyOk = typeof input.quotedCurrency === 'string' && input.quotedCurrency.trim().length > 0;
+    if (!amountOk || !currencyOk) {
+      throw new Error('invalid_payload');
+    }
+  }
+}
+
 export async function updateQuoteRequestState(input: {
   quoteRequestId: string;
   actorUserId: string;
@@ -1176,24 +1224,13 @@ export async function updateQuoteRequestState(input: {
       throw new Error('policy_denied');
     }
 
-    // Only the provider attaches a price, and only on the 'provider_responded' transition. The survivor
-    // may move the quote through its lifecycle but can never set the quoted amount/currency.
-    if (input.targetState === 'provider_responded') {
-      if (input.actorUserId !== quote.provider_user_id) {
-        throw new Error('policy_denied');
-      }
-      const amountOk = typeof input.quotedAmount === 'number'
-        && Number.isFinite(input.quotedAmount)
-        && input.quotedAmount >= 0;
-      const currencyOk = typeof input.quotedCurrency === 'string' && input.quotedCurrency.trim().length > 0;
-      if (!amountOk || !currencyOk) {
-        throw new Error('invalid_payload');
-      }
-    }
+    assertProviderResponsePayload(quote, input);
 
     if (!canTransitionQuote(quote.lifecycle_state, input.targetState)) {
       throw new Error('invalid_quote_transition');
     }
+
+    const transitionReason = input.transitionReason ?? null;
 
     // Persist the price only on 'provider_responded'; stamp settled_at on 'closed' when the quote carries
     // a value (the CASE reads the pre-update quoted_amount, which is what we want). settled_at feeds GDP.
@@ -1224,7 +1261,7 @@ export async function updateQuoteRequestState(input: {
         input.quoteRequestId,
         input.targetState,
         quote.lifecycle_state,
-        input.transitionReason ?? null,
+        transitionReason,
         input.quotedAmount ?? null,
         input.quotedCurrency ?? null,
       ],
@@ -1237,7 +1274,7 @@ export async function updateQuoteRequestState(input: {
         VALUES
           ($1::uuid, $2, $3, $4, $5, '{}'::jsonb)
       `,
-      [input.quoteRequestId, input.actorUserId, quote.lifecycle_state, input.targetState, input.transitionReason ?? null],
+      [input.quoteRequestId, input.actorUserId, quote.lifecycle_state, input.targetState, transitionReason],
     );
 
     const recipient = quote.provider_user_id === input.actorUserId ? quote.survivor_user_id : quote.provider_user_id;
@@ -1387,7 +1424,7 @@ export async function listConnectionHistory(input: {
       modality: FoundationCallModality;
       stream_call_id: string;
       requested_duration_minutes: number;
-      status: 'created' | 'active' | 'ended' | 'cancelled';
+      status: 'created' | 'active' | 'ended' | 'canceled';
       created_at: Date;
     }>(
       `
@@ -1412,7 +1449,7 @@ export async function listConnectionHistory(input: {
       modality: FoundationCallModality;
       stream_call_id: string;
       requested_duration_minutes: number;
-      status: 'created' | 'active' | 'ended' | 'cancelled';
+      status: 'created' | 'active' | 'ended' | 'canceled';
       created_at: Date;
     }> };
 
@@ -1595,8 +1632,22 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
       maxCallDurationMinutes: 45,
       quotaState: 'green',
       updatedAtIso: new Date().toISOString(),
+      policyVersion: null,
+      activatedAtIso: null,
     };
   }
+
+  // The current version comes from the append-only event log (issue #1960): the highest policy_version
+  // and when it activated. Both are null on a policy that has never been updated through the events path.
+  const latestEvent = await queryDb<{ policy_version: number; activated_at: Date }>(
+    `
+      SELECT policy_version, activated_at
+      FROM foundation_capacity_policy_events
+      ORDER BY policy_version DESC
+      LIMIT 1
+    `,
+  );
+  const eventRow = latestEvent.rows[0];
 
   return {
     maxActiveThreadsPerUser: row.max_active_threads_per_user,
@@ -1606,6 +1657,8 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
     maxCallDurationMinutes: row.max_call_duration_minutes,
     quotaState: row.quota_state,
     updatedAtIso: toIso(row.updated_at),
+    policyVersion: eventRow ? Number(eventRow.policy_version) : null,
+    activatedAtIso: eventRow ? toIso(eventRow.activated_at) : null,
   };
 }
 
@@ -1618,60 +1671,92 @@ export async function updateCapacityPolicy(input: {
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
 }): Promise<FoundationCapacityPolicy> {
-  const updated = await queryDb<{
-    max_active_threads_per_user: number;
-    max_messages_per_minute: number;
-    max_searches_per_minute: number;
-    max_quote_transitions_per_minute: number;
-    max_call_duration_minutes: number;
-    quota_state: 'green' | 'yellow' | 'orange' | 'red';
-    updated_at: Date;
-  }>(
-    `
-      INSERT INTO foundation_capacity_policies
-        (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
-      VALUES
-        (TRUE, $1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (singleton_key)
-      DO UPDATE SET
-        max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
-        max_messages_per_minute = EXCLUDED.max_messages_per_minute,
-        max_searches_per_minute = EXCLUDED.max_searches_per_minute,
-        max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
-        max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
-        quota_state = EXCLUDED.quota_state,
-        updated_by_user_id = EXCLUDED.updated_by_user_id,
-        updated_at = NOW()
-      RETURNING
-        max_active_threads_per_user,
-        max_messages_per_minute,
-        max_searches_per_minute,
-        max_quote_transitions_per_minute,
-        max_call_duration_minutes,
-        quota_state,
-        updated_at
-    `,
-    [
-      input.maxActiveThreadsPerUser,
-      input.maxMessagesPerMinute,
-      input.maxSearchesPerMinute,
-      input.maxQuoteTransitionsPerMinute,
-      input.maxCallDurationMinutes,
-      input.quotaState,
-      input.actorUserId,
-    ],
-  );
+  return withDbTransaction(async (client) => {
+    const updated = await client.query<{
+      max_active_threads_per_user: number;
+      max_messages_per_minute: number;
+      max_searches_per_minute: number;
+      max_quote_transitions_per_minute: number;
+      max_call_duration_minutes: number;
+      quota_state: 'green' | 'yellow' | 'orange' | 'red';
+      updated_at: Date;
+    }>(
+      `
+        INSERT INTO foundation_capacity_policies
+          (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
+        VALUES
+          (TRUE, $1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (singleton_key)
+        DO UPDATE SET
+          max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
+          max_messages_per_minute = EXCLUDED.max_messages_per_minute,
+          max_searches_per_minute = EXCLUDED.max_searches_per_minute,
+          max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
+          max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
+          quota_state = EXCLUDED.quota_state,
+          updated_by_user_id = EXCLUDED.updated_by_user_id,
+          updated_at = NOW()
+        RETURNING
+          max_active_threads_per_user,
+          max_messages_per_minute,
+          max_searches_per_minute,
+          max_quote_transitions_per_minute,
+          max_call_duration_minutes,
+          quota_state,
+          updated_at
+      `,
+      [
+        input.maxActiveThreadsPerUser,
+        input.maxMessagesPerMinute,
+        input.maxSearchesPerMinute,
+        input.maxQuoteTransitionsPerMinute,
+        input.maxCallDurationMinutes,
+        input.quotaState,
+        input.actorUserId,
+      ],
+    );
 
-  const row = updated.rows[0];
-  return {
-    maxActiveThreadsPerUser: row.max_active_threads_per_user,
-    maxMessagesPerMinute: row.max_messages_per_minute,
-    maxSearchesPerMinute: row.max_searches_per_minute,
-    maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
-    maxCallDurationMinutes: row.max_call_duration_minutes,
-    quotaState: row.quota_state,
-    updatedAtIso: toIso(row.updated_at),
-  };
+    const row = updated.rows[0];
+
+    // Record this change as a versioned, append-only event (issue #1960): a monotonic policy_version, the
+    // full snapshot of the new values, who changed it, and when it activated. MAX+1 is safe inside this
+    // transaction — the policy is a singleton and only admins update it, so there is no real contention.
+    const versionResult = await client.query<{ next_version: string }>(
+      `SELECT (COALESCE(MAX(policy_version), 0) + 1)::text AS next_version FROM foundation_capacity_policy_events`,
+    );
+    const policyVersion = Number.parseInt(versionResult.rows[0]?.next_version ?? '1', 10);
+    const eventResult = await client.query<{ activated_at: Date }>(
+      `
+        INSERT INTO foundation_capacity_policy_events
+          (policy_version, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute,
+           max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, changed_by_user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING activated_at
+      `,
+      [
+        policyVersion,
+        row.max_active_threads_per_user,
+        row.max_messages_per_minute,
+        row.max_searches_per_minute,
+        row.max_quote_transitions_per_minute,
+        row.max_call_duration_minutes,
+        row.quota_state,
+        input.actorUserId,
+      ],
+    );
+
+    return {
+      maxActiveThreadsPerUser: row.max_active_threads_per_user,
+      maxMessagesPerMinute: row.max_messages_per_minute,
+      maxSearchesPerMinute: row.max_searches_per_minute,
+      maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
+      maxCallDurationMinutes: row.max_call_duration_minutes,
+      quotaState: row.quota_state,
+      updatedAtIso: toIso(row.updated_at),
+      policyVersion,
+      activatedAtIso: toIso(eventResult.rows[0].activated_at),
+    };
+  });
 }
 
 export async function evaluateRateLimitCommand(input: {

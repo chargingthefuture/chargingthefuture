@@ -69,7 +69,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
 
 // Resolve a plugin's accent for the active theme. Unknown slugs fall back to a
-// neutral grey (standard) / inkDim (comic) so a new plugin never renders unstyled.
+// neutral gray (standard) / inkDim (comic) so a new plugin never renders unstyled.
 export function getAppAccent(slug: string, theme: ThemeName): string {
   const pair = PLUGIN_ACCENTS[slug] ?? FALLBACK_ACCENT;
   return theme === 'comic' ? pair.comic : pair.standard;

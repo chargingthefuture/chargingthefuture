@@ -40,7 +40,7 @@ Rule 114 baseline: TrustTransport uses a single canonical profile and plugin ext
   - field name: `availability_preferences`
     - type: jsonb
     - nullable/default: default `{}`
-    - purpose: when/how the member is available to fulfil trips
+    - purpose: when/how the member is available to fulfill trips
   - field name: `work_preferences`
     - type: jsonb
     - nullable/default: default `{}`
@@ -88,7 +88,7 @@ Two more tables are not in the service-scoped deletion registry, for two differe
 
 ### Transaction-scoped messaging retention
 
-Per platform rule 100 ("Messaging Scope and Lifecycle"), the per-trip 1:1 chat is bound to a single trip/order between exactly the two parties (rider and driver) and has no existence outside it. When the trip reaches a terminal state (completed, cancelled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and chat records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, chat bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+Per platform rule 100 ("Messaging Scope and Lifecycle"), the per-trip 1:1 chat is bound to a single trip/order between exactly the two parties (rider and driver) and has no existence outside it. When the trip reaches a terminal state (completed, canceled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and chat records are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, chat bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
 
 ## 5) Service-Scoped Deletion Contract
 
@@ -115,6 +115,13 @@ Implemented via the generic per-plugin deletion route (Section 9) driven by the
 - User-facing confirmation text: the generic Account & Data screen's per-service delete confirmation
   (see `GET /api/account/services`, which lists TrustTransport under "deletable" with the
   `dataSummary` above).
+
+### Rows you appear on but do not own (pseudonymized, not deleted)
+
+A trip you **drove or delivered** belongs to the rider who requested it, so the row stays and your
+identity is overwritten instead: `trust_transport_trips.provider_user_id` is set to `deleted_member`.
+Trips you requested are deleted outright, as before. Same rule and same reasoning as SocketRelay —
+see that plugin's contract for why a shared constant is used rather than a per-user token.
 
 ## 6) Full-Account Deletion Contract
 

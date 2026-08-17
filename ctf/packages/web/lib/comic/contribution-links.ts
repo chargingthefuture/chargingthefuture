@@ -47,6 +47,59 @@ function isAcceptableSourceUrl(raw: string): boolean {
   return host === 'quora.com' || host.endsWith('.quora.com');
 }
 
+type SinglePostValidation =
+  | { ok: true; entry: ContributedEntry }
+  | { ok: false; message: string };
+
+// Validate one pasted post at its 1-based position. Records the accepted URL in `seenUrls` so a
+// later post reusing the same link is caught. Kept separate from the loop so each function stays
+// within the complexity budget; the checks run in the same order as before.
+function validateSinglePost(raw: unknown, position: number, seenUrls: Set<string>): SinglePostValidation {
+  if (!raw || typeof raw !== 'object') {
+    return { ok: false, message: `Post ${position} is missing.` };
+  }
+  const { url, text } = raw as Partial<LinkedPostInput>;
+
+  if (typeof url !== 'string' || !isAcceptableSourceUrl(url)) {
+    return { ok: false, message: `Post ${position} needs a link to the post on Quora.` };
+  }
+  const normalizedUrl = url.trim();
+  if (seenUrls.has(normalizedUrl)) {
+    return { ok: false, message: `Post ${position} is the same link as an earlier one.` };
+  }
+  seenUrls.add(normalizedUrl);
+
+  if (typeof text !== 'string') {
+    return { ok: false, message: `Post ${position} is missing its text.` };
+  }
+  const trimmed = text.trim();
+  if (trimmed.length < MIN_POST_LENGTH) {
+    // Not a quality judgment — a couple of lines cannot ground an answer to anything, and the
+    // reviewer would only discard it. Saying so now saves the contributor the wait.
+    return {
+      ok: false,
+      message: `Post ${position} is very short. Paste the whole post — a line or two is not enough for the assistant to answer from.`,
+    };
+  }
+  if (trimmed.length > MAX_POST_LENGTH) {
+    return { ok: false, message: `Post ${position} is longer than a single Quora post. Paste one post per box.` };
+  }
+
+  // The same redaction the export path applies: contact details out, links out. The source URL is
+  // kept separately as provenance rather than left inside the text, where the redactor would strip
+  // it and the reviewer would lose the ability to check the post.
+  return {
+    ok: true,
+    entry: {
+      entryType: 'post',
+      question: null,
+      content: redactContributedText(trimmed),
+      createdRaw: null,
+      sourceUrl: normalizedUrl,
+    },
+  };
+}
+
 export function validateLinkedPosts(rawPosts: unknown): LinkedPostValidation {
   if (!Array.isArray(rawPosts) || rawPosts.length === 0) {
     return { ok: false, message: 'Add at least one post.' };
@@ -59,47 +112,11 @@ export function validateLinkedPosts(rawPosts: unknown): LinkedPostValidation {
   const seenUrls = new Set<string>();
 
   for (const [index, raw] of rawPosts.entries()) {
-    const position = index + 1;
-    if (!raw || typeof raw !== 'object') {
-      return { ok: false, message: `Post ${position} is missing.` };
+    const result = validateSinglePost(raw, index + 1, seenUrls);
+    if (!result.ok) {
+      return result;
     }
-    const { url, text } = raw as Partial<LinkedPostInput>;
-
-    if (typeof url !== 'string' || !isAcceptableSourceUrl(url)) {
-      return { ok: false, message: `Post ${position} needs a link to the post on Quora.` };
-    }
-    const normalizedUrl = url.trim();
-    if (seenUrls.has(normalizedUrl)) {
-      return { ok: false, message: `Post ${position} is the same link as an earlier one.` };
-    }
-    seenUrls.add(normalizedUrl);
-
-    if (typeof text !== 'string') {
-      return { ok: false, message: `Post ${position} is missing its text.` };
-    }
-    const trimmed = text.trim();
-    if (trimmed.length < MIN_POST_LENGTH) {
-      // Not a quality judgement — a couple of lines cannot ground an answer to anything, and the
-      // reviewer would only discard it. Saying so now saves the contributor the wait.
-      return {
-        ok: false,
-        message: `Post ${position} is very short. Paste the whole post — a line or two is not enough for the assistant to answer from.`,
-      };
-    }
-    if (trimmed.length > MAX_POST_LENGTH) {
-      return { ok: false, message: `Post ${position} is longer than a single Quora post. Paste one post per box.` };
-    }
-
-    // The same redaction the export path applies: contact details out, links out. The source URL is
-    // kept separately as provenance rather than left inside the text, where the redactor would strip
-    // it and the reviewer would lose the ability to check the post.
-    entries.push({
-      entryType: 'post',
-      question: null,
-      content: redactContributedText(trimmed),
-      createdRaw: null,
-      sourceUrl: normalizedUrl,
-    });
+    entries.push(result.entry);
   }
 
   return { ok: true, entries };

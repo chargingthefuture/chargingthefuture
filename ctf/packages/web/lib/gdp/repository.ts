@@ -1,7 +1,8 @@
 import { queryDb } from 'lib/db/postgres';
-import { countActiveDirectoryProfiles } from 'lib/directory/repository';
+import { countActiveDirectoryProfiles } from 'lib/shared/directory-interface';
 import { countTotalMembers } from 'lib/engagement/login-activity';
 import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
+import { projectOpenValueIndex } from 'lib/gdp/projection';
 
 // Canonical community member count (owner decision 2026-07-15): the active Directory roster —
 // countActiveDirectoryProfiles (is_active AND NOT deleted, claimed or not) — the SAME definition the
@@ -47,10 +48,23 @@ export type GdpLiveMetricRow = {
 /** One registered recognition source's contribution to the live Community Value Index. */
 export type GdpLiveSource = { pluginSlug: string; label: string; valueIndex: number };
 
+/**
+ * The projected figure and its breakdown, carried in its OWN field — never inside `metrics` and never
+ * inside `sources`. It measures open posts that have not closed yet (lib/gdp/projection.ts), so it is
+ * deliberately kept out of every field a caller might sum into the Community Value Index. `null` when
+ * the projection read fails: the panel disappears and the real report is untouched.
+ */
+export type GdpLiveProjection = {
+  projectedValueIndex: number;
+  openPostCount: number;
+  perSource: Array<{ pluginSlug: string; label: string; valueIndex: number; openCount: number }>;
+};
+
 export type GdpLiveReport = {
   publication: { id: string; weekStartDate: string; title: string; summary: string; status: 'draft' | 'published' };
   metrics: GdpLiveMetricRow[];
   sources: GdpLiveSource[];
+  projection: GdpLiveProjection | null;
 };
 
 const LIVE_PUBLICATION_TITLE = 'Skills Economy — Live';
@@ -67,9 +81,13 @@ function currentWeekStartIso(now = new Date()): string {
 }
 
 export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
-  const [breakdown, totalMembers] = await Promise.all([
+  // The projection is a separate, marketing-facing read of open posts. It is fetched alongside the real
+  // recognition but never folded into it, and a failure here must never take the dashboard down — so it
+  // resolves to null and the panel is simply omitted.
+  const [breakdown, totalMembers, projection] = await Promise.all([
     recognizeCommunityValueIndex(),
     resolveMemberCount(),
+    projectOpenValueIndex().catch(() => null),
   ]);
 
   // Community Value Index is the headline: a normalized, weighted estimate (no currency symbol), so it
@@ -105,7 +123,26 @@ export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
     status: 'published' as const,
   };
 
-  return { publication, metrics, sources: breakdown.perSource };
+  // `metrics` carries ONLY recognized (settled) figures — the projected number is never appended there,
+  // so nothing downstream (the weekly job, the snapshot table, the Weekly Performance goal snapshot)
+  // can pick it up by metric key.
+  return {
+    publication,
+    metrics,
+    sources: breakdown.perSource,
+    projection: projection
+      ? {
+          projectedValueIndex: Math.round(projection.projectedValueIndex),
+          openPostCount: projection.openPostCount,
+          perSource: projection.perSource.map((s) => ({
+            pluginSlug: s.pluginSlug,
+            label: s.label,
+            valueIndex: Math.round(s.valueIndex),
+            openCount: s.openCount,
+          })),
+        }
+      : null,
+  };
 }
 
 // === Country distribution (Top Countries panel) ===

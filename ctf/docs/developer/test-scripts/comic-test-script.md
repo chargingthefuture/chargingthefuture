@@ -11,6 +11,43 @@ the tests worth running slowly.
 
 ---
 
+## CMC-C0 · The landing page, and contributing as the way in
+**Role:** a signed-out visitor, then a brand-new signed-in member who has NOT verified
+**Steps:**
+1. Signed out, open `/knowledge`.
+2. Sign up as a fresh account that has never submitted a Quora URL, and open `/knowledge` again.
+3. Tick the six consent lines, paste a post, paste your own Quora **profile** link in the field that
+   appears, and send.
+4. Open `/admin/unlock` as admin.
+5. As a member who **already** has a Quora URL on file, open `/knowledge`.
+6. As a fresh unverified member, send a contribution with a Quora **post** link (not `/profile/`) in
+   that field.
+
+**Expected:**
+- Step 1 → the **public landing page**, not a redirect to sign-in. It says what the library is, what
+  happens to your writing, that you can take it back, and that contributing also verifies you. This
+  is the page the invitation post links to from Quora, so a visitor with no account has to be able to
+  read it and decide. The page also carries the standard back chevron to the left of the title
+  (added 2026-08-09) — it looks and behaves like the one on every other screen, and on a phone it is
+  the only way back, since the installed web app has no browser back button. Reach the page from
+  inside the app and it returns you to the page you came from; open it cold from the Quora link and
+  it goes to the apps grid, which a signed-out visitor can also see.
+- Step 2 → the form loads. An unverified member is **not** turned away — contributing is the way in,
+  not something behind the gate.
+- Step 3 → send is blocked until the profile field is filled; the receipt then says the Quora profile
+  went in for verification at the same time.
+- Step 4 → a **pending** submission for that member is in the queue, with an audit row tagged
+  `source: comic_knowledge_contribution`. **Pending, never auto-approved** — the point is that one
+  review covers both questions, not that review is skipped.
+- Step 5 → **no Quora URL field at all.** A member who already has one on file is never asked again,
+  so two conflicting URLs cannot reach one account by this route.
+- Step 6 → the writing is still kept and the receipt says verification did not start. Losing
+  someone's writing over a malformed link would be the wrong trade.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C1 · Pick a few posts (the default path)
 **Role:** signed-in member · **Surfaces:** web + mobile-responsive
 **Precondition:** two of your own public Quora posts.
@@ -49,7 +86,7 @@ the tests worth running slowly.
 - Step 1 → refused, "Post 1 needs a link to the post on Quora."
 - Step 2 → refused as a duplicate link.
 - Step 3 → refused with "Paste the whole post — a line or two is not enough for the assistant to
-  answer from." (Not a quality judgement — the reviewer would only discard it, so saying so now saves
+  answer from." (Not a quality judgment — the reviewer would only discard it, so saying so now saves
   the contributor the wait.)
 - Step 4 → each row has the pasted text in `content` and the link in `source_url`. Contact details
   and any URLs inside the text itself are redacted; the source link survives separately because it is
@@ -151,7 +188,7 @@ the tests worth running slowly.
 6. Check `comic_knowledge_entries` and the contributors' ServiceCredits balances.
 
 **Expected:**
-- Every entry is shown **in full**, not summarised — the decision cannot be made from a count.
+- Every entry is shown **in full**, not summarized — the decision cannot be made from a count.
 - Nothing is excluded by default: entries start included and the reviewer opts one OUT. A skim must
   not be able to silently drop someone's writing.
 - If the contributor wrote a third-party note, it appears **at the top of the card**, highlighted —
@@ -207,7 +244,7 @@ withdrawal by either still reaches it.
 
 **Expected:**
 - Step 1 → refused, "Give a reason — the contributor sees it." A decline nobody can understand reads
-  as a judgement on what they lived through.
+  as a judgment on what they lived through.
 - Step 3 → the contribution reads **Not used** with the reason shown. Nothing was promoted.
 
 **Result:** web ☐
@@ -219,7 +256,29 @@ withdrawal by either still reaches it.
 **Steps:** Open the apps launcher, find **Knowledge Library**, and tap it.
 
 **Expected:** It lands on `/knowledge` — `/apps/knowledge` redirects there, so there is one page
-rather than two copies to keep in step. The admin landing also lists **Contributed Writing**.
+rather than two copies to keep in step. The admin landing also lists **Contributed Writing** and
+**AI Knowledge Base**.
+
+**Result:** web ☐
+
+---
+
+## CMC-A6 · Knowledge-base curation: switch an entry off and on (added 2026-08-05)
+**Role:** admin (plus a member session to check retrieval)
+**Precondition:** at least one active `comic_knowledge_entries` row exists (accept a contribution via CMC-A1, or use seeded/imported entries).
+
+**Steps:**
+1. Open `/admin` and tap **AI Knowledge Base** (lands on `/admin/comic/knowledge`).
+2. Read the list; use the `all` / `active` / `inactive` pills.
+3. Switch one entry **off**, then ask the assistant a question whose only grounding is that entry.
+4. Switch the same entry back **on**.
+5. As a non-admin, open `/admin/comic/knowledge` directly and call `PUT /api/comic/admin/knowledge/<id>`.
+
+**Expected:**
+- Step 2: entries list newest-first with source, type, title/question, a content snippet, active state, and an "N of M entries active" summary; the pills filter and the counts follow.
+- Step 3: the toggle saves without a page reload (the row shows "off" and dims); the assistant's draft for that question no longer quotes the switched-off entry (retrieval skips inactive rows). The row is NOT deleted.
+- Step 4: the entry is active again and retrievable — off/on is reversible.
+- Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐
 

@@ -4,6 +4,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { archiveMission, getMissionById, updateMission, type MissionUpdateInput } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // All operations on a mission must scope by both roundId AND missionId so
 // callers from one round cannot read/write missions belonging to another
@@ -37,7 +38,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_missionid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to load mission.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to load mission: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -59,9 +60,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   let body: MissionUpdateInput;
   try {
     body = (await request.json()) as MissionUpdateInput;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -85,7 +86,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_missionid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to update mission.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to update mission: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -124,7 +125,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ r
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_missionid' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to archive mission.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to archive mission: ${failureReason(error)}` },
       { status: 503 },
     );
   }

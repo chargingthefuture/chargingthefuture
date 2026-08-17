@@ -1,12 +1,21 @@
 policies:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles: [user]
     attributePolicies:
       - attribute: userId
         mustMatch: authenticatedUserId
-    consentRequirements: []
+      # The "Not listed" scheme flow (schemeTags contains 'other-scheme') additionally requires
+      # the Weavers of the Commons badge (contributor_access_eligibility: eligible and not
+      # revoked) — spam control on the scheme-suggestion intake. Enforced in the create route;
+      # members without the badge get a 403 and the client hides the option. (2.0.0: schemeTags
+      # is a list — see the command contract.)
+      - attribute: schemeTags
+        conditionalRequirement: weavers_badge_when_other_scheme
+    # The schemeSuggestion text is member content explicitly shared with the owner; the field
+    # states this in the form, so submission is the consent act.
+    consentRequirements: [scheme_suggestion_shared_with_owner]
   - pluginId: click-log
     command: click-log.incident.list
     version: 1.0.0
@@ -23,3 +32,52 @@ policies:
       - attribute: id
         mustBeOwnedBy: authenticatedUserId
     consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.update
+    version: 2.0.0
+    # Deliberately no admin override: the note is the member's private content, so only the
+    # incident's owner may edit it (mirrors click-log.incident.share.set).
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+      # The catch-all 'other-scheme' scheme tag may only be kept (already on the incident),
+      # never newly picked on edit — the suggestion intake it requires happens at create.
+      # (2.0.0: schemeTags is a list — see the command contract.)
+      - attribute: schemeTags
+        conditionalRequirement: other_scheme_only_if_already_set
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.incident.share.set
+    version: 1.0.0
+    # Deliberately no admin override: whether an incident is shared with the owner is the
+    # member's consent decision alone, so only the incident's owner may change it.
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: id
+        mustBeOwnedBy: authenticatedUserId
+    consentRequirements: [owner_share_opt_in]
+  - pluginId: click-log
+    command: click-log.preferences.fetch
+    version: 1.0.0
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: []
+  - pluginId: click-log
+    command: click-log.preferences.update
+    version: 1.0.0
+    requiredRoles: [user]
+    attributePolicies:
+      - attribute: userId
+        mustMatch: authenticatedUserId
+    consentRequirements: [owner_share_opt_in]
+  - pluginId: click-log
+    command: click-log.trends.fetch
+    version: 1.0.0
+    # Owner/admin-only aggregate view. Reads only member-opted-in rows, and only as coarse
+    # buckets (day + ~11 km location cell + count).
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: [owner_share_opt_in]

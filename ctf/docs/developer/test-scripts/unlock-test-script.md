@@ -31,6 +31,9 @@
   next run knows it's already filed.
 - Run the **Core smoke** block every session. Run the full walkthrough when you changed this
   plugin or on a pre-release sweep.
+- Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
+  `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
+  inventory was updated only where it names one of those paths. No step below changes.
 - This plugin has no member-facing screen for the verification queue. Test it as an admin /
   internal reviewer on the admin surface only.
 
@@ -108,6 +111,25 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M3 · Approved status card wording (no "Hub")
+**Role:** member (approved) · **Surfaces:** web + mobile-responsive (member Unlock status screen), android
+**Precondition:** a member whose submission has been approved.
+**Steps:**
+1. Open the Unlock status screen as the approved member.
+2. Confirm the approved card title reads "Welcome to Skills Economy (SE)" — not "Survivor Hub" or
+   "Hub" (terminology fix, 2026-08-03, owner-specified wording per the brand lexicon).
+3. On web, confirm the button reads "Continue to the Commons" and tapping it lands on the Commons
+   home page (`/`), not the plugin navigator (`/apps`).
+4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
+   button).
+5. Before approval, on the submission screen: confirm the explanation says "To unlock full access to
+   Skills Economy" on web, and "Skills Economy uses Quora profile verification" on android — neither
+   should say "Survivor Hub" (name retired 2026-08-09).
+**Expected:** The approved card welcomes the member to Skills Economy (SE) and the web continue
+button goes to the Commons home so the label matches the destination. No "Hub" wording anywhere on
+the card.
+**Result:** web ☐ android ☐ — notes:
+
 ---
 
 ## Admin walkthrough
@@ -118,10 +140,20 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 **Steps:**
 1. Open `/admin/unlock`.
 2. Read the snapshot counts at the top.
-3. Switch between the Pending and All views.
+3. Switch between the Pending, Support-only, and All views.
+4. On the Support-only view, compare the number of rows listed against the Support-only counter in
+   the snapshot, and check that each row carries a gray "Support-only" pill.
+4. Check that every card names the member — first and last name with their handle, e.g.
+   `Jane Doe (@jane)` — not a bare `user_…` id. A member with no directory profile and no handle is
+   the only case where the raw id stands alone.
 **Expected:** The queue lists submissions; the Pending view shows only pending rows, the All view
 shows every status. Each row shows the submitter's Quora profile link and its review status. A
-non-admin cannot reach this page (`requireUnlockAdminAccess`).
+non-admin cannot reach this page (`requireUnlockAdminAccess`). Step 3/4: the Support-only view shows
+only members on the `locked_support_only` access tier — which includes rejected and spam rows **and**
+any `pending` row whose window lapsed and was swept by `supportOnlyAfterExpiry`, so do not expect it
+to equal rejected + spam. The row count matches the Support-only counter; if the page holds fewer
+than the counter reports, the view says so ("Showing N of M …") rather than presenting a short list as
+the whole set. Every listed row shows the Support-only pill.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2 · Review decision — approve / reject / spam
@@ -130,10 +162,65 @@ non-admin cannot reach this page (`requireUnlockAdminAccess`).
 **Steps:**
 1. On a pending submission, choose **Approve**.
 2. On another, choose **Reject**.
-3. Confirm a third can be marked **spam** (the route accepts `approved`, `rejected`, `spam`).
+3. On a third, click **Spam**, then click **Confirm spam + block** in the inline confirm (or
+   **Cancel** to back out — the route accepts `approved`, `rejected`, `spam`).
 **Expected:** Each decision posts to the review route, records the reviewer, and refreshes the row
 to its new status. Approve moves the account to full access; reject/spam drop it out of pending.
 The decision is audited (`unlock.admin.submission.review`).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2b · Spam removes the member from the app; a later approve/reject restores access
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** a submission that can be marked spam, and the ability to sign in as that member.
+**Steps:**
+1. Mark the submission **spam** (confirm the block).
+2. As that member, try to open the Commons / Hub general channel and any plugin.
+3. As that member, open the Unlock status page and the account / data-deletion pages.
+4. Back as admin, re-review the same submission to **Approved** (or **Rejected**).
+5. As the member, retry the Commons / a plugin (approved) or the Commons support channel (rejected).
+**Expected:** Step 1 also places a platform-wide (`all`-scope) `account_restrictions` record with
+reason `unlock:spam` (audited in `account_restrictions_audit`). Step 2: the member is denied on every
+product surface — Commons and all plugins — with reason `account_restricted`. Step 3: their own Unlock
+status and the account / data-deletion routes still load (`any_authenticated` — the block deliberately
+leaves the right to be forgotten open). Step 4/5: re-reviewing lifts the `unlock:spam` restriction, so
+the member regains the access their new tier grants (full app on approve; Commons/support on reject). A
+restriction an admin set for any other reason is left untouched.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2c · Spam denylist — a known-spam Quora URL never re-enters the queue, and survives deletion
+**Role:** admin / reviewer + member · **Surfaces:** web (admin surface + member submission)
+**Precondition:** a member with a submission that can be marked spam; the ability to sign in as a
+second, different member.
+**Steps:**
+1. As admin, mark the first member's submission **spam** (confirm the block).
+2. As admin, delete that first member's account/data (or have them delete it).
+3. As the second member, submit the **same** Quora profile URL the first member used.
+4. As admin, open the Pending queue.
+5. As the second member, try to open the Commons / a plugin.
+**Expected:** Step 1 records the normalized URL on `unlock_spam_quora_urls`. Step 2 hard-deletes the
+first member's `unlock_verification_submissions` row but leaves the denylist row intact (it holds no
+member id and is retained). Step 3: the second member's submission is auto-marked `spam` /
+`locked_support_only` at submission time (not `pending`), and an `all`-scope `account_restrictions`
+record is placed (actor `system:unlock-spam-denylist`, reason `unlock:spam`). Step 4: the second
+member's submission does **not** appear in Pending — the admin never has to re-review the same spam
+Quora account. Step 5: the second member is blocked from the Commons and all plugins. Re-reviewing that
+URL to approved/rejected (in the admin queue) removes it from the denylist and lifts the block.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2d · Spam denylist panel — view and remove a URL
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one URL on the denylist (mark a submission spam first, per UNLOCK-A2c).
+**Steps:**
+1. On `/admin/unlock`, scroll to the "Spam Quora-URL denylist" panel.
+2. Confirm the flagged URL is listed with its last-flagged date (and flag count if more than one).
+3. Click **Remove**, then **Confirm remove**.
+4. Re-submit that URL as a member (per UNLOCK-A2c).
+**Expected:** Step 2: the panel lists every denylisted URL. Step 3: `POST
+/api/unlock/admin/spam-denylist/remove` deletes the row (audited
+`unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
+longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
+submissions only; a member already blocked for that URL stays blocked until their submission is
+re-reviewed. A non-admin cannot reach the route.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A3 · Approval reward — granted or pending, never double

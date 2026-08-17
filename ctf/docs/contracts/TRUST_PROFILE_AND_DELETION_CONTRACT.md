@@ -21,7 +21,6 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
   - none to canonical profile
 - Why canonical fields are needed:
   - attach trust signals to one canonical member identity
-  - support policy checks for self-service visibility changes and moderator/admin review
   - render consistent identity context across plugin surfaces
 
 ## Identity Handle Baseline
@@ -38,18 +37,10 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
     - type: uuid or text keyed to canonical identity implementation
     - nullable/default: non-null, unique, FK to canonical profile equivalent
     - purpose: plugin extension ownership key
-  - field name: `trust_status`
-    - type: enum (`unverified` | `verified` | `flagged`)
-    - nullable/default: non-null, default `unverified`
-    - purpose: public-safe trust state for trust badge rendering (admin-controlled)
   - field name: `trust_evidence`
     - type: jsonb (array of evidence items: `{ type, summary, details?, createdAt, createdBy? }`)
     - nullable/default: non-null, default `[]`
-    - purpose: qualitative, non-numeric evidence derived from real cross-plugin participation, plus admin notes
-  - field name: `trust_visibility`
-    - type: enum (`public` | `private` | `restricted`)
-    - nullable/default: non-null, default `public`
-    - purpose: reduce stalking/harassment risk by limiting who can view trust signal detail
+    - purpose: qualitative, non-numeric evidence derived from real cross-plugin participation
   - field name: `member_since_at`
     - type: timestamptz
     - nullable/default: nullable, derived/backfilled from canonical account timeline when available
@@ -72,10 +63,10 @@ Rule 114 baseline: Trust extends the canonical profile by `user_id` and must not
   - field name: `snapshot`
     - type: jsonb
     - nullable/default: non-null, default `{}`
-    - purpose: the derived metric bundle computed from real upstream rows (login*, socketRelay*, serviceCredits*, and per-plugin participation counts: lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelUpCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed). Only coarse COUNTs are read (never amounts, balances, or sensitive per-row detail). No numeric trust score is stored.
+    - purpose: the derived metric bundle computed from real upstream rows (login* — including `loginDays`, the all-time count of days the member signed in on, and `loginStreakDays`, their current unbroken run of consecutive sign-in days — socketRelay*, serviceCredits*, and per-plugin participation counts: lighthouseMatchesAccepted, trustTransportTripsCompleted, skillsHuntSubmissionsAccepted, levelUpCohortsCompleted, chymeRoomsJoined, directoryProfilesClaimed, whatWorksEndorsements, peerProgrammingCohortsJoined, contributionsConfirmed). Only coarse COUNTs are read (never amounts, balances, or sensitive per-row detail). No numeric trust score is stored.
   - field name: `snapshot_type`
     - type: text
-    - nullable/default: non-null, default `cross_plugin_engagement_v3`
+    - nullable/default: non-null; every insert writes the current model explicitly, `cross_plugin_engagement_v5`
     - purpose: derivation model version so older snapshots stay self-describing
   - field name: `created_at`
     - type: timestamptz
@@ -131,7 +122,7 @@ When user requests full account deletion:
 If user returns after service-scoped deletion:
 
 - Recreated defaults:
-  - new `trust_user_extension` with `unverified` status and `public` visibility
+  - new `trust_user_extension` with empty evidence
   - empty or re-derived `trust_signal_snapshot`
 - Data that is not restored:
   - prior public-safe trust summary state unless re-derived from approved source systems
@@ -171,7 +162,7 @@ If user returns after service-scoped deletion:
 - Rollback approach:
   - reverse-order rollback for Trust-only extension and snapshot tables
 - Backfill required? (yes/no):
-  - yes (member-since derivation and any approved initial verification carry-over from legacy systems)
+  - yes (member-since derivation only; there is no verification state to carry over)
 
 ## 11) Sign-off Checklist
 

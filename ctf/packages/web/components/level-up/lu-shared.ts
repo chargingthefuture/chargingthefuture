@@ -63,7 +63,7 @@ export const STATUS_COLOR: Record<string, string> = {
   active: "#3B82F6",
   full: MUTED,
   completed: "#A855F7",
-  cancelled: "#EF4444",
+  canceled: "#EF4444",
   draft: MUTED,
 };
 
@@ -88,21 +88,20 @@ export interface Cohort {
   startDate?: string;
 }
 
-export interface Milestone {
-  id: string;
-  name?: string;
-  percentRelease?: number;
-  requiredTask?: string;
-  status?: string;
-}
-
+// One of the signed-in member's own enrollments, exactly as GET /api/level-up/enrollments returns it.
+// `isCurrent` is true while the enrollment is live (server statuses `enrolled` / `active`) and false
+// once it is completed or dropped, so the Browse count can say how many cohorts you are in right now
+// rather than how many you have ever joined.
 export interface Enrollment {
+  enrollmentId: string;
   cohortId: string;
+  status: string;
+  isCurrent: boolean;
   title: string;
   track?: string;
-  trainerName?: string;
-  milestones: Milestone[];
-  completedCount: number;
+  trainerName?: string | null;
+  milestoneTotal: number;
+  milestoneCompleted: number;
 }
 
 export interface Wallet {
@@ -156,5 +155,5 @@ export function idempotencyKey(): string {
 }
 
 export function enrollmentPct(enr: Enrollment): number {
-  return enr.milestones.length > 0 ? Math.round((enr.completedCount / enr.milestones.length) * 100) : 0;
+  return enr.milestoneTotal > 0 ? Math.round((enr.milestoneCompleted / enr.milestoneTotal) * 100) : 0;
 }

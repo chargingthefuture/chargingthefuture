@@ -20,6 +20,7 @@ import {
   getHostedAfterSignOutUrl,
   getAppUrl,
 } from '@/lib/auth/clerk-env';
+import { SENTRY_DSN_GLOBAL } from '@/lib/observability/sentry-config';
 import './globals.css';
 
 // The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
@@ -88,6 +89,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/*
+          Hands the browser the Sentry DSN the server already holds (SENTRY_DSN in Infisical). Next.js
+          inlines only NEXT_PUBLIC_* names into client bundles, so without this the browser had no DSN
+          and crash reporting never started there. Rendering it here keeps one secret key instead of a
+          NEXT_PUBLIC_ duplicate, and keeps it a runtime value — rotating the secret takes effect on
+          restart, with no image rebuild. A DSN only permits sending events to the project, so it is
+          meant to travel to the client. JSON.stringify keeps the value a string literal.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window[${JSON.stringify(SENTRY_DSN_GLOBAL)}]=${JSON.stringify(process.env.SENTRY_DSN ?? '')};`,
+          }}
+        />
         {/*
           No-flash theme script: runs before paint, reads the saved theme from
           localStorage, and sets data-theme="comic" on <html> so a returning comic-theme

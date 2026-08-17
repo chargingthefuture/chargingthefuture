@@ -62,7 +62,7 @@ export function useChymeBackChannel(enabled: boolean): MobileBackChannelControll
     try {
       setState(await getBackChannelState());
     } catch {
-      /* best-effort poll; next tick retries */
+      /* no-trace: best-effort poll, the next tick retries */
     }
   }, []);
 
@@ -71,15 +71,15 @@ export function useChymeBackChannel(enabled: boolean): MobileBackChannelControll
       setState(EMPTY_STATE);
       return;
     }
-    let cancelled = false;
+    let canceled = false;
     const tick = () => {
-      if (cancelled) return;
+      if (canceled) return;
       void refresh();
     };
     tick();
     const id = setInterval(tick, POLL_MS);
     return () => {
-      cancelled = true;
+      canceled = true;
       clearInterval(id);
     };
   }, [enabled, refresh]);

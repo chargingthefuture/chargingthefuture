@@ -89,7 +89,7 @@ function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: strin
         <Text style={{ color: accent }}>the verification process</Text>
       </Text>
       <Text style={[s.bodyText, { marginBottom: 20 }]}>
-        Survivor Hub uses Quora profile verification to confirm members are real people. This protects the community.
+        Skills Economy uses Quora profile verification to confirm members are real people. This protects the community.
       </Text>
       {[
         { n: '1', title: 'Create a free account', desc: 'Sign up in 60 seconds.' },
@@ -276,7 +276,7 @@ function StatusView({
         {display === 'approved' && (
           <View style={s.approvedBox}>
             <Text style={{ fontSize: 26, textAlign: 'center' }}>🎉</Text>
-            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to the Survivor Hub!</Text>
+            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to Skills Economy (SE)</Text>
             <Text style={[s.bodyText, { textAlign: 'center' }]}>All features are now unlocked.</Text>
             <Text style={[s.bodyText, { textAlign: 'center', marginTop: 8 }]}>
               {status.incentiveGrantedAt

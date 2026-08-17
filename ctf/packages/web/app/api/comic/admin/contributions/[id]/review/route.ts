@@ -6,6 +6,7 @@ import { logComicAudit } from 'lib/comic/audit';
 import { acceptContribution, declineContribution } from 'lib/comic/contribution-repository';
 import { grantContributionRecognition } from 'lib/comic/contribution-grant';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,104 @@ function hashOf(entryType: string, question: string | null, content: string): st
   return createHash('sha256')
     .update([entryType, question ?? '', content.trim()].join(HASH_SEPARATOR))
     .digest('hex');
+}
+
+// DECLINE: flip the contribution to declined with a reason the contributor will see.
+async function handleDecline(id: string, reviewerId: string, rawReason: unknown): Promise<NextResponse> {
+  const reason = typeof rawReason === 'string' ? rawReason.trim() : '';
+  if (reason.length === 0) {
+    // A decline the contributor cannot understand reads as a judgment on what they lived
+    // through. The reason is shown to them on their own page, so it is required.
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Give a reason — the contributor sees it.' },
+      { status: 400 },
+    );
+  }
+
+  const declined = await declineContribution({ contributionId: id, reviewerId, reason });
+  if (!declined) {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
+      { status: 404 },
+    );
+  }
+
+  logComicAudit({
+    actorId: reviewerId,
+    pluginId: 'comic',
+    command: 'comic.contribution.review',
+    status: 'allow',
+    reason: 'declined',
+    targetType: 'contribution',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+  });
+  return NextResponse.json({ ok: true, status: 'declined' }, { status: 200 });
+}
+
+// ACCEPT: promote the chosen entries, then make the recognition grant (which may fail without
+// undoing the promotion — see the POST doc comment below).
+async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown): Promise<NextResponse> {
+  const excludedEntryIds = Array.isArray(rawExcluded)
+    ? rawExcluded.filter((value): value is string => typeof value === 'string')
+    : [];
+
+  const accepted = await acceptContribution({
+    contributionId: id,
+    reviewerId,
+    excludedEntryIds,
+    hashOf,
+  });
+  if (!accepted) {
+    return NextResponse.json(
+      { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
+      { status: 404 },
+    );
+  }
+
+  const grant = await grantContributionRecognition({
+    contributionId: id,
+    contributorUserId: accepted.contributorUserId,
+    reviewerId,
+  });
+  if (grant.status === 'failed') {
+    // Reported, never thrown: the writing is already in the library and the reading is done.
+    reportError(new Error(`contribution grant failed: ${grant.reason}`), {
+      area: 'comic',
+      op: 'contribution_grant',
+      extra: { contributionId: id },
+    });
+  }
+
+  logComicAudit({
+    actorId: reviewerId,
+    pluginId: 'comic',
+    command: 'comic.contribution.review',
+    status: 'allow',
+    reason: 'accepted',
+    targetType: 'contribution',
+    targetId: id,
+    result: 'success',
+    errorCategory: null,
+    metadata: {
+      promoted: accepted.promoted,
+      alreadyPresent: accepted.alreadyPresent,
+      excluded: excludedEntryIds.length,
+      grant: grant.status,
+    },
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      status: 'accepted',
+      promoted: accepted.promoted,
+      alreadyPresent: accepted.alreadyPresent,
+      grant,
+    },
+    { status: 200 },
+  );
 }
 
 // Admin: accept or decline a contribution.
@@ -53,9 +152,9 @@ export async function POST(request: Request, context: RouteContext) {
   let body: { action?: string; excludedEntryIds?: unknown; reason?: string };
   try {
     body = (await request.json()) as typeof body;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Could not read the request.' },
+      { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: `Could not read the request: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -69,101 +168,14 @@ export async function POST(request: Request, context: RouteContext) {
 
   try {
     if (body.action === 'decline') {
-      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
-      if (reason.length === 0) {
-        // A decline the contributor cannot understand reads as a judgement on what they lived
-        // through. The reason is shown to them on their own page, so it is required.
-        return NextResponse.json(
-          { ok: false, code: COMIC_ERROR_CODE.invalidPayload, message: 'Give a reason — the contributor sees it.' },
-          { status: 400 },
-        );
-      }
-
-      const declined = await declineContribution({ contributionId: id, reviewerId: gate.auth.userId, reason });
-      if (!declined) {
-        return NextResponse.json(
-          { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
-          { status: 404 },
-        );
-      }
-
-      logComicAudit({
-        actorId: gate.auth.userId,
-        pluginId: 'comic',
-        command: 'comic.contribution.review',
-        status: 'allow',
-        reason: 'declined',
-        targetType: 'contribution',
-        targetId: id,
-        result: 'success',
-        errorCategory: null,
-      });
-      return NextResponse.json({ ok: true, status: 'declined' }, { status: 200 });
+      return await handleDecline(id, gate.auth.userId, body.reason);
     }
 
-    const excludedEntryIds = Array.isArray(body.excludedEntryIds)
-      ? body.excludedEntryIds.filter((value): value is string => typeof value === 'string')
-      : [];
-
-    const accepted = await acceptContribution({
-      contributionId: id,
-      reviewerId: gate.auth.userId,
-      excludedEntryIds,
-      hashOf,
-    });
-    if (!accepted) {
-      return NextResponse.json(
-        { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
-        { status: 404 },
-      );
-    }
-
-    const grant = await grantContributionRecognition({
-      contributionId: id,
-      contributorUserId: accepted.contributorUserId,
-      reviewerId: gate.auth.userId,
-    });
-    if (grant.status === 'failed') {
-      // Reported, never thrown: the writing is already in the library and the reading is done.
-      reportError(new Error(`contribution grant failed: ${grant.reason}`), {
-        area: 'comic',
-        op: 'contribution_grant',
-        extra: { contributionId: id },
-      });
-    }
-
-    logComicAudit({
-      actorId: gate.auth.userId,
-      pluginId: 'comic',
-      command: 'comic.contribution.review',
-      status: 'allow',
-      reason: 'accepted',
-      targetType: 'contribution',
-      targetId: id,
-      result: 'success',
-      errorCategory: null,
-      metadata: {
-        promoted: accepted.promoted,
-        alreadyPresent: accepted.alreadyPresent,
-        excluded: excludedEntryIds.length,
-        grant: grant.status,
-      },
-    });
-
-    return NextResponse.json(
-      {
-        ok: true,
-        status: 'accepted',
-        promoted: accepted.promoted,
-        alreadyPresent: accepted.alreadyPresent,
-        grant,
-      },
-      { status: 200 },
-    );
+    return await handleAccept(id, gate.auth.userId, body.excludedEntryIds);
   } catch (error) {
     reportError(error, { area: 'comic', op: 'contribution_review', extra: { contributionId: id } });
     return NextResponse.json(
-      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Could not record that review.' },
+      { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Could not record that review: ${failureReason(error)}` },
       { status: 503 },
     );
   }

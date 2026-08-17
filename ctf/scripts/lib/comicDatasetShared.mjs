@@ -1,23 +1,26 @@
 // Shared helpers for the comic seed-dataset scripts (issue #504): the parsers
 // (parseQuoraExportToComicDataset.mjs, parseQuoraMarkdownToComicDataset.mjs,
-// parseWikiToComicDataset.mjs), the importer, and the identifier scrub.
+// parseWikiToComicDataset.mjs) and the importer.
 
 import { createHash } from "node:crypto";
 
-// THE canonical comic_knowledge_entries.content_hash formula. Every place that writes a
-// content_hash must use this one function, because the hash is what stops the same writing being
-// stored twice: import (importComicKnowledge.mjs), the identifier scrub
-// (scrubComicKnowledgeIdentifiers.mjs), and — across the package boundary, which cannot import this
-// file — the member-contribution accept path (packages/web/app/api/comic/admin/contributions/[id]/
-// review/route.ts). Change the formula here and that route must change in the same commit.
+// THE canonical comic_knowledge_entries.content_hash formula. The hash is what stops the same
+// writing being stored twice, so every place that writes one must agree on it: the importer
+// (importComicKnowledge.mjs) and — across the package boundary, which cannot import this file — the
+// member-contribution accept path (packages/web/app/api/comic/admin/contributions/[id]/review/
+// route.ts). Change the formula here and that route must change in the same commit.
 //
-// The separator is NUL ("\u0000"), not a space. It is written as the escape rather than a literal
-// NUL byte so this file stays plain text: a raw NUL makes git treat the source as binary and print
-// "Binary files differ" instead of a reviewable diff. The runtime string — and therefore every
-// hash — is identical either way.
+// The separator is NUL, written as the escape rather than a literal NUL byte so this file stays
+// plain text: a raw NUL makes git treat a source file as binary and print "Binary files differ"
+// instead of a reviewable diff. The runtime string — and therefore every hash — is identical.
 //
-// NUL is the right separator on its own merits: it cannot occur in the text being hashed, so
+// NUL is also the right separator on its own merits: it cannot occur in the text being hashed, so
 // ("post", "a b", "c") and ("post", "a", "b c") cannot collide the way a space-joined key can.
+//
+// History: the now-removed identifier scrub (scrubComicKnowledgeIdentifiers.mjs, deleted in #1954
+// after its production run) joined these fields with a SPACE while the importer used NUL. Rows that
+// scrub rewrote therefore hold a hash the importer will not reproduce, so they will not dedupe
+// against a re-import until they are recomputed — a production data pass, tracked separately.
 export function contentHashOf(entryType, question, content) {
   return createHash("sha256")
     .update(entryType + "\u0000" + (question || "") + "\u0000" + content.trim())
@@ -67,7 +70,7 @@ export function redact(text) {
       .replace(/\b[48][0-9AB][1-9A-HJ-NP-Za-km-z]{93}\b/g, "[wallet removed]")
       // Quora profile links, with or without a scheme/host, including the
       // trailing post slug and any query string. Handled before the general URL
-      // rule so a profile link is labelled as such rather than as a bare link.
+      // rule so a profile link is labeled as such rather than as a bare link.
       .replace(
         /(?:https?:\/\/)?(?:www\.)?quora\.com\/profile\/[^\s")\]]*/gi,
         "[profile link removed]",

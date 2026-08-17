@@ -5,7 +5,7 @@ import { deleteGatedChannelPost } from 'lib/contributor-access/channel-repositor
 import { insertContributorAccessAudit } from 'lib/contributor-access/repository';
 import { reportError } from 'lib/observability/report';
 
-// Delete a gated-channel post. Same route shape as the Commons (DELETE /api/hub/messages/[postId])
+// Delete a gated-channel post. Same route shape as the Commons (DELETE /api/commons/messages/[postId])
 // but a SOFT delete: deleted_at/deleted_by are set and every read excludes the row — content is
 // hidden, not erased. Two allowed paths, audited under distinct commands:
 //   - the post's author (contributor-access.channel.post.delete, reason author_delete);

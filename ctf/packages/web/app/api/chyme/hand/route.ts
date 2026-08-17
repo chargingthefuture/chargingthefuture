@@ -4,6 +4,7 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { setRoomMemberHandRaised } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
 import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
 // the raised hand until they lower it (or leave). Stream reactions are transient and auto-clear, so
@@ -26,12 +27,12 @@ export async function POST(request: Request) {
   let body: HandRequestBody;
   try {
     body = (await request.json()) as HandRequestBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
       {
         ok: false,
         code: CHYME_ERROR_CODE.invalidPayload,
-        message: 'Invalid JSON payload.',
+        message: 'Invalid JSON payload.', reason: failureReason(error),
       },
       { status: 400 },
     );

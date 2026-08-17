@@ -4,6 +4,7 @@ import { insertPeerProgrammingAudit, runWeeklyAssignment } from 'lib/peer-progra
 import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
 import { listUnlockedUserIds } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AssignmentBody = {
   activeUserIds?: string[];
@@ -24,8 +25,8 @@ export async function POST(request: Request) {
   let body: AssignmentBody;
   try {
     body = (await request.json()) as AssignmentBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
   const useManualOverride = Boolean(body.allowManualOverride) && Array.isArray(body.activeUserIds);

@@ -17,7 +17,7 @@ export type AdminCohort = {
   requiredCredits: number;
   materialsCost: number;
   deviceSupport: boolean;
-  status: 'draft' | 'open' | 'active' | 'completed' | 'cancelled';
+  status: 'draft' | 'open' | 'active' | 'completed' | 'canceled';
   allowNoDeposit: boolean;
   trainerSplitPercent: number;
   completionBonusCredits: number;
@@ -57,8 +57,14 @@ export type AdminProposal = {
 export const PROPOSAL_TERM_MONTHS = [1, 3, 5] as const;
 export type ProposalTermMonths = (typeof PROPOSAL_TERM_MONTHS)[number];
 
+// Headline numbers on the admin panel. `enrollments` counts every enrollment row ever written (a
+// member in three cohorts contributes three), `activeEnrollments` counts only the live ones, and
+// `membersEnrolled` counts the distinct people behind those live rows — three different questions
+// that a single "Enrollments" number used to be asked to answer at once.
 export type AdminKpis = {
   enrollments: number;
+  activeEnrollments: number;
+  membersEnrolled: number;
   completions: number;
   avgDaysToFirstTrainerPayout: number;
 };

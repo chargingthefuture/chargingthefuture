@@ -1,22 +1,65 @@
 commands:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 1.0.0
+    version: 2.0.0
     inputSchema:
       type: object
       properties:
         metadata:
           $ref: '#/definitions/IncidentMetadata'
-      # metadata is not required, matches implementation
+        sharedWithOwner:
+          type: boolean
+        problemTags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+        schemeTags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+        schemeSuggestion:
+          type: string
+        schemeQuoraUrl:
+          type: string
+      # metadata is not required, matches implementation.
+      # sharedWithOwner is optional: when omitted, the member's stored global default
+      # (click_log_preferences.share_with_owner, itself defaulting to false) is applied.
+      # problemTags / schemeTags are optional coarse tag LISTS (2.0.0, owner decision
+      # 2026-08-13: a real incident routinely chains several schemes, so the singular
+      # problemTag/schemeTag fields of 1.x never fit — this is the breaking change). Either,
+      # both, or neither may be sent; absent/null/[] all mean untagged. Every slug is
+      # validated against the canonical list in packages/web/lib/click-log/tags.ts (problems
+      # mirror the landing-page 50+ problems list; schemes started from the owner's "A post
+      # for each gang stalker game" Discourse thread — now deprecated, so tags.ts is the
+      # living canonical scheme list); an unknown slug is a 400, duplicates are collapsed,
+      # and more than 10 of a kind (MAX_TAGS_PER_KIND) is a 400.
+      # When either list is non-empty, metadata.latitude and metadata.longitude are required
+      # (owner decision, 2026-08-02: tagged trend data needs location to be detailed enough);
+      # a tagged request without a location is a 400.
+      # schemeSuggestion is REQUIRED (1–200 chars after trim) when schemeTags contains the
+      # catch-all 'other-scheme' ("Not listed") and rejected otherwise. It is member text
+      # EXPLICITLY shared with the owner (the form says so; metadata.notes stays never-shared)
+      # and is stored in click_log_scheme_suggestions for the scheme-naming pipeline.
+      # schemeQuoraUrl is optional with 'other-scheme' only: an https quora.com link to the
+      # member's own post about a similar incident (a spam signal for the owner).
+      # The 'other-scheme' flow is limited to Weavers of the Commons badge holders
+      # (contributor_access_eligibility: eligible and not revoked); others receive a 403.
     outputSchema:
       $ref: '#/definitions/ClickLogIncident'
     dataAccess:
       - click_log_incidents (insert)
+      - click_log_preferences (select)
+      - click_log_scheme_suggestions (insert — only when schemeTags contains 'other-scheme')
+      - contributor_access_eligibility (select — Weavers badge check, only when schemeTags contains 'other-scheme')
     purpose: Log a new incident for the authenticated user
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.incident.list
-    version: 1.0.0
+    version: 2.0.0
+    # 2.0.0: the ClickLogIncident items now carry problem_tags/scheme_tags arrays instead of
+    # the singular problem_tag/scheme_tag (owner decision, 2026-08-13).
     inputSchema:
       type: object
       properties:
@@ -35,8 +78,14 @@ commands:
             $ref: '#/definitions/ClickLogIncident'
         count:
           type: integer
+        canSuggestScheme:
+          type: boolean
+      # canSuggestScheme: whether this member may pick the "Not listed" scheme tag (Weavers of
+      # the Commons badge holders only). The client hides the option when false; the create
+      # route enforces the same rule independently.
     dataAccess:
       - click_log_incidents (select)
+      - contributor_access_eligibility (select — Weavers badge check for canSuggestScheme)
     purpose: List incidents for a user
     retentionClass: user_event
   - pluginId: click-log
@@ -56,6 +105,133 @@ commands:
     dataAccess:
       - click_log_incidents (delete)
     purpose: Delete an incident by id
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.incident.update
+    version: 2.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        notes:
+          type:
+            - string
+            - 'null'
+        problemTags:
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+          maxItems: 10
+        schemeTags:
+          type:
+            - array
+            - 'null'
+          items:
+            type: string
+          maxItems: 10
+      required: [id]
+      # Edits an incident's note and tag lists in place (owner decision, 2026-08-13). The date
+      # (created_at) and location (metadata latitude/longitude) are IMMUTABLE — the body
+      # carries no coordinates and the SQL never touches them. notes null/empty removes the
+      # note; problemTags/schemeTags absent/null/[] untags that kind (2.0.0, owner decision
+      # 2026-08-13: tag lists replace the singular problemTag/schemeTag of 1.0.0 — the
+      # breaking change; same validation as create: canonical slugs, duplicates collapsed,
+      # at most 10 of a kind).
+      # Tags follow the same rules as create: slugs validated against the canonical lists in
+      # packages/web/lib/click-log/tags.ts, and tags may only be set on an incident that
+      # carries a location (tags-require-location, owner decision 2026-08-02). Since the
+      # location is immutable, an incident logged without one can never gain tags — only its
+      # note can be edited; the client explains this instead of showing pickers.
+      # The catch-all 'other-scheme' ("Not listed") may be KEPT or REMOVED on an incident that
+      # already carries it, but never newly picked on edit — its required description intake
+      # happens at logging time (click-log.incident.create); a 400 explains this.
+      # An edit whose resulting metadata duplicates another of the member's incidents violates
+      # the UNIQUE (user_id, metadata_hash) dedupe and returns a readable 409.
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+    dataAccess:
+      - click_log_incidents (select, update — own row only; metadata notes key and the two tag
+        array columns; never coordinates or created_at)
+    purpose: Edit the note and tag lists of an own incident after logging (date and location immutable)
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.incident.share.set
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        sharedWithOwner:
+          type: boolean
+      required: [id, sharedWithOwner]
+    outputSchema:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sharedWithOwner:
+          type: boolean
+    dataAccess:
+      - click_log_incidents (update)
+    purpose: Set whether a single incident is shared with the owner for aggregate trends (owner of the incident only)
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.preferences.fetch
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      $ref: '#/definitions/ClickLogPreferences'
+    dataAccess:
+      - click_log_preferences (select)
+    purpose: Read the member's global owner-share default
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.preferences.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        shareWithOwner:
+          type: boolean
+      required: [shareWithOwner]
+    outputSchema:
+      $ref: '#/definitions/ClickLogPreferences'
+    dataAccess:
+      - click_log_preferences (upsert)
+    purpose: Set the member's global owner-share default for newly logged incidents
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.trends.fetch
+    version: 1.1.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        buckets:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentTrendBucket'
+        tagTrends:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentTagTrend'
+    dataAccess:
+      - click_log_incidents (select, aggregate only — shared_with_owner rows; the SQL projects
+        only day buckets, 1-decimal location cells, counts, and per-tag counts over the
+        canonical problem/scheme tag slugs, never notes, precise coordinates, incident ids,
+        or member identity)
+    purpose: Owner/admin-only aggregate trends over incidents members opted to share
     retentionClass: user_event
 
 definitions:
@@ -80,6 +256,55 @@ definitions:
           - 'null'
       metadata:
         $ref: '#/definitions/IncidentMetadata'
+      shared_with_owner:
+        type: boolean
+      # Optional coarse tag lists; slugs from packages/web/lib/click-log/tags.ts, [] when
+      # untagged. Arrays since 2026-08-13 (owner decision: a real incident routinely chains
+      # several schemes). The superseded singular problem_tag/scheme_tag DB columns are kept
+      # for history but no longer surface in API responses' typed shape.
+      problem_tags:
+        type: array
+        items:
+          type: string
+        maxItems: 10
+      scheme_tags:
+        type: array
+        items:
+          type: string
+        maxItems: 10
       created_at:
         type: string
-    required: [id, user_id, metadata, created_at]
+    required: [id, user_id, metadata, shared_with_owner, problem_tags, scheme_tags, created_at]
+  ClickLogPreferences:
+    type: object
+    properties:
+      shareWithOwner:
+        type: boolean
+    required: [shareWithOwner]
+  SharedIncidentTrendBucket:
+    type: object
+    properties:
+      day:
+        type: string
+      latitudeCell:
+        type:
+          - number
+          - 'null'
+      longitudeCell:
+        type:
+          - number
+          - 'null'
+      count:
+        type: integer
+    required: [day, latitudeCell, longitudeCell, count]
+  SharedIncidentTagTrend:
+    type: object
+    properties:
+      tagType:
+        type: string
+        enum: [problem, scheme]
+      tag:
+        type: string
+      count:
+        type: integer
+    required: [tagType, tag, count]

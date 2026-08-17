@@ -215,6 +215,12 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+// Parse a COUNT(*)::text (or similar) column into a number, treating a missing
+// row/column as 0.
+function parseCount(value: string | null | undefined): number {
+  return Number.parseInt(value ?? '0', 10);
+}
+
 function isIsoDatetime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
 }
@@ -453,40 +459,66 @@ function hasUnsafeCollectionText(values: string[]): boolean {
   return values.some((value) => containsUnsafeText(value));
 }
 
-export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boolean {
-  const fullName = normalizeText(input.fullName ?? '');
-  const bio = normalizeText(input.bio ?? '');
-  const skills = normalizeArray(input.skills);
-  const proposedSkills = normalizeArray(input.proposedSkills ?? []);
-  const claimedProfessions = normalizeArray(input.claimedProfessions);
+// Normalized view of a submission's text/collection fields, computed once and
+// shared by the per-field validators below.
+type NormalizedSubmissionFields = {
+  fullName: string;
+  bio: string;
+  skills: string[];
+  proposedSkills: string[];
+  claimedProfessions: string[];
+  country: string;
+  state: string | null;
+  city: string | null;
+};
 
-  const hasValidRoundId = typeof input.roundId === 'string' && input.roundId.length > 0;
+function normalizeSubmissionFields(input: SkillsHuntSubmissionInput): NormalizedSubmissionFields {
+  return {
+    fullName: normalizeText(input.fullName ?? ''),
+    bio: normalizeText(input.bio ?? ''),
+    skills: normalizeArray(input.skills),
+    proposedSkills: normalizeArray(input.proposedSkills ?? []),
+    claimedProfessions: normalizeArray(input.claimedProfessions),
+    // Location: country is REQUIRED (a nominee's country matters, especially for non-US members and
+    // the GDP country breakdown); state/city are optional.
+    country: normalizeText(input.country ?? ''),
+    state: normalizeNullableText(input.state),
+    city: normalizeNullableText(input.city),
+  };
+}
 
-  // Location: country is REQUIRED (a nominee's country matters, especially for non-US members and the
-  // GDP country breakdown); state/city are optional. Each is a plain name capped at the location limit.
-  const country = normalizeText(input.country ?? '');
-  const state = normalizeNullableText(input.state);
-  const city = normalizeNullableText(input.city);
-  const hasValidLocation =
-    country.length > 0
-    && country.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH
-    && (!state || state.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH)
-    && (!city || city.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH);
+function hasValidSubmissionRoundId(input: SkillsHuntSubmissionInput): boolean {
+  return typeof input.roundId === 'string' && input.roundId.length > 0;
+}
 
-  // Spec §2.1: full name 2–100 chars, letters/digits/spaces only.
-  const hasValidFullName =
-    isLengthInRange(fullName, SKILLS_HUNT_MIN_FULL_NAME_LENGTH, SKILLS_HUNT_MAX_FULL_NAME_LENGTH)
+// Each location field is a plain name capped at the location limit; state/city are optional.
+function hasValidSubmissionLocation(fields: NormalizedSubmissionFields): boolean {
+  return fields.country.length > 0
+    && fields.country.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH
+    && (!fields.state || fields.state.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH)
+    && (!fields.city || fields.city.length <= SKILLS_HUNT_MAX_LOCATION_LENGTH);
+}
+
+// Spec §2.1: full name 2–100 chars, letters/digits/spaces only.
+function hasValidSubmissionFullName(fullName: string): boolean {
+  return isLengthInRange(fullName, SKILLS_HUNT_MIN_FULL_NAME_LENGTH, SKILLS_HUNT_MAX_FULL_NAME_LENGTH)
     && SKILLS_HUNT_FULL_NAME_PATTERN.test(fullName);
+}
 
-  // Spec §2.1: bio is optional (max 280). Length 0 accepted; >280 rejected.
-  const hasValidBio = bio.length === 0 || bio.length <= SKILLS_HUNT_MAX_BIO_LENGTH;
+// Spec §2.1: bio is optional (max 280). Length 0 accepted; >280 rejected.
+function hasValidSubmissionBio(bio: string): boolean {
+  return bio.length === 0 || bio.length <= SKILLS_HUNT_MAX_BIO_LENGTH;
+}
 
+function hasValidSubmissionUrl(input: SkillsHuntSubmissionInput): boolean {
   const quoraProfileUrl = typeof input.quoraProfileUrl === 'string' ? input.quoraProfileUrl.trim() : '';
-  const hasValidUrl = isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH);
+  return isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH);
+}
 
-  // Spec §2.1: ≥1 skill, sum capped at 10. Free-text proposed skills keep the short 40-char
-  // cap; taxonomy-picked skills carry the canonical taxonomy name and may be longer (up to the
-  // taxonomy's 120-char max), so a legitimate long skill name no longer fails the submission.
+// Spec §2.1: ≥1 skill, sum capped at 10. Free-text proposed skills keep the short 40-char
+// cap; taxonomy-picked skills carry the canonical taxonomy name and may be longer (up to the
+// taxonomy's 120-char max), so a legitimate long skill name no longer fails the submission.
+function hasValidSubmissionSkills(skills: string[], proposedSkills: string[]): boolean {
   const totalSkills = skills.length + proposedSkills.length;
   const pickedWithinLabelLimit = skills.every(
     (label) => label.length <= SKILLS_HUNT_MAX_TAXONOMY_SKILL_LABEL_LENGTH,
@@ -494,26 +526,34 @@ export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boole
   const proposedWithinLabelLimit = proposedSkills.every(
     (label) => label.length <= SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH,
   );
-  const hasValidSkills =
-    totalSkills > 0
+  return totalSkills > 0
     && totalSkills <= SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION
     && proposedSkills.length <= SKILLS_HUNT_MAX_PROPOSED_SKILLS_PER_SUBMISSION
     && pickedWithinLabelLimit
     && proposedWithinLabelLimit;
+}
 
-  const hasValidClaimedProfessions = claimedProfessions.length <= 20;
-  const hasUnsafeText = hasUnsafeCollectionText([
-    fullName, bio, ...skills, ...proposedSkills, ...claimedProfessions,
+function hasUnsafeSubmissionText(fields: NormalizedSubmissionFields): boolean {
+  return hasUnsafeCollectionText([
+    fields.fullName, fields.bio, ...fields.skills, ...fields.proposedSkills, ...fields.claimedProfessions,
   ]);
+}
 
-  return hasValidRoundId
-    && hasValidFullName
-    && hasValidBio
-    && hasValidUrl
-    && hasValidSkills
-    && hasValidClaimedProfessions
-    && hasValidLocation
-    && !hasUnsafeText;
+export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boolean {
+  const fields = normalizeSubmissionFields(input);
+
+  const checks = [
+    hasValidSubmissionRoundId(input),
+    hasValidSubmissionFullName(fields.fullName),
+    hasValidSubmissionBio(fields.bio),
+    hasValidSubmissionUrl(input),
+    hasValidSubmissionSkills(fields.skills, fields.proposedSkills),
+    fields.claimedProfessions.length <= 20,
+    hasValidSubmissionLocation(fields),
+    !hasUnsafeSubmissionText(fields),
+  ];
+
+  return checks.every((ok) => ok);
 }
 
 export function validateReviewInput(input: SkillsHuntSubmissionReviewInput): boolean {
@@ -583,6 +623,39 @@ async function ensureSubmissionWindow(client: PoolClient, roundId: string): Prom
 //   - tier 'trusted'    (sample ≥ 5 AND acceptance rate ≥ 80%) → 10/wk
 //   - tier 'standard'   (sample ≥ 5 but not yet trusted)       → 3/wk
 //   - tier 'new'        (sample < 5)                            → 3/wk
+// Resolve the reputation tier and the rolling 7-day submission limit from the
+// user's reviewed sample and accept/reject rates:
+//   - 'restricted' (sample ≥ preApprovalMinSampleSize AND rejection rate > threshold)
+//   - 'trusted'    (sample ≥ trustedMinSampleSize AND acceptance rate ≥ threshold) → trusted limit
+//   - 'standard'   (sample ≥ trustedMinSampleSize but not yet trusted)
+//   - 'new'        (sample below the trusted sample size)
+// Only the 'trusted' tier raises the rolling limit; every other tier keeps the
+// new-user limit.
+function resolveReputationTier(
+  reviewedCount: number,
+  acceptanceRate: number | null,
+  rejectionRate: number | null,
+): { tier: SkillsHuntReputationProfile['tier']; rolling7dLimit: number } {
+  if (
+    reviewedCount >= SKILLS_HUNT_REPUTATION.preApprovalMinSampleSize &&
+    rejectionRate !== null &&
+    rejectionRate > SKILLS_HUNT_REPUTATION.preApprovalRejectionRateThreshold
+  ) {
+    return { tier: 'restricted', rolling7dLimit: SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d };
+  }
+  if (
+    reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize &&
+    acceptanceRate !== null &&
+    acceptanceRate >= SKILLS_HUNT_REPUTATION.trustedAcceptanceRateThreshold
+  ) {
+    return { tier: 'trusted', rolling7dLimit: SKILLS_HUNT_REPUTATION.trustedUserSubmissionLimit7d };
+  }
+  if (reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize) {
+    return { tier: 'standard', rolling7dLimit: SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d };
+  }
+  return { tier: 'new', rolling7dLimit: SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d };
+}
+
 async function computeReputationProfile(
   client: PoolClient,
   userId: string,
@@ -594,7 +667,7 @@ async function computeReputationProfile(
        AND deleted_at IS NULL`,
     [userId],
   );
-  const rolling7dCount = Number.parseInt(usageResult.rows[0]?.total ?? '0', 10);
+  const rolling7dCount = parseCount(usageResult.rows[0]?.total);
 
   const reviewedResult = await client.query<{
     total: string; accepted: string; rejected: string; pending: string;
@@ -610,44 +683,91 @@ async function computeReputationProfile(
     [userId],
   );
 
-  const reviewedCount = Number.parseInt(reviewedResult.rows[0]?.total ?? '0', 10);
-  const acceptedCount = Number.parseInt(reviewedResult.rows[0]?.accepted ?? '0', 10);
-  const rejectedCount = Number.parseInt(reviewedResult.rows[0]?.rejected ?? '0', 10);
-  const pendingCount = Number.parseInt(reviewedResult.rows[0]?.pending ?? '0', 10);
+  const stats = reviewedResult.rows[0];
+  const reviewedCount = parseCount(stats?.total);
+  const acceptedCount = parseCount(stats?.accepted);
+  const rejectedCount = parseCount(stats?.rejected);
+  const pendingCount = parseCount(stats?.pending);
   const acceptanceRate = reviewedCount > 0 ? acceptedCount / reviewedCount : null;
   const rejectionRate = reviewedCount > 0 ? rejectedCount / reviewedCount : null;
 
-  let tier: SkillsHuntReputationProfile['tier'] = 'new';
-  let rolling7dLimit: number = SKILLS_HUNT_REPUTATION.newUserSubmissionLimit7d;
-
-  if (
-    reviewedCount >= SKILLS_HUNT_REPUTATION.preApprovalMinSampleSize &&
-    rejectionRate !== null &&
-    rejectionRate > SKILLS_HUNT_REPUTATION.preApprovalRejectionRateThreshold
-  ) {
-    tier = 'restricted';
-  } else if (
-    reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize &&
-    acceptanceRate !== null &&
-    acceptanceRate >= SKILLS_HUNT_REPUTATION.trustedAcceptanceRateThreshold
-  ) {
-    tier = 'trusted';
-    rolling7dLimit = SKILLS_HUNT_REPUTATION.trustedUserSubmissionLimit7d;
-  } else if (reviewedCount >= SKILLS_HUNT_REPUTATION.trustedMinSampleSize) {
-    tier = 'standard';
-  }
+  const resolved = resolveReputationTier(reviewedCount, acceptanceRate, rejectionRate);
 
   return {
     userId,
-    tier,
+    tier: resolved.tier,
     acceptedCount,
     rejectedCount,
     pendingCount,
     rolling7dCount,
-    rolling7dLimit,
+    rolling7dLimit: resolved.rolling7dLimit,
     acceptanceRate,
-    preApprovalRequired: tier === 'restricted',
+    preApprovalRequired: resolved.tier === 'restricted',
   };
+}
+
+// The cap is a rolling 7-day window, so a slot frees when an in-window
+// submission ages past 7 days. To drop back under the cap we need
+// (count - limit + 1) of the oldest in-window submissions to age out; the
+// last of those to expire (created_at + 7 days) is when the scout can submit
+// again. Returns that time so the API can tell the scout when (null if the
+// oldest in-window row can't be resolved).
+async function computeRateLimitResetIso(
+  client: PoolClient,
+  userId: string,
+  profile: SkillsHuntReputationProfile,
+): Promise<string | null> {
+  const offset = Math.max(0, profile.rolling7dCount - profile.rolling7dLimit);
+  const oldestResult = await client.query<{ created_at: Date }>(
+    `SELECT created_at FROM skills_hunt_submissions
+      WHERE submitter_user_id = $1
+        AND created_at >= NOW() - INTERVAL '7 days'
+        AND deleted_at IS NULL
+      ORDER BY created_at ASC
+      OFFSET $2 LIMIT 1`,
+    [userId, offset],
+  );
+  const oldest = oldestResult.rows[0]?.created_at;
+  return oldest ? new Date(oldest.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
+}
+
+// Belt-and-braces: keep the legacy rejection-rate guard on the most recent
+// sample. Wave 2 reputation supersedes the lifetime >20% gate, but the
+// sample-based check still catches rapid degradation that lifetime stats
+// haven't caught up to yet.
+async function enforceRejectionGuard(
+  client: PoolClient,
+  userId: string,
+  profile: SkillsHuntReputationProfile,
+): Promise<void> {
+  const reviewedCount = profile.acceptedCount + profile.rejectedCount;
+  if (reviewedCount < SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
+    return;
+  }
+
+  const recent = await client.query<{ total: string; rejected: string }>(
+    `SELECT
+       COUNT(*)::text AS total,
+       COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
+     FROM (
+       SELECT status FROM skills_hunt_submissions
+       WHERE submitter_user_id = $1
+         AND reviewed_at IS NOT NULL
+         AND deleted_at IS NULL
+       ORDER BY reviewed_at DESC LIMIT $2
+     ) sampled`,
+    [userId, SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE],
+  );
+  const sampledTotal = parseCount(recent.rows[0]?.total);
+  const sampledRejected = parseCount(recent.rows[0]?.rejected);
+  if (sampledTotal < SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
+    return;
+  }
+
+  const rate = sampledRejected / sampledTotal;
+  if (rate >= SKILLS_HUNT_REJECTION_GUARD_THRESHOLD) {
+    throw new Error('skills_hunt_rejection_guard_violation');
+  }
 }
 
 async function ensureSubmissionRateLimits(client: PoolClient, userId: string): Promise<SkillsHuntReputationProfile> {
@@ -658,54 +778,11 @@ async function ensureSubmissionRateLimits(client: PoolClient, userId: string): P
   }
 
   if (profile.rolling7dCount >= profile.rolling7dLimit) {
-    // The cap is a rolling 7-day window, so a slot frees when an in-window
-    // submission ages past 7 days. To drop back under the cap we need
-    // (count - limit + 1) of the oldest in-window submissions to age out; the
-    // last of those to expire (created_at + 7 days) is when the scout can submit
-    // again. Encode that time in the error so the API can tell the scout when.
-    const offset = Math.max(0, profile.rolling7dCount - profile.rolling7dLimit);
-    const oldestResult = await client.query<{ created_at: Date }>(
-      `SELECT created_at FROM skills_hunt_submissions
-        WHERE submitter_user_id = $1
-          AND created_at >= NOW() - INTERVAL '7 days'
-          AND deleted_at IS NULL
-        ORDER BY created_at ASC
-        OFFSET $2 LIMIT 1`,
-      [userId, offset],
-    );
-    const oldest = oldestResult.rows[0]?.created_at;
-    const resetAtIso = oldest ? new Date(oldest.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
+    const resetAtIso = await computeRateLimitResetIso(client, userId, profile);
     throw new Error(resetAtIso ? `skills_hunt_submission_limit_exceeded:${resetAtIso}` : 'skills_hunt_submission_limit_exceeded');
   }
 
-  // Belt-and-braces: keep the legacy rejection-rate guard on the most recent
-  // sample. Wave 2 reputation supersedes the lifetime >20% gate, but the
-  // sample-based check still catches rapid degradation that lifetime stats
-  // haven't caught up to yet.
-  const reviewedCount = profile.acceptedCount + profile.rejectedCount;
-  if (reviewedCount >= SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
-    const recent = await client.query<{ total: string; rejected: string }>(
-      `SELECT
-         COUNT(*)::text AS total,
-         COUNT(*) FILTER (WHERE status = 'rejected')::text AS rejected
-       FROM (
-         SELECT status FROM skills_hunt_submissions
-         WHERE submitter_user_id = $1
-           AND reviewed_at IS NOT NULL
-           AND deleted_at IS NULL
-         ORDER BY reviewed_at DESC LIMIT $2
-       ) sampled`,
-      [userId, SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE],
-    );
-    const sampledTotal = Number.parseInt(recent.rows[0]?.total ?? '0', 10);
-    const sampledRejected = Number.parseInt(recent.rows[0]?.rejected ?? '0', 10);
-    if (sampledTotal >= SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE) {
-      const rate = sampledRejected / sampledTotal;
-      if (rate >= SKILLS_HUNT_REJECTION_GUARD_THRESHOLD) {
-        throw new Error('skills_hunt_rejection_guard_violation');
-      }
-    }
-  }
+  await enforceRejectionGuard(client, userId, profile);
 
   return profile;
 }
@@ -792,13 +869,13 @@ const NAMED_BADGES = {
   },
 } as const;
 
-async function awardNamedBadges(
+// first-finder — this submission's score includes the firstMatchBonus.
+async function maybeAwardFirstFinder(
   client: PoolClient,
   userId: string,
   roundId: string,
   scoreBreakdown: Record<string, unknown>,
 ): Promise<void> {
-  // first-finder — this submission's score includes the firstMatchBonus.
   const firstMatchBonus = scoreBreakdown.firstMatchBonus;
   if (typeof firstMatchBonus === 'number' && firstMatchBonus > 0) {
     await ensureAchievement(
@@ -807,9 +884,15 @@ async function awardNamedBadges(
       roundId,
     );
   }
+}
 
-  // rare-talent-scout — 3+ accepted submissions tagged with rare skills.
-  // "tagged with rare skills" = score_breakdown.rareSkillBonus > 0.
+// rare-talent-scout — 3+ accepted submissions tagged with rare skills.
+// "tagged with rare skills" = score_breakdown.rareSkillBonus > 0.
+async function maybeAwardRareTalentScout(
+  client: PoolClient,
+  userId: string,
+  roundId: string,
+): Promise<void> {
   const rareCountResult = await client.query<CountRow>(
     `
       SELECT COUNT(*)::text AS total
@@ -821,7 +904,7 @@ async function awardNamedBadges(
     `,
     [userId],
   );
-  const rareCount = Number.parseInt(rareCountResult.rows[0]?.total ?? '0', 10);
+  const rareCount = parseCount(rareCountResult.rows[0]?.total);
   if (rareCount >= 3) {
     await ensureAchievement(
       client, userId,
@@ -829,9 +912,15 @@ async function awardNamedBadges(
       roundId,
     );
   }
+}
 
-  // diversity-champion — accepted submissions spanning 3+ distinct claimed
-  // professions. claimed_professions is a JSONB array, so we unnest into rows.
+// diversity-champion — accepted submissions spanning 3+ distinct claimed
+// professions. claimed_professions is a JSONB array, so we unnest into rows.
+async function maybeAwardDiversityChampion(
+  client: PoolClient,
+  userId: string,
+  roundId: string,
+): Promise<void> {
   const diversityResult = await client.query<{ total: string }>(
     `
       SELECT COUNT(DISTINCT prof)::text AS total
@@ -846,7 +935,7 @@ async function awardNamedBadges(
     `,
     [userId],
   );
-  const distinctProfessionCount = Number.parseInt(diversityResult.rows[0]?.total ?? '0', 10);
+  const distinctProfessionCount = parseCount(diversityResult.rows[0]?.total);
   if (distinctProfessionCount >= 3) {
     await ensureAchievement(
       client, userId,
@@ -854,9 +943,15 @@ async function awardNamedBadges(
       roundId,
     );
   }
+}
 
-  // quality-contributor — 100% acceptance rate with 5+ accepted submissions.
-  // 100% rate = accepted >= 5 AND rejected = 0. Edits still count as accepted.
+// quality-contributor — 100% acceptance rate with 5+ accepted submissions.
+// 100% rate = accepted >= 5 AND rejected = 0. Edits still count as accepted.
+async function maybeAwardQualityContributor(
+  client: PoolClient,
+  userId: string,
+  roundId: string,
+): Promise<void> {
   const qualityResult = await client.query<{ accepted: string; rejected: string }>(
     `
       SELECT
@@ -868,8 +963,8 @@ async function awardNamedBadges(
     `,
     [userId],
   );
-  const acceptedCount = Number.parseInt(qualityResult.rows[0]?.accepted ?? '0', 10);
-  const rejectedCount = Number.parseInt(qualityResult.rows[0]?.rejected ?? '0', 10);
+  const acceptedCount = parseCount(qualityResult.rows[0]?.accepted);
+  const rejectedCount = parseCount(qualityResult.rows[0]?.rejected);
   if (acceptedCount >= 5 && rejectedCount === 0) {
     await ensureAchievement(
       client, userId,
@@ -877,6 +972,18 @@ async function awardNamedBadges(
       roundId,
     );
   }
+}
+
+async function awardNamedBadges(
+  client: PoolClient,
+  userId: string,
+  roundId: string,
+  scoreBreakdown: Record<string, unknown>,
+): Promise<void> {
+  await maybeAwardFirstFinder(client, userId, roundId, scoreBreakdown);
+  await maybeAwardRareTalentScout(client, userId, roundId);
+  await maybeAwardDiversityChampion(client, userId, roundId);
+  await maybeAwardQualityContributor(client, userId, roundId);
 }
 
 export async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<void> {
@@ -1908,6 +2015,128 @@ export async function listSubmissions(
   };
 }
 
+// Resolved review decision: the new status plus the point/score/participation
+// values derived from the moderator's action. Purely computes the outcome; the
+// caller persists it.
+type ReviewOutcome = {
+  status: SkillsHuntSubmission['status'];
+  pointsAwarded: number;
+  scoreBreakdown: Record<string, unknown>;
+  participationPoints: number;
+};
+
+async function resolveReviewOutcome(
+  client: PoolClient,
+  existing: SkillsHuntSubmissionRow,
+  submissionId: string,
+  input: SkillsHuntSubmissionReviewInput,
+): Promise<ReviewOutcome> {
+  let status: SkillsHuntSubmission['status'] = existing.status;
+  let pointsAwarded = existing.points_awarded;
+  let scoreBreakdown = normalizeJsonObject(existing.score_breakdown);
+  let participationPoints = 0;
+
+  if (input.action === 'accept' || input.action === 'edit') {
+    const scored = await scoreSubmission(client, submissionId, input.action);
+    pointsAwarded = scored.pointsAwarded;
+    scoreBreakdown = scored.scoreBreakdown;
+    status = 'accepted';
+  }
+
+  if (input.action === 'reject') {
+    // Reputation system (Wave 2 spec §6.2): rejected submitters still
+    // earn +1 participation point so scouting attempts aren't punished
+    // beyond the rejection-rate guardrail.
+    const rejectWeights = resolveScoreWeights(
+      (await client.query<{ scoring_config: unknown }>(
+        `SELECT scoring_config FROM skills_hunt_rounds WHERE id = $1::uuid LIMIT 1`,
+        [existing.round_id],
+      )).rows[0]?.scoring_config ?? null,
+    );
+    status = 'rejected';
+    pointsAwarded = 0;
+    participationPoints = rejectWeights.participationOnReject;
+    scoreBreakdown = { rejected: true, participationPoints };
+  }
+
+  if (input.action === 'flag') {
+    status = 'flagged';
+    pointsAwarded = 0;
+    scoreBreakdown = { flagged: true };
+  }
+
+  return { status, pointsAwarded, scoreBreakdown, participationPoints };
+}
+
+// Fan out emitLeaderboardTopTen() for anyone who is inside the top-ten cap now
+// (after the rebuild) but was not before.
+async function emitNewTopTenEntries(
+  client: PoolClient,
+  roundId: string,
+  topTenBefore: Set<string>,
+): Promise<void> {
+  const topTenAfter = await readCurrentTopTen(client, roundId);
+  for (const entry of topTenAfter) {
+    if (!topTenBefore.has(entry.userId)) {
+      await emitLeaderboardTopTen(client, entry.userId, roundId, entry.rank, entry.score);
+    }
+  }
+}
+
+// Post-accept fan-out: acceptance notification (only on a real transition into
+// accepted), named badges, mission-progress recompute + mission-complete
+// notifications, and the best-effort Directory profile generation.
+async function handleAcceptedReview(
+  client: PoolClient,
+  actorId: string,
+  actorUsername: string | null,
+  existing: SkillsHuntSubmissionRow,
+  submissionId: string,
+  pointsAwarded: number,
+  scoreBreakdown: Record<string, unknown>,
+): Promise<void> {
+  // Only fan out the acceptance notification on an actual transition into
+  // `accepted` — re-reviewing an already-accepted submission (accept/edit)
+  // must not spam duplicate inbox entries for the same submission.
+  if (existing.status !== 'accepted') {
+    await emitSubmissionAccepted(client, existing.submitter_user_id, submissionId, pointsAwarded);
+  }
+
+  await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
+
+  // Mission progress recompute on accept — newlyCompleted gives us the
+  // missions that crossed the goal threshold for the user in this
+  // transaction; fan out one mission-complete notification each.
+  const { newlyCompleted } = await recomputeMissionProgressForUser(
+    client,
+    existing.round_id,
+    existing.submitter_user_id,
+  );
+  for (const mission of newlyCompleted) {
+    await emitMissionComplete(
+      client,
+      existing.submitter_user_id,
+      mission.id,
+      mission.title,
+      mission.bonusPoints,
+    );
+  }
+
+  const attributionUsername = existing.submitter_username ?? actorUsername ?? 'system';
+  // Generating the Directory profile is a best-effort follow-up to the accept: it must
+  // never roll back the review decision. Isolate it in a savepoint so any failure (e.g. a
+  // legacy not-null column on cloned data) leaves the accept committed; the profile can be
+  // regenerated later via generateDirectoryProfileFromAcceptedSubmission.
+  try {
+    await client.query('SAVEPOINT sh_directory_profile');
+    await maybeAutoGenerateDirectoryProfile(client, actorId, submissionId, attributionUsername);
+    await client.query('RELEASE SAVEPOINT sh_directory_profile');
+  } catch (directoryError) {
+    await client.query('ROLLBACK TO SAVEPOINT sh_directory_profile');
+    reportError(directoryError, { area: 'skills-hunt', op: 'review_auto_directory_profile', extra: { submissionId } });
+  }
+}
+
 export async function reviewSubmission(
   actorId: string,
   actorUsername: string | null,
@@ -1949,39 +2178,11 @@ export async function reviewSubmission(
       throw new Error('skills_hunt_submission_not_found');
     }
 
-    let status: SkillsHuntSubmission['status'] = existing.status;
-    let pointsAwarded = existing.points_awarded;
-    let scoreBreakdown = normalizeJsonObject(existing.score_breakdown);
-    let participationPoints = 0;
-
-    if (input.action === 'accept' || input.action === 'edit') {
-      const scored = await scoreSubmission(client, submissionId, input.action);
-      pointsAwarded = scored.pointsAwarded;
-      scoreBreakdown = scored.scoreBreakdown;
-      status = 'accepted';
-    }
-
-    if (input.action === 'reject') {
-      // Reputation system (Wave 2 spec §6.2): rejected submitters still
-      // earn +1 participation point so scouting attempts aren't punished
-      // beyond the rejection-rate guardrail.
-      const rejectWeights = resolveScoreWeights(
-        (await client.query<{ scoring_config: unknown }>(
-          `SELECT scoring_config FROM skills_hunt_rounds WHERE id = $1::uuid LIMIT 1`,
-          [existing.round_id],
-        )).rows[0]?.scoring_config ?? null,
-      );
-      status = 'rejected';
-      pointsAwarded = 0;
-      participationPoints = rejectWeights.participationOnReject;
-      scoreBreakdown = { rejected: true, participationPoints };
-    }
-
-    if (input.action === 'flag') {
-      status = 'flagged';
-      pointsAwarded = 0;
-      scoreBreakdown = { flagged: true };
-    }
+    const outcome = await resolveReviewOutcome(client, existing, submissionId, input);
+    const status = outcome.status;
+    const pointsAwarded = outcome.pointsAwarded;
+    const scoreBreakdown = outcome.scoreBreakdown;
+    const participationPoints = outcome.participationPoints;
 
     const updated = await client.query<SkillsHuntSubmissionRow>(
       `
@@ -2046,54 +2247,18 @@ export async function reviewSubmission(
 
     await rebuildLeaderboard(client, existing.round_id);
 
-    const topTenAfter = await readCurrentTopTen(client, existing.round_id);
-    for (const entry of topTenAfter) {
-      if (!topTenBefore.has(entry.userId)) {
-        await emitLeaderboardTopTen(client, entry.userId, existing.round_id, entry.rank, entry.score);
-      }
-    }
+    await emitNewTopTenEntries(client, existing.round_id, topTenBefore);
 
     if (status === 'accepted') {
-      // Only fan out the acceptance notification on an actual transition into
-      // `accepted` — re-reviewing an already-accepted submission (accept/edit)
-      // must not spam duplicate inbox entries for the same submission.
-      if (existing.status !== 'accepted') {
-        await emitSubmissionAccepted(client, existing.submitter_user_id, submissionId, pointsAwarded);
-      }
-
-      await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
-
-      // Mission progress recompute on accept — newlyCompleted gives us the
-      // missions that crossed the goal threshold for the user in this
-      // transaction; fan out one mission-complete notification each.
-      const { newlyCompleted } = await recomputeMissionProgressForUser(
+      await handleAcceptedReview(
         client,
-        existing.round_id,
-        existing.submitter_user_id,
+        actorId,
+        actorUsername,
+        existing,
+        submissionId,
+        pointsAwarded,
+        scoreBreakdown,
       );
-      for (const mission of newlyCompleted) {
-        await emitMissionComplete(
-          client,
-          existing.submitter_user_id,
-          mission.id,
-          mission.title,
-          mission.bonusPoints,
-        );
-      }
-
-      const attributionUsername = existing.submitter_username ?? actorUsername ?? 'system';
-      // Generating the Directory profile is a best-effort follow-up to the accept: it must
-      // never roll back the review decision. Isolate it in a savepoint so any failure (e.g. a
-      // legacy not-null column on cloned data) leaves the accept committed; the profile can be
-      // regenerated later via generateDirectoryProfileFromAcceptedSubmission.
-      try {
-        await client.query('SAVEPOINT sh_directory_profile');
-        await maybeAutoGenerateDirectoryProfile(client, actorId, submissionId, attributionUsername);
-        await client.query('RELEASE SAVEPOINT sh_directory_profile');
-      } catch (directoryError) {
-        await client.query('ROLLBACK TO SAVEPOINT sh_directory_profile');
-        reportError(directoryError, { area: 'skills-hunt', op: 'review_auto_directory_profile', extra: { submissionId } });
-      }
     }
 
     if (status === 'rejected') {

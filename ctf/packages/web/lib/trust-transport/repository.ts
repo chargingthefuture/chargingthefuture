@@ -1,6 +1,7 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
-import { createTransfer } from 'lib/service-credits/repository';
+import { createTransfer } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
 import {
   getAccountRestrictionStatus,
@@ -32,6 +33,7 @@ import type {
 } from './types';
 import { ensureTrustTransportTripChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { isBlockedBetween, isBlockedBetweenTx } from 'lib/blocks/repository';
 
 // Cross-plugin presence: a TrustTransport ride request marks its requester (the rider) as active.
 // A request counts as active presence unless its status is terminal, so the live hooks clear presence
@@ -43,7 +45,7 @@ const TRUST_TRANSPORT_PRESENCE_DEEP_LINK = '/apps/trust-transport';
 
 // Statuses that mean a request is no longer active presence — mirrors the backfill's terminal set.
 const TRUST_TRANSPORT_TERMINAL_STATUSES = new Set([
-  'cancelled',
+  'canceled',
   'canceled',
   'completed',
   'closed',
@@ -55,6 +57,36 @@ const TRUST_TRANSPORT_TERMINAL_STATUSES = new Set([
 
 function isTrustTransportRequestActive(status: string | null | undefined): boolean {
   return !TRUST_TRANSPORT_TERMINAL_STATUSES.has((status ?? '').toLowerCase());
+}
+
+// Offer presence mirrors the request hook: same slug/deep link, but the ref is the offer row and the
+// label is the driver-side one the derive path already emits (lib/presence/derive.ts). Best-effort —
+// the presence helpers swallow and report their own failures.
+const TRUST_TRANSPORT_OFFER_REF_TYPE = 'offer';
+const TRUST_TRANSPORT_OFFER_LABEL = 'Offering rides';
+
+async function syncTrustTransportOfferPresence(
+  providerUserId: string,
+  offerId: string,
+  status: string | null | undefined,
+): Promise<void> {
+  if (isTrustTransportRequestActive(status)) {
+    await recordMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+      label: TRUST_TRANSPORT_OFFER_LABEL,
+      deepLink: TRUST_TRANSPORT_PRESENCE_DEEP_LINK,
+    });
+  } else {
+    await clearMemberPresence({
+      userId: providerUserId,
+      pluginSlug: TRUST_TRANSPORT_PRESENCE_SLUG,
+      refType: TRUST_TRANSPORT_OFFER_REF_TYPE,
+      refId: offerId,
+    });
+  }
 }
 
 // Keep the requester's TrustTransport presence in step with a request's current status. Best-effort:
@@ -103,6 +135,7 @@ type RequestRow = {
   // Present only when the row is selected with a join to trust_transport_trips (e.g. listRequests).
   trip_id?: string | null;
   trip_status?: TrustTransportTripStatus | null;
+  trip_provider_user_id?: string | null;
   requester_completion_confirmed_at?: Date | null;
   provider_completion_confirmed_at?: Date | null;
 };
@@ -127,7 +160,7 @@ type TripRow = {
   mode: TrustTransportMode;
   status: TrustTransportTrip['status'];
   stream_channel_id: string | null;
-  cancelled_reason: string | null;
+  canceled_reason: string | null;
   completed_at: Date | null;
   requester_completion_confirmed_at: Date | null;
   provider_completion_confirmed_at: Date | null;
@@ -146,24 +179,24 @@ type AuditInput = {
 };
 
 const REQUEST_TRANSITIONS: Record<TrustTransportRequest['status'], TrustTransportRequest['status'][]> = {
-  open: ['accepted', 'cancelled', 'emergency_frozen'],
-  accepted: ['in_progress', 'cancelled', 'disputed', 'emergency_frozen'],
-  in_progress: ['completed', 'cancelled', 'disputed', 'emergency_frozen'],
+  open: ['accepted', 'canceled', 'emergency_frozen'],
+  accepted: ['in_progress', 'canceled', 'disputed', 'emergency_frozen'],
+  in_progress: ['completed', 'canceled', 'disputed', 'emergency_frozen'],
   completed: [],
-  cancelled: [],
-  disputed: ['completed', 'cancelled'],
-  emergency_frozen: ['disputed', 'cancelled'],
+  canceled: [],
+  disputed: ['completed', 'canceled'],
+  emergency_frozen: ['disputed', 'canceled'],
 };
 
 const TRIP_TRANSITIONS: Record<TrustTransportTrip['status'], TrustTransportTripStatus[]> = {
-  assigned: ['en_route', 'cancelled', 'disputed', 'emergency_frozen'],
-  en_route: ['picked_up', 'cancelled', 'disputed', 'emergency_frozen'],
-  picked_up: ['delivered', 'cancelled', 'disputed', 'emergency_frozen'],
+  assigned: ['en_route', 'canceled', 'disputed', 'emergency_frozen'],
+  en_route: ['picked_up', 'canceled', 'disputed', 'emergency_frozen'],
+  picked_up: ['delivered', 'canceled', 'disputed', 'emergency_frozen'],
   delivered: ['completed', 'disputed', 'emergency_frozen'],
   completed: [],
-  cancelled: [],
-  disputed: ['completed', 'cancelled'],
-  emergency_frozen: ['disputed', 'cancelled'],
+  canceled: [],
+  disputed: ['completed', 'canceled'],
+  emergency_frozen: ['disputed', 'canceled'],
 };
 
 function toIso(value: Date): string {
@@ -217,13 +250,93 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     status: row.status,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    // The accepted-currencies set lives in a join table and is loaded separately by
+    // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
+    acceptedCurrencies: [],
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     tripId: row.trip_id ?? null,
     tripStatus: row.trip_status ?? null,
+    // Who accepted the request. Present only once a trip exists — i.e. once the requester and this
+    // provider are already paired and talking on the Direct Line — so it reveals nothing the requester
+    // cannot already see. Carried so a finished trip can offer to record the ride as a regular one.
+    tripProviderUserId: row.trip_provider_user_id ?? null,
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
   };
+}
+
+type AcceptedCurrencyRow = { request_id: string; currency_code: string };
+
+// Ordered so ServiceCredits leads (currencies.sort_order = 0) — the platform's preferred currency
+// wherever multiple options appear — and clients can render the set in server order.
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT rac.request_id::text AS request_id, rac.currency_code
+  FROM trust_transport_request_accepted_currencies rac
+  JOIN currencies c ON c.code = rac.currency_code
+  WHERE rac.request_id = ANY($1::uuid[])
+  ORDER BY c.sort_order, rac.currency_code
+`;
+
+function acceptedCodesByRequest(rows: AcceptedCurrencyRow[]): Map<string, string[]> {
+  const codesByRequest = new Map<string, string[]>();
+  for (const row of rows) {
+    const codes = codesByRequest.get(row.request_id) ?? [];
+    codes.push(row.currency_code);
+    codesByRequest.set(row.request_id, codes);
+  }
+  return codesByRequest;
+}
+
+// Load each request's accepted currencies from trust_transport_request_accepted_currencies and attach
+// them to the mapped requests (split settlements — a ride can accept several currencies, e.g.
+// ServiceCredits and USD, independent of its single listed price).
+async function attachAcceptedCurrencies(requests: TrustTransportRequest[]): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
+// inside createRequest.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  requests: TrustTransportRequest[],
+): Promise<TrustTransportRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  const codesByRequest = acceptedCodesByRequest(result.rows);
+  return requests.map((request) => ({ ...request, acceptedCurrencies: codesByRequest.get(request.id) ?? [] }));
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a request. Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, requestId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  for (const row of valid.rows) {
+    await client.query(
+      `INSERT INTO trust_transport_request_accepted_currencies (request_id, currency_code)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (request_id, currency_code) DO NOTHING`,
+      [requestId, row.code],
+    );
+  }
 }
 
 function mapOfferRow(row: OfferRow): TrustTransportOffer {
@@ -249,7 +362,7 @@ function mapTripRow(row: TripRow): TrustTransportTrip {
     mode: row.mode,
     status: row.status,
     streamChannelId: row.stream_channel_id,
-    cancelledReason: row.cancelled_reason,
+    canceledReason: row.canceled_reason,
     completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
@@ -340,7 +453,8 @@ export async function createRequest(
     );
 
     if ((existing.rowCount ?? 0) > 0) {
-      return mapRequestRow(existing.rows[0]);
+      const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(existing.rows[0])]);
+      return replayed;
     }
 
     const created = await client.query<RequestRow>(
@@ -380,7 +494,10 @@ export async function createRequest(
       [created.rows[0].id, actorUserId],
     );
 
-    return mapRequestRow(created.rows[0]);
+    await replaceAcceptedCurrencies(client, created.rows[0].id, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(created.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the request is durably committed: a new open request makes the
@@ -403,7 +520,8 @@ export async function getRequestById(requestId: string): Promise<TrustTransportR
     return null;
   }
 
-  return mapRequestRow(result.rows[0]);
+  const [request] = await attachAcceptedCurrencies([mapRequestRow(result.rows[0])]);
+  return request;
 }
 
 export async function listRequests(options?: { page?: number; pageSize?: number; requesterUserId?: string }) {
@@ -424,10 +542,10 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
     // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
     // request in the page and diverge from the COUNT above — at most one trip id per request.
     `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at,
-            t.id AS trip_id, t.status AS trip_status, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
+            t.id AS trip_id, t.status AS trip_status, t.provider_user_id AS trip_provider_user_id, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
      FROM trust_transport_requests r
      LEFT JOIN LATERAL (
-       SELECT id, status, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
+       SELECT id, status, provider_user_id, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
        WHERE request_id = r.id
        ORDER BY created_at
        LIMIT 1
@@ -439,7 +557,7 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
   );
 
   return {
-    items: result.rows.map(mapRequestRow),
+    items: await attachAcceptedCurrencies(result.rows.map(mapRequestRow)),
     page,
     pageSize,
     total,
@@ -472,10 +590,20 @@ export async function listAvailableRequests(options: {
   const offset = (page - 1) * pageSize;
   const excludeUserId = options.excludeUserId;
 
+  // Blocked pairs are hidden from discovery (issue #809 task 4): a helper never sees a blocked
+  // requester's ride, in either block direction, mirroring the LightHouse browse filter.
+  const hideBlockedRequestersSql = `
+     AND NOT EXISTS (
+       SELECT 1
+       FROM member_blocks
+       WHERE (blocker_user_id = $1 AND blocked_user_id = trust_transport_requests.requester_user_id)
+          OR (blocker_user_id = trust_transport_requests.requester_user_id AND blocked_user_id = $1)
+     )`;
+
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1`,
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}`,
     [excludeUserId],
   );
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -489,11 +617,18 @@ export async function listAvailableRequests(options: {
   }>(
     `SELECT id, mode, price_amount, price_currency, created_at
      FROM trust_transport_requests
-     WHERE status = 'open' AND requester_user_id <> $1
+     WHERE status = 'open' AND requester_user_id <> $1${hideBlockedRequestersSql}
      ORDER BY created_at DESC
      OFFSET $2 LIMIT $3`,
     [excludeUserId, offset, pageSize],
   );
+
+  // Attach each open request's accepted-currencies set (split settlements) so a driver sees the whole
+  // offer (e.g. ServiceCredits + USD). Mode/settlement/age only — still no locations before acceptance.
+  const requestIds = result.rows.map((row) => row.id);
+  const acceptedRows =
+    requestIds.length > 0 ? (await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds])).rows : [];
+  const codesByRequest = acceptedCodesByRequest(acceptedRows);
 
   return {
     items: result.rows.map((row) => ({
@@ -501,6 +636,7 @@ export async function listAvailableRequests(options: {
       mode: row.mode,
       priceCurrency: row.price_currency,
       priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+      acceptedCurrencies: codesByRequest.get(row.id) ?? [],
       createdAtIso: toIso(row.created_at),
     })),
     page,
@@ -547,13 +683,20 @@ export async function createOffer(
     throw new Error('policy_denied');
   }
 
+  // Block check (issue #809 task 4): a block in either direction means these two members must not
+  // reach each other — the driver cannot offer on a blocked requester's ride, and vice versa. The
+  // route maps blocked_pair to neutral copy so the block never reveals itself.
+  if (await isBlockedBetween(providerUserId, request.requesterUserId)) {
+    throw new Error('blocked_pair');
+  }
+
   if (request.status !== 'open') {
     throw new Error('invalid_transition');
   }
 
   const note = normalizeNullableText(input.note);
 
-  return withDbTransaction(async (client) => {
+  const offer = await withDbTransaction(async (client) => {
     const existing = await client.query<OfferRow>(
       `SELECT id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at
        FROM trust_transport_offers
@@ -584,6 +727,12 @@ export async function createOffer(
 
     return mapOfferRow(created.rows[0]);
   });
+
+  // Best-effort presence write after the offer is durably committed: an open offer makes the driver
+  // active in TrustTransport ("Offering rides"). Never breaks offer creation.
+  await syncTrustTransportOfferPresence(offer.providerUserId, offer.id, offer.status);
+
+  return offer;
 }
 
 export async function acceptOffer(requestId: string, offerId: string, actorUserId: string, idempotencyKey: string): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
@@ -616,8 +765,14 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
 
     const offer = offerResult.rows[0];
 
+    // Block check (issue #809 task 4): a block created after the offer was made still stops the pair
+    // from being joined into a trip. Neutral blocked_pair mapping at the route.
+    if (await isBlockedBetweenTx(client, actorUserId, offer.provider_user_id)) {
+      throw new Error('blocked_pair');
+    }
+
     const existingTrip = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE request_id = $1::uuid
        LIMIT 1`,
@@ -639,18 +794,19 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
       };
     }
 
-    await client.query(
+    const offerStatusResult = await client.query<{ id: string; provider_user_id: string; status: string }>(
       `UPDATE trust_transport_offers
        SET status = CASE WHEN id = $1::uuid THEN 'accepted' ELSE 'rejected' END,
            updated_at = NOW()
-       WHERE request_id = $2::uuid`,
+       WHERE request_id = $2::uuid
+       RETURNING id, provider_user_id, status`,
       [offerId, requestId],
     );
 
     const tripResult = await client.query<TripRow>(
       `INSERT INTO trust_transport_trips (request_id, offer_id, requester_user_id, provider_user_id, mode, status)
        VALUES ($1::uuid, $2::uuid, $3, $4, $5, 'assigned')
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [requestId, offerId, request.requesterUserId, offer.provider_user_id, request.mode],
     );
 
@@ -671,8 +827,16 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     return {
       trip: mapTripRow(tripResult.rows[0]),
       request: mapRequestRow(requestResult.rows[0]),
+      offerStatuses: offerStatusResult.rows,
     };
   });
+
+  // Best-effort presence sync after the commit: rejected drivers stop "Offering rides"; the accepted
+  // offer stays active while the trip runs. Never breaks the acceptance. (Empty on the idempotent
+  // replay path, which changes no offer rows.)
+  for (const row of created.offerStatuses ?? []) {
+    await syncTrustTransportOfferPresence(row.provider_user_id, row.id, row.status);
+  }
 
   const streamChannelId = await ensureTrustTransportTripChannel({
     tripId: created.trip.id,
@@ -737,7 +901,7 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
 
 export async function getTripById(tripId: string): Promise<TrustTransportTrip | null> {
   const result = await queryDb<TripRow>(
-    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+    `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
      FROM trust_transport_trips
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -758,6 +922,14 @@ function assertTripTransition(currentStatus: TrustTransportTrip['status'], nextS
   }
 }
 
+// A trip's status may be changed only by one of its two participants (requester or provider) or an admin.
+function assertTripActorAllowed(trip: TripRow, actorUserId: string, isAdmin: boolean): void {
+  const isParticipant = trip.requester_user_id === actorUserId || trip.provider_user_id === actorUserId;
+  if (!isParticipant && !isAdmin) {
+    throw new Error('policy_denied');
+  }
+}
+
 function mapRequestStatusFromTrip(nextStatus: TrustTransportTripStatus): TrustTransportRequest['status'] {
   if (nextStatus === 'assigned' || nextStatus === 'en_route' || nextStatus === 'picked_up') {
     return 'in_progress';
@@ -767,8 +939,8 @@ function mapRequestStatusFromTrip(nextStatus: TrustTransportTripStatus): TrustTr
     return 'completed';
   }
 
-  if (nextStatus === 'cancelled') {
-    return 'cancelled';
+  if (nextStatus === 'canceled') {
+    return 'canceled';
   }
 
   if (nextStatus === 'disputed') {
@@ -787,7 +959,7 @@ export async function updateTripStatus(
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest }> {
   const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE id = $1::uuid
        LIMIT 1
@@ -800,10 +972,7 @@ export async function updateTripStatus(
     }
 
     const trip = tripResult.rows[0];
-    const isParticipant = trip.requester_user_id === actorUserId || trip.provider_user_id === actorUserId;
-    if (!isParticipant && !isAdmin) {
-      throw new Error('policy_denied');
-    }
+    assertTripActorAllowed(trip, actorUserId, isAdmin);
 
     // Neither party can unilaterally complete a trip (owner decision, 2026-07-08): completion is what
     // triggers settlement (a ServiceCredits debit from the requester, or an earnings-ledger credit for an
@@ -827,11 +996,11 @@ export async function updateTripStatus(
     const updatedTripResult = await client.query<TripRow>(
       `UPDATE trust_transport_trips
        SET status = $2,
-           cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
+           canceled_reason = CASE WHEN $2 = 'canceled' THEN $3 ELSE canceled_reason END,
            completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END,
            updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [tripId, nextStatus, normalizeNullableText(note)],
     );
 
@@ -864,7 +1033,7 @@ export async function updateTripStatus(
   });
 
   // Best-effort presence sync after the status change is durably committed: a trip moving the request
-  // to a terminal status (completed/cancelled) clears the rider's presence; otherwise it stays active.
+  // to a terminal status (completed/canceled) clears the rider's presence; otherwise it stays active.
   // Never breaks the status update.
   await syncTrustTransportRequestPresence(
     result.request.requesterUserId,
@@ -891,7 +1060,7 @@ export async function confirmTripCompletion(
 ): Promise<{ trip: TrustTransportTrip; request: TrustTransportRequest; bothConfirmed: boolean }> {
   const result = await withDbTransaction(async (client) => {
     const tripResult = await client.query<TripRow>(
-      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
+      `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
        WHERE id = $1::uuid
        LIMIT 1
@@ -919,7 +1088,7 @@ export async function confirmTripCompletion(
       `UPDATE trust_transport_trips
        SET ${column} = COALESCE(${column}, NOW()), updated_at = NOW()
        WHERE id = $1::uuid
-       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+       RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
       [tripId],
     );
 
@@ -938,7 +1107,7 @@ export async function confirmTripCompletion(
         `UPDATE trust_transport_trips
          SET status = 'completed', completed_at = NOW(), updated_at = NOW()
          WHERE id = $1::uuid
-         RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, cancelled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
+         RETURNING id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at`,
         [tripId],
       );
       confirmedTrip = completedTripResult.rows[0];
@@ -987,6 +1156,72 @@ export async function confirmTripCompletion(
   return result;
 }
 
+// ServiceCredits rail: move credits from the requester's wallet to the provider's, idempotent by trip id,
+// then record the settlement in the admin audit trail.
+async function settleTripViaServiceCredits(
+  trip: TrustTransportTrip,
+  request: TrustTransportRequest,
+  currency: string,
+  amount: number,
+): Promise<void> {
+  const tx = await createTransfer({
+    senderUserId: request.requesterUserId,
+    recipientUserId: trip.providerUserId,
+    amount,
+    idempotencyKey: `trust-transport-settlement-${trip.id}`,
+    originPlugin: 'trust-transport',
+    reasonCode: 'trust-transport.trip.settlement',
+  });
+
+  await insertTrustTransportAudit({
+    actorId: trip.providerUserId,
+    command: 'trust-transport.trip.settlement',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetType: 'trip',
+    targetId: trip.id,
+    metadata: {
+      rail: 'service_credits',
+      currency,
+      amount,
+      fromUserId: request.requesterUserId,
+      toUserId: trip.providerUserId,
+      transferId: (tx as { id?: string }).id ?? null,
+    },
+  });
+}
+
+// Fiat/crypto rail: credit the provider's earnings ledger in the settlement currency, idempotent by trip id
+// so a re-completion cannot double-credit. Payouts draw from this per-currency balance. Only audits when a
+// new ledger row is actually inserted.
+async function settleTripViaEarningsLedger(
+  trip: TrustTransportTrip,
+  currency: string,
+  amount: number,
+): Promise<void> {
+  const credited = await queryDb(
+    `INSERT INTO trust_transport_earnings_ledger (provider_user_id, trip_id, entry_type, amount, currency, price_currency, status, metadata)
+     SELECT $1, $2::uuid, 'credit', $3, $4, $4, 'posted', jsonb_build_object('reason', 'trip_settlement')
+     WHERE NOT EXISTS (
+       SELECT 1 FROM trust_transport_earnings_ledger
+       WHERE trip_id = $2::uuid AND entry_type = 'credit' AND (metadata->>'reason') = 'trip_settlement'
+     )`,
+    [trip.providerUserId, trip.id, amount, currency],
+  );
+
+  if ((credited.rowCount ?? 0) > 0) {
+    await insertTrustTransportAudit({
+      actorId: trip.providerUserId,
+      command: 'trust-transport.trip.settlement',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'trip',
+      targetId: trip.id,
+      metadata: { rail: 'earnings_ledger', currency, amount, toUserId: trip.providerUserId },
+    });
+  }
+}
+
 // Settle a completed trip against the requester's chosen settlement. Best-effort and idempotent by trip
 // id: the trip is already completed and the work done, so a failure here (e.g. the requester lacks
 // balance) is logged for reconciliation rather than reverting the trip, and the trip-id key means a
@@ -1008,57 +1243,11 @@ async function settleTripOnCompletion(
 
   try {
     if (currency === 'SC') {
-      const tx = await createTransfer({
-        senderUserId: request.requesterUserId,
-        recipientUserId: trip.providerUserId,
-        amount,
-        idempotencyKey: `trust-transport-settlement-${trip.id}`,
-        originPlugin: 'trust-transport',
-        reasonCode: 'trust-transport.trip.settlement',
-      });
-
-      await insertTrustTransportAudit({
-        actorId: trip.providerUserId,
-        command: 'trust-transport.trip.settlement',
-        policyStatus: 'allow',
-        reason: 'ok',
-        targetType: 'trip',
-        targetId: trip.id,
-        metadata: {
-          rail: 'service_credits',
-          currency,
-          amount,
-          fromUserId: request.requesterUserId,
-          toUserId: trip.providerUserId,
-          transferId: (tx as { id?: string }).id ?? null,
-        },
-      });
+      await settleTripViaServiceCredits(trip, request, currency, amount);
       return;
     }
 
-    // Fiat/crypto: credit the provider's earnings ledger in the settlement currency, idempotent by trip id
-    // so a re-completion cannot double-credit. Payouts draw from this per-currency balance.
-    const credited = await queryDb(
-      `INSERT INTO trust_transport_earnings_ledger (provider_user_id, trip_id, entry_type, amount, currency, price_currency, status, metadata)
-       SELECT $1, $2::uuid, 'credit', $3, $4, $4, 'posted', jsonb_build_object('reason', 'trip_settlement')
-       WHERE NOT EXISTS (
-         SELECT 1 FROM trust_transport_earnings_ledger
-         WHERE trip_id = $2::uuid AND entry_type = 'credit' AND (metadata->>'reason') = 'trip_settlement'
-       )`,
-      [trip.providerUserId, trip.id, amount, currency],
-    );
-
-    if ((credited.rowCount ?? 0) > 0) {
-      await insertTrustTransportAudit({
-        actorId: trip.providerUserId,
-        command: 'trust-transport.trip.settlement',
-        policyStatus: 'allow',
-        reason: 'ok',
-        targetType: 'trip',
-        targetId: trip.id,
-        metadata: { rail: 'earnings_ledger', currency, amount, toUserId: trip.providerUserId },
-      });
-    }
+    await settleTripViaEarningsLedger(trip, currency, amount);
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trip_settlement' });
   }
@@ -1114,21 +1303,21 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
     throw new Error('policy_denied');
   }
 
-  if (!REQUEST_TRANSITIONS[request.status].includes('cancelled')) {
+  if (!REQUEST_TRANSITIONS[request.status].includes('canceled')) {
     throw new Error('invalid_transition');
   }
 
   await queryDb(
     `UPDATE trust_transport_requests
-     SET status = 'cancelled', updated_at = NOW()
+     SET status = 'canceled', updated_at = NOW()
      WHERE id = $1::uuid`,
     [orderId],
   );
 
   await queryDb(
     `UPDATE trust_transport_trips
-     SET status = CASE WHEN status IN ('completed', 'cancelled') THEN status ELSE 'cancelled' END,
-         cancelled_reason = COALESCE($2, cancelled_reason),
+     SET status = CASE WHEN status IN ('completed', 'canceled') THEN status ELSE 'canceled' END,
+         canceled_reason = COALESCE($2, canceled_reason),
          updated_at = NOW()
      WHERE request_id = $1::uuid`,
     [orderId, normalizeNullableText(reason)],
@@ -1136,13 +1325,13 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
 
   await queryDb(
     `INSERT INTO trust_transport_status_events (request_id, actor_user_id, event_name, from_status, to_status, metadata)
-     VALUES ($1::uuid, $2, 'order_cancelled', $3, 'cancelled', jsonb_build_object('reason', $4))`,
+     VALUES ($1::uuid, $2, 'order_cancelled', $3, 'canceled', jsonb_build_object('reason', $4))`,
     [orderId, actorUserId, request.status, normalizeNullableText(reason)],
   );
 
-  // Best-effort presence clear after the request is durably set to cancelled. The requester (rider)
+  // Best-effort presence clear after the request is durably set to canceled. The requester (rider)
   // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
-  await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'cancelled');
+  await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'canceled');
 }
 
 // The caller's recorded earnings per currency: the total value of the trips they completed, grouped by

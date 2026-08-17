@@ -92,7 +92,7 @@ export type FeedCommunityDetail = {
   reactions: FeedReactionSummary[];
 };
 
-// One reply on an official announcement. Members can reply to a Survivor Hub announcement; the
+// One reply on an official announcement. Members can reply to an official announcement; the
 // replies group under it as a thread. author_username is captured at reply time so the thread can
 // render the member's handle without a second lookup.
 export type FeedAnnouncementReply = {
@@ -101,6 +101,10 @@ export type FeedAnnouncementReply = {
   body: string;
   authorUserId: string;
   authorUsername: string | null;
+  // When the author last rewrote this reply, or null if they never did. Kept separate from
+  // createdAtIso so the thread still reads in the order it was written while still being honest
+  // that the words changed after they were posted.
+  editedAtIso: string | null;
   createdAtIso: string;
 };
 

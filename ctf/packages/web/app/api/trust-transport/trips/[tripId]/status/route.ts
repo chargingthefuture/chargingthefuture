@@ -4,6 +4,7 @@ import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { insertTrustTransportAudit, updateTripStatus } from 'lib/trust-transport/repository';
 import type { TrustTransportTripStatus } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type RouteProps = {
   params: Promise<{ tripId: string }>;
@@ -15,7 +16,7 @@ const VALID_NEXT_STATUSES: TrustTransportTripStatus[] = [
   'picked_up',
   'delivered',
   'completed',
-  'cancelled',
+  'canceled',
   'disputed',
   'emergency_frozen',
 ];
@@ -34,9 +35,9 @@ export async function POST(request: Request, { params }: RouteProps) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

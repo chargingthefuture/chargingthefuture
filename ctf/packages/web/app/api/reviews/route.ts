@@ -35,12 +35,19 @@ export async function GET(request: Request) {
 }
 
 // Preflight for cross-origin fetches from the landing page.
+//
+// `Access-Control-Allow-Headers` is declared defensively rather than to fix a live failure. The
+// widget's own `Accept: application/json` is a CORS-safelisted request header, so it does not
+// trigger a preflight at all and this handler is never reached for it. But any caller that later
+// sends `Content-Type` or a custom header WOULD preflight, and would be rejected for a header this
+// response never named — a failure that would look like the endpoint being down.
 export function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': CORS_ALLOW_ORIGIN,
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Accept, Content-Type',
       'Access-Control-Max-Age': '86400',
     },
   });

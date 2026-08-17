@@ -16,7 +16,7 @@
 >   signed-in app shell under `components/feed/` have been removed (see the 2026-06-09 change-log
 >   entry), so `/apps/feed-announcements` now 404s. The admin surface remains at
 >   `/admin/feed-announcements`, and the `/api/feed/*` routes and schema tables are the Hub's
->   data layer; the Hub home channel reads them via `GET /api/hub/messages`.
+>   data layer; the Hub home channel reads them via `GET /api/commons/messages`.
 > - The phantom `feed_user_extension` references (seed `INSERT`, deletion contract, and the
 >   data-model entry in §4.1 below) have been removed — no code read them and there is no real
 >   per-user feed-preference table (render mode is global via `feed_render_config`). This resolves
@@ -26,7 +26,7 @@
 >   Public unauthenticated read enforcement is the tracked follow-up.
 >
 > See the full decision + ordered next steps in
-> `ctf-survivor-hub-chat-feature-inventory.md`.
+> `ctf-hub-feature-inventory.md`.
 
 ## Scope and Boundary
 
@@ -79,7 +79,7 @@ Architecture decisions in effect:
 1. Community support posts for peer-to-peer engagement (general, peer support, resource sharing, events).
 2. Threaded replies on community posts.
 3. Content moderation and rate limiting on post creation. Members are capped at 1,200 characters and 3 links per post (anti-spam in the publicly-readable Commons); admins get a higher cap (4,000 characters, 20 links) so the owner's detailed welcome/help posts are not blocked. The raw-HTML (`<>`) block applies to everyone.
-4. The Commons (Survivor Hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel for real-time updates and typing indicators. `POST /api/hub/join` mints the credentials via `getFeedStreamCredentials(userId, displayName, 'community')` — the same channel and Stream identity (`feed-<userId>`) the Questions/Community Stream surfaces use. The post data itself stays in `feed_community_posts` (our database); Stream is the real-time signal only. See the Commons live-layer entry in `ctf-survivor-hub-chat-feature-inventory.md` and the quota note `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
+4. The Commons (the hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel for real-time updates and typing indicators. `POST /api/commons/join` mints the credentials via `getFeedStreamCredentials(userId, displayName, 'community')` — the same channel and Stream identity (`feed-<userId>`) the Questions/Community Stream surfaces use. The post data itself stays in `feed_community_posts` (our database); Stream is the real-time signal only. See the Commons live-layer entry in `ctf-hub-feature-inventory.md` and the quota note `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
 
 ### 1.5 Membership-Aware Personalization
 
@@ -99,7 +99,10 @@ Architecture decisions in effect:
 
 ### 2.1 Central Admin Surface
 
-1. Single admin page at `/admin/feed-announcements` for Feed + Announcements controls.
+1. Single admin page at `/admin/feed-announcements` for Feed + Announcements controls. It is titled
+   **Commons: Feed & Announcements Admin**, and the `/admin` landing tile that opens it is named
+   **Commons: Feed & Announcements** — the same name the Account & Data screen gives this service,
+   so every surface calls it after the Commons.
 2. Role-gated create/edit/publish/archive actions.
 3. Moderation and publish-state controls with auditability.
 
@@ -156,7 +159,7 @@ User routes:
 - `POST /api/feed/answers/:answerId/rate`
 - `POST /api/feed/community/posts` — body accepts an optional `replyToPostId` (the id of the peer post this one quotes, Signal-style). Validated server-side to reference an existing post; rejected with 400 when malformed or unknown.
 - `POST /api/feed/community/posts/:postId/reply`
-- `POST /api/hub/messages/:postId/reactions` — toggle the requesting member's emoji reaction on a Commons community post. Body `{ emoji }`; the emoji must be in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋), else 400. A second toggle of the same emoji removes it. Hub access gate + `x-ctf-csrf: '1'`. Returns `{ ok, reacted }`. Reactions are stored in our own database (`feed_community_post_reactions`), not Stream.
+- `POST /api/commons/messages/:postId/reactions` — toggle the requesting member's emoji reaction on a Commons community post. Body `{ emoji }`; the emoji must be in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋), else 400. A second toggle of the same emoji removes it. Hub access gate + `x-ctf-csrf: '1'`. Returns `{ ok, reacted }`. Reactions are stored in our own database (`feed_community_post_reactions`), not Stream.
 - `POST /api/feed/stream` — mint Stream chat credentials for the announcements channel (`ctf-feed-announcements`)
 - `POST /api/questions/stream` — mint Stream chat credentials for the questions channel (`ctf-feed-questions`); used by the mobile Questions screen
 
@@ -172,6 +175,50 @@ Admin routes:
 - `PUT /api/feed/admin/announcements/:announcementId`
 - `POST /api/feed/admin/announcements/:announcementId/publish`
 - `POST /api/feed/admin/announcements/:announcementId/archive`
+- `GET`/`POST /api/commons/first-visit-notice` — the one standing notice a member is shown on arrival
+  rather than on the rotation. `GET` returns `{ show, title, body }`; `POST` records that they have read
+  it (idempotent, `(user_id, notice_key)` primary key). Gated at `any_authenticated`, **deliberately**:
+  a signed-in but unverified member can already read and post in the Commons, so they are exactly who
+  needs telling first. `POST` checks `checkMutationOrigin(request) !== 'allow'` — that helper returns a
+  verdict string, and a truthiness test against it would disable the check entirely. Both directions
+  fail **closed**: a read error reports `show: false`, because a database hiccup must not be able to pop
+  the notice on every visit, which is how a notice trains people to dismiss it unread.
+- `GET /api/feed/admin/moderation/flagged-answers` — admin lists answers members have flagged, ordered
+  by flag count then newest (`listFlaggedAnswers`), with `pending` = how many flagged answers are still
+  visible (`countPendingFlaggedAnswers`, counted in the database so it is never a page-capped
+  undercount). Each row carries the parent question, the answer, whether it came from the assistant or
+  a member, and its flag / not-helpful counts. Admin-gated, read-only. **This route is what closed the
+  gap**: members could rate an answer `flagged` from the day rating shipped, the count was aggregated by
+  `GET /api/feed/admin/questions`, and no screen ever called that route — so every flag reached nobody.
+- `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
+  footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
+  moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
+  is what you use to *pick* someone, so it is dead weight once you have.
+- `GET /api/feed/admin/moderation` — admin lists member-authored Commons posts and replies for review
+  — including replies on official announcements — newest first, together with the count of rows currently hidden (`listCommonsModerationQueue` +
+  `countHiddenCommonsRows` in `lib/feed/moderation.ts`). Hidden rows are included by default so a
+  moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
+  `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
+- `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
+  `:target` is one of `post` / `reply` / `announcement-reply` / `question` / `answer`
+  (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official announcement,
+  stored in `announcement_replies`.
+  Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
+  `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
+  moderator's prose about a member would become a permanent unreviewable note on a survivor's
+  account. An unrecognized or absent code falls back to `other` rather than 400: a hide is
+  time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
+  stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
+  `:target` is `post`, `reply`, `question`, or `answer` (else 400); body `{ hidden: boolean }` is **required** — an absent
+  field is a 400 rather than defaulting to restore, so a malformed request can never quietly put
+  hidden content back in front of members. Admin-gated + `x-ctf-csrf: '1'`; 404 when the row is gone.
+  Sets `moderation_status` to `'hidden'` or `'accepted'` under `FOR UPDATE`, so two moderators acting
+  at once cannot both record the same transition. Returns `{ changed: false }` and writes **no** audit
+  row when the row is already in the requested state. A real transition writes
+  `feed.community.moderation.hide` or `feed.community.moderation.restore` with the previous and new
+  status in metadata (never the body — the trail is a record *about* the content, not a second copy of
+  it). **There is no admin edit route**: a moderator may take content out of view, never rewrite a
+  member's words while leaving the member's name on them.
 - `PATCH /api/feed/admin/questions/:questionId` — admin re-labels a feed question's category (`relabelQuestionCategory`). Body `{ category }` validated against the allowed feed question categories (else 400); the question id must be a UUID (else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`; 404 when the question id is unknown. Writes a `feed.question.category.relabel` audit row.
 - `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events` and fanning out to Stream when configured). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
 
@@ -200,7 +247,12 @@ Domain tables:
 
 **Existing (implemented):**
 
-1. `feed_items`
+1. `feed_items` — the timeline table the Commons actually reads. Every announcement, question, and
+   community post is copied into a row here carrying the same `title`/`body` text, linked back by
+   `source_announcement_id` / `source_question_id` / `source_community_post_id`. Because it mixes a
+   member's own words with admin-published announcements, account deletion treats the two
+   differently: the member's post/question copies are deleted (registry `delWhere`, scoped by
+   `created_by_user_id` plus a source-id filter), the announcement copies are retained.
 2. `feed_item_targets` — `target_role`/`target_plugin`/`target_region` are nullable, where `NULL` means "any" (read path treats `NULL` as a wildcard). Uniqueness is a `NULLS NOT DISTINCT` unique index on `(item_id, target_role, target_plugin, target_region)` rather than a primary key, because primary-key columns are implicitly `NOT NULL` and cannot hold the `NULL` wildcard used by default targeting.
 3. `feed_user_read_state`
 4. `feed_user_dismissals`
@@ -218,8 +270,23 @@ Domain tables:
 16. `llm_inference_log`
 17. `feed_community_posts` — includes `reply_to_post_id UUID NULL REFERENCES feed_community_posts(id) ON DELETE SET NULL` for Signal-style quoted replies (a peer post quoting another peer post). When the quoted post is deleted, the reference is set to null and no quote renders. Indexed by `idx_feed_community_posts_reply_to`.
 18. `feed_community_replies`
-19. `feed_hub_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
+19. `feed_commons_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
 20. `feed_community_post_reactions` — emoji reactions on Commons community posts, stored in our own database (not Stream). Columns `id UUID PK DEFAULT gen_random_uuid()`, `post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE`, `user_id TEXT NOT NULL`, `emoji TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` makes a reaction a toggle (one of each emoji per member per post); `idx_feed_community_post_reactions_post (post_id)` serves the batched aggregate read. The emoji is constrained to the fixed quick set (`FEED_REACTION_EMOJIS`) at the application layer.
+21. `feed_commons_guidance_milestones` — one row per Commons post-count milestone at which the
+    automatic guidance notice was published. Columns `id UUID PK DEFAULT gen_random_uuid()`,
+    `milestone_count INTEGER NOT NULL UNIQUE`, `announcement_id UUID NULL`,
+    `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. **The UNIQUE constraint on `milestone_count` is
+    the concurrency control, not just a hygiene index**: two members posting at the same moment across
+    the boundary both compute the same count and both try to claim it, and `ON CONFLICT DO NOTHING`
+    lets exactly one win, so the notice is never published twice for one milestone. `announcement_id`
+    is stamped after the notice is created so an admin can find the exact announcement a milestone
+    produced. **Holds no member data** — no user ids, no content — so it is retained on account
+    deletion and is not in the deletion registry.
+22. `feed_commons_notice_seen` — which standing notices a member has already been shown once, on
+    arrival. Columns `user_id TEXT`, `notice_key TEXT`, `seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`,
+    primary key `(user_id, notice_key)`. Separate from the cadence table because it answers a different
+    question: the cadence table asks whether a period has been served *for the room*, this asks whether
+    *this member* has seen it. Holds a user id, so it is deleted with the account (deletion registry).
 
 **Reserved (schema-only, no runtime reader/writer yet):**
 
@@ -284,10 +351,111 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 1. LLM inference for question answers runs against a single configured provider; provider failover and confidence-thresholding policy are not yet contractualized.
 2. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
+3. ~~Questions and answers cannot be moderated.~~ **Closed 2026-07-30** — both tables gained
+   `moderation_status`, the read path honours it, and `/admin/commons` can hide either.
+4. ~~Member flags route nowhere.~~ **Closed 2026-07-30** — `GET /api/feed/admin/moderation/flagged-answers`
+   plus the Flagged answers tab on `/admin/commons`. `GET /api/feed/admin/questions` is still orphaned and
+   is recorded in `ctf/scripts/orphan-route-allowlist.json` as a burn-down entry: its `flagged_count` is
+   now superseded by the flag queue, so it should be either wired to a page or deleted.
 
 ---
 
 ## 11) Change Log
+
+- 2026-08-10: **The admin surface is named after the Commons too (owner request, follow-on from the
+  Account & Data rename in #2189).** The `/admin` landing tile read "Feed Announcements" and the
+  screen header read "Feed & Announcements Admin" — neither named the surface those announcements
+  land on. The tile is now **Commons: Feed & Announcements** (matching the Account & Data service
+  row exactly) and the header is **Commons: Feed & Announcements Admin**. It still sits beside
+  **Commons Moderation**, which is the separate power over member-authored posts. Copy only —
+  `app/admin/page.tsx` and `components/feed-announcements/feed-announcements-admin-shell.tsx`; no
+  route, schema, or contract change. Test step FD-A1 updated to check the new header (and to drop
+  the "ADMIN badge" it told the tester to look for, which the shared header has not rendered since
+  the surface moved to `MobileScreenHeader`).
+- 2026-08-10: **Announcement replies became moderatable, and their authors can edit or delete them.** `FeedModerationTarget` widened to `post | reply | announcement-reply | question | answer`, so `POST /api/feed/admin/moderation/:target/:id` covers replies on official announcements with no new endpoint. `listCommonsModerationQueue` now unions `announcement_replies` (its `parentId` is the announcement — the field was renamed from `postId` because the two kinds of reply hang off different things), `listCommonsAuthors` counts them in each member's reply total, and `countHiddenCommonsRows` counts hidden ones in the reply total on `/admin/commons`. The Commons moderation screen labels them "Announcement reply" and links them to their announcement. Hide and restore only — still no admin edit anywhere. The member-side edit/delete of one's own announcement reply is documented in the Announcements inventory.
+- 2026-08-09: **Account deletion now deletes Commons posts instead of leaving them under a generic
+  name (owner report).** Deleting an account removed `feed_community_posts` / `feed_questions` but
+  the Commons reads `feed_items`, which holds a copy of every post and question carrying the same
+  text. That copy was classified `retain`, so the words stayed on screen; with the source row gone
+  there was no author to resolve, and the read path fell back to the pseudonym built from the
+  placeholder id — every deleted member's posts re-labeled `user-hub-syst`, the same handle each
+  time, which reads as anonymising rather than deleting. Three changes: (1) a new `delWhere()`
+  builder in the account deletion registry deletes only *some* of a member's rows in a shared table,
+  and `feed_items` now uses it —
+  `created_by_user_id = $1 AND (source_community_post_id IS NOT NULL OR source_question_id IS NOT NULL)`
+  — so a member's own post/question copies go and the admin announcement copies stay retained;
+  deleting a copy cascades its targets, read state, and dismissals. (2) `listFeedTimeline` (page,
+  count, and deep-link offset queries alike) hides any community/question item whose source row is
+  missing, so no other path can put deleted words back on screen. (3) `schema.sql` /
+  `schema.demo.sql` clear the copies already left behind by earlier deletions — idempotent, and
+  scoped to rows with a missing source. The engine supports an optional row filter that is only ever
+  ANDed onto the user-column match; both CI validators (`check-deletion-registry.mjs`,
+  `check-deletion-engine.mjs`) were extended to parse `delWhere`, check its columns against
+  `schema.sql`, restrict it to `<column> IS [NOT] NULL` clauses, and assert the generated SQL still
+  scopes by `$1`. Deletion contract updated. No route or API-shape change.
+- 2026-08-09: **Official posts are signed with the operator's name, and the "SH" avatar is gone
+  (owner decision).** `hubMessageAuthor` in `app/api/commons/messages/route.ts` labeled every
+  non-community item "Survivor Hub" — an institution's name over first-person writing. It now reads
+  the shared `OFFICIAL_SENDER_LABEL` (`lib/commons/constants.ts`), which is **Farah**, the operator,
+  matching how Beacon already names her publicly. The same constant backs the
+  `shell-chat-panel.tsx` sender fallback and the Stream system user in
+  `lib/contributor-access/gated-channel.ts`, so the official identity cannot drift between them.
+  Whether a post is official is still carried by the shield badge on the announcement card, not by
+  the name. The hardcoded **"SH"** avatar is deleted rather than renamed: `avatarFromSender` and the
+  announcement card both take the first letter of whatever name they are given, so no house glyph
+  can disagree with the name printed beside it. AI answers are unaffected — they render through
+  their own card branch and never used this label. Copy-and-label only: no route, schema, or
+  contract change.
+- 2026-08-05: **Member blocks enforced on the Commons timeline (issue #809 task 4).**
+  `listFeedTimeline` now leaves out community posts authored by a member who is blocked (either
+  direction) relative to the viewer, and the replies batch-loader applies the same filter, so a
+  blocked person's posts and replies no longer render in the Commons. Announcements and AI Q&A items
+  have no member author and always show. The count query and the deep-link "load around" offset
+  apply the identical filter so pagination stays consistent. A post's stored `reply_count` may
+  overstate the visible replies for a viewer with a block — accepted, the counter is denormalized.
+  `member_blocks` added to the `feed.timeline.fetch` contract `dataAccess`. No schema change.
+- 2026-08-02: **Deletion burn-down batch 4.** On account deletion, `announcement_replies` (your replies to announcements) and `llm_inference_log` rows carrying your id are now deleted (the log mostly FK-cascades with your questions/answers already; the direct delete closes any path the cascades miss). Admin-authored platform content (`announcements`, `announcement_revisions`, `announcement_delivery_events`, `feed_items`, `feed_render_config`) is classified retained — authorship columns are the publish audit.
+- 2026-08-02: **Four code-review fixes (issues #2045, #2046, #2048, #2017).** (1) `evaluateFeedRateLimit`
+  no longer interpolates the table/column names it received: both are looked up from a frozen
+  allow-list map keyed by the four permitted table literals, so a widened type or a hostile cast can
+  never reach the SQL string (value literals stay parameterized). (2) The server-side Stream client in
+  `lib/feed/stream.ts` no longer calls `disconnectUser()` in a `finally` — that is the client-side
+  teardown for a connected user; a key+secret server client opens no WebSocket, and the call only risked
+  masking a real error. (3) `refreshPublishedGuidanceNotices` scopes its `feed_items` UPDATE to
+  `item_type = 'announcement'`, so a same-title, same-actor row of another type can never be overwritten.
+  (4) `markAnnouncementRead` now returns the stored `read_at`; `POST /api/announcements/[id]/read`
+  reports that persisted timestamp instead of a route-computed one, matching `markFeedItemRead` and
+  `dismissFeedItem`. The response shape (`{ ok, announcementId, readAt }`) is unchanged.
+- 2026-08-02: **Deletion burn-down batch 1: three per-user tables join the deletion registry.**
+  `feed_community_post_reactions` (the deletion contract already promised this table would clear, but
+  no registry entry existed, so the engine never executed the promise), `announcement_reactions`, and
+  `feed_commons_last_seen` (unread-badge state) are now deleted with the account. Caught by the
+  deletion-coverage gate added in #2056. Contract updated to match.
+- 2026-08-01: **Dismissing an announcement now reports the time the database actually recorded
+  (code-review issue #2016).** `dismissAnnouncement` returned the literal string `'ok'` and its
+  insert did not read `dismissed_at` back, so `POST /api/announcements/{announcementId}/dismiss`
+  filled the contract's `dismissedAt` field with a timestamp the route computed itself just before
+  the write. That value could disagree with the stored one whenever the app server and the database
+  clocks differ. The insert now ends with `RETURNING dismissed_at`, the function returns
+  `{ dismissedAtIso }`, and the route sends that value — the same shape `dismissFeedItem` and the
+  feed-item dismiss route already use. Response fields are unchanged; only the source of the
+  timestamp is.
+
+- 2026-08-01: **Two code-review corrections (issues #2021, #2019).** (1) `GET /api/feed/items` now
+  honors the `mentions=me` input its contract (feed.timeline.fetch) has always documented: handle
+  tokens are derived server-side from the authenticated caller (never client-supplied) and passed to
+  `listFeedTimeline`; any other `mentions` value is rejected with 400. The Hub "@ Mentions" toggle was
+  never broken — it calls `/api/commons/messages`, which already implemented the filter — this closes the
+  gap on the documented items route. (2) The `feed.community.moderation.list` contract (now v1.0.1) no
+  longer claims `feed_questions`/`feed_answers` in dataAccess: the queue is Commons-only by design and
+  its query never read those tables; Q&A moderation lives in `feed.qa.moderation.flagged.list`.
+- 2026-07-31: **Admin membership-event route now writes its audit entry (code-review finding).**
+  `POST /api/feed/membership/events` called `emitMembershipEvent` and returned without ever calling
+  `logFeedAudit`, so this admin-only command left no audit trail even though
+  `FEED_PLUGIN_AUDIT_CONTRACTS.yaml` declares a `feed.membership.event.emit` entry for every call.
+  The route now logs that entry on both the success and the failure path, recording the acting
+  admin, the target member, the plugin, the event type, and the request/trace identifiers — matching
+  what the sibling `/api/announcements/membership/events` route already did.
 
 - 2026-07-27: **Commons composer shows how far over the character limit you are — and no longer
   destroys an over-limit message (owner report).** A member's long post silently failed: the composer
@@ -310,18 +478,18 @@ All three feed channels (announcements, questions, community) are shipped on web
 - 2026-07-22: **"Edit" action on a member's own Commons chat post (edit = delete + repost).** Members could already delete their own community post, and the product model is deliberately no-in-place-edit (a corrected post is a fresh row with its own moderation, no inherited reactions/replies), but the only way to fix a typo was to delete then retype — so people posted follow-up corrections like "*done" instead. Added an **Edit** button next to Delete on the author's own message in both Commons channels: the home channel (`shell-chat-panel.tsx` + `use-home-chat.ts`) and the gated #contributors channel (`gated-chat-panel.tsx` + `use-gated-chat.ts`). It loads the post's text back into the composer, deletes the original (existing `feed.community.post.delete` / the contributor-access channel delete), clears any active reply, and focuses the box; sending posts a fresh message via the existing create path — a new row with a new timestamp. No schema, route, or contract change — reuses the existing delete + create. Web + mobile-responsive (Commons is web-only; the RN app has no Commons surface). Verified: `@ctf/web` typecheck + eslint clean, EOF clean.
 - 2026-07-17: **"Edit" button for draft announcements in the admin surface.** The admin could create, publish, and archive announcements but had no way to edit a draft before publishing — the `feed.announcement.draft.update` command and its `PUT /api/feed/admin/announcements/:id` route already existed but were never exposed in the UI. Added an "Edit" action on each draft row (`feed-announcements-admin-shell.tsx`) that loads the draft (title, body, linked plugin) into the top form; the form switches to "Edit announcement" with a "Save changes" button (PUT) and a "Cancel" that clears edit mode. Create-draft is unchanged (still POST). Edit is offered on drafts only (the update command already rejects non-draft rows server-side). UI-only — no schema, route, or contract change. Verified: typecheck, lint, production build.
 - 2026-07-16: **Preserve paragraph/line breaks in posts and announcements.** A multi-paragraph message posted to the Commons rendered as one jumbled wall of text — `normalizeText` (used on every body) collapses *all* whitespace including newlines (`\s+` → single space), so line breaks were destroyed at save time. Added `normalizeMultilineText` (collapses only horizontal whitespace per line, trims each line, caps blank-line runs at one) and used it for community-post bodies (`createFeedCommunityPost`), replies (`replyToFeedCommunityPost`), and announcement bodies (`create`/`updateAnnouncementDraft`), plus the matching length validators so the measured length equals what is stored. Render side: added `white-space: pre-wrap` to the authenticated `.chatBubble` and the signed-out `.publicChatBody` (the announcement card body and mobile RN `<Text>` already keep newlines). Titles and single-line fields still use the collapsing `normalizeText`. No schema change. Note: messages saved *before* this fix were already flattened in storage, so they stay single-paragraph — re-post them (delete + repost) to get the breaks back. Verified: typecheck, lint, production build.
-- 2026-07-16: **Higher community-post limits for admins (owner welcome/help posts were blocked).** A detailed welcome post from the owner (1,965 characters, 6 links) was rejected: community posts are capped at 1,200 characters (`validateFeedCommunityPostInput`) and 3 links (`passesFeedModeration`). Both caps are deliberate anti-spam guards for the publicly-readable Commons, but too tight for the owner. Added admin-only higher caps: `FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH = 4000` and `FEED_ADMIN_MAX_COMMUNITY_POST_URLS = 20` (`constants.ts`); `validateFeedCommunityPostInput(input, maxLength)` and `passesFeedModeration(text, urlCap)` now take the applicable cap, and `createFeedCommunityPost(..., isPrivileged)` passes the admin link cap. `POST /api/hub/messages` derives `isPrivileged` from `gate.auth.isAdmin` and applies the admin length cap. Members keep 1,200 chars / 3 links; the `<>` raw-HTML block still applies to everyone. Server-only validation change; no schema or new route. Verified: typecheck, lint, production build.
-- 2026-07-16: **Member self-delete of their own community post (`feed.community.post.delete`).** Added `deleteCommunityPost` (`lib/feed/repository.ts`): author-only hard delete that removes the projected `feed_items` row (cascading its targets/read-state/dismissals) and the `feed_community_posts` row (cascading its replies + reactions), all in one transaction. Exposed as `DELETE /api/hub/messages/:postId` (hub gate + CSRF; 403 non-owner, 404 gone). Command contract `feed.community.post.delete`, an author-only access policy, and an audit event added; `FEED_PROFILE_AND_DELETION_CONTRACT.md` documents the self-delete surface. This is the product's answer to "no edit" — a member corrects a post by deleting and reposting, avoiding the bait-and-switch risk of in-place edits. No schema change. The full UI (web + Android delete affordance) is detailed in the Survivor Hub inventory. Verified: typecheck, lint, production build.
+- 2026-07-16: **Higher community-post limits for admins (owner welcome/help posts were blocked).** A detailed welcome post from the owner (1,965 characters, 6 links) was rejected: community posts are capped at 1,200 characters (`validateFeedCommunityPostInput`) and 3 links (`passesFeedModeration`). Both caps are deliberate anti-spam guards for the publicly-readable Commons, but too tight for the owner. Added admin-only higher caps: `FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH = 4000` and `FEED_ADMIN_MAX_COMMUNITY_POST_URLS = 20` (`constants.ts`); `validateFeedCommunityPostInput(input, maxLength)` and `passesFeedModeration(text, urlCap)` now take the applicable cap, and `createFeedCommunityPost(..., isPrivileged)` passes the admin link cap. `POST /api/commons/messages` derives `isPrivileged` from `gate.auth.isAdmin` and applies the admin length cap. Members keep 1,200 chars / 3 links; the `<>` raw-HTML block still applies to everyone. Server-only validation change; no schema or new route. Verified: typecheck, lint, production build.
+- 2026-07-16: **Member self-delete of their own community post (`feed.community.post.delete`).** Added `deleteCommunityPost` (`lib/feed/repository.ts`): author-only hard delete that removes the projected `feed_items` row (cascading its targets/read-state/dismissals) and the `feed_community_posts` row (cascading its replies + reactions), all in one transaction. Exposed as `DELETE /api/commons/messages/:postId` (hub gate + CSRF; 403 non-owner, 404 gone). Command contract `feed.community.post.delete`, an author-only access policy, and an audit event added; `FEED_PROFILE_AND_DELETION_CONTRACT.md` documents the self-delete surface. This is the product's answer to "no edit" — a member corrects a post by deleting and reposting, avoiding the bait-and-switch risk of in-place edits. No schema change. The full UI (web + Android delete affordance) is detailed in the Survivor Hub inventory. Verified: typecheck, lint, production build.
 - 2026-07-16: **Retired announcement `priority` and `mandatory` (owner decision).** With the Commons as one time-ordered stream where every announcement flows through the same feed, there is no manual ranking and no non-dismissable flag, so both fields are removed end to end. Dropped `priority`/`mandatory` from `feed_items`, `announcements`, `announcement_revisions`, and `feed_timeline_projection` in `schema.sql` + `schema.demo.sql` (guarded `DROP COLUMN IF EXISTS`; the `feed_items` timeline index was rebuilt without `priority`). `listFeedTimeline` now orders purely by `published_at DESC, id DESC`. Removed the fields from `Announcement` / `AnnouncementDraftInput` / `FeedTimelineItem`, the create/update-draft SQL and validation, the admin form (the "Mandatory" checkbox, the "Priority" number input, and the "mandatory" list badge), and the admin/create + update API parsing. `dismissFeedItem` / `dismissAnnouncement` no longer guard on `mandatory` (every item is dismissable), and the dismiss routes drop the 409 "cannot dismiss mandatory" branch. Contract YAMLs drop the `mandatoryDismissGuard` / `target_*_mandatory` / `mandatoryDismissGuardCheck` clauses and reword the dismiss command descriptions. Seeds (`seedFeedAnnouncements.mjs`, `seedDemo.mjs`) no longer write either column. Owner-review lane (schema + contract change). Verified: typecheck (web + mobile + shared), lint, production build.
 - 2026-07-14: **Android pull-to-refresh on the feed surfaces.** The React Native `FeedStream.tsx`, `Announcements.tsx`, and `Community.tsx` screens now support pull-to-refresh: dragging the list down re-pulls the current data (feed timeline + @comic cards, announcements, community posts) in the background without flashing the full-screen loading state. Mobile-client only — no backend, schema, route, or contract change.
 - 2026-07-14: **Hardened the mobile Questions Stream-chat lifecycle (GitHub #1502–#1506).** In `ctf/packages/mobile/src/features/questions/Questions.tsx` the connect effect now (1) `await`s `chat.connectUser(...)` before rendering the channel, so the `Chat`/`Channel` components never watch a channel before the WebSocket handshake completes (#1503); (2) catches an error from `connectUser` (not just the credentials fetch) and surfaces it via `setError`, and no longer renders a broken, unconnected client (#1505); (3) holds the connected client in a `useRef` so the effect cleanup always disconnects the real client instead of the stale `null` captured at first render — closing the leaked authenticated WebSocket (#1502); and (4) guards `setError`/`setLoading(false)` behind the `isMounted` flag so an unmounted component is never updated, tearing the client down if it unmounted mid-connect (#1506). Separately, `POST /api/questions/stream` (`ctf/packages/web/app/api/questions/stream/route.ts`) now returns the four `stream*` fields explicitly rather than spreading `credentials`, so the response shape the mobile client reads is guaranteed at the boundary and cannot silently become `undefined` if `getFeedStreamCredentials` changes its keys (#1504). No route, contract, or schema change — the field names are unchanged; behavior-only hardening.
-- 2026-07-14: **Fixed published announcements (and questions) never appearing in the Commons.** `listFeedTimeline` filtered feed rows with `f.item_type = ANY($enabledChannels)`, but the enabled-channel names are plural (`announcements`, `questions`, `community`) while `feed_items.item_type` is singular (`announcement`, `question`, `community`). Only `community` matched both spellings, so the plural `announcements`/`questions` channels never matched their singular rows and those two item types were silently excluded from the Hub home channel (`GET /api/hub/messages`) and `GET /api/feed/items` — a published announcement showed in the admin list but never in the Commons. Added `FEED_CHANNEL_TO_ITEM_TYPE` (`lib/feed/constants.ts`) mapping each channel name to its item type, plus a `FeedItemType` type (`lib/feed/types.ts`); `listFeedTimeline` now maps the resolved channels through it before the item_type filter. Behavior-only fix — no schema, route, or contract change. Guarded by `lib/feed/channel-item-type.test.ts`.
+- 2026-07-14: **Fixed published announcements (and questions) never appearing in the Commons.** `listFeedTimeline` filtered feed rows with `f.item_type = ANY($enabledChannels)`, but the enabled-channel names are plural (`announcements`, `questions`, `community`) while `feed_items.item_type` is singular (`announcement`, `question`, `community`). Only `community` matched both spellings, so the plural `announcements`/`questions` channels never matched their singular rows and those two item types were silently excluded from the Hub home channel (`GET /api/commons/messages`) and `GET /api/feed/items` — a published announcement showed in the admin list but never in the Commons. Added `FEED_CHANNEL_TO_ITEM_TYPE` (`lib/feed/constants.ts`) mapping each channel name to its item type, plus a `FeedItemType` type (`lib/feed/types.ts`); `listFeedTimeline` now maps the resolved channels through it before the item_type filter. Behavior-only fix — no schema, route, or contract change. Guarded by `lib/feed/channel-item-type.test.ts`.
 - 2026-07-11: **Fixed "Unable to publish announcement" caused by a legacy text `announcements.id` column.** After the create-draft fix, publishing a draft still 503'd. The live `announcements.id` column was `character varying`, but `schema.sql` declares it `UUID`; `publishAnnouncement`, `archiveAnnouncement` and `updateAnnouncementDraft` all run `WHERE id = $1::uuid`, which Postgres rejects on a text column with `operator does not exist: character varying = uuid`. (Create-draft was unaffected because it casts values *into* a uuid column rather than comparing.) Added a guarded, idempotent migration to `schema.sql` and `schema.demo.sql` right after the existing `id` repair: when the column is not already `uuid`, `ALTER COLUMN id TYPE uuid USING id::uuid` and re-set the `gen_random_uuid()` default. Every stored id is a uuid string, so the cast is lossless; there are no foreign keys referencing the column, and the full publish path (announcement update + delivery event + `feed_items` upsert + `feed_item_targets`) was verified to succeed after the conversion in a rolled-back transaction against the live database. Applied the same conversion to the live database directly for immediate relief. No route, contract, or application-code change.
 - 2026-07-11: **Fixed "Unable to create announcement draft" on databases carrying a legacy `content` column.** The admin "Create draft" action 503'd on the live database with `null value in column "content" of relation "announcements" violates not-null constraint`. The live `announcements` table still had a pre-v3 `content` column (`NOT NULL`, no default) that the v3 app never writes — it authors into `body` — so every insert failed. `schema.sql` has no `content` column and its `ADD COLUMN IF NOT EXISTS` repairs can only add columns, never drop or relax an existing one, so the leftover was never removed. Added a guarded, idempotent migration to `schema.sql` and `schema.demo.sql` (right after the announcements column backfills): copy any old `content` text into `body` where `body` is empty, then `DROP COLUMN content` — wrapped in an `information_schema` existence check so it is a no-op on fresh databases. Applied the same statement to the live database directly for immediate relief (0 existing announcement rows, so no data affected). No route, contract, or application-code change — behavior-only DB drift repair; verified against Postgres 16 by reproducing the exact failure and confirming the insert succeeds after the drop.
 - 2026-07-08: **Attach a plugin to an announcement (link-through) + create-draft fixes.** Added `announcements.linked_plugin_slug TEXT NULL` (`schema.sql`, CREATE + `ALTER … ADD COLUMN IF NOT EXISTS`). The admin "New announcement" form (`components/feed-announcements/feed-announcements-admin-shell.tsx`) gained a "Link a plugin (optional)" picker (options from `/api/plugins`), and the announcement list shows the attached plugin. `AnnouncementDraftInput`/`Announcement` carry `linkedPluginSlug`; `lib/feed/repository.ts` validates it against the visible plugin registry (`getPluginBySlug` + `isAdminOnlyPlugin`; unknown/admin-only → null) on create/update, and `syncFeedItemForAnnouncement` composes the published feed item body with a trailing `Open <Plugin>: https://app.chargingthefuture.com/apps/<slug>` line so the link shows on every reader surface (mobile feed, Commons) with no per-surface change — recomposed from the clean body each publish, so no duplicate lines. The `feed.announcement.draft.create` / `draft.update` contract input schemas gained `linkedPluginSlug`. Also fixed two bugs surfaced while wiring this: (1) creating a draft 503'd on databases whose `announcement_revisions` predated its `targeting`/`status`/`priority`/`mandatory`/`schedule_at`/`expires_at` columns — added the missing `ALTER … ADD COLUMN IF NOT EXISTS` backfills; (2) the admin form erased the typed title/message on a failed submit — it now only resets on success. Android render of a styled tappable button (vs the in-body link line) is a follow-up (see the Android parity note).
-- 2026-07-03: **Stable per-member handle for community posts in the signed-in view (attribution).** A signed-in member who has not set a username no longer collapses into the shared "Community member" label — they now render under a stable per-user pseudonym `user-<first 8 of user id>` (matching Chyme's `chymeHandle`), so an unnamed member stays recognizable and accountable across their posts. Added `feedAuthorHandle(username, userId)` to `lib/feed/repository.ts` (used for `GET`/`POST /api/hub/messages` community `displayName` and for quoted-post author labels; the quoted-post read now also selects `author_user_id`). The Commons authenticated chat shows a nudge to set a username when the member has none, and renders the member's own posts under the same handle. The public/signed-out community view keeps its anonymized "Community member" label unchanged (privacy). No schema, contract, or route addition — behavior-only change to how the existing `hub/messages` attribution is computed.
+- 2026-07-03: **Stable per-member handle for community posts in the signed-in view (attribution).** A signed-in member who has not set a username no longer collapses into the shared "Community member" label — they now render under a stable per-user pseudonym `user-<first 8 of user id>` (matching Chyme's `chymeHandle`), so an unnamed member stays recognizable and accountable across their posts. Added `feedAuthorHandle(username, userId)` to `lib/feed/repository.ts` (used for `GET`/`POST /api/commons/messages` community `displayName` and for quoted-post author labels; the quoted-post read now also selects `author_user_id`). The Commons authenticated chat shows a nudge to set a username when the member has none, and renders the member's own posts under the same handle. The public/signed-out community view keeps its anonymized "Community member" label unchanged (privacy). No schema, contract, or route addition — behavior-only change to how the existing `commons/messages` attribution is computed.
 - 2026-06-25: **Documented two admin routes and the timeline projection table** (inventory-debt burn-down — documentation catch-up, no code change). Added `PATCH /api/feed/admin/questions/:questionId` (admin category relabel) and `POST /api/feed/membership/events` (join/leave membership event) to §3.2, and `feed_timeline_projection` to §4.2 (item 21) — recorded as a schema-only reserved read model with no runtime reader/writer, with a matching note in §4.3. Each verified against the route handlers, `schema.sql`, and `FEED_PLUGIN_AUDIT_CONTRACTS.yaml`. Removed these three items from `ctf/scripts/inventory-drift-allowlist.json`.
-- 2026-06-21: Commons (Survivor Hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel. `POST /api/hub/join` was changed from returning hardcoded stub Stream credentials to minting real ones via `getFeedStreamCredentials(userId, displayName, 'community')` (the shared community channel + `feed-<userId>` Stream identity), or `{ ok: true, configured: false }` when Stream is not configured. This adds a per-Commons-member live chat connection (a real WATCH/connection cost) — captured in `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`. Falls back to polling when Stream is unconfigured. No feed schema or contract change; the post data layer (`feed_community_posts`) is unchanged. Full detail is in `ctf-survivor-hub-chat-feature-inventory.md` (task 1 of `STREAM_FEATURE_ADOPTION.md`).
+- 2026-06-21: Commons (Survivor Hub home chat) now opens a live Stream connection to this channel's `ctf-feed-community` Stream channel. `POST /api/commons/join` was changed from returning hardcoded stub Stream credentials to minting real ones via `getFeedStreamCredentials(userId, displayName, 'community')` (the shared community channel + `feed-<userId>` Stream identity), or `{ ok: true, configured: false }` when Stream is not configured. This adds a per-Commons-member live chat connection (a real WATCH/connection cost) — captured in `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`. Falls back to polling when Stream is unconfigured. No feed schema or contract change; the post data layer (`feed_community_posts`) is unchanged. Full detail is in `ctf-hub-feature-inventory.md` (task 1 of `STREAM_FEATURE_ADOPTION.md`).
 - 2026-06-17: Removed the feed kill switch (owner decision — unapproved agentic addition). Dropped `feed_render_config.kill_switch_enabled` (`schema.sql` + `schema.demo.sql` add a guarded `DROP COLUMN IF EXISTS`), the `killSwitchEnabled` field on `FeedConfig`/`FeedConfigInput`, its validation, the `listFeedTimeline` early-return that blanked the timeline when enabled, the `feed.admin.config.update` contract input, and the read-only display row in the feed admin shell. Part of a product-wide kill-switch removal (also Foundation and Workforce). No replacement control.
 - 2026-06-13: Web admin design pass. Replaced the bare diagnostic `/admin/feed-announcements` page with `components/feed-announcements/feed-announcements-admin-shell.tsx`, styled to the admin design system (header with icon + ADMIN badge, snapshot stat blocks, read-only feed-config panel, announcement lifecycle). Bound to the real backend — `getFeedConfig` + `listAnnouncements(true)`. Real actions on existing endpoints (with `x-ctf-csrf: '1'`): create a draft (`POST /api/feed/admin/announcements`), publish a draft (`POST /api/feed/admin/announcements/:id/publish`), and archive a published one (`POST /api/feed/admin/announcements/:id/archive`). There is no desktop or mobile mockup for this admin surface, so it follows the established admin design system over real data (rule 131). No new endpoint, schema, or contract.
 - 2026-06-12: The Android community-channel client (`packages/mobile/src/features/community/api.ts`, reading the feed routes with `channel=community`) now uses the shared authenticated fetch helper, which attaches the signed-in user's Clerk bearer token and reads the server address from runtime config (`APP_URL`), replacing plain fetch calls against hardcoded development URLs; its Stream chat credential fetcher now calls the real `POST /api/feed/stream` route (the `/api/community/stream` path it pointed at never existed) and maps the response field names. No schema, route, or contract change.
@@ -499,11 +667,222 @@ All three feed channels (announcements, questions, community) are shipped on web
   - Acceptance criteria:
     - Implementation status is tracked; detailed evidence collection deferred to post-MVP.
 
+- 2026-07-30 (later): **Q&A moderation, and member flags now reach somebody.** Closes the gap flagged in
+  the previous pass, and the CI hole that let it survive.
+  - **`feed_questions` and `feed_answers` had no `moderation_status` at all.** That is why the flag queue
+    could not be built: an admin could read a flagged answer and then do nothing about it. Both tables
+    now carry `moderation_status` (default `'accepted'`) plus the same nullable
+    `moderation_reason` / `moderated_by_user_id` / `moderated_at` trio as the Commons tables, so one
+    admin surface drives all four kinds of content. New index
+    `idx_feed_answers_moderation_status (moderation_status, created_at DESC)` serves the queue.
+  - **Read path honours it**, which is the load-bearing half: the timeline's question and answer
+    queries, and `generateFeedQuestionAnswer` (a hidden question cannot be given a new answer, and
+    reports `question_not_found` rather than revealing that it exists).
+  - **`exportQuestionsByCategory` excludes hidden questions.** Hiding something is a judgment that it
+    does not belong; exporting it into training data would launder it straight back in and the model
+    would keep answering in the register of the thing that was removed.
+  - `FeedModerationTarget` widened to `post | reply | question | answer`, with a
+    `MODERATION_TABLES` map and an `isFeedModerationTarget` guard replacing the old two-way ternary, so
+    `POST /api/feed/admin/moderation/:target/:id` covers all four with no new endpoint.
+  - New `GET /api/feed/admin/moderation/flagged-answers` and a **Flagged answers** tab on
+    `/admin/commons`, with the pending count on the tab label. Ordered by flag count, not date: this is
+    triage, and the answer six people objected to matters more than the newest one. Hiding an answer
+    leaves the question up, so the member who asked still has their question and can get a better
+    answer.
+  - **Why no gate caught this**: `check-inventory-drift.mjs` asks whether a route is *documented*, not
+    whether it is *called*. Documented-but-dead is the worse failure, because the inventory then asserts
+    a capability the product does not have. Fixed by `check-orphan-routes.mjs` (`orphan-route-gate`),
+    which fails on any API route with no caller. Its first run found 91 — 3 genuinely external, 88
+    recorded as a burn-down baseline. It cannot see unread database columns, which is the other half of
+    this failure mode and how `moderation_status` sat dead for months.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
 
-- 2026-07-19: **Tap a quoted reply to jump to the original message** (owner report: tapping the "you are replying to" block did nothing). `HubMessage.quotedMessage` / `ChatQuotedMessage` gained `postId` (the quoted community post id), carried from the already-resolved `FeedCommunityDetail.replyToPostId` in `GET /api/hub/messages` and echoed on `POST` for the optimistic copy. In `shell-chat-panel` each peer bubble group now carries `data-post-id={communityPostId}` and the quote block is a button that scrolls the original into view and briefly highlights it (`chatBubbleFlash`); when the quoted post is older than the loaded window the tap is a no-op (the snippet still shows what was said). The same was applied to the gated contributor channel (`gated-chat-panel`, `channel-repository` quoted message gained `postId` from `reply_to_post_id`). No schema, route-surface, or contract change — only a new field on an existing payload plus client rendering. Android carries the optional `postId` on its `HubQuotedMessage` type but the tap-to-jump (needs FlatList `scrollToIndex`) is a tracked parity follow-up.
-- 2026-06-21: Emoji reactions on Commons (Survivor Hub home channel) community posts — the first feature of the Stream-adoption initiative, using "approach b" (reactions live in our own database; Stream is not involved). New table `feed_community_post_reactions (id UUID PK, post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE, user_id TEXT NOT NULL, emoji TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` using the CREATE TABLE IF NOT EXISTS + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern, with `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` (toggling adds/removes) and `idx_feed_community_post_reactions_post (post_id)`. A fixed quick set `FEED_REACTION_EMOJIS = ['👍','❤️','😂','🎉','🙏','😢']` is exported from `lib/feed/constants` and shared by server and client; the server rejects any emoji outside it (400). `toggleCommunityPostReaction(userId, postId, emoji)` validates the emoji and that the post exists, then `INSERT ... ON CONFLICT DO NOTHING` and removes the existing row when nothing was inserted (toggle). `listFeedTimeline` aggregates reactions for the visible community posts in one batched query (`COUNT(*)` + `BOOL_OR(user_id = $currentUser)`), attaching `FeedCommunityDetail.reactions: FeedReactionSummary[]` (new type — `{ emoji, count, reactedByMe }`), ordered by the fixed-set order, only emojis with at least one reaction; posts with none get `[]`. New route `POST /api/hub/messages/:postId/reactions` (hub access gate + `x-ctf-csrf: '1'`) returns `{ ok, reacted }`. `HubMessage.reactions` carries the aggregate; the Commons chat (`ChatMessage.reactions`, `use-home-chat` `toggleReaction`) optimistically flips the chip and reconciles via the existing 10s poll; `shell-chat-panel` renders a compact reaction row (emoji+count pills, highlighted when reacted, plus an "add reaction" picker over the fixed set) under peer bubbles that have a `communityPostId`. `schema.demo.sql` regenerated; drift gate passes. Android parity deferred.
-- 2026-06-21: Commons chat (Survivor Hub home channel) gained two member features. (1) Signal-style quoted reply: added `feed_community_posts.reply_to_post_id UUID NULL REFERENCES feed_community_posts(id) ON DELETE SET NULL` (CREATE column + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`, plus `idx_feed_community_posts_reply_to`). `createFeedCommunityPost` accepts an optional `replyToPostId`, validates it is a well-formed UUID that references an existing post (else `reply_target_invalid` / `reply_target_not_found` → 400), and stores it. `listFeedTimeline` resolves each quoted post's author handle and a ~120-char body snippet server-side into `FeedCommunityDetail.quotedPost` / `replyToPostId` (new `FeedQuotedPost` type), so the chat renders the quote without a second fetch. `GET /api/hub/messages` carries this as `HubMessage.quotedMessage` and now also returns `communityPostId` (the reply target id, distinct from the feed item id). `POST /api/hub/messages` and `POST /api/feed/community/posts` accept `replyToPostId`. (2) Unread divider: new table `feed_hub_last_seen (user_id TEXT PRIMARY KEY, last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` with `GET`/`POST /api/hub/last-seen` (member endpoint; CSRF on the POST, marker clamped to server NOW() and never moved backwards) backed by `getHubLastSeen` / `updateHubLastSeen`. The Commons chat reads the marker on entry, draws a single "New messages" divider before the first entry newer than it, and marks seen once after viewing — all best-effort so a failure never breaks the chat. `schema.demo.sql` regenerated; drift gate passes. Android parity deferred (Parity Ticket).
+- 2026-07-31 (latest): **Copy preview — render member-facing text before it ships (owner request).** Two
+  defects reached members in a day (sentences chopped mid-clause; a card that swallowed the screen), and
+  every automated gate passed both, because none of them look at the OUTPUT.
+  `ctf/scripts/preview-member-copy.mjs` (`pnpm --dir ctf preview:member-copy`) renders every standing
+  notice and the first-visit card to PNGs at phone width with the phone fold marked, and **exits
+  non-zero when the first-visit card is taller than the screen** — the exact failure that happened. The
+  PNGs are attached to any PR that changes member-facing copy and are git-ignored, so the repo never
+  accumulates screenshots of superseded wording. It renders the text and the box, not the live app:
+  faithful for line breaking, paragraph spacing and overflow; it does not prove theme colors. Playwright
+  is resolved from the project or a global install rather than added as a dependency, since this is a
+  review tool and not a CI gate. The pure paragraph logic moved to `lib/feed/notice-paragraphs.ts` so the
+  script and any future test can use it without pulling in React.
+- 2026-07-31 (later): **The first-visit card is short and no longer fights the chat for the screen**
+  (owner report, with a screenshot). It was rendering the FULL standing notice inside a card that sits
+  above the message list in a fixed-height flex column. A tall card steals the flexible space, pushes
+  the Commons header off screen, and leaves the member scrolling the *conversation* to get past the
+  notice — landing in empty space below it. Two fixes: the card now has its own short copy
+  (`COMMONS_FIRST_VISIT_TITLE` / `COMMONS_FIRST_VISIT_BODY` — "Before you post": this room is public,
+  the assistant is not), and it is pinned `flex: 0 0 auto` with `overflow: visible` so it can never grow
+  into the message area or become its own scroller. The long version still arrives on the 75-post
+  rotation, where length costs nothing because an announcement scrolls with the chat instead of sitting
+  on top of it. `NoticeParagraphs` also stopped adding a trailing margin, so a one-paragraph body leaves
+  no stray space in a compact card.
+- 2026-07-31: **Notice text renders as paragraphs (bug fix — this reached members).** The notice bodies
+  were authored as an array of source-wrapped lines joined with `\n`. Under `white-space: pre-wrap`
+  every one of those source wraps rendered as a HARD line break, so members read sentences chopped
+  mid-clause. Source formatting is not content, and nothing in the codebase knew the difference.
+  - **Content fixed at the source**: paragraphs are single strings, assembled with a `para(...)` helper
+    that joins fragments with a space so the SOURCE can still wrap, and paragraphs joined with `\n\n`.
+  - **Renderer fixed too**, because a renderer should not be one stray newline from that result: new
+    `NoticeParagraphs` splits on blank lines into real `<p>` elements and collapses a lone newline to a
+    space — unless the paragraph is a deliberate line list, which keeps an announcement's trailing
+    `Open <Plugin>: <url>` block on separate lines. Used by both the first-visit card and the stream
+    announcement card.
+  - **Already-published rows are repaired.** Fixing the constant alone would have left every published
+    row broken until its next milestone — three weeks for the 21-day notice. `refreshPublishedGuidanceNotices`
+    now brings any system-authored notice back in line with its current wording on each run, matching on
+    title and restricted to `FEED_SYSTEM_ACTOR_ID` so member- or owner-authored announcements are never
+    touched.
+  - **New CI gate** `notice-formatting-gate` (`check-notice-formatting.mjs`) fails any notice body built
+    by joining lines with a single `\n`. Verified in both directions: it passes on the fixed text and
+    exits non-zero when the original mistake is reintroduced. Typecheck, lint and every other gate had
+    passed the broken version.
+- 2026-07-30 (later): **Three standing Commons notices, three cadences.** The single notice became a
+  registry (`COMMONS_NOTICES` in `lib/feed/commons-guidance.ts`), and the milestone table is now keyed
+  `(notice_key, milestone_count)` — that composite UNIQUE is still the whole concurrency story.
+  - **What the Commons is for** — every 50 posts. Purpose and moderation.
+  - **Where things are public, and where the work happens** — every 75 posts, offset from the first so
+    the two rarely land together and a member meets one or the other roughly every 25 posts. They share
+    a multiple at 150, which is two announcements in a row — rare enough not to be worth more machinery.
+  - **Who I interact with is not a vouch** — every 21 days. Time-shaped, not volume-shaped: it is the
+    owner's standing "every few weeks" reminder, and tying it to post count would fire it repeatedly in
+    a busy week and never in a quiet one. `dueMilestoneFor` turns a day cadence into a period index
+    (days since epoch / interval) so one UNIQUE constraint serves both kinds. A time-cadence notice is
+    delivered **by the next post**, not by a clock — nothing publishes into a silent room, which is
+    intended rather than a compromise.
+  - **Two owner claims were corrected against the code before shipping**, because a notice that is
+    wrong about privacy is worse than no notice:
+    - The **Chyme** claim in the draft was correct and an intermediate edit of mine broke it, then was
+      reverted. Chyme's main room *is* publicly listenable: a signed-out visitor does not get the
+      authenticated branch in `app/apps/[pluginSlug]/page.tsx`, they get `ChymePublicShell` from the
+      public-visitor registry, which fetches `/api/chyme/public/room` and hands a guest Stream
+      credentials via `ChymeGuestListen` ("Free to listen · Sign in to speak"). Both spaces have the
+      same shape — a public room anyone can read or listen to, plus a private Weavers room. Reading only
+      the authenticated branch makes Chyme look gated; check the public-visitor registry before
+      concluding that about any plugin.
+    - The draft said the owner would only look at AI Assistant messages to check the assistant is safe.
+      True, and now precise: `comic_review_queue` joins the asker's turn, so reviewing an answer does
+      show the question it answers. The notice says that rather than promising nobody ever reads them.
+  - **Naming:** the signal-vs-noise draft used "TI Skills Economy (TSE)". Corrected to **Skills
+    Economy** per the owner's earlier decision and `BRAND_VOICE_LEXICON.md`; "TI" as a label is also
+    replaced with "Target".
+  - The Commons is publicly readable only while `feed_render_config.is_public` is on (default TRUE). If
+    that is ever switched off, the public-rooms notice becomes wrong and must be edited.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
+- 2026-07-30: **The Commons states its own purpose every 50 posts (owner decision).** A newcomer now
+  meets the rule without anyone having to say it to them personally, and a regular is reminded without
+  being singled out. `FEED_COMMONS_GUIDANCE_INTERVAL = 50`; the copy lives in
+  `lib/feed/commons-guidance.ts`. On every community post, `maybePostCommonsGuidance` counts the posts
+  and, when the total lands exactly on a multiple of 50, claims the milestone and publishes an
+  announcement — which renders inline in the Commons stream, so it appears where the behavior is.
+  Attributed to a reserved actor (`FEED_SYSTEM_ACTOR_ID`), never to a member and specifically not to
+  the owner, who should not appear to be personally telling people off every 50 posts.
+  - **Inside the post's transaction, on purpose.** The count, the milestone claim, and the notice all
+    commit with the post that triggered them. Running it after commit would let a rolled-back post
+    leave a claimed milestone behind, silently suppressing that notice forever. It still swallows its
+    own errors — a failed reminder must never cost a member their post.
+  - Published immediately rather than as a draft: nobody is going to hand-publish this every 50 posts,
+    and a draft that never ships is the same as no notice.
+  - Counts hidden posts too. The milestone means "the Commons has seen this much traffic"; moderating
+    after the fact should not shift where the next notice falls.
+  - **Every paragraph of the copy is load-bearing and was corrected by the owner (2026-07-30).** The
+    first draft was wrong about what the Commons *is* and had to be rewritten:
+    - **It is a support channel, not a marketplace.** Ask in the open, get an answer. It is **not**
+      where exchanges are arranged or recorded — skills, trades, housing, rides and calls each live in
+      their own plugin, and those are what count toward the economy. The first draft said trades get
+      "sorted out" here, which would have taught members to do business in a public thread instead of
+      in the app that records it.
+    - **Why it is open**: the design reason is that the owner takes no direct messages — her inbox was
+      used to harass her. The final copy states only the benefit (answered once where the next person
+      finds it, never waiting on the owner alone) and does not explain that history; the owner cut the
+      line on 2026-07-30. Keep it cut — the rule stands on the benefit, and the notice does not owe a
+      whole community an account of what was done to her.
+    - **It must not frighten off real survivors.** This is the constraint that shapes the tone. "No
+      storytelling" read alone tells a newly targeted person their experience is unwelcome, which is
+      the opposite of true, and would cost the app exactly the members it exists for. So the notice says
+      outright that you can describe what is happening to you, and draws the line at the retelling that
+      asks for nothing. The Quora contrast is the selling point, not a complaint: there you narrate into
+      a void; here you ask and someone answers. The Commons is a first filter, nothing heavier.
+    - **The public rule is TOPIC, not character**: content is removed for repeatedly going nowhere,
+      never for who somebody is suspected of being. An accusation posted to a whole community cannot be
+      retracted, and being wrong about it lands on a survivor. The internal `suspected_bad_actor`
+      moderation reason stays admin-only and is never shown to a member — the same split, held on both
+      sides.
+    - **The exclusion is stated as fact, not feeling**: traffickers are "not allowed", not "not
+      tolerated". The owner was explicit that these people kill with impunity and no wording should
+      imply they are merely unwelcome. Volume of off-topic chatter is not the problem being solved, and
+      a perpetrator's feelings are not a consideration.
+    - **Tone is a pitch, not a telling-off** (owner, second pass). The message was right and the delivery
+      read as annoyed. It now opens on the Quora contrast — there you write into a void, here you ask and
+      someone answers — and the rules follow as consequences of that promise. Same content, same firmness
+      on the exclusion; firmness toward traffickers is not the same thing as a scolding tone toward
+      everyone else, and a newcomer should finish it wanting to join.
+    - **The Weaver perk is the private room, not the Commons.** An earlier draft said Weavers "post
+      without restriction", which was false — the topic rule applies to the Commons for everyone. What a
+      Weaver earns is the private Weavers room, where none of it applies. Promising members something the
+      app does not do is worse than any tone problem, so this wording must not be restored.
+  - **Weavers of the Commons post without restriction**, and the notice says so. That is the incentive
+    doing the work the rule cannot: the way out of the topic limit is to contribute, not to argue.
+  - New table `feed_commons_guidance_milestones` (see §4.2 item 21). **Parity:** web +
+    mobile-responsive; Android out of scope (web-only per rule 105).
+- 2026-07-29 (later): **Moderation reason + moderating by member (owner: the real problem is volume of
+  off-topic Quora discussion, and most of it is a handful of accounts).** Hide/restore alone did not fit
+  a repeatable sweep. Added `moderation_reason`, `moderated_by_user_id`, `moderated_at` (all `TEXT`/
+  `TIMESTAMPTZ`, **nullable**, null on every pre-existing row) to `feed_community_posts` and
+  `feed_community_replies` via `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` in `schema.sql` and
+  `schema.demo.sql`. The reason is a short code from `FEED_MODERATION_REASON`, defaulting to
+  `off_topic` in the UI because that is the actual day-to-day judgment — one picker for the whole
+  list, so a sweep of twenty posts is not twenty identical clicks. It rides on the Hidden pill, so a
+  later pass tells an off-topic sweep apart from an abuse removal without opening the audit log.
+  `suspected_bad_actor` is worded as *suspected* and carries **no** automatic consequence: it hides the
+  post and nothing else — no access revocation, no account flag, no score. A hunch recorded as a fact
+  is how a wrong hunch becomes permanent. New `listCommonsAuthors` powers a **By member** tab: aggregate
+  counts per author ordered by volume, so an account that has never been on topic looks different from
+  a member who wandered off once. Aggregate only — no bodies — because deciding whether to look at
+  someone should not require reading everything they wrote. `?author=` then shows that member's whole
+  footprint. **No bulk hide**: acting on many posts at once is one click away from clearing a member's
+  entire history on a wrong hunch, so each row is still its own decision. **Parity:** web +
+  mobile-responsive; Android out of scope (web-only per rule 105).
+- 2026-07-29: **Commons moderation — the first one that exists (owner request).** Until now there was
+  no moderation surface for member-authored Commons content at all: no admin UI listed posts or
+  replies, no route could hide or remove anyone else's, and `DELETE /api/commons/messages/:postId` was
+  author-only (an admin hitting it on another member's post got a 403). Removing a post meant direct
+  SQL. Worse, `moderation_status` on `feed_community_posts` / `feed_community_replies` looked like the
+  mechanism but was **dead**: no query read it and the only value ever written was `'accepted'`, so
+  setting a row to anything else left it fully visible.
+  - **The read path now honours it.** `listFeedTimeline` (posts, replies, and the quoted-post lookup)
+    and `listPublicCommunityPosts` all filter `moderation_status = 'accepted'`. This is the blocking
+    change — without it a hide control would be a button that does nothing.
+  - `FEED_MODERATION_STATUS` in `lib/feed/constants.ts` defines exactly two states, `accepted` and
+    `hidden`. Two on purpose: a third "under review but still visible" state would be a promise the
+    code does not keep.
+  - New `lib/feed/moderation.ts` — `setCommunityModerationStatus` (locks the row `FOR UPDATE`, returns
+    `unchanged` instead of pretending to act), `listCommonsModerationQueue`, `countHiddenCommonsRows`.
+  - New routes `GET /api/feed/admin/moderation` and `POST /api/feed/admin/moderation/:target/:id`.
+  - New admin surface `/admin/commons` (`components/feed-announcements/commons-moderation-admin-shell.tsx`),
+    listed on the admin landing page as **Commons Moderation**. Recent / Hidden-only tabs, hidden
+    counters, and a Hide / Put back control per row. Restoring is confirm-gated and hiding is not:
+    hiding is reversible, while putting content back in front of members is the direction worth a
+    deliberate pause.
+  - **Hide, never delete, and never edit.** Deletion is unrecoverable and takes the member's words plus
+    the reply thread with them, so a moderator acting fast on a judgment call is not making a
+    permanent one. There is no admin edit anywhere in this plugin, and the access-policy contract
+    records that as `contentImmutable: required`. Member self-deletion is unchanged.
+  - Contracts: `feed.community.moderation.list` / `.hide` / `.restore` added to the command and
+    access-policy contracts; `.hide` / `.restore` added to the audit contract with `previousStatus` /
+    `newStatus` in `targetContext`.
+  - **Not covered:** questions and answers. `feed_questions` and `feed_answers` have no
+    `moderation_status` column, so hiding one would need a schema change; and the member-submitted
+    `flagged` answer ratings still route nowhere. Recorded in Gaps rather than half-built.
+  - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
+
+- 2026-07-19: **Tap a quoted reply to jump to the original message** (owner report: tapping the "you are replying to" block did nothing). `HubMessage.quotedMessage` / `ChatQuotedMessage` gained `postId` (the quoted community post id), carried from the already-resolved `FeedCommunityDetail.replyToPostId` in `GET /api/commons/messages` and echoed on `POST` for the optimistic copy. In `shell-chat-panel` each peer bubble group now carries `data-post-id={communityPostId}` and the quote block is a button that scrolls the original into view and briefly highlights it (`chatBubbleFlash`); when the quoted post is older than the loaded window the tap is a no-op (the snippet still shows what was said). The same was applied to the gated contributor channel (`gated-chat-panel`, `channel-repository` quoted message gained `postId` from `reply_to_post_id`). No schema, route-surface, or contract change — only a new field on an existing payload plus client rendering. Android carries the optional `postId` on its `HubQuotedMessage` type but the tap-to-jump (needs FlatList `scrollToIndex`) is a tracked parity follow-up.
+- 2026-06-21: Emoji reactions on Commons (Survivor Hub home channel) community posts — the first feature of the Stream-adoption initiative, using "approach b" (reactions live in our own database; Stream is not involved). New table `feed_community_post_reactions (id UUID PK, post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE, user_id TEXT NOT NULL, emoji TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` using the CREATE TABLE IF NOT EXISTS + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` pattern, with `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` (toggling adds/removes) and `idx_feed_community_post_reactions_post (post_id)`. A fixed quick set `FEED_REACTION_EMOJIS = ['👍','❤️','😂','🎉','🙏','😢']` is exported from `lib/feed/constants` and shared by server and client; the server rejects any emoji outside it (400). `toggleCommunityPostReaction(userId, postId, emoji)` validates the emoji and that the post exists, then `INSERT ... ON CONFLICT DO NOTHING` and removes the existing row when nothing was inserted (toggle). `listFeedTimeline` aggregates reactions for the visible community posts in one batched query (`COUNT(*)` + `BOOL_OR(user_id = $currentUser)`), attaching `FeedCommunityDetail.reactions: FeedReactionSummary[]` (new type — `{ emoji, count, reactedByMe }`), ordered by the fixed-set order, only emojis with at least one reaction; posts with none get `[]`. New route `POST /api/commons/messages/:postId/reactions` (hub access gate + `x-ctf-csrf: '1'`) returns `{ ok, reacted }`. `HubMessage.reactions` carries the aggregate; the Commons chat (`ChatMessage.reactions`, `use-home-chat` `toggleReaction`) optimistically flips the chip and reconciles via the existing 10s poll; `shell-chat-panel` renders a compact reaction row (emoji+count pills, highlighted when reacted, plus an "add reaction" picker over the fixed set) under peer bubbles that have a `communityPostId`. `schema.demo.sql` regenerated; drift gate passes. Android parity deferred.
+- 2026-06-21: Commons chat (Survivor Hub home channel) gained two member features. (1) Signal-style quoted reply: added `feed_community_posts.reply_to_post_id UUID NULL REFERENCES feed_community_posts(id) ON DELETE SET NULL` (CREATE column + `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`, plus `idx_feed_community_posts_reply_to`). `createFeedCommunityPost` accepts an optional `replyToPostId`, validates it is a well-formed UUID that references an existing post (else `reply_target_invalid` / `reply_target_not_found` → 400), and stores it. `listFeedTimeline` resolves each quoted post's author handle and a ~120-char body snippet server-side into `FeedCommunityDetail.quotedPost` / `replyToPostId` (new `FeedQuotedPost` type), so the chat renders the quote without a second fetch. `GET /api/commons/messages` carries this as `HubMessage.quotedMessage` and now also returns `communityPostId` (the reply target id, distinct from the feed item id). `POST /api/commons/messages` and `POST /api/feed/community/posts` accept `replyToPostId`. (2) Unread divider: new table `feed_commons_last_seen (user_id TEXT PRIMARY KEY, last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` with `GET`/`POST /api/commons/last-seen` (member endpoint; CSRF on the POST, marker clamped to server NOW() and never moved backwards) backed by `getHubLastSeen` / `updateHubLastSeen`. The Commons chat reads the marker on entry, draws a single "New messages" divider before the first entry newer than it, and marks seen once after viewing — all best-effort so a failure never breaks the chat. `schema.demo.sql` regenerated; drift gate passes. Android parity deferred (Parity Ticket).
 - 2026-06-12: The Android feed API clients (`packages/mobile/src/features/feed/api.ts` and `fetchFeedStreamCredentials.ts`) now use the shared authenticated fetch helper — every call carries the signed-in member's Clerk bearer token and the server address comes from runtime config (APP_URL) — replacing plain dev-only fetch against hardcoded development URLs; the read-receipt call now reports failures instead of swallowing them. Removed the unused `feedDemoData.ts` mock re-export.
 - 2026-06-09: Deleted the retired Feed user-facing app surface (superseding the earlier same-day `is_visible = FALSE` hide — dead code is removed, not hidden). Removed the whole signed-in app shell under `components/feed/` (`feed-announcements-shell.tsx` and its icon rail, sidebar, header, right panel, compose forms, item card, and live view — all reachable only from the `/apps` route), the `feed-announcements` branch and import in `app/apps/[pluginSlug]/page.tsx`, the `feed-announcements` row from the `ctf_plugin_registry` seed and the code fallback array, and the `feed` / `announcements` aliases. Added an idempotent `DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'feed-announcements'` to `schema.sql` and `schema.demo.sql` so the existing production row is removed on deploy. `/apps/feed-announcements` now 404s. Verified `evaluatePluginAccess` takes only role/approval options (no registry lookup), so the admin page at `/admin/feed-announcements` and the `/api/feed/*` routes are unaffected; `lib/feed/*`, the Stream channel id, the account-deletion entry, and the Hub plugin styling are kept as the live data layer.
 - 2026-06-09: Corrected the `ctf_plugin_registry` seed in `schema.sql` (and `schema.demo.sql`) to set `feed-announcements` `is_visible = FALSE`, matching the 2026-05-31 consolidation decision above. The seed had still set it `TRUE`, so the live registry row stayed visible even though the code fallback array was `isVisible: false`; because `getPluginBySlug` reads `is_visible` from the database, a signed-out visitor reaching `/apps/feed-announcements` fell through to the generic public preview card instead of a 404. With the row hidden the app route 404s; Feed remains the Hub's data layer and keeps its admin lifecycle at `/admin/feed-announcements`. No table or column change.

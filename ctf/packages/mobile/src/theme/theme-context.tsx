@@ -56,7 +56,7 @@ async function writeStoredTheme(theme: ThemeName): Promise<void> {
   try {
     await SecureStore.setItemAsync(THEME_STORAGE_KEY, theme);
   } catch {
-    // Storage unavailable — the in-memory choice still applies this session.
+    // no-trace: storage is unavailable, and the in-memory choice still applies this session.
   }
 }
 
@@ -91,11 +91,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
-    let cancelled = false;
+    let canceled = false;
 
     void (async () => {
       const local = await readStoredTheme();
-      if (cancelled) return;
+      if (canceled) return;
       if (local !== DEFAULT_THEME) {
         setThemeState(local);
       }
@@ -103,18 +103,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const res = await authedFetch(PREFERENCES_PATH);
         if (!res.ok) return;
         const data = (await res.json()) as { ok?: boolean; theme?: unknown };
-        if (!data?.ok || cancelled) return;
+        if (!data?.ok || canceled) return;
         const serverTheme = normalizeTheme(data.theme);
         if (serverTheme !== local) {
           applyTheme(serverTheme, false);
         }
       } catch {
-        // Offline or not signed in — keep the local choice.
+        // no-trace: offline or not signed in, so the local choice stands.
       }
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, [applyTheme]);
 

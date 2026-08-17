@@ -3,13 +3,43 @@ import { createMessage, getMessageById, insertPeerProgrammingAudit, isCohortEnde
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from 'lib/peer-programming/constants';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type ReplyBody = {
   cohortId?: string;
   body?: string;
 };
 
+// Parse and validate the reply body. Returns the narrowed, required fields on success so the caller
+// keeps TypeScript's non-optional types; on failure returns the exact 400 response to send.
+type ParsedReplyBody =
+  | { ok: true; cohortId: string; body: string }
+  | { ok: false; response: NextResponse };
 
+async function parseReplyBody(request: Request): Promise<ParsedReplyBody> {
+  let body: ReplyBody;
+  try {
+    body = (await request.json()) as ReplyBody;
+  } catch (error) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 }) };
+  }
+
+  if (!body.cohortId || !body.body) {
+    return { ok: false, response: NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'cohortId and body are required.' }, { status: 400 }) };
+  }
+
+  if (body.body.length > PEER_PROGRAMMING_MAX_MESSAGE_LENGTH) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { ok: false, code: 'peer_programming_invalid_payload', message: `Reply body must be ${PEER_PROGRAMMING_MAX_MESSAGE_LENGTH} characters or fewer.` },
+        { status: 400 },
+      ),
+    };
+  }
+
+  return { ok: true, cohortId: body.cohortId, body: body.body };
+}
 
 export async function POST(request: Request, context: { params: Promise<{ messageId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -22,23 +52,11 @@ export async function POST(request: Request, context: { params: Promise<{ messag
     return gate.response;
   }
 
-  let body: ReplyBody;
-  try {
-    body = (await request.json()) as ReplyBody;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  const parsed = await parseReplyBody(request);
+  if (!parsed.ok) {
+    return parsed.response;
   }
-
-  if (!body.cohortId || !body.body) {
-    return NextResponse.json({ ok: false, code: 'peer_programming_invalid_payload', message: 'cohortId and body are required.' }, { status: 400 });
-  }
-
-  if (body.body.length > PEER_PROGRAMMING_MAX_MESSAGE_LENGTH) {
-    return NextResponse.json(
-      { ok: false, code: 'peer_programming_invalid_payload', message: `Reply body must be ${PEER_PROGRAMMING_MAX_MESSAGE_LENGTH} characters or fewer.` },
-      { status: 400 },
-    );
-  }
+  const body = parsed;
 
   const { messageId } = await context.params;
 

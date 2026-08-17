@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) |
 
 ## How to run this
 
@@ -35,12 +35,13 @@
 Workforce is a read-only live tracker — these are the can't-ship-broken checks. Member role unless noted.
 
 1. **Dashboard loads with numbers.** Open the Workforce dashboard. Population, Workforce Total,
-   and Recruited all render as numbers, not a spinner or error. There is NO "Total Headcount
+   Recruited, and Skills Coverage all render as numbers, not a spinner or error. There is NO "Total Headcount
    Target" card on any surface — it duplicated Workforce Total after sector rounding (dropped
    2026-07-19, web and android); per-sector targets live in the Sectors view. On android the
    screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
-   the Recruitment Progress shows a percent of target, not a repeated count. → web ☐ mobile ☐
+   the Skills Economy Summary statement uses that same recruited count and the Skills Coverage
+   percent — no progress bar, no repeated card. → web ☐ mobile ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
    — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐
 4. **Empty state is handled.** If there are no sectors/occupations and no Directory members, the
@@ -54,12 +55,21 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 **Role:** member · **Surfaces:** all · **Seed:** `seed:workforce`
 **Steps:**
 1. Open the Workforce dashboard for a signed-in member.
-2. Read the three hero cards (Population, Workforce Total, Recruited) and the Recruitment Progress.
-**Expected:** All three cards show numbers. Workforce Total = population × participation rate.
-Recruited = the count of all active Directory members. Recruitment Progress reads as a percent of
-the recruitment goal (recruited ÷ min recruitable, the 2,000,000 target) and shows the recruited
-count plus "Remaining to the 2,000,000 goal", which counts down as members are recruited. There is
-no "Remaining capacity" line (the max-recruitable ceiling is config, not progress).
+2. Read the four hero cards (Population, Workforce Total, Recruited, Skills Coverage) and the Skills Economy Summary card beneath them.
+**Expected:** All four cards show numbers. Workforce Total = population × participation rate.
+Recruited = the count of all active Directory members. Skills Coverage shows a whole-number percent
+with "{listed} of {catalog} skills" beneath — both numbers live: listed = the count of DIFFERENT
+skills at least one active Directory member has listed; catalog = the current count of ALL active
+skills in the Skills Taxonomy (not a hardcoded figure — adding or removing a taxonomy skill moves
+it). The percent is listed ÷ catalog, never above 100%. The Skills Economy Summary is a fixed
+statement with live numbers: the recruited count, the Skills Coverage percent, a speculative GDP
+potential in US dollars (recruited × the $142,500 per-person modeling benchmark), the per-person
+GDP contribution, and the per-person earnings (half the benchmark). It opens "With {recruited}
+people recruited, we have reached …" — there is no "only" before the recruited count. Its
+disclaimer paragraph says
+the figures are speculative, not actuals, that this is the only place in the app where GDP is
+stated in US dollars, and that the Skills Economy has no intention of forming a nation state.
+There is no progress bar, no "Remaining to the goal" countdown, and no "Remaining capacity" line.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WF-2 · Sector opportunities
@@ -117,10 +127,11 @@ reason (job title, skill, or sector). Recruited in a bucket can exceed the physi
 **Role:** member · **Surfaces:** all
 **Precondition:** the member has a claimed Directory profile.
 **Steps:**
-1. Open the Workforce profile view; read occupation, skill level, recruited state. (No region row
-   renders — the profile API's `region` field is always empty; see the tracked gaps below.)
-2. Find the only member write — the service-scoped delete — and read its notice (do not complete a
-   destructive delete in a shared seed DB unless it is your own throwaway account).
+1. Open the Workforce profile view; read occupation, skill level, recruited state. (There is no
+   region row — the always-null `region` field was dropped 2026-08-04.)
+2. Open `/account/data` and find the per-service "Delete your Workforce data?" control — this is the
+   member-facing service-scoped delete (do not complete a destructive delete in a shared seed DB
+   unless it is your own throwaway account).
 **Expected:** The profile is derived live from the member's own claimed Directory profile and is
 display-only (no editor). The delete is a service-scoped soft delete (it clears the Workforce
 preferences and marks the service deleted), requires sign-in/ownership, and does not delete the
@@ -207,10 +218,15 @@ an "admins only" notice (401/403), not a raw error.
 ### WF-A2 · Audit trail visible
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. As admin, open the audit events list.
-2. Save a config change (WF-A1), then re-open the list.
-**Expected:** The config update and the config/dashboard reads appear as audit entries with their
-outcome. The list is admin-gated; a non-admin cannot read it.
+1. As admin, open `/admin/workforce` and scroll to the "Audit trail" panel (below the Config card).
+2. Click "Load audit trail" — events load newest-first.
+3. Save a config change (WF-A1), then click "Load audit trail" again (or reload the page and re-open).
+4. If more than one page of events exists, click "Load more".
+**Expected:** Each entry shows the command, an allow/deny marker, the reason, target, actor, and
+timestamp. The config update (and the config/dashboard reads) appear as entries with their outcome.
+The panel loads only on demand — no automatic fetch on page load, because each read is itself an
+audited action. "Load more" appends the next page. The route is admin-gated; a non-admin cannot
+read it.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WF-A3 · No sync / recompute / export / occupation-edit controls
@@ -251,13 +267,12 @@ of these, it is already tracked, not a new bug:
   `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor`) are unused
   dead weight in the schema, kept only because the SkillsHunt rare-skill snapshot and the demo seed
   still reference `workforce_occupations`.
-- The admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) has no admin screen
-  yet, so there is nothing to test from the UI.
-- The member-facing control for the service-scoped delete (WF-7 step 2) is not built yet — the
-  endpoint exists per the deletion contract, but no screen offers the confirmation; verify the
-  read-only profile and skip the delete until the control ships.
-- The profile API's `region` field is always empty (no upstream source); both profile surfaces hide
-  the row when it is absent, so seeing no region is correct, not a bug.
+- The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
+  inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
+  The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
+  mandates it.
+- The profile has no `region` field (dropped 2026-08-04 — it was always null with no upstream
+  source). Seeing no region row anywhere is correct.
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on
   every run, two never-shown mobile screens, and a button with no action were removed; no test case
   covered them, so no case changes — recorded here so the script and inventory move together.

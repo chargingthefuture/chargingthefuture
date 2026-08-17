@@ -3,10 +3,35 @@ import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../.
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { generateDirectoryProfileFromAcceptedSubmission, insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
+import { failureReason, withReason } from 'lib/errors/failure';
 
 type GenerateBody = {
   invitedByUsername?: string;
 };
+
+// Map a thrown repository error message to the HTTP response shape. Unknown
+// messages fall through to a 503 persistence-unavailable response.
+function mapGenerateProfileError(message: string): { status: number; code: string; responseMessage: string } {
+  if (message === 'skills_hunt_profile_already_generated') {
+    return {
+      status: 409,
+      code: SKILLS_HUNT_ERROR_CODE.profileAlreadyGenerated,
+      responseMessage: 'Directory profile was already generated for this submission.',
+    };
+  }
+  if (message === 'skills_hunt_submission_not_found') {
+    return {
+      status: 404,
+      code: SKILLS_HUNT_ERROR_CODE.submissionNotFound,
+      responseMessage: 'Accepted submission not found.',
+    };
+  }
+  return {
+    status: 503,
+    code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,
+    responseMessage: 'Unable to generate directory profile projection.',
+  };
+}
 
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const gate = await requireSkillsHuntModeratorAccess();
@@ -24,9 +49,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   let body: GenerateBody;
   try {
     body = (await request.json()) as GenerateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -59,21 +84,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_generate_directory_profile' });
     const message = error instanceof Error ? error.message : 'unknown';
+    const { status, code, responseMessage } = mapGenerateProfileError(message);
 
-    let status = 503;
-    let code: string = SKILLS_HUNT_ERROR_CODE.persistenceUnavailable;
-    let responseMessage = 'Unable to generate directory profile projection.';
-
-    if (message === 'skills_hunt_profile_already_generated') {
-      status = 409;
-      code = SKILLS_HUNT_ERROR_CODE.profileAlreadyGenerated;
-      responseMessage = 'Directory profile was already generated for this submission.';
-    } else if (message === 'skills_hunt_submission_not_found') {
-      status = 404;
-      code = SKILLS_HUNT_ERROR_CODE.submissionNotFound;
-      responseMessage = 'Accepted submission not found.';
-    }
-
-    return NextResponse.json({ ok: false, code, message: responseMessage }, { status });
+    return NextResponse.json({ ok: false, code, message: withReason(responseMessage, error) }, { status });
   }
 }

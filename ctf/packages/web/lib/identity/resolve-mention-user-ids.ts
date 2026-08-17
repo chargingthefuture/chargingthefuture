@@ -85,7 +85,7 @@ async function resolvePseudonymTokens(tokens: string[], into: Set<string>): Prom
       }
     }
   } catch {
-    // best-effort: leave pseudonym mentions unresolved
+    // no-trace: best-effort, so pseudonym mentions are left unresolved
   }
 }
 
@@ -112,6 +112,6 @@ async function resolveUsernameHandles(handles: string[], into: Set<string>): Pro
       into.add(user.id);
     }
   } catch {
-    // best-effort: leave username mentions unresolved
+    // no-trace: best-effort, so username mentions are left unresolved
   }
 }

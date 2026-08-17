@@ -202,12 +202,65 @@ policies:
       - actor_not_admin
 
   - pluginId: comic
-    command: comic.contribution.submit
+    command: comic.admin.knowledge.list
     version: 1.0.0
     requiredRoles:
-      - member
+      - admin
     attributePolicies:
       tenancy: same_workspace
+      adminRouteGuard: required
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_admin
+
+  - pluginId: comic
+    command: comic.admin.knowledge.set-active
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+      csrfProtection: required
+    consentRequirements:
+      scopes:
+        - feed_admin_governance
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_admin
+
+  - pluginId: comic
+    command: comic.contribution.submit
+    version: 1.1.0
+    requiredRoles:
+      - member
+    # ANY signed-in member — deliberately looser than the rest of comic (owner decision, 2026-07-29).
+    # Contributing is a route INTO verification: judging a contribution means opening the
+    # contributor's Quora account, the same look Unlock asks for, so gating it behind Unlock would
+    # review the same account twice.
+    minUnlockTier: any_authenticated
+    attributePolicies:
+      tenancy: same_workspace
+      # With no Quora URL on file, the submission opens a PENDING Unlock submission from the one
+      # supplied. Never an auto-approval; the owner still reviews.
+      maySeedPendingUnlockSubmission: true
       # Explicit, per-clause consent — every clause id must be present, and the version submitted
       # must match the wording currently served. This is the lawful basis for using the content, so
       # it is checked before the uploaded file is read at all.
@@ -239,9 +292,10 @@ policies:
 
   - pluginId: comic
     command: comic.contribution.withdraw
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
       - member
+    minUnlockTier: any_authenticated
     attributePolicies:
       tenancy: same_workspace
       # A member may only withdraw their own contribution; ownership is enforced inside the query.
@@ -275,7 +329,7 @@ policies:
       # Only an accept promotes anything. Until then a contribution is inert — it cannot reach the
       # assistant, which is what the knowledge page promises the contributor.
       promotionRequiresHumanAccept: true
-      # A decline the contributor cannot understand reads as a judgement on what they lived through.
+      # A decline the contributor cannot understand reads as a judgment on what they lived through.
       declineReasonRequired: true
       # ServiceCredits recognition lands only for a member who has finished Unlock. Contributing is
       # open to anyone signed in; the grant is the part that waits. This also puts a real cost in

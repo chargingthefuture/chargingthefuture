@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import {
@@ -23,6 +24,7 @@ import type {
 import { ensureSocketRelayFulfillmentChannel } from './stream';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
+import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
@@ -82,7 +84,7 @@ type RequestRow = {
   state: string | null;
   country: string | null;
   is_public: boolean;
-  status: 'open' | 'claimed' | 'closed' | 'cancelled';
+  status: 'open' | 'claimed' | 'closed' | 'canceled';
   reopened_count: number;
   claimed_fulfillment_id: string | null;
   price_amount: string | number | null;
@@ -99,10 +101,16 @@ type FulfillmentRow = {
   fulfiller_user_id: string;
   requester_username: string | null;
   fulfiller_username: string | null;
-  status: 'active' | 'closed' | 'cancelled';
+  status: 'active' | 'closed' | 'canceled';
   close_reason: string | null;
   created_at: Date;
   updated_at: Date;
+  // Joined for the admin list only (listAdminFulfillments). Absent on every other read, which selects
+  // the bare row — hence optional rather than nullable.
+  request_title?: string | null;
+  request_status?: SocketRelayRequestStatus | null;
+  requester_name?: string | null;
+  fulfiller_name?: string | null;
 };
 
 type MessageRow = {
@@ -208,14 +216,92 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     claimedFulfillmentId: row.claimed_fulfillment_id,
     priceCurrency: row.price_currency,
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
+    // The accepted-currencies set lives in a join table and is loaded separately by
+    // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
+    acceptedCurrencies: [],
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     // A post auto-expires 28 days after it is posted or re-posted. It only counts as expired while it is
-    // still open and waiting (a claimed/closed/cancelled post is not "expired"). Derived here so the
+    // still open and waiting (a claimed/closed/canceled post is not "expired"). Derived here so the
     // whole app reads the same expiry without a scheduled job flipping a status column.
     isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
   };
+}
+
+type AcceptedCurrencyRow = { request_id: string; currency_code: string };
+
+// Ordered so ServiceCredits leads (currencies.sort_order = 0) — the platform's preferred currency
+// wherever multiple options appear — and clients can render the set in server order.
+const ACCEPTED_CURRENCIES_SQL = `
+  SELECT rac.request_id::text AS request_id, rac.currency_code
+  FROM socket_relay_request_accepted_currencies rac
+  JOIN currencies c ON c.code = rac.currency_code
+  WHERE rac.request_id = ANY($1::uuid[])
+  ORDER BY c.sort_order, rac.currency_code
+`;
+
+function mergeAcceptedCurrencies(requests: SocketRelayRequest[], rows: AcceptedCurrencyRow[]): SocketRelayRequest[] {
+  const codesByRequest = new Map<string, string[]>();
+  for (const row of rows) {
+    const codes = codesByRequest.get(row.request_id) ?? [];
+    codes.push(row.currency_code);
+    codesByRequest.set(row.request_id, codes);
+  }
+  return requests.map((request) => ({
+    ...request,
+    acceptedCurrencies: codesByRequest.get(request.id) ?? [],
+  }));
+}
+
+// Load each request's accepted currencies from socket_relay_request_accepted_currencies and attach
+// them to the mapped requests (split settlements — a post can accept several currencies, e.g.
+// ServiceCredits and USD, independent of its single listed price).
+async function attachAcceptedCurrencies(requests: SocketRelayRequest[]): Promise<SocketRelayRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  return mergeAcceptedCurrencies(requests, result.rows);
+}
+
+// Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
+// inside createRequest/updateRequest.
+async function attachAcceptedCurrenciesWithClient(
+  client: PoolClient,
+  requests: SocketRelayRequest[],
+): Promise<SocketRelayRequest[]> {
+  const requestIds = requests.map((request) => request.id);
+  if (requestIds.length === 0) {
+    return requests;
+  }
+  const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
+  return mergeAcceptedCurrencies(requests, result.rows);
+}
+
+// Validate the requested accepted-currency codes against the active currencies catalog and persist
+// them for a request. Caller is responsible for clearing existing rows first (REPLACE semantics on
+// update). Unknown or inactive codes are skipped. Runs inside the caller's transaction.
+async function replaceAcceptedCurrencies(client: PoolClient, requestId: string, codes: string[]): Promise<void> {
+  const requested = Array.from(
+    new Set(codes.filter((code): code is string => typeof code === 'string' && code.trim().length > 0).map((code) => code.trim())),
+  );
+  if (requested.length === 0) {
+    return;
+  }
+  const valid = await client.query<{ code: string }>(
+    `SELECT code FROM currencies WHERE code = ANY($1::text[]) AND is_active = TRUE`,
+    [requested],
+  );
+  for (const row of valid.rows) {
+    await client.query(
+      `INSERT INTO socket_relay_request_accepted_currencies (request_id, currency_code)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (request_id, currency_code) DO NOTHING`,
+      [requestId, row.code],
+    );
+  }
 }
 
 function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
@@ -230,6 +316,10 @@ function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
     closeReason: row.close_reason,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
+    requestTitle: row.request_title ?? undefined,
+    requestStatus: row.request_status ?? undefined,
+    requesterName: row.requester_name ?? null,
+    fulfillerName: row.fulfiller_name ?? null,
   };
 }
 
@@ -260,24 +350,41 @@ export function validateProfileInput(input: SocketRelayProfileInput): boolean {
   return Boolean(input.relayPreferences && typeof input.relayPreferences === 'object' && !Array.isArray(input.relayPreferences));
 }
 
+// Per-field validators for validateRequestInput, split out so the top-level check stays under the
+// complexity limit. Each mirrors the exact rule it replaced.
+function isValidRequestTitle(title: string): boolean {
+  return title.length > 0 && title.length <= SOCKET_RELAY_MAX_TITLE_LENGTH;
+}
+
+function isValidRequestDetails(details: string): boolean {
+  return details.length > 0 && details.length <= SOCKET_RELAY_MAX_DETAILS_LENGTH;
+}
+
+function isValidRequestTags(tags: string[]): boolean {
+  if (tags.length === 0 || tags.length > SOCKET_RELAY_MAX_TAGS_PER_REQUEST) {
+    return false;
+  }
+  return !hasOverlongTag(tags);
+}
+
+function isValidOptionalLocationField(value: string | null): boolean {
+  return !value || value.length <= 120;
+}
+
 export function validateRequestInput(input: SocketRelayRequestInput): boolean {
   const title = normalizeText(input.title);
   const details = normalizeText(input.details);
   const tags = normalizeTags(input.tags);
 
-  if (title.length === 0 || title.length > SOCKET_RELAY_MAX_TITLE_LENGTH) {
+  if (!isValidRequestTitle(title)) {
     return false;
   }
 
-  if (details.length === 0 || details.length > SOCKET_RELAY_MAX_DETAILS_LENGTH) {
+  if (!isValidRequestDetails(details)) {
     return false;
   }
 
-  if (tags.length === 0 || tags.length > SOCKET_RELAY_MAX_TAGS_PER_REQUEST) {
-    return false;
-  }
-
-  if (hasOverlongTag(tags)) {
+  if (!isValidRequestTags(tags)) {
     return false;
   }
 
@@ -288,7 +395,7 @@ export function validateRequestInput(input: SocketRelayRequestInput): boolean {
   const city = normalizeNullableText(input.city);
   const state = normalizeNullableText(input.state);
   const country = normalizeNullableText(input.country);
-  return (!city || city.length <= 120) && (!state || state.length <= 120) && (!country || country.length <= 120);
+  return isValidOptionalLocationField(city) && isValidOptionalLocationField(state) && isValidOptionalLocationField(country);
 }
 
 // Validate the chosen value type + amount against the currency catalog (issue #420). No value type
@@ -409,7 +516,8 @@ export async function createRequest(actorUserId: string, actorUsername: string |
     );
 
     if ((existing.rowCount ?? 0) > 0) {
-      return mapRequestRow(existing.rows[0]);
+      const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(existing.rows[0])]);
+      return replayed;
     }
 
     const tags = normalizeTags(input.tags);
@@ -441,7 +549,10 @@ export async function createRequest(actorUserId: string, actorUsername: string |
       [created.rows[0].id, actorUserId],
     );
 
-    return mapRequestRow(created.rows[0]);
+    await replaceAcceptedCurrencies(client, created.rows[0].id, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(created.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the post is durably committed: a new open post makes its owner
@@ -451,28 +562,51 @@ export async function createRequest(actorUserId: string, actorUsername: string |
   return request;
 }
 
-export async function listRequests(options?: {
+type ListRequestsOptions = {
   page?: number;
   pageSize?: number;
   ownerUserId?: string;
   statuses?: SocketRelayRequestStatus[];
-}): Promise<{ items: SocketRelayRequest[]; page: number; pageSize: number; total: number }> {
+  // When set, requests whose owner is blocked (either direction) relative to this viewer are hidden
+  // (issue #809 task 4). Pass the signed-in member for the browse feed; leave unset for admin lists
+  // and owner-scoped lists, which must stay complete.
+  viewerUserId?: string;
+};
+
+function normalizeListRequestsOptions(options?: ListRequestsOptions) {
   const page = normalizePage(options?.page);
   const pageSize = normalizePageSize(options?.pageSize);
-  const offset = (page - 1) * pageSize;
+  return {
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize,
+    ownerUserId: normalizeNullableText(options?.ownerUserId ?? null),
+    // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved
+    // and claimed posts do not crowd out open ones on a page. Null means every status — the owner
+    // "Mine" / Direct Line lists and the admin list all keep their full-status view.
+    statuses: options?.statuses && options.statuses.length > 0 ? options.statuses : null,
+    viewerUserId: normalizeNullableText(options?.viewerUserId ?? null),
+  };
+}
 
-  const ownerUserId = normalizeNullableText(options?.ownerUserId ?? null);
-  // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved and
-  // claimed posts do not crowd out open ones on a page. Null means every status — the owner "Mine" /
-  // Direct Line lists and the admin list all keep their full-status view.
-  const statuses = options?.statuses && options.statuses.length > 0 ? options.statuses : null;
+export async function listRequests(options?: ListRequestsOptions): Promise<{ items: SocketRelayRequest[]; page: number; pageSize: number; total: number }> {
+  const { page, pageSize, offset, ownerUserId, statuses, viewerUserId } = normalizeListRequestsOptions(options);
+
+  // Mirrors the LightHouse browse filter: a `IS NULL` arm keeps this a no-op when no viewer is passed.
+  const hideBlockedOwnersSql = `
+       AND ($3::text IS NULL OR NOT EXISTS (
+         SELECT 1
+         FROM member_blocks
+         WHERE (blocker_user_id = $3 AND blocked_user_id = socket_relay_requests.owner_user_id)
+            OR (blocker_user_id = socket_relay_requests.owner_user_id AND blocked_user_id = $3)
+       ))`;
 
   const count = await queryDb<CountRow>(
     `SELECT COUNT(*)::text AS total
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::text[] IS NULL OR status = ANY($2))`,
-    [ownerUserId, statuses],
+       AND ($2::text[] IS NULL OR status = ANY($2))${hideBlockedOwnersSql}`,
+    [ownerUserId, statuses, viewerUserId],
   );
 
   const total = Number.parseInt(count.rows[0]?.total ?? '0', 10);
@@ -481,14 +615,14 @@ export async function listRequests(options?: {
     `SELECT id, owner_user_id, owner_username, title, details, category, tags, city, state, country, is_public, status, reopened_count, claimed_fulfillment_id, price_amount, price_currency, created_at, updated_at, expires_at
      FROM socket_relay_requests
      WHERE ($1::text IS NULL OR owner_user_id = $1)
-       AND ($2::text[] IS NULL OR status = ANY($2))
+       AND ($2::text[] IS NULL OR status = ANY($2))${hideBlockedOwnersSql}
      ORDER BY created_at DESC
-     OFFSET $3 LIMIT $4`,
-    [ownerUserId, statuses, offset, pageSize],
+     OFFSET $4 LIMIT $5`,
+    [ownerUserId, statuses, viewerUserId, offset, pageSize],
   );
 
   return {
-    items: result.rows.map(mapRequestRow),
+    items: await attachAcceptedCurrencies(result.rows.map(mapRequestRow)),
     page,
     pageSize,
     total,
@@ -508,7 +642,8 @@ export async function getRequestById(requestId: string): Promise<SocketRelayRequ
     return null;
   }
 
-  return mapRequestRow(result.rows[0]);
+  const [request] = await attachAcceptedCurrencies([mapRequestRow(result.rows[0])]);
+  return request;
 }
 
 export async function updateRequest(requestId: string, actorUserId: string, isAdmin: boolean, input: SocketRelayRequestInput): Promise<SocketRelayRequest> {
@@ -573,7 +708,12 @@ export async function updateRequest(requestId: string, actorUserId: string, isAd
       [requestId, actorUserId],
     );
 
-    return mapRequestRow(result.rows[0]);
+    // Replace the accepted-currencies set: clear existing rows, then insert the validated new set.
+    await client.query('DELETE FROM socket_relay_request_accepted_currencies WHERE request_id = $1::uuid', [requestId]);
+    await replaceAcceptedCurrencies(client, requestId, input.acceptedCurrencies);
+
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(result.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence sync after the durable update: keeps presence (and its label) in step with
@@ -634,7 +774,8 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
       [requestId, actorUserId],
     );
 
-    return mapRequestRow(updated.rows[0]);
+    const [withAccepted] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(updated.rows[0])]);
+    return withAccepted;
   });
 
   // Best-effort presence write after the durable repost: the post is back to open, so its owner is
@@ -642,6 +783,46 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
   await syncSocketRelayRequestPresence(request.ownerUserId, request.id, request.status);
 
   return request;
+}
+
+// Idempotency arm of claimRequest: a network retry after the first claim already committed finds the
+// request 'claimed'. If it was claimed by THIS actor, return the existing active fulfillment instead
+// of erroring — the command contract marks claim idempotent, so a retry of a claim that actually
+// succeeded reads as success, not `request_not_claimable`. Another member's claim returns null.
+async function findExistingActiveClaim(
+  client: PoolClient,
+  requestRow: RequestRow,
+  actorUserId: string,
+): Promise<SocketRelayFulfillment | null> {
+  if (requestRow.status !== 'claimed') {
+    return null;
+  }
+  const existing = await client.query<FulfillmentRow>(
+    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
+     FROM socket_relay_fulfillments
+     WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'active'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [requestRow.id, actorUserId],
+  );
+  return (existing.rowCount ?? 0) > 0 ? mapFulfillmentRow(existing.rows[0]) : null;
+}
+
+// A helper the requester already canceled off this request (resolve outcome `unsuccessful_reopen`,
+// the only path that sets a fulfillment to 'canceled') cannot claim the same post again — "reopen
+// for others" means other helpers, not the same person coming back (owner directive, 2026-08-06).
+// Runs before the idempotency branch so a retry cannot resurrect the canceled claim.
+async function ensureHelperNotPreviouslyCanceled(client: PoolClient, requestId: string, actorUserId: string): Promise<void> {
+  const canceledBefore = await client.query(
+    `SELECT 1
+     FROM socket_relay_fulfillments
+     WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'canceled'
+     LIMIT 1`,
+    [requestId, actorUserId],
+  );
+  if ((canceledBefore.rowCount ?? 0) > 0) {
+    throw new Error('helper_previously_canceled');
+  }
 }
 
 export async function claimRequest(requestId: string, actorUserId: string, actorUsername: string | null = null): Promise<{ request: SocketRelayRequest; fulfillment: SocketRelayFulfillment }> {
@@ -665,27 +846,20 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       throw new Error('actor_is_owner');
     }
 
+    // Block check (issue #809 task 4): a blocked pair must not be joined into a Direct Line. Checked
+    // before the idempotency branch so a blocked retry cannot resurrect an old claim either. The
+    // route maps blocked_pair to neutral copy so the block never reveals itself.
+    if (await isBlockedBetweenTx(client, actorUserId, requestRow.owner_user_id)) {
+      throw new Error('blocked_pair');
+    }
+
+    await ensureHelperNotPreviouslyCanceled(client, requestId, actorUserId);
+
     if (requestRow.status !== 'open') {
-      // Idempotency: a network retry after the first claim already committed will find the request
-      // 'claimed'. If it was claimed by THIS actor, return the existing active fulfillment instead of
-      // erroring — the command contract marks claim idempotent, so a retry of a claim that actually
-      // succeeded should read as success, not `request_not_claimable`. Another member's claim still
-      // errors.
-      if (requestRow.status === 'claimed') {
-        const existing = await client.query<FulfillmentRow>(
-          `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
-           FROM socket_relay_fulfillments
-           WHERE request_id = $1::uuid AND fulfiller_user_id = $2 AND status = 'active'
-           ORDER BY created_at DESC
-           LIMIT 1`,
-          [requestId, actorUserId],
-        );
-        if ((existing.rowCount ?? 0) > 0) {
-          return {
-            request: mapRequestRow(requestRow),
-            fulfillment: mapFulfillmentRow(existing.rows[0]),
-          };
-        }
+      const existing = await findExistingActiveClaim(client, requestRow, actorUserId);
+      if (existing) {
+        const [replayed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(requestRow)]);
+        return { request: replayed, fulfillment: existing };
       }
       throw new Error('request_not_claimable');
     }
@@ -723,8 +897,9 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       [requestId, actorUserId, fulfillment.rows[0].id],
     );
 
+    const [claimed] = await attachAcceptedCurrenciesWithClient(client, [mapRequestRow(requestUpdate.rows[0])]);
     return {
-      request: mapRequestRow(requestUpdate.rows[0]),
+      request: claimed,
       fulfillment: mapFulfillmentRow(fulfillment.rows[0]),
     };
   });
@@ -776,12 +951,21 @@ export async function getFulfillmentById(fulfillmentId: string): Promise<SocketR
 
 export async function listMyFulfillments(userId: string): Promise<SocketRelayFulfillment[]> {
   // Join the request so the chat can show what the conversation is about (title + current status)
-  // instead of a bare "Fulfillment <uuid>".
+  // instead of a bare "Fulfillment <uuid>", and both participants' real names so the header can say
+  // WHO the other person is. The usernames captured at claim time are null for anyone without a
+  // handle, which left a member with no way to tell who had offered to help — the whole point of
+  // being able to open a past conversation (owner report).
   const result = await queryDb<FulfillmentRow & { request_title: string | null; request_status: string | null }>(
     `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.requester_username, f.fulfiller_username, f.status, f.close_reason, f.created_at, f.updated_at,
-            r.title AS request_title, r.status AS request_status
+            r.title AS request_title, r.status AS request_status,
+            NULLIF(TRIM(COALESCE(rp.first_name, '') || ' ' || COALESCE(rp.last_name, '')), '') AS requester_name,
+            NULLIF(TRIM(COALESCE(fp.first_name, '') || ' ' || COALESCE(fp.last_name, '')), '') AS fulfiller_name
      FROM socket_relay_fulfillments f
      LEFT JOIN socket_relay_requests r ON r.id = f.request_id
+     LEFT JOIN directory_profiles rp
+       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+     LEFT JOIN directory_profiles fp
+       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
      WHERE f.requester_user_id = $1 OR f.fulfiller_user_id = $1
      ORDER BY f.created_at DESC`,
     [userId],
@@ -810,6 +994,22 @@ async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: 
   }
 
   return fulfillment;
+}
+
+// The status/event triples a resolve applies, derived once from the outcome so resolveFulfillment
+// does not repeat the same `reopen ? … : …` branch three times. `unsuccessful_reopen` cancels this
+// helper and puts the request back to open; every other outcome closes both.
+type ResolveOutcomePlan = {
+  fulfillmentStatus: 'canceled' | 'closed';
+  requestStatus: 'open' | 'closed';
+  eventName: 'fulfillment_reopened' | 'fulfillment_closed';
+};
+
+function resolveOutcomePlan(outcome: SocketRelayResolveOutcome): ResolveOutcomePlan {
+  if (outcome === 'unsuccessful_reopen') {
+    return { fulfillmentStatus: 'canceled', requestStatus: 'open', eventName: 'fulfillment_reopened' };
+  }
+  return { fulfillmentStatus: 'closed', requestStatus: 'closed', eventName: 'fulfillment_closed' };
 }
 
 // Resolve a claimed request. Only the REQUESTER (the person who posted it) or an admin may resolve —
@@ -846,14 +1046,14 @@ export async function resolveFulfillment(
     }
 
     const reopen = outcome === 'unsuccessful_reopen';
-    const fulfillmentStatus = reopen ? 'cancelled' : 'closed';
+    const plan = resolveOutcomePlan(outcome);
 
     const updated = await client.query<FulfillmentRow>(
       `UPDATE socket_relay_fulfillments
        SET status = $3, close_reason = $2, updated_at = NOW()
        WHERE id = $1::uuid AND status = 'active'
        RETURNING id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at`,
-      [fulfillmentId, outcome, fulfillmentStatus],
+      [fulfillmentId, outcome, plan.fulfillmentStatus],
     );
     if ((updated.rowCount ?? 0) === 0) {
       throw new Error('fulfillment_not_active');
@@ -861,7 +1061,7 @@ export async function resolveFulfillment(
 
     if (reopen) {
       // Put the request back into the open pool for other helpers (mirrors repost) — including resetting
-      // the 28-day expiry clock. Without this a helper-cancelled reopen would keep the original
+      // the 28-day expiry clock. Without this a helper-canceled reopen would keep the original
       // expires_at, so a post that had aged close to (or past) expiry would come back already expired and
       // be immediately un-claimable, forcing the owner to re-post manually.
       await client.query(
@@ -883,7 +1083,7 @@ export async function resolveFulfillment(
     await client.query(
       `INSERT INTO socket_relay_request_events (request_id, actor_user_id, event_name, metadata)
        VALUES ($1::uuid, $2, $3, jsonb_build_object('outcome', $4::text))`,
-      [fulfillment.requestId, actorUserId, reopen ? 'fulfillment_reopened' : 'fulfillment_closed', outcome],
+      [fulfillment.requestId, actorUserId, plan.eventName, outcome],
     );
 
     return {
@@ -891,7 +1091,7 @@ export async function resolveFulfillment(
       // The requester is the request owner (see this function's doc comment).
       ownerUserId: fulfillment.requesterUserId,
       requestId: fulfillment.requestId,
-      requestStatus: reopen ? 'open' : 'closed',
+      requestStatus: plan.requestStatus,
     };
   });
 
@@ -949,11 +1149,30 @@ export async function listAdminRequests(options?: { page?: number; pageSize?: nu
   return listRequests({ page: options?.page, pageSize: options?.pageSize });
 }
 
+// Admin fulfillment list, enriched so the screen is readable without a lookup.
+//
+// It used to select the bare row, so the admin screen could only print the request UUID and two Clerk
+// user ids. Identifying who offered to help meant copying an id, finding the request another way, and
+// cross-referencing by hand (owner report). The request title and each participant's real name are
+// joined here instead: a name that is on file is shown, and the raw id survives only as the last
+// resort when a member has neither a directory profile nor a handle.
 export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]> {
   const result = await queryDb<FulfillmentRow>(
-    `SELECT id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at
-     FROM socket_relay_fulfillments
-     ORDER BY created_at DESC`,
+    `SELECT
+       f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id,
+       f.requester_username, f.fulfiller_username, f.status, f.close_reason,
+       f.created_at, f.updated_at,
+       r.title AS request_title,
+       r.status AS request_status,
+       NULLIF(TRIM(COALESCE(rp.first_name, '') || ' ' || COALESCE(rp.last_name, '')), '') AS requester_name,
+       NULLIF(TRIM(COALESCE(fp.first_name, '') || ' ' || COALESCE(fp.last_name, '')), '') AS fulfiller_name
+     FROM socket_relay_fulfillments f
+     LEFT JOIN socket_relay_requests r ON r.id = f.request_id
+     LEFT JOIN directory_profiles rp
+       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+     LEFT JOIN directory_profiles fp
+       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
+     ORDER BY f.created_at DESC`,
   );
 
   return result.rows.map(mapFulfillmentRow);

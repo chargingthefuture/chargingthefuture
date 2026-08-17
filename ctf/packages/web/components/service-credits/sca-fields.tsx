@@ -1,12 +1,12 @@
 'use client';
 
 // Small presentational building blocks shared by the ServiceCredits admin panels:
-// a labelled text/number input and a confirm-before-commit step. Kept separate so each
+// a labeled text/number input and a confirm-before-commit step. Kept separate so each
 // action panel stays small (rule 116) and the confirm gesture is identical everywhere.
 // Dark admin design system (rule 131): ServiceCredits accent is #A855F7.
 import { useState, type ReactNode } from 'react';
 import { useTheme } from '@/hooks/useTheme';
-import { getServiceCreditsTokens } from './sc-shared';
+import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
 
 export function Field({
   label,
@@ -51,55 +51,64 @@ export function Field({
   );
 }
 
-// A two-step commit: the primary button arms a plain-language summary of exactly what
-// will change; the operator must press "Confirm" to fire the mutation. Used for every
-// state-changing action in the ServiceCredits admin (money core — no silent commits).
-export function ConfirmAction({
+// The un-armed primary button. Pressing it arms the confirm prompt. A "danger" tone renders
+// the red destructive styling (used for burns); the default tone uses the ServiceCredits accent.
+function ArmButton({
   label,
-  summary,
   busy,
   disabled,
-  onConfirm,
-  tone = 'default',
+  tone,
+  onArm,
+  t,
 }: {
   label: string;
-  summary: ReactNode;
   busy: boolean;
   disabled?: boolean;
-  onConfirm: () => void;
-  tone?: 'default' | 'danger';
+  tone: 'default' | 'danger';
+  onArm: () => void;
+  t: ServiceCreditsTokens;
 }) {
-  const { theme } = useTheme();
-  const t = getServiceCreditsTokens(theme);
-  const [armed, setArmed] = useState(false);
+  const blocked = disabled || busy;
+  const isDanger = tone === 'danger';
+  return (
+    <button
+      type="button"
+      disabled={blocked}
+      onClick={onArm}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 8,
+        padding: '9px 16px',
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: blocked ? 'not-allowed' : 'pointer',
+        opacity: blocked ? 0.5 : 1,
+        background: isDanger ? 'rgba(239,68,68,0.1)' : t.ACCENT,
+        border: isDanger ? '1px solid rgba(239,68,68,0.4)' : `1px solid ${t.ACCENT}`,
+        color: isDanger ? '#FCA5A5' : '#FFFFFF',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
-  if (!armed) {
-    const isDanger = tone === 'danger';
-    return (
-      <button
-        type="button"
-        disabled={disabled || busy}
-        onClick={() => setArmed(true)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 8,
-          padding: '9px 16px',
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: disabled || busy ? 'not-allowed' : 'pointer',
-          opacity: disabled || busy ? 0.5 : 1,
-          background: isDanger ? 'rgba(239,68,68,0.1)' : t.ACCENT,
-          border: isDanger ? '1px solid rgba(239,68,68,0.4)' : `1px solid ${t.ACCENT}`,
-          color: isDanger ? '#FCA5A5' : '#FFFFFF',
-        }}
-      >
-        {label}
-      </button>
-    );
-  }
-
+// The armed state: a plain-language summary of exactly what will change plus Confirm / Cancel.
+function ConfirmPrompt({
+  summary,
+  busy,
+  onConfirm,
+  onCancel,
+  t,
+}: {
+  summary: ReactNode;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  t: ServiceCreditsTokens;
+}) {
   return (
     <div
       style={{
@@ -138,7 +147,7 @@ export function ConfirmAction({
         <button
           type="button"
           disabled={busy}
-          onClick={() => setArmed(false)}
+          onClick={onCancel}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -158,6 +167,39 @@ export function ConfirmAction({
         </button>
       </div>
     </div>
+  );
+}
+
+// A two-step commit: the primary button arms a plain-language summary of exactly what
+// will change; the operator must press "Confirm" to fire the mutation. Used for every
+// state-changing action in the ServiceCredits admin (money core — no silent commits).
+export function ConfirmAction({
+  label,
+  summary,
+  busy,
+  disabled,
+  onConfirm,
+  tone = 'default',
+}: {
+  label: string;
+  summary: ReactNode;
+  busy: boolean;
+  disabled?: boolean;
+  onConfirm: () => void;
+  tone?: 'default' | 'danger';
+}) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
+  const [armed, setArmed] = useState(false);
+
+  if (!armed) {
+    return (
+      <ArmButton label={label} busy={busy} disabled={disabled} tone={tone} onArm={() => setArmed(true)} t={t} />
+    );
+  }
+
+  return (
+    <ConfirmPrompt summary={summary} busy={busy} onConfirm={onConfirm} onCancel={() => setArmed(false)} t={t} />
   );
 }
 

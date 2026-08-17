@@ -10,6 +10,7 @@ import {
 } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type SkillUpdateBody = {
   jobTitleId?: unknown;
@@ -22,6 +23,120 @@ type SkillUpdateBody = {
 type DeleteBody = {
   reason?: unknown;
 };
+
+type DeleteFailureKind = 'not_found' | 'conflict' | 'error';
+
+// Maps a repository delete error message to a coarse outcome. `notFoundCode` is
+// the entity-specific "not found" message the repository throws.
+function classifyDeleteFailure(errorMessage: string, notFoundCode: string): DeleteFailureKind {
+  if (errorMessage === notFoundCode) {
+    return 'not_found';
+  }
+
+  if (errorMessage === 'unresolved_downstream_dependencies' || errorMessage === 'destructive_threshold_exceeded') {
+    return 'conflict';
+  }
+
+  return 'error';
+}
+
+// Resolves the delete reason from the query string, falling back to the JSON
+// body when the query parameter is absent.
+async function resolveDeleteReason(request: Request): Promise<string> {
+  let reason = new URL(request.url).searchParams.get('reason') ?? '';
+  if (!reason) {
+    try {
+      const body = (await request.json()) as DeleteBody;
+      reason = typeof body.reason === 'string' ? body.reason : '';
+    } catch {
+      reason = '';
+    }
+  }
+
+  return reason;
+}
+
+function buildSkillUpdateInput(id: string, body: SkillUpdateBody) {
+  return {
+    id,
+    jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : undefined,
+    name: typeof body.name === 'string' ? body.name : undefined,
+    displayOrder: typeof body.displayOrder === 'number' ? body.displayOrder : undefined,
+    aliases: Array.isArray(body.aliases) ? body.aliases.filter((entry): entry is string => typeof entry === 'string') : undefined,
+    isActive: typeof body.isActive === 'boolean' ? body.isActive : undefined,
+  };
+}
+
+// Shared failure path for skill updates: records the audit outcome and maps a
+// missing parent job title to 404 / everything else to 503.
+function handleSkillUpdateFailure(error: unknown, actorId: string, id: string): NextResponse {
+  const errorMessage = error instanceof Error ? error.message : 'unknown_error';
+  const notFound = errorMessage === 'job_title_not_found';
+
+  logSkillsTaxonomyAudit({
+    pluginId: 'skills-taxonomy',
+    command: 'skills-taxonomy.skill.update',
+    actorId,
+    status: notFound ? 'deny' : 'allow',
+    reason: notFound ? 'invalid_parent_job_title' : 'admin_or_taxonomy_admin',
+    target: { skillId: id },
+    result: 'failure',
+    errorCategory: notFound ? 'not_found' : 'persistence_error',
+  });
+
+  if (notFound) {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent job title not found.' },
+      { status: 404 },
+    );
+  }
+
+  reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
+  return NextResponse.json(
+    { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update skill.' },
+    { status: 503 },
+  );
+}
+
+// Shared failure path for skill deletion: records the audit outcome and maps a
+// missing target to 404 / dependency safeguards to 409 / everything else to 503.
+function handleSkillDeleteFailure(error: unknown, actorId: string, id: string): NextResponse {
+  const errorMessage = error instanceof Error ? error.message : 'unknown_error';
+  const kind = classifyDeleteFailure(errorMessage, 'skill_not_found');
+  const errorCategory =
+    kind === 'conflict' ? 'dependency_conflict' : kind === 'not_found' ? 'not_found' : 'persistence_error';
+
+  logSkillsTaxonomyAudit({
+    pluginId: 'skills-taxonomy',
+    command: 'skills-taxonomy.skill.delete',
+    actorId,
+    status: kind === 'error' ? 'allow' : 'deny',
+    reason: kind === 'error' ? 'admin_or_taxonomy_admin' : errorMessage,
+    target: { skillId: id },
+    result: 'failure',
+    errorCategory,
+  });
+
+  if (kind === 'not_found') {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Skill not found.' },
+      { status: 404 },
+    );
+  }
+
+  if (kind === 'conflict') {
+    return NextResponse.json(
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.conflict, message: 'Skill delete blocked by dependency safeguards.' },
+      { status: 409 },
+    );
+  }
+
+  reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
+  return NextResponse.json(
+    { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete skill.' },
+    { status: 503 },
+  );
+}
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const gate = await requireTaxonomyAdminAccess();
@@ -44,7 +159,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   } catch (error) {
     reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to read skill.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to read skill: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -66,21 +181,14 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   let body: SkillUpdateBody;
   try {
     body = (await request.json()) as SkillUpdateBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
 
-  const input = {
-    id,
-    jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : undefined,
-    name: typeof body.name === 'string' ? body.name : undefined,
-    displayOrder: typeof body.displayOrder === 'number' ? body.displayOrder : undefined,
-    aliases: Array.isArray(body.aliases) ? body.aliases.filter((entry): entry is string => typeof entry === 'string') : undefined,
-    isActive: typeof body.isActive === 'boolean' ? body.isActive : undefined,
-  };
+  const input = buildSkillUpdateInput(id, body);
 
   if (!validateSkillUpdateInput(input)) {
     return NextResponse.json(
@@ -111,32 +219,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
     return NextResponse.json({ ok: true, skill }, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'unknown_error';
-    const notFound = errorMessage === 'job_title_not_found';
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.skill.update',
-      actorId: gate.auth.userId,
-      status: notFound ? 'deny' : 'allow',
-      reason: notFound ? 'invalid_parent_job_title' : 'admin_or_taxonomy_admin',
-      target: { skillId: id },
-      result: 'failure',
-      errorCategory: notFound ? 'not_found' : 'persistence_error',
-    });
-
-    if (notFound) {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Parent job title not found.' },
-        { status: 404 },
-      );
-    }
-
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to update skill.' },
-      { status: 503 },
-    );
+    return handleSkillUpdateFailure(error, gate.auth.userId, id);
   }
 }
 
@@ -153,15 +236,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
   const { id } = await context.params;
 
-  let reason = new URL(request.url).searchParams.get('reason') ?? '';
-  if (!reason) {
-    try {
-      const body = (await request.json()) as DeleteBody;
-      reason = typeof body.reason === 'string' ? body.reason : '';
-    } catch {
-      reason = '';
-    }
-  }
+  const reason = await resolveDeleteReason(request);
 
   if (!validateDeleteInput('skill', id, reason)) {
     return NextResponse.json(
@@ -186,39 +261,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     return NextResponse.json({ ok: true, skillId: id, deleted: true, deletedAt: deleted.deletedAtIso }, { status: 200 });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'unknown_error';
-    const conflict = errorMessage === 'unresolved_downstream_dependencies' || errorMessage === 'destructive_threshold_exceeded';
-    const notFound = errorMessage === 'skill_not_found';
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.skill.delete',
-      actorId: gate.auth.userId,
-      status: conflict || notFound ? 'deny' : 'allow',
-      reason: conflict ? errorMessage : notFound ? 'skill_not_found' : 'admin_or_taxonomy_admin',
-      target: { skillId: id },
-      result: 'failure',
-      errorCategory: conflict ? 'dependency_conflict' : notFound ? 'not_found' : 'persistence_error',
-    });
-
-    if (notFound) {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.notFound, message: 'Skill not found.' },
-        { status: 404 },
-      );
-    }
-
-    if (conflict) {
-      return NextResponse.json(
-        { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.conflict, message: 'Skill delete blocked by dependency safeguards.' },
-        { status: 409 },
-      );
-    }
-
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_skills_id' });
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete skill.' },
-      { status: 503 },
-    );
+    return handleSkillDeleteFailure(error, gate.auth.userId, id);
   }
 }

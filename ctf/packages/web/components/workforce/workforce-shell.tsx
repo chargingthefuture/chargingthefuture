@@ -156,6 +156,62 @@ function WorkforceWarningBanner({ message }: { message: string }) {
   );
 }
 
+// Empty only when there is genuinely nothing to track: no taxonomy sectors/occupations and nobody
+// in the Directory. Demand alone (population model) is enough to render the dashboard.
+function isDashboardEmptyData(dashboard: WorkforceDashboard): boolean {
+  return dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0;
+}
+
+function WorkforceSkillSection({
+  activeView,
+  skillItems,
+}: {
+  activeView: SidebarView;
+  skillItems: WorkforceGroupedReportItem[];
+}) {
+  const showDistribution = (activeView === 'overview' || activeView === 'skill-level') && skillItems.length > 0;
+  return (
+    <>
+      {showDistribution ? <WorkforceSkillDistribution skillItems={skillItems} /> : null}
+
+      {/* Skill-level drilldown: expand a level to see the matched members (the V2 drilldown). */}
+      {activeView === 'skill-level' ? (
+        <div style={{ marginTop: 16 }}>
+          <WorkforceBucketDrilldown kind="skill-level" title="Members by skill level" items={skillItems} />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function WorkforceSectorSection({
+  activeView,
+  sectorItems,
+  occupationItems,
+}: {
+  activeView: SidebarView;
+  sectorItems: WorkforceGroupedReportItem[];
+  occupationItems: WorkforceOccupationGapItem[];
+}) {
+  const showTraining = activeView === 'overview' || activeView === 'sector';
+  return (
+    <>
+      {/* Overview keeps the aggregate sector bars; the Sectors view uses the expandable drilldown so
+          members are reachable. */}
+      {activeView === 'overview' ? <WorkforceSectorGaps sectorItems={sectorItems} /> : null}
+      {activeView === 'sector' ? (
+        <WorkforceBucketDrilldown kind="sector" title="Members by sector" items={sectorItems} />
+      ) : null}
+
+      {showTraining ? (
+        <div style={{ marginTop: 16 }}>
+          <WorkforceTrainingGaps occupationItems={occupationItems} />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function WorkforceDashboardContent({
   t,
   dashboard,
@@ -173,12 +229,7 @@ function WorkforceDashboardContent({
   activeView: SidebarView;
   warning: string | null;
 }) {
-  // Empty only when there is genuinely nothing to track: no taxonomy sectors/occupations and nobody
-  // in the Directory. Demand alone (population model) is enough to render the dashboard.
-  const isEmpty = !dashboard
-    || (dashboard.sectorsTotal === 0 && dashboard.occupationsTotal === 0 && dashboard.totalMembers === 0);
-
-  if (isEmpty) {
+  if (!dashboard || isDashboardEmptyData(dashboard)) {
     return <WorkforceEmptyState t={t} />;
   }
 
@@ -188,32 +239,88 @@ function WorkforceDashboardContent({
         {warning ? <WorkforceWarningBanner message={warning} /> : null}
         <WorkforceHeroStats dashboard={dashboard} />
 
-        {(activeView === 'overview' || activeView === 'skill-level') && skillItems.length > 0 ? (
-          <WorkforceSkillDistribution skillItems={skillItems} />
-        ) : null}
+        <WorkforceSkillSection activeView={activeView} skillItems={skillItems} />
 
-        {/* Skill-level drilldown: expand a level to see the matched members (the V2 drilldown). */}
-        {activeView === 'skill-level' ? (
-          <div style={{ marginTop: 16 }}>
-            <WorkforceBucketDrilldown kind="skill-level" title="Members by skill level" items={skillItems} />
-          </div>
-        ) : null}
-
-        {/* Overview keeps the aggregate sector bars; the Sectors view uses the expandable drilldown so
-            members are reachable. */}
-        {activeView === 'overview' ? <WorkforceSectorGaps sectorItems={sectorItems} /> : null}
-        {activeView === 'sector' ? (
-          <WorkforceBucketDrilldown kind="sector" title="Members by sector" items={sectorItems} />
-        ) : null}
-
-        {(activeView === 'overview' || activeView === 'sector') ? (
-          <div style={{ marginTop: 16 }}>
-            <WorkforceTrainingGaps occupationItems={occupationItems} />
-          </div>
-        ) : null}
+        <WorkforceSectorSection
+          activeView={activeView}
+          sectorItems={sectorItems}
+          occupationItems={occupationItems}
+        />
       </div>
     </ScrollArea>
   );
+}
+
+function isAborted(signal?: AbortSignal): boolean {
+  return signal?.aborted === true;
+}
+
+// A 401/403 on ANY endpoint means the session is no longer valid (e.g. it expired after the page
+// loaded). Callers surface a re-auth prompt rather than a soft "couldn't load" warning.
+function anyAuthFailure(responses: Response[]): boolean {
+  return responses.some((r) => r.status === 401 || r.status === 403);
+}
+
+async function readItems<T>(res: Response): Promise<T[]> {
+  if (!res.ok) return [];
+  const json = (await res.json()) as { items?: T[] };
+  return json.items ?? [];
+}
+
+// A 404 on the profile is normal (the member has not claimed a Directory profile); any other
+// non-OK profile status yields null too, and is noted separately in failedSectionsMessage.
+async function readProfile(res: Response): Promise<WorkforceProfile | null> {
+  if (!res.ok) return null;
+  const json = (await res.json()) as { profile?: WorkforceProfile };
+  return json.profile ?? null;
+}
+
+// Surface a non-blocking notice if a secondary panel failed to load, instead of silently showing it
+// empty (which reads as "no data").
+function failedSectionsMessage(
+  sectorRes: Response,
+  skillRes: Response,
+  occRes: Response,
+  profileRes: Response,
+): string | null {
+  const failed: string[] = [];
+  if (!sectorRes.ok) failed.push('sector gaps');
+  if (!skillRes.ok) failed.push('skill levels');
+  if (!occRes.ok) failed.push('training gaps');
+  if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
+  return failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null;
+}
+
+async function loadWorkforceData(
+  signal?: AbortSignal,
+): Promise<{ data: WorkforceData; warning: string | null }> {
+  const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
+    fetch('/api/workforce/dashboard', { signal }),
+    fetch('/api/workforce/reports/sector/all', { signal }),
+    fetch('/api/workforce/reports/skill-level/all', { signal }),
+    fetch('/api/workforce/reports/occupations?limit=10', { signal }),
+    fetch('/api/workforce/profile', { signal }),
+  ]);
+
+  if (anyAuthFailure([dashRes, sectorRes, skillRes, occRes, profileRes])) {
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+
+  // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
+  // surface the error state rather than silently falling through to the empty state.
+  if (!dashRes.ok) {
+    throw new Error(`Dashboard request failed (${dashRes.status}).`);
+  }
+
+  const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
+  const data: WorkforceData = {
+    dashboard: dashJson.dashboard ?? null,
+    sectorItems: await readItems<WorkforceGroupedReportItem>(sectorRes),
+    skillItems: await readItems<WorkforceGroupedReportItem>(skillRes),
+    occupationItems: await readItems<WorkforceOccupationGapItem>(occRes),
+    profile: await readProfile(profileRes),
+  };
+  return { data, warning: failedSectionsMessage(sectorRes, skillRes, occRes, profileRes) };
 }
 
 export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
@@ -238,67 +345,15 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     setError(null);
     setWarning(null);
     try {
-      const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
-        fetch('/api/workforce/dashboard', { signal }),
-        fetch('/api/workforce/reports/sector/all', { signal }),
-        fetch('/api/workforce/reports/skill-level/all', { signal }),
-        fetch('/api/workforce/reports/occupations?limit=10', { signal }),
-        fetch('/api/workforce/profile', { signal }),
-      ]);
-
-      if (signal?.aborted) return;
-
-      // A 401/403 on ANY endpoint means the session is no longer valid (e.g. it expired after the
-      // page loaded). Surface a re-auth prompt via the error state rather than a soft "couldn't load"
-      // warning, so a user who lost their session is told to sign in again instead of being left on a
-      // half-rendered dashboard.
-      if ([dashRes, sectorRes, skillRes, occRes, profileRes].some((r) => r.status === 401 || r.status === 403)) {
-        throw new Error('Your session has expired. Please sign in again.');
-      }
-
-      // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
-      // surface the error state rather than silently falling through to the empty state.
-      if (!dashRes.ok) {
-        throw new Error(`Dashboard request failed (${dashRes.status}).`);
-      }
-
-      const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
-      const sectorJson = sectorRes.ok
-        ? ((await sectorRes.json()) as { items?: WorkforceGroupedReportItem[] })
-        : null;
-      const skillJson = skillRes.ok
-        ? ((await skillRes.json()) as { items?: WorkforceGroupedReportItem[] })
-        : null;
-      const occJson = occRes.ok
-        ? ((await occRes.json()) as { items?: WorkforceOccupationGapItem[] })
-        : null;
-      // A 404 on the profile is normal (the member has not claimed a Directory profile); any other
-      // non-OK profile status is a real failure worth noting.
-      const profileJson = profileRes.ok
-        ? ((await profileRes.json()) as { profile?: WorkforceProfile })
-        : null;
-
-      // Surface a non-blocking notice if a secondary panel failed to load, instead of silently
-      // showing it empty (which reads as "no data").
-      const failed: string[] = [];
-      if (!sectorRes.ok) failed.push('sector gaps');
-      if (!skillRes.ok) failed.push('skill levels');
-      if (!occRes.ok) failed.push('training gaps');
-      if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
-
-      setData({
-        dashboard: dashJson?.dashboard ?? null,
-        sectorItems: sectorJson?.items ?? [],
-        skillItems: skillJson?.items ?? [],
-        occupationItems: occJson?.items ?? [],
-        profile: profileJson?.profile ?? null,
-      });
-      setWarning(failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null);
+      const { data: loaded, warning: warn } = await loadWorkforceData(signal);
+      if (isAborted(signal)) return;
+      setData(loaded);
+      setWarning(warn);
     } catch (e: unknown) {
-      if (signal?.aborted) return;
+      if (isAborted(signal)) return;
       setError(e instanceof Error ? e.message : 'Failed to load workforce data.');
     } finally {
-      if (!signal?.aborted && initial) {
+      if (!isAborted(signal) && initial) {
         setLoading(false);
       }
     }
@@ -366,7 +421,11 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     return (
       <div className="ctf-self-responsive" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, gap: 8, padding: '10px 14px' }}>
             <BackChevronButton accent={t.ACCENT} />
             <BarChart2 size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}

@@ -25,7 +25,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
     return NextResponse.json({ ok: false, message: 'Match not found or access denied' }, { status: 404 });
   }
 
-  // Chat exists only for accepted matches. A pending/rejected/cancelled/completed match must not
+  // Chat exists only for accepted matches. A pending/rejected/canceled/completed match must not
   // be able to provision a live Stream channel or token.
   if (match.status !== 'accepted') {
     return NextResponse.json(

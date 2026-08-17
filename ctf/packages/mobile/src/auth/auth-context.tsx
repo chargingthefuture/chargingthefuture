@@ -6,26 +6,28 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { Alert } from 'react-native';
-import Constants from 'expo-constants';
-import * as WebBrowser from 'expo-web-browser';
+} from "react";
+import { Alert } from "react-native";
+import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
 import {
   exchangeCodeAsync,
   makeRedirectUri,
   refreshAsync,
   useAuthRequest,
   type DiscoveryDocument,
-} from 'expo-auth-session';
-import { registerAuthTokenGetter } from './authedFetch';
-import { getClerkOAuthClientId, getClerkOAuthEndpoints } from './clerkOAuth';
+  type TokenResponse,
+} from "expo-auth-session";
+import { registerAuthTokenGetter } from "./authedFetch";
+import { getClerkOAuthClientId, getClerkOAuthEndpoints } from "./clerkOAuth";
 import {
   clearStoredSession,
   loadStoredSession,
   saveStoredSession,
   type StoredSession,
-} from './sessionStore';
-import { decodeJwtClaims } from './jwt';
+} from "./sessionStore";
+import { decodeJwtClaims } from "./jwt";
+import { reportError } from '../observability/report';
 
 // Lets the OAuth browser tab hand control back to the app.
 WebBrowser.maybeCompleteAuthSession();
@@ -66,34 +68,86 @@ function getRuntimeConfig(): RuntimeConfig {
 
 // OpenID Connect scopes: `openid` is required to receive an id_token; `profile`
 // and `email` ask Clerk to include the standard profile/email claims.
-const OAUTH_SCOPES = ['openid', 'profile', 'email'];
+const OAUTH_SCOPES = ["openid", "profile", "email"];
+
+function resolveMetadata(claims: Record<string, unknown>): Record<string, unknown> {
+  return (
+    (claims.metadata as Record<string, unknown> | undefined) ??
+    (claims.public_metadata as Record<string, unknown> | undefined) ??
+    {}
+  );
+}
+
+function resolveRole(
+  claims: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): string | null {
+  const rawRole =
+    (typeof claims.role === "string" ? claims.role : undefined) ??
+    (typeof metadata.role === "string" ? metadata.role : undefined);
+  return rawRole ? rawRole.toLowerCase() : null;
+}
+
+function resolveUsername(
+  claims: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): string | null {
+  return (
+    (typeof claims.username === "string" ? claims.username : null) ??
+    (typeof metadata.username === "string" ? (metadata.username as string) : null)
+  );
+}
+
+function resolveApproved(
+  claims: Record<string, unknown>,
+  metadata: Record<string, unknown>,
+): boolean {
+  const approved = claims.is_approved ?? metadata.is_approved ?? metadata.isApproved;
+  return typeof approved === "boolean"
+    ? approved
+    : ["1", "true", "yes", "approved"].includes(String(approved ?? "").toLowerCase());
+}
 
 function deriveUserFromClaims(claims: Record<string, unknown> | null): AuthUser | null {
   if (!claims) return null;
-  const sub = typeof claims.sub === 'string' ? claims.sub : null;
+  const sub = typeof claims.sub === "string" ? claims.sub : null;
   if (!sub) return null;
-  const metadata =
-    (claims.metadata as Record<string, unknown> | undefined) ??
-    (claims.public_metadata as Record<string, unknown> | undefined) ??
-    {};
-  const rawRole =
-    (typeof claims.role === 'string' ? claims.role : undefined) ??
-    (typeof metadata.role === 'string' ? metadata.role : undefined);
-  const role = rawRole ? rawRole.toLowerCase() : null;
-  const approved = claims.is_approved ?? metadata.is_approved ?? metadata.isApproved;
+  const metadata = resolveMetadata(claims);
+  const role = resolveRole(claims, metadata);
   return {
     id: sub,
-    username:
-      (typeof claims.username === 'string' ? claims.username : null) ??
-      (typeof metadata.username === 'string' ? (metadata.username as string) : null),
-    email: typeof claims.email === 'string' ? claims.email : null,
+    username: resolveUsername(claims, metadata),
+    email: typeof claims.email === "string" ? claims.email : null,
     role,
-    isAdmin: role === 'admin',
-    isApproved:
-      typeof approved === 'boolean'
-        ? approved
-        : ['1', 'true', 'yes', 'approved'].includes(String(approved ?? '').toLowerCase()),
-    provider: getRuntimeConfig().authProvider ?? 'clerk',
+    isAdmin: role === "admin",
+    isApproved: resolveApproved(claims, metadata),
+    provider: getRuntimeConfig().authProvider ?? "clerk",
+  };
+}
+
+// Build a refreshed StoredSession from a token refresh response, preserving the
+// previous session's values wherever the refresh did not return a new one.
+function buildRefreshedSession(refreshed: TokenResponse, current: StoredSession): StoredSession {
+  return {
+    idToken: refreshed.idToken ?? current.idToken,
+    refreshToken: refreshed.refreshToken ?? current.refreshToken,
+    expiresAt:
+      typeof refreshed.expiresIn === "number"
+        ? Date.now() + refreshed.expiresIn * 1000
+        : current.expiresAt,
+  };
+}
+
+// Build a StoredSession from a fresh code-exchange token response. `idToken` is
+// passed in already narrowed to a non-null string by the caller's guard.
+function buildStoredSession(idToken: string, tokenResponse: TokenResponse): StoredSession {
+  return {
+    idToken,
+    refreshToken: tokenResponse.refreshToken ?? null,
+    expiresAt:
+      typeof tokenResponse.expiresIn === "number"
+        ? Date.now() + tokenResponse.expiresIn * 1000
+        : null,
   };
 }
 
@@ -126,10 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // The redirect URI the browser returns to. Uses the app scheme (ctf://) in a
   // standalone build and an Expo proxy URL in Expo Go; register both on the
   // Clerk OAuth application.
-  const redirectUri = useMemo(
-    () => makeRedirectUri({ scheme: 'ctf', path: 'oauth-callback' }),
-    [],
-  );
+  const redirectUri = useMemo(() => makeRedirectUri({ scheme: "ctf", path: "oauth-callback" }), []);
 
   const [session, setSession] = useState<StoredSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,26 +189,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [request, , promptAsync] = useAuthRequest(
     {
-      clientId: clientId ?? 'missing-client-id',
+      clientId: clientId ?? "missing-client-id",
       scopes: OAUTH_SCOPES,
       redirectUri,
       usePKCE: true,
     },
-    discovery ?? { authorizationEndpoint: '', tokenEndpoint: '' },
+    discovery ?? { authorizationEndpoint: "", tokenEndpoint: "" },
   );
 
   // Restore any previously stored session on launch.
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     (async () => {
       const stored = await loadStoredSession();
-      if (!cancelled) {
+      if (!canceled) {
         setSession(stored);
         setIsLoading(false);
       }
     })();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 
@@ -177,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!current) return null;
     const skewMs = 30_000;
     const stillValid =
-      typeof current.expiresAt !== 'number' || current.expiresAt - skewMs > Date.now();
+      typeof current.expiresAt !== "number" || current.expiresAt - skewMs > Date.now();
     if (stillValid) return current.idToken;
 
     if (!current.refreshToken || !discovery || !clientId) {
@@ -190,17 +241,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         { clientId, refreshToken: current.refreshToken, scopes: OAUTH_SCOPES },
         discovery,
       );
-      const next: StoredSession = {
-        idToken: refreshed.idToken ?? current.idToken,
-        refreshToken: refreshed.refreshToken ?? current.refreshToken,
-        expiresAt:
-          typeof refreshed.expiresIn === 'number'
-            ? Date.now() + refreshed.expiresIn * 1000
-            : current.expiresAt,
-      };
+      const next = buildRefreshedSession(refreshed, current);
       await persistSession(next);
       return next.idToken;
-    } catch {
+    } catch (caught) {
+      // A failed refresh signs the member out, so the reason must not vanish with it.
+      reportError(caught, { area: 'auth', op: 'refresh_session' });
       await persistSession(null);
       return null;
     }
@@ -220,14 +266,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleSignIn = useCallback(async () => {
     if (!discovery || !clientId || !request) {
       Alert.alert(
-        'Sign in not configured',
-        'Set NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY and EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID, and register the Clerk OAuth application, to enable sign-in.',
+        "Sign in not configured",
+        "Set NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY and EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID, and register the Clerk OAuth application, to enable sign-in.",
       );
       return;
     }
     try {
       const result = await promptAsync();
-      if (result.type !== 'success' || !result.params.code) {
+      if (result.type !== "success" || !result.params.code) {
         return;
       }
       const tokenResponse = await exchangeCodeAsync(
@@ -235,26 +281,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           clientId,
           code: result.params.code,
           redirectUri,
-          extraParams: request.codeVerifier
-            ? { code_verifier: request.codeVerifier }
-            : undefined,
+          extraParams: request.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
         },
         discovery,
       );
       if (!tokenResponse.idToken) {
-        Alert.alert('Sign in failed', 'No id token was returned by the sign-in server.');
+        Alert.alert("Sign in failed", "No id token was returned by the sign-in server.");
         return;
       }
-      await persistSession({
-        idToken: tokenResponse.idToken,
-        refreshToken: tokenResponse.refreshToken ?? null,
-        expiresAt:
-          typeof tokenResponse.expiresIn === 'number'
-            ? Date.now() + tokenResponse.expiresIn * 1000
-            : null,
-      });
-    } catch {
-      Alert.alert('Sign in failed', 'Could not complete sign-in. Please try again.');
+      await persistSession(buildStoredSession(tokenResponse.idToken, tokenResponse));
+    } catch (caught) {
+      reportError(caught, { area: 'auth', op: 'sign_in' });
+      Alert.alert("Sign in failed", "Could not complete sign-in. Please try again.");
     }
   }, [clientId, discovery, persistSession, promptAsync, redirectUri, request]);
 
@@ -267,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
-        provider: user?.provider ?? getRuntimeConfig().authProvider ?? 'clerk',
+        provider: user?.provider ?? getRuntimeConfig().authProvider ?? "clerk",
         isLoading,
         isAuthenticated: Boolean(session && user),
         getToken,
@@ -283,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

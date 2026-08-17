@@ -16,7 +16,84 @@ import {
   type TreasuryFeeResponse,
 } from './sca-shared';
 import { useTheme } from '@/hooks/useTheme';
-import { getServiceCreditsTokens } from './sc-shared';
+import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
+import { reasonText } from 'lib/errors/client-failure';
+
+// Fee collection is ready once both members, a finite positive amount, a reason code, and an
+// origin plugin are supplied.
+function isFeeReady(
+  sourceUserId: string,
+  treasuryUserId: string,
+  fee: number,
+  feeReasonCode: string,
+  originPlugin: string,
+): boolean {
+  return (
+    Boolean(sourceUserId.trim()) &&
+    Boolean(treasuryUserId.trim()) &&
+    Number.isFinite(fee) &&
+    fee > 0 &&
+    Boolean(feeReasonCode.trim()) &&
+    Boolean(originPlugin.trim())
+  );
+}
+
+// The treasury-policy editor: a loading note, else the JSON textarea plus its parse error and save.
+function TreasuryPolicyEditor({
+  loading,
+  policyText,
+  policyError,
+  busy,
+  onPolicyTextChange,
+  onSave,
+  t,
+}: {
+  loading: boolean;
+  policyText: string;
+  policyError: string | null;
+  busy: boolean;
+  onPolicyTextChange: (value: string) => void;
+  onSave: () => void;
+  t: ServiceCreditsTokens;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>Treasury policy</h3>
+      {loading ? (
+        <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>Loading…</p>
+      ) : (
+        <>
+          <textarea
+            style={{
+              height: 192,
+              width: '100%',
+              boxSizing: 'border-box',
+              borderRadius: 8,
+              border: `1px solid ${t.BORDER_SOLID}`,
+              background: t.BG,
+              color: t.TITLE,
+              padding: '9px 12px',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: 12,
+              outline: 'none',
+              resize: 'vertical',
+            }}
+            value={policyText}
+            spellCheck={false}
+            onChange={(event) => onPolicyTextChange(event.target.value)}
+          />
+          {policyError ? <p style={{ fontSize: 11, color: '#FCA5A5', margin: 0 }}>{policyError}</p> : null}
+          <ConfirmAction
+            label="Save policy"
+            busy={busy}
+            onConfirm={onSave}
+            summary="Replace the stored treasury policy with the JSON above. This overwrites the whole policy object."
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 export function ServiceCreditsTreasuryPanel() {
   const { theme } = useTheme();
@@ -65,8 +142,8 @@ export function ServiceCreditsTreasuryPanel() {
       }
       setPolicyError(null);
       return parsed as Record<string, unknown>;
-    } catch {
-      setPolicyError('Policy is not valid JSON.');
+    } catch (caught) {
+      setPolicyError(`Policy is not valid JSON: ${reasonText(caught)}`);
       return null;
     }
   }
@@ -88,8 +165,7 @@ export function ServiceCreditsTreasuryPanel() {
   }
 
   const fee = Number(feeAmount);
-  const feeReady =
-    sourceUserId.trim() && treasuryUserId.trim() && Number.isFinite(fee) && fee > 0 && feeReasonCode.trim() && originPlugin.trim();
+  const feeReady = isFeeReady(sourceUserId, treasuryUserId, fee, feeReasonCode, originPlugin);
 
   async function collectFee() {
     setBusy('fee');
@@ -138,44 +214,18 @@ export function ServiceCreditsTreasuryPanel() {
 
       <Feedback error={error} notice={notice} />
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>Treasury policy</h3>
-        {loading ? (
-          <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>Loading…</p>
-        ) : (
-          <>
-            <textarea
-              style={{
-                height: 192,
-                width: '100%',
-                boxSizing: 'border-box',
-                borderRadius: 8,
-                border: `1px solid ${t.BORDER_SOLID}`,
-                background: t.BG,
-                color: t.TITLE,
-                padding: '9px 12px',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                fontSize: 12,
-                outline: 'none',
-                resize: 'vertical',
-              }}
-              value={policyText}
-              spellCheck={false}
-              onChange={(event) => {
-                setPolicyText(event.target.value);
-                setPolicyError(null);
-              }}
-            />
-            {policyError ? <p style={{ fontSize: 11, color: '#FCA5A5', margin: 0 }}>{policyError}</p> : null}
-            <ConfirmAction
-              label="Save policy"
-              busy={busy === 'policy'}
-              onConfirm={() => void savePolicy()}
-              summary="Replace the stored treasury policy with the JSON above. This overwrites the whole policy object."
-            />
-          </>
-        )}
-      </div>
+      <TreasuryPolicyEditor
+        loading={loading}
+        policyText={policyText}
+        policyError={policyError}
+        busy={busy === 'policy'}
+        onPolicyTextChange={(value) => {
+          setPolicyText(value);
+          setPolicyError(null);
+        }}
+        onSave={() => void savePolicy()}
+        t={t}
+      />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: `1px solid ${t.BORDER_SOLID}`, paddingTop: 16 }}>
         <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>Collect fee</h3>

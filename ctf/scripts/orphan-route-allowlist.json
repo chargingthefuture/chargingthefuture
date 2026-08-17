@@ -1,0 +1,452 @@
+{
+  "_README": [
+    "Allowlist for check-orphan-routes.mjs.",
+    "",
+    "Two kinds of entry, and the difference matters:",
+    "",
+    "  \"external\" \u2014 genuinely called from outside this repository (a provider webhook, an uptime",
+    "  check, an embed on another site). These are permanent and correct. The reason MUST name who",
+    "  calls it.",
+    "",
+    "  \"baseline\" \u2014 a route that already had no caller when this gate was introduced on 2026-07-30.",
+    "  These are NOT approved; they are a burn-down list. Each is either a capability that was never",
+    "  wired up (fix it) or dead code (delete it, and its inventory entry with it). This list should",
+    "  only ever shrink.",
+    "",
+    "Never add a NEW route here to silence the gate. A new route with no caller means either the",
+    "feature is unfinished or the route should not exist. Both are worth failing the build over \u2014",
+    "that is the whole point of the gate."
+  ],
+  "routes": [
+    {
+      "route": "/api/account/skills-hunt-profile",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/admin/account-restrictions/audit",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/admin/account-restrictions/restrict",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/admin/account-restrictions/unrestrict",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/admin/[announcementId]/archive",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/admin/[announcementId]/publish",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/admin/drafts/[draftId]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/admin/drafts",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/admin/targeting/validate",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements/membership/events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/announcements",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/beacon/stream-webhook",
+      "kind": "external",
+      "reason": "Called by GetStream. Delivers Stream chat/video events for Beacon."
+    },
+    {
+      "route": "/api/comic/admin/ai-status",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/comic/training/export",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/directory/admin/announcements/[id]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/directory/admin/announcements",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/directory/admin/skills",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/directory/announcements",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/admin/config",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/admin/questions/[questionId]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/admin/questions/export",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/answers/[answerId]/rate",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/community/posts/[postId]/reply",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/community/posts",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/config",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/items/[itemId]/dismiss",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/items/[itemId]/read",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/items",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/membership/events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/questions/[questionId]/answer",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/feed/questions",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/admin/audit-events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/admin/rate-limits/evaluate",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/connections/history",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/notifications/[notificationEventId]/ack",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/notifications/preferences",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/notifications",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/foundation/service-credits",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/health",
+      "kind": "external",
+      "reason": "Called by the host platform uptime check, not by app code."
+    },
+    {
+      "route": "/api/level-up/cohorts/[cohortId]/claim-trainer",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/level-up/disputes/[disputeId]/resolve",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/level-up/disputes",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/level-up/milestones/[milestoneId]/release",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/level-up/milestones/[milestoneId]/validate",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/level-up/transfers",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/audit-events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/hosts",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/matches",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/profiles",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/properties",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/seekers",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/admin/stats",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/lighthouse/service-credits",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/notifications/push/unsubscribe",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/peer-programming/messages/[messageId]/replies",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/plugin/policy-probe",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/questions/stream",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/service-credits/disputes",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/service-credits/escrows/[escrowId]/refund",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/service-credits/escrows/[escrowId]/release",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/service-credits/escrows",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-hunt/admin/audit-events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-hunt/admin/notifications/round-ending-soon",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-hunt/submissions/[submissionId]/report",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/dependency-impact",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/flattened",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/hierarchy",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/job-titles/[id]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/job-titles",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/sectors/[id]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/sectors",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/skills/[id]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/skills-taxonomy/admin/skills",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/socket-relay/admin/fulfillments",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/socket-relay/admin/requests",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/socket-relay/profile",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/socket-relay/service-credits",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/trust/signal/snapshot",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/trust-transport/admin/audit-events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/trust-transport/admin/incidents",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/trust-transport/service-credits",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/unlock/admin/experiment-split",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/webhooks/clerk",
+      "kind": "external",
+      "reason": "Called by Clerk, not by this app. Auth provider posts user lifecycle events here."
+    },
+    {
+      "route": "/api/weekly-performance/admin/week-selection",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/weekly-performance/weeks/[weekStart]",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/workforce/admin/audit-events",
+      "kind": "baseline",
+      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    }
+  ]
+}

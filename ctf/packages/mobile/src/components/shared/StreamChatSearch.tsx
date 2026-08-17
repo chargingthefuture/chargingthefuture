@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
+import { reportError } from '../../observability/report';
 
 // One in-channel search result row: enough to show who said what and when.
 interface SearchHit {
@@ -91,7 +92,8 @@ export const StreamChatSearch: React.FC<StreamChatSearchProps> = ({
       });
       setHits(next);
       setSearched(true);
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'chyme', op: 'chat_search' });
       setHits([]);
       setSearched(true);
       setFailed(true);

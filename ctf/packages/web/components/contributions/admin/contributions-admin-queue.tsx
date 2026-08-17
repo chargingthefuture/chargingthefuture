@@ -48,6 +48,152 @@ function inputStyle(t: ContributionsTokens, width?: number | string): React.CSSP
   };
 }
 
+function initialUrl(row: ContributionSubmissionAdminView): string {
+  return row.quoraPostUrl ?? row.githubProfileUrl ?? '';
+}
+
+function initialConfirmedValue(
+  row: ContributionSubmissionAdminView,
+  config: ContributionsRuntimeConfig | null,
+  isGiftCard: boolean,
+): string {
+  if (row.confirmedAmountUsd != null) {
+    return String(row.confirmedAmountUsd);
+  }
+  if (isGiftCard) {
+    return String(row.claimedAmountUsd ?? '');
+  }
+  return String(config?.nonMonetaryUnitValueUsd ?? 1);
+}
+
+function resultingCredits(confirmedValue: string, config: ContributionsRuntimeConfig | null): number {
+  const creditsPerUsd = config?.creditsPerUsd ?? 10;
+  const numericValue = Number(confirmedValue);
+  return Number.isFinite(numericValue) ? Math.round(numericValue * creditsPerUsd) : 0;
+}
+
+function ReviewUrlField({
+  t,
+  row,
+  urlField,
+  setUrlField,
+  isPending,
+}: {
+  t: ContributionsTokens;
+  row: ContributionSubmissionAdminView;
+  urlField: string;
+  setUrlField: (value: string) => void;
+  isPending: boolean;
+}) {
+  const isQuora = row.kind === 'quora_comment';
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>
+        {isQuora ? 'Quora post URL (editable — paste from notifications)' : 'GitHub profile URL (editable — paste from notifications)'}
+      </label>
+      <input
+        value={urlField}
+        onChange={(e) => setUrlField(e.target.value)}
+        placeholder={isQuora ? 'https://quora.com/…' : 'https://github.com/…'}
+        disabled={!isPending}
+        style={inputStyle(t, 400)}
+      />
+    </div>
+  );
+}
+
+function ConfirmedValueRow({
+  t,
+  confirmedValue,
+  setConfirmedValue,
+  resultingSc,
+  isPending,
+  isGiftCard,
+}: {
+  t: ContributionsTokens;
+  confirmedValue: string;
+  setConfirmedValue: (value: string) => void;
+  resultingSc: number;
+  isPending: boolean;
+  isGiftCard: boolean;
+}) {
+  // Gift cards are whole dollars, 1 to 500, and the server rejects anything else — so say the rule
+  // here rather than letting the admin find it on submit. A comment or star has no such rule: the
+  // field carries the configured USD-equivalent, which is free to be fractional.
+  return (
+    <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <label htmlFor="contrib-q-confirmed-value" style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>
+        {isGiftCard ? 'Confirmed value (whole USD, 1–500)' : 'Confirmed value (USD)'}
+      </label>
+      <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode={isGiftCard ? 'numeric' : 'decimal'} disabled={!isPending} style={inputStyle(t, 80)} />
+      <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (credits granted automatically, subject to per-cycle cap)</span>
+    </div>
+  );
+}
+
+function ReviewNoteRow({
+  t,
+  note,
+  setNote,
+  isPending,
+}: {
+  t: ContributionsTokens;
+  note: string;
+  setNote: (value: string) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label htmlFor="contrib-q-note" style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>Note (optional)</label>
+      <input id="contrib-q-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note…" disabled={!isPending} style={inputStyle(t, 400)} />
+    </div>
+  );
+}
+
+function ReviewActions({
+  t,
+  row,
+  reviewing,
+  isPending,
+  confirm,
+  reject,
+}: {
+  t: ContributionsTokens;
+  row: ContributionSubmissionAdminView;
+  reviewing: boolean;
+  isPending: boolean;
+  confirm: () => void;
+  reject: () => void;
+}) {
+  if (!isPending) {
+    return (
+      <div style={{ fontSize: 12, color: t.MUTED }}>
+        Already reviewed{row.reviewNote ? ` — ${row.reviewNote}` : ''}.
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      <button
+        type="button"
+        onClick={confirm}
+        disabled={reviewing}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: '#22C55E', border: 'none', color: '#000', fontSize: 12, fontWeight: 600, cursor: reviewing ? 'default' : 'pointer', opacity: reviewing ? 0.6 : 1 }}
+      >
+        <CheckCircle size={12} /> Confirm
+      </button>
+      <button
+        type="button"
+        onClick={reject}
+        disabled={reviewing}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: 'transparent', border: '1px solid #EF4444', color: '#EF4444', fontSize: 12, cursor: reviewing ? 'default' : 'pointer', opacity: reviewing ? 0.6 : 1 }}
+      >
+        <X size={12} /> Reject
+      </button>
+    </div>
+  );
+}
+
 function ReviewPanel({
   t,
   config,
@@ -63,15 +209,11 @@ function ReviewPanel({
 }) {
   const isGiftCard = row.kind === 'gift_card';
   const isUrlKind = row.kind === 'quora_comment' || row.kind === 'github_star';
-  const [urlField, setUrlField] = useState(row.quoraPostUrl ?? row.githubProfileUrl ?? '');
-  const [confirmedValue, setConfirmedValue] = useState(
-    String(row.confirmedAmountUsd ?? (isGiftCard ? (row.claimedAmountUsd ?? '') : config?.nonMonetaryUnitValueUsd ?? 1)),
-  );
+  const [urlField, setUrlField] = useState(initialUrl(row));
+  const [confirmedValue, setConfirmedValue] = useState(initialConfirmedValue(row, config, isGiftCard));
   const [note, setNote] = useState(row.reviewNote ?? '');
 
-  const creditsPerUsd = config?.creditsPerUsd ?? 10;
-  const numericValue = Number(confirmedValue);
-  const resultingSc = Number.isFinite(numericValue) ? Math.round(numericValue * creditsPerUsd) : 0;
+  const resultingSc = resultingCredits(confirmedValue, config);
   const isPending = row.status === 'pending';
 
   function confirm() {
@@ -90,52 +232,11 @@ function ReviewPanel({
   return (
     <div style={{ padding: '14px 24px 18px 36px', background: `${t.ACCENT}05`, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
       {isUrlKind && (
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>
-            {row.kind === 'quora_comment' ? 'Quora post URL (editable — paste from notifications)' : 'GitHub profile URL (editable — paste from notifications)'}
-          </label>
-          <input
-            value={urlField}
-            onChange={(e) => setUrlField(e.target.value)}
-            placeholder={row.kind === 'quora_comment' ? 'https://quora.com/…' : 'https://github.com/…'}
-            disabled={!isPending}
-            style={inputStyle(t, 400)}
-          />
-        </div>
+        <ReviewUrlField t={t} row={row} urlField={urlField} setUrlField={setUrlField} isPending={isPending} />
       )}
-      <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <label htmlFor="contrib-q-confirmed-value" style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>Confirmed value (USD)</label>
-        <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode="decimal" disabled={!isPending} style={inputStyle(t, 80)} />
-        <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (credits granted automatically, subject to per-cycle cap)</span>
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label htmlFor="contrib-q-note" style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>Note (optional)</label>
-        <input id="contrib-q-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Internal note…" disabled={!isPending} style={inputStyle(t, 400)} />
-      </div>
-      {isPending ? (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={confirm}
-            disabled={reviewing}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: '#22C55E', border: 'none', color: '#000', fontSize: 12, fontWeight: 600, cursor: reviewing ? 'default' : 'pointer', opacity: reviewing ? 0.6 : 1 }}
-          >
-            <CheckCircle size={12} /> Confirm
-          </button>
-          <button
-            type="button"
-            onClick={reject}
-            disabled={reviewing}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: 'transparent', border: '1px solid #EF4444', color: '#EF4444', fontSize: 12, cursor: reviewing ? 'default' : 'pointer', opacity: reviewing ? 0.6 : 1 }}
-          >
-            <X size={12} /> Reject
-          </button>
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, color: t.MUTED }}>
-          Already reviewed{row.reviewNote ? ` — ${row.reviewNote}` : ''}.
-        </div>
-      )}
+      <ConfirmedValueRow t={t} confirmedValue={confirmedValue} setConfirmedValue={setConfirmedValue} resultingSc={resultingSc} isPending={isPending} isGiftCard={isGiftCard} />
+      <ReviewNoteRow t={t} note={note} setNote={setNote} isPending={isPending} />
+      <ReviewActions t={t} row={row} reviewing={reviewing} isPending={isPending} confirm={confirm} reject={reject} />
     </div>
   );
 }

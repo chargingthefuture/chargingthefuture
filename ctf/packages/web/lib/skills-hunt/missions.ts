@@ -187,7 +187,31 @@ export async function recomputeMissionProgressForUser(
     [roundId, userId],
   );
 
-  const acceptedSubmissions = submissionsResult.rows.map((row) => ({
+  const acceptedSubmissions = submissionsResult.rows.map(mapAcceptedSubmission);
+
+  const newlyCompleted: SkillsHuntMissionWithProgress[] = [];
+
+  for (const mission of missions) {
+    const entry = await processMissionProgress(client, mission, userId, acceptedSubmissions);
+    if (entry) {
+      newlyCompleted.push(entry);
+    }
+  }
+
+  return { newlyCompleted };
+}
+
+type AcceptedSubmissionRow = {
+  skills: unknown;
+  claimed_professions: unknown;
+  score_breakdown: Record<string, unknown>;
+};
+
+// Maps one accepted-submission DB row into the shape the goal-type counters
+// consume. rareSkillBonus is read defensively from score_breakdown, which is
+// free-form JSON that may not carry the field.
+function mapAcceptedSubmission(row: AcceptedSubmissionRow): AcceptedSubmissionForMission {
+  return {
     skills: Array.isArray(row.skills) ? (row.skills as string[]) : [],
     claimedProfessions: Array.isArray(row.claimed_professions)
       ? (row.claimed_professions as string[])
@@ -198,48 +222,54 @@ export async function recomputeMissionProgressForUser(
       && typeof (row.score_breakdown as { rareSkillBonus?: unknown }).rareSkillBonus === 'number'
         ? ((row.score_breakdown as { rareSkillBonus: number }).rareSkillBonus)
         : 0,
-  }));
+  };
+}
 
-  const newlyCompleted: SkillsHuntMissionWithProgress[] = [];
+// Recomputes and upserts progress for a single mission. Returns the
+// mission-with-progress entry when this recompute crossed it from incomplete
+// to complete, otherwise null.
+async function processMissionProgress(
+  client: PoolClient,
+  mission: SkillsHuntMission,
+  userId: string,
+  acceptedSubmissions: AcceptedSubmissionForMission[],
+): Promise<SkillsHuntMissionWithProgress | null> {
+  const progressCount = computeProgressForMission(mission, acceptedSubmissions);
+  const previousResult = await client.query<SkillsHuntMissionProgressRow>(
+    `
+      SELECT id, mission_id, user_id, progress_count, completed_at,
+             bonus_credited_at, metadata, updated_at
+      FROM skills_hunt_mission_progress
+      WHERE mission_id = $1::uuid AND user_id = $2
+      LIMIT 1
+    `,
+    [mission.id, userId],
+  );
+  const previous = previousResult.rows[0] ? mapMissionProgress(previousResult.rows[0]) : null;
+  const wasCompleted = previous?.completedAtIso != null;
+  const isNowCompleted = progressCount >= mission.goalTarget;
+  const justCompleted = isNowCompleted && !wasCompleted;
+  const completedAtClause = justCompleted ? 'NOW()' : 'completed_at';
 
-  for (const mission of missions) {
-    const progressCount = computeProgressForMission(mission, acceptedSubmissions);
-    const previousResult = await client.query<SkillsHuntMissionProgressRow>(
-      `
-        SELECT id, mission_id, user_id, progress_count, completed_at,
-               bonus_credited_at, metadata, updated_at
-        FROM skills_hunt_mission_progress
-        WHERE mission_id = $1::uuid AND user_id = $2
-        LIMIT 1
-      `,
-      [mission.id, userId],
-    );
-    const previous = previousResult.rows[0] ? mapMissionProgress(previousResult.rows[0]) : null;
-    const wasCompleted = previous?.completedAtIso != null;
-    const isNowCompleted = progressCount >= mission.goalTarget;
-    const completedAtClause = isNowCompleted && !wasCompleted ? 'NOW()' : 'completed_at';
-
-    const upsertResult = await client.query<SkillsHuntMissionProgressRow>(
-      `
-        INSERT INTO skills_hunt_mission_progress
-          (mission_id, user_id, progress_count, completed_at, updated_at)
-        VALUES ($1::uuid, $2, $3, ${isNowCompleted && !wasCompleted ? 'NOW()' : 'NULL'}, NOW())
-        ON CONFLICT (mission_id, user_id) DO UPDATE
-          SET progress_count = EXCLUDED.progress_count,
-              completed_at = ${completedAtClause === 'NOW()' ? 'NOW()' : 'skills_hunt_mission_progress.completed_at'},
-              updated_at = NOW()
-        RETURNING id, mission_id, user_id, progress_count, completed_at,
-                  bonus_credited_at, metadata, updated_at
-      `,
-      [mission.id, userId, progressCount],
-    );
-    const updated = mapMissionProgress(upsertResult.rows[0]);
-    if (isNowCompleted && !wasCompleted) {
-      newlyCompleted.push({ ...mission, progress: updated });
-    }
+  const upsertResult = await client.query<SkillsHuntMissionProgressRow>(
+    `
+      INSERT INTO skills_hunt_mission_progress
+        (mission_id, user_id, progress_count, completed_at, updated_at)
+      VALUES ($1::uuid, $2, $3, ${justCompleted ? 'NOW()' : 'NULL'}, NOW())
+      ON CONFLICT (mission_id, user_id) DO UPDATE
+        SET progress_count = EXCLUDED.progress_count,
+            completed_at = ${completedAtClause === 'NOW()' ? 'NOW()' : 'skills_hunt_mission_progress.completed_at'},
+            updated_at = NOW()
+      RETURNING id, mission_id, user_id, progress_count, completed_at,
+                bonus_credited_at, metadata, updated_at
+    `,
+    [mission.id, userId, progressCount],
+  );
+  const updated = mapMissionProgress(upsertResult.rows[0]);
+  if (justCompleted) {
+    return { ...mission, progress: updated };
   }
-
-  return { newlyCompleted };
+  return null;
 }
 
 type AcceptedSubmissionForMission = {
@@ -393,23 +423,42 @@ export async function updateMission(
       WHERE id = $1::uuid
       RETURNING ${MISSION_RETURN_COLS}
     `,
-    [
-      missionId,
-      input.title?.trim() ?? null,
-      input.description !== undefined,
-      input.description !== undefined ? input.description?.trim() ?? null : null,
-      input.goalType ?? null,
-      input.goalTarget ?? null,
-      input.goalMetadata !== undefined ? JSON.stringify(input.goalMetadata) : null,
-      input.bonusPoints ?? null,
-      input.colorHex !== undefined,
-      input.colorHex !== undefined ? input.colorHex : null,
-      input.status ?? null,
-      input.displayOrder ?? null,
-      actorId,
-    ],
+    buildMissionUpdateParams(missionId, input, actorId),
   );
   return result.rows[0] ? mapMission(result.rows[0]) : null;
+}
+
+// Resolves the description update param: undefined means "leave unchanged"
+// (mapped to null, which the CASE guard skips); an explicit value or explicit
+// null is written through after trimming.
+function resolveDescriptionParam(input: MissionUpdateInput): string | null {
+  if (input.description === undefined) return null;
+  return input.description?.trim() ?? null;
+}
+
+// Builds the ordered param list for the updateMission UPDATE statement. Kept
+// separate so the many per-field null/provided resolutions don't inflate the
+// query function's complexity.
+function buildMissionUpdateParams(
+  missionId: string,
+  input: MissionUpdateInput,
+  actorId: string,
+): unknown[] {
+  return [
+    missionId,
+    input.title?.trim() ?? null,
+    input.description !== undefined,
+    resolveDescriptionParam(input),
+    input.goalType ?? null,
+    input.goalTarget ?? null,
+    input.goalMetadata !== undefined ? JSON.stringify(input.goalMetadata) : null,
+    input.bonusPoints ?? null,
+    input.colorHex !== undefined,
+    input.colorHex !== undefined ? input.colorHex : null,
+    input.status ?? null,
+    input.displayOrder ?? null,
+    actorId,
+  ];
 }
 
 // Soft-archive (status='archived'). Hard delete is intentionally not exposed —
@@ -423,21 +472,64 @@ export async function archiveMission(
   return updateMission(client, actorId, missionId, { status: 'archived' });
 }
 
-export function validateMissionCreateInput(input: MissionCreateInput): string | null {
+function validateRoundId(input: MissionCreateInput): string | null {
   if (!input.roundId || typeof input.roundId !== 'string') return 'roundId required';
+  return null;
+}
+
+function validateTitle(input: MissionCreateInput): string | null {
   if (!input.title || input.title.trim().length < 2 || input.title.length > 200) return 'title 2-200 chars required';
+  return null;
+}
+
+function validateDescription(input: MissionCreateInput): string | null {
   if (input.description && input.description.length > 1000) return 'description max 1000 chars';
+  return null;
+}
+
+function validateGoalType(input: MissionCreateInput): string | null {
   const validGoalTypes: SkillsHuntMissionGoalType[] = [
     'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors',
   ];
   if (!validGoalTypes.includes(input.goalType)) return 'invalid goalType';
+  return null;
+}
+
+function validateGoalTarget(input: MissionCreateInput): string | null {
   if (!Number.isInteger(input.goalTarget) || input.goalTarget <= 0) return 'goalTarget must be positive integer';
+  return null;
+}
+
+function validateSectorMetadata(input: MissionCreateInput): string | null {
   if (input.goalType === 'count_skills_in_sector') {
     const sector = input.goalMetadata?.sectorName;
     if (typeof sector !== 'string' || sector.trim().length === 0) return 'goalMetadata.sectorName required for count_skills_in_sector';
   }
+  return null;
+}
+
+function validateBonusPoints(input: MissionCreateInput): string | null {
   if (input.bonusPoints != null && (!Number.isInteger(input.bonusPoints) || input.bonusPoints < 0)) {
     return 'bonusPoints must be non-negative integer';
+  }
+  return null;
+}
+
+export function validateMissionCreateInput(input: MissionCreateInput): string | null {
+  // Field checks run in order; the first failure wins (behavior preserved from
+  // the original inline sequence).
+  const checks = [
+    validateRoundId,
+    validateTitle,
+    validateDescription,
+    validateGoalType,
+    validateGoalTarget,
+    validateSectorMetadata,
+    validateBonusPoints,
+  ];
+  for (const check of checks) {
+    const error = check(input);
+    if (error) return error;
   }
   return null;
 }

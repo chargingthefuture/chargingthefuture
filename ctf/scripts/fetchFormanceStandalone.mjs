@@ -65,7 +65,7 @@ async function main() {
     try {
       fetched.push(await fetchAndWriteRelativeFile(relativeFile));
     } catch {
-      // Keep going if upstream compose references optional files unavailable in raw path.
+      // no-trace: upstream compose references optional files that may not exist on the raw path.
     }
   }
 

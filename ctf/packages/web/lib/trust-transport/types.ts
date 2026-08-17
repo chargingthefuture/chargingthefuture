@@ -7,7 +7,7 @@ export type TrustTransportRequestStatus =
   | 'accepted'
   | 'in_progress'
   | 'completed'
-  | 'cancelled'
+  | 'canceled'
   | 'disputed'
   | 'emergency_frozen';
 
@@ -27,7 +27,7 @@ export type TrustTransportTripStatus =
   | 'picked_up'
   | 'delivered'
   | 'completed'
-  | 'cancelled'
+  | 'canceled'
   | 'disputed'
   | 'emergency_frozen';
 
@@ -43,6 +43,9 @@ export type TrustTransportRequestInput = {
   // 'BARTER', …) with a positive amount for priced types only; amount-less types carry null.
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the requester accepts for settling (split settlements) — a ride settled part in
+  // ServiceCredits and part in dollars names both, independent of the single listed price above.
+  acceptedCurrencies: string[];
 };
 
 export type TrustTransportRequest = {
@@ -58,6 +61,9 @@ export type TrustTransportRequest = {
   status: TrustTransportRequestStatus;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Every currency the requester accepts (split settlements), ServiceCredits first, from
+  // trust_transport_request_accepted_currencies.
+  acceptedCurrencies: string[];
   createdAtIso: string;
   updatedAtIso: string;
   // The trip id once an offer has been accepted for this request, otherwise null. Chat is keyed by
@@ -69,6 +75,10 @@ export type TrustTransportRequest = {
   // and settlement have actually happened. The UI uses this to know whether a completion confirmation is
   // still pending.
   tripStatus?: TrustTransportTripStatus | null;
+  // The member who accepted the request, present only once a trip exists. By then the two are already
+  // paired and talking on the Direct Line, so this reveals nothing new; it is carried so a finished ride
+  // can offer to record the arrangement as a regular one.
+  tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
 };
@@ -110,6 +120,8 @@ export type TrustTransportAvailableRequest = {
   mode: TrustTransportMode;
   priceCurrency: string | null;
   priceAmount: number | null;
+  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) whole.
+  acceptedCurrencies: string[];
   createdAtIso: string;
 };
 
@@ -129,7 +141,7 @@ export type TrustTransportTrip = {
   mode: TrustTransportMode;
   status: TrustTransportTripStatus;
   streamChannelId: string | null;
-  cancelledReason: string | null;
+  canceledReason: string | null;
   completedAtIso: string | null;
   // Mutual completion confirmation (owner decision, 2026-07-08): once a trip is "delivered", neither
   // party alone can complete it — completion (and settlement) fires only once both have confirmed.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
@@ -9,6 +9,7 @@ import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
+import { responseFailureText } from 'lib/errors/client-failure';
 import type {
   ChymeJoinResponse,
   ChymeMessage,
@@ -17,7 +18,13 @@ import type {
 
 export type ChymeRoomScope = 'main' | 'contributors';
 
-export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUser: CurrentUser; roomScope?: ChymeRoomScope }) {
+type ChymeTokens = ReturnType<typeof getChymeTokens>;
+
+// Everything ChymeLiveShell needs from the shell controller: the room/chat state, the derived
+// `locked` and `t` values, and the async handlers. Hoisted into a hook so the component itself stays
+// a thin render — the hooks below run in exactly the order they always have (state, ref, theme, then
+// the three effects), so hook ordering is unchanged.
+function useChymeShellState(roomScope: ChymeRoomScope) {
   const [room, setRoom] = useState<ChymeRoomResponse | null>(null);
   const [messages, setMessages] = useState<ChymeMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -61,7 +68,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
           return;
         }
         if (!roomRes.ok) {
-          throw new Error('Unable to load Chyme.');
+          throw new Error(await responseFailureText(roomRes, 'Unable to load Chyme.', 'member'));
         }
         const roomPayload = (await roomRes.json()) as ChymeRoomResponse;
         const messagePayload = await requestJson<{ roomKey: string; messages: ChymeMessage[] }>(
@@ -212,27 +219,159 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
     }
   }
 
-  if (locked) {
-    // Private room, member not eligible (or the channel isn't open yet). No-shaming: show the same
-    // "how it's earned" explainer the gated Commons chat uses, never a locked/absence state elsewhere.
-    return (
-      <div style={{ flex: 1, minHeight: 0, width: '100%', background: t.BG, color: t.TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
-        <div style={{ maxWidth: 420, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-          <WeaversBadge size={40} />
-          <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>Weavers of the Commons</div>
-          <div style={{ fontSize: 14, lineHeight: 1.6, color: t.FAINT }}>
-            This is a private audio room for consistent, broad contributors to the community — real
-            help, delivered over time. Anyone can earn it; when you do, the room opens here.
-          </div>
-          <Link
-            href="/apps/directory/weavers-of-the-commons"
-            style={{ marginTop: 4, fontSize: 14, fontWeight: 600, color: t.ACCENT, textDecoration: 'none' }}
-          >
-            How it&rsquo;s earned →
-          </Link>
+  return {
+    room,
+    messages,
+    draft,
+    loading,
+    sending,
+    joinState,
+    joinInfo,
+    error,
+    showChat,
+    refreshing,
+    locked,
+    messagesEndRef,
+    t,
+    setDraft,
+    setShowChat,
+    refreshRoomAndMessages,
+    handleSend,
+    handleEditMessage,
+    handleDeleteMessage,
+    handleLeave,
+    handleJoin,
+  };
+}
+
+// Private room, member not eligible (or the channel isn't open yet). No-shaming: show the same
+// "how it's earned" explainer the gated Commons chat uses, never a locked/absence state elsewhere.
+function ChymeLockedExplainer({ t }: { t: ChymeTokens }) {
+  return (
+    <div style={{ flex: 1, minHeight: 0, width: '100%', background: t.BG, color: t.TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+      <div style={{ maxWidth: 420, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        <WeaversBadge size={40} />
+        <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>Weavers of the Commons</div>
+        <div style={{ fontSize: 14, lineHeight: 1.6, color: t.FAINT }}>
+          This is a private audio room for consistent, broad contributors to the community — real
+          help, delivered over time. Anyone can earn it; when you do, the room opens here.
         </div>
+        <Link
+          href="/apps/directory/weavers-of-the-commons"
+          style={{ marginTop: 4, fontSize: 14, fontWeight: 600, color: t.ACCENT, textDecoration: 'none' }}
+        >
+          How it&rsquo;s earned →
+        </Link>
       </div>
-    );
+    </div>
+  );
+}
+
+function ChymeErrorBanner({ error }: { error: string }) {
+  return (
+    <div style={{ padding: '12px 24px', background: '#2b0b0b', border: `1px solid #7f1d1d`, color: '#fecaca', fontSize: 13, margin: 16, borderRadius: 12 }}>
+      {error}
+    </div>
+  );
+}
+
+// Shown when no room is active yet: the "Join a Room" call to action.
+function ChymeJoinRoomPrompt({ t }: { t: ChymeTokens }) {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+      <div style={{ width: 80, height: 80, borderRadius: 24, background: `${t.ACCENT}18`, border: `2px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Radio size={36} style={{ color: t.ACCENT }} />
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
+      <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
+        Select a live room to listen, speak, and connect with survivors worldwide. All rooms are members-only.
+      </div>
+    </div>
+  );
+}
+
+type ChymeShellContentProps = {
+  error: string | null;
+  room: ChymeRoomResponse | null;
+  loading: boolean;
+  t: ChymeTokens;
+  currentUser: CurrentUser;
+  showChat: boolean;
+  onToggleChat: () => void;
+  joinInfo: ChymeJoinResponse | null;
+  joinReady: boolean;
+  messages: ChymeMessage[];
+  draft: string;
+  onDraftChange: (value: string) => void;
+  onSend: () => void;
+  sending: boolean;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
+  onLeave: () => void;
+  roomScope: ChymeRoomScope;
+  onEditMessage: (messageId: string, text: string) => void;
+  onDeleteMessage: (messageId: string) => void;
+};
+
+// The main content column: error banner, the empty "Join a Room" prompt, or the live room view.
+function ChymeShellContent(props: ChymeShellContentProps) {
+  const { error, room, loading, t } = props;
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {error && <ChymeErrorBanner error={error} />}
+
+      {!room && !loading && <ChymeJoinRoomPrompt t={t} />}
+
+      {room && (
+        <ChymeRoomView
+          room={room}
+          currentUser={props.currentUser}
+          showChat={props.showChat}
+          onToggleChat={props.onToggleChat}
+          joinInfo={props.joinInfo}
+          joinReady={props.joinReady}
+          messages={props.messages}
+          draft={props.draft}
+          onDraftChange={props.onDraftChange}
+          onSend={props.onSend}
+          sending={props.sending}
+          messagesEndRef={props.messagesEndRef}
+          onLeave={props.onLeave}
+          roomScope={props.roomScope}
+          onEditMessage={props.onEditMessage}
+          onDeleteMessage={props.onDeleteMessage}
+        />
+      )}
+    </div>
+  );
+}
+
+export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUser: CurrentUser; roomScope?: ChymeRoomScope }) {
+  const {
+    room,
+    messages,
+    draft,
+    loading,
+    sending,
+    joinState,
+    joinInfo,
+    error,
+    showChat,
+    refreshing,
+    locked,
+    messagesEndRef,
+    t,
+    setDraft,
+    setShowChat,
+    refreshRoomAndMessages,
+    handleSend,
+    handleEditMessage,
+    handleDeleteMessage,
+    handleLeave,
+    handleJoin,
+  } = useChymeShellState(roomScope);
+
+  if (locked) {
+    return <ChymeLockedExplainer t={t} />;
   }
 
   return (
@@ -253,46 +392,27 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
           refreshing={refreshing}
         />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {error && (
-            <div style={{ padding: '12px 24px', background: '#2b0b0b', border: `1px solid #7f1d1d`, color: '#fecaca', fontSize: 13, margin: 16, borderRadius: 12 }}>
-              {error}
-            </div>
-          )}
-
-          {!room && !loading && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-              <div style={{ width: 80, height: 80, borderRadius: 24, background: `${t.ACCENT}18`, border: `2px solid ${t.ACCENT}35`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Radio size={36} style={{ color: t.ACCENT }} />
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
-              <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
-                Select a live room to listen, speak, and connect with survivors worldwide. All rooms are members-only.
-              </div>
-            </div>
-          )}
-
-          {room && (
-            <ChymeRoomView
-              room={room}
-              currentUser={currentUser}
-              showChat={showChat}
-              onToggleChat={() => setShowChat((s) => !s)}
-              joinInfo={joinInfo}
-              joinReady={joinState === 'ready'}
-              messages={messages}
-              draft={draft}
-              onDraftChange={setDraft}
-              onSend={() => void handleSend()}
-              sending={sending}
-              messagesEndRef={messagesEndRef}
-              onLeave={() => void handleLeave()}
-              roomScope={roomScope}
-              onEditMessage={handleEditMessage}
-              onDeleteMessage={(id) => void handleDeleteMessage(id)}
-            />
-          )}
-        </div>
+        <ChymeShellContent
+          error={error}
+          room={room}
+          loading={loading}
+          t={t}
+          currentUser={currentUser}
+          showChat={showChat}
+          onToggleChat={() => setShowChat((s) => !s)}
+          joinInfo={joinInfo}
+          joinReady={joinState === 'ready'}
+          messages={messages}
+          draft={draft}
+          onDraftChange={setDraft}
+          onSend={() => void handleSend()}
+          sending={sending}
+          messagesEndRef={messagesEndRef}
+          onLeave={() => void handleLeave()}
+          roomScope={roomScope}
+          onEditMessage={handleEditMessage}
+          onDeleteMessage={(id) => void handleDeleteMessage(id)}
+        />
       </div>
     </div>
   );

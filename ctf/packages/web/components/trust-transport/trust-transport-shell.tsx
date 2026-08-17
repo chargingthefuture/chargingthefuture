@@ -15,6 +15,32 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
+// Build the create-request body from the booking form. The API expects mode + title + details (both
+// required) and optional pickup/dropoff cities — not fromLocation/toLocation. Settlement: the chosen
+// value type (default Free) with an amount only for priced types, plus the accepted-currencies set
+// (split settlements — every currency the requester accepts, independent of the single price).
+function buildBookingBody(args: {
+  rideType: string;
+  pickup: string;
+  dropoff: string;
+  priceCurrency: string;
+  priceAmount: string;
+  acceptedCurrencies: string[];
+}) {
+  const modeLabel = args.rideType.charAt(0).toUpperCase() + args.rideType.slice(1);
+  const parsedAmount = Number(args.priceAmount);
+  return {
+    mode: args.rideType,
+    title: `${modeLabel}: ${args.pickup} → ${args.dropoff}`.slice(0, 160),
+    details: `Pickup: ${args.pickup}\nDrop-off: ${args.dropoff}`,
+    pickupCity: args.pickup,
+    dropoffCity: args.dropoff,
+    priceCurrency: args.priceCurrency || null,
+    priceAmount: Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : null,
+    acceptedCurrencies: args.acceptedCurrencies,
+  };
+}
+
 export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +56,9 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [priceCurrency, setPriceCurrency] = useState("FREE");
   const [priceAmount, setPriceAmount] = useState("");
   const [requiresAmount, setRequiresAmount] = useState(false);
+  // Split settlements: every currency the requester accepts, independent of the single settlement
+  // above (a ride settled part in ServiceCredits and part in dollars checks both).
+  const [acceptedCurrencies, setAcceptedCurrencies] = useState<string[]>([]);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<TripRequest | null>(null);
@@ -88,28 +117,12 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setSubmitting(true);
     setBookingError(null);
     try {
-      // The API expects mode + title + details (both required) and optional pickup/dropoff cities — not
-      // fromLocation/toLocation. Build a title/details from the pickup and destination the user typed,
-      // and send the x-ctf-csrf header every mutation requires (without it the request is denied 403).
-      const pickup = from.trim();
-      const dropoff = to.trim();
-      const modeLabel = rideType.charAt(0).toUpperCase() + rideType.slice(1);
+      // Body building lives in buildBookingBody; send the x-ctf-csrf header every mutation requires
+      // (without it the request is denied 403).
       const res = await fetch("/api/trust-transport/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({
-          mode: rideType,
-          title: `${modeLabel}: ${pickup} → ${dropoff}`.slice(0, 160),
-          details: `Pickup: ${pickup}\nDrop-off: ${dropoff}`,
-          pickupCity: pickup,
-          dropoffCity: dropoff,
-          // Chosen settlement (default Free); amount only for priced types (cleared for Free/Barter).
-          priceCurrency: priceCurrency || null,
-          priceAmount: (() => {
-            const n = Number(priceAmount);
-            return Number.isFinite(n) && n > 0 ? n : null;
-          })(),
-        }),
+        body: JSON.stringify(buildBookingBody({ rideType, pickup: from.trim(), dropoff: to.trim(), priceCurrency, priceAmount, acceptedCurrencies })),
       });
       if (!res.ok) throw new Error("Failed to create request");
       setBooked(true);
@@ -186,11 +199,15 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             if (!needs) setPriceAmount("");
           }}
           onPriceAmount={setPriceAmount}
+          acceptedCurrencies={acceptedCurrencies}
+          onToggleAcceptedCurrency={(code) =>
+            setAcceptedCurrencies((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]))
+          }
           bookingError={bookingError}
           booked={booked}
           submitting={submitting}
           onBook={() => void handleBook()}
-          onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); }}
+          onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); setAcceptedCurrencies([]); }}
         />
       )}
       {tab === "tracking" && (
@@ -222,7 +239,11 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 10, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />
             <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>TrustTransport</span>

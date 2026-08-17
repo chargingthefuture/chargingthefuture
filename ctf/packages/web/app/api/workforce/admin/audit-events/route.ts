@@ -4,6 +4,7 @@ import { WORKFORCE_ERROR_CODE } from 'lib/workforce/constants';
 import { listAdminAuditEvents, parsePaginationParams } from 'lib/workforce/repository';
 import { logWorkforceAudit, WORKFORCE_AUDIT_WORKSPACE } from 'lib/workforce/audit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export async function GET(request: Request) {
   const gate = await requireWorkforceAdminAccess();
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'admin_audit_events' });
     return NextResponse.json(
-      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: 'Unable to fetch audit events.' },
+      { ok: false, code: WORKFORCE_ERROR_CODE.persistenceUnavailable, message: `Unable to fetch audit events: ${failureReason(error)}` },
       { status: 503 },
     );
   }

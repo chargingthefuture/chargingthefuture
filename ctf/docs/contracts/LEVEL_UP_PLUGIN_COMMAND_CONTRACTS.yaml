@@ -87,6 +87,27 @@ contracts:
     idempotency: true
 
   - pluginId: level-up
+    command: enrollment.list
+    version: 1.0.0
+    description: >-
+      List the calling member's own cohort enrollments with a per-enrollment milestone tally.
+      Read-only and always scoped to the caller — it takes no user id and can return no one else's
+      enrollments.
+    inputSchema: {}
+    outputSchema:
+      enrollments:
+        type: array
+    dataAccess:
+      - level_up_enrollments
+      - level_up_cohorts
+      - level_up_trainers
+      - level_up_enrollment_milestone_escrows
+      - level_up_milestone_validations
+    purpose: training_enrollment_self_view
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: level-up
     command: milestone.validate
     version: 1.0.0
     description: Record trainer/admin validation for milestone completion.

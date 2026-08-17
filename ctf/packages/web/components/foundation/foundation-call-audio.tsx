@@ -11,7 +11,7 @@ import {
 } from "@stream-io/video-react-sdk";
 import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getFoundationTokens } from "./foundation-ui";
+import { getFoundationTokens, type FoundationTokens } from "./foundation-ui";
 import { reportError } from "@/lib/observability/report";
 
 // Audio-only 1:1 call room for Foundation "Connect now" (issue #808 task 3). Reuses the same Stream Video
@@ -50,7 +50,7 @@ export function FoundationCallAudio({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
     const videoClient = new StreamVideoClient({
       apiKey: credentials.streamApiKey,
       user: { id: credentials.streamUserId, name: credentials.displayName },
@@ -65,12 +65,12 @@ export function FoundationCallAudio({
         // can mute with the control below.
         try { await activeCall.camera.disable(); } catch { /* no camera to disable */ }
         try { await activeCall.microphone.enable(); } catch { /* no mic available */ }
-        if (cancelled) return;
+        if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
         setStatus("in-call");
       } catch (error) {
-        if (cancelled) return;
+        if (canceled) return;
         reportError(error, {
           area: "foundation",
           op: "instant_call_audio_join",
@@ -82,7 +82,7 @@ export function FoundationCallAudio({
     })();
 
     return () => {
-      cancelled = true;
+      canceled = true;
       void (async () => {
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
@@ -164,23 +164,7 @@ function CallShell({
 
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         {state === "in-call" && onToggleMute ? (
-          <button
-            type="button"
-            onClick={onToggleMute}
-            aria-label={muted ? "Unmute microphone" : "Mute microphone"}
-            aria-pressed={muted}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "11px 18px", borderRadius: 12,
-              background: muted ? t.BORDER : `${t.ACCENT}1A`,
-              border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : t.ACCENT + "40"}`,
-              color: muted ? t.SUBTLE : t.ACCENT,
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            {muted ? <MicOff size={16} /> : <Mic size={16} />}
-            <span>{muted ? "Muted" : "Mute"}</span>
-          </button>
+          <MuteButton muted={!!muted} onToggleMute={onToggleMute} t={t} />
         ) : null}
         <button
           type="button"
@@ -198,5 +182,36 @@ function CallShell({
         </button>
       </div>
     </div>
+  );
+}
+
+// The mute toggle, only shown in the in-call state.
+function MuteButton({
+  muted,
+  onToggleMute,
+  t,
+}: {
+  muted: boolean;
+  onToggleMute: () => void;
+  t: FoundationTokens;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggleMute}
+      aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+      aria-pressed={muted}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "11px 18px", borderRadius: 12,
+        background: muted ? t.BORDER : `${t.ACCENT}1A`,
+        border: `1px solid ${muted ? "rgba(255,255,255,0.12)" : t.ACCENT + "40"}`,
+        color: muted ? t.SUBTLE : t.ACCENT,
+        fontSize: 14, fontWeight: 600, cursor: "pointer",
+      }}
+    >
+      {muted ? <MicOff size={16} /> : <Mic size={16} />}
+      <span>{muted ? "Muted" : "Mute"}</span>
+    </button>
   );
 }

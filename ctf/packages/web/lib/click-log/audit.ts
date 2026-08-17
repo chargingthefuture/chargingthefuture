@@ -4,13 +4,19 @@ import { randomUUID } from 'crypto';
 // other plugins (mood/chyme/foundation): one structured line per allowed command,
 // emitted to the application log. The audit contract
 // (CLICK_LOG_PLUGIN_AUDIT_CONTRACTS.yaml) requires an audit event on every successful
-// allowed operation — click-log.incident.create, click-log.incident.list, and
-// click-log.incident.delete — so the route handlers call this after each success.
+// allowed operation — incident create/list/delete, the per-incident share toggle, the
+// preferences fetch/update, and the admin trends fetch — so the route handlers call
+// this after each success.
 
 type ClickLogCommand =
   | 'click-log.incident.create'
   | 'click-log.incident.list'
-  | 'click-log.incident.delete';
+  | 'click-log.incident.delete'
+  | 'click-log.incident.update'
+  | 'click-log.incident.share.set'
+  | 'click-log.preferences.fetch'
+  | 'click-log.preferences.update'
+  | 'click-log.trends.fetch';
 
 type ClickLogAuditEvent = {
   actorId: string;

@@ -65,6 +65,14 @@ function NumberField({
   );
 }
 
+// Pick the most specific error text the server returned, falling back to a status-based message.
+function resolveErrorMessage(
+  data: { message?: string; reason?: string; code?: string } | null,
+  status: number,
+): string {
+  return data?.message ?? data?.reason ?? data?.code ?? `Request failed (${status}).`;
+}
+
 async function adminMutate(
   url: string,
   method: 'PUT',
@@ -80,10 +88,117 @@ async function adminMutate(
       | { message?: string; reason?: string; code?: string; config?: WorkforceConfig }
       | null;
     if (res.ok) return { ok: true, config: data?.config };
-    return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
+    return { ok: false, message: resolveErrorMessage(data, res.status) };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
   }
+}
+
+type WorkforceAuditEventItem = {
+  id: string;
+  actorId: string;
+  command: string;
+  policyStatus: 'allow' | 'deny';
+  reason: string;
+  targetType: string;
+  targetId: string;
+  createdAtIso: string;
+};
+
+type AuditEventsResponseBody =
+  | { items?: WorkforceAuditEventItem[]; pagination?: { page: number; pageSize: number; total: number }; message?: string; reason?: string; code?: string }
+  | null;
+
+function parseAuditEventsPage(data: AuditEventsResponseBody, page: number): { ok: true; items: WorkforceAuditEventItem[]; hasMore: boolean } {
+  const items = data?.items ?? [];
+  const total = data?.pagination?.total ?? 0;
+  const pageSize = data?.pagination?.pageSize ?? items.length;
+  return { ok: true, items, hasMore: page * pageSize < total };
+}
+
+async function fetchAuditEventsPage(
+  page: number,
+): Promise<{ ok: true; items: WorkforceAuditEventItem[]; hasMore: boolean } | { ok: false; message: string }> {
+  try {
+    const res = await fetch(`/api/workforce/admin/audit-events?page=${page}`);
+    const data = (await res.json().catch(() => null)) as AuditEventsResponseBody;
+    if (!res.ok) {
+      return { ok: false, message: resolveErrorMessage(data, res.status) };
+    }
+    return parseAuditEventsPage(data, page);
+  } catch (err) {
+    return { ok: false, message: `Could not load the audit trail: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+// Read-only viewer over GET /api/workforce/admin/audit-events. Loaded on demand so the
+// snapshot/config screen stays light; every fetch is itself an audited admin action server-side.
+function AuditTrailPanel() {
+  const { theme } = useTheme();
+  const t = getWorkforceTokens(theme);
+  const [events, setEvents] = useState<WorkforceAuditEventItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadPage(nextPage: number) {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    const outcome = await fetchAuditEventsPage(nextPage);
+    if (!outcome.ok) {
+      setError(outcome.message);
+    } else {
+      setEvents((prev) => (nextPage === 1 ? outcome.items : [...prev, ...outcome.items]));
+      setPage(nextPage);
+      setHasMore(outcome.hasMore);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ padding: '16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Audit trail</div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 14 }}>
+        Every admin action on this plugin, newest first. Viewing the trail is itself recorded.
+      </div>
+
+      {error ? <div role="alert" style={{ marginBottom: 12, fontSize: 13, color: '#EF4444' }}>{error}</div> : null}
+
+      {events.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+          {events.map((event) => (
+            <div key={event.id} style={{ padding: '10px 12px', borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: t.TITLE }}>{event.command}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: event.policyStatus === 'allow' ? '#22C55E' : '#EF4444' }}>
+                  {event.policyStatus}
+                </span>
+                <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{new Date(event.createdAtIso).toLocaleString()}</span>
+              </div>
+              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 4 }}>
+                {event.reason} · record {event.targetType}/{event.targetId} · actor {event.actorId}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : page > 0 && !loading ? (
+        <div style={{ fontSize: 13, color: t.MUTED, marginBottom: 12 }}>No audit events recorded yet.</div>
+      ) : null}
+
+      {(page === 0 || hasMore) && (
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void loadPage(page + 1)}
+          style={{ padding: '9px 16px', borderRadius: 10, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
+        >
+          {loading ? 'Loading…' : page === 0 ? 'Load audit trail' : 'Load more'}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function WorkforceAdminShell({
@@ -150,7 +265,7 @@ export function WorkforceAdminShell({
         {/* Snapshot */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
           <StatBlock label="Workforce total" value={dashboard.workforceTotal} accent={t.ACCENT} />
-          <StatBlock label="Headcount target" value={dashboard.totalHeadcountTarget} accent="#EF4444" />
+          <StatBlock label="Headcount goal" value={dashboard.totalHeadcountTarget} accent="#EF4444" />
           <StatBlock label="Recruited" value={dashboard.recruitedTotal} accent="#22C55E" />
           <StatBlock label="Directory members" value={dashboard.totalMembers} />
         </div>
@@ -176,6 +291,8 @@ export function WorkforceAdminShell({
             {busy ? 'Saving…' : 'Save config'}
           </button>
         </div>
+
+        <AuditTrailPanel />
       </div>
     </div>
   );

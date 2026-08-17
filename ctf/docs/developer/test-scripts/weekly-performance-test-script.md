@@ -82,13 +82,19 @@ admits `admin` or the `operations` role, matching `requiredRoles: [admin, operat
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Read the week history (current week back through prior weeks) and the current week.
-2. Pick a week to review (web admin picker, or the History tab on Android).
+2. Scroll the list to the bottom and read the oldest week it offers.
+3. Pick a week to review (web admin picker, or the History tab on Android).
+4. Pick the oldest week — the launch week — and look for the comparison chart.
 **Expected:** Weeks use an ISO Monday start. The list is **continuous — it never skips a week**:
 every week from the current one back to the earliest tracked week (or a year, whichever is longer)
-appears, newest first, even for weeks with no activity (they read zero). Labels are a friendly range
-(e.g. "Jul 13–19, 2026") on desktop **and** the mobile-responsive week selector — never a raw ISO
-date. Picking a week shows that week's live metrics; the current week is marked **Live**. There is no
-"set active week" action and no per-week status.
+appears, newest first, even for weeks with no activity (they read zero). The list **stops at the
+launch week**: the oldest entry is "Jun 8–14, 2026" (the week containing the 12 June 2026 launch),
+and no earlier week — Apr or May 2026, or anything from 2025 — is offered on either the desktop
+sidebar or the mobile week selector. Labels are a friendly range (e.g. "Jul 13–19, 2026") on
+desktop **and** the mobile-responsive week selector — never a raw ISO date. Picking a week shows
+that week's live metrics; the current week is marked **Live**. The launch week shows its own
+numbers but no week-over-week comparison, since there is no earlier week to compare against. There
+is no "set active week" action and no per-week status.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A3 · Metrics and week-over-week comparison
@@ -102,10 +108,13 @@ date. Picking a week shows that week's live metrics; the current week is marked 
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
    USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, LevelUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters, Beacon engagement per unique broadcast); **Adoption** — Directory findable members, Mood
-   check-ins + average, ClickLog incidents + distinct loggers. There are NO login/engagement cards,
-   NO feed cards, NO LevelUp enrollments-started card, and nothing for GentlePulse or Skills
-   Taxonomy. No revenue/MRR/ARR/CLV.
+   posters, Beacon engagement per unique broadcast); **Adoption** — Daily Active Members, Directory
+   findable members, Mood check-ins + average, ClickLog incidents + distinct loggers. The Daily
+   Active Members card reads "N per day": the average number of distinct members active on a day of
+   the selected week, from `login_events`; on the current week it divides by the days of the week so
+   far, on a past week by the full 7. It is an aggregate — no member is ever named. There are NO
+   other login/engagement cards, NO feed cards, NO LevelUp enrollments-started card, and nothing for
+   GentlePulse or Skills Taxonomy. No revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
 3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab

@@ -34,14 +34,14 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
   useEffect(() => {
     if (!active || typeof document === 'undefined') return;
 
-    let cancelled = false;
+    let canceled = false;
 
     const acquire = async () => {
       const wl = getWakeLock();
       if (!wl || sentinelRef.current) return;
       try {
         const sentinel = await wl.request('screen');
-        if (cancelled) {
+        if (canceled) {
           void sentinel.release().catch(() => {});
           return;
         }
@@ -73,7 +73,7 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
     const mediaSession = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
     if (mediaSession && typeof MediaMetadata !== 'undefined') {
       try {
-        mediaSession.metadata = new MediaMetadata({ title, artist: 'Survivor Hub' });
+        mediaSession.metadata = new MediaMetadata({ title, artist: 'Skills Economy' });
         mediaSession.playbackState = 'playing';
       } catch {
         // Some browsers throw on unsupported metadata fields — ignore.
@@ -81,7 +81,7 @@ export function useAudioCallKeepAlive(active: boolean, title = 'Chyme audio room
     }
 
     return () => {
-      cancelled = true;
+      canceled = true;
       document.removeEventListener('visibilitychange', onVisibility);
       release();
       if (mediaSession) {

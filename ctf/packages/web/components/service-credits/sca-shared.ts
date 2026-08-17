@@ -7,6 +7,14 @@
 
 export type AdminMutationResult<T = unknown> = { ok: boolean; message?: string; data?: T };
 
+// The shape of a failed admin-mutation response body: a message/reason/code plus any extra fields.
+type ScErrorBody = { ok?: boolean; message?: string; reason?: string; code?: string } & Record<string, unknown>;
+
+// Pick the most specific human-readable message from a failed response, falling back to the status.
+function scErrorMessage(data: ScErrorBody | null, status: number): string {
+  return data?.message ?? data?.reason ?? data?.code ?? `Request failed (${status}).`;
+}
+
 // All admin mutations carry the CSRF confirmation header the API requires (x-ctf-csrf: '1').
 export async function scAdminMutate<T = unknown>(
   url: string,
@@ -19,16 +27,11 @@ export async function scAdminMutate<T = unknown>(
       headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
-    const data = (await res.json().catch(() => null)) as
-      | ({ ok?: boolean; message?: string; reason?: string; code?: string } & Record<string, unknown>)
-      | null;
+    const data = (await res.json().catch(() => null)) as ScErrorBody | null;
     if (res.ok) {
       return { ok: true, data: (data as T) ?? undefined };
     }
-    return {
-      ok: false,
-      message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).`,
-    };
+    return { ok: false, message: scErrorMessage(data, res.status) };
   } catch {
     return { ok: false, message: 'Network error. Try again.' };
   }
@@ -101,7 +104,7 @@ export type CreditLimitResponse = {
 };
 
 // Look-up view of a member's mutual-credit limit (the flat policy default or a per-account override)
-// and freeze state. No behavioural score — there is no credit/social score on this platform.
+// and freeze state. No behavioral score — there is no credit/social score on this platform.
 export type CreditLimitLookup = {
   targetUserId: string;
   creditLimit: number;

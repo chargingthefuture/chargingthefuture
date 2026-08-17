@@ -84,7 +84,7 @@ export function AccountDataDesktop({
           <Shield size={18} color={BRAND} />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: TEXT }}>Your Data &amp; Privacy</div>
-            <div style={{ fontSize: 12, color: SUBTLE }}>See and delete the data Survivor Hub holds across all services</div>
+            <div style={{ fontSize: 12, color: SUBTLE }}>See and delete the data Skills Economy holds across all services</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: SUBTLE, textTransform: 'uppercase' }}>Theme</span>
@@ -208,7 +208,7 @@ function EmptyState({ retained, tokens }: { retained: AccountService[]; tokens: 
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 8 }}>No personal data stored yet</div>
       <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7, maxWidth: 480, marginBottom: 28 }}>
-        As you use Survivor Hub apps, any personal data they hold will appear here — where you can see it and delete it on your own terms.
+        As you use Skills Economy apps, any personal data they hold will appear here — where you can see it and delete it on your own terms.
       </div>
       {retained.length > 0 ? (
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 16px', borderRadius: 12, background: `${BRAND}05`, border: `1px solid ${BRAND}15`, maxWidth: 560, width: '100%', textAlign: 'left' }}>
@@ -232,12 +232,12 @@ function DangerZone({ serviceCount, onOpenAccountDelete, tokens }: { serviceCoun
           <span style={{ fontSize: 16, fontWeight: 700, color: TEXT }}>Delete Entire Account</span>
         </div>
         <div style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.7, marginBottom: 16 }}>
-          This removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits balance is settled via the standard process — not silently destroyed. Some audit records are retained for platform integrity.
+          This removes your profile and all personal data across all {serviceCount} services. Your ServiceCredits are held for 7 days after the request, then returned to the community treasury — never silently destroyed, and never withdrawable externally. If any of your credits are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 18 }}>
           {([
             { t: `All personal data across ${serviceCount} services permanently deleted`, warn: true },
-            { t: 'ServiceCredits balance settled via standard process — not destroyed', warn: false },
+            { t: 'ServiceCredits: held 7 days, then returned to the community treasury (an active escrow resolves first)', warn: false },
             { t: 'Some audit records retained for platform integrity (by design)', warn: false },
             { t: 'Profile and username removed from all directories', warn: true },
           ]).map(({ t, warn }, i) => (

@@ -17,6 +17,94 @@ import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { failureText } from 'lib/errors/client-failure';
+
+/** GET a list endpoint and return its `items`; [] when the request fails or has no items. */
+async function fetchItems<T>(url: string): Promise<T[]> {
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = (await res.json()) as { items?: T[] };
+  return data.items ?? [];
+}
+
+function LighthouseTabContent({
+  tab,
+  visibleProperties,
+  properties,
+  currencyMap,
+  creditsCount,
+  saved,
+  matches,
+  selectedMatch,
+  chatLoading,
+  chatError,
+  chatCredentials,
+  username,
+  viewerUserId,
+  editPropertyId,
+  onToggleSave,
+  onSelectProperty,
+  onSelectMatch,
+  onEditHandled,
+}: {
+  tab: Tab;
+  visibleProperties: Property[];
+  properties: Property[];
+  currencyMap: CurrencyMap;
+  creditsCount: number;
+  saved: string[];
+  matches: Match[];
+  selectedMatch: Match | null;
+  chatLoading: boolean;
+  chatError: string | null;
+  chatCredentials: ChatCredentials | null;
+  username: string | null;
+  // Passed to the matches tab so an accepted match can offer to record the arrangement as ongoing,
+  // naming the other side of the match.
+  viewerUserId: string;
+  editPropertyId: string | null;
+  onToggleSave: (id: string) => void;
+  onSelectProperty: (property: Property) => void;
+  onSelectMatch: (match: Match | null) => void;
+  onEditHandled: () => void;
+}) {
+  return (
+    <>
+      {tab === "browse" && (
+        <LighthouseBrowse
+          properties={visibleProperties}
+          currencies={currencyMap}
+          totalCount={properties.length}
+          creditsCount={creditsCount}
+          saved={saved}
+          onToggleSave={onToggleSave}
+          onSelect={onSelectProperty}
+        />
+      )}
+      {tab === "matches" && (
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} />
+      )}
+      {tab === "chat" && (
+        <LighthouseChat
+          matches={matches}
+          selectedMatch={selectedMatch}
+          onSelectMatch={onSelectMatch}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          chatCredentials={chatCredentials}
+        />
+      )}
+      {tab === "profile" && <LighthouseSeekerProfile />}
+      {tab === "host" && (
+        <LighthouseHost
+          username={username}
+          editPropertyId={editPropertyId}
+          onEditHandled={onEditHandled}
+        />
+      )}
+    </>
+  );
+}
 
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -46,11 +134,9 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       // Browse shows all active public listings to seekers, so it reads the public listings
       // endpoint — not the current user's own listings. The Host tab loads the user's own
       // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
-      const browseRes = await fetch("/api/lighthouse/properties");
-      setProperties(browseRes.ok ? (await browseRes.json()).items ?? [] : []);
+      setProperties(await fetchItems<Property>("/api/lighthouse/properties"));
 
-      const matchRes = await fetch("/api/lighthouse/matches");
-      setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
+      setMatches(await fetchItems<Match>("/api/lighthouse/matches"));
 
       // Currency catalog, fetched once, so the card/detail can format rent in its own currency
       // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
@@ -59,8 +145,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
         const data = await currencyRes.json() as { currencies?: Currency[] };
         setCurrencies(Array.isArray(data.currencies) ? data.currencies : []);
       }
-    } catch {
-      setError("Failed to load LightHouse data.");
+    } catch (caught) {
+      setError(failureText(caught, { area: 'lighthouse', op: 'fetch_all', fallback: "Failed to load LightHouse data.", audience: 'member' }));
     } finally {
       if (initial) setLoading(false);
     }
@@ -129,6 +215,11 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
           setSelectedProperty(null);
           setTab("profile");
         }}
+        // Blocking the host hides their listings, so go back to browse and re-read the list.
+        onBlocked={() => {
+          setSelectedProperty(null);
+          void fetchAll();
+        }}
       />
     );
   }
@@ -145,40 +236,26 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
   }
 
   const content = (
-    <>
-      {tab === "browse" && (
-        <LighthouseBrowse
-          properties={visibleProperties}
-          currencies={currencyMap}
-          totalCount={properties.length}
-          creditsCount={creditsCount}
-          saved={saved}
-          onToggleSave={toggleSave}
-          onSelect={setSelectedProperty}
-        />
-      )}
-      {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={setSelectedProperty} />
-      )}
-      {tab === "chat" && (
-        <LighthouseChat
-          matches={matches}
-          selectedMatch={selectedMatch}
-          onSelectMatch={setSelectedMatch}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          chatCredentials={chatCredentials}
-        />
-      )}
-      {tab === "profile" && <LighthouseSeekerProfile />}
-      {tab === "host" && (
-        <LighthouseHost
-          username={username}
-          editPropertyId={editPropertyId}
-          onEditHandled={() => setEditPropertyId(null)}
-        />
-      )}
-    </>
+    <LighthouseTabContent
+      tab={tab}
+      visibleProperties={visibleProperties}
+      properties={properties}
+      currencyMap={currencyMap}
+      creditsCount={creditsCount}
+      saved={saved}
+      matches={matches}
+      selectedMatch={selectedMatch}
+      chatLoading={chatLoading}
+      chatError={chatError}
+      chatCredentials={chatCredentials}
+      username={username}
+      viewerUserId={userId}
+      editPropertyId={editPropertyId}
+      onToggleSave={toggleSave}
+      onSelectProperty={setSelectedProperty}
+      onSelectMatch={setSelectedMatch}
+      onEditHandled={() => setEditPropertyId(null)}
+    />
   );
 
     const tabs: { key: Tab; label: string }[] = [
@@ -196,7 +273,11 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 8, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <Home size={16} strokeWidth={1.75} style={{ color: t.ACCENT, flexShrink: 0 }} />

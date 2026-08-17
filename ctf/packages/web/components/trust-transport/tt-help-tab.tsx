@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { HandHeart, Loader2, Check, MessageCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getTrustTransportTokens, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
+import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 
 function modeLabel(mode: string | undefined): string {
@@ -25,6 +26,10 @@ function tripStatusLabel(s: string | undefined): string {
   if (s === "picked_up") return "Picked up";
   if (s === "emergency_frozen") return "Emergency stop";
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+}
+
+function tripRoute(trip: ProviderTrip): string {
+  return `${trip.pickupCity ?? "—"} → ${trip.dropoffCity ?? "—"}`;
 }
 
 const PROOF_TYPES: { key: "photo" | "code" | "note"; label: string; placeholder: string }[] = [
@@ -185,43 +190,76 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
   );
 }
 
+// The single "advance to the next status" button, shown while a trip is still on the happy path.
+function AdvanceButton({ trip, step, busyId, onAdvance }: { trip: ProviderTrip; step: { next: string; label: string }; busyId: string | null; onAdvance: (tripId: string, next: string) => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  return (
+    <button type="button" onClick={() => onAdvance(trip.tripId, step.next)} disabled={busyId !== null} style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== trip.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+      {busyId === trip.tripId ? <Loader2 size={14} className="ctf-spin" /> : <Check size={14} />} {step.label}
+    </button>
+  );
+}
+
+// The primary action area for a provider's trip: advance one step, confirm completion once delivered,
+// or a plain "no further action" line for terminal states.
+function TripActionArea({ trip, busyId, onAdvance, onConfirmed }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void; onConfirmed: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const step = NEXT_STEP[trip.status ?? ""];
+  if (step) {
+    return <AdvanceButton trip={trip} step={step} busyId={busyId} onAdvance={onAdvance} />;
+  }
+  if (trip.status === "delivered") {
+    return (
+      <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso ?? null} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso ?? null} onConfirmed={onConfirmed} />
+    );
+  }
+  return (
+    <div style={{ marginTop: 10, fontSize: 12, color: t.MUTED }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
+  );
+}
+
+// Pickup/delivery proof controls, hidden entirely on terminal trips.
+function ProofSection({ trip, proofOpen, proofDone, onOpen, onProofDone }: { trip: ProviderTrip; proofOpen: boolean; proofDone: boolean; onOpen: () => void; onProofDone: () => void }) {
+  const { theme } = useTheme();
+  const t = getTrustTransportTokens(theme);
+  const terminal = ["completed", "canceled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
+  if (terminal) return null;
+  if (proofDone) {
+    return <div style={{ marginTop: 10, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Proof saved.</div>;
+  }
+  if (proofOpen) {
+    return <ProofForm tripId={trip.tripId} onDone={onProofDone} />;
+  }
+  return (
+    <button type="button" onClick={onOpen} style={{ marginTop: 8, width: "100%", padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+      Add pickup/delivery proof
+    </button>
+  );
+}
+
 function ProviderTripCard({ trip, busyId, onAdvance, onConfirmed }: { trip: ProviderTrip; busyId: string | null; onAdvance: (tripId: string, next: string) => void; onConfirmed: () => void }) {
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
   const [proofOpen, setProofOpen] = useState(false);
   const [proofDone, setProofDone] = useState(false);
-  const step = NEXT_STEP[trip.status ?? ""];
-  const route = `${trip.pickupCity ?? "—"} → ${trip.dropoffCity ?? "—"}`;
-  const terminal = ["completed", "cancelled", "disputed", "emergency_frozen"].includes(trip.status ?? "");
-  const awaitingCompletion = trip.status === "delivered";
 
   return (
     <div style={{ padding: "14px 16px", borderRadius: 14, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}25`, marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{route}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{tripRoute(trip)}</div>
         <span style={{ marginLeft: "auto", fontSize: 12, color: t.ACCENT, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}33`, borderRadius: 20, padding: "2px 10px" }}>{tripStatusLabel(trip.status)}</span>
       </div>
       <div style={{ marginTop: 6, fontSize: 12, color: t.SUBTLE }}>{modeLabel(trip.mode)} · {ttSettlementLabel(trip.priceCurrency, trip.priceAmount)}</div>
-      {step ? (
-        <button type="button" onClick={() => onAdvance(trip.tripId, step.next)} disabled={busyId !== null} style={{ marginTop: 12, width: "100%", padding: "10px 12px", borderRadius: 9, background: `${t.ACCENT}1F`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busyId !== null ? "default" : "pointer", opacity: busyId !== null && busyId !== trip.tripId ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          {busyId === trip.tripId ? <Loader2 size={14} className="ctf-spin" /> : <Check size={14} />} {step.label}
-        </button>
-      ) : awaitingCompletion ? (
-        <CompletionConfirm tripId={trip.tripId} myConfirmedAtIso={trip.providerCompletionConfirmedAtIso ?? null} otherConfirmedAtIso={trip.requesterCompletionConfirmedAtIso ?? null} onConfirmed={onConfirmed} />
-      ) : (
-        <div style={{ marginTop: 10, fontSize: 12, color: t.MUTED }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
-      )}
-      {!terminal && (
-        proofDone ? (
-          <div style={{ marginTop: 10, fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>Proof saved.</div>
-        ) : proofOpen ? (
-          <ProofForm tripId={trip.tripId} onDone={() => { setProofDone(true); setProofOpen(false); }} />
-        ) : (
-          <button type="button" onClick={() => setProofOpen(true)} style={{ marginTop: 8, width: "100%", padding: "8px 12px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.12)", color: t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-            Add pickup/delivery proof
-          </button>
-        )
-      )}
+      <TripActionArea trip={trip} busyId={busyId} onAdvance={onAdvance} onConfirmed={onConfirmed} />
+      <ProofSection
+        trip={trip}
+        proofOpen={proofOpen}
+        proofDone={proofDone}
+        onOpen={() => setProofOpen(true)}
+        onProofDone={() => { setProofDone(true); setProofOpen(false); }}
+      />
       <TripChat tripId={trip.tripId} />
     </div>
   );
@@ -368,6 +406,11 @@ function HelpCard({ request }: { request: AvailableRequest }) {
         <span style={{ fontSize: 12, color: "#22C55E", background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 20, padding: "2px 10px" }}>
           {ttSettlementLabel(request.priceCurrency, request.priceAmount)}
         </span>
+        {acceptedCurrenciesBadgeLabel(request.acceptedCurrencies) && (
+          <span style={{ fontSize: 12, color: t.ACCENT, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}30`, borderRadius: 20, padding: "2px 10px" }}>
+            {acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)}
+          </span>
+        )}
         <span style={{ marginLeft: "auto", fontSize: 12, color: t.MUTED }}>{postedAgo(request.createdAtIso)}</span>
       </div>
       <div style={{ marginTop: 8, fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>

@@ -34,10 +34,18 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Live dashboard: Population, Workforce Total, Total Headcount Target, Recruited, Recruitment Progress, Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+1. Live dashboard: Population, Workforce Total, Recruited (with "% of goal" progress), Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), the Skills Economy Summary statement (below), Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
 2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
+5. Skills Economy Summary: a fixed positive statement on the overview with live numbers — "With
+   {recruited} people recruited, we have reached {skills coverage}% of the skills potential of
+   an independent nation state like Finland, Estonia, or Singapore — equating to ${GDP potential}
+   in GDP potential. That means each individual contributing ${per person} in GDP, and earning
+   upwards of ${earnings}." Followed by the disclaimer that the figures are speculative, not
+   actuals, that this is the only place in the app where GDP is stated in US dollars, and that the
+   Skills Economy has no intention of forming a nation state — it is a baseline for understanding
+   economics at the scale of upwards of 5 million people.
 
 ### 1.2 Workforce Directory-Coupled Profile Experience
 
@@ -61,7 +69,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 ### 2.1 Workforce Admin Operations
 
 1. Admin route for the workforce config (the population model) plus the read-only dashboard snapshot.
-2. Admin audit-trail read endpoint (`GET /api/workforce/admin/audit-events`) — implemented and admin-gated, but no admin screen calls it yet (Gaps item 5).
+2. Admin audit-trail viewer: the admin screen's "Audit trail" panel loads `GET /api/workforce/admin/audit-events` on demand and pages through events newest-first (command, allow/deny, reason, the record acted on, actor, timestamp).
 3. No occupation/announcement/export/sync/recompute admin surface — those were removed in the read-only model.
 
 ### 2.2 Workforce Configuration Governance
@@ -153,7 +161,7 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 
 ### 4.3 Storage and Derivation Rules
 
-1. The sector / skill-level / occupation breakdowns (the report routes) are derived live in `computeWorkforceModel()` from one read of the upstream sources; there is no stored snapshot, no inferred-event history, and no weekly bucketing. The **dashboard** top-line totals come from a separate lightweight read (`getDashboard()`): config + sector demand + two counts (active job titles, active profiles). It deliberately skips the expensive per-bucket supply match, because the dashboard returns only top-line numbers — `recruitedTotal` there is the count of all active profiles, identical to the full model, so the two never diverge.
+1. The sector / skill-level / occupation breakdowns (the report routes) are derived live in `computeWorkforceModel()` from one read of the upstream sources; there is no stored snapshot, no inferred-event history, and no weekly bucketing. The **dashboard** top-line totals come from a separate lightweight read (`getDashboard()`): config + sector demand + four counts (active job titles, active profiles, distinct active skills listed by active members, and all active taxonomy skills — the last two are the Skills Coverage numerator and denominator, both live so the figure moves as skills are added/removed). It deliberately skips the expensive per-bucket supply match, because the dashboard returns only top-line numbers — `recruitedTotal` there is the count of all active profiles, identical to the full model, so the two never diverge.
 2. **Demand** per sector = (sector `workforce_share` ÷ sum of shares) × `workforce_total`, where `workforce_total = population × participation_rate`. If no sector carries a positive share, demand is an even split across active sectors. Per-occupation demand = its sector's demand split evenly across the sector's active job titles.
 3. **Supply** is read from Directory: a profile's own sector resolves by spec precedence — taxonomy-derived signals first (the chosen occupation's sector via `job_title_id → sector_id`, else the sector the profile's skills map to through the taxonomy: plurality across the skills' occupations' sectors, ties broken by sector name), then the raw profile `sector_id` field. Only a profile with no occupation, no skills, and no sector lands in the `Unassigned` bucket (rendered only when non-empty; it carries no demand). Members = all active profiles. **Recruited** is the V2 aspirational match — a profile counts toward a sector/skill-level/occupation if it matches by sector, job title, or a skill registered under the job title (see section 5); the top-line recruited total is the count of all active profiles (V2 parity).
 4. **Skill level** is derived live from each job title's name using V2's keyword rule (`lib/workforce/skill-level.ts`) — Foundational / Intermediate / Advanced. No stored skill-level column.
@@ -166,7 +174,7 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 
 1. **Top-line total mirrors V2 exactly:** the headline "Recruited" is the count of ALL active Directory profiles (`is_active = TRUE AND deleted_at IS NULL`) — not just claimed profiles. (This makes the top-line "Recruited" equal "Directory Members"; the dashboard reconciles the two cards.)
 2. **Per-bucket recruited is a live 3-way match.** Per sector, per skill level, and per occupation, `recruited` is the count of DISTINCT active Directory profiles that match the bucket by ANY of three signals:
-   - **Sector** — the profile's resolved sector (spec precedence: occupation's sector, else skills-derived sector, else the raw profile sector field — see 4.3.3) is that sector. A profile's own sector matches **every** occupation in that sector (V2 behaviour), so per-occupation recruited is intentionally generous.
+   - **Sector** — the profile's resolved sector (spec precedence: occupation's sector, else skills-derived sector, else the raw profile sector field — see 4.3.3) is that sector. A profile's own sector matches **every** occupation in that sector (V2 behavior), so per-occupation recruited is intentionally generous.
    - **Job title** — the profile's job title is that occupation's job title.
    - **Skill** — the profile carries a skill whose normalized NAME is listed (as an active skill) under that occupation. Name-based, not row-based (owner decision 2026-07-04): a skill name appearing under several occupations matches its holders to all of them, across sectors. Row-based matching funneled every holder of a shared skill into the single sector whose copy they happened to pick.
 3. **Members vs recruited:** `members` stays the physical count of profiles whose resolved sector / job title falls in the bucket; `recruited` is the matched (aspirational) count and can exceed `members` in a bucket.
@@ -194,9 +202,9 @@ Note: there is no snapshot table — the dashboard, sector/skill/occupation brea
 2. Per-occupation demand is split evenly across a sector's job titles (no per-occupation weight exists in Skills Taxonomy). If finer weighting is wanted, it would need a new upstream signal.
 3. Single-bucket report fetches (`/reports/sector/:sector`, `/reports/skill-level/:skillLevel` with a value other than `all`) now match the bucket case-insensitively on both routes; the dashboard only uses the `all` variant, so the single-bucket paths are lightly exercised.
 4. The retained-but-unused `workforce_occupations` / `workforce_export_jobs` tables and the vestigial `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor` tables are dead weight in the schema; `workforce_occupations` cannot be dropped until the SkillsHunt rare-skill snapshot and the demo seed stop referencing it.
-5. `GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet. Acknowledged gap: build an admin audit view against the existing route, or retire the route by owner decision.
-6. `DELETE /api/workforce/profile` (the service-scoped compliance soft delete mandated by the deletion contract §9) has no member-facing control yet — no screen offers the "Delete Workforce plugin data only?" confirmation. The route is kept because the deletion contract requires it; the gap is the missing UI control. Full-account deletion is separately handled by the central deletion registry (`lib/account/deletion-registry.ts`), which soft-deletes `workforce_user_extension` directly.
-7. The profile API's `region` field is always `null` — `getOwnProfile` never populates it (no upstream region source exists). The web profile panel and mobile `WorkforceProfileCard` render the region row only when the value is present, so nothing shows today; either wire a region source or drop the field.
+5. ~~`GET /api/workforce/admin/audit-events` is implemented (admin-gated, paginated, self-audited) but no web or mobile admin screen calls it — the audit trail has no viewing surface yet.~~ Resolved (2026-08-04) — the web admin screen now has an "Audit trail" panel (`AuditTrailPanel` in `workforce-admin-shell.tsx`) that loads the route on demand, lists events newest-first (command, allow/deny, reason, target, actor, timestamp), and pages with a "Load more" control.
+6. ~~`DELETE /api/workforce/profile` has no member-facing control yet.~~ Reclassified (2026-08-04): the member-facing control already exists — the Account & Data screen (`/account/data`, `account-data-shell.tsx`) offers a per-service "Delete your Workforce data?" confirmation that runs the same service-scoped soft delete via `DELETE /api/account/services/workforce` and the central deletion registry. The plugin route is kept only because the deletion contract §9 mandates it; no separate in-plugin control is needed. Not a gap.
+7. ~~The profile API's `region` field is always `null`.~~ Resolved (2026-08-04) by dropping the field: `region` was left as an always-null vestige when the profile went read-only/Directory-derived (2026-06-16) and `directory_profiles` carries no region column, so there was never anything to render. Removed from `WorkforceProfile`, `getOwnProfile`, and the profile panel's dead conditional row.
 
 ## 9) Web and Android Delivery Status
 
@@ -204,7 +212,7 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 
 | Surface | Status | Notes |
 |---|---|---|
-| Web dashboard | ✅ Delivered | `workforce-shell.tsx` + `workforce-hero-stats` (incl. Recruitment Progress), `workforce-sector-gaps`, `workforce-skill-distribution`, `workforce-training-gaps`, sidebar, profile panel. Bound to `/dashboard`, `/reports/sector/all`, `/reports/skill-level/all`, `/reports/occupations`, `/profile`. |
+| Web dashboard | ✅ Delivered | `workforce-shell.tsx` + `workforce-hero-stats` (incl. the Skills Economy Summary), `workforce-sector-gaps`, `workforce-skill-distribution`, `workforce-training-gaps`, sidebar, profile panel. Bound to `/dashboard`, `/reports/sector/all`, `/reports/skill-level/all`, `/reports/occupations`, `/profile`. |
 | Web admin | ✅ Delivered | `workforce-admin-shell.tsx` — snapshot counts + the population-model config (population, participation rate, min/max recruitable). |
 | Android dashboard | ➖ Removed (web-only per rule 105 / #1742) | `WorkforceDashboard` with StatGrid (Population / Workforce Total / Headcount Target / Recruited / Directory Members), Sector Gaps, Top Training Gaps; `WorkforceLoading`, `WorkforceEmpty`, `WorkforcePublic`, `WorkforceStatCard`, `WorkforceProfileCard`. |
 | Android admin | ➖ Removed (web-only per rule 105 / #1742) | `AdminWorkforce.tsx` + `admin-api.ts`; mirrors `/admin/workforce` (snapshot + population-model config) against `GET /dashboard`, `GET/PUT /admin/config` only. |
@@ -217,13 +225,76 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 - **Real bindings:** `GET /api/workforce/dashboard` → `fetchWorkforceDashboard()`, `GET /api/workforce/reports/sector/all` → `fetchWorkforceSectorReport()`, `GET /api/workforce/reports/occupations?limit=10` → `fetchWorkforceOccupationGaps()`, `GET /api/workforce/profile` → `fetchWorkforceProfile()`, plus the browse/drilldown bindings — `GET /api/workforce/occupations` → `fetchAllWorkforceOccupations()`, `GET /api/workforce/occupations/:id` → `fetchWorkforceOccupation()`, `GET /api/workforce/reports/skill-level/:skillLevel` → `fetchWorkforceSkillLevelReport()` / `fetchWorkforceSkillLevelDetail()`, `GET /api/workforce/reports/sector/:sector` → `fetchWorkforceSectorDetail()`, `GET /api/workforce/reports/community-planning` → `fetchWorkforceCommunityPlanning()` — and the admin bindings `GET/PUT /api/workforce/admin/config` (`admin-api.ts`).
 - **Delivered states:** loading, empty (no sectors/occupations and no Directory members), error, and the main authenticated dashboard.
 - **Stats shown from real data:** Population, Workforce Total, Total Headcount Target, Recruited, Directory Members. Plus Sector Gaps (recruited / target / gap) and Top Training Gaps (per occupation).
-- **Profile section:** occupation name, skill level, recruited state — all from `GET /api/workforce/profile`. (The API's `region` field is currently always `null` — see Gaps item 7.) The profile is rendered inline on the dashboard via `WorkforceProfileCard`; there is no standalone profile screen (the orphaned, never-mounted `WorkforceProfile.tsx` and its `Workforce.tsx` wrapper were deleted 2026-07-03).
+- **Profile section:** occupation name, skill level, recruited state — all from `GET /api/workforce/profile`. (The API's `region` field was dropped 2026-08-04 — see Gaps item 7.) The profile is rendered inline on the dashboard via `WorkforceProfileCard`; there is no standalone profile screen (the orphaned, never-mounted `WorkforceProfile.tsx` and its `Workforce.tsx` wrapper were deleted 2026-07-03).
 - **Rule 116 compliance:** dashboard logic is split across `WorkforceDashboard` (orchestration/state) plus small presentational sub-components and `WorkforceStatCard` / `WorkforceProfileCard` / `WorkforceLoading` / `WorkforceEmpty` / `WorkforcePublic`.
 
-Profile read + compliance-delete surface: the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. The web profile panel and the mobile `WorkforceProfileCard` remain display-only; the member-facing delete control is an open gap (Gaps item 6).
+Profile read + compliance-delete surface: the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. The web profile panel and the mobile `WorkforceProfileCard` remain display-only; the member-facing delete control lives on the Account & Data screen (`/account/data`) — see Gaps item 6.
 
 ## 10) Change Log
 
+- 2026-08-17: **Dropped the word "only" from the Skills Economy Summary opening line** (owner
+  direction — it read as filler). The statement now opens "With {recruited} people recruited, we
+  have reached …". Copy-only change in `workforce-hero-stats.tsx`; no numbers, layout, or
+  behavior changed. The disclaimer paragraph's "the only place in the app where GDP is stated in
+  US dollars" is unchanged — that "only" carries meaning.
+- 2026-08-16: **Replaced the Recruitment Progress bar with the Skills Economy Summary statement
+  (owner direction — at 94 recruited against a 2,000,000 goal the bar sat at 0% and repeated the
+  hero card's numbers; the owner wants a positive summary instead).** The card
+  (`WorkforceEconomySummary` in `workforce-hero-stats.tsx`) renders a fixed statement whose numbers
+  are live: recruited count (`recruitedTotal`), skills-coverage percent (same live calculation as
+  the hero tile, now shared via `computeSkillsCoveragePct`), speculative GDP potential
+  (recruited × `WORKFORCE_BENCHMARK_GDP_PER_PERSON_USD`, a $142,500 modeling constant in
+  `lib/workforce/constants.ts` approximating Singapore's per-person GDP on a purchasing-power
+  basis, the upper benchmark of the three reference economies), per-person GDP contribution (the
+  benchmark itself), and per-person earnings (benchmark × `WORKFORCE_EARNINGS_SHARE_OF_GDP` = 0.5,
+  the lower bound of the compensation share in advanced economies, backing "earning upwards of").
+  The card's second paragraph is the standing disclaimer: figures are speculative, not actuals;
+  this is the only place in the app where GDP is stated in US dollars (owner directive, recorded in
+  `ctf/docs/BRAND_VOICE_LEXICON.md` Prohibited Patterns); the Skills Economy has no intention of
+  forming a nation state — it is a baseline for understanding economics at the scale of upwards of
+  5 million people. Display-only: the dashboard API payload, schema, routes, and contracts are
+  unchanged; `minRecruitable` is no longer read by this card. Web-only (rule 105). Test script
+  WF-1 and the core smoke updated to match.
+  direction — in this product "target" refers only to a person subjected to Specterati harassment;
+  the lexicon already reserved it, `ctf/docs/BRAND_VOICE_LEXICON.md`).** Overview hero "% of target"
+  → "% of goal"; Skill Level Breakdown subtitle "Target shown for context" → "Goal shown for
+  context" and the per-bar "{n} target" → "{n} goal"; sector/skill-level drilldown rows "recruited /
+  {n} target" → "{n} goal"; Sector Opportunities legend "Target (opportunity)" → "Goal
+  (opportunity)"; occupation detail "Headcount target (demand)" / "Annual training target" and the
+  how-computed explainer → goal wording; sidebar Quick Stats "Headcount Target" → "Headcount Goal";
+  admin "Headcount target" stat → "Headcount goal"; the admin audit-trail line's "target
+  {type}/{id}" (the record acted on) → "record {type}/{id}". Display-only — code identifiers, API
+  fields (`target`, `totalHeadcountTarget`, `annualTrainingTarget`, `target_type`/`target_id`), and
+  contracts are unchanged; no schema or route change.
+- 2026-08-16: **Added the Skills Coverage tile to the dashboard overview (fourth hero card).** Shows
+  the whole-number percentage of the skills taxonomy with at least one active Directory member
+  behind it (e.g. "24%" with "156 of 650 skills" beneath). Every value is live (owner directive,
+  2026-08-16 — skills may be added and removed, so nothing is hardcoded): the numerator is
+  `COUNT(DISTINCT skill_id)` over `directory_profile_skills` joined to active `directory_profiles`
+  and active `skills_taxonomy_skills` (both join sides cast to text — production
+  `directory_profiles.id` is varchar; the same distinct-listed count the weekly community-stats
+  draft reports), and the denominator is the current `COUNT(*)` of active `skills_taxonomy_skills`.
+  The numerator filters to the same active-skill population as the denominator, so coverage can
+  never exceed 100%. `getDashboard()` gained the two counts in its existing lightweight read, and
+  `WorkforceDashboard` gained `skillsListedTotal` + `skillsCatalogTotal`. Percentage is computed in
+  the tile (0% on an empty catalog, capped at 100). The dashboard command contract is unchanged —
+  its `dataAccess` already lists `directory_profile_skills` and `skills_taxonomy_skills`, and its
+  output schema is the opaque `dashboard` object. No schema, route, or contract change; web-only
+  (the Android Workforce surface was removed per rule 105).
+- 2026-08-04: **Two gaps closed by history check, not by building (inventory audit).** Gap #6: the
+  "missing" member delete control has existed on the Account & Data screen since 2026-06-05 — the
+  gap text predated that surface and was never reconciled; reclassified as not-a-gap. Gap #7: the
+  always-null `region` field is dropped from the profile type, `getOwnProfile`, and the panel's dead
+  conditional row — it became a vestige when the profile went read-only/Directory-derived
+  (2026-06-16) and no upstream region source exists. API shape change is removal-only (a field that
+  was always `null`); no schema change (`workforce_profiles.region` stays in the dead legacy table
+  already listed in gap #4).
+- 2026-08-04: **Audit trail viewing surface (closes Gaps item 5).** The admin screen
+  (`workforce-admin-shell.tsx`) gained an "Audit trail" panel below the config card. It fetches
+  `GET /api/workforce/admin/audit-events` only when the admin clicks "Load audit trail" (each read
+  is itself audited server-side, so no automatic fetch on page load), renders events newest-first
+  with command, allow/deny, reason, target, actor, and timestamp, and pages with "Load more" using
+  the route's existing `page`/`pageSize` parameters. UI-only — no route, schema, or contract change.
 - 2026-07-17: **History-aware back + admin↔member navigation (app-wide sweep).** The member
   shell's hand-rolled back chevron was replaced by the shared `BackChevronButton` — it returns to
   the previous in-app page and falls back to All Apps when there is no in-app history. The admin

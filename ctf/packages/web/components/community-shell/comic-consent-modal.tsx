@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Check, EyeOff, Lock, Server, ShieldCheck, Sparkles, X } from 'lucide-react';
 import styles from './community-shell.module.css';
+import { cycleFocusTrap } from './dialog-focus';
 
 type ComicConsentModalProps = {
   open: boolean;
@@ -13,15 +14,11 @@ type ComicConsentModalProps = {
 // First-use AI-processing consent (the llm_consent_granted gate). Translated from the locked
 // design's AIConsent mockup into the app's CSS-module approach. Self-hosted, no third parties.
 const POINTS = [
-  { icon: Server, title: 'Runs on our own servers', desc: 'The AI Assistant is self-hosted inside Survivor Hub. Your questions never leave our infrastructure.' },
+  { icon: Server, title: 'Runs on our own servers', desc: 'The AI Assistant is self-hosted inside Skills Economy. Your questions never leave our infrastructure.' },
   { icon: EyeOff, title: 'No third parties', desc: "We don't send your messages to outside AI companies, advertisers, or data brokers — ever." },
   { icon: ShieldCheck, title: 'A teammate reviews answers', desc: 'Sensitive answers are checked by a trained human before they reach you.' },
   { icon: Lock, title: 'Your safety comes first', desc: 'The assistant will never reveal your location or identity, or ask you to.' },
 ];
-
-// Tab-focusable elements inside the dialog, used to cycle focus (focus trap).
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentModalProps) {
   const confirmRef = useRef<HTMLButtonElement | null>(null);
@@ -42,8 +39,19 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
 
       // Enter confirms the dialog. On mobile the soft keyboard keeps focus in the chat input, so a
       // press of Return would otherwise fall through to the composer and silently re-open this same
-      // modal instead of turning the assistant on. Treat Enter as "turn it on" regardless of focus.
+      // modal instead of turning the assistant on. Treat Enter as "turn it on" — EXCEPT when a button
+      // inside the dialog already has focus. A keyboard member who tabs to "Not now" and presses
+      // Return means "not now"; granting consent there is the opposite of what they asked for. Leave
+      // those presses alone and the browser fires the focused button's own click, so "Not now" and
+      // the close button dismiss, and the confirm button confirms.
       if (event.key === 'Enter') {
+        const root = modalRef.current;
+        const active = document.activeElement;
+        const onDialogButton =
+          root !== null && active instanceof HTMLElement && root.contains(active) && active.tagName === 'BUTTON';
+        if (onDialogButton) {
+          return;
+        }
         event.preventDefault();
         onConfirm();
         return;
@@ -53,26 +61,7 @@ export function ComicConsentModal({ open, onConfirm, onDismiss }: ComicConsentMo
 
       // Focus trap: keep Tab / Shift+Tab cycling within the dialog.
       const root = modalRef.current;
-      if (!root) return;
-
-      const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (element) => element.offsetParent !== null || element === document.activeElement,
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-
-      if (event.shiftKey) {
-        if (active === first || !root.contains(active)) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (active === last || !root.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (root) cycleFocusTrap(root, event);
     }
 
     window.addEventListener('keydown', onKeyDown);

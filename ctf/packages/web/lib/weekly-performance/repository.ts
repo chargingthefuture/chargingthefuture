@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { PLATFORM_LAUNCH_DATE_ISO } from 'lib/platform/launch';
 import { computeLiveWeekMetrics } from 'lib/weekly-performance/live-metrics';
 
 type WeekRow = {
@@ -23,19 +24,36 @@ function mapWeek(row: WeekRow) {
 // stored row are shown as 'open'; their numbers are computed live per window, so an empty week
 // simply reads zero rather than being missing from the list. Nothing is persisted here — a week
 // gets a row only when an admin sets it active (see selectWeek).
+//
+// The run stops at the week containing the platform launch date (owner report, 2026-08-10): the
+// platform did not exist before then, so an earlier week is not a week that read zero — it is a
+// week that never happened, and listing it invites a reader to compare against a window with no
+// meaning. The floor covers stored rows too, so a pre-launch row seeded by demo data cannot pull
+// the list back past launch. `LEAST(current_start, ...)` keeps the generated run non-empty even if
+// a clock ever reads a date before launch.
 export async function listWeeks() {
   const result = await queryDb<WeekRow>(
-    `WITH current_week AS (
-       SELECT DATE_TRUNC('week', NOW())::date AS current_start
+    `WITH bounds AS (
+       SELECT DATE_TRUNC('week', NOW())::date AS current_start,
+              DATE_TRUNC('week', $1::date)::date AS launch_start
      ),
      span AS (
        SELECT
-         cw.current_start,
+         b.current_start,
          LEAST(
-           (cw.current_start - INTERVAL '51 weeks')::date,
-           COALESCE((SELECT MIN(week_start_date) FROM weekly_performance_weeks), cw.current_start)
+           b.current_start,
+           GREATEST(
+             b.launch_start,
+             LEAST(
+               (b.current_start - INTERVAL '51 weeks')::date,
+               COALESCE(
+                 (SELECT MIN(week_start_date) FROM weekly_performance_weeks WHERE week_start_date >= b.launch_start),
+                 b.current_start
+               )
+             )
+           )
          ) AS earliest_start
-       FROM current_week cw
+       FROM bounds b
      ),
      series AS (
        SELECT generate_series(sp.current_start, sp.earliest_start, INTERVAL '-1 week')::date AS week_start_date
@@ -43,6 +61,7 @@ export async function listWeeks() {
      ),
      combined AS (
        SELECT week_start_date, status FROM weekly_performance_weeks
+       WHERE week_start_date >= (SELECT launch_start FROM bounds)
        UNION
        SELECT s.week_start_date, 'open' AS status
        FROM series s
@@ -56,6 +75,7 @@ export async function listWeeks() {
      FROM combined
      ORDER BY week_start_date DESC
      LIMIT 260`,
+    [PLATFORM_LAUNCH_DATE_ISO],
   );
 
   return result.rows.map(mapWeek);

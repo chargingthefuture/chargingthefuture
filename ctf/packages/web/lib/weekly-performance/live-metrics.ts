@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { buildLiveGdpReport } from 'lib/gdp/repository';
+import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
 
 // Live weekly numbers — rebuilt around the per-plugin value-metric decision record
 // (ctf/docs/developer/PLUGIN_VALUE_METRICS.md, owner-locked 2026-07-18).
@@ -13,13 +13,16 @@ import { buildLiveGdpReport } from 'lib/gdp/repository';
 //   2. The per-plugin VALUE EVENTS — each plugin's defining action, the event that means the
 //      plugin was used as intended (a completed trip, a hosted stay, a confirmed contribution…).
 //      These are windowed on the event's own timestamp, so any week reports its real count.
-//   3. Honest ADOPTION rows for the no-value-to-others plugins the owner wants visible:
-//      Directory (findable members), Mood (check-ins + average, aggregate only), ClickLog
-//      (aggregate incidents + distinct loggers — never per-member detail).
+//   3. Honest ADOPTION rows: how many members are actually turning up (daily active members) plus
+//      the no-value-to-others plugins the owner wants visible: Directory (findable members), Mood
+//      (check-ins + average, aggregate only), ClickLog (aggregate incidents + distinct loggers —
+//      never per-member detail).
 //
-// Dropped from the old set (owner decision): login/engagement counts (logins are downstream of
-// value, not value), feed counts, and LevelUp enrollments-started (intent, not delivered value —
-// replaced by completions). Skills Taxonomy carries no dashboard stats at all.
+// Dropped from the old set (owner decision): feed counts and LevelUp enrollments-started (intent,
+// not delivered value — replaced by completions). Skills Taxonomy carries no dashboard stats at
+// all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
+// dashboard has to answer "how many people showed up this week", so daily active members is carried
+// as an adoption row (owner report, 2026-08-15).
 //
 // The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
 // participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as
@@ -188,6 +191,25 @@ const beaconBroadcastEngagement = (weekStart: string) =>
 
 // ── Adoption rows (honest non-value metrics) ──────────────────────────────────
 
+// Daily active members: the average number of distinct members active on a day of this week.
+// `login_events` holds at most one row per member per UTC day, so one row is one member-day;
+// COUNT(DISTINCT (member, day)) is used anyway so a database cloned before the once-per-day unique
+// index existed cannot inflate the average with duplicate rows. The divisor is the number of days
+// of the window that have already started (1–7), so the live current week reports the average of
+// the days it has actually had instead of a figure watered down by days that have not happened yet;
+// every past week divides by the full 7. Aggregate only — never a per-member figure.
+const dailyActiveMembers = (weekStart: string) =>
+  guardedScalar(
+    'login_events',
+    `SELECT ROUND(
+              COUNT(DISTINCT (user_id, (created_at AT TIME ZONE 'UTC')::date))::numeric
+                / GREATEST(LEAST(7, (CURRENT_DATE - $1::date) + 1), 1),
+              2)::text AS v
+     FROM login_events
+     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
+    weekStart,
+  );
+
 // Directory: findable members — claimed, active, non-deleted profiles holding at least one skill.
 // Claim time is not stored, so this is the cumulative count of such profiles created by week end
 // (their CURRENT claimed/active state) — the same cumulative pattern the old members.total used.
@@ -327,6 +349,7 @@ const METRIC_SPECS: MetricSpec[] = [
   { metricKey: 'value.recurring_ties_confirmed', metricUnit: 'ties', sourcePlugin: 'recurring-activity', compute: recurringTiesConfirmed },
   { metricKey: 'value.peer_programming_active_posters', metricUnit: 'members', sourcePlugin: 'peer-programming', compute: peerProgrammingActivePosters },
   { metricKey: 'value.beacon_broadcast_engagement', metricUnit: 'engagements', sourcePlugin: 'beacon', compute: beaconBroadcastEngagement },
+  { metricKey: 'adoption.daily_active_members', metricUnit: 'per day', sourcePlugin: 'platform', compute: dailyActiveMembers },
   { metricKey: 'adoption.directory_findable_members', metricUnit: 'members', sourcePlugin: 'directory', compute: directoryFindableMembers },
   { metricKey: 'adoption.mood_checkins', metricUnit: 'check-ins', sourcePlugin: 'mood', compute: moodCheckins },
   { metricKey: 'adoption.mood_average', metricUnit: '', sourcePlugin: 'mood', compute: moodAverage },

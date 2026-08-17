@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { itemId } = await params;
 
   try {
-    await dismissFeedItem(gate.auth.userId, itemId);
+    const { dismissedAtIso } = await dismissFeedItem(gate.auth.userId, itemId);
 
     logFeedAudit({
       actorId: gate.auth.userId,
@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       errorCategory: null,
     });
 
-    return NextResponse.json({ ok: true, itemId }, { status: 200 });
+    return NextResponse.json({ ok: true, itemId, dismissedAt: dismissedAtIso }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'items_itemid_dismiss' });
     return NextResponse.json(

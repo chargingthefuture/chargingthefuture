@@ -1,8 +1,9 @@
 "use client";
 
 import { ChevronLeft, Clock, MessageCircle } from "lucide-react";
+import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { FAINT, SUBTLE, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { FAINT, SUBTLE, srCounterpartLabel, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens } from './sr-shared';
 
@@ -17,6 +18,23 @@ function fulfillmentTitle(f: SrFulfillment): string {
   return f.requestTitle && f.requestTitle.trim().length > 0 ? f.requestTitle : `Request ${f.id.slice(0, 8)}`;
 }
 
+// Why the composer is gone on a past conversation. A Direct Line closes for good at a terminal state
+// (rule 100) — there is no reopen. Without this, a member typed into the still-visible composer and
+// the send failed "Unauthorized" with no explanation (owner report). The canceled-but-open case also
+// says what TO do for the requester: a fresh offer opens a fresh Direct Line. The canceled helper
+// gets only the neutral first sentence — the reopen is for other helpers, and the copy must never
+// reveal to them that the poster reopened the post (owner directive; same rule as the feed's
+// "You already offered to help" note).
+function readOnlyNotice(f: SrFulfillment, isRequester: boolean): string | null {
+  if (f.status === "active") return null;
+  if (f.status === "canceled") {
+    return isRequester && f.requestStatus === "open"
+      ? "This conversation ended when the offer was canceled and can't be reopened. The request is open again on the feed — a new offer starts a new Direct Line."
+      : "This conversation ended when the offer was canceled and can't be reopened.";
+  }
+  return "This conversation ended when the request closed. You can still read it, but no new messages can be sent.";
+}
+
 function ResolveBar({
   selected,
   isRequester,
@@ -28,13 +46,9 @@ function ResolveBar({
   resolving: boolean;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
 }) {
-  if (selected.status !== "active") {
-    return (
-      <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
-        This request is {selected.requestStatus === "open" ? "open again" : "closed"}.
-      </div>
-    );
-  }
+  // A past conversation gets its explanation where the composer used to be (readOnlyNotice in the
+  // chat panel), so no second footer line is needed here.
+  if (selected.status !== "active") return null;
   if (!isRequester) {
     return (
       <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
@@ -83,6 +97,39 @@ function PendingPane({ title }: { title: string }) {
   );
 }
 
+/**
+ * "Is this ongoing?" under a favor conversation. A favor is often not a one-off — the same neighbor
+ * collects the same prescription every month. Shown on the live conversation as well as on one closed
+ * successfully, because that is where the relationship is and the member usually knows it is standing
+ * while it is happening. Not on a canceled or unsuccessful close: that is not an arrangement. Its own
+ * component so ChatPane stays a layout, not a decision tree (rule 116).
+ */
+function FavorRecurringPrompt({
+  selected,
+  isRequester,
+  accent,
+}: {
+  selected: SrFulfillment;
+  isRequester: boolean;
+  accent: string;
+}) {
+  const isStandingCandidate =
+    selected.status === "active" || (selected.status === "closed" && selected.closeReason === "successful");
+  if (!isStandingCandidate) return null;
+  return (
+    <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <MarkRecurringControl
+        counterpartyUserId={isRequester ? selected.fulfillerUserId : selected.requesterUserId}
+        counterpartyName={isRequester ? selected.fulfillerUsername : selected.requesterUsername}
+        originPlugin="socket-relay"
+        sector="favor"
+        sectorLabel="a favor like this one"
+        accent={accent}
+      />
+    </div>
+  );
+}
+
 function ChatPane({
   selected,
   isRequester,
@@ -107,7 +154,12 @@ function ChatPane({
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: "#F0FDF4" }}>{fulfillmentTitle(selected)}</div>
-        <div style={{ fontSize: 12, color: SUBTLE }}>{isRequester ? "Your request — you're talking with the helper." : "You offered to help — talking with the requester."}</div>
+        {/* Names the other person. The old line said "you're talking with the helper" without ever
+            saying who the helper was, and kept saying it on a canceled conversation where nobody is
+            talking — so a request owner could open a past line and still not learn who had offered
+            (owner report). Falls back to the old wording only when the member has no name and no
+            handle on file. */}
+        <div style={{ fontSize: 12, color: SUBTLE }}>{counterpartHeadline(selected, isRequester)}</div>
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {chatLoading ? (
@@ -124,11 +176,13 @@ function ChatPane({
             streamUserId={chatCredentials.streamUserId}
             streamChannelId={chatCredentials.streamChannelId}
             accentColor={t.ACCENT}
+            readOnlyNotice={readOnlyNotice(selected, isRequester)}
           />
         ) : (
           <div style={{ flex: 1 }} />
         )}
       </div>
+      <FavorRecurringPrompt selected={selected} isRequester={isRequester} accent={t.ACCENT} />
       <ResolveBar selected={selected} isRequester={isRequester} resolving={resolving} onResolve={onResolve} />
     </div>
   );
@@ -156,7 +210,13 @@ function DirectLineRow({
       "Your request · Waiting for a helper"
     ) : (
       <>
-        {isRequester ? "Your request" : "You're helping"} · <span style={{ textTransform: "capitalize" }}>{line.fulfillment.status}</span>
+        {/* Names the other person in the list too, so a request owner can see who offered without
+            opening each conversation one at a time. */}
+        {isRequester ? "Your request" : "You're helping"}
+        {srCounterpartLabel(line.fulfillment, isRequester)
+          ? ` · ${srCounterpartLabel(line.fulfillment, isRequester)}`
+          : ""}{" "}
+        · <span style={{ textTransform: "capitalize" }}>{line.fulfillment.status}</span>
       </>
     );
   return (
@@ -170,6 +230,21 @@ function DirectLineRow({
       <div style={{ fontSize: 11, color: SUBTLE }}>{sub}</div>
     </button>
   );
+}
+
+// The header's second line: the viewer's role, who the other person is, and — when the conversation
+// is no longer live — that it ended. Kept out of the component so its branches stay off the chat's
+// complexity budget.
+function counterpartHeadline(f: SrFulfillment, isRequester: boolean): string {
+  const role = isRequester ? "Your request" : "You offered to help";
+  const who = srCounterpartLabel(f, isRequester);
+  const other = who
+    ? `${isRequester ? "Helper" : "Requester"}: ${who}`
+    : isRequester
+      ? "with the helper"
+      : "with the requester";
+  const ended = f.status === "canceled" ? " · Canceled" : f.status === "closed" ? " · Closed" : "";
+  return `${role} · ${other}${ended}`;
 }
 
 export function SocketRelayChat({

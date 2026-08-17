@@ -16,6 +16,71 @@ import {
   formatResultDateTime,
 } from './mutual-time-shared';
 
+type Tokens = ReturnType<typeof getMutualTimeTokens>;
+
+const chipStyleFor = (t: Tokens): React.CSSProperties => ({ padding: '6px 12px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 });
+
+function ClosedResult({ ev, t, tz }: { ev: MutualTimeEvent; t: Tokens; tz: string }) {
+  return (
+    <>
+      {ev.effectiveState === 'closed' && ev.resultSlotStartIso && (
+        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>
+          ✓ {formatResultDateTime(ev.resultSlotStartIso, tz)} · {ev.resultCanMakeIt} can make it
+        </span>
+      )}
+      {ev.effectiveState === 'closed' && !ev.resultSlotStartIso && (
+        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>No time chosen (no votes)</span>
+      )}
+    </>
+  );
+}
+
+function EventActions({ ev, t, tz, isCopied, isClosing, onCopy, onClose }: { ev: MutualTimeEvent; t: Tokens; tz: string; isCopied: boolean; isClosing: boolean; onCopy: (slug: string) => void; onClose: (id: string) => void }) {
+  const chipStyle = chipStyleFor(t);
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <button onClick={() => onCopy(ev.slug)} style={{ ...chipStyle, color: isCopied ? t.ACCENT : t.TITLE, border: `1px solid ${isCopied ? t.ACCENT : t.BORDER_SOLID}` }}>
+        {isCopied ? <Check size={12} /> : <Copy size={12} />}
+        {isCopied ? 'Copied' : 'Copy link'}
+      </button>
+      <a href={`/mutual-time/${ev.slug}`} target="_blank" rel="noreferrer" style={chipStyle}>
+        <Link2 size={12} /> View
+      </a>
+      {ev.effectiveState !== 'closed' && (
+        <button onClick={() => onClose(ev.id)} disabled={isClosing} style={{ ...chipStyle, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.30)', color: isClosing ? t.SUBTLE : '#F87171' }}>
+          {isClosing ? 'Closing…' : 'Close and choose the time'}
+        </button>
+      )}
+      <ClosedResult ev={ev} t={t} tz={tz} />
+    </div>
+  );
+}
+
+function EventRow({ ev, t, tz, copiedSlug, closingId, onCopy, onClose }: { ev: MutualTimeEvent; t: Tokens; tz: string; copiedSlug: string | null; closingId: string | null; onCopy: (slug: string) => void; onClose: (id: string) => void }) {
+  const isScheduled = ev.effectiveState === 'scheduled';
+  const isCopied = copiedSlug === ev.slug;
+  const isClosing = closingId === ev.id;
+  const active = ev.effectiveState !== 'closed' && !isScheduled;
+  const statusText = ev.effectiveState === 'closed' ? 'closed' : isScheduled ? 'scheduled' : 'open';
+  return (
+    <div style={{ padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{ev.title || 'Untitled event'}</div>
+          <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 2 }}>
+            {ev.voterCount} voter{ev.voterCount === 1 ? '' : 's'} · {meetingPluginName(ev.meetingPlugin)}
+          </div>
+        </div>
+        <div style={{ flexShrink: 0, padding: '3px 10px', borderRadius: 999, background: active ? `${t.ACCENT}14` : t.SURFACE, border: `1px solid ${active ? `${t.ACCENT}44` : t.BORDER_SOLID}`, fontSize: 11, fontWeight: 700, color: active ? t.ACCENT : t.SUBTLE }}>
+          {statusText}
+        </div>
+      </div>
+
+      <EventActions ev={ev} t={t} tz={tz} isCopied={isCopied} isClosing={isClosing} onCopy={onCopy} onClose={onClose} />
+    </div>
+  );
+}
+
 // Admin dashboard for Mutual Time (spec #1780): create an event (one shareable link) and manage the
 // list of events you created — copy the link, open it, close a survey and choose the winning time.
 // Admin-only surface (gated by the page). No credits anywhere.
@@ -119,8 +184,9 @@ export function MutualTimeAdmin() {
 
   const card: React.CSSProperties = { marginTop: 20, borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 20 };
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: t.SUBTLE, margin: '10px 0 4px' };
-  const inputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, fontFamily: 'inherit' };
-  const chipStyle: React.CSSProperties = { padding: '6px 12px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 };
+  // maxWidth + minWidth 0 keep a field inside the phone-width column even when the control has a wide
+  // intrinsic size — a `datetime-local` input reports one wider than the column on iOS Safari.
+  const inputStyle: React.CSSProperties = { width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, fontFamily: 'inherit' };
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TITLE }}>
@@ -157,14 +223,17 @@ export function MutualTimeAdmin() {
           <p style={{ fontSize: 12, color: t.SUBTLE, margin: '4px 0 10px' }}>After the time is chosen, voters see a link directly to this plugin.</p>
 
           {/* Stack the two datetime-local fields: side by side they overflowed the phone-width column
-              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column. */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            <div>
+              (each datetime picker has a wide intrinsic min-width). Mobile-first = one column.
+              `minmax(0, 1fr)` + `minWidth: 0` are both needed: a grid track defaults to a floor of the
+              item's min-content width, so without them the datetime picker's wide intrinsic size grew
+              the track and pushed the field past the right edge of the card. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
               <label htmlFor="mt-opens" style={labelStyle}>Survey opens (optional)</label>
               <input id="mt-opens" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to open immediately.</p>
             </div>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label htmlFor="mt-closes" style={labelStyle}>Survey closes (optional)</label>
               <input id="mt-closes" type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} style={inputStyle} />
               <p style={{ fontSize: 11, color: t.SUBTLE, margin: '4px 0 0' }}>Leave blank to close manually below.</p>
@@ -193,51 +262,9 @@ export function MutualTimeAdmin() {
             <div style={{ color: t.SUBTLE, fontSize: 14 }}>No events yet. Create one above and share its link.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {events.map((ev) => {
-                const isOpen = ev.effectiveState !== 'closed';
-                const isScheduled = ev.effectiveState === 'scheduled';
-                const isCopied = copiedSlug === ev.slug;
-                const isClosing = closingId === ev.id;
-                const statusText = ev.effectiveState === 'closed' ? 'closed' : isScheduled ? 'scheduled' : 'open';
-                return (
-                  <div key={ev.id} style={{ padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>{ev.title || 'Untitled event'}</div>
-                        <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 2 }}>
-                          {ev.voterCount} voter{ev.voterCount === 1 ? '' : 's'} · {meetingPluginName(ev.meetingPlugin)}
-                        </div>
-                      </div>
-                      <div style={{ flexShrink: 0, padding: '3px 10px', borderRadius: 999, background: isOpen && !isScheduled ? `${t.ACCENT}14` : t.SURFACE, border: `1px solid ${isOpen && !isScheduled ? `${t.ACCENT}44` : t.BORDER_SOLID}`, fontSize: 11, fontWeight: 700, color: isOpen && !isScheduled ? t.ACCENT : t.SUBTLE }}>
-                        {statusText}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <button onClick={() => handleCopy(ev.slug)} style={{ ...chipStyle, color: isCopied ? t.ACCENT : t.TITLE, border: `1px solid ${isCopied ? t.ACCENT : t.BORDER_SOLID}` }}>
-                        {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                        {isCopied ? 'Copied' : 'Copy link'}
-                      </button>
-                      <a href={`/mutual-time/${ev.slug}`} target="_blank" rel="noreferrer" style={chipStyle}>
-                        <Link2 size={12} /> View
-                      </a>
-                      {ev.effectiveState !== 'closed' && (
-                        <button onClick={() => handleClose(ev.id)} disabled={isClosing} style={{ ...chipStyle, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.30)', color: isClosing ? t.SUBTLE : '#F87171' }}>
-                          {isClosing ? 'Closing…' : 'Close and choose the time'}
-                        </button>
-                      )}
-                      {ev.effectiveState === 'closed' && ev.resultSlotStartIso && (
-                        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>
-                          ✓ {formatResultDateTime(ev.resultSlotStartIso, tz)} · {ev.resultCanMakeIt} can make it
-                        </span>
-                      )}
-                      {ev.effectiveState === 'closed' && !ev.resultSlotStartIso && (
-                        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>No time chosen (no votes)</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {events.map((ev) => (
+                <EventRow key={ev.id} ev={ev} t={t} tz={tz} copiedSlug={copiedSlug} closingId={closingId} onCopy={handleCopy} onClose={handleClose} />
+              ))}
             </div>
           )}
         </section>

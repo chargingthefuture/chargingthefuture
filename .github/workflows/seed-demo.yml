@@ -12,6 +12,16 @@ on:
         required: false
         type: string
         default: ""
+      demo_tester_admin_id:
+        description: "Optional: the hired tester's ADMIN Clerk user ID (issue #2037). The seed grants entry + wallet + profile; you must also set role=admin on it in Clerk and target the demo-mode Unleash flag at it."
+        required: false
+        type: string
+        default: ""
+      demo_tester_member_id:
+        description: "Optional: the hired tester's MEMBER Clerk user ID (issue #2037). The seed grants entry + wallet + profile; also target the demo-mode Unleash flag at it."
+        required: false
+        type: string
+        default: ""
 
 jobs:
   seed:
@@ -62,6 +72,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DEMO_OWNER_ID: ${{ inputs.demo_owner_id }}
           DEMO_SECOND_OWNER_ID: ${{ inputs.demo_second_owner_id }}
+          DEMO_TESTER_ADMIN_ID: ${{ inputs.demo_tester_admin_id }}
+          DEMO_TESTER_MEMBER_ID: ${{ inputs.demo_tester_member_id }}
         run: |
           if [ -z "$DATABASE_URL_DIRECT" ] && [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
@@ -72,4 +84,10 @@ jobs:
           echo "Demo schema seeded for $DEMO_OWNER_ID."
           if [ -n "$DEMO_SECOND_OWNER_ID" ]; then
             echo "Two-sided counterparty seeded: $DEMO_SECOND_OWNER_ID (also target the demo-mode Unleash flag at this ID)."
+          fi
+          if [ -n "$DEMO_TESTER_ADMIN_ID" ]; then
+            echo "Tester admin seeded: $DEMO_TESTER_ADMIN_ID (set role=admin on it in Clerk, and target the demo-mode Unleash flag at it)."
+          fi
+          if [ -n "$DEMO_TESTER_MEMBER_ID" ]; then
+            echo "Tester member seeded: $DEMO_TESTER_MEMBER_ID (target the demo-mode Unleash flag at it)."
           fi

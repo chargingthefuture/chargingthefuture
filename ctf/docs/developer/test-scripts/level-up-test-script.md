@@ -17,6 +17,8 @@
 
 ---
 
+> Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
+
 ## How to run this
 
 - Mark each surface checkbox as you go: ✅ pass · ❌ fail · ⛔ blocked
@@ -117,7 +119,31 @@ Result: web ☐
 **Expected:**
 - Enrollment succeeds — the button flips to "✓ Enrolled" and **no** "Invalid LevelUp payload." error banner appears.
 - Wallet balance is unchanged and no escrow is held (a free cohort deposits nothing).
-- The Enrolled stat count increases by one.
+- The **My Cohorts** stat count increases by one.
+
+Result: web ☐
+
+---
+
+### LU-3c — Your cohorts survive leaving and coming back
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member who is already enrolled in at least one cohort (complete LU-3 or LU-3b first, then navigate away from LevelUp entirely).
+
+**Steps:**
+1. Open `/apps/level-up` fresh (a full page reload, not a tab switch).
+2. Read the **My Cohorts** card on Browse.
+3. Find the cohort you enrolled in earlier in the cohort list.
+4. Open the **Progress** tab.
+
+**Steps to check the failure case:**
+5. Block or fail `GET /api/level-up/enrollments` (offline, or block the request in the browser tools) and reload.
+
+**Expected:**
+- **My Cohorts** shows the number of cohorts you are in — not 0. It counts only live ones: a cohort you completed or left is not in it.
+- The cohort you already joined shows "✓ Enrolled" and offers no Enroll button.
+- Progress lists each cohort with its milestone count (for example "2/5") and your trainer's name; it does not say "Not enrolled yet". A finished cohort with no milestones reads "Completed" and one you left reads "You left this cohort".
+- In the failure case: **My Cohorts** shows a dash (—) and a note says the cohorts you are in could not be read and to refresh. It never shows "0", which would look like you are not enrolled anywhere.
 
 Result: web ☐
 
@@ -336,7 +362,9 @@ Result: web ☐
 3. Inspect the cohort overview table below.
 
 **Expected:**
-- KPI cards show enrollments, completions, and avg days to first trainer payout (values may be 0 for a fresh seed; they must not be blank or "undefined").
+- KPI cards show **Members in a cohort now**, **Active enrollments**, **Enrollments, all time**, **Completions**, and **Avg days to first trainer credit grant** (values may be 0 for a fresh seed; they must not be blank or "undefined").
+- The three enrollment numbers agree with each other: "Members in a cohort now" is never larger than "Active enrollments", and "Active enrollments" is never larger than "Enrollments, all time".
+- Cross-check against the member side: enroll one member in two cohorts, then reload this page. "Active enrollments" goes up by two and "Members in a cohort now" goes up by one — a row count and a headcount, not the same number under two names.
 - Cohort overview table shows title, track, status, seats open, required deposit, trainer split, and completion bonus for the seed cohort.
 - The page uses the shared dark admin design system (dark tokens, icon header with ADMIN badge).
 
@@ -448,13 +476,12 @@ Result: web ☐
 **Precondition:** At least one cohort opened from an approved proposal has the `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
 
 **Steps:**
-1. Find the auto-created cohort with the `needs trainer` badge in the cohort list.
-2. Call `POST /api/level-up/cohorts/[cohortId]/claim-trainer` for that cohort.
-3. Reload the cohort list.
+1. Find the auto-created cohort with the `needs trainer` badge in the admin cohort list.
+2. Press its **Claim as trainer** button (added 2026-08-05; a non-admin trainer without admin-page access still claims via `POST /api/level-up/cohorts/[cohortId]/claim-trainer`).
 
 **Expected:**
-- The request succeeds and returns the cohort ID.
-- The `needs trainer` badge disappears from that cohort in the list.
+- The claim succeeds and the cohort list re-pulls itself.
+- The `needs trainer` badge and the Claim button disappear from that cohort in the list.
 - If trainee 2 was enrolled in that cohort before the claim, their enrollment's `assigned_trainer_id` is now set to the claiming trainer (check via milestone release in LU-A8).
 
 Result: web ☐
@@ -467,12 +494,12 @@ Result: web ☐
 **Precondition:** Trainee 1 is enrolled in the seed cohort (LU-3 done). Signed in as seed admin.
 
 **Steps:**
-1. Call `POST /api/level-up/milestones/[milestoneId]/validate` with the seed cohort's first milestone ID, trainee 1's enrollment ID, and a unique idempotency key.
+1. As admin, open `/admin/level-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/level-up/milestones/[milestoneId]/validate` with enrollment ID, cohort ID, and a unique idempotency key — the only path for a non-admin trainer.)
 
 **Expected:**
-- Returns a validation ID and status.
-- A second identical request with the same idempotency key returns the same validation ID without creating a duplicate record.
-- Note: the member LevelUp shell has **no** inline "pending validations" approve panel (the member-shell right panel was removed; enrollments now show under the Progress tab). Validation is performed via this endpoint, which is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
+- The validation succeeds and the queue re-pulls via refresh.
+- A second identical API request with the same idempotency key returns the same validation ID without creating a duplicate record.
+- Note: the member LevelUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
 
@@ -484,7 +511,7 @@ Result: web ☐
 **Precondition:** Milestone 1 validated (LU-A7 done). Trainee 1 enrolled in seed cohort.
 
 **Steps:**
-1. Call `POST /api/level-up/milestones/[milestoneId]/release` for the validated milestone.
+1. As admin, press **Release credits** on the validation's row in the admin queue (added 2026-08-05; API variant: `POST /api/level-up/milestones/[milestoneId]/release`).
 2. Check trainee 1's wallet balance.
 3. Check the trainer's wallet (if accessible).
 
@@ -503,13 +530,17 @@ Result: web ☐
 **Role:** admin · **Surfaces:** web
 **Precondition:** A dispute exists (LU-10 done). Signed in as seed admin.
 
-**Steps:**
-1. Call `POST /api/level-up/disputes/[disputeId]/resolve` with the dispute ID from LU-10, a resolution comment, and an idempotency key.
-2. If the resolution includes a credit adjustment, replay the exact same request (same idempotency key) once more.
+**Steps (UI, since 2026-08-05):**
+1. Open `/admin/level-up` and find the dispute from LU-10 in the **Open disputes** list.
+2. Press **Resolve…**, write a resolution comment, and press **Resolve dispute**.
+3. (API-only variant) A resolution with a credit adjustment still goes through
+   `POST /api/level-up/disputes/[disputeId]/resolve` directly — the form is deliberately
+   comment-only (moving credits from free-typed ids is an error magnet; adjustment cases go
+   through the ServiceCredits admin). If used, replay the same request (same idempotency key) once.
 
 **Expected:**
-- Returns the dispute ID and `status: resolved`.
-- The replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
+- Step 2: the dispute leaves the Open disputes list after the refresh; an empty comment keeps the button disabled.
+- The API replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
 
 Result: web ☐
@@ -548,6 +579,22 @@ Result: web ☐
 - The back control returns to the admin panel (or to the previous in-app page).
 
 Result: web ☐
+
+---
+
+### Account deletion and cohort escrow records
+
+**Expected:** Deleting the account removes the member's enrollments (existing behavior).
+Disbursements from cohort escrow and any disputes (with their comments) are retained — the record
+of why cohort balances moved survives the account.
+
+---
+
+### Account deletion clears the trainer profile and achievements
+
+**Expected:** Deleting the account removes the member's trainer profile (name, headline, bio) and
+their achievements. Cohorts, proposals, milestone validations, disbursements, and disputes remain
+(shared/admin and ledger records).
 
 ---
 

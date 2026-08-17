@@ -1,6 +1,10 @@
 // Account deletion engine — turns a plugin's entry in the account deletion registry into the
 // concrete database operations that delete (or soft-delete) that user's data, and runs them.
 //
+// A `delete` entry may also carry a `rowFilter`, which is ANDed onto the user-column match so only
+// some of the member's rows in a shared table are removed (`feed_items` holds both the member's own
+// Commons post copies and the admin announcement copies).
+//
 // This is split from the orchestrator on purpose: `planDeletion` is a pure function (no database,
 // no clock, no randomness) so its output can be checked exactly — see
 // `ctf/scripts/check-deletion-engine.mjs`, which asserts the generated SQL for every registry
@@ -18,17 +22,33 @@
 // foreign keys when run in order.
 
 import type { PoolClient } from 'pg';
-import type { OwnedTable, PluginDeletionEntry } from './deletion-registry';
+import { DELETED_MEMBER_PLACEHOLDER, type OwnedTable, type PluginDeletionEntry } from './deletion-registry';
 
 /** A single database operation produced from one owned table. */
 export type DeletionStatement = {
   /** Real table this operates on. */
   readonly table: string;
   /** Which registry action produced it. */
-  readonly action: 'delete' | 'soft-delete';
+  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
   /** Parameterized SQL with `$1` bound to the user id. */
   readonly sql: string;
 };
+
+/** The `delete` branch of `planTable`, kept separate so the switch stays simple to read. */
+function planDelete(owned: OwnedTable): DeletionStatement {
+  if (!owned.userColumn) {
+    throw new Error(`Table "${owned.table}" is action "delete" but has no userColumn.`);
+  }
+  // An optional registry-authored row filter narrows the delete to some of the member's rows in
+  // a table that also holds rows nobody should lose (see `delWhere` in the registry). It never
+  // widens the delete: the user-column match stays, and the filter is only ANDed onto it.
+  const rowFilter = owned.rowFilter ? ` AND (${owned.rowFilter})` : '';
+  return {
+    table: owned.table,
+    action: 'delete',
+    sql: `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1${rowFilter}`,
+  };
+}
 
 /**
  * Pure translation of one owned table into a SQL statement, or `null` for `retain` (no-op).
@@ -42,14 +62,7 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
     case 'retain':
       return null;
     case 'delete':
-      if (!owned.userColumn) {
-        throw new Error(`Table "${owned.table}" is action "delete" but has no userColumn.`);
-      }
-      return {
-        table: owned.table,
-        action: 'delete',
-        sql: `DELETE FROM ${owned.table} WHERE ${owned.userColumn} = $1`,
-      };
+      return planDelete(owned);
     case 'soft-delete':
       if (!owned.userColumn) {
         throw new Error(`Table "${owned.table}" is action "soft-delete" but has no userColumn.`);
@@ -64,6 +77,25 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
           `UPDATE ${owned.table} SET ${owned.softDeleteColumn} = NOW() ` +
           `WHERE ${owned.userColumn} = $1 AND ${owned.softDeleteColumn} IS NULL`,
       };
+    case 'pseudonymize': {
+      if (!owned.userColumn) {
+        throw new Error(`Table "${owned.table}" is action "pseudonymize" but has no userColumn.`);
+      }
+      // Overwrite the id, and NULL any denormalized copies of the member's identity alongside it —
+      // clearing the id while leaving a captured handle would defeat the whole point.
+      //
+      // The WHERE still matches the REAL id, so this is naturally idempotent: a second run finds no
+      // rows, because the first already replaced them with the placeholder.
+      const sets = [
+        `${owned.userColumn} = '${DELETED_MEMBER_PLACEHOLDER}'`,
+        ...(owned.clearColumns ?? []).map((column) => `${column} = NULL`),
+      ];
+      return {
+        table: owned.table,
+        action: 'pseudonymize',
+        sql: `UPDATE ${owned.table} SET ${sets.join(', ')} WHERE ${owned.userColumn} = $1`,
+      };
+    }
     default: {
       // Exhaustiveness guard: a new action must be handled here explicitly.
       const unreachable: never = owned.action;
@@ -90,7 +122,7 @@ export function planDeletion(entry: PluginDeletionEntry): DeletionStatement[] {
 /** Per-table outcome of running a deletion, for the audit/event record. */
 export type DeletionTableResult = {
   readonly table: string;
-  readonly action: 'delete' | 'soft-delete';
+  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
   /** Rows affected (deleted or soft-deleted). */
   readonly rowCount: number;
 };

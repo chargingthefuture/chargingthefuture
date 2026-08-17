@@ -181,7 +181,7 @@ function ensureLabel(name, color, description) {
   try {
     gh(['label', 'create', name, '--repo', TRIAGE_REPO, '--color', color, '--description', description, '--force']);
   } catch {
-    // Best-effort.
+    // no-trace: best-effort, since applying the label at create time is what matters.
   }
 }
 

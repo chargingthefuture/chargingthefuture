@@ -6,7 +6,7 @@
 // edit that changes the meaning must also bump CONTRIBUTION_CONSENT_VERSION, and old rows keep
 // pointing at the old version.
 //
-// What this is, in legal shape: a limited, non-exclusive, revocable licence. The contributor keeps
+// What this is, in legal shape: a limited, non-exclusive, revocable license. The contributor keeps
 // every right to their own writing; they are permitting one use, and they can end it. Each clause
 // below states one of those edges in plain words.
 //

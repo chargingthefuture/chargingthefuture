@@ -38,7 +38,7 @@ export const UNLOCK_FLAGS = {
     // (the Hub general channel) so they can ask for help — e.g. trouble finding their Quora URL —
     // instead of being confined to the Unlock screen. Configure in Unleash as a gradual rollout
     // (e.g. 50%) with stickiness on userId so each member is sticky in one bucket. OFF (default,
-    // and when Unleash is unconfigured) = current behaviour (Unlock-only until verified). The goal
+    // and when Unleash is unconfigured) = current behavior (Unlock-only until verified). The goal
     // is to test whether early Commons access lifts the Quora-URL submission/completion rate.
     EARLY_COMMONS_ACCESS: 'feature-unlock-early-commons-access',
 };

@@ -6,11 +6,11 @@ Mutual Time is a one-link meeting-time picker (spec #1780). An admin (the platfo
 event that has a single shareable link. Approved members open that link and pick up to three one-hour
 windows — snapped to the half-hour — in their own timezone. When the survey closes, the app chooses the
 window the most members can make (ties go to the earliest) and shows it, in each viewer's own timezone,
-with a link to where the meeting happens (Chyme or Peer Programming).
+with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
 
 - **In scope:** owner/admin event creation and manual close; a public shareable link with three viewer
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
-  at a set close time.
+  at a set close time; a rolling seven-day window of times while the survey is open.
 - **Out of scope:** any ServiceCredits/money (there are none here); a public directory of events (events
   are shared as direct links, never listed); recurring events; native Android (web + mobile-responsive
   only, per rule 105 — Mutual Time is not on the Chyme keep-list).
@@ -27,23 +27,51 @@ to the meeting surface; members who did not vote can still come listen in.
    up to 3 one-hour windows they're free — in their own timezone, auto-detected and changeable (for a
    VPN or travel). Slots are shown as date chips with Morning/Afternoon/Evening groups; a member can
    revise or clear their picks any time while voting is open.
+   The days on offer are always the next seven days counted from the moment they open the link, so a
+   survey that has been open for a while still shows upcoming days, never days that have gone by.
 2. **See the chosen time.** After the survey closes, the same link shows the winning time in the
    viewer's own timezone, how many members can make it, and a "Go to <plugin>" link to the meeting.
 3. **Listen-in for everyone.** A signed-out or not-yet-approved visitor can still open the link: they
    see the event and a message that they can come listen in at whatever time is chosen — the link is
    their invite. They are shown a sign-in prompt if they want a say in the time.
-4. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+4. **See the days and times before signing in.** Under that sign-in prompt, a visitor sees the real
+   voting form — the same day chips and one-hour windows a member picks from — grayed out and not
+   tappable, with the line "Here are the times on offer — sign in to pick yours". They can see exactly
+   what they would be choosing from before they decide to sign in.
+5. **Know where the meeting is, from the moment the link opens.** Every state of the shared link —
+   before voting opens, while voting is open, for a signed-out visitor, and after the time is chosen —
+   shows "We'll meet in <plugin>" with a button straight to that plugin (for example Chyme, at
+   `/apps/chyme`). It no longer waits for the survey to close.
+6. **A way back off the survey.** A signed-in member sees the standard top bar on the shared link —
+   back chevron, brand icon, "Mutual Time", and the bug / settings / account controls — the same bar
+   every other screen has. A signed-out visitor sees the shared back chevron next to the event name,
+   and only when there is somewhere in-app to go back to.
+7. **Copy the link.** Every surface has a Copy-link button (rule 130) for sharing the one event link.
+8. **Told when a pick of theirs has gone by.** Because the days on offer roll forward, a time a member
+   picked last week can fall behind the current moment. Their expired picks stop counting and are taken
+   off their list, and the voting form tells them so — "One time you picked earlier has now passed, so
+   it no longer counts. Pick from the days below and save again." — instead of dropping the vote
+   silently. Their remaining upcoming picks are untouched.
 
 ## Admin Features
 
 1. **Create an event** at `/apps/mutual-time`: optional title, optional description, a "Where we'll
-   meet" plugin (Chyme or Peer Programming), and optional survey open/close date-times. Leaving close
+   meet" plugin (Chyme, Peer Programming, or Beacon), and optional survey open/close date-times. Leaving close
    blank means the admin closes it manually.
 2. **Manage events:** the dashboard lists the admin's events with voter counts, a status pill
    (scheduled / open / closed), Copy-link, View, "Close and choose the time", and — once closed — the
    chosen time and how many can make it.
 3. **Close and choose:** closing runs the most-overlap algorithm and stamps the winning window. A survey
-   with a set close time auto-closes when that time passes.
+   with a set close time auto-closes when that time passes. Only windows still ahead of the moment of
+   closing can win, so closing a long-open survey can never stamp a time that has already been and
+   gone; if every vote had passed, the link says so and no time is chosen.
+4. **A dot on the admin landing when there is something to act on.** The Mutual Time tile on `/admin`
+   carries the shared "new to review" dot (see the non-plugin inventory §1.14) in two cases, both for
+   the surveys this admin created: somebody picked times on one of their still-open surveys, or one of
+   their surveys reached its close time and chose a time without them. That is the cue to open the
+   dashboard and decide when to go live. A survey nobody has voted on raises nothing — it simply stays
+   open until someone picks — and a survey the admin closed by hand raises nothing either. Opening the
+   tile clears the dot.
 
 ## API Surface and Route Map
 
@@ -55,11 +83,13 @@ All routes under `ctf/packages/web/app/api/mutual-time/`:
 - `POST /api/mutual-time/events/[eventId]/close` — close a survey now and compute the winner. Admin-only
   (and the creator). CSRF-guarded.
 - `GET /api/mutual-time/event/[slug]` — **public** read of one event (title, description, status,
-  candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`
-  and their own picks; never returns anyone else's votes.
+  candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`,
+  their own upcoming picks, and `viewer.expiredPicks` (how many of their picks were for times that have
+  since passed); never returns anyone else's votes.
 - `POST /api/mutual-time/event/[slug]/vote` — save (replace) the signed-in, Unlock-approved member's
   picks (up to 3 half-hour-snapped one-hour windows). CSRF-guarded. Rejected if the event is not open or
-  a pick is not a valid candidate slot.
+  a pick is not a valid candidate slot — which now includes a pick whose time passed while the form sat
+  open (same error code, wording that names the reason).
 
 ## Data Model and Storage Contracts
 
@@ -69,17 +99,25 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. `mutual_time_events`
    - One row per event, keyed by `id`, with a unique shareable `slug`. Columns: `created_by_user_id`
      (the admin creator), `title` (nullable), `description` (nullable), `meeting_plugin`
-     (`chyme|peer-programming`), `window_start_date` (UTC date the 7-day candidate window begins),
+     (`chyme|peer-programming|beacon`), `window_start_date` (UTC date recorded at creation; it anchors
+     the candidate window only for a closed survey — while a survey is open the window rolls forward
+     from the current moment instead),
      `window_days` (default 7), `opens_at` (nullable — null opens immediately), `closes_at` (nullable —
      null closes manually), `status` (`open|closed`), `result_slot_start` (winning UTC slot, nullable),
-     `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable). Indexed by slug
-     (unique) and by creator.
+     `result_can_make_it` (count, nullable), `created_at`, `closed_at` (nullable), `auto_closed`
+     (boolean, default `FALSE` — `TRUE` when the survey closed itself at `closes_at` rather than an
+     admin pressing Close; the admin-landing dot keys on it). Indexed by slug (unique) and by creator.
 2. `mutual_time_votes`
    - One row per (event, voter, slot): `event_id` (FK → `mutual_time_events(id)` `ON DELETE CASCADE`),
      `voter_user_id`, `slot_start_utc` (the one-hour window start), `created_at`. Unique on
      `(event_id, voter_user_id, slot_start_utc)`; indexed by `(event_id, slot_start_utc)` and by voter.
-     Candidate slots are computed from the event window (`window_start_date` + `window_days`, 48
-     half-hour starts/day) and never stored — only cast votes are stored.
+     Candidate slots are computed from the event window (`window_days` × 48 half-hour starts/day) and
+     never stored — only cast votes are stored. The window is anchored by
+     `candidateWindowStartMs` in `lib/mutual-time/repository.ts`: the next half-hour from now while the
+     survey is open, the opening moment while it is scheduled, and `window_start_date` once it is
+     closed. A stored vote whose `slot_start_utc` has passed stays in the table but is ignored
+     everywhere — it is left out of the voter count, out of the winner computation, and out of the
+     member's own pick list.
 
 ## Security, Privacy, and Compliance Controls
 
@@ -112,29 +150,42 @@ is added to `TrustSignalMetrics`, `computeTrustSignalMetrics`, or `buildTrustEvi
 ## Web and Android Delivery Status
 
 - **Web:** complete — admin dashboard (`/apps/mutual-time`), the public one-link surface
-  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes.
+  (`/mutual-time/[slug]`) with vote/result/gate states, and all API routes. The day chips and slot grid
+  live in `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the grayed-out
+  preview on the sign-in gate are the same component, not two that can drift apart.
 - **Mobile-responsive web:** complete — the same web components render at phone width (single-column
   layout, horizontally scrollable date chips, wrapping slot grid).
 - **Android:** **out of scope (web-only per rule 105).** Mutual Time is not on the Chyme keep-list; there
-  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming)
-  is where any native experience lives, not the scheduling.
+  is intentionally no React Native surface. The meeting the result points to (Chyme / Peer Programming /
+  Beacon) is where any native experience lives, not the scheduling.
 
 ## Seed Coverage Status
 
 Deterministic seed at `ctf/scripts/seedMutualTime.mjs` (pnpm `seed:mutual-time`). Seeds two events — one
 open ("Weekly check-in", no close date, spread of votes) and one closed ("Q3 onboarding", with a
 computed winning time) — plus sample votes, using fixed slugs + `ON CONFLICT DO NOTHING` so it is
-idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed deterministic.
+idempotent. The open event is anchored to the day the seed runs — its votes land on the days after it,
+inside the rolling window, so the sample overlap is always still ahead and its votes are replaced on
+each run rather than piling up. The closed event keeps a fixed past window (`2026-07-21`, 7 days), which
+keeps that half reproducible; its stamped result stands.
 
 ## Gaps and Known Technical Debt
 
-1. **Target meeting week is derived, not configured.** The candidate window is a fixed 7 days starting
-   from when voting opens (or creation). Letting the admin pick the target week separately from the
-   survey open/close times is a documented follow-up.
-2. **Full 24h candidate grid.** To let anyone in any timezone find a free hour, the candidate grid spans
+1. **Target meeting week is derived, not configured.** The candidate window is 7 days, rolling forward
+   from the current moment while the survey is open (from the opening moment while it is scheduled).
+   Letting the admin pick a specific target week separately from the survey open/close times is a
+   documented follow-up — until then, an admin who needs a fixed week sets a close time and closes
+   before it passes.
+2. **A survey with no close time still needs a person to end it.** The rolling window keeps an
+   unattended survey usable indefinitely, but nothing chooses a time on its own: the admin presses
+   "Close and choose the time" (owner decision, 2026-08-12 — a default close date was considered and
+   turned down). The admin-landing dot is the prompt that there is something to look at; the dashboard
+   itself has no per-survey "new since you last looked" marker, because opening the tile clears the
+   dot before the dashboard renders. Which survey is new has to be read off the voter counts.
+3. **Full 24h candidate grid.** To let anyone in any timezone find a free hour, the candidate grid spans
    all 24 hours (48 half-hour starts/day). Members see them grouped by their local Night/Morning/
    Afternoon/Evening; a future refinement could let the admin bound the daily hours.
-3. **No reminder/notification** when a time is chosen — members re-open the link to see the result. A
+4. **No reminder/notification** when a time is chosen — members re-open the link to see the result. A
    push/notification tie-in is a possible follow-up.
 
 ## Change Log
@@ -155,7 +206,7 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   fallback), but there was no link to it, so admins could not reach the create/manage dashboard ("not
   linked anywhere; cannot create a poll"). Added the `mutual-time` row (nav_rank 250, visible) to the
   `schema.sql` registry seed. Takes effect when `schema.sql` is applied to the database on deploy.
-- 2026-07-22: **Code-review fixes (issues #1803–#1809).** No behaviour change to the happy path.
+- 2026-07-22: **Code-review fixes (issues #1803–#1809).** No behavior change to the happy path.
   (1) Audit lines now carry the contract's `policyDecision.evidence` (`role=admin`,
   `role=admin;owner=true`, `unlockTier=approved_full`) so the emitted audit satisfies
   `MUTUAL_TIME_PLUGIN_AUDIT_CONTRACTS.yaml` (#1807). (2) `GET /api/mutual-time/events` adds a same-origin
@@ -180,6 +231,85 @@ idempotent. Fixed candidate window (`2026-07-21`, 7 days) keeps the seed determi
   members only ever reach an event through its shared link (`/mutual-time/<slug>`), never
   `/apps/mutual-time`. The admin dashboard now renders the shared `MobileScreenHeader` top nav (accent
   back chevron + brand icon + title + the bug/settings/avatar actions), matching every other page.
+- 2026-08-09: **Beacon added to "Where we'll meet" + the date fields stopped running off the screen.**
+  (1) `beacon` is now a third choice in the meeting-plugin list, alongside Chyme and Peer Programming:
+  added to `MUTUAL_TIME_MEETING_PLUGINS`, to the display-name map (`Beacon`), to the command-contract
+  enum and the audit contract's target context, and to the `meeting_plugin` check in `schema.sql`
+  (plus a drop-and-re-add of `mutual_time_events_meeting_plugin_check` so a database created before
+  today accepts the new value too). The result link points at `/apps/beacon`, the same
+  `/apps/<slug>` shape as the other two. (2) The two "Survey opens / Survey closes" date-and-time
+  fields ran past the right edge of the card on a phone. A grid column sized `1fr` keeps a floor of the
+  item's own minimum width, and a `datetime-local` control reports a minimum wider than the phone-width
+  column, so the column grew and took the field with it. The column is now `minmax(0, 1fr)`, each
+  wrapper carries `minWidth: 0`, and the shared input style carries `maxWidth: 100%` — the fields line
+  up with the title, description, and dropdown above them.
+- 2026-08-09: **The shared link now previews the form, names the meeting place, and stops offering to
+  clear picks nobody made.** All on `/mutual-time/<slug>`; no schema, contract, or API change.
+  (1) A signed-out or not-yet-approved visitor used to see only a locked box. They now see the sign-in
+  prompt with the real voting form below it — the same day chips and one-hour windows a member picks
+  from — grayed out, not tappable, not keyboard-focusable, and skipped by screen readers, under the line
+  "Here are the times on offer — sign in to pick yours". The reason to sign in is visible instead of
+  described. (2) "We'll meet in <plugin>" with a button to that plugin now shows on every state of the
+  link, not just after the survey closes: the gate, the not-yet-open state, and the voting form. The
+  candidate slots and the meeting plugin were already in the public read, so nothing new is exposed.
+  (3) The button under the grid read "Clear my picks" whenever nothing was selected — including on a
+  first visit, where there was nothing to clear. It now tracks what the server holds separately from
+  what is selected on screen: "Save my picks" when there is a selection, "Clear my picks" only when the
+  member has saved picks and has deselected them all, and switched off with the hint "Pick a time above,
+  then save." when there is neither. The day chips and slot grid moved to
+  `components/mutual-time/mutual-time-slot-picker.tsx` so the voting form and the gate preview share one
+  component.
+- 2026-08-09: **The shared survey link now has a way back (rule 134).** `/mutual-time/<slug>` shipped
+  with no back control at all — on a phone, and especially in the installed web app where there is no
+  browser back button, a member who opened it was stranded. It is the one screen a signed-out stranger
+  can open, so the two viewers get different chrome. A signed-in member now gets the shared
+  `MobileScreenHeader` (back chevron, brand icon, "Mutual Time", and the bug / settings / account
+  cluster), the same bar as every other screen. A signed-out visitor gets the shared
+  `BackChevronButton` beside the event name instead, and only when `useSmartBack` reports in-app
+  history: the full bar would offer them an account menu and a settings link they cannot use, and the
+  one-level-up fallback would push them to the all-apps page, which needs an account. With no in-app
+  history there is nothing in-app behind them and their browser's own back still works. No hand-rolled
+  back control — both pieces are the shared ones. `MutualTimePublic` was also split into `EventHeader`
+  and `EventBody` to stay under the complexity limit.
+- 2026-08-12: **The days on offer now roll forward, so an open survey never goes out of date.** Reported
+  by the owner: a survey created with no close time kept offering the same seven days after they had
+  gone by, members could still pick a time in the past, and closing it would stamp that past time as
+  the chosen one. Nothing about the survey ended by itself. The candidate window is no longer frozen at
+  creation. One function, `candidateWindowStartMs` in `lib/mutual-time/repository.ts`, now decides where
+  the window starts — the next half-hour from now while the survey is open, the opening moment while it
+  is scheduled, the stored `window_start_date` once it is closed — and the public read, the vote guard,
+  and the winner computation all go through it, so what a voter sees, what the server accepts, and what
+  can win are the same set of times. `slots.ts` gained `generateSlotsFrom` and `rollingWindowStartMs`
+  and lost `generateCandidateSlots`. Votes for times that have passed stay in the table but are ignored:
+  left out of `computeWinner` (`slot_start_utc > NOW()`), out of the open-survey voter count, and out of
+  `getViewerPicks`, which now also returns how many of the member's picks expired so the form can say so
+  ("One time you picked earlier has now passed…") rather than dropping them silently — the owner chose
+  telling the voter over rolling their picks forward or letting past picks keep counting. A survey
+  closed after all its votes had passed now says that on the link instead of "closed with no votes".
+  Saving a pick that has just passed returns the same `MUTUAL_TIME_INVALID_SLOT` code with wording that
+  says which of the two it is. Auto-close was deliberately left alone (owner decision, same date): a
+  survey with no close time still waits for the admin to close it, and the rolling window is what keeps
+  it usable in the meantime. The seed's open event is anchored to the day it runs and its votes are
+  replaced each run; the closed event keeps its fixed past window. No schema change, no contract change,
+  no API-shape change beyond the added `viewer.expiredPicks` count.
+
+- 2026-08-12: **The admin landing tells the admin when a survey needs them (owner request).** Until now
+  an admin had to open `/apps/mutual-time` and check by eye to learn that anyone had voted, or that a
+  survey with a close time had chosen its own time — and that is exactly what tells them when to go
+  live and run the meeting. Mutual Time is now wired into the shared admin-landing dot
+  (`lib/admin/area-attention.ts`, non-plugin inventory §1.14) with two signals, both limited to the
+  surveys this admin created: votes cast on one of their still-open surveys since they last opened the
+  area (counting only picks still ahead of now, matching the rolling window), and one of their surveys
+  having passed its close time and chosen a time on its own. The second query treats "past `closes_at`
+  but still stored as open" the same as "already closed", because a survey only flips when someone next
+  reads it — otherwise a survey nobody had opened since its close time would never raise the dot. A
+  survey nobody has voted on raises nothing and stays open until someone picks; a survey the admin
+  closed by hand raises nothing either (owner decision, same date). This is the first area signal
+  scoped to one admin, so the registry now accepts `{ sql, scopedToAdmin: true }` entries that also get
+  the admin's user id as `$2`; existing string entries are untouched. One schema addition,
+  `mutual_time_events.auto_closed` (boolean, default `FALSE`, set by `closeAndComputeTx`), so the two
+  ways a survey ends can be told apart — an admin who pressed Close does not need telling.
+  `schema.demo.sql` regenerated. No contract or API-shape change.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 

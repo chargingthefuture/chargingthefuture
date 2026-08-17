@@ -39,6 +39,16 @@ async function fetchCohorts(track: string, signal: AbortSignal): Promise<Cohort[
   return Array.isArray(data) ? data : (data.cohorts ?? []);
 }
 
+// The signed-in member's own enrollments. Without this read the shell knew only about enrollments
+// made in the current visit, so a member who enrolled yesterday saw "0" on Browse and an empty
+// Progress tab while the admin panel counted those same rows.
+async function fetchEnrollments(signal: AbortSignal): Promise<Enrollment[]> {
+  const res = await fetch("/api/level-up/enrollments", { signal });
+  if (!res.ok) throw new Error("Failed to load your enrollments");
+  const data = (await res.json()) as { enrollments?: Enrollment[] };
+  return data.enrollments ?? [];
+}
+
 async function fetchWallet(signal: AbortSignal): Promise<Wallet | null> {
   const res = await fetch("/api/service-credits/wallet", { signal });
   if (!res.ok) return null;
@@ -150,6 +160,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
   const [enrolledIds, setEnrolledIds] = useState<Set<string>>(new Set());
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollmentsError, setEnrollmentsError] = useState<string | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [walletView, setWalletView] = useState<WalletView | null>(null);
@@ -162,6 +173,21 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     // display instead of flashing the loading state.
     if (!background) setLoading(true);
     setError(null);
+    setEnrollmentsError(null);
+    // The member's own enrollments load alongside the cohorts, but a failure there does not blank the
+    // screen: browsing still works, and the Browse count reports that it could not be read instead of
+    // showing a "0" that would be indistinguishable from genuinely not being enrolled anywhere.
+    const enrollmentsPromise = fetchEnrollments(signal).then(
+      (rows) => {
+        if (signal.aborted) return;
+        setEnrollments(rows);
+        setEnrolledIds(new Set(rows.filter((row) => row.isCurrent).map((row) => row.cohortId)));
+      },
+      (e: unknown) => {
+        if (signal.aborted) return;
+        setEnrollmentsError(e instanceof Error ? e.message : "Failed to load your enrollments.");
+      },
+    );
     try {
       const [cohortsData, walletData] = await Promise.all([fetchCohorts(track, signal), fetchWallet(signal)]);
       if (signal.aborted) return;
@@ -171,6 +197,7 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       if (signal.aborted) return;
       setError(e instanceof Error ? e.message : "Failed to load LevelUp.");
     } finally {
+      await enrollmentsPromise;
       if (!signal.aborted && !background) setLoading(false);
     }
   }, [track]);
@@ -229,8 +256,24 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
         const d = (await res.json()) as { error?: string; message?: string };
         throw new Error(d.error ?? d.message ?? "Enrollment failed");
       }
+      const created = (await res.json()) as { enrollment?: { enrollmentId?: string } };
       setEnrolledIds((prev) => new Set([...prev, cohort.id]));
-      setEnrollments((prev) => [...prev, { cohortId: cohort.id, title: cohort.title, track: cohort.track, trainerName: cohort.trainerName, milestones: [], completedCount: 0 }]);
+      // Optimistic row so the count and the Progress tab move immediately; the next load replaces it
+      // with the server's version, including the milestone tally the response does not carry.
+      setEnrollments((prev) => [
+        ...prev,
+        {
+          enrollmentId: created.enrollment?.enrollmentId ?? cohort.id,
+          cohortId: cohort.id,
+          status: "enrolled",
+          isCurrent: true,
+          title: cohort.title,
+          track: cohort.track,
+          trainerName: cohort.trainerName,
+          milestoneTotal: 0,
+          milestoneCompleted: 0,
+        },
+      ]);
     } catch (e: unknown) {
       setEnrollError(e instanceof Error ? e.message : "Enrollment failed.");
     } finally {
@@ -254,7 +297,8 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           <LevelUpBrowse
             cohorts={filtered}
             openCount={openCount}
-            enrolledCount={enrollments.length}
+            enrolledCount={enrollments.filter((enr) => enr.isCurrent).length}
+            enrolledCountError={enrollmentsError}
             escrow={escrow}
             search={search}
             onSearch={setSearch}
@@ -282,7 +326,11 @@ export function LevelUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     return (
       <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
+              together overflow a 390px phone — the last control was clipped off the right
+              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
+              off; on a wider viewport it still renders as one line. */}
+          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 8, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>LevelUp</span>

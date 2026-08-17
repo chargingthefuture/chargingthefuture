@@ -65,6 +65,7 @@ export async function ensureLighthouseMatchChannel(input: {
     try {
       await channel.create();
     } catch {
+      // no-trace: a failed create means the channel already exists, so watching it is the answer.
       await channel.watch();
     }
 

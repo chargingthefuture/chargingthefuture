@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product |
 
 ## How to run this
 
@@ -359,6 +359,15 @@ connected while viewing the other and when switching back. The in-room controls 
 avatars and the chat. The Android-app card links to the GitHub Releases page on a non-Android
 browser and is hidden on Android.
 **Result:** web ☐ mobile ☐ — notes:
+
+---
+
+### Account deletion clears the back-channel call log
+
+**Expected:** Deleting the account removes every back-channel call row the member appeared on —
+calls they started and calls they received. The call log is ephemeral and has no history screen, so
+there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
+registry entries.
 
 ---
 

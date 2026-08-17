@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { StreamChat } from 'stream-chat';
+import type { Channel as StreamChannel, Message, SendMessageOptions } from 'stream-chat';
 import {
   Chat,
   Channel,
@@ -15,6 +16,9 @@ import {
 } from 'stream-chat-react';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './stream-chat-panel.css';
+import { acquireStreamChatClient, releaseStreamChatClient } from '../../lib/shared/stream-chat-connection';
+import { describeSendBlock, describeStreamSendFailure, streamChatDebugContext } from '../../lib/shared/stream-chat-send-state';
+import { reportError } from '../../lib/observability/report';
 
 // How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
 const REMINDER_DELAY_MS = 30 * 60 * 1000;
@@ -34,44 +38,6 @@ const MESSAGE_ACTIONS_NO_EDIT: MessageActionsArray = [
   'react',
   'reply',
 ];
-
-// Shared Stream connection registry, keyed by API key. `StreamChat.getInstance(apiKey)` returns one
-// singleton client per key, so several StreamChatPanels on screen at once (e.g. a Beacon viewer plus a
-// plugin chat) share the SAME client. Previously each panel called connectUser on mount and
-// disconnectUser on unmount, so the first panel to unmount tore the connection out from under every
-// other live panel, and a quick re-mount (React StrictMode, a token refresh) could connect twice.
-// Ref-count the connection instead: connect once for the first panel, and only disconnect when the
-// LAST panel using that client unmounts. Worst case is a connection kept alive slightly too long (a
-// benign leak until page unload), never one dropped while still in use.
-const streamConnections = new Map<string, { userId: string; count: number; ready: Promise<StreamChat> }>();
-
-function acquireStreamConnection(apiKey: string, userId: string, token: string): Promise<StreamChat> {
-  const client = StreamChat.getInstance(apiKey);
-  const existing = streamConnections.get(apiKey);
-  if (existing && existing.userId === userId) {
-    existing.count += 1;
-    return existing.ready;
-  }
-  // No live connection for this key, or it is connected as a different user: (re)connect. Guard
-  // connectUser so we never call it when the client is already connected as this user.
-  const ready = Promise.resolve()
-    .then(() => (client.userID && client.userID !== userId ? client.disconnectUser() : undefined))
-    .then(() => (client.userID === userId ? undefined : client.connectUser({ id: userId }, token)))
-    .then(() => client);
-  streamConnections.set(apiKey, { userId, count: 1, ready });
-  return ready;
-}
-
-function releaseStreamConnection(apiKey: string): void {
-  const entry = streamConnections.get(apiKey);
-  if (!entry) return;
-  entry.count -= 1;
-  if (entry.count <= 0) {
-    streamConnections.delete(apiKey);
-    // Best-effort teardown once nothing is using the shared client anymore.
-    StreamChat.getInstance(apiKey).disconnectUser().catch(() => {});
-  }
-}
 
 // The logged-in author's own messages are always gray; everyone else's use the plugin accent.
 const OWN_BUBBLE_BG = 'rgba(255, 255, 255, 0.07)';
@@ -232,7 +198,7 @@ const ChannelSearchBar: React.FC = () => {
 };
 
 // A message a member asked to be reminded about, plus the timer that fires the reminder. The timer id
-// is kept so the reminder can be cancelled on unmount and never fires into a torn-down panel.
+// is kept so the reminder can be canceled on unmount and never fires into a torn-down panel.
 interface ActiveReminder {
   id: string;
   label: string;
@@ -256,7 +222,7 @@ const ReminderToast: React.FC<{ text: string; onDismiss: () => void }> = ({ text
   </div>
 );
 
-// Builds the conversation's message-action menu and reminder behaviour, scoped to one channel.
+// Builds the conversation's message-action menu and reminder behavior, scoped to one channel.
 //
 // stream-chat-react 12.16 / stream-chat 8.60 do not yet ship Stream's server-backed message
 // reminders (the per-message reminder API — client.reminders / message.reminder — and the built-in
@@ -370,7 +336,20 @@ const ConversationBody: React.FC<{
   // The Stream Channel value is loosely typed throughout this panel; passed straight to the hook.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   channel: any;
-}> = ({ channel }) => {
+  // When set, the conversation is over (rule 100: transaction-scoped chats close at a terminal
+  // state). The transcript stays readable but the composer is replaced by this notice — otherwise a
+  // member types a message and watches the send fail "Unauthorized" with no explanation (owner
+  // report on a canceled Direct Line).
+  readOnlyNotice?: string | null;
+  // Set when Stream says this member is not allowed to post here (not a member of the conversation,
+  // banned, or the conversation is frozen). The composer is replaced by this explanation, because a
+  // composer that is guaranteed to fail is worse than none: the chat library renders it regardless of
+  // permission and then reports every refusal as the same bare "Unauthorized".
+  sendBlockedNotice?: string | null;
+  // The reason the last send was refused, in plain words. Shown above the composer so the member sees
+  // what happened instead of only the failed bubble.
+  sendFailureNotice?: string | null;
+}> = ({ channel, readOnlyNotice, sendBlockedNotice, sendFailureNotice }) => {
   const { customMessageActions, toast } = useReminderActions(channel);
   return (
     <>
@@ -384,10 +363,15 @@ const ConversationBody: React.FC<{
           the panel), and link preview cards render in the MessageList via the default Attachment Card.
           Polls (create + vote) are entirely default in stream-chat-react 12.16: the composer's
           AttachmentSelector shows a "Create poll" entry whenever the channel config allows polls and
-          the member holds the send-poll capability (uploads are off, so it is the only entry there),
-          and MessageList renders the default Poll card with live voting for any message that carries a
-          poll. The owner enabled polls on the messaging channel type, so no extra wiring is needed; the
-          affordance is simply absent on channels that do not permit polls. The reminder action is the
+          the member holds the send-poll capability, and MessageList renders the default Poll card with
+          live voting for any message that carries a poll. The owner enabled polls on the messaging
+          channel type, so no extra wiring is needed; the affordance is simply absent on channels that
+          do not permit polls. Uploads are ON for the messaging channel type (a Stream dashboard
+          setting, not code), so the AttachmentSelector also shows a "File" entry. There is no custom
+          upload handler anywhere in the app: a picked file goes from the member's browser straight to
+          Stream's own file storage/CDN via the SDK default — our servers never receive the bytes.
+          (The gated contributor channel is different: its custom 'ctf-gated' channel type has uploads
+          OFF — see lib/contributor-access/gated-channel.ts.) The reminder action is the
           only message action passed in — it is empty (no extra action) when the channel does not permit
           reminders. */}
       <div className="ctf-chat-conversation">
@@ -398,7 +382,18 @@ const ConversationBody: React.FC<{
               message you delete it and repost, so a correction lands as a fresh message with a new
               timestamp. Delete and every other action stay. */}
           <MessageList customMessageActions={customMessageActions} messageActions={MESSAGE_ACTIONS_NO_EDIT} />
-          <MessageInput />
+          {readOnlyNotice ? (
+            <div className="ctf-chat-readonly" role="status">{readOnlyNotice}</div>
+          ) : sendBlockedNotice ? (
+            <div className="ctf-chat-readonly" role="status">{sendBlockedNotice}</div>
+          ) : (
+            <>
+              {sendFailureNotice ? (
+                <div className="ctf-chat-send-error" role="alert">{sendFailureNotice}</div>
+              ) : null}
+              <MessageInput />
+            </>
+          )}
         </Window>
         {toast}
       </div>
@@ -415,6 +410,9 @@ export interface StreamChatPanelProps {
   channelType?: string;
   /** Plugin brand color used to tint Stream's accent (send button, links, active states). */
   accentColor?: string;
+  /** When set, the conversation is over: the transcript stays readable, the composer is replaced by
+   * this notice, and no send can fail unexplained. */
+  readOnlyNotice?: string | null;
 }
 
 export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
@@ -424,6 +422,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   streamChannelId,
   channelType = 'messaging',
   accentColor,
+  readOnlyNotice,
 }) => {
   const [client, setClient] = useState<StreamChat | null>(null);
   // The Stream Channel type is generically parameterized and impractical to satisfy here; the value is
@@ -432,12 +431,17 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   const [channel, setChannel] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Set when Stream says this member may read but not post here; replaces the composer.
+  const [sendBlockedNotice, setSendBlockedNotice] = useState<string | null>(null);
+  // Set when a send is actually refused; shown above the composer and cleared by the next success.
+  const [sendFailureNotice, setSendFailureNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    // Ref-counted shared connection (see streamConnections above) — connect once across all panels on
-    // this API key, disconnect only when the last one unmounts.
-    acquireStreamConnection(streamApiKey, streamUserId, streamToken)
+    // Ref-counted connection per (apiKey, userId) identity (see lib/shared/stream-chat-connection):
+    // panels chatting as the same identity share one client; a panel can never re-authenticate or
+    // tear down another identity's connection.
+    acquireStreamChatClient(streamApiKey, streamUserId, streamToken)
       .then((chatClient) => {
         const ch = chatClient.channel(channelType, streamChannelId);
         // Watch with presence so the channel state carries its member list. The default '@' mention
@@ -445,6 +449,19 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
         // loaded for autocomplete to offer anyone; watch() populates channel.state.members.
         return ch.watch({ presence: true }).then(() => {
           if (!isMounted) return;
+          // Stream returns the member's capabilities with the channel. When posting is not among them,
+          // every send is going to be refused, so say why here instead of letting the member type into
+          // a composer that answers with a bare "Unauthorized" — and record the capability list, the
+          // frozen flag, and which Stream app answered, which is what pins down the cause.
+          const blocked = describeSendBlock(ch);
+          setSendBlockedNotice(blocked);
+          if (blocked) {
+            reportError(new Error('Stream chat: member cannot post in this channel'), {
+              area: 'chat',
+              op: 'send_capability_missing',
+              extra: streamChatDebugContext({ streamApiKey, streamUserId, streamChannelId, channel: ch }),
+            });
+          }
           setChannel(ch);
           setClient(chatClient);
           setLoading(false);
@@ -457,25 +474,57 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
       });
     return () => {
       isMounted = false;
-      releaseStreamConnection(streamApiKey);
+      releaseStreamChatClient(streamApiKey, streamUserId);
     };
   }, [streamApiKey, streamToken, streamUserId, streamChannelId, channelType]);
+
+  // Send the message ourselves instead of letting the library do it silently, so a refusal keeps its
+  // reason. Stream's error carries the actual cause; the library throws it away and labels every
+  // refusal "Unauthorized" on the failed bubble. The error is rethrown afterwards so the failed-message
+  // UI (and its retry) behaves exactly as before — this only adds the explanation and the log.
+  const doSendMessageRequest = useCallback(
+    async (ch: StreamChannel, message: Message, options?: SendMessageOptions) => {
+      try {
+        const response = await ch.sendMessage(message, options);
+        setSendFailureNotice(null);
+        return response;
+      } catch (sendError: unknown) {
+        const failure = describeStreamSendFailure(sendError);
+        setSendFailureNotice(failure.memberText);
+        reportError(sendError, {
+          area: 'chat',
+          op: 'send_message',
+          extra: {
+            ...streamChatDebugContext({ streamApiKey, streamUserId, streamChannelId, channel: ch }),
+            ...failure.detail,
+          },
+        });
+        throw sendError;
+      }
+    },
+    [streamApiKey, streamUserId, streamChannelId],
+  );
 
   if (loading) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Loading chat…</div>;
   if (error) return <div style={{ padding: 16, color: '#EF4444', fontSize: 14 }}>{error}</div>;
   if (!client || !channel) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Chat unavailable.</div>;
 
-  // The whole app is dark, so the chat must use Stream's dark theme (it used to render the light
-  // theme, which looked like a white widget dropped into a dark plugin). The wrapper carries the
-  // theme class and, when given, tints Stream's accent CSS variables to the plugin's brand color.
+  // The whole app is dark, so the chat must use Stream's dark theme. The theme class MUST go on
+  // <Chat theme=...>: the SDK composes that prop into the class list of its own `.str-chat` root
+  // element, and Stream's stylesheet defines the light palette as element-own custom properties on
+  // `.str-chat` itself — element-own values always beat anything inherited, so a theme class (or an
+  // accent variable) placed only on this wrapper div never changes the palette. That was the bug:
+  // the wrapper carried `str-chat__theme-dark` while every panel still rendered the light theme
+  // (owner report — the Direct Line chat showed as a white widget inside the dark app). The
+  // wrapper keeps the class purely as a scope for our own rules in stream-chat-panel.css, and the
+  // `ctf-chat-accented` modifier + `--ctf-chat-accent` re-declare Stream's accent variables on the
+  // `.str-chat` element from that stylesheet (same reason: they must land element-own to win).
   const themeVars = {
     // Own messages are gray everywhere; other people's messages take the plugin accent (below).
     '--ctf-chat-own-bg': OWN_BUBBLE_BG,
     ...(accentColor
       ? {
-          '--str-chat__primary-color': accentColor,
-          '--str-chat__active-primary-color': accentColor,
-          '--str-chat__message-send-color': accentColor,
+          '--ctf-chat-accent': accentColor,
           '--ctf-chat-other-bg': accentColor,
           '--ctf-chat-other-fg': readableTextOn(accentColor),
         }
@@ -483,16 +532,29 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   } as React.CSSProperties;
 
   return (
-    <div className="str-chat__theme-dark" style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}>
-      <Chat client={client}>
+    <div
+      className={`str-chat__theme-dark${accentColor ? ' ctf-chat-accented' : ''}`}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}
+    >
+      <Chat client={client} theme="str-chat__theme-dark">
         {/* enrichURLForPreview turns on URL enrichment in the composer: as a member types or pastes a
             link, Stream scrapes it and MessageInput shows a LinkPreviewList card before sending. The
             sent message then carries an og-scrape attachment, which the default Attachment renderer
             (Card) draws as a preview card in the MessageList — so pasted links get preview cards both
             while composing and in the conversation. The messaging channel type already permits URL
             enrichment in the dashboard, so no dashboard change is needed. */}
-        <Channel channel={channel} enrichURLForPreview EmptyStateIndicator={ChatEmptyState}>
-          <ConversationBody channel={channel} />
+        <Channel
+          channel={channel}
+          enrichURLForPreview
+          EmptyStateIndicator={ChatEmptyState}
+          doSendMessageRequest={doSendMessageRequest}
+        >
+          <ConversationBody
+            channel={channel}
+            readOnlyNotice={readOnlyNotice}
+            sendBlockedNotice={sendBlockedNotice}
+            sendFailureNotice={sendFailureNotice}
+          />
         </Channel>
       </Chat>
     </div>

@@ -17,6 +17,24 @@ type LedgerPosting = {
   asset: string;
 };
 
+// Reads an environment variable and trims it, returning undefined when unset.
+function readTrimmedEnv(name: string): string | undefined {
+  return process.env[name]?.trim();
+}
+
+// Chooses the ledger book name for the current run. Demo mode (a recording
+// session) uses the separate staging book (FORMANCE_LEDGER_STAGING); production
+// uses FORMANCE_LEDGER. In demo mode there is deliberately no fallback to the
+// production ledger, so no demo transaction can reach production financial data.
+function resolveLedgerName(demoMode: boolean): string | undefined {
+  return demoMode ? readTrimmedEnv('FORMANCE_LEDGER_STAGING') : readTrimmedEnv('FORMANCE_LEDGER');
+}
+
+// The credits asset used for every posting, with the shared default.
+function resolveAsset(): string {
+  return readTrimmedEnv('FORMANCE_ASSET') || 'SERVICE_CREDITS';
+}
+
 // Resolves the active Formance ledger configuration. Demo mode (a recording
 // session) writes to a separate ledger book on the same Formance instance
 // (FORMANCE_LEDGER_STAGING) so test transactions never touch the production
@@ -25,10 +43,8 @@ type LedgerPosting = {
 // production ledger: if FORMANCE_LEDGER_STAGING is unset the config is treated as
 // not configured, so no demo transaction can reach production financial data.
 async function getFormanceConfig() {
-  const apiUrl = process.env.FORMANCE_API_URL?.trim();
-  const ledger = (await isDemoMode())
-    ? process.env.FORMANCE_LEDGER_STAGING?.trim()
-    : process.env.FORMANCE_LEDGER?.trim();
+  const apiUrl = readTrimmedEnv('FORMANCE_API_URL');
+  const ledger = resolveLedgerName(await isDemoMode());
 
   if (!apiUrl || !ledger) {
     throw new Error('external_ledger_not_configured');
@@ -37,8 +53,8 @@ async function getFormanceConfig() {
   return {
     apiUrl: apiUrl.replace(/\/$/, ''),
     ledger,
-    apiToken: process.env.FORMANCE_API_TOKEN?.trim() ?? null,
-    asset: process.env.FORMANCE_ASSET?.trim() || 'SERVICE_CREDITS',
+    apiToken: readTrimmedEnv('FORMANCE_API_TOKEN') ?? null,
+    asset: resolveAsset(),
   };
 }
 
@@ -52,10 +68,10 @@ export async function getFormanceConfigStatus(): Promise<{
   asset: string;
   demoMode: boolean;
 }> {
-  const apiUrl = process.env.FORMANCE_API_URL?.trim() ?? '';
+  const apiUrl = readTrimmedEnv('FORMANCE_API_URL') ?? '';
   const demoMode = await isDemoMode();
-  const ledger = (demoMode ? process.env.FORMANCE_LEDGER_STAGING?.trim() : process.env.FORMANCE_LEDGER?.trim()) ?? '';
-  const asset = process.env.FORMANCE_ASSET?.trim() || 'SERVICE_CREDITS';
+  const ledger = resolveLedgerName(demoMode) ?? '';
+  const asset = resolveAsset();
   return {
     configured: apiUrl.length > 0 && ledger.length > 0,
     apiUrlSet: apiUrl.length > 0,
@@ -108,6 +124,7 @@ async function postTransactionToFormance(input: {
   try {
     payload = (await response.json()) as FormanceTransactionResponse;
   } catch {
+    // no-trace: a non-JSON or empty body keeps the default payload, and the post already succeeded.
   }
 
   return {

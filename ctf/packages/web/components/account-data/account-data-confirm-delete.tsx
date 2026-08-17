@@ -17,6 +17,40 @@ type ConfirmProps = {
   onConfirm: () => Promise<void>;
 };
 
+// The confirm/cancel button row. Kept as its own component so the ready/submitting style branches
+// live outside the main component's decision count.
+function ConfirmDeleteActions({
+  ready, submitting, brand, border, onConfirm, onCancel,
+}: {
+  ready: boolean;
+  submitting: boolean;
+  brand: string;
+  border: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 10 }}>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={!ready}
+        style={{ flex: 1, padding: '13px', borderRadius: 11, background: ready ? 'rgba(239,68,68,0.14)' : 'rgba(255,255,255,0.04)', border: `1px solid ${ready ? 'rgba(239,68,68,0.45)' : border}`, color: ready ? '#EF4444' : '#374151', fontSize: 14, fontWeight: 700, cursor: ready ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+      >
+        {submitting ? <><Loader2 size={15} className="account-data-spin" /> Deleting…</> : <><Trash2 size={15} /> Delete permanently</>}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={submitting}
+        style={{ padding: '13px 22px', borderRadius: 11, background: `${brand}12`, border: `1px solid ${brand}30`, color: brand, fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer' }}
+      >
+        Keep my data
+      </button>
+    </div>
+  );
+}
+
 // Full-account deletion confirmation. Requires the user to type the exact phrase
 // ("delete my account") before the delete button is enabled — an intentional gesture, matching
 // AccountDataConfirmDelete.tsx / MobileAccountDataConfirmDelete.tsx. On success it shows the
@@ -54,7 +88,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Deletion queued</div>
           <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
-            Your request has been received. Your personal data is being removed across all services, and your ServiceCredits balance will be settled through the standard process. Some audit records are retained for platform integrity.
+            Your request has been received. Your personal data is being removed across all services. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
           </div>
         </div>
       </div>
@@ -93,7 +127,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
             {([
               { t: `All personal data deleted across ${serviceCount} services`, Icon: Trash2, c: '#EF4444' },
-              { t: 'ServiceCredits balance settled via standard process — not destroyed', Icon: CheckCircle, c: '#9CA3AF' },
+              { t: 'ServiceCredits: held 7 days, then returned to the community treasury (an active escrow resolves first)', Icon: CheckCircle, c: '#9CA3AF' },
               { t: 'Some audit records retained for platform integrity — this is intentional', Icon: Lock, c: '#9CA3AF' },
               { t: 'Your profile and username removed from all directories', Icon: Trash2, c: '#EF4444' },
             ]).map(({ t, Icon, c }, i) => (
@@ -128,24 +162,14 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           ) : null}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              onClick={handleConfirm}
-              disabled={!ready}
-              style={{ flex: 1, padding: '13px', borderRadius: 11, background: ready ? 'rgba(239,68,68,0.14)' : 'rgba(255,255,255,0.04)', border: `1px solid ${ready ? 'rgba(239,68,68,0.45)' : BORDER}`, color: ready ? '#EF4444' : '#374151', fontSize: 14, fontWeight: 700, cursor: ready ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
-            >
-              {status === 'submitting' ? <><Loader2 size={15} className="account-data-spin" /> Deleting…</> : <><Trash2 size={15} /> Delete permanently</>}
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={status === 'submitting'}
-              style={{ padding: '13px 22px', borderRadius: 11, background: `${BRAND}12`, border: `1px solid ${BRAND}30`, color: BRAND, fontSize: 14, fontWeight: 600, cursor: status === 'submitting' ? 'not-allowed' : 'pointer' }}
-            >
-              Keep my data
-            </button>
-          </div>
+          <ConfirmDeleteActions
+            ready={ready}
+            submitting={status === 'submitting'}
+            brand={BRAND}
+            border={BORDER}
+            onConfirm={handleConfirm}
+            onCancel={onCancel}
+          />
         </div>
       </div>
     </div>

@@ -5,24 +5,52 @@ import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateP
 import { logDirectoryAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 type AdminProfileBody = Partial<DirectoryProfileInput>;
 
+// Returns the value when it is a string, otherwise the given fallback. Keeps parseBody free of
+// per-field type-guard ternaries so it stays within the complexity budget.
+function asString<T>(value: unknown, fallback: T): string | T {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+// Maps a persistence error to a response plus a validation flag. A message mentioning a "_not_found"
+// selector is a client validation problem (400); anything else is a persistence failure (503). The
+// flag lets the caller record the matching audit errorCategory.
+function mapSelectorError(error: unknown): { response: NextResponse; isValidation: boolean } {
+  const message = error instanceof Error ? error.message : 'unknown';
+  const isValidation = message.includes('_not_found');
+
+  const response = NextResponse.json(
+    {
+      ok: false,
+      code: isValidation ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
+      message: isValidation ? 'Invalid selector references in profile payload.' : 'Unable to create profile.',
+    },
+    { status: isValidation ? 400 : 503 },
+  );
+
+  return { response, isValidation };
+}
+
 function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   return {
-    firstName: typeof body.firstName === 'string' ? body.firstName : '',
-    lastName: typeof body.lastName === 'string' ? body.lastName : null,
-    headline: typeof body.headline === 'string' ? body.headline : null,
-    bio: typeof body.bio === 'string' ? body.bio : null,
-    profileUrl: typeof body.profileUrl === 'string' ? body.profileUrl : null,
-    sectorId: typeof body.sectorId === 'string' ? body.sectorId : null,
-    jobTitleId: typeof body.jobTitleId === 'string' ? body.jobTitleId : null,
-    skillIds: Array.isArray(body.skillIds)
-      ? body.skillIds.filter((value): value is string => typeof value === 'string')
-      : [],
-    city: typeof body.city === 'string' ? body.city : undefined,
-    state: typeof body.state === 'string' ? body.state : undefined,
-    country: typeof body.country === 'string' ? body.country : undefined,
+    firstName: asString(body.firstName, ''),
+    lastName: asString(body.lastName, null),
+    headline: asString(body.headline, null),
+    bio: asString(body.bio, null),
+    profileUrl: asString(body.profileUrl, null),
+    sectorId: asString(body.sectorId, null),
+    jobTitleId: asString(body.jobTitleId, null),
+    skillIds: stringArray(body.skillIds),
+    city: asString(body.city, undefined),
+    state: asString(body.state, undefined),
+    country: asString(body.country, undefined),
   };
 }
 
@@ -41,7 +69,7 @@ export async function GET(request: Request) {
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: 'Unable to list admin profiles.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to list admin profiles: ${failureReason(error)}` },
       { status: 503 },
     );
   }
@@ -61,9 +89,9 @@ export async function POST(request: Request) {
   let body: AdminProfileBody;
   try {
     body = (await request.json()) as AdminProfileBody;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: DIRECTORY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
     );
   }
@@ -93,8 +121,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, profile }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });
-    const message = error instanceof Error ? error.message : 'unknown';
-    const isValidation = message.includes('_not_found');
+    const { response, isValidation } = mapSelectorError(error);
 
     logDirectoryAudit({
       actorId: gate.auth.userId,
@@ -107,13 +134,6 @@ export async function POST(request: Request) {
       errorCategory: isValidation ? 'validation' : 'persistence_error',
     });
 
-    return NextResponse.json(
-      {
-        ok: false,
-        code: isValidation ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
-        message: isValidation ? 'Invalid selector references in profile payload.' : 'Unable to create profile.',
-      },
-      { status: isValidation ? 400 : 503 },
-    );
+    return response;
   }
 }

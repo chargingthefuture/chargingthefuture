@@ -4,6 +4,7 @@ import { TRUST_TRANSPORT_DEFAULT_PAGE, TRUST_TRANSPORT_DEFAULT_PAGE_SIZE, TRUST_
 import { createRequest, insertTrustTransportAudit, isValidRequestPrice, listRequests, validateRequestInput } from 'lib/trust-transport/repository';
 import type { TrustTransportMode, TrustTransportRequestInput } from 'lib/trust-transport/types';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Only a real number or a non-empty numeric string becomes an amount; booleans, arrays, objects, and
 // `null`/`undefined` never coerce to a price (so e.g. `true` is not read as 1).
@@ -18,30 +19,53 @@ function parsePriceAmount(value: unknown): number | null {
   return null;
 }
 
-function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
-  const modeValue = typeof body.mode === 'string' ? body.mode : 'ride';
-  const mode = (TRUST_TRANSPORT_MODES as readonly string[]).includes(modeValue)
+function parseMode(value: unknown): TrustTransportMode {
+  const modeValue = typeof value === 'string' ? value : 'ride';
+  return (TRUST_TRANSPORT_MODES as readonly string[]).includes(modeValue)
     ? (modeValue as TrustTransportMode)
     : 'ride';
+}
 
-  // Settlement value type (issue #420): a non-empty code names how the ride is settled; absent means
-  // none chosen. Amount is kept only as a positive finite number, so amount-less types carry no amount.
-  const priceCurrency =
-    typeof body.priceCurrency === 'string' && body.priceCurrency.trim().length > 0
-      ? body.priceCurrency.trim()
-      : null;
-  const priceAmount = parsePriceAmount(body.priceAmount);
+function stringOrDefault(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+// Settlement value type (issue #420): a non-empty code names how the ride is settled; absent means
+// none chosen. Amount is kept only as a positive finite number, so amount-less types carry no amount.
+function parsePriceCurrency(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+// Accepted-currencies multi-select (split settlements): keep only non-empty strings, trimmed and
+// deduped. Codes are validated against the active currency catalog in the repository, where unknown
+// or inactive codes are dropped rather than rejected.
+function parseAcceptedCurrencies(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+        .map((code) => code.trim()),
+    ),
+  );
+}
+
+function parseRequestInput(body: Record<string, unknown>): TrustTransportRequestInput {
   return {
-    mode,
-    title: typeof body.title === 'string' ? body.title : '',
-    details: typeof body.details === 'string' ? body.details : '',
-    pickupCity: typeof body.pickupCity === 'string' ? body.pickupCity : null,
-    dropoffCity: typeof body.dropoffCity === 'string' ? body.dropoffCity : null,
-    pickupGeoRedacted: typeof body.pickupGeoRedacted === 'string' ? body.pickupGeoRedacted : null,
-    dropoffGeoRedacted: typeof body.dropoffGeoRedacted === 'string' ? body.dropoffGeoRedacted : null,
-    priceCurrency,
-    priceAmount,
+    mode: parseMode(body.mode),
+    title: stringOrDefault(body.title, ''),
+    details: stringOrDefault(body.details, ''),
+    pickupCity: optionalString(body.pickupCity),
+    dropoffCity: optionalString(body.dropoffCity),
+    pickupGeoRedacted: optionalString(body.pickupGeoRedacted),
+    dropoffGeoRedacted: optionalString(body.dropoffGeoRedacted),
+    priceCurrency: parsePriceCurrency(body.priceCurrency),
+    priceAmount: parsePriceAmount(body.priceAmount),
+    acceptedCurrencies: parseAcceptedCurrencies(body.acceptedCurrencies),
   };
 }
 
@@ -77,9 +101,9 @@ export async function POST(request: Request) {
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.' },
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
       { status: 400 },
     );
   }

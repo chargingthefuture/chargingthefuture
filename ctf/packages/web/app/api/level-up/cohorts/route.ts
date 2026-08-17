@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createCohort, insertLevelUpAudit, listCohorts } from 'lib/level-up/repository';
 import { ensureMutationCsrf, levelUpErrorResponse, requireLevelUpReadAccess } from 'lib/level-up/_lib';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 const querySchema = z.object({
   track: z.string().optional(),
@@ -36,7 +37,7 @@ const createCohortSchema = z.object({
   requiredCredits: z.number().min(0),
   materialsCost: z.number().min(0).optional(),
   deviceSupport: z.boolean().optional(),
-  status: z.enum(['draft', 'open', 'active', 'completed', 'cancelled']).optional(),
+  status: z.enum(['draft', 'open', 'active', 'completed', 'canceled']).optional(),
   allowNoDeposit: z.boolean().optional(),
   trainerSplitPercent: z.number().min(0).max(100).optional(),
   completionBonusCredits: z.number().min(0).optional(),
@@ -99,8 +100,8 @@ export async function POST(request: Request) {
   let body: unknown;
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ ok: false, code: 'level_up_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
   const parsed = createCohortSchema.safeParse(body);

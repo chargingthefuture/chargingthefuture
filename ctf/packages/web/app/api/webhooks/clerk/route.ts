@@ -5,6 +5,7 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
 import { runWithForcedPool, queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Clerk webhook receiver. Clerk deliveries are signed with svix; we verify the signature ourselves
 // (this Clerk version ships no verify helper and svix is not a dependency) using the endpoint's
@@ -60,13 +61,22 @@ function verifySvixSignature(
 
 type ClerkWebhookEvent = { type?: string; data?: { id?: unknown } };
 
-export async function POST(request: Request) {
-  const signingSecret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
+// Configuration presence + full svix verification for an incoming delivery, in the original order:
+// require the signing secret (503 inert), read the raw body (never parse before verifying), require
+// the three svix headers, enforce the timestamp tolerance, then verify the signature. Returns a ready
+// error response or the verified raw body. Each status code and code string is unchanged from the
+// inline version.
+async function verifyWebhookDelivery(
+  request: Request,
+  signingSecret: string | undefined,
+): Promise<{ error: NextResponse } | { rawBody: string }> {
   if (!signingSecret || signingSecret.trim().length === 0) {
-    return NextResponse.json(
-      { ok: false, code: 'clerk_webhook_not_configured', message: 'CLERK_WEBHOOK_SIGNING_SECRET is not set in the app runtime.' },
-      { status: 503 },
-    );
+    return {
+      error: NextResponse.json(
+        { ok: false, code: 'clerk_webhook_not_configured', message: 'CLERK_WEBHOOK_SIGNING_SECRET is not set in the app runtime.' },
+        { status: 503 },
+      ),
+    };
   }
 
   const svixId = request.headers.get('svix-id');
@@ -76,23 +86,33 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
 
   if (!svixId || !svixTimestamp || !svixSignature) {
-    return NextResponse.json({ ok: false, code: 'missing_signature_headers' }, { status: 400 });
+    return { error: NextResponse.json({ ok: false, code: 'missing_signature_headers' }, { status: 400 }) };
   }
 
   const timestampSeconds = Number(svixTimestamp);
   if (!Number.isFinite(timestampSeconds) || Math.abs(Date.now() / 1000 - timestampSeconds) > TIMESTAMP_TOLERANCE_SECONDS) {
-    return NextResponse.json({ ok: false, code: 'timestamp_out_of_tolerance' }, { status: 400 });
+    return { error: NextResponse.json({ ok: false, code: 'timestamp_out_of_tolerance' }, { status: 400 }) };
   }
 
   if (!verifySvixSignature(signingSecret, svixId, svixTimestamp, svixSignature, rawBody)) {
-    return NextResponse.json({ ok: false, code: 'invalid_signature' }, { status: 401 });
+    return { error: NextResponse.json({ ok: false, code: 'invalid_signature' }, { status: 401 }) };
   }
+
+  return { rawBody };
+}
+
+export async function POST(request: Request) {
+  const verification = await verifyWebhookDelivery(request, process.env.CLERK_WEBHOOK_SIGNING_SECRET);
+  if ('error' in verification) {
+    return verification.error;
+  }
+  const { rawBody } = verification;
 
   let event: ClerkWebhookEvent;
   try {
     event = JSON.parse(rawBody) as ClerkWebhookEvent;
-  } catch {
-    return NextResponse.json({ ok: false, code: 'invalid_json' }, { status: 400 });
+  } catch (caught) {
+    return NextResponse.json({ ok: false, code: 'invalid_json', reason: failureReason(caught) }, { status: 400 });
   }
 
   // Acknowledge every other event type so Clerk does not retry deliveries we intentionally ignore.

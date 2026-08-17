@@ -19,11 +19,100 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
   metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
+  -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
+  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
+  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
+  -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
+  -- and/or which named schemes were used (scheme_tags — slugs from the owner's "A post for each
+  -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
+  -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
+  -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
+  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
+  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
+  -- columns are superseded: backfilled into the arrays below, kept for history, no longer
+  -- read or written by the app.
+  problem_tag TEXT,
+  scheme_tag TEXT,
+  problem_tags TEXT[] NOT NULL DEFAULT '{}',
+  scheme_tags TEXT[] NOT NULL DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, metadata_hash)
 );
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tags TEXT[] NOT NULL DEFAULT '{}';
+-- One-time backfill of the superseded singular tag columns into the arrays. Idempotent: only
+-- touches rows whose array is still empty while the singular column has a value, so re-running
+-- schema.sql never overwrites a member's later multi-tag edits.
+UPDATE click_log_incidents SET problem_tags = ARRAY[problem_tag]
+  WHERE problem_tag IS NOT NULL AND problem_tags = '{}';
+UPDATE click_log_incidents SET scheme_tags = ARRAY[scheme_tag]
+  WHERE scheme_tag IS NOT NULL AND scheme_tags = '{}';
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
+-- Partial index for the admin trends aggregate, which only ever reads shared rows.
+CREATE INDEX IF NOT EXISTS idx_click_log_incidents_shared ON click_log_incidents(created_at DESC) WHERE shared_with_owner;
+-- Per-member ClickLog preferences. share_with_owner is the member's global default for whether a
+-- newly logged incident is shared with the owner (per-incident override always wins). Opt-in:
+-- defaults FALSE. Mirrors the notification_preferences / user_ui_preferences upsert-on-user_id shape.
+CREATE TABLE IF NOT EXISTS click_log_preferences (
+  user_id TEXT PRIMARY KEY,
+  share_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS share_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS click_log_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- "Not listed" scheme suggestions (2026-08-02): when a member picks the catch-all scheme tag they
+-- must describe the scheme, and that text is EXPLICITLY shared with the owner (the form says so —
+-- unlike incident notes, which are never shared). Weavers of the Commons badge holders only (spam
+-- control, enforced in the create route). quora_url is an optional self-provided link to the
+-- member's own Quora post about a similar incident (a spam signal for the owner). The scheduled
+-- proposeSchemeSuggestions script drains status='new' rows into PRIVATE triage-repo issues (the
+-- text may carry personal detail; the public repo never sees it, and issues never carry user_id or
+-- incident_id), then stamps status='issue_created' plus the issue reference — mirroring bug_reports.
+CREATE TABLE IF NOT EXISTS click_log_scheme_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  incident_id UUID,
+  user_id TEXT NOT NULL,
+  suggestion TEXT NOT NULL,
+  quora_url TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  triage_repo TEXT,
+  issue_number INTEGER,
+  issue_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS incident_id UUID;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS suggestion TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS quora_url TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'new';
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS triage_repo TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS issue_number INTEGER;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS issue_url TEXT;
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS click_log_scheme_suggestions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_click_log_scheme_suggestions_status ON click_log_scheme_suggestions(status, created_at);
+-- Dedupe marker for the unnamed-scheme threshold alert: one row per filed alert issue, so the
+-- scheduled script files at most one alert per cooldown window. Holds counts only — no member data.
+CREATE TABLE IF NOT EXISTS click_log_unnamed_scheme_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  window_days INTEGER NOT NULL,
+  shared_count INTEGER NOT NULL,
+  issue_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS window_days INTEGER;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS shared_count INTEGER;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS issue_url TEXT;
+ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
@@ -650,7 +739,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
   -- Which app surfaced this proposal, for provenance in the filed GitHub issue. This is the
   -- single cross-app intake for "skill not in the taxonomy yet": SkillsHunt nominations and the
   -- Directory "skill not listed" box both write here. 'skills-hunt' is the default so existing
-  -- rows (all from SkillsHunt) are labelled correctly without a backfill.
+  -- rows (all from SkillsHunt) are labeled correctly without a backfill.
   source TEXT NOT NULL DEFAULT 'skills-hunt',
   suggested_sector TEXT,
   suggested_occupation TEXT,
@@ -755,7 +844,7 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   render_mode TEXT NOT NULL,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
   enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
-  -- Survivor Hub consolidation: the blended channel is publicly viewable (read-only)
+  -- Commons consolidation: the blended channel is publicly viewable (read-only)
   -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
   -- as a follow-up; this flag is the canonical config the admin/seed sets.
   is_public BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1030,7 +1119,21 @@ ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS sources JSONB NOT NU
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS author_user_id TEXT NULL;
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
+-- Moderation for member-facing Q&A (2026-07-30). These tables had no moderation_status at all, so a
+-- flagged answer could be read by an admin and then nothing could be done about it — the flag queue was
+-- unbuildable. Same two states and same reason vocabulary as the Commons post tables, so one admin
+-- surface can drive both. Nullable reason/actor/timestamp, null until a moderator acts.
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+-- Serves the flag queue: flagged answers, newest first, without scanning every answer.
+CREATE INDEX IF NOT EXISTS idx_feed_answers_moderation_status
+  ON feed_answers (moderation_status, created_at DESC);
 CREATE TABLE IF NOT EXISTS feed_answer_ratings (
   user_id TEXT NOT NULL,
   answer_id UUID NOT NULL REFERENCES feed_answers(id) ON DELETE CASCADE,
@@ -1096,10 +1199,36 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS author_usern
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
+-- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
+-- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
+-- about the economy — so a sweep needs to record which judgment was applied, not just that something
+-- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Clear Commons timeline copies whose source row is gone (owner report, 2026-08-09).
+-- Every community post and AI question is copied into a feed_items row that carries the same text.
+-- Account deletion used to remove the post/question but keep the copy, so a deleted member's words
+-- stayed on the Commons, re-labeled with the fallback handle built from the placeholder author id
+-- ("user-hub-syst") — the same handle every time, so it looked like an anonymised post rather than a
+-- deletion. The deletion registry now removes the copy with the source; this clears the ones already
+-- left behind. Announcement copies carry neither source id and are untouched. Idempotent: a second
+-- run matches nothing. Deleting a feed_items row cascades its targets, read state, and dismissals.
+DELETE FROM feed_items f
+WHERE (
+        f.source_community_post_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+      )
+   OR (
+        f.source_question_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+      );
 
 CREATE TABLE IF NOT EXISTS feed_community_replies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1115,6 +1244,57 @@ ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS post_id UU
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a row was hidden, who hid it, and when (Commons moderation, 2026-07-29). Nullable and null on
+-- every pre-existing row: these are only stamped when a moderator acts. The reason matters because the
+-- day-to-day moderation problem is volume of OFF-TOPIC content — Quora-style discussion that is not
+-- about the economy — so a sweep needs to record which judgment was applied, not just that something
+-- was taken down. Reason is a short code from FEED_MODERATION_REASON, never free text about a member.
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
+
+-- Commons guidance notices, published automatically on a cadence (owner decision, 2026-07-30). Three
+-- notices with three different rhythms: what the Commons is for, how the public rooms work, and telling
+-- signal from noise. One row per (notice, period) actually published.
+--
+-- `(notice_key, milestone_count)` is UNIQUE and that uniqueness IS the idempotency: two members posting
+-- at the same moment across a boundary both compute the same period and both try to claim it, and the
+-- second loses the ON CONFLICT DO NOTHING race and skips. `milestone_count` means the post count for a
+-- post-count cadence, and the period index (days since epoch / interval) for a time cadence — one
+-- mechanism serves both.
+CREATE TABLE IF NOT EXISTS feed_commons_guidance_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  notice_key TEXT NOT NULL DEFAULT 'commons_purpose',
+  milestone_count INTEGER NOT NULL,
+  announcement_id UUID NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS notice_key TEXT NOT NULL DEFAULT 'commons_purpose';
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS milestone_count INTEGER;
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS announcement_id UUID NULL;
+ALTER TABLE IF EXISTS feed_commons_guidance_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Drop the single-column key from the first cut of this table so the composite one can take over.
+DROP INDEX IF EXISTS feed_commons_guidance_milestones_count_key;
+CREATE UNIQUE INDEX IF NOT EXISTS feed_commons_guidance_milestones_notice_period_key
+  ON feed_commons_guidance_milestones (notice_key, milestone_count);
+
+-- Which standing notices a member has already been shown once, on arrival (owner decision, 2026-07-30).
+--
+-- Separate from the cadence table because it answers a different question. The cadence table asks "has
+-- this period been served for the room"; this asks "has THIS MEMBER seen it yet". The public-rooms notice
+-- needs both: a member who posts before their first cadence hit could say something identifying without
+-- ever having been told the room is readable by anyone. A rotation cannot fix that — only showing it on
+-- arrival can.
+CREATE TABLE IF NOT EXISTS feed_commons_notice_seen (
+  user_id TEXT NOT NULL,
+  notice_key TEXT NOT NULL,
+  seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, notice_key)
+);
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS notice_key TEXT;
+ALTER TABLE IF EXISTS feed_commons_notice_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -1135,15 +1315,38 @@ ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS use
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Per-member "last seen" marker for the Hub home channel, used to draw a single
+-- Per-member "last seen" marker for the Commons home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.
-CREATE TABLE IF NOT EXISTS feed_hub_last_seen (
+--
+-- Renamed from `feed_hub_last_seen` on 2026-08-09 with the rest of the hub → commons rename. The
+-- rename MUST run before the CREATE TABLE below: otherwise `CREATE TABLE IF NOT EXISTS` would make
+-- an empty `feed_commons_last_seen` first and every member's marker would be stranded in the old
+-- table, resetting the unread divider for everyone. Guarded on both sides so it happens exactly
+-- once and a re-run is a no-op.
+DO $rename_feed_hub_last_seen$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_hub_last_seen'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = current_schema() AND table_name = 'feed_commons_last_seen'
+  ) THEN
+    ALTER TABLE feed_hub_last_seen RENAME TO feed_commons_last_seen;
+    -- RENAME TO leaves the primary key named after the old table; rename it too so a later reader
+    -- of \d output is not sent looking for a table that no longer exists.
+    ALTER INDEX IF EXISTS feed_hub_last_seen_pkey RENAME TO feed_commons_last_seen_pkey;
+  END IF;
+END
+$rename_feed_hub_last_seen$;
+
+CREATE TABLE IF NOT EXISTS feed_commons_last_seen (
   user_id TEXT PRIMARY KEY,
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS feed_hub_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS feed_commons_last_seen ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Per-admin "last opened" marker for each admin area, powering the "new to review" dot on the admin
 -- landing tiles. A dot shows for an area when its newest actionable item (a pending review, a new
@@ -1238,6 +1441,29 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
 CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
   ON unlock_verification_submissions (quora_profile_url_normalized);
 
+-- Persistent spam denylist of normalized Quora profile URLs. When an admin marks a submission spam,
+-- its normalized URL is recorded here. This serves two purposes: (1) a member's per-member submission
+-- row is hard-deleted when they delete their account/data, but this denylist is deliberately keyed on
+-- the URL (never on a member id) and retained for abuse prevention, so the spam URL survives that
+-- deletion; (2) a fresh submission of a denylisted URL (even from a new account) is auto-marked spam at
+-- submission time and never re-enters the review queue. A later approve/reject of the same URL removes
+-- it here, so a mistaken spam mark is fully reversible.
+CREATE TABLE IF NOT EXISTS unlock_spam_quora_urls (
+  quora_profile_url_normalized TEXT PRIMARY KEY,
+  quora_profile_url TEXT NOT NULL,
+  flagged_by_user_id TEXT,
+  flag_count INTEGER NOT NULL DEFAULT 1,
+  first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS quora_profile_url TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flagged_by_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS flag_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS first_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
 -- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action
@@ -1321,9 +1547,15 @@ CREATE TABLE IF NOT EXISTS level_up_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   user_id TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('active', 'completed', 'dropped', 'pending')),
+  -- 'enrolled' is the value the enrollment insert actually writes; it was missing from this list, so
+  -- on a brand-new database every enrollment failed the check while the long-running database (whose
+  -- table predates this block) accepted them. 'active' stays for the rows written before the value
+  -- changed — both count as a live enrollment everywhere in the code.
+  status TEXT NOT NULL CHECK (status IN ('enrolled', 'active', 'completed', 'dropped', 'pending')),
   credits_deposited INTEGER NOT NULL DEFAULT 0,
   assigned_trainer_id TEXT,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  progress_percent NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cohort_id, user_id)
@@ -1334,6 +1566,11 @@ ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
+-- enrolled_at: when the member joined. It exists on the long-running database (it came over with the
+-- legacy `levelup_enrollments` table) but was never declared here, so a database built from this file
+-- lacked it while three live reads order or measure by it — the admin lead-time number, the trainer
+-- trainee list, and the member's own enrollment list.
+ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Add unique constraint if not exists (Postgres 15+)
@@ -1409,6 +1646,17 @@ BEGIN
   END IF;
 END
 $trust_transport_requests_price_consistency$;
+-- Accepted currencies (split settlements): every currency the requester can settle the ride in,
+-- independent of the single listed price above — one row per accepted code, mirroring
+-- lighthouse_property_accepted_currencies and socket_relay_request_accepted_currencies.
+CREATE TABLE IF NOT EXISTS trust_transport_request_accepted_currencies (
+  request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
+  currency_code TEXT NOT NULL REFERENCES currencies(code),
+  PRIMARY KEY (request_id, currency_code)
+);
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS request_id UUID;
+ALTER TABLE IF EXISTS trust_transport_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
+CREATE INDEX IF NOT EXISTS idx_trust_transport_request_accepted_currencies_request ON trust_transport_request_accepted_currencies(request_id);
 -- === foundation_capacity_policies ===
 CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
@@ -1432,6 +1680,35 @@ ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS upda
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Removed feature: drop the legacy kill-switch column if a prior DB created it.
 ALTER TABLE IF EXISTS foundation_capacity_policies DROP COLUMN IF EXISTS kill_switch_enabled;
+-- === foundation_capacity_policy_events ===
+-- Append-only audit log of each capacity-policy change (issue #1960). The policy itself is a singleton
+-- row; this records who changed it, to what values, and when — with a monotonic policy_version — so the
+-- admin update has a real audit trail (the command contract's policyVersion/activatedAt outputs and its
+-- capacity_policy_event_log audit reference this table).
+CREATE TABLE IF NOT EXISTS foundation_capacity_policy_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  policy_version INTEGER NOT NULL UNIQUE,
+  max_active_threads_per_user INTEGER NOT NULL,
+  max_messages_per_minute INTEGER NOT NULL,
+  max_searches_per_minute INTEGER NOT NULL,
+  max_quote_transitions_per_minute INTEGER NOT NULL,
+  max_call_duration_minutes INTEGER NOT NULL,
+  quota_state TEXT NOT NULL CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
+  changed_by_user_id TEXT,
+  activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS policy_version INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_active_threads_per_user INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_messages_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_searches_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS quota_state TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS changed_by_user_id TEXT;
+ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_foundation_capacity_policy_events_activated_at
+  ON foundation_capacity_policy_events (activated_at DESC);
 CREATE TABLE IF NOT EXISTS trust_transport_status_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL REFERENCES trust_transport_requests(id) ON DELETE CASCADE,
@@ -1462,7 +1739,7 @@ CREATE TABLE IF NOT EXISTS trust_transport_trips (
   mode TEXT NOT NULL,
   status TEXT NOT NULL,
   stream_channel_id TEXT,
-  cancelled_reason TEXT,
+  canceled_reason TEXT,
   completed_at TIMESTAMPTZ,
   requester_completion_confirmed_at TIMESTAMPTZ,
   provider_completion_confirmed_at TIMESTAMPTZ,
@@ -1784,7 +2061,7 @@ CREATE TABLE IF NOT EXISTS service_credits_credit_limits (
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS credit_limit NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS service_credits_credit_limits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behaviour if negative).
+-- Enforce non-negative limits on legacy tables too (idempotent; the constraint inverts floor behavior if negative).
 DO $service_credits_credit_limits_non_negative$
 BEGIN
   IF NOT EXISTS (
@@ -1873,7 +2150,7 @@ CREATE TABLE IF NOT EXISTS lighthouse_matches (
   message TEXT NULL,
   proposed_move_in_date DATE NULL,
   host_response TEXT NULL,
-  status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled', 'completed')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed')),
   stream_channel_id TEXT NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2133,7 +2410,7 @@ CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
   ON announcement_reactions(announcement_id);
 
 -- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
--- a member can reply to an official Survivor Hub announcement, and the replies group under that
+-- a member can reply to an official announcement, and the replies group under that
 -- announcement as a thread. author_username is captured at reply time so the thread can show the
 -- member's handle without a second lookup. Deleting the announcement cascades its replies.
 CREATE TABLE IF NOT EXISTS announcement_replies (
@@ -2143,6 +2420,10 @@ CREATE TABLE IF NOT EXISTS announcement_replies (
   author_username TEXT,
   body TEXT NOT NULL,
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
+  moderation_reason TEXT,
+  moderated_by_user_id TEXT,
+  moderated_at TIMESTAMPTZ,
+  edited_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -2152,6 +2433,15 @@ ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+-- Why a moderator hid the reply, who hid it, and when. Added 2026-08-10 with announcement-reply
+-- moderation: the shared hide/restore writer sets all three, so a table without them could not be
+-- moderated at all — an admin could see a bad reply on an announcement and had no way to take it down.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT;
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ;
+-- Set when the author rewrites their own reply, so the thread can mark it "edited" rather than
+-- silently showing different words under the same timestamp.
+ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
@@ -2224,14 +2514,20 @@ DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttranspo
 -- GentlePulse decommissioned 2026-07-27 (owner decision): remove its registry row from existing DBs.
 DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'gentle-pulse';
 
--- Seed plugin registry (upsert so re-running is safe)
+-- Seed plugin registry (upsert so re-running is safe).
+--
+-- THIS TABLE IS WHAT THE APPS LIST SHOWS. `fallbackPluginRegistry` in
+-- packages/web/lib/plugins/repository.ts is only used when this table is empty or unreadable, which
+-- is never true in production — so adding a plugin to that array alone puts NO tile in the launcher.
+-- A new plugin needs a row here as well, or it is invisible to members.
 INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible) VALUES
   ('chyme',              'Chyme',                'Live social audio rooms. Broadcast, listen, and connect in real time.',                       'implemented_shell', 10,  TRUE),
   ('skills-taxonomy',    'Skills Taxonomy',      'Browse the shared catalog of sectors, job titles, and skills.',                     'implemented_shell', 20,  TRUE),
   ('directory',          'Directory',            'Browse skills across the survivor community.',                      'implemented_shell', 30,  TRUE),
-  ('workforce',          'Workforce',            'Real-time work and skills distribution amongst 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
+  ('workforce',          'Workforce',            'Real-time work and skills distribution among 5 million survivors globally.',                           'implemented_shell', 50,  TRUE),
   ('skills-hunt',        'SkillsHunt',          'Nominate survivors to build the Directory and grow the economy.', 'implemented_shell', 60,  TRUE),
   ('unlock',             'Unlock',               'Internal verification queue and staged unlock orchestration for Quora URL onboarding.',           'implemented_shell', 65,  FALSE),
+  ('knowledge',          'Knowledge Library',    'Lend your own public writing so the assistant answers from more than one person.', 'implemented_shell', 66,  TRUE),
   ('foundation',         'Foundation',           'Find talent, tools, repairs, and infrastructure support in real time.',                      'implemented_shell', 70,  TRUE),
   ('lighthouse',         'LightHouse',           'Community housing listings from trauma-informed hosts; ServiceCredits accepted.', 'implemented_shell', 80,  TRUE),
   ('socket-relay',         'SocketRelay',          'Real-time resource sharing across the network.',                        'implemented_shell', 90,  TRUE),
@@ -2258,7 +2554,7 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
 
--- Feed + Announcements was consolidated into the Survivor Hub and is no longer a
+-- Feed + Announcements was consolidated into the Commons and is no longer a
 -- navigable app: its data layer (the feed_* tables + /api/feed/*) and its admin
 -- page at /admin/feed-announcements remain, but it is not a plugin tile/route.
 -- Remove any registry row left from when it was seeded as a visible app so the
@@ -4148,16 +4444,19 @@ ALTER TABLE IF EXISTS peer_programming_settings ADD COLUMN IF NOT EXISTS updated
 -- === TRUST MODULE ===
 CREATE TABLE IF NOT EXISTS trust_user_extension (
   user_id TEXT PRIMARY KEY,
-  trust_status TEXT NOT NULL DEFAULT 'unverified',
   trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
-  trust_visibility TEXT NOT NULL DEFAULT 'public',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_status TEXT NOT NULL DEFAULT 'unverified';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_evidence JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS trust_visibility TEXT NOT NULL DEFAULT 'public';
 ALTER TABLE IF EXISTS trust_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Dropped 2026-08-10: a member never chose who sees their trust, so the column held a setting
+-- the product does not have. What another member sees is decided in code, in
+-- app/api/trust/user/[userId]/route.ts, the same way for everyone.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibility;
+-- Dropped 2026-08-10: admin verification review was removed, so nothing set this and no surface
+-- showed it. The platform does not vet people; Trust reports what a member has actually done.
+ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_status;
 
 CREATE TABLE IF NOT EXISTS trust_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4708,7 +5007,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   asker_username TEXT NULL,
-  channel TEXT NOT NULL DEFAULT 'hub' CHECK (channel IN ('hub', 'feed')),
+  channel TEXT NOT NULL DEFAULT 'commons' CHECK (channel IN ('commons', 'feed', 'hub')),
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -4716,7 +5015,7 @@ CREATE TABLE IF NOT EXISTS comic_conversations (
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS asker_username TEXT NULL;
-ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'hub';
+ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'commons';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_conversations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -5015,6 +5314,24 @@ CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_contribution
 
 -- Named CHECK constraints for the comic_* enum/range columns. Idempotent (skip if present) so
 -- legacy DBs that predate the inline CHECKs converge. Enum values mirror lib/comic/constants.ts.
+-- comic_conversations.channel: 'hub' → 'commons' (2026-08-09, with the rest of the rename).
+--
+-- Order is load-bearing. The old constraint forbids 'commons', so it has to go before the data can
+-- move; the new one is added after. Dropping unconditionally and letting the guarded block below
+-- re-add it keeps this convergent on a fresh DB (where CREATE TABLE already made the constraint
+-- under the same auto-generated name) and on a legacy one, and a re-run is a no-op.
+ALTER TABLE IF EXISTS comic_conversations DROP CONSTRAINT IF EXISTS comic_conversations_channel_check;
+UPDATE comic_conversations SET channel = 'commons' WHERE channel = 'hub';
+ALTER TABLE IF EXISTS comic_conversations ALTER COLUMN channel SET DEFAULT 'commons';
+
+-- 'hub' is still ACCEPTED here, deliberately and temporarily. This file is applied by
+-- update-neon-db.yml on push to main, while the web app redeploys separately — so for a few minutes
+-- the previous release is still serving with the database already migrated. A strict
+-- CHECK (channel IN ('commons', 'feed')) would make any @comic question asked in that window fail
+-- on a constraint violation. No row is written with 'hub' after this ships (the API coerces every
+-- non-'feed' value to 'commons'), and reads normalize a legacy 'hub' to 'commons', so the value is
+-- write-dead already. Drop 'hub' from this list in a follow-up once the deploy has settled — that
+-- change is this one line plus the matching UPDATE above becoming a no-op.
 DO $comic_conversations_channel_check$
 BEGIN
   IF NOT EXISTS (
@@ -5024,7 +5341,7 @@ BEGIN
     BEGIN
       ALTER TABLE comic_conversations
         ADD CONSTRAINT comic_conversations_channel_check
-        CHECK (channel IN ('hub', 'feed'));
+        CHECK (channel IN ('commons', 'feed', 'hub'));
     EXCEPTION WHEN duplicate_object THEN
       NULL;
     END;
@@ -5815,6 +6132,15 @@ ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_at TIM
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS ended_by_user_id TEXT;
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Which app the member declared this from, when they used that app's inline "mark as recurring"
+-- control instead of walking over to the Recurring Activity plugin (the plugin's own form leaves this
+-- NULL). Two jobs: it lets a surface show where a relationship came from, and it lets GDP recognition
+-- tell apart a declaration made in an app that already records every single exchange (Foundation calls,
+-- TrustTransport trips, SocketRelay favors — where counting a declared ServiceCredits value again would
+-- count the same value twice) from one made in an app that only records the arrangement (LightHouse).
+-- Free text rather than a CHECK: the plugin list changes, and an unknown value simply falls back to the
+-- safe treatment. Validated against the plugin registry at write time.
+ALTER TABLE IF EXISTS recurring_activities ADD COLUMN IF NOT EXISTS origin_plugin TEXT;
 CREATE INDEX IF NOT EXISTS recurring_activities_owner_idx ON recurring_activities (owner_user_id, status);
 CREATE INDEX IF NOT EXISTS recurring_activities_counterparty_idx ON recurring_activities (counterparty_user_id, status);
 CREATE INDEX IF NOT EXISTS recurring_activities_status_currency_idx ON recurring_activities (status, currency_code);
@@ -5985,7 +6311,7 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   created_by_user_id TEXT NOT NULL,
   title TEXT NULL,
   description TEXT NULL,
-  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming')),
+  meeting_plugin TEXT NOT NULL CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')),
   window_start_date DATE NOT NULL,
   window_days INTEGER NOT NULL DEFAULT 7 CHECK (window_days BETWEEN 1 AND 14),
   opens_at TIMESTAMPTZ NULL,
@@ -5994,7 +6320,11 @@ CREATE TABLE IF NOT EXISTS mutual_time_events (
   result_slot_start TIMESTAMPTZ NULL,
   result_can_make_it INTEGER NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  closed_at TIMESTAMPTZ NULL
+  closed_at TIMESTAMPTZ NULL,
+  -- TRUE when the survey closed itself at closes_at rather than an admin pressing Close. It is what
+  -- the admin-landing dot keys on: a survey that chose its own time needs the admin told, where one
+  -- they closed by hand does not.
+  auto_closed BOOLEAN NOT NULL DEFAULT FALSE
 );
 -- Column reconciliation (all added nullable / with safe defaults so they never fail on a populated table).
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS title TEXT;
@@ -6008,6 +6338,13 @@ ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS status TEXT NO
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_slot_start TIMESTAMPTZ;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS result_can_make_it INTEGER;
 ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS mutual_time_events ADD COLUMN IF NOT EXISTS auto_closed BOOLEAN NOT NULL DEFAULT FALSE;
+-- "Where we'll meet" vocabulary. Beacon was added after the table shipped, so an existing database
+-- still carries the two-value check from the original CREATE TABLE. Drop + re-add keeps it idempotent
+-- and brings a legacy database up to date (same idiom as currencies_kind_check). NOT VALID so the ADD
+-- can never fail on an existing row and stop the rest of the file from being applied.
+ALTER TABLE IF EXISTS mutual_time_events DROP CONSTRAINT IF EXISTS mutual_time_events_meeting_plugin_check;
+ALTER TABLE IF EXISTS mutual_time_events ADD CONSTRAINT mutual_time_events_meeting_plugin_check CHECK (meeting_plugin IN ('chyme', 'peer-programming', 'beacon')) NOT VALID;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_mutual_time_events_slug ON mutual_time_events(slug);
 CREATE INDEX IF NOT EXISTS idx_mutual_time_events_creator ON mutual_time_events(created_by_user_id, created_at DESC);
 
@@ -6090,4 +6427,55 @@ ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_act
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_community BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet_push BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+COMMIT;
+
+
+-- spelling:disable — this migration must name the old British value to rewrite it; every
+-- occurrence below is the value being migrated away from, not new usage.
+-- === US-SPELLING DATA MIGRATION: cancelled -> canceled (owner-directed, 2026-07-31) ===
+-- "cancelled" was a stored status value in several tables. The owner directed the repo-wide switch
+-- to US spelling to include stored values, so this block renames every persisted occurrence. It is
+-- idempotent and stays in the schema permanently: each deploy re-runs it, so any straggler row
+-- written by not-yet-redeployed code is corrected on the next apply. The code, contracts, and docs
+-- were renamed in the same PR, so reader and writer agree from the same deploy onward.
+BEGIN;
+
+-- Column rename: trust_transport_trips.cancelled_reason -> canceled_reason. Guarded so it runs
+-- once on a legacy database and never on a fresh one (where CREATE TABLE already used the new name).
+-- The guard must name the schema: the database also holds the demo schema, and an unfiltered
+-- information_schema lookup matched the demo copy of the column after the public one was already
+-- renamed, sending the ALTER at a column that no longer exists (issue #2030). The demo-schema
+-- generator retargets the table_schema value, so the demo apply guards its own copy the same way.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'trust_transport_trips' AND column_name = 'cancelled_reason'
+  ) THEN
+    ALTER TABLE trust_transport_trips RENAME COLUMN cancelled_reason TO canceled_reason;
+  END IF;
+END $$;
+
+-- Status values. WHERE makes each UPDATE a no-op after the first run.
+UPDATE trust_transport_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_trips SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE trust_transport_status_events SET event_name = 'order_canceled' WHERE event_name = 'order_cancelled';
+UPDATE trust_transport_status_events SET from_status = 'canceled' WHERE from_status = 'cancelled';
+UPDATE trust_transport_status_events SET to_status = 'canceled' WHERE to_status = 'cancelled';
+UPDATE lighthouse_matches SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_requests SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE socket_relay_fulfillments SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE level_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE service_credits_transfers SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE foundation_call_sessions SET status = 'canceled' WHERE status = 'cancelled';
+
+-- lighthouse_matches carries the only CHECK constraint naming the old value. On a legacy database
+-- the inline constraint still allows 'cancelled' and not 'canceled', so swap it: drop whichever
+-- form exists, then re-add with the US value. Runs after the UPDATE above so validation passes.
+ALTER TABLE IF EXISTS lighthouse_matches DROP CONSTRAINT IF EXISTS lighthouse_matches_status_check;
+ALTER TABLE IF EXISTS lighthouse_matches
+  ADD CONSTRAINT lighthouse_matches_status_check
+  CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed'));
+-- spelling:enable
 COMMIT;

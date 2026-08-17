@@ -20,8 +20,43 @@ import {
 } from './recurring-activity-shared';
 import { RecurringActivityList } from './recurring-activity-list';
 import { RecurringActivityCreateForm, type CreateActivityInput } from './recurring-activity-create-form';
+import { responseFailureText } from 'lib/errors/client-failure';
 
 type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
+
+// Fetch and parse the activities + currencies payloads. Kept out of the component's loadData so its
+// response-shape branching does not inflate that callback's complexity.
+async function fetchRecurringActivityData(
+  signal?: AbortSignal,
+): Promise<{ activities: Activity[]; currencies: Currency[] }> {
+  const [activitiesRes, currenciesRes] = await Promise.all([
+    fetch('/api/recurring-activity', { cache: 'no-store', signal }),
+    fetch('/api/currencies', { cache: 'no-store', signal }),
+  ]);
+  if (!activitiesRes.ok) {
+    throw new Error(await responseFailureText(activitiesRes, 'We could not load your ongoing activities. Try again in a moment.', 'member'));
+  }
+  const activitiesData = (await activitiesRes.json()) as ActivitiesResponse;
+  const currenciesData = currenciesRes.ok
+    ? ((await currenciesRes.json()) as CurrenciesResponse)
+    : { ok: false as const };
+  return {
+    activities: activitiesData.activities ?? [],
+    currencies: currenciesData.currencies ?? [],
+  };
+}
+
+// An aborted load is expected teardown, not an error to surface; returns null in that case.
+function loadErrorMessage(e: unknown): string | null {
+  if ((e as Error).name === 'AbortError') {
+    return null;
+  }
+  return e instanceof Error ? e.message : 'We could not load your ongoing activities.';
+}
+
+function shouldClearLoading(signal: AbortSignal | undefined, background: boolean): boolean {
+  return !signal?.aborted && !background;
+}
 
 export function RecurringActivityShell() {
   const { theme } = useTheme();
@@ -43,29 +78,19 @@ export function RecurringActivityShell() {
     if (!background) setLoading(true);
     setError(null);
     try {
-      const [activitiesRes, currenciesRes] = await Promise.all([
-        fetch('/api/recurring-activity', { cache: 'no-store', signal }),
-        fetch('/api/currencies', { cache: 'no-store', signal }),
-      ]);
-      if (!activitiesRes.ok) {
-        throw new Error('We could not load your ongoing activities. Try again in a moment.');
-      }
-      const activitiesData = (await activitiesRes.json()) as ActivitiesResponse;
-      const currenciesData = currenciesRes.ok
-        ? ((await currenciesRes.json()) as CurrenciesResponse)
-        : { ok: false as const };
+      const data = await fetchRecurringActivityData(signal);
       if (signal?.aborted) {
         return;
       }
-      setActivities(activitiesData.activities ?? []);
-      setCurrencies(currenciesData.currencies ?? []);
+      setActivities(data.activities);
+      setCurrencies(data.currencies);
     } catch (e) {
-      if ((e as Error).name === 'AbortError') {
-        return;
+      const message = loadErrorMessage(e);
+      if (message) {
+        setError(message);
       }
-      setError(e instanceof Error ? e.message : 'We could not load your ongoing activities.');
     } finally {
-      if (!signal?.aborted && !background) {
+      if (shouldClearLoading(signal, background)) {
         setLoading(false);
       }
     }
@@ -113,7 +138,7 @@ export function RecurringActivityShell() {
           body: JSON.stringify(body ?? {}),
         });
         if (!res.ok) {
-          throw new Error('That action did not go through. Try again in a moment.');
+          throw new Error(await responseFailureText(res, 'That action did not go through. Try again in a moment.', 'member'));
         }
         await loadData();
       } catch (e) {
