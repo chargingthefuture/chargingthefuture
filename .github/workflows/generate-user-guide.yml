@@ -9,8 +9,8 @@ name: User Guide — Regenerate
 # keep the model-API cost bounded. Each run only regenerates the sections whose source docs changed
 # since they were last generated (the generator skips unchanged sections, so a run with no doc
 # changes makes no API calls and opens no PR). It never publishes directly: it opens a pull request
-# so the generated wording is reviewed before it goes live. A manual run with publish_wiki=true also
-# pushes the markdown copy to the GitHub wiki; force=true regenerates every section from scratch.
+# so the generated wording is reviewed before it goes live. force=true regenerates every section
+# from scratch.
 
 on:
   workflow_dispatch:
