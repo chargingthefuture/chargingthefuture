@@ -181,13 +181,33 @@ needed to authenticate `infisical run`.
 - Never develop on, commit to, or open a PR from the auto-generated session branch that the Claude Code harness assigns (e.g. `claude/<random-slug>` such as `claude/loving-mendel-wwWF4`). That name is opaque and meaningless. Treat it as a throwaway base: immediately branch off it (or off `main`) to a descriptive name and push/open the PR from the descriptive branch.
 - Branch names must describe the task at hand — never an opaque/random string. This applies even when a session is initialized on a `claude/<slug>` branch: the first action for any code work is to create the descriptive branch.
 
-## Executed changes go through /bpr (Critical — all agents, every repo)
+## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17. Any request that changes files runs the `/bpr` routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes, and the owner does not have to type the slash command for it to apply — asking for a change is the request.
+Owner directive, 2026-08-17. Three routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
-The routine, in full, lives in [`.claude/commands/bpr.md`](.claude/commands/bpr.md). In short: descriptive branch off the latest `main` before any edit, do the work surgically, run the checks CI would run before pushing, then open the PR ready for review with the title and body set at creation so no metadata check goes red. Pick the lane by risk per the Pull Request Conventions section below.
+| Command | File | Applies when |
+|---|---|---|
+| `/bpr` | [`.claude/commands/bpr.md`](.claude/commands/bpr.md) | The owner asks for any change to files. |
+| `/pr` | [`.claude/commands/pr.md`](.claude/commands/pr.md) | Open pull requests are blocked, behind, conflicted, or failing checks. |
+| `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 
-Sister repos do not enforce this repo's PR metadata checks. `wiki-site` in particular has no semantic-title check, no parity check, and auto-merge turned off — use a Conventional Commit title there anyway, omit the `Parity Status:` line, and expect the PR to wait on a human merge. Read the target repo's own `CLAUDE.md` for what it does enforce.
+### /bpr — every executed change
+
+Any request that changes files runs this routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes.
+
+In short: descriptive branch off the latest `main` before any edit, do the work surgically, run the checks CI would run before pushing, then open the PR ready for review with the title and body set at creation so no metadata check goes red. Pick the lane by risk per the Pull Request Conventions section below.
+
+### /pr — opening a PR is the start of the job, not the end
+
+Agents open pull requests and abandon them. They do not merge themselves once a branch falls behind or a check goes red, so a PR left alone is work that never shipped. Sweep every open PR that is blocked, behind, conflicted, or failing, and drive each one to merge: resolve conflicts by understanding both sides, read the actual failure log before touching anything, update branches that fell behind. Do not report that a PR needs something — do it. Leave alone only a draft someone is actively working, or a risky-lane PR sitting green and waiting on the owner's review, and say which those are.
+
+### /cr — verify every finding before acting on it
+
+Findings are often wrong. A meaningful share describe a bug the code does not have, or give the right fix for the wrong reason. Read the current code first, then do one of three things: fix it; fix it and write in the PR body what is actually load-bearing so the next reader does not undo it; or close the issue with a one-paragraph explanation of why the claim does not hold and change nothing. Never apply a finding you have not checked against the code, and never open a PR just to have opened one.
+
+### Sister repos do not enforce this repo's gates
+
+`wiki-site` in particular has no semantic-title check, no parity check, and auto-merge turned off — use a Conventional Commit title there anyway, omit the `Parity Status:` line, and expect the PR to wait on a human merge. `/cr` is specific to this repo, since the code-review issues and their labels live here. Read the target repo's own `CLAUDE.md` for what it does enforce.
 
 ## Search Tooling Policy
 
