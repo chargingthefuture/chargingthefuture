@@ -181,6 +181,14 @@ needed to authenticate `infisical run`.
 - Never develop on, commit to, or open a PR from the auto-generated session branch that the Claude Code harness assigns (e.g. `claude/<random-slug>` such as `claude/loving-mendel-wwWF4`). That name is opaque and meaningless. Treat it as a throwaway base: immediately branch off it (or off `main`) to a descriptive name and push/open the PR from the descriptive branch.
 - Branch names must describe the task at hand — never an opaque/random string. This applies even when a session is initialized on a `claude/<slug>` branch: the first action for any code work is to create the descriptive branch.
 
+## Executed changes go through /bpr (Critical — all agents, every repo)
+
+Owner directive, 2026-08-17. Any request that changes files runs the `/bpr` routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes, and the owner does not have to type the slash command for it to apply — asking for a change is the request.
+
+The routine, in full, lives in [`.claude/commands/bpr.md`](.claude/commands/bpr.md). In short: descriptive branch off the latest `main` before any edit, do the work surgically, run the checks CI would run before pushing, then open the PR ready for review with the title and body set at creation so no metadata check goes red. Pick the lane by risk per the Pull Request Conventions section below.
+
+Sister repos do not enforce this repo's PR metadata checks. `wiki-site` in particular has no semantic-title check, no parity check, and auto-merge turned off — use a Conventional Commit title there anyway, omit the `Parity Status:` line, and expect the PR to wait on a human merge. Read the target repo's own `CLAUDE.md` for what it does enforce.
+
 ## Search Tooling Policy
 
 - Prefer `rg`/ripgrep for recursive text and file discovery.
