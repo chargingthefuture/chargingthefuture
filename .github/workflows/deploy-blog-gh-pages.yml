@@ -23,12 +23,13 @@ jobs:
     name: Build Pages artifact
     runs-on: ubuntu-latest
     steps:
-      # Clone wiki-site main (recursing its nested wiki/ submodule, which the
-      # article sync reads). The nested wiki-site/ directory is the pnpm
-      # workspace root; everything is built and uploaded from there.
+      # Clone wiki-site main. Article content lives in the repo itself
+      # (wiki-site/content/ with front matter); there are no submodules.
+      # The nested wiki-site/ directory is the pnpm workspace root;
+      # everything is built and uploaded from there.
       - name: Clone wiki-site (main)
         run: |
-          git clone --recurse-submodules --depth 1 \
+          git clone --depth 1 \
             https://github.com/chargingthefuture/wiki-site.git wiki-site-src
 
       - uses: pnpm/action-setup@v4
