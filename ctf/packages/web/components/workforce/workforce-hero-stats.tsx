@@ -150,7 +150,7 @@ function WorkforceEconomySummary({ dashboard }: WorkforceHeroStatsProps) {
         Skills Economy Summary
       </div>
       <p style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.7, margin: 0 }}>
-        With only <span style={strong}>{recruited.toLocaleString()}</span> people recruited, we have
+        With <span style={strong}>{recruited.toLocaleString()}</span> people recruited, we have
         reached <span style={strong}>{skillsCoveragePct}%</span> of the skills potential of an
         independent nation state like Finland, Estonia, or Singapore — equating to{' '}
         <span style={strong}>${gdpPotentialLabel}</span> in GDP potential. That means each individual

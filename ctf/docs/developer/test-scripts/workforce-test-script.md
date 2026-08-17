@@ -64,7 +64,9 @@ skills in the Skills Taxonomy (not a hardcoded figure — adding or removing a t
 it). The percent is listed ÷ catalog, never above 100%. The Skills Economy Summary is a fixed
 statement with live numbers: the recruited count, the Skills Coverage percent, a speculative GDP
 potential in US dollars (recruited × the $142,500 per-person modeling benchmark), the per-person
-GDP contribution, and the per-person earnings (half the benchmark). Its disclaimer paragraph says
+GDP contribution, and the per-person earnings (half the benchmark). It opens "With {recruited}
+people recruited, we have reached …" — there is no "only" before the recruited count. Its
+disclaimer paragraph says
 the figures are speculative, not actuals, that this is the only place in the app where GDP is
 stated in US dollars, and that the Skills Economy has no intention of forming a nation state.
 There is no progress bar, no "Remaining to the goal" countdown, and no "Remaining capacity" line.
