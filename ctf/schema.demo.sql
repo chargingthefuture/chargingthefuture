@@ -5144,10 +5144,16 @@ CREATE TABLE IF NOT EXISTS comic_knowledge_entries (
   title TEXT NULL,
   question TEXT NULL,
   content TEXT NOT NULL,
-  content_hash TEXT NOT NULL UNIQUE,
+  content_hash TEXT NOT NULL,
+  -- Stable per-item identity for repo-sourced rows (e.g. 'quora:pedigree101/answers/0000'). When an
+  -- edited source file is re-imported its content_hash changes but source_ref stays constant, so the
+  -- import UPDATES the existing row in place instead of inserting a second copy (added 2026-07-28).
+  -- NULL for legacy rows imported from the raw Quora HTML export, which dedupe on content_hash only.
+  source_ref TEXT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,
   authored_at TIMESTAMPTZ NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NULL
 );
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'quora_export';
@@ -5156,9 +5162,19 @@ ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS title TEX
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS question TEXT NULL;
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS content_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS source_ref TEXT NULL;
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS authored_at TIMESTAMPTZ NULL;
 ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS comic_knowledge_entries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NULL;
+-- Two idempotency strategies coexist, so the old global UNIQUE(content_hash) is replaced by two
+-- partial unique indexes: repo-sourced rows dedupe on source_ref, legacy HTML-export rows on
+-- content_hash. Drop the legacy auto-named column constraint first so legacy DBs converge.
+ALTER TABLE IF EXISTS comic_knowledge_entries DROP CONSTRAINT IF EXISTS comic_knowledge_entries_content_hash_key;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_comic_knowledge_entries_source_ref
+  ON comic_knowledge_entries(source_ref) WHERE source_ref IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_comic_knowledge_entries_content_hash
+  ON comic_knowledge_entries(content_hash) WHERE source_ref IS NULL;
 CREATE INDEX IF NOT EXISTS idx_comic_knowledge_entries_search
   ON comic_knowledge_entries
   USING GIN (to_tsvector('english', COALESCE(question, '') || ' ' || COALESCE(title, '') || ' ' || content));
