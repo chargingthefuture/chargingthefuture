@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-16_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -80,7 +80,7 @@ After a favor is complete, you can record it as an ongoing arrangement (like a r
 
 ## Beacon
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-12_
 
 Beacon is a live broadcast where members can watch, chat, and react together.
 
@@ -168,7 +168,7 @@ View the leaderboard to see accepted nominations ranked by points. Team leaderbo
 
 ## Workforce
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-16_
 
 Workforce is a live tracker that shows job openings by sector and skill level, and displays which members have been matched to those openings.
 
@@ -235,7 +235,7 @@ You can dismiss the fundraiser banner for two months if you want. It collapses t
 
 ## LevelUp
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-15_
 
 LevelUp is where you can enroll in skills training cohorts and track your progress and credits.
 
@@ -289,7 +289,7 @@ If a host makes you uncomfortable, you can block them from any listing. When you
 
 ## ClickLog
 
-_Last updated: 2026-08-07_
+_Last updated: 2026-08-14_
 
 ClickLog is a private place to record incidents and track patterns over time.
 

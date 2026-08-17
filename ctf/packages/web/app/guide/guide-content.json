@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-09",
+  "updated": "2026-08-16",
   "intro": [
     "This guide explains what each part of the app does and how to use it, in plain words.",
     "The app is made of small apps, each doing one job. Open any of them from the main menu.",
@@ -73,7 +73,7 @@
     {
       "id": "beacon",
       "title": "Beacon",
-      "updated": "2026-08-08",
+      "updated": "2026-08-12",
       "summary": "Beacon is a live broadcast where members can watch, chat, and react together.",
       "body": [
         "When Beacon is live, you can watch the stream on this page. Anyone with the link can watch — you don't need to sign in. If nothing is live right now, you'll see a calm screen and the last recording if one exists.",
@@ -152,7 +152,7 @@
     {
       "id": "workforce",
       "title": "Workforce",
-      "updated": "2026-08-05",
+      "updated": "2026-08-16",
       "summary": "Workforce is a live tracker that shows job openings by sector and skill level, and displays which members have been matched to those openings.",
       "body": [
         "Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, and your progress toward the recruitment goal.",
@@ -213,7 +213,7 @@
     {
       "id": "level-up",
       "title": "LevelUp",
-      "updated": "2026-08-05",
+      "updated": "2026-08-15",
       "summary": "LevelUp is where you can enroll in skills training cohorts and track your progress and credits.",
       "body": [
         "Browse available cohorts by track, status, or start date. Each cohort shows its curriculum and milestones. When you find one that fits, you can enroll and set up a payment plan if one is required.",
@@ -261,7 +261,7 @@
     {
       "id": "click-log",
       "title": "ClickLog",
-      "updated": "2026-08-07",
+      "updated": "2026-08-14",
       "summary": "ClickLog is a private place to record incidents and track patterns over time.",
       "body": [
         "Open ClickLog and press Log Incident to add a new entry. You can add a location and notes. Only you see your incident list.",
