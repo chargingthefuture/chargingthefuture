@@ -235,7 +235,7 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 - 2026-08-17: **Dropped the word "only" from the Skills Economy Summary opening line** (owner
   direction — it read as filler). The statement now opens "With {recruited} people recruited, we
   have reached …". Copy-only change in `workforce-hero-stats.tsx`; no numbers, layout, or
-  behaviour changed. The disclaimer paragraph's "the only place in the app where GDP is stated in
+  behavior changed. The disclaimer paragraph's "the only place in the app where GDP is stated in
   US dollars" is unchanged — that "only" carries meaning.
 - 2026-08-16: **Replaced the Recruitment Progress bar with the Skills Economy Summary statement
   (owner direction — at 94 recruited against a 2,000,000 goal the bar sat at 0% and repeated the
