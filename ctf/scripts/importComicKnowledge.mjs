@@ -13,7 +13,7 @@
  *     edited file UPDATES the same row in place (new content + content_hash, updated_at set)
  *     so a corrected post never leaves a second, out-of-date copy behind.
  *   - Records WITHOUT a source_ref (from parseQuoraExportToComicDataset.mjs — the raw HTML
- *     export) keep the original behaviour: keyed by content hash, re-running inserts nothing
+ *     export) keep the original behavior: keyed by content hash, re-running inserts nothing
  *     twice.
  * Rows are imported with active = TRUE; retiring an entry is a curation step done in the
  * database by setting active = FALSE (this script never deactivates rows — add/update only).
