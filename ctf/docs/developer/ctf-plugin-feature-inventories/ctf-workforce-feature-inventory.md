@@ -39,7 +39,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
 5. Skills Economy Summary: a fixed positive statement on the overview with live numbers — "With
-   only {recruited} people recruited, we have reached {skills coverage}% of the skills potential of
+   {recruited} people recruited, we have reached {skills coverage}% of the skills potential of
    an independent nation state like Finland, Estonia, or Singapore — equating to ${GDP potential}
    in GDP potential. That means each individual contributing ${per person} in GDP, and earning
    upwards of ${earnings}." Followed by the disclaimer that the figures are speculative, not
@@ -232,6 +232,11 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ## 10) Change Log
 
+- 2026-08-17: **Dropped the word "only" from the Skills Economy Summary opening line** (owner
+  direction — it read as filler). The statement now opens "With {recruited} people recruited, we
+  have reached …". Copy-only change in `workforce-hero-stats.tsx`; no numbers, layout, or
+  behaviour changed. The disclaimer paragraph's "the only place in the app where GDP is stated in
+  US dollars" is unchanged — that "only" carries meaning.
 - 2026-08-16: **Replaced the Recruitment Progress bar with the Skills Economy Summary statement
   (owner direction — at 94 recruited against a 2,000,000 goal the bar sat at 0% and repeated the
   hero card's numbers; the owner wants a positive summary instead).** The card
