@@ -131,34 +131,16 @@ jobs:
       #     UPDATE_JSON: ${{ steps.content.outputs.json }}
       #   run: node ctf/scripts/publish-product-update.mjs
 
-      # ── GitHub wiki page ──────────────────────────────────────────────────────
-      - name: Create GitHub wiki page
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-          UPDATE_JSON: ${{ steps.content.outputs.json }}
-        run: |
-          WIKI_PAGE_NAME=$(echo "$UPDATE_JSON" | jq -r '.wikiPageName')
-          echo "$UPDATE_JSON" | jq -r '.wikiContent' > /tmp/wiki-page.md
-
-          git clone \
-            "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/chargingthefuture.wiki.git" \
-            /tmp/ctf-wiki
-
-          cd /tmp/ctf-wiki
-          git config user.email "ci@chargingthefuture.org"
-          git config user.name "CTF CI Bot"
-          cp /tmp/wiki-page.md "${WIKI_PAGE_NAME}.md"
-          git add "${WIKI_PAGE_NAME}.md"
-          git commit -m "Add product update: ${WIKI_PAGE_NAME}"
-          git push
-
-      # ── Blog registry (wiki-site) ─────────────────────────────────────────────
-      # Adds the update to the wiki-site blog (category "Updates") on wiki-site's
-      # main branch, then triggers deploy-blog-gh-pages.yml to rebuild the live
-      # site. wiki-site is a separate repo with its own layout: the pnpm
-      # workspace lives in the nested wiki-site/ directory, with scripts
-      # wiki:validate / wiki:sync and articles at artifacts/wiki/src/lib.
-      - name: Publish to wiki-site blog registry
+      # ── Blog content (wiki-site) ──────────────────────────────────────────────
+      # Writes the update as a front-mattered markdown file in wiki-site's
+      # content/product-updates/ collection (the canonical content home — the
+      # GitHub wiki is no longer written to), regenerates the article registry,
+      # pushes to wiki-site main, then triggers deploy-blog-gh-pages.yml to
+      # rebuild the live site. wiki-site is a separate repo with its own
+      # layout: the pnpm workspace lives in the nested wiki-site/ directory,
+      # with scripts wiki:validate / wiki:sync and articles at
+      # artifacts/wiki/src/lib.
+      - name: Publish to wiki-site content
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           UPDATE_JSON: ${{ steps.content.outputs.json }}
@@ -168,22 +150,25 @@ jobs:
           SLUG=$(echo "$UPDATE_JSON"     | jq -r '.wikiPageName')
           TITLE=$(echo "$UPDATE_JSON"    | jq -r '.feedTitle')
           EXCERPT=$(echo "$UPDATE_JSON"  | jq -r '.wikiSiteExcerpt // .feedTitle')
-          CATEGORY="Updates"
           DATE=$(date +%Y-%m-%d)
 
-          # Recurse submodules: wiki:sync infers extra "folder" articles from the
-          # nested wiki/ submodule, so it must be present or sync drops them.
-          git clone --recurse-submodules \
+          git clone \
             "https://x-access-token:${GH_PAT}@github.com/chargingthefuture/wiki-site.git" /tmp/wiki-site
 
           cd /tmp/wiki-site/wiki-site
-          SLUG="$SLUG" TITLE="$TITLE" EXCERPT="$EXCERPT" CATEGORY="$CATEGORY" DATE="$DATE" \
-          yq -i '.articles += [{
-            "slug": strenv(SLUG), "title": strenv(TITLE),
-            "repo": "chargingthefuture/chargingthefuture",
-            "date": strenv(DATE), "excerpt": strenv(EXCERPT),
-            "category": strenv(CATEGORY)
-          }]' content-index.yaml
+          FILE="content/product-updates/${SLUG}.md"
+
+          TITLE="$TITLE" DATE="$DATE" EXCERPT="$EXCERPT" \
+          yq -n '.title = strenv(TITLE) | .date = strenv(DATE) |
+                 .excerpt = strenv(EXCERPT) | .category = "Updates"' > /tmp/front-matter.yaml
+
+          {
+            echo '---'
+            cat /tmp/front-matter.yaml
+            echo '---'
+            echo
+            echo "$UPDATE_JSON" | jq -r '.wikiContent'
+          } > "$FILE"
 
           corepack enable
           pnpm install --frozen-lockfile
@@ -193,12 +178,12 @@ jobs:
           cd /tmp/wiki-site
           git config user.name  "CTF CI Bot"
           git config user.email "ci@chargingthefuture.org"
-          git add wiki-site/content-index.yaml wiki-site/artifacts/wiki/src/lib/articles.ts
+          git add "wiki-site/${FILE}" wiki-site/artifacts/wiki/src/lib/articles.ts
           if git commit -m "feat(blog): publish ${DATE} product update — ${SLUG}"; then
             git push
             PUBLISHED=1
           else
-            echo "No content-index changes; nothing to publish."
+            echo "No content changes; nothing to publish."
             PUBLISHED=0
           fi
 
