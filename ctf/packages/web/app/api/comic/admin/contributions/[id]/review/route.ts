@@ -14,9 +14,18 @@ type RouteContext = { params: Promise<{ id: string }> };
 // The SAME content_hash formula importComicKnowledge.mjs uses. Keep the two in step: it is what makes
 // a promoted entry and an imported one collapse onto the same row instead of duplicating, so two
 // members quoting the same widely-shared passage do not double it in the library.
+//
+// The fields are joined with NUL, matching the canonical `contentHashOf` in
+// ctf/scripts/lib/comicDatasetShared.mjs. That file is outside this package and cannot be imported
+// here, so this is a deliberate second copy: change one and change the other in the same commit.
+// Until 2026-07-29 this copy joined with a SPACE while the importer used NUL, which silently
+// defeated the dedupe the comment above promises — a contributed post whose text was already in the
+// library hashed differently, hit no conflict, and was stored a second time.
+const HASH_SEPARATOR = String.fromCharCode(0);
+
 function hashOf(entryType: string, question: string | null, content: string): string {
   return createHash('sha256')
-    .update(`${entryType} ${question ?? ''} ${content.trim()}`)
+    .update([entryType, question ?? '', content.trim()].join(HASH_SEPARATOR))
     .digest('hex');
 }
 

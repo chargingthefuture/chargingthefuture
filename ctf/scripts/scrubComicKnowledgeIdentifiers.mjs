@@ -27,9 +27,8 @@
  * rather than deleted — curation in this table is an off-switch, never a hard delete.
  */
 
-import { createHash } from "node:crypto";
 import pg from "pg";
-import { redact } from "./lib/comicDatasetShared.mjs";
+import { contentHashOf, redact } from "./lib/comicDatasetShared.mjs";
 
 const { Pool } = pg;
 const APPLY = process.argv.includes("--apply");
@@ -43,12 +42,11 @@ function requireEnv(name) {
   return value;
 }
 
-// Same hash formula as importComicKnowledge.mjs — keep these in step.
-function hashOf(entryType, question, content) {
-  return createHash("sha256")
-    .update(entryType + " " + (question || "") + " " + content.trim())
-    .digest("hex");
-}
+// Imported, not re-declared, so it cannot drift. This script previously carried its own copy that
+// joined the fields with a SPACE while importComicKnowledge.mjs joined them with NUL, so every row
+// this scrub rewrote was left holding a hash the importer would never reproduce: a later re-import
+// found no conflict and inserted a second copy of writing that was already there.
+const hashOf = contentHashOf;
 
 // Show the first line that actually changed, so a reviewer sees the edit in context
 // rather than a wall of unchanged text.
@@ -57,7 +55,10 @@ function firstChangedLine(before, after) {
   const a = after.split("\n");
   for (let i = 0; i < Math.max(b.length, a.length); i++) {
     if (b[i] !== a[i]) {
-      return { before: (b[i] || "").trim().slice(0, 160), after: (a[i] || "").trim().slice(0, 160) };
+      return {
+        before: (b[i] || "").trim().slice(0, 160),
+        after: (a[i] || "").trim().slice(0, 160),
+      };
     }
   }
   return null;
@@ -84,7 +85,9 @@ try {
 
     changed++;
     const newHash = hashOf(row.entry_type, newQuestion, newContent);
-    const diff = firstChangedLine(row.content, newContent) || firstChangedLine(row.question || "", newQuestion || "");
+    const diff =
+      firstChangedLine(row.content, newContent) ||
+      firstChangedLine(row.question || "", newQuestion || "");
 
     console.log("=".repeat(74));
     console.log(`row ${row.id}  type=${row.entry_type}  active=${row.active}`);
@@ -104,7 +107,9 @@ try {
     if (clash.rowCount > 0) {
       await pool.query(`UPDATE comic_knowledge_entries SET active = FALSE WHERE id = $1`, [row.id]);
       deactivated++;
-      console.log(`  -> duplicate of row ${clash.rows[0].id} after redaction; deactivated instead of updated`);
+      console.log(
+        `  -> duplicate of row ${clash.rows[0].id} after redaction; deactivated instead of updated`,
+      );
       continue;
     }
 
@@ -119,9 +124,13 @@ try {
 
   console.log("=".repeat(74));
   if (APPLY) {
-    console.log(`Scanned ${scanned} rows; updated ${changed - deactivated}, deactivated ${deactivated} as duplicates.`);
+    console.log(
+      `Scanned ${scanned} rows; updated ${changed - deactivated}, deactivated ${deactivated} as duplicates.`,
+    );
   } else {
-    console.log(`DRY RUN — scanned ${scanned} rows; ${changed} would change. Re-run with --apply to write.`);
+    console.log(
+      `DRY RUN — scanned ${scanned} rows; ${changed} would change. Re-run with --apply to write.`,
+    );
   }
 } finally {
   await pool.end();
