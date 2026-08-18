@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { SurveyTokens } from './survey-theme';
 
-// Small labelled form primitives shared by the survey form and its per-account card.
+// Small labeled form primitives shared by the survey form and its per-account card.
 //
 // Every control is bound to a real <label htmlFor>, and every group of choices is a fieldset with
 // a legend. That is what the accessibility gate checks statically, and it is also what makes the

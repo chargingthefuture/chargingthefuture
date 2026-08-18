@@ -96,7 +96,7 @@ export const QUORA_SURVEY_TOPIC_LABEL: Record<QuoraSurveyTopic, string> = {
 };
 
 // Length and count caps. They bound one accidental paste and one abusive flood; they are not a
-// judgement about how much anyone has to say.
+// judgment about how much anyone has to say.
 export const QUORA_SURVEY_HANDLE_MAX_LENGTH = 200;
 export const QUORA_SURVEY_TEXT_MAX_LENGTH = 5000;
 export const QUORA_SURVEY_MAX_ACCOUNTS = 25;
