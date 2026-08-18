@@ -70,6 +70,14 @@ function asOneOf<T extends string>(value: unknown, allowed: readonly T[], fallba
     : fallback;
 }
 
+// The same check without a fallback, for a question that has no safe default and must be
+// answered rather than assumed.
+function asOneOfStrict<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : null;
+}
+
 function asTopics(value: unknown): QuoraSurveyTopic[] {
   if (!Array.isArray(value)) return [];
   const allowed = new Set<string>(QUORA_SURVEY_TOPIC);
@@ -124,6 +132,16 @@ export function parseSurveySubmission(raw: unknown): ParseResult {
   const anyAccountRemoved = asBoolean(body.anyAccountRemoved);
   const accounts = parseAccounts(body.accounts);
 
+  // Q1 has no third option and therefore no safe default: storing an unanswered response as
+  // either 'yes' or 'no' would count the person as having said something they did not say.
+  const targetedIndividual = asOneOfStrict<QuoraSurveyTargetedIndividual>(
+    body.targetedIndividual,
+    QUORA_SURVEY_TARGETED_INDIVIDUAL,
+  );
+  if (targetedIndividual === null) {
+    return { ok: false, message: 'Answer the first question with yes or no.' };
+  }
+
   if (anyAccountRemoved && accounts.length === 0) {
     return {
       ok: false,
@@ -134,11 +152,7 @@ export function parseSurveySubmission(raw: unknown): ParseResult {
   return {
     ok: true,
     value: {
-      targetedIndividual: asOneOf<QuoraSurveyTargetedIndividual>(
-        body.targetedIndividual,
-        QUORA_SURVEY_TARGETED_INDIVIDUAL,
-        'prefer_not_to_say',
-      ),
+      targetedIndividual,
       anyAccountRemoved,
       evidenceNote: asOptionalText(body.evidenceNote),
       otherNotes: asOptionalText(body.otherNotes),

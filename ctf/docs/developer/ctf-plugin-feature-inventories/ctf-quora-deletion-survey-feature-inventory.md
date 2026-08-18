@@ -39,7 +39,8 @@ Anyone, with no account and no sign-in, can open `/survey/quora-account-deletion
 
 - Read what the survey is for, what happens to their answers, and what the results can and cannot
   show, before any question is asked.
-- Say whether they consider themselves a targeted individual — yes, no, or prefer not to say.
+- Say whether they consider themselves a targeted individual — yes or no. Required; the form will
+  not send without it.
 - Say yes or no to whether at least one of their Quora accounts was removed.
 - Describe each removed account on its own card, adding as many cards as they lost (up to 25): the
   handle, what happened (deleted, banned or suspended, answers removed but account kept, a Space
@@ -85,7 +86,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 | Column | Type | Notes |
 |---|---|---|
 | `id` | UUID PK | `gen_random_uuid()` |
-| `targeted_individual` | TEXT | `yes` / `no` / `prefer_not_to_say`; defaults to `prefer_not_to_say` |
+| `targeted_individual` | TEXT | `yes` / `no`, no third option. Required by the form and by the submit route, so the column default is never a recorded answer. |
 | `any_account_removed` | BOOLEAN | Yes/no only. The count of removals is derived from the account rows, not from this. |
 | `evidence_note` | TEXT NULL | Free text, capped at 5000 characters |
 | `other_notes` | TEXT NULL | Free text, capped at 5000 characters |
@@ -179,6 +180,8 @@ this is not a plugin. The steps that matter:
 3. Answer yes, add two accounts with handles, leave every optional field alone, and send. The
    admin list shows one response with two removals.
 4. Answer yes and add no handle. The form is rejected with a message naming what is missing.
+4b. Leave question 1 untouched. The send button stays disabled, and a request that omits the
+   answer is rejected by the route rather than stored with an assumed one.
 5. Leave all three consent boxes off and send. The admin card shows three "may not" chips.
 6. Open `/admin/quora-deletion-survey` as a non-admin. Access is denied with the status and reason
    shown.
@@ -202,5 +205,9 @@ this is not a plugin. The steps that matter:
 ## Change Log
 
 - 2026-08-18: Built. Public form, submit route, admin reader, CSV export, and the two tables.
-  Question 2 is yes/no only and the follow-up contact field is absent, both on the owner's
-  instruction the same day; the count of removals is derived from account rows instead.
+  The follow-up contact field is absent on the owner's instruction the same day.
+- 2026-08-18: Question 1 (targeted individual) narrowed to yes/no, dropping the third
+  "prefer not to say" option, on the owner's instruction. It has no safe default, so the form
+  requires an answer and the submit route rejects a response that carries none rather than
+  storing an assumed one. Question 2 stays yes/no with the removal count derived from the account
+  rows, which is where "how many times" comes from.

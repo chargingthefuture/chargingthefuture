@@ -22,9 +22,10 @@ export const QUORA_SURVEY_ERROR_CODE = {
 export type QuoraSurveyErrorCode =
   (typeof QUORA_SURVEY_ERROR_CODE)[keyof typeof QUORA_SURVEY_ERROR_CODE];
 
-// Q1. 'prefer_not_to_say' is a real answer and the stored default, so a response that skips the
-// question is still a complete response rather than a broken one.
-export const QUORA_SURVEY_TARGETED_INDIVIDUAL = ['yes', 'no', 'prefer_not_to_say'] as const;
+// Q1. Yes or no, with no third option (owner decision, 2026-08-18). The question is required
+// rather than defaulted: an unanswered response would be stored as one of the two answers and
+// counted as if the person had said it, so the form asks for it before it will send.
+export const QUORA_SURVEY_TARGETED_INDIVIDUAL = ['yes', 'no'] as const;
 export type QuoraSurveyTargetedIndividual = (typeof QUORA_SURVEY_TARGETED_INDIVIDUAL)[number];
 
 // Q4. What Quora did to the account. An account left standing but emptied of its answers is the

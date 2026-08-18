@@ -25,7 +25,6 @@ import {
 const TARGETED_LABEL: Record<QuoraSurveyTargetedIndividual, string> = {
   yes: 'Yes',
   no: 'No',
-  prefer_not_to_say: 'Prefer not to say',
 };
 
 function TargetedIndividualQuestion({
@@ -33,7 +32,7 @@ function TargetedIndividualQuestion({
   onChange,
   tokens,
 }: {
-  value: QuoraSurveyTargetedIndividual;
+  value: QuoraSurveyTargetedIndividual | null;
   onChange: (next: QuoraSurveyTargetedIndividual) => void;
   tokens: SurveyTokens;
 }) {
@@ -153,8 +152,11 @@ export function QuoraSurveyPublicShell() {
   const t = getSurveyTokens(theme);
 
   const nextKey = useRef(1);
+  // Starts unanswered rather than at a default, so nobody is recorded as having answered a
+  // question they never touched. The send button stays disabled until both required questions
+  // carry a real answer.
   const [targetedIndividual, setTargetedIndividual] =
-    useState<QuoraSurveyTargetedIndividual>('prefer_not_to_say');
+    useState<QuoraSurveyTargetedIndividual | null>(null);
   const [anyAccountRemoved, setAnyAccountRemoved] = useState<boolean | null>(null);
   const [accounts, setAccounts] = useState<AccountDraft[]>([emptyAccountDraft('0')]);
   const [evidenceNote, setEvidenceNote] = useState('');
@@ -175,12 +177,18 @@ export function QuoraSurveyPublicShell() {
   };
 
   const handleSubmit = async () => {
+    // Both required questions have to carry a real answer. The send button is already disabled
+    // until they do; this guard means a stray call can never post an assumed answer instead.
+    if (targetedIndividual === null || anyAccountRemoved === null) {
+      setError('Answer the first two questions before sending.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const outcome = await submitSurvey(
       buildSubmission({
         targetedIndividual,
-        anyAccountRemoved: anyAccountRemoved === true,
+        anyAccountRemoved,
         accounts,
         evidenceNote,
         otherNotes,
@@ -201,7 +209,7 @@ export function QuoraSurveyPublicShell() {
     return <SurveyDone accountCount={done.accountCount} tokens={t} />;
   }
 
-  const blocked = submitting || anyAccountRemoved === null;
+  const blocked = submitting || targetedIndividual === null || anyAccountRemoved === null;
 
   return (
     <main style={pageStyle(t)}>

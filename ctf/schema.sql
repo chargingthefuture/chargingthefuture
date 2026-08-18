@@ -5545,10 +5545,11 @@ CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_i
 -- has nothing to delete here and these tables are correctly absent from it.
 CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- Q1. Self-identification, with a real opt-out: a person who will not answer this must still
-  -- be able to file the rest of the response.
-  targeted_individual TEXT NOT NULL DEFAULT 'prefer_not_to_say'
-    CHECK (targeted_individual IN ('yes', 'no', 'prefer_not_to_say')),
+  -- Q1. Yes or no, no third option (owner decision, 2026-08-18). The form requires an answer
+  -- before it will send, so the default below is only ever the column default and never the
+  -- recorded answer of someone who declined to state one.
+  targeted_individual TEXT NOT NULL DEFAULT 'no'
+    CHECK (targeted_individual IN ('yes', 'no')),
   -- Q2. Yes/no only (owner decision, 2026-08-18). The COUNT of removals is not asked as a number;
   -- it is derived from the account rows below, so every removal counted is one backed by a handle
   -- and a date rather than a figure someone typed.
@@ -5566,7 +5567,7 @@ CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS targeted_individual TEXT NOT NULL DEFAULT 'prefer_not_to_say';
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS targeted_individual TEXT NOT NULL DEFAULT 'no';
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS any_account_removed BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS evidence_note TEXT NULL;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS other_notes TEXT NULL;
