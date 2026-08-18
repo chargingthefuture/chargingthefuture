@@ -185,7 +185,10 @@ function AdminReportCard({ report, busy, t, onResolve }: {
     <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <StatusPill status={report.status} />
-        <span style={{ fontSize: 12, color: t.MUTED }}>{formatWhen(report.createdAt)}</span>
+        {/* Say "Filed" out loud: the status pill sits right next to this date, so a bare timestamp
+            beside "Sent to triage" reads as the day it went to triage rather than the day the member
+            wrote it (owner report, 2026-08-18). */}
+        <span style={{ fontSize: 12, color: t.MUTED }}>Filed {formatWhen(report.createdAt)}</span>
         <span style={{ fontSize: 12, color: t.MUTED }}>· From: {report.reporterHandle}</span>
         {report.pluginSlug ? <span style={{ fontSize: 12, color: t.MUTED }}>· {report.pluginSlug}</span> : null}
       </div>
@@ -240,7 +243,7 @@ export function BugReportsAdminShell() {
     async (id: string, action: 'release' | 'reject') => {
       const confirmText =
         action === 'release'
-          ? 'Send this report to the triage repo? The redacted text becomes a triage issue on the next run (within 15 minutes).'
+          ? 'Send this report to the triage repo? The redacted text becomes a triage issue on the next run (within 30 minutes).'
           : 'Reject this report? It will never be sent to triage.';
       if (typeof window !== 'undefined' && !window.confirm(confirmText)) {
         return;
