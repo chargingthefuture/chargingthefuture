@@ -37,7 +37,8 @@ standing room, Cohort 1, that everyone joins (inventory Intent and Outcome, 2026
 
 Session timing is ad hoc by decision: a cohort holds as many or as few calls as it wants, whenever
 its members want them. There is no scheduled meeting hour and no reminder, so the absence of one is
-not a bug to file.
+not a bug to file. The week's topic is admin-set for the same reason — a cohort cannot pick or vote
+on its own topic, and no screen should offer to.
 
 These are the checks that must pass before anything else is worth testing.
 
