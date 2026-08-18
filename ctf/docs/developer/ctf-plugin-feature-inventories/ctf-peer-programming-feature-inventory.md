@@ -9,37 +9,47 @@
 
 ## Intent and Outcome
 
-PeerProgramming puts members into a small group each week and gives that group its own room to talk
-in. Nobody has to be there at the same time as anyone else: the room is text, messages and their
-replies stay put, and a member reads and answers whenever they get to it. The point is that someone
-who signs in has a particular group of people to talk with that week rather than an empty screen.
+PeerProgramming puts members into a small group each week and gives that group a room to meet in.
+The room has two halves and both matter: a live video call, where the cohort sees and hears each
+other like any video meeting, and a text conversation that carries on between calls for whoever
+could not make it. A member joins the call from the Session tab with "Join Session"; camera and
+microphone start on, so joining puts them on screen, and there are the usual mute, camera, and
+leave controls. Each cohort has its own call — one call per cohort, members only — and it is
+available whenever the cohort is running rather than at a set hour.
 
-Being placed in a group is automatic; taking part is voluntary. Anyone who signed in during the last
-7 days is placed in a cohort of up to 12, and in practice about 5 of them post in a given week. The
-app tells a member when they have been placed, and tells the rest of the cohort when someone posts.
-If almost nobody in a cohort is around, the room opens to a wider audience rather than leaving one
-member alone in it.
+The point is a weekly meeting with a particular group of people to talk a topic through, not an
+empty screen. Groups rotate: being placed in one is automatic, taking part is voluntary. Anyone who
+signed in during the last 7 days is placed in a cohort of up to 12, and in practice about 5 of them
+take part in a given week. The app tells a member when they have been placed, and tells the rest of
+the cohort when someone posts.
+
+The topic for the week is set by an admin today and shown in the room header. Cohorts choosing their
+own topic is the intent but is not built — see Gaps and Known Technical Debt.
 
 While the community is small the plugin normally runs as one standing room — Cohort 1 — that every
 member joins and that stays open week after week. Splitting members into separate weekly cohorts is
-what happens once there are enough people to fill them. The mode section below is the detail.
+what happens once there are enough people to fill them. The mode section below is the detail. If
+almost nobody in a cohort is around, the room opens to a wider audience rather than leaving one
+member alone in it.
 
-Who can do what: a member of the cohort posts and replies. Any other signed-in member can read that
-room and take part in the limited ways it allows. A signed-out visitor can only read what the room
-shows publicly. After a member's own cohort has ended — not while it is running, and never for a
-cohort they were only reading — a box asks them to write how it went, in their own words.
+Who can do what: a member of the cohort joins the call, posts, and replies. Any other signed-in
+member can read that room and take part in the limited ways it allows, but cannot join the call —
+the call is always the caller's own cohort. A signed-out visitor can only read what the room shows
+publicly. After a member's own cohort has ended — not while it is running, and never for a cohort
+they were only reading — a box asks them to write how it went, in their own words.
 
 The plugin, stated precisely:
 
 1. Selects active members (signed in within the last 7 days) and places them in cohorts each week,
 2. Targets 12 members per cohort; participation is voluntary, so about 5 typically take part,
 3. Writes an in-app notification for every placement, keyed so a repeated run never notifies twice,
-4. Opens the room to a wider audience when fewer than 2 cohort members are present,
-5. Runs a text room with threaded replies whose history persists continuously and survives reconnects,
+4. Runs one live video call per cohort, members only, on web and Android,
+5. Runs a text conversation with threaded replies whose history persists continuously and survives reconnects,
 6. Notifies the other cohort members when someone posts,
-7. Holds the line on what a cohort member, another signed-in member, and a signed-out visitor can each do,
-8. Takes a free-text note from a member once their own cohort has ended,
-9. Shows the admin-set topic guidance for the week in the room header.
+7. Opens the room to a wider audience when fewer than 2 cohort members are present,
+8. Holds the line on what a cohort member, another signed-in member, and a signed-out visitor can each do,
+9. Takes a free-text note from a member once their own cohort has ended,
+10. Shows the admin-set topic guidance for the week in the room header.
 
 ### Single standing, always-open Cohort 1 mode (low-population, admin-flippable)
 
@@ -95,6 +105,26 @@ to the env flag, then the default. With no admin setting and no env override, th
 1. When a member posts in a cohort's Direct Line, every **other** cohort member gets a notifications-center notification (`peer-programming.cohort.message`, category `community`), so a message no longer goes unseen until someone happens to open the room.
 2. It surfaces in the shared 🔔 notifications center (the bell tab in the Commons) and deep-links to the cohort room; a member who has opted the **Community** device-push category in also gets a device ping.
 3. Best-effort and deduped per (member, message): the sender is never notified, and a notification failure never blocks the message.
+
+### Live Video Session
+
+1. **The cohort meets by video.** The Session tab's "Join Session" button opens the cohort's live
+   video call — the members see and hear each other like any video meeting. Shipped on web
+   2026-06-16 and on Android 2026-06-23 (issue #555); it was missing from this section until
+   2026-08-18 even though it has shipped since, which is why the public user guide described
+   PeerProgramming as text-only.
+2. Camera and microphone start enabled, so joining puts the member on screen; mute, camera toggle,
+   and leave controls are on the call, and leaving returns to the Session tab.
+3. One call per cohort, members only: `POST /api/peer-programming/session/join` resolves the cohort
+   from the signed-in member and the call id is derived from the cohort id, so every member of a
+   cohort lands in the same call and no one can join another cohort's call. A member listening in on
+   another cohort sees a short note instead of a join button.
+4. The call is available while the cohort is running, at no set hour — there is no scheduled meeting
+   time in the model. The button disappears once the cohort has ended.
+5. Deterministic failure states: no cohort yet → "you're not in a cohort yet"; live video not
+   configured in the environment → a readable "live video unavailable" notice, never a raw error.
+6. On Android the Stream Video SDK needs native code, so the call works in an EAS dev/production
+   build, not Expo Go (same constraint as Chyme and LightHouse video).
 
 ### Cohort Room Experience
 
@@ -232,9 +262,35 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 1. Heuristic for partially-filled cohorts when active-user count is not divisible by 5 is implemented as best-effort packing; product sign-off on edge cases is pending.
 2. Fallback-open is now derived from the live cohort roster: the room reports a cohort as open when it has fewer than 2 members, not only from the flag snapshotted at assignment time. A richer per-session presence signal (who is actually in the room right now) is still a possible future refinement but is no longer required for the basic "too small to be a group" rule.
 3. Weekly cohort assignment now runs automatically once a week via the scheduler (the `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow calling the secret-guarded `POST /api/peer-programming/internal/assignments/run` route), with the admin manual run kept as a fallback/override. Closes issue #554. The cron is OFF until `CRON_SECRET` and the existing `NEXT_PUBLIC_APP_URL` secret are set in the repository's Actions secrets and `CRON_SECRET` is matched in the app runtime — until then it skips with a visible warning rather than failing, and admins form cohorts from the admin screen.
-4. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
+4. **Cohorts do not choose their own topic.** The owner's intent (stated 2026-08-18) is that each
+   cohort picks the topic it wants to discuss. What ships today is admin-set: an admin writes the
+   week's topic guidance from `/admin/peer-programming` (`POST /api/peer-programming/admin/topics`),
+   and the room header shows it. There is no member- or cohort-facing topic route, no proposal or
+   vote, and no per-cohort topic field — a cohort's `topic_id` points at the same weekly topic row.
+   Building it needs a member-facing way to propose and settle on a topic per cohort.
+5. **No scheduled meeting time.** The cohort's video call is open whenever the cohort is running;
+   nothing in the schema or the routes records a meeting time, sends a reminder, or opens and closes
+   the call on a schedule. A member who expects "the weekly call is at this hour" has nothing in the
+   product telling them when that is.
+6. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
 
 ## Change Log
+
+- 2026-08-18: **The video call is in Intent and Outcome and User Features now — the docs described
+  PeerProgramming as text-only (owner report).** The live per-cohort video call has shipped since
+  2026-06-16 on web and 2026-06-23 on Android, and was documented in the route map, the security
+  controls, the delivery status, and this change log — but not in either of the two sections the
+  public user guide generator reads. So the `/guide` page described the plugin as a text room and
+  said nothing about video, and the Intent rewrite earlier the same day repeated the gap by asserting
+  the room is text and nobody has to be there at the same time. Both sections now lead with the real
+  shape: a rotating weekly group that meets by video, with a text conversation carrying on between
+  calls for whoever could not make it. New **Live Video Session** subsection under User Features
+  covers the join path, camera and microphone starting on, one call per cohort with members only, the
+  listen-in note, the no-cohort and live-video-unavailable states, and the Expo Go constraint. Two
+  gaps recorded against the owner's stated intent: cohorts do not choose their own topic (an admin
+  sets the week's topic guidance) and there is no scheduled meeting time. The manual test script's
+  Core smoke block gained a join-the-call check, which is also what the guide's "how to use it" steps
+  are drawn from. Documentation only; no schema, route, contract, or behavior change.
 
 - 2026-08-18: **Intent and Outcome rewritten in plain words — it ships to the public user guide
   (owner request).** Since 2026-08-18 the guide generator reads this section as the framing block for
