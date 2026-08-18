@@ -15,7 +15,9 @@ other like any video meeting, and a text conversation that carries on between ca
 could not make it. A member joins the call from the Session tab with "Join Session"; camera and
 microphone start on, so joining puts them on screen, and there are the usual mute, camera, and
 leave controls. Each cohort has its own call — one call per cohort, members only — and it is
-available whenever the cohort is running rather than at a set hour.
+available whenever the cohort is running rather than at a set hour. That is deliberate: a cohort
+holds as many or as few sessions as it wants, arranged between its members, and nothing in the app
+schedules them.
 
 The point is a weekly meeting with a particular group of people to talk a topic through, not an
 empty screen. Groups rotate: being placed in one is automatic, taking part is voluntary. Anyone who
@@ -268,13 +270,34 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
    and the room header shows it. There is no member- or cohort-facing topic route, no proposal or
    vote, and no per-cohort topic field — a cohort's `topic_id` points at the same weekly topic row.
    Building it needs a member-facing way to propose and settle on a topic per cohort.
-5. **No scheduled meeting time.** The cohort's video call is open whenever the cohort is running;
-   nothing in the schema or the routes records a meeting time, sends a reminder, or opens and closes
-   the call on a schedule. A member who expects "the weekly call is at this hour" has nothing in the
-   product telling them when that is.
+5. **Session timing is ad hoc by decision, not by omission (owner, 2026-08-18).** The call being open
+   whenever the cohort is running is the intended behavior: a cohort holds as many or as few video
+   sessions as it wants, whenever its members want them, on a rolling basis. Nothing records a meeting
+   hour, sends a reminder, or opens and closes the call on a schedule, and no agent should file that as
+   debt or build a schedule to "fix" it. The one real cost is that a member has nothing telling them
+   when others intend to be there.
+   **Open product question, deliberately not decided yet:** the owner wants members using the feature
+   first, so the answer is pulled from real use rather than guessed. One idea on the table is a light
+   version of Mutual Time embedded here — each member votes, on a rolling basis, for when they would
+   like a call; nothing ever closes, automatically or by hand; the surface simply highlights the time
+   where votes overlap (or the single voted time when there is only one), and someone goes live to
+   start the session. Nothing about this is committed: no schema, no route, no design. Mutual Time's
+   own model (one-hour windows, a chosen window, a link to the meeting surface) is the reference, but
+   the embedded version would drop the closing step that plugin has.
 6. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
 
 ## Change Log
+
+- 2026-08-18: **Ad hoc session timing recorded as a decision, not a gap (owner).** The same-day entry
+  below listed "no scheduled meeting time" under Gaps, which read as debt someone should clear. It is
+  not: a cohort holds as many or as few video sessions as it wants, whenever its members want them,
+  and nothing in the app schedules them. Intent and Outcome now says so, and the Gaps entry is
+  reframed as a decision plus an open product question the owner is deliberately leaving open until
+  people are using the feature and the answer can be pulled from real use. The one idea on the table
+  is recorded there so it is not lost or mistaken for a plan: a light Mutual Time embedded in this
+  plugin — rolling votes for when a member would like a call, nothing ever closing, the surface
+  highlighting the overlapping time (or the single voted time), someone going live to start it.
+  Nothing is committed — no schema, no route, no design. Documentation only.
 
 - 2026-08-18: **The video call is in Intent and Outcome and User Features now — the docs described
   PeerProgramming as text-only (owner report).** The live per-cohort video call has shipped since
