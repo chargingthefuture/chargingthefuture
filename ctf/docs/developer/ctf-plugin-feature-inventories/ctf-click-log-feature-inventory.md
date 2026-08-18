@@ -13,6 +13,11 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 3. User Features
 
+- Three privacy rules cover the whole feature, and member-facing copy leads with them in this
+  order (owner directive, 2026-08-18 — the earlier guide copy over-explained to the point of
+  confusion): (1) notes are always private, nobody but the member ever sees them; (2) a private,
+  untagged incident does not need a location; (3) tagging problems or schemes requires a
+  location, and only shared incidents feed the global trend data.
 - Log incident (with optional location/notes)
 - Optionally tag an incident with which known problems happened ("Which problems happened?" —
   the 50+ problems list published on the public landing page) and/or which named schemes were

@@ -1,308 +1,308 @@
 {
-  "updated": "2026-08-09",
-  "intro": [
-    "This guide explains what each part of the app does and how to use it, in plain words.",
-    "The app is made of small apps, each doing one job. Open any of them from the main menu.",
-    "Below, each app has a short summary, a few notes on what a member can do, and simple steps where they help."
-  ],
-  "sections": [
-    {
-      "id": "directory",
-      "title": "Directory",
-      "updated": "2026-07-31",
-      "summary": "Directory is a list of members and the skills they have.",
-      "body": [
-        "Open Directory to browse member profiles. You can see each person's job title, sector, location, and skills. Any signed-in member can read every active profile — you do not need your own profile to look at others. Some profiles are written by the members themselves; others are created by the community and marked with a 'Community generated' badge.",
-        "Create your own profile by adding your name, an optional headline, a short bio, location, and skills. You can edit or delete your profile anytime. At least one skill is required to save. Both sector and job title are optional — you can pick one, both, or neither.",
-        "Search for members by name, headline, bio, skills, or location. Use the sector filter to narrow the list to one sector. Directory is for reading and finding members — it does not include messaging, booking, or skill exchanges. Those happen in Foundation."
-      ],
-      "howTo": [
-        "Open Directory. You will see a list of active member profiles, even if you have not created your own.",
-        "Click a member's name or profile card to open their full profile and see their job title, sector, location, and skills.",
-        "Use the search box to find members by name, skills, or location. Use the sector filter chips to narrow the list."
-      ]
-    },
-    {
-      "id": "foundation",
-      "title": "Foundation",
-      "updated": "2026-08-05",
-      "summary": "Foundation is where you find and connect with providers who offer skills, and manage your work with them.",
-      "body": [
-        "Search for providers by name, headline, or bio. Filter results by the skills they offer. Open a provider's profile to see their full information.",
-        "When you connect with a provider, you get a private chat with that person. You can send messages, attach files, and start a voice or video call. The chat stays open while you're working together and closes when the work ends.",
-        "Track all your requests, active connections, and past work in one place. Get notified when a provider replies or when a call comes in. You can also record ongoing arrangements with a provider—like regular check-ins or ongoing services—right in the chat."
-      ],
-      "howTo": [
-        "Sign in and go to Foundation. The Browse tab shows provider cards with their name and headline.",
-        "Search or browse the provider list. Tap a provider card to open their profile."
-      ]
-    },
-    {
-      "id": "chyme",
-      "title": "Chyme",
-      "updated": "2026-08-05",
-      "summary": "Chyme is a live audio room where survivors can connect, listen, speak, and chat together in real time.",
-      "body": [
-        "When you open Chyme, you join a shared room with other members. You can listen for free, or sign in to speak and chat. The room stays open — you can mute and unmute your microphone anytime, and you'll see who else is in the room.",
-        "You can send text messages in the room chat. Your messages stay there and show up again if you reload the page. You can edit or delete your own messages anytime.",
-        "You can send ServiceCredits as a tip to another member in the room right now using the tip button on their profile card. You can also start a private, one-to-one audio call with another member using the Back Channel action — they'll get an invite they can accept or decline, and the call stays private while the room chat keeps running."
-      ],
-      "howTo": [
-        "Open Chyme while signed in. The room, the list of who's there, and the chat panel will load.",
-        "Press the join button to connect to the live audio. You'll start muted. You can mute and unmute yourself anytime.",
-        "Type a message in the chat and send it. It will show up in the list right away and stay there when you come back.",
-        "If you're not signed in, you can listen to the room but won't be able to speak or chat."
-      ]
-    },
-    {
-      "id": "socket-relay",
-      "title": "SocketRelay",
-      "updated": "2026-08-09",
-      "summary": "SocketRelay is where you post a task or favor you need help with, or claim someone else's request to help them out.",
-      "body": [
-        "Post a request for help with a specific task. Add tags to describe what you need, pick how you'll settle it (ServiceCredits, dollars, or both), and set a deadline. Your request stays on the feed for 28 days. You can edit it anytime while it's open, or repost it if it expires.",
-        "Browse requests from other members and claim one to help. Once you claim a request, a private chat opens between you and the person who posted it. You can talk through the details, complete the task, and then close out the favor. If a member reopens a request after you offered to help, you won't be able to claim it again—the reopen is for other helpers.",
-        "After a favor is complete, you can record it as an ongoing arrangement (like a regular recurring task) without leaving SocketRelay. The other member will confirm it in the Recurring Activity app."
-      ],
-      "howTo": [
-        "Sign in and open SocketRelay. You'll see a list of requests from members. Each card shows a title and at least one tag.",
-        "To post your own request, fill out the form with a title, tags, settlement type, and any other details. Your request appears on the feed.",
-        "To help with someone else's request, find one on the feed and click to claim it. A Direct Line chat opens so you can talk with the requester."
-      ]
-    },
-    {
-      "id": "beacon",
-      "title": "Beacon",
-      "updated": "2026-08-08",
-      "summary": "Beacon is a live broadcast where members can watch, chat, and react together.",
-      "body": [
-        "When Beacon is live, you can watch the stream on this page. Anyone with the link can watch — you don't need to sign in. If nothing is live right now, you'll see a calm screen and the last recording if one exists.",
-        "If you're signed in, you can post chat messages and send reactions during the broadcast. If you're not signed in, you'll see a prompt to sign in before you can chat.",
-        "After the event ends, the recording stays on Beacon and gets posted to the Commons so other members can watch it later. A clear marker on the screen reminds you that the broadcast and chat are public."
-      ],
-      "howTo": [
-        "Open the app list and tap or click the Beacon tile to go to the broadcast page.",
-        "To watch, you don't need to sign in — the stream is open to anyone with the link.",
-        "To chat or react during a live event, sign in to your account. A prompt will appear if you're not signed in."
-      ]
-    },
-    {
-      "id": "peer-programming",
-      "title": "PeerProgramming",
-      "updated": "2026-08-09",
-      "summary": "PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.",
-      "body": [
-        "Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.",
-        "Once you're in a cohort, you can post messages and reply to others in your group's chat room. Other cohort members get a notification when someone posts, so conversations don't get missed. The room stays open while the cohort is running and shows a summary of who's taking part.",
-        "After your cohort ends, a feedback box appears where you can write a note about how it went. You can only leave feedback for your own cohort, not for others you may have listened in on."
-      ],
-      "howTo": [
-        "Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.",
-        "When you're in a cohort, open the chat room and post or reply to other members' messages.",
-        "After your cohort ends, use the feedback box to write about your experience."
-      ]
-    },
-    {
-      "id": "mood",
-      "title": "Mood",
-      "updated": "2026-08-02",
-      "summary": "Mood lets you check in on how you're doing, and see how the community is doing overall.",
-      "body": [
-        "Open Mood and pick a number from 1 to 5 to show how you're feeling right now. You can add a note if you want to. After you submit, you can check in again in 7 days.",
-        "The community can see a chart of all the mood check-ins together, but no one can see your individual check-in, your note, or who you are. Your check-in stays private."
-      ],
-      "howTo": [
-        "Open Mood. Pick a mood value from 1 to 5 and submit.",
-        "Right after you submit, the system blocks a second check with a message telling you when you can check in again.",
-        "Visit the community pulse or trends to see an aggregate chart of all check-ins."
-      ]
-    },
-    {
-      "id": "what-works",
-      "title": "WhatWorks",
-      "updated": "2026-08-02",
-      "summary": "WhatWorks is a shared list of tools that survivors say help with specific problems.",
-      "body": [
-        "Browse tools organized by problem. Each tool shows its name, a short note about why it works, how many survivors found it helpful, and a link to get it.",
-        "Mark a tool as helpful if it worked for you. Your endorsement adds to the count other survivors see. You can change your mind and remove your endorsement anytime.",
-        "Suggest a new tool for a problem you know about. Give the product name, a link to buy or access it, and an optional note. Your suggestion goes to review before it appears on the list."
-      ],
-      "howTo": [
-        "Open the WhatWorks app while signed in. Problems and their tools load with names, why-it-works notes, helpful counts, and purchase links.",
-        "Pick a tool and mark it helpful if it helped you. The count goes up by one. Toggle it off to remove your endorsement.",
-        "To suggest a tool, choose a problem, enter the product name and purchase link, add a note if you want, and submit. The suggestion waits for review before appearing on the shared list."
-      ]
-    },
-    {
-      "id": "skills-hunt",
-      "title": "SkillsHunt",
-      "updated": "2026-08-04",
-      "summary": "SkillsHunt is a round-based nomination system where members submit and review skills and work experience.",
-      "body": [
-        "Open a SkillsHunt round to nominate a survivor. Fill in their display name, short bio, Quora profile URL, and skills from the list. You can also add skills that are not on the list. Submit only while the round is active.",
-        "Your submissions are checked for safety and accuracy. The system verifies the Quora profile URL is live and blocks duplicate submissions from the same profile across all rounds.",
-        "View the leaderboard to see accepted nominations ranked by points. Team leaderboards group members by claimed profession. You'll get notifications when your submissions are accepted or rejected, and achievements for reaching milestones."
-      ],
-      "howTo": [
-        "Go to SkillsHunt and pick an active round.",
-        "Click or tap the Scout tab and fill out the nomination form with the survivor's name, bio, Quora URL, and skills.",
-        "Switch to the Leaderboard tab to see ranked submissions and your progress."
-      ]
-    },
-    {
-      "id": "workforce",
-      "title": "Workforce",
-      "updated": "2026-08-05",
-      "summary": "Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.",
-      "body": [
-        "Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, your progress toward the recruitment goal, and how much of the skills list has at least one member behind it. The number of people each sector needs is worked out from the size of the population, not from posted jobs — nothing here is advertised or applied for.",
-        "View your own profile as it appears in the workforce system. Your profile is read-only and pulls from your Directory profile — it shows your job title and skill level.",
-        "Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details."
-      ],
-      "howTo": [
-        "Open the Workforce dashboard. Check that Population, Workforce Total, and Recruited all show numbers (not a loading spinner or error).",
-        "Open your Workforce profile view. Confirm it is read-only with no edit buttons.",
-        "If the dashboard shows no sectors or occupations, the screen displays a clear empty state instead of a blank or broken panel."
-      ]
-    },
-    {
-      "id": "skills-taxonomy",
-      "title": "Skills Taxonomy",
-      "updated": "2026-08-05",
-      "summary": "Skills Taxonomy is the shared list of work sectors, job titles, and skills that the platform uses.",
-      "body": [
-        "Members can browse the Skills Taxonomy to see what sectors, job titles, and skills are available on the platform. The taxonomy is organized in three levels: sector, job title, and skill."
-      ],
-      "howTo": [
-        "Sign in and open the Skills Taxonomy browser.",
-        "Look through the three-level tree to find sectors, job titles, and skills."
-      ]
-    },
-    {
-      "id": "service-credits",
-      "title": "ServiceCredits",
-      "updated": "2026-08-05",
-      "summary": "ServiceCredits is where you view and send credits within the Skills Economy.",
-      "body": [
-        "Open ServiceCredits to see your available balance. The wallet tab shows how many credits you have.",
-        "You can send credits to another member. Once you send them, both balances update right away.",
-        "The Economy tab shows numbers about credits across the whole platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds."
-      ],
-      "howTo": [
-        "Sign in and open ServiceCredits. Your wallet tab will show your available balance.",
-        "To send credits, choose a member and enter the amount. After you send, check that your balance went down and theirs went up.",
-        "Open the Economy tab to see platform-wide credit numbers."
-      ]
-    },
-    {
-      "id": "contributions",
-      "title": "Contributions",
-      "updated": "2026-08-09",
-      "summary": "Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.",
-      "body": [
-        "You can submit three kinds of contributions: a gift card (Amazon, Apple, or Denny's) from $1 to $500, a link to a Quora comment you wrote, or a link to your GitHub profile. For gift cards, you tell the platform your Signal contact and the dollar amount, but you send the actual code to the owner over Signal—never post the code in the Commons or it won't count. For Quora comments and GitHub profiles, the link is required so the owner can find and confirm your work.",
-        "The platform keeps track of your contributions and shows you whether each one is pending, confirmed, or rejected. You can also see the current fundraiser cycle and how close the community is to its goals—total dollars raised, total comments, total stars, and how many people have contributed.",
-        "You can dismiss the fundraiser banner for two months if you want. It collapses to a small gift emoji in the Commons, so the reminder stays small and out of the way. The full banner comes back after two months. Contributing does not require any Unlock verification and never changes your Unlock status."
-      ],
-      "howTo": [
-        "Sign in and go to /apps/contributions. You'll see the current fundraiser progress and collective totals.",
-        "Pick a contribution type (gift card, Quora comment, or GitHub profile) and fill in the form with the required information.",
-        "If you're submitting a gift card, send the code to the owner over Signal, not in the app."
-      ]
-    },
-    {
-      "id": "level-up",
-      "title": "LevelUp",
-      "updated": "2026-08-05",
-      "summary": "LevelUp is where you can enroll in skills training cohorts and track your progress and credits.",
-      "body": [
-        "Browse available cohorts by track, status, or start date. Each cohort shows its curriculum and milestones. When you find one that fits, you can join it. Some cohorts ask for a deposit in credits, which is held against the cohort's milestones and released as each one is validated.",
-        "Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through LevelUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.",
-        "If a problem comes up with an enrollment, you can open a dispute and add comments or attachments to explain what happened. You can also browse trainer profiles to see who runs each cohort."
-      ],
-      "howTo": [
-        "Sign in and open the LevelUp app. You'll see cohort cards to browse.",
-        "Go to the Wallet tab to see your ServiceCredits balance and escrow totals.",
-        "Pick a cohort and follow the enrollment flow to sign up. If a deposit is required, you'll set that up as part of enrollment."
-      ]
-    },
-    {
-      "id": "trust-transport",
-      "title": "TrustTransport",
-      "updated": "2026-08-06",
-      "summary": "TrustTransport is a marketplace where members request and offer rides, package delivery, and food orders.",
-      "body": [
-        "You can request a ride, send a package, or order food. Pick your mode, enter where you're starting and where you're going, and see a price range before you book. If you're offering a ride or delivering, you can accept jobs and track them to completion.",
-        "Each trip has a private chat between the two people involved — the person who requested and the person who's helping. The chat closes when the trip is done. You can also record a ride as an ongoing arrangement if the same person drives you regularly.",
-        "When a trip is finished, you see a record of what it was worth in whatever currency you agreed on. ServiceCredits go straight to your wallet. For other payments, you arrange them directly with the other person, outside the platform. Your history shows only whether trips completed or not — there are no ratings or reviews."
-      ],
-      "howTo": [
-        "Open the TrustTransport screen. You'll see a mode selector, fields for where you're starting and going, and a list of your requests.",
-        "To request a service, pick your mode (ride, package, or food), fill in your locations, and you'll see a price range before you submit.",
-        "Sign out and try to open TrustTransport — you'll see a sign-in prompt instead of the booking surface."
-      ]
-    },
-    {
-      "id": "lighthouse",
-      "title": "LightHouse",
-      "updated": "2026-08-04",
-      "summary": "LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.",
-      "body": [
-        "Open LightHouse and you land on a list of available properties. You can browse listings, see details like location and monthly rent, and reach out to hosts. If you own a place, you can list it yourself — no approval needed. You can do both at the same time: list your own property and also request to stay elsewhere.",
-        "When you request to stay at a listing, the host can accept or reject your request. If they accept, you can start a private chat with them. You can also record ongoing housing arrangements without leaving LightHouse — just pick how often and how it's settled, and the other person confirms it in their app.",
-        "If a host makes you uncomfortable, you can block them from any listing. When you block someone, their properties disappear from your browse list and they cannot request to stay with you."
-      ],
-      "howTo": [
-        "Open LightHouse. It loads straight to a list of available properties with titles, locations, and rent amounts.",
-        "Pick a property you don't own and tap or click Request to stay. If you haven't filled in your seeker details yet, you'll be sent to Your details first. Fill it in, save it, then go back and send the request.",
-        "To list your own place, go to the List your place tab. Fill in the property fields — title, address, bedrooms, bathrooms, rent, accepted currencies, available date, and photos — and save it. Your listing is live right away."
-      ]
-    },
-    {
-      "id": "click-log",
-      "title": "ClickLog",
-      "updated": "2026-08-07",
-      "summary": "ClickLog is a private place to record incidents and track patterns over time.",
-      "body": [
-        "Open ClickLog and press Log Incident to add a new entry. You can add a location and notes. Only you see your incident list.",
-        "When you log an incident, you can tag it with a problem type from the 50+ published problems list, or a scheme name from the canonical list. If you know of a scheme that is not listed, you can suggest a new one with a description (up to 200 characters) — this option is only available if you hold the Weavers of the Commons badge. Tagging requires a location so trend data stays useful.",
-        "By default, new incidents are not shared. You can turn on sharing per incident or set a global default. When sharing is on, only grouped trend data (date, rough area, and tags) goes to the owner — never your notes or exact location. You can delete any of your own incidents, and you can turn off sharing for any incident at any time."
-      ],
-      "howTo": [
-        "Open ClickLog. Your total count and recent incidents load with real numbers.",
-        "Press the large Log Incident button to record a new entry. The count rises by one.",
-        "Sign out and try to reach ClickLog. You will not be able to — ClickLog requires you to be signed in."
-      ]
-    },
-    {
-      "id": "recurring-activity",
-      "title": "Recurring Activity",
-      "updated": "2026-08-04",
-      "summary": "Recurring Activity is where you record and confirm ongoing arrangements with other members — who you work with, what you trade, and how often.",
-      "body": [
-        "You can declare a new recurring activity with another member by choosing them, the type of work or trade, what currency you use, and how often it happens. If you're trading ServiceCredits, you can also write down the amount. The activity starts as pending until the other member confirms it.",
-        "When another member records an activity with you, you'll see it waiting for your confirmation here. Once you confirm it, the arrangement counts toward your Trust and shows up in the Skills Economy. You can change who sees each activity — keep it private, limit it to certain people, or make it public.",
-        "Many apps have a quick prompt that lets you record an arrangement without leaving that app — after a match, a service thread, a favor, a ride, or a ServiceCredits send. You pick the cadence and how it's settled, and it lands here as pending. Once you record an activity with someone, the prompt disappears so you don't record the same pair twice."
-      ],
-      "howTo": [
-        "Sign in and open Recurring Activity. You'll see your confirmed activities and any pending confirmations waiting for you.",
-        "To record a new arrangement, choose the other member, the sector or type of work, your currency, and how often it happens. ServiceCredits activities let you declare an amount; fiat activities show the currency and cadence only.",
-        "When you see a pending activity another member recorded with you, review it and confirm or decline."
-      ]
-    },
-    {
-      "id": "gdp",
-      "title": "GDP",
-      "updated": "2026-08-09",
-      "summary": "GDP shows community metrics on a dashboard.",
-      "body": [
-        "The GDP dashboard loads when you sign in and visit the app. It displays data about the community in one place."
-      ],
-      "howTo": [
-        "Sign in to your account.",
-        "Go to the GDP dashboard. The page loads without errors.",
-        "View the community metrics displayed on the dashboard."
-      ]
-    }
-  ]
+ "updated": "2026-08-09",
+ "intro": [
+  "This guide explains what each part of the app does and how to use it, in plain words.",
+  "The app is made of small apps, each doing one job. Open any of them from the main menu.",
+  "Below, each app has a short summary, a few notes on what a member can do, and simple steps where they help."
+ ],
+ "sections": [
+  {
+   "id": "directory",
+   "title": "Directory",
+   "updated": "2026-07-31",
+   "summary": "Directory is a list of members and the skills they have.",
+   "body": [
+    "Open Directory to browse member profiles. You can see each person's job title, sector, location, and skills. Any signed-in member can read every active profile — you do not need your own profile to look at others. Some profiles are written by the members themselves; others are created by the community and marked with a 'Community generated' badge.",
+    "Create your own profile by adding your name, an optional headline, a short bio, location, and skills. You can edit or delete your profile anytime. At least one skill is required to save. Both sector and job title are optional — you can pick one, both, or neither.",
+    "Search for members by name, headline, bio, skills, or location. Use the sector filter to narrow the list to one sector. Directory is for reading and finding members — it does not include messaging, booking, or skill exchanges. Those happen in Foundation."
+   ],
+   "howTo": [
+    "Open Directory. You will see a list of active member profiles, even if you have not created your own.",
+    "Click a member's name or profile card to open their full profile and see their job title, sector, location, and skills.",
+    "Use the search box to find members by name, skills, or location. Use the sector filter chips to narrow the list."
+   ]
+  },
+  {
+   "id": "foundation",
+   "title": "Foundation",
+   "updated": "2026-08-05",
+   "summary": "Foundation is where you find and connect with providers who offer skills, and manage your work with them.",
+   "body": [
+    "Search for providers by name, headline, or bio. Filter results by the skills they offer. Open a provider's profile to see their full information.",
+    "When you connect with a provider, you get a private chat with that person. You can send messages, attach files, and start a voice or video call. The chat stays open while you're working together and closes when the work ends.",
+    "Track all your requests, active connections, and past work in one place. Get notified when a provider replies or when a call comes in. You can also record ongoing arrangements with a provider—like regular check-ins or ongoing services—right in the chat."
+   ],
+   "howTo": [
+    "Sign in and go to Foundation. The Browse tab shows provider cards with their name and headline.",
+    "Search or browse the provider list. Tap a provider card to open their profile."
+   ]
+  },
+  {
+   "id": "chyme",
+   "title": "Chyme",
+   "updated": "2026-08-05",
+   "summary": "Chyme is a live audio room where survivors can connect, listen, speak, and chat together in real time.",
+   "body": [
+    "When you open Chyme, you join a shared room with other members. You can listen for free, or sign in to speak and chat. The room stays open — you can mute and unmute your microphone anytime, and you'll see who else is in the room.",
+    "You can send text messages in the room chat. Your messages stay there and show up again if you reload the page. You can edit or delete your own messages anytime.",
+    "You can send ServiceCredits as a tip to another member in the room right now using the tip button on their profile card. You can also start a private, one-to-one audio call with another member using the Back Channel action — they'll get an invite they can accept or decline, and the call stays private while the room chat keeps running."
+   ],
+   "howTo": [
+    "Open Chyme while signed in. The room, the list of who's there, and the chat panel will load.",
+    "Press the join button to connect to the live audio. You'll start muted. You can mute and unmute yourself anytime.",
+    "Type a message in the chat and send it. It will show up in the list right away and stay there when you come back.",
+    "If you're not signed in, you can listen to the room but won't be able to speak or chat."
+   ]
+  },
+  {
+   "id": "socket-relay",
+   "title": "SocketRelay",
+   "updated": "2026-08-09",
+   "summary": "SocketRelay is where you post a task or favor you need help with, or claim someone else's request to help them out.",
+   "body": [
+    "Post a request for help with a specific task. Add tags to describe what you need, pick how you'll settle it (ServiceCredits, dollars, or both), and set a deadline. Your request stays on the feed for 28 days. You can edit it anytime while it's open, or repost it if it expires.",
+    "Browse requests from other members and claim one to help. Once you claim a request, a private chat opens between you and the person who posted it. You can talk through the details, complete the task, and then close out the favor. If a member reopens a request after you offered to help, you won't be able to claim it again—the reopen is for other helpers.",
+    "After a favor is complete, you can record it as an ongoing arrangement (like a regular recurring task) without leaving SocketRelay. The other member will confirm it in the Recurring Activity app."
+   ],
+   "howTo": [
+    "Sign in and open SocketRelay. You'll see a list of requests from members. Each card shows a title and at least one tag.",
+    "To post your own request, fill out the form with a title, tags, settlement type, and any other details. Your request appears on the feed.",
+    "To help with someone else's request, find one on the feed and click to claim it. A Direct Line chat opens so you can talk with the requester."
+   ]
+  },
+  {
+   "id": "beacon",
+   "title": "Beacon",
+   "updated": "2026-08-08",
+   "summary": "Beacon is a live broadcast where members can watch, chat, and react together.",
+   "body": [
+    "When Beacon is live, you can watch the stream on this page. Anyone with the link can watch — you don't need to sign in. If nothing is live right now, you'll see a calm screen and the last recording if one exists.",
+    "If you're signed in, you can post chat messages and send reactions during the broadcast. If you're not signed in, you'll see a prompt to sign in before you can chat.",
+    "After the event ends, the recording stays on Beacon and gets posted to the Commons so other members can watch it later. A clear marker on the screen reminds you that the broadcast and chat are public."
+   ],
+   "howTo": [
+    "Open the app list and tap or click the Beacon tile to go to the broadcast page.",
+    "To watch, you don't need to sign in — the stream is open to anyone with the link.",
+    "To chat or react during a live event, sign in to your account. A prompt will appear if you're not signed in."
+   ]
+  },
+  {
+   "id": "peer-programming",
+   "title": "PeerProgramming",
+   "updated": "2026-08-09",
+   "summary": "PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.",
+   "body": [
+    "Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.",
+    "Once you're in a cohort, you can post messages and reply to others in your group's chat room. Other cohort members get a notification when someone posts, so conversations don't get missed. The room stays open while the cohort is running and shows a summary of who's taking part.",
+    "After your cohort ends, a feedback box appears where you can write a note about how it went. You can only leave feedback for your own cohort, not for others you may have listened in on."
+   ],
+   "howTo": [
+    "Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.",
+    "When you're in a cohort, open the chat room and post or reply to other members' messages.",
+    "After your cohort ends, use the feedback box to write about your experience."
+   ]
+  },
+  {
+   "id": "mood",
+   "title": "Mood",
+   "updated": "2026-08-02",
+   "summary": "Mood lets you check in on how you're doing, and see how the community is doing overall.",
+   "body": [
+    "Open Mood and pick a number from 1 to 5 to show how you're feeling right now. You can add a note if you want to. After you submit, you can check in again in 7 days.",
+    "The community can see a chart of all the mood check-ins together, but no one can see your individual check-in, your note, or who you are. Your check-in stays private."
+   ],
+   "howTo": [
+    "Open Mood. Pick a mood value from 1 to 5 and submit.",
+    "Right after you submit, the system blocks a second check with a message telling you when you can check in again.",
+    "Visit the community pulse or trends to see an aggregate chart of all check-ins."
+   ]
+  },
+  {
+   "id": "what-works",
+   "title": "WhatWorks",
+   "updated": "2026-08-02",
+   "summary": "WhatWorks is a shared list of tools that survivors say help with specific problems.",
+   "body": [
+    "Browse tools organized by problem. Each tool shows its name, a short note about why it works, how many survivors found it helpful, and a link to get it.",
+    "Mark a tool as helpful if it worked for you. Your endorsement adds to the count other survivors see. You can change your mind and remove your endorsement anytime.",
+    "Suggest a new tool for a problem you know about. Give the product name, a link to buy or access it, and an optional note. Your suggestion goes to review before it appears on the list."
+   ],
+   "howTo": [
+    "Open the WhatWorks app while signed in. Problems and their tools load with names, why-it-works notes, helpful counts, and purchase links.",
+    "Pick a tool and mark it helpful if it helped you. The count goes up by one. Toggle it off to remove your endorsement.",
+    "To suggest a tool, choose a problem, enter the product name and purchase link, add a note if you want, and submit. The suggestion waits for review before appearing on the shared list."
+   ]
+  },
+  {
+   "id": "skills-hunt",
+   "title": "SkillsHunt",
+   "updated": "2026-08-04",
+   "summary": "SkillsHunt is a round-based nomination system where members submit and review skills and work experience.",
+   "body": [
+    "Open a SkillsHunt round to nominate a survivor. Fill in their display name, short bio, Quora profile URL, and skills from the list. You can also add skills that are not on the list. Submit only while the round is active.",
+    "Your submissions are checked for safety and accuracy. The system verifies the Quora profile URL is live and blocks duplicate submissions from the same profile across all rounds.",
+    "View the leaderboard to see accepted nominations ranked by points. Team leaderboards group members by claimed profession. You'll get notifications when your submissions are accepted or rejected, and achievements for reaching milestones."
+   ],
+   "howTo": [
+    "Go to SkillsHunt and pick an active round.",
+    "Click or tap the Scout tab and fill out the nomination form with the survivor's name, bio, Quora URL, and skills.",
+    "Switch to the Leaderboard tab to see ranked submissions and your progress."
+   ]
+  },
+  {
+   "id": "workforce",
+   "title": "Workforce",
+   "updated": "2026-08-05",
+   "summary": "Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.",
+   "body": [
+    "Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, your progress toward the recruitment goal, and how much of the skills list has at least one member behind it. The number of people each sector needs is worked out from the size of the population, not from posted jobs — nothing here is advertised or applied for.",
+    "View your own profile as it appears in the workforce system. Your profile is read-only and pulls from your Directory profile — it shows your job title and skill level.",
+    "Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details."
+   ],
+   "howTo": [
+    "Open the Workforce dashboard. Check that Population, Workforce Total, and Recruited all show numbers (not a loading spinner or error).",
+    "Open your Workforce profile view. Confirm it is read-only with no edit buttons.",
+    "If the dashboard shows no sectors or occupations, the screen displays a clear empty state instead of a blank or broken panel."
+   ]
+  },
+  {
+   "id": "skills-taxonomy",
+   "title": "Skills Taxonomy",
+   "updated": "2026-08-05",
+   "summary": "Skills Taxonomy is the shared list of work sectors, job titles, and skills that the platform uses.",
+   "body": [
+    "Members can browse the Skills Taxonomy to see what sectors, job titles, and skills are available on the platform. The taxonomy is organized in three levels: sector, job title, and skill."
+   ],
+   "howTo": [
+    "Sign in and open the Skills Taxonomy browser.",
+    "Look through the three-level tree to find sectors, job titles, and skills."
+   ]
+  },
+  {
+   "id": "service-credits",
+   "title": "ServiceCredits",
+   "updated": "2026-08-05",
+   "summary": "ServiceCredits is where you view and send credits within the Skills Economy.",
+   "body": [
+    "Open ServiceCredits to see your available balance. The wallet tab shows how many credits you have.",
+    "You can send credits to another member. Once you send them, both balances update right away.",
+    "The Economy tab shows numbers about credits across the whole platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds."
+   ],
+   "howTo": [
+    "Sign in and open ServiceCredits. Your wallet tab will show your available balance.",
+    "To send credits, choose a member and enter the amount. After you send, check that your balance went down and theirs went up.",
+    "Open the Economy tab to see platform-wide credit numbers."
+   ]
+  },
+  {
+   "id": "contributions",
+   "title": "Contributions",
+   "updated": "2026-08-09",
+   "summary": "Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.",
+   "body": [
+    "You can submit three kinds of contributions: a gift card (Amazon, Apple, or Denny's) from $1 to $500, a link to a Quora comment you wrote, or a link to your GitHub profile. For gift cards, you tell the platform your Signal contact and the dollar amount, but you send the actual code to the owner over Signal—never post the code in the Commons or it won't count. For Quora comments and GitHub profiles, the link is required so the owner can find and confirm your work.",
+    "The platform keeps track of your contributions and shows you whether each one is pending, confirmed, or rejected. You can also see the current fundraiser cycle and how close the community is to its goals—total dollars raised, total comments, total stars, and how many people have contributed.",
+    "You can dismiss the fundraiser banner for two months if you want. It collapses to a small gift emoji in the Commons, so the reminder stays small and out of the way. The full banner comes back after two months. Contributing does not require any Unlock verification and never changes your Unlock status."
+   ],
+   "howTo": [
+    "Sign in and go to /apps/contributions. You'll see the current fundraiser progress and collective totals.",
+    "Pick a contribution type (gift card, Quora comment, or GitHub profile) and fill in the form with the required information.",
+    "If you're submitting a gift card, send the code to the owner over Signal, not in the app."
+   ]
+  },
+  {
+   "id": "level-up",
+   "title": "LevelUp",
+   "updated": "2026-08-05",
+   "summary": "LevelUp is where you can enroll in skills training cohorts and track your progress and credits.",
+   "body": [
+    "Browse available cohorts by track, status, or start date. Each cohort shows its curriculum and milestones. When you find one that fits, you can join it. Some cohorts ask for a deposit in credits, which is held against the cohort's milestones and released as each one is validated.",
+    "Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through LevelUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.",
+    "If a problem comes up with an enrollment, you can open a dispute and add comments or attachments to explain what happened. You can also browse trainer profiles to see who runs each cohort."
+   ],
+   "howTo": [
+    "Sign in and open the LevelUp app. You'll see cohort cards to browse.",
+    "Go to the Wallet tab to see your ServiceCredits balance and escrow totals.",
+    "Pick a cohort and follow the enrollment flow to sign up. If a deposit is required, you'll set that up as part of enrollment."
+   ]
+  },
+  {
+   "id": "trust-transport",
+   "title": "TrustTransport",
+   "updated": "2026-08-06",
+   "summary": "TrustTransport is a marketplace where members request and offer rides, package delivery, and food orders.",
+   "body": [
+    "You can request a ride, send a package, or order food. Pick your mode, enter where you're starting and where you're going, and see a price range before you book. If you're offering a ride or delivering, you can accept jobs and track them to completion.",
+    "Each trip has a private chat between the two people involved — the person who requested and the person who's helping. The chat closes when the trip is done. You can also record a ride as an ongoing arrangement if the same person drives you regularly.",
+    "When a trip is finished, you see a record of what it was worth in whatever currency you agreed on. ServiceCredits go straight to your wallet. For other payments, you arrange them directly with the other person, outside the platform. Your history shows only whether trips completed or not — there are no ratings or reviews."
+   ],
+   "howTo": [
+    "Open the TrustTransport screen. You'll see a mode selector, fields for where you're starting and going, and a list of your requests.",
+    "To request a service, pick your mode (ride, package, or food), fill in your locations, and you'll see a price range before you submit.",
+    "Sign out and try to open TrustTransport — you'll see a sign-in prompt instead of the booking surface."
+   ]
+  },
+  {
+   "id": "lighthouse",
+   "title": "LightHouse",
+   "updated": "2026-08-04",
+   "summary": "LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.",
+   "body": [
+    "Open LightHouse and you land on a list of available properties. You can browse listings, see details like location and monthly rent, and reach out to hosts. If you own a place, you can list it yourself — no approval needed. You can do both at the same time: list your own property and also request to stay elsewhere.",
+    "When you request to stay at a listing, the host can accept or reject your request. If they accept, you can start a private chat with them. You can also record ongoing housing arrangements without leaving LightHouse — just pick how often and how it's settled, and the other person confirms it in their app.",
+    "If a host makes you uncomfortable, you can block them from any listing. When you block someone, their properties disappear from your browse list and they cannot request to stay with you."
+   ],
+   "howTo": [
+    "Open LightHouse. It loads straight to a list of available properties with titles, locations, and rent amounts.",
+    "Pick a property you don't own and tap or click Request to stay. If you haven't filled in your seeker details yet, you'll be sent to Your details first. Fill it in, save it, then go back and send the request.",
+    "To list your own place, go to the List your place tab. Fill in the property fields — title, address, bedrooms, bathrooms, rent, accepted currencies, available date, and photos — and save it. Your listing is live right away."
+   ]
+  },
+  {
+   "id": "click-log",
+   "title": "ClickLog",
+   "updated": "2026-08-07",
+   "summary": "ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.",
+   "body": [
+    "Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: a private incident does not need a location; add one only if you want it in your own record. Three: tagging an incident with problems or schemes requires a location, because tags only mean something on a map.",
+    "Sharing is a separate choice and always yours: off until you turn it on, per incident or as a default. A shared incident contributes only grouped trend data — the date, a rough area, and the tags. Never your notes, never your exact location. Only shared incidents count toward the global trends.",
+    "You can edit or delete your own incidents at any time, and turn sharing off again per incident. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required)."
+   ],
+   "howTo": [
+    "Open ClickLog. Your total count and recent incidents load with real numbers.",
+    "Press the large Log Incident button to record a new entry. The count rises by one.",
+    "Sign out and try to reach ClickLog. You will not be able to — ClickLog requires you to be signed in."
+   ]
+  },
+  {
+   "id": "recurring-activity",
+   "title": "Recurring Activity",
+   "updated": "2026-08-04",
+   "summary": "Recurring Activity is where you record and confirm ongoing arrangements with other members — who you work with, what you trade, and how often.",
+   "body": [
+    "You can declare a new recurring activity with another member by choosing them, the type of work or trade, what currency you use, and how often it happens. If you're trading ServiceCredits, you can also write down the amount. The activity starts as pending until the other member confirms it.",
+    "When another member records an activity with you, you'll see it waiting for your confirmation here. Once you confirm it, the arrangement counts toward your Trust and shows up in the Skills Economy. You can change who sees each activity — keep it private, limit it to certain people, or make it public.",
+    "Many apps have a quick prompt that lets you record an arrangement without leaving that app — after a match, a service thread, a favor, a ride, or a ServiceCredits send. You pick the cadence and how it's settled, and it lands here as pending. Once you record an activity with someone, the prompt disappears so you don't record the same pair twice."
+   ],
+   "howTo": [
+    "Sign in and open Recurring Activity. You'll see your confirmed activities and any pending confirmations waiting for you.",
+    "To record a new arrangement, choose the other member, the sector or type of work, your currency, and how often it happens. ServiceCredits activities let you declare an amount; fiat activities show the currency and cadence only.",
+    "When you see a pending activity another member recorded with you, review it and confirm or decline."
+   ]
+  },
+  {
+   "id": "gdp",
+   "title": "GDP",
+   "updated": "2026-08-09",
+   "summary": "GDP shows community metrics on a dashboard.",
+   "body": [
+    "The GDP dashboard loads when you sign in and visit the app. It displays data about the community in one place."
+   ],
+   "howTo": [
+    "Sign in to your account.",
+    "Go to the GDP dashboard. The page loads without errors.",
+    "View the community metrics displayed on the dashboard."
+   ]
+  }
+ ]
 }
