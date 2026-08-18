@@ -114,7 +114,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `id UUID PRIMARY KEY`
   - `user_id TEXT`
   - `metadata JSONB NOT NULL DEFAULT '{}'` (latitude, longitude, notes)
-  - `shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — member's per-incident owner-share opt-in; a real column (not metadata) so it is excluded from the `metadata_hash` dedupe
+  - `shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — member's per-incident owner-share opt-in for untagged incidents; forced TRUE whenever the incident carries tags (owner decision, 2026-08-18 — enforced at create/edit, plus an idempotent one-time backfill `UPDATE` in `schema.sql` for tagged rows logged private before the rule); a real column (not metadata) so it is excluded from the `metadata_hash` dedupe
   - `problem_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which of the 50+ known problems happened; each slug validated against `lib/click-log/tags.ts` (mirrors the landing-page problems list); at most 10 (`MAX_TAGS_PER_KIND`, enforced in the API). Real column, excluded from the `metadata_hash` dedupe. Arrays since 2026-08-13 (owner decision: one tag per kind never fit a real incident).
   - `scheme_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which named schemes were used; each slug validated against `lib/click-log/tags.ts` (schemes started from the owner's "A post for each gang stalker game" Discourse thread, now deprecated — `tags.ts` is the living canonical list and grows there; slugs are never renamed or reused so trend history stays comparable); at most 10. Real column, excluded from the `metadata_hash` dedupe.
   - `problem_tag TEXT` / `scheme_tag TEXT` (nullable) — the superseded singular tag columns (2026-08-02 → 2026-08-13): backfilled into the arrays by guarded `UPDATE`s in `schema.sql`, kept for history, no longer read or written by the app.
@@ -166,9 +166,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   default and every per-incident flag default to off; only the incident's owner may toggle its
   share state (`canToggleIncidentShare` — deliberately no admin override, and share-off is
   rejected on a tagged incident until its tags are removed); and the trends aggregate reads only
-  `shared_with_owner = true` rows. Tagged incidents logged before 2026-08-18 as private are NOT
-  retroactively shared — the always-shared rule applies when an incident is created or next
-  edited, never by backfill (consent stays the member's). The privacy boundary is enforced in SQL
+  `shared_with_owner = true` rows. Tagged incidents logged private before 2026-08-18 are brought
+  under the rule by an idempotent backfill in `schema.sql` (owner approval, 2026-08-18): it sets
+  `shared_with_owner` on rows that carry tags, touches nothing when no such rows exist, and
+  never touches untagged rows — their share flag stays the member's own choice. The privacy boundary is enforced in SQL
   (`getSharedIncidentTrends` projects only day / 1-decimal (~11 km) location cell / count — notes,
   precise coordinates, incident ids, and member identity never leave the query).
 - The trends endpoint and `/admin/click-log` page are admin-gated (`requireClickLogAdminAccess`,
@@ -230,8 +231,10 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   share checkbox locks on while tags are picked and its label says sharing is required for
   tagged incidents; the editor warns, before save, that saving a private incident with tags
   turns sharing on; the history-row pill locks on tagged shared incidents with a tooltip saying
-  why. No backfill: tagged incidents logged private under the old rule stay private until
-  created-or-edited under the new one. Notes stay never-shared in every path. Guide and
+  why. Backfill (owner approval, 2026-08-18): an idempotent `UPDATE` in `schema.sql` (mirrored
+  in `schema.demo.sql`) sets `shared_with_owner` on already-logged tagged private rows, so
+  existing tagged incidents follow the same rule; it matches nothing when no such rows exist and
+  never touches untagged rows. Notes stay never-shared in every path. Guide and
   test-script copy updated to the corrected rules. Android: out of scope (web-only per
   rule 105).
 - 2026-08-14: **Both tag pickers now link to the public list that describes their tags in full
