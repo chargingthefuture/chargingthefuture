@@ -122,6 +122,15 @@ export function ClickLogIncidentEditor({
         onProblemTagsChange={setProblemTags}
         onSchemeTagsChange={setSchemeTags}
       />
+      {/* Tags require trend sharing (owner decision, 2026-08-18): saving a private incident
+          with tags turns sharing on server-side, so say it plainly before the member saves. */}
+      {!incident.shared_with_owner && (problemTags.length > 0 || schemeTags.length > 0) && (
+        <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Tags share trend data with the owner: saving with these tags turns on sharing for this
+          incident (only the date, rough area, and tags — never your note). Remove the tags to
+          keep it private.
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button
           onClick={() => onSave({ notes, problemTags, schemeTags })}

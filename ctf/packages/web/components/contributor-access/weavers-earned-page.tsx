@@ -79,6 +79,10 @@ export function WeaversEarnedPage() {
               Commons and the private room in Chyme when they launch — spaces for the members who
               keep this community running.
             </p>
+            <p style={body}>
+              It also opens scheme suggestions in ClickLog: badge holders can propose a new scheme
+              name while logging an incident, and a real one becomes part of the canonical list.
+            </p>
           </section>
         </div>
       </div>

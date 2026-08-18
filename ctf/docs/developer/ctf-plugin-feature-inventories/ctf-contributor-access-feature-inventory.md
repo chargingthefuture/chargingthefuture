@@ -355,6 +355,11 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-08-18 — "What it opens" third perk catch-up: the explainer (`weavers-earned-page.tsx`)
+  now also names scheme suggestions in ClickLog — badge holders can propose a new scheme name
+  while logging an incident (the l-badge gate documented in the ClickLog inventory since the
+  feature shipped; the explainer page had never mentioned it). Test script CA-6 updated to
+  match. Copy-only; no schema, route, or contract change. Web-only (rule 105).
 - 2026-08-07 — "How it's earned" explainer copy catch-up: the "What it opens" section
   (`weavers-earned-page.tsx`) now names both private surfaces the badge standing opens — the
   members-only channel in the Commons **and** the private "Weavers of the Commons" room in Chyme

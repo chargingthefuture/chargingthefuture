@@ -1,7 +1,7 @@
 policies:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 2.0.0
+    version: 3.0.0
     requiredRoles: [user]
     attributePolicies:
       - attribute: userId
@@ -15,7 +15,10 @@ policies:
         conditionalRequirement: weavers_badge_when_other_scheme
     # The schemeSuggestion text is member content explicitly shared with the owner; the field
     # states this in the form, so submission is the consent act.
-    consentRequirements: [scheme_suggestion_shared_with_owner]
+    # A tagged create is always stored shared (3.0.0, owner decision 2026-08-18): picking a tag
+    # is the consent act for trend sharing — the form locks the share checkbox on and says so,
+    # and an explicit sharedWithOwner: false alongside tags is a 400, never a silent override.
+    consentRequirements: [scheme_suggestion_shared_with_owner, tagging_shares_trend_data]
   - pluginId: click-log
     command: click-log.incident.list
     version: 1.0.0
@@ -34,7 +37,7 @@ policies:
     consentRequirements: []
   - pluginId: click-log
     command: click-log.incident.update
-    version: 2.0.0
+    version: 3.0.0
     # Deliberately no admin override: the note is the member's private content, so only the
     # incident's owner may edit it (mirrors click-log.incident.share.set).
     requiredRoles: [user]
@@ -46,12 +49,18 @@ policies:
       # (2.0.0: schemeTags is a list — see the command contract.)
       - attribute: schemeTags
         conditionalRequirement: other_scheme_only_if_already_set
-    consentRequirements: []
+    # Saving with a non-empty tag list turns shared_with_owner on (3.0.0, owner decision
+    # 2026-08-18: tags require trend sharing). The editor states this before save — keeping or
+    # adding tags is the consent act; saving with both lists empty leaves the flag alone.
+    consentRequirements: [tagging_shares_trend_data]
   - pluginId: click-log
     command: click-log.incident.share.set
-    version: 1.0.0
+    version: 2.0.0
     # Deliberately no admin override: whether an incident is shared with the owner is the
     # member's consent decision alone, so only the incident's owner may change it.
+    # sharedWithOwner: false is rejected on a tagged incident (2.0.0, owner decision
+    # 2026-08-18: a tagged incident always shares its trend data — the member removes the
+    # tags via click-log.incident.update first to make it private).
     requiredRoles: [user]
     attributePolicies:
       - attribute: id

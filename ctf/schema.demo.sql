@@ -69,6 +69,13 @@ UPDATE click_log_incidents SET problem_tags = ARRAY[problem_tag]
   WHERE problem_tag IS NOT NULL AND problem_tags = '{}';
 UPDATE click_log_incidents SET scheme_tags = ARRAY[scheme_tag]
   WHERE scheme_tag IS NOT NULL AND scheme_tags = '{}';
+-- Backfill for the tags-require-sharing rule (owner decision, 2026-08-18: a tagged incident
+-- always shares its trend data, so tagged rows logged private under the earlier rule become
+-- shared). Idempotent: the WHERE clause matches nothing once every tagged row is shared, and
+-- untagged rows are never touched — their share flag stays the member's own choice.
+UPDATE click_log_incidents SET shared_with_owner = TRUE
+  WHERE NOT shared_with_owner
+    AND (cardinality(problem_tags) > 0 OR cardinality(scheme_tags) > 0);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_user_id ON click_log_incidents(user_id);
 CREATE INDEX IF NOT EXISTS idx_click_log_incidents_created_at ON click_log_incidents(created_at DESC);
 -- Partial index for the admin trends aggregate, which only ever reads shared rows.

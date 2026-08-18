@@ -42,7 +42,10 @@ async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
 
 // Build the create-incident request body. Unpicked tags are omitted entirely (the API treats
 // absent as untagged), and the suggestion fields ride along only with the "Not listed" scheme
-// (the API rejects them otherwise). Module-level so postIncident stays under the complexity limit.
+// (the API rejects them otherwise). A tagged incident always shares its trend data (owner
+// decision, 2026-08-18) — the form locks the share checkbox on, and this sends the matching
+// true so the server (which rejects tagged-but-unshared) accepts it. Module-level so
+// postIncident stays under the complexity limit.
 function buildCreateBody(args: {
   metadata: Record<string, unknown>;
   sharedWithOwner: boolean;
@@ -52,9 +55,10 @@ function buildCreateBody(args: {
   schemeQuoraUrl: string;
 }): Record<string, unknown> {
   const notListed = args.schemeTags.includes(NOT_LISTED_SCHEME_SLUG);
+  const tagged = args.problemTags.length > 0 || args.schemeTags.length > 0;
   return {
     metadata: args.metadata,
-    sharedWithOwner: args.sharedWithOwner,
+    sharedWithOwner: tagged || args.sharedWithOwner,
     ...(args.problemTags.length > 0 ? { problemTags: args.problemTags } : {}),
     ...(args.schemeTags.length > 0 ? { schemeTags: args.schemeTags } : {}),
     ...(notListed && args.schemeSuggestion.trim() ? { schemeSuggestion: args.schemeSuggestion.trim() } : {}),

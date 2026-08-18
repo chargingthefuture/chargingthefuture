@@ -209,6 +209,15 @@ Findings are often wrong. A meaningful share describe a bug the code does not ha
 
 `wiki-site` in particular has no semantic-title check, no parity check, and auto-merge turned off — use a Conventional Commit title there anyway, omit the `Parity Status:` line, and expect the PR to wait on a human merge. `/cr` is specific to this repo, since the code-review issues and their labels live here. Read the target repo's own `CLAUDE.md` for what it does enforce.
 
+### Term changes update the blog Dictionary (owner decision, 2026-08-18)
+
+The blog keeps a living Dictionary page (`wiki-site` → `content/posts/Dictionary.md`) as the
+public reference for product names, member-count vocabulary, the Specterati lexicon, and the
+capability list. When a change in this repo adds, renames, or retires a member-facing term or
+capability — a plugin registry entry, a product name, a stats term — updating that Dictionary is
+part of the same work, like the inventory sync is. See `wiki-site/CLAUDE.md` "Snapshots vs Living
+Pages" for how living pages are edited (date bump, dated change line, header).
+
 ## Search Tooling Policy
 
 - Prefer `rg`/ripgrep for recursive text and file discovery.
