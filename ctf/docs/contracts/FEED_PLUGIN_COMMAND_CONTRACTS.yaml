@@ -421,7 +421,7 @@ contracts:
     version: 1.0.0
     description: >-
       Toggle the requesting member's emoji reaction on a community post. The emoji must be in the
-      fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋); a second toggle of the same emoji removes the reaction.
+      fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋 💯); a second toggle of the same emoji removes the reaction.
       Reactions are stored in our own database (not Stream).
     inputSchema:
       postId:
@@ -429,7 +429,7 @@ contracts:
         required: true
       emoji:
         type: string
-        enum: ["👍", "❤️", "😂", "🎉", "🙏", "😢", "👋"]
+        enum: ["👍", "❤️", "😂", "🎉", "🙏", "😢", "👋", "💯"]
         required: true
     outputSchema:
       ok:
@@ -448,7 +448,7 @@ contracts:
     version: 1.0.0
     description: >-
       Toggle the requesting member's emoji reaction on an official announcement. The emoji must be
-      in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋); a second toggle of the same emoji removes the
+      in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋 💯); a second toggle of the same emoji removes the
       reaction. The announcement must be published. Reactions are stored in our own database.
     inputSchema:
       announcementId:
@@ -456,7 +456,7 @@ contracts:
         required: true
       emoji:
         type: string
-        enum: ["👍", "❤️", "😂", "🎉", "🙏", "😢", "👋"]
+        enum: ["👍", "❤️", "😂", "🎉", "🙏", "😢", "👋", "💯"]
         required: true
     outputSchema:
       ok:

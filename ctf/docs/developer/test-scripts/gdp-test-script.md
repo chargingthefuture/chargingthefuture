@@ -68,18 +68,20 @@ Result: web ☐
 
 **Role:** member
 **Surfaces:** web (desktop), web (mobile-responsive)
-**Precondition:** Seed run includes at least one `gdp_metric_snapshots` row with `is_estimate = true` for the headline metric (`gdp_total_revenue` or `gdp_value_index`).
+**Precondition:** Seed run includes at least one `gdp_metric_snapshots` row with `is_estimate = true` for the headline metric (`gdp_total_revenue` or `gdp_value_index`), and the recognized Community Value Index is above 0.
 
 **Steps:**
 1. On `/apps/gdp`, locate the main GDP headline value in the hero and in the sidebar Live Ticker.
 2. Check for an "Estimate" chip or badge next to each flagged figure.
 3. Read the footnote beneath the chip.
+4. On a community with nothing recognized yet (headline figure reads 0), look at the same two places again.
 
 **Expected:**
-- An understated "Estimate" chip appears on the headline figure (and in the sidebar Live Ticker) wherever `isEstimate` is true.
+- An understated "Estimate" chip appears on the headline figure (and in the sidebar Live Ticker) wherever `isEstimate` is true and the figure is above 0.
 - The footnote describes a community-wide normalized figure — not a per-user redemption value or a dollar balance.
 - No currency symbol appears alongside the index value.
 - If the seed has no estimate-flagged metric, the chip simply does not appear (no crash).
+- When the headline figure is 0, no chip appears next to it in either place — "0 Estimate" would read as doubt about the zero, and there is nothing rolled together to estimate yet.
 
 Result: web ☐
 
