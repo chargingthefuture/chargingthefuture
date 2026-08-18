@@ -3,11 +3,16 @@
  * Regenerates the public user guide from each member-facing plugin's own documentation.
  *
  * Grounding (this is the whole point): the ONLY facts fed to the model are, per plugin, the
- * inventory's "User Features" section and the test script's "Core smoke" walkthrough — the two
- * plain-language, always-current descriptions of what a member can do and how. The model rewrites
- * those into the project's plain voice and is told, in the strongest terms, to invent nothing. This
- * mirrors the product-update generator's grounding fix (issue #1471): a public page must never claim
- * a capability its own docs do not state.
+ * inventory's "Intent and Outcome" statement, its "User Features" section, and the test script's
+ * "Core smoke" walkthrough — the plain-language, always-current descriptions of what the plugin is,
+ * what a member can do, and how. The model rewrites those into the project's plain voice and is told,
+ * in the strongest terms, to invent nothing. This mirrors the product-update generator's grounding fix
+ * (issue #1471): a public page must never claim a capability its own docs do not state.
+ *
+ * "Intent and Outcome" is fed for one reason: without it the model had only feature bullets and no
+ * statement of what the plugin IS, so it supplied a familiar frame of its own. That is how the guide
+ * came to call Workforce — a read-only tracker of how a population's skills are spread across sectors
+ * — a list of "job openings" members are "matched to", which no part of Workforce does.
  *
  * Output:
  *   - ctf/packages/web/app/guide/guide-content.json  (rendered by /guide)
@@ -131,8 +136,9 @@ function lastUpdated(paths) {
 // ── Model call ───────────────────────────────────────────────────────────────
 
 const GROUNDING = `GROUNDING — DO NOT FABRICATE (most important rule, overrides everything):
-- The two source blocks below (this plugin's "User Features" and its "Core smoke" steps) are your ONLY facts. Every claim you write must trace to them. If they do not say it, you do not write it.
+- The three source blocks below (this plugin's "What it is", its "User Features", and its "Core smoke" steps) are your ONLY facts. Every claim you write must trace to them. If they do not say it, you do not write it.
 - Invent no capability, number, date, rating, or outcome. When unsure what something does, say less — a vaguer true sentence beats a specific false one. A short section is fine.
+- Keep the frame the docs give you. Never swap a documented term for a familiar real-world one that means something different — a headcount worked out from a population model is not a "job opening", a list of skills is not a "job board", and a count is not a rating. If a plain word for it is not in the sources, describe what the screen shows instead of naming it.
 - The platform verifies NO ONE's identity, background, or work, and has no trust "score". Never write "verified", "verification", "vetted", "background check", or "trust score", even for Directory, Foundation, or Trust features. Foundation helpers are fellow community members, not a formally vetted service. Trust features are peer/social information only.
 - Describe MEMBER actions only. Skip anything admin-only.`;
 
@@ -158,7 +164,7 @@ function extractJson(text) {
   return t;
 }
 
-async function rewrite(slug, title, features, coreSmoke) {
+async function rewrite(slug, title, whatItIs, features, coreSmoke) {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -174,7 +180,7 @@ async function rewrite(slug, title, features, coreSmoke) {
       messages: [
         {
           role: 'user',
-          content: `Write the "${title}" section of the user guide, grounded ONLY in the two source blocks below.\n\n=== ${title} — User Features (what a member can do) ===\n${features || '(none documented)'}\n\n=== ${title} — Core smoke (plain member steps) ===\n${coreSmoke || '(none documented)'}\n\nReturn ONLY a JSON object with these exact keys:\n- summary: one plain sentence saying what ${title} is for.\n- body: an array of 1 to 3 short plain paragraphs on what a member can do here (strings).\n- howTo: an array of 2 to 4 plain steps for using it, drawn from the Core smoke block (strings). Use an empty array if there is no meaningful walkthrough.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+          content: `Write the "${title}" section of the user guide, grounded ONLY in the three source blocks below.\n\n=== ${title} — What it is (developer notes on the point of this plugin) ===\n${whatItIs || '(none documented)'}\n\nUse that first block only to get the framing right — what this plugin is and is not. It is written for developers, so never copy its wording, its rule numbers, its file paths, or its planning notes into the guide. Everything a member can DO comes from the two blocks below.\n\n=== ${title} — User Features (what a member can do) ===\n${features || '(none documented)'}\n\n=== ${title} — Core smoke (plain member steps) ===\n${coreSmoke || '(none documented)'}\n\nReturn ONLY a JSON object with these exact keys:\n- summary: one plain sentence saying what ${title} is for.\n- body: an array of 1 to 3 short plain paragraphs on what a member can do here (strings).\n- howTo: an array of 2 to 4 plain steps for using it, drawn from the Core smoke block (strings). Use an empty array if there is no meaningful walkthrough.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
         },
       ],
     }),
@@ -225,6 +231,12 @@ for (const [slug, title] of ORDER) {
   const tsPath = testScriptPath(slug);
   const inv = invPath ? readFileSync(invPath, 'utf-8') : '';
   const ts = tsPath ? readFileSync(tsPath, 'utf-8') : '';
+  // "Intent and Outcome" states what the plugin IS. Without it the model has only feature bullets
+  // and reaches for a familiar frame that may be wrong (see the Workforce note at the top of this
+  // file). A few inventories have no such heading — those sections fall back to the other two blocks.
+  // Capped because these sections carry developer planning notes the model does not need; only the
+  // longest of them (PeerProgramming) is anywhere near the cap today.
+  const whatItIs = extractSection(inv, /Intent (and|&) Outcome/i).slice(0, 2500);
   const features = extractSection(inv, /User Features/i);
   const coreSmoke = extractSection(ts, /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);
@@ -241,7 +253,7 @@ for (const [slug, title] of ORDER) {
   }
 
   console.error(`generating ${slug}…`);
-  const written = await rewrite(slug, title, features, coreSmoke);
+  const written = await rewrite(slug, title, whatItIs, features, coreSmoke);
   if (!written || !written.summary || !written.body.length) {
     // Model call failed or returned nothing usable. Keep the reviewed section as-is (only bumping
     // its date); fail only if there is no prior section to preserve.
