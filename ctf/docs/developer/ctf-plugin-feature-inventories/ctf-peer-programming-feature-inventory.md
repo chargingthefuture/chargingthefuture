@@ -9,19 +9,37 @@
 
 ## Intent and Outcome
 
-PeerProgramming is a persistent, async-first collaboration experience that builds survivor momentum through weekly cohort assignment, guided discussion prompts, and reliable in-app communication.
+PeerProgramming puts members into a small group each week and gives that group its own room to talk
+in. Nobody has to be there at the same time as anyone else: the room is text, messages and their
+replies stay put, and a member reads and answers whenever they get to it. The point is that someone
+who signs in has a particular group of people to talk with that week rather than an empty screen.
 
-The plugin:
+Being placed in a group is automatic; taking part is voluntary. Anyone who signed in during the last
+7 days is placed in a cohort of up to 12, and in practice about 5 of them post in a given week. The
+app tells a member when they have been placed, and tells the rest of the cohort when someone posts.
+If almost nobody in a cohort is around, the room opens to a wider audience rather than leaving one
+member alone in it.
 
-1. Runs weekly cohort assignment from active users (login within the last 7 days),
-2. Assigns up to 12 users per cohort (participation is voluntary; about 5 are expected to actively show up in a given week),
-3. Records in-app assignment notifications for every assignment cycle with idempotent delivery,
-4. Opens fallback access when fewer than 2 cohort members are present,
-5. Provides a cohort room optimized for async text with threaded replies,
-6. Preserves messages and thread context continuously (24/7 persistence),
-7. Enforces tiered participation across cohort member, authenticated audience, and unauthenticated audience,
-8. Captures structured feedback for iteration,
-9. Supports admin-defined weekly topic guidance.
+While the community is small the plugin normally runs as one standing room — Cohort 1 — that every
+member joins and that stays open week after week. Splitting members into separate weekly cohorts is
+what happens once there are enough people to fill them. The mode section below is the detail.
+
+Who can do what: a member of the cohort posts and replies. Any other signed-in member can read that
+room and take part in the limited ways it allows. A signed-out visitor can only read what the room
+shows publicly. After a member's own cohort has ended — not while it is running, and never for a
+cohort they were only reading — a box asks them to write how it went, in their own words.
+
+The plugin, stated precisely:
+
+1. Selects active members (signed in within the last 7 days) and places them in cohorts each week,
+2. Targets 12 members per cohort; participation is voluntary, so about 5 typically take part,
+3. Writes an in-app notification for every placement, keyed so a repeated run never notifies twice,
+4. Opens the room to a wider audience when fewer than 2 cohort members are present,
+5. Runs a text room with threaded replies whose history persists continuously and survives reconnects,
+6. Notifies the other cohort members when someone posts,
+7. Holds the line on what a cohort member, another signed-in member, and a signed-out visitor can each do,
+8. Takes a free-text note from a member once their own cohort has ended,
+9. Shows the admin-set topic guidance for the week in the room header.
 
 ### Single standing, always-open Cohort 1 mode (low-population, admin-flippable)
 
@@ -217,6 +235,22 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 4. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
 
 ## Change Log
+
+- 2026-08-18: **Intent and Outcome rewritten in plain words — it ships to the public user guide
+  (owner request).** Since 2026-08-18 the guide generator reads this section as the framing block for
+  the plugin's `/guide` section. It opened with "a persistent, async-first collaboration experience
+  that builds survivor momentum" — abstract product-speak of exactly the kind rule 120 tells authors
+  to keep out of a generator-grounding section, and a poor thing to hand a model as the statement of
+  what this plugin is. The section now says it in member-facing words: members are put into a small
+  group each week, the group gets its own text room, nobody has to be there at the same time, and the
+  point is having a particular group to talk with rather than an empty screen. It also states who can
+  do what (cohort member posts, another signed-in member reads and takes part in limited ways, a
+  signed-out visitor reads only what is public) and when the feedback box appears. The nine mechanical
+  facts are kept as a numbered list below the prose, with the stand-in words ("async-first",
+  "tiered participation", "structured feedback") replaced by what they actually describe. The whole
+  plain statement now fits inside the generator's 2500-character framing cap, so the model reads all
+  of it and the developer detail below is what gets cut. Documentation only; no schema, route,
+  contract, or behavior change.
 
 - 2026-08-10: **Dropped the two placeholder labels from each admin feedback row.** Every row in the admin "Member feedback" panel read "general general" next to the author name. Those were `issueType` and `suggestionCategory`, and neither is chosen by the member: the feedback box has no category picker, so `peer-programming-shell.tsx` posts the fixed string "general" for both on every submission. The labels therefore repeated the same two words on every row and carried no information. `pp-admin-shell.tsx` no longer renders them — a row is now author, time, and the note. Display-only: the columns are still written and still returned by `GET /api/peer-programming/admin/feedback`, so nothing is lost and the labels can come back if the member form ever collects real categories (a code comment on the row records this). No schema, route, or contract change. Web only.
 - 2026-08-10: **Session Feedback only appears after your cohort has ended.** A member sent "session feedback" for a session that had not happened — the box sat at the bottom of the Cohorts tab from the moment you were placed in a cohort, so it invited a review of something still in progress. `pp-cohorts-tab.tsx` now renders the box only when the open cohort is the viewer's own **and** it has ended (`room.ended`, already returned by `GET /api/peer-programming/room`), so someone listening in on another cohort never sees it either. Added the line "Your cohort has ended. Tell us how it went." above the note field so the box says why it appeared. Two matching fixes on the same card, which would otherwise contradict the new box: the own-cohort badge now reads "Ended" (gray) instead of always reading "Active" (`room.status` was never populated by `mapRoom`, so the badge was hardcoded green in practice), and the "Join Session" button is hidden for an ended cohort — there is no call to join once the cohort is closed. Web only. No schema, route, or contract change; the feedback route itself is unchanged. Note: the standing Cohort 1 can never be ended, so while single standing cohort mode is on the box does not appear at all.

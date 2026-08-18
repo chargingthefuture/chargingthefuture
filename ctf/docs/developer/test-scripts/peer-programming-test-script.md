@@ -28,6 +28,12 @@
 
 ## Core smoke (every session)
 
+PeerProgramming puts members into a small group each week and gives that group its own text room.
+Nobody has to be there at the same time as anyone else, so a quiet room is not by itself a failure —
+what has to work is being placed in a cohort, being told about it, and being able to post and reply
+whenever you get to it. While the community is small this normally runs as one standing room,
+Cohort 1, that everyone joins (inventory Intent and Outcome, rewritten 2026-08-18).
+
 These are the checks that must pass before anything else is worth testing.
 
 **1. Room loads for a seeded member**
