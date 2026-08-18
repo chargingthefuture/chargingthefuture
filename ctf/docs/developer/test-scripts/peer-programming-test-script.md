@@ -35,6 +35,10 @@ about it, being able to join the call, and being able to post and reply whenever
 quiet text room is not by itself a failure. While the community is small this normally runs as one
 standing room, Cohort 1, that everyone joins (inventory Intent and Outcome, 2026-08-18).
 
+Session timing is ad hoc by decision: a cohort holds as many or as few calls as it wants, whenever
+its members want them. There is no scheduled meeting hour and no reminder, so the absence of one is
+not a bug to file.
+
 These are the checks that must pass before anything else is worth testing.
 
 **1. Room loads for a seeded member**
