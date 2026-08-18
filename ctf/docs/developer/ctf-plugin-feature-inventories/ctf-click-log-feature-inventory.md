@@ -14,10 +14,11 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 3. User Features
 
 - Three privacy rules cover the whole feature, and member-facing copy leads with them in this
-  order (owner directive, 2026-08-18 — the earlier guide copy over-explained to the point of
-  confusion): (1) notes are always private, nobody but the member ever sees them; (2) a private,
-  untagged incident does not need a location; (3) tagging problems or schemes requires a
-  location, and only shared incidents feed the global trend data.
+  order (owner directive, 2026-08-18): (1) notes are always private, nobody but the member ever
+  sees them; (2) an incident can be private only when it is untagged, and a private, untagged
+  incident does not need a location; (3) tagging problems or schemes requires both a location
+  and trend sharing — a tagged incident always shares its trend data with the owner, and only
+  shared incidents feed the global trends.
 - Log incident (with optional location/notes)
 - Optionally tag an incident with which known problems happened ("Which problems happened?" —
   the 50+ problems list published on the public landing page) and/or which named schemes were
@@ -30,7 +31,13 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   skill pickers): tapping a chip adds it, tapping it again removes it. A tagged incident
   requires a location — the form disables Submit (with an explanation) until location is added,
   and the server enforces the same rule — because tagged trend data needs location to be
-  detailed enough. Tags show as chips on the history rows and feed trend reporting.
+  detailed enough. A tagged incident also always shares its trend data with the owner (owner
+  decision, 2026-08-18): while tags are picked, the form's share checkbox locks on and its label
+  says sharing is required for tagged incidents; unpicking every tag returns the checkbox to the
+  member's own choice. The server enforces the same rule (a tagged create with an explicit
+  sharedWithOwner: false is a 400; a tagged create with the flag omitted stores shared
+  regardless of the member's global default). Tags show as chips on the history rows and feed
+  trend reporting.
 - Read the full problems list and the full schemes list while tagging: each picker carries a
   "Full list" link beside its question — the problems picker points at
   `https://www.chargingthefuture.com/look-ma`, the schemes picker at
@@ -53,17 +60,24 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   same type-and-search multi-select pickers as the log form. The date and location cannot be changed: they anchor
   the trend data, and a location can't be truthfully added after the fact. Because tags require
   a location, an incident logged without one can never gain tags — the editor says so plainly
-  and offers only the note. The "Not listed" scheme can be kept or removed on an incident that
+  and offers only the note. Because tags also require trend sharing (owner decision,
+  2026-08-18), saving a private incident with tags turns sharing on: the editor states this in
+  plain words before save, and the server sets `shared_with_owner` to true in the same update.
+  The "Not listed" scheme can be kept or removed on an incident that
   already carries it, but not newly picked on edit (its required description is written when
   logging).
 - Delete own incidents
-- Choose whether an incident is shared with the owner for trend tracking: a global "share new
-  incidents by default" setting plus a per-incident override (in the log form and on each history
-  row). Sharing is opt-in and off until the member turns it on, and can be turned off again per
-  incident at any time. Shared incidents contribute only grouped trend data (day, approximate area,
-  count) — never the note or exact location. The member-facing copy says so in plain words: the
-  global default reads "only trend data — never your notes" and the per-incident checkbox reads
-  "only the date, rough area, and tags". Neither uses the word "coarse".
+- Choose whether an untagged incident is shared with the owner for trend tracking: a global
+  "share new incidents by default" setting plus a per-incident override (in the log form and on
+  each history row). For untagged incidents sharing is opt-in and off until the member turns it
+  on, and can be turned off again per incident at any time. A tagged incident always shares
+  (owner decision, 2026-08-18): its history-row pill locks at "Shared with owner" with a tooltip
+  saying to remove the tags to make it private, and the server rejects a share-off call on a
+  tagged incident with the same explanation. Shared incidents contribute only grouped trend data
+  (day, approximate area, tags, count) — never the note or exact location. The member-facing
+  copy says so in plain words: the global default reads "only trend data — never your notes" and
+  the per-incident checkbox reads "only the date, rough area, and tags". Neither uses the word
+  "coarse".
 
 ## 4. Admin Features
 
@@ -86,10 +100,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 5. API Surface and Route Map
 
 - `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count, canSuggestScheme }` (`canSuggestScheme` = whether this member holds the Weavers of the Commons badge and so may pick "Not listed"). The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
-- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTags` / `schemeTags` string arrays (each slug validated against the canonical lists in `lib/click-log/tags.ts` — an unknown slug is a 400; duplicates collapsed; at most 10 per kind, `MAX_TAGS_PER_KIND`). When either list is non-empty, `metadata.latitude`/`metadata.longitude` are required (400 otherwise). When `schemeTags` contains `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields without `other-scheme` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
+- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTags` / `schemeTags` string arrays (each slug validated against the canonical lists in `lib/click-log/tags.ts` — an unknown slug is a 400; duplicates collapsed; at most 10 per kind, `MAX_TAGS_PER_KIND`). When either list is non-empty, `metadata.latitude`/`metadata.longitude` are required (400 otherwise), and the incident is always stored shared: an explicit `sharedWithOwner: false` alongside tags is a 400, and an omitted flag stores shared regardless of the member's global default (owner decision, 2026-08-18). When `schemeTags` contains `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields without `other-scheme` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id. Returns `{ success: true }`.
-- `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). Returns `{ success, sharedWithOwner }`.
-- `PUT /api/click-log/[id]` — Edit an incident's note and tag lists in place. Body `{ notes, problemTags, schemeTags }`: a null note clears it, an absent/null/empty tag array untags that kind. Only the incident's owner may call it (no admin override — the note is the member's private content). The date and location are immutable: the body carries no coordinates and the SQL never touches them. Tag lists follow the create rules (canonical slugs, duplicates collapsed, at most 10 per kind; tags require the incident to carry a location — since location is immutable, a location-less incident can only edit its note, 400 otherwise). `other-scheme` ("Not listed") may be kept or removed but not newly picked on edit (400 — its description intake happens at create). An edit whose metadata duplicates another of the member's incidents returns a readable 409 (the `metadata_hash` dedupe). Returns `{ success: true }`.
+- `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). `sharedWithOwner: false` on a tagged incident is a 400 telling the member to remove the tags first (owner decision, 2026-08-18: a tagged incident always shares its trend data); turning sharing on is always allowed. Returns `{ success, sharedWithOwner }`.
+- `PUT /api/click-log/[id]` — Edit an incident's note and tag lists in place. Body `{ notes, problemTags, schemeTags }`: a null note clears it, an absent/null/empty tag array untags that kind. Only the incident's owner may call it (no admin override — the note is the member's private content). The date and location are immutable: the body carries no coordinates and the SQL never touches them. Tag lists follow the create rules (canonical slugs, duplicates collapsed, at most 10 per kind; tags require the incident to carry a location — since location is immutable, a location-less incident can only edit its note, 400 otherwise). Saving with a non-empty tag list sets `shared_with_owner` to true in the same update (owner decision, 2026-08-18: tags require trend sharing; the editor states this before save); saving with both lists empty leaves the share flag as it stands. `other-scheme` ("Not listed") may be kept or removed but not newly picked on edit (400 — its description intake happens at create). An edit whose metadata duplicates another of the member's incidents returns a readable 409 (the `metadata_hash` dedupe). Returns `{ success: true }`.
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ buckets, tagTrends }` — `buckets` of day / ~11 km location cell / count, plus `tagTrends` of tag kind (`problem` | `scheme`) / tag slug / count.
@@ -142,14 +156,19 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Incident tags are coarse by construction: values come only from the fixed canonical slug lists
   in `lib/click-log/tags.ts` (the create route rejects unknown slugs), so tag data can never carry
   free text. A tagged incident must carry a location (client and server enforced) so tagged trend
-  data is detailed enough; the location itself still only ever reaches the owner as the rounded
-  ~11 km cell, and only for incidents the member opted to share. The trends aggregate over tags
+  data is detailed enough, and is always shared (owner decision, 2026-08-18: tags exist to feed
+  the trend data — the member's consent act is picking the tag, and the form/editor say so in
+  plain words before submit/save); the location itself still only ever reaches the owner as the
+  rounded ~11 km cell. The trends aggregate over tags
   (`getSharedIncidentTagTrends`) reads only `shared_with_owner = true` rows and projects only tag
   slug + count.
-- Owner sharing is strictly opt-in and member-controlled: both the global default and every
-  per-incident flag default to off; only the incident's owner may toggle its share state
-  (`canToggleIncidentShare` — deliberately no admin override); and the trends aggregate reads only
-  `shared_with_owner = true` rows. The privacy boundary is enforced in SQL
+- Owner sharing of untagged incidents is strictly opt-in and member-controlled: both the global
+  default and every per-incident flag default to off; only the incident's owner may toggle its
+  share state (`canToggleIncidentShare` — deliberately no admin override, and share-off is
+  rejected on a tagged incident until its tags are removed); and the trends aggregate reads only
+  `shared_with_owner = true` rows. Tagged incidents logged before 2026-08-18 as private are NOT
+  retroactively shared — the always-shared rule applies when an incident is created or next
+  edited, never by backfill (consent stays the member's). The privacy boundary is enforced in SQL
   (`getSharedIncidentTrends` projects only day / 1-decimal (~11 km) location cell / count — notes,
   precise coordinates, incident ids, and member identity never leave the query).
 - The trends endpoint and `/admin/click-log` page are admin-gated (`requireClickLogAdminAccess`,
@@ -198,6 +217,23 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-18: **Tagging now requires trend sharing, not just a location (owner directive —
+  correcting the 2026-08-18 guide copy, which had restated sharing as opt-in even for tagged
+  incidents).** The three rules as the owner states them: tags (problems or schemes) require a
+  location AND trend sharing; notes are always private; an incident can be private only when
+  untagged (location optional when untagged). Server: a tagged create with an explicit
+  `sharedWithOwner: false` is a 400, and a tagged create with the flag omitted stores shared
+  regardless of the global default (`click-log.incident.create` 3.0.0); an edit that saves a
+  non-empty tag list sets `shared_with_owner` true in the same UPDATE
+  (`click-log.incident.update` 3.0.0); a share-off call on a tagged incident is a 400 telling
+  the member to remove the tags first (`click-log.incident.share.set` 2.0.0). UI: the log form's
+  share checkbox locks on while tags are picked and its label says sharing is required for
+  tagged incidents; the editor warns, before save, that saving a private incident with tags
+  turns sharing on; the history-row pill locks on tagged shared incidents with a tooltip saying
+  why. No backfill: tagged incidents logged private under the old rule stay private until
+  created-or-edited under the new one. Notes stay never-shared in every path. Guide and
+  test-script copy updated to the corrected rules. Android: out of scope (web-only per
+  rule 105).
 - 2026-08-14: **Both tag pickers now link to the public list that describes their tags in full
   (owner request).** The chip labels are short by necessity, so a member who does not recognize
   one had nowhere to read the long version. Each picker question now carries a "Full list" link:

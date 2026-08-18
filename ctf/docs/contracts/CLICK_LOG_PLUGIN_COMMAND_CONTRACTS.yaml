@@ -1,7 +1,7 @@
 commands:
   - pluginId: click-log
     command: click-log.incident.create
-    version: 2.0.0
+    version: 3.0.0
     inputSchema:
       type: object
       properties:
@@ -38,6 +38,12 @@ commands:
       # When either list is non-empty, metadata.latitude and metadata.longitude are required
       # (owner decision, 2026-08-02: tagged trend data needs location to be detailed enough);
       # a tagged request without a location is a 400.
+      # A tagged incident is ALWAYS shared with the owner (3.0.0, owner decision 2026-08-18:
+      # tags exist to feed the trend data, so tagging requires trend sharing — an incident can
+      # be private only when untagged). A tagged request with an explicit sharedWithOwner: false
+      # is a 400; a tagged request with sharedWithOwner omitted stores shared regardless of the
+      # member's global default. The note (metadata.notes) stays never-shared either way — only
+      # the coarse trend data (day, ~11 km cell, tag slugs, counts) ever reaches the owner.
       # schemeSuggestion is REQUIRED (1–200 chars after trim) when schemeTags contains the
       # catch-all 'other-scheme' ("Not listed") and rejected otherwise. It is member text
       # EXPLICITLY shared with the owner (the form says so; metadata.notes stays never-shared)
@@ -108,7 +114,7 @@ commands:
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.incident.update
-    version: 2.0.0
+    version: 3.0.0
     inputSchema:
       type: object
       properties:
@@ -148,6 +154,9 @@ commands:
       # The catch-all 'other-scheme' ("Not listed") may be KEPT or REMOVED on an incident that
       # already carries it, but never newly picked on edit — its required description intake
       # happens at logging time (click-log.incident.create); a 400 explains this.
+      # A tagged incident is ALWAYS shared (3.0.0, owner decision 2026-08-18): saving with a
+      # non-empty tag list sets shared_with_owner to true in the same UPDATE — the editor states
+      # this before save. Saving with both lists empty leaves the share flag as it stands.
       # An edit whose resulting metadata duplicates another of the member's incidents violates
       # the UNIQUE (user_id, metadata_hash) dedupe and returns a readable 409.
     outputSchema:
@@ -156,13 +165,14 @@ commands:
         success:
           type: boolean
     dataAccess:
-      - click_log_incidents (select, update — own row only; metadata notes key and the two tag
-        array columns; never coordinates or created_at)
+      - click_log_incidents (select, update — own row only; metadata notes key, the two tag
+        array columns, and shared_with_owner — forced true when the saved tags are non-empty;
+        never coordinates or created_at)
     purpose: Edit the note and tag lists of an own incident after logging (date and location immutable)
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.incident.share.set
-    version: 1.0.0
+    version: 2.0.0
     inputSchema:
       type: object
       properties:
@@ -171,6 +181,10 @@ commands:
         sharedWithOwner:
           type: boolean
       required: [id, sharedWithOwner]
+      # sharedWithOwner: false is rejected with a 400 on a tagged incident (2.0.0, owner
+      # decision 2026-08-18: a tagged incident always shares its trend data — remove the tags
+      # via click-log.incident.update first to make it private). Turning sharing ON is always
+      # allowed; the client locks the per-row pill on tagged shared incidents and says why.
     outputSchema:
       type: object
       properties:

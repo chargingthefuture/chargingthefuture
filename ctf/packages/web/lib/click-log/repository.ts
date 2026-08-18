@@ -35,6 +35,9 @@ export async function createIncident(input: CreateIncidentInput): Promise<ClickL
 // generated metadata_hash column recomputes automatically, so an edit that makes this row's
 // metadata identical to another of the member's rows violates UNIQUE (user_id, metadata_hash) —
 // the route maps that to a readable 409.
+// A tagged incident is always shared (owner decision, 2026-08-18: tags exist to feed the trend
+// data), so saving with a non-empty tag list turns shared_with_owner on — the editor states this
+// before save. Saving with both lists empty leaves the member's share choice as it stands.
 export async function updateIncident(input: UpdateIncidentInput): Promise<boolean> {
   const { id, userId, notes, problemTags, schemeTags } = input;
   const result = await queryDb(
@@ -44,7 +47,11 @@ export async function updateIncident(input: UpdateIncidentInput): Promise<boolea
            ELSE jsonb_set(metadata, '{notes}', to_jsonb($3::text), true)
          END,
          problem_tags = $4::text[],
-         scheme_tags = $5::text[]
+         scheme_tags = $5::text[],
+         shared_with_owner = CASE
+           WHEN cardinality($4::text[]) > 0 OR cardinality($5::text[]) > 0 THEN TRUE
+           ELSE shared_with_owner
+         END
      WHERE id = $1 AND user_id = $2`,
     [id, userId, notes, problemTags, schemeTags]
   );
