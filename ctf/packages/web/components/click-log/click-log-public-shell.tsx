@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Pointer, MapPin } from 'lucide-react';
+import { AlertTriangle, Lock, ShieldCheck, Clock, FileText, UserPlus, Pointer, PenLine } from 'lucide-react';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { useTheme } from '@/hooks/useTheme';
@@ -68,9 +68,12 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
 
         <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           {[
+            // Reads as a sequence: log it fast, add detail if you want, and it stays yours.
+            // "Private" sat next to "Location" here, which pitched privacy and location capture
+            // in the same breath. Ending on "Private" keeps the reassurance last.
             { Icon: Pointer, label: 'One tap' },
+            { Icon: PenLine, label: 'Add a note' },
             { Icon: ShieldCheck, label: 'Private' },
-            { Icon: MapPin, label: 'Location' },
           ].map(({ Icon, label }) => (
             <div key={label} style={{ flex: 1, padding: '12px 8px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, textAlign: 'center' }}>
               <Icon size={18} color={t.ACCENT} style={{ marginBottom: 6, opacity: 0.75 }} />
