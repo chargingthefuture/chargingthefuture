@@ -17,7 +17,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   order (owner directive, 2026-08-18 — the earlier guide copy over-explained to the point of
   confusion): (1) notes are always private, nobody but the member ever sees them; (2) a private,
   untagged incident does not need a location; (3) tagging problems or schemes requires a
-  location, and only shared incidents feed the global trend data.
+  location and trend sharing — tags exist to feed the global trend data (owner-confirmed
+  intended behavior, 2026-08-18; the enforcement change ships separately).
 - Log incident (with optional location/notes)
 - Optionally tag an incident with which known problems happened ("Which problems happened?" —
   the 50+ problems list published on the public landing page) and/or which named schemes were
