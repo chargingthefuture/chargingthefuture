@@ -32,7 +32,7 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   ],
   // Bug reports are an inbox, not a queue the admin drains: a clean report is forwarded to the
   // triage repo by a background job, which flips it out of 'new' on its own. Counting only
-  // 'new'/'held_for_review' meant the job silently cancelled the dot — a report filed between two
+  // 'new'/'held_for_review' meant the job silently canceled the dot — a report filed between two
   // runs raised the dot for a few minutes at most, and one filed while the admin was away was
   // already 'issue_created' by the time they next opened the landing, so it never showed at all
   // (owner report, 2026-08-18: five reports, none of them ever announced). So count every report

@@ -147,7 +147,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
   1. *The dot never fired.* The admin-landing signal counted only reports still in `new` or
      `held_for_review`. A clean report is `new` for as long as it takes the create-issues job to
      forward it, and the job then flips it to `issue_created` — so the background job was silently
-     cancelling the dot before anyone saw it, and a report filed while the owner was away never
+     canceling the dot before anyone saw it, and a report filed while the owner was away never
      showed a dot at all. `lib/admin/area-attention.ts` now counts every report filed since the
      admin last opened the area, whatever the job did with it afterwards; only `rejected` and
      `resolved` (the two states an admin sets by hand) are left out. Registry change only — no

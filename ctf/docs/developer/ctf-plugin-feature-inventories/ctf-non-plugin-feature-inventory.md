@@ -314,7 +314,7 @@ An owner-curated list of real community comments, shown two ways on the public (
   alone (§1.14, owner report).** Five reports had reached `/admin/bug-reports` without the tile ever
   showing a dot. The signal counted only rows still in `new` or `held_for_review`, but a clean bug
   report is `new` only until the create-issues job forwards it to the triage repo and flips it to
-  `issue_created` — so the job was cancelling the dot, and a report filed while the admin was away
+  `issue_created` — so the job was canceling the dot, and a report filed while the admin was away
   had already moved on by the time they next opened the landing. Bug reports are now read the same
   way PeerProgramming feedback is: an inbox, where the dot means "a report arrived since you last
   opened this", excluding only `rejected` and `resolved` — the two states an admin sets by hand, and

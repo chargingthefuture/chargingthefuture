@@ -100,7 +100,7 @@ rate-limited state. Over-long input is length-capped. These are flood/abuse cont
 3. Attempt to reach the page as a plain member.
 **Expected:** The page lists reports with held ones first and shows **redacted** message/context
 only — the raw user text never leaves the database (rule 129). Status, risk flags/level, page URL,
-plugin slug, and any triage-repo issue link are shown, and each card's date is labelled
+plugin slug, and any triage-repo issue link are shown, and each card's date is labeled
 **Filed** so it is not read as the date the report went to triage. A non-admin is denied
 (`requireBugReportAdminAccess`).
 **Result:** web ☐ — notes:
