@@ -17,9 +17,11 @@ type ChymeShellProps = {
 };
 
 // Where the "Get the Android app" card links: the native app's APK is downloaded from the repo's
-// GitHub Releases page only (owner decision 2026-07-23). On an Android device the card is hidden: the
-// rail there is just the list of open rooms.
-const ANDROID_APP_URL = 'https://github.com/chargingthefuture/chargingthefuture/releases';
+// GitHub Releases page only (owner decision 2026-07-23). The link is filtered to the mobile-v*
+// releases (owner request 2026-08-18) so the newest APK sits at the top — the unfiltered page mixes
+// in wallpaper releases and makes a non-technical visitor scroll and guess. On an Android device the
+// card is hidden: the rail there is just the list of open rooms.
+const ANDROID_APP_URL = 'https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile';
 
 // Detect an Android browser so the "get the app" card can be hidden there. Runs client-side only (a
 // state flip after mount) so the server and first client render match and there is no hydration warning.
