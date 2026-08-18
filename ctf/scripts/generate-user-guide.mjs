@@ -44,6 +44,10 @@ const OUT_MD = join(ctfRoot, 'docs/USER_GUIDE.md');
 // Reading order for the guide — people/connection first, then the ways to contribute, then the
 // quieter tools and stats. Each entry: [slug, display name]. Only member-facing plugins appear.
 const ORDER = [
+  // Commons is the home page and the app list itself, so earlier passes left it out of the guide;
+  // members still need it explained (owner decision, 2026-08-18) — it leads the reading order as
+  // the surface everyone lands on first.
+  ['commons', 'Commons'],
   ['directory', 'Directory'],
   ['foundation', 'Foundation'],
   ['chyme', 'Chyme'],
