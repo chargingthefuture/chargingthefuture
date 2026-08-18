@@ -95,7 +95,13 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 ## Web and Android Delivery Status
 
 - **Web (backend):** complete — schema, submit route, redaction/risk gate, repository,
-  create-issues job and workflow.
+  create-issues job and workflow. The create-issues job
+  (`.github/workflows/bug-reports-create-issues.yml` → `ctf/scripts/createBugReportIssues.mjs`)
+  runs every 30 minutes, at :11 and :41, so a clean report reaches the triage repo within half an
+  hour of being filed and a released held report within half an hour of release — which is what the
+  admin screen tells the owner when they press Release. The triage agent
+  (`bug-reports-triage.yml`) runs on its own 30-minute schedule at :05 and :35. A report is visible
+  on `/admin/bug-reports` the moment it is filed; neither job gates that.
 - **Web (UI):** complete — the global Help control + popover (`components/bug-reports/help-control.tsx`,
   wired into `components/community-shell/shell-icon-rail.tsx` on the desktop rail and into the
   phone-width top bar in `community-shell.tsx`) and the report modal
@@ -120,16 +126,42 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Gaps & Known Technical Debt
 
-- The private admin view for held reports is not built.
-- The triage agent (`bug-reports-triage.yml`) and the human-gated build agent
-  (`bug-reports-build.yml`) are built but manual-dispatch only until the triage repo's labels
-  exist, `GH_PAT` can read+write it, and `ANTHROPIC_API_KEY` / `DATABASE_URL` are available.
+- The human-gated build agent (`bug-reports-build.yml`) is built but manual-dispatch only on
+  purpose — the owner kicks off each build. The create-issues and triage workflows are both on a
+  live 30-minute schedule.
+- The admin-landing dot for this area clears only when the admin opens the Bug Reports tile from
+  `/admin`. Reaching `/admin/bug-reports` by a direct link or a bookmark does not mark the area
+  seen, so the dot stays until the tile is used. This is how every area's dot behaves, not
+  something specific to bug reports.
 - The build workflow uses the external Claude Code GitHub Action; pin its version and confirm
   its inputs on the first run.
 - Redaction is deterministic and conservative; a model-based restatement can be layered on
   later for higher-quality issue text.
 
 ## Change Log
+
+- 2026-08-18: **Reports now announce themselves, and reach triage within half an hour (owner
+  report).** Five reports had been sitting on `/admin/bug-reports` for days, the oldest from a month
+  earlier, and the owner saw all of them for the first time at once — nothing had ever told them a
+  report arrived. Three changes, all confirmed against the code:
+  1. *The dot never fired.* The admin-landing signal counted only reports still in `new` or
+     `held_for_review`. A clean report is `new` for as long as it takes the create-issues job to
+     forward it, and the job then flips it to `issue_created` — so the background job was silently
+     cancelling the dot before anyone saw it, and a report filed while the owner was away never
+     showed a dot at all. `lib/admin/area-attention.ts` now counts every report filed since the
+     admin last opened the area, whatever the job did with it afterwards; only `rejected` and
+     `resolved` (the two states an admin sets by hand) are left out. Registry change only — no
+     schema, route, or contract change.
+  2. *The forwarding job was slow.* `bug-reports-create-issues.yml` ran every 8 hours, so a report
+     could sit in the database most of a day before becoming a triage issue, and the admin screen's
+     own Release confirmation promised the next run "within 15 minutes". The job now runs every 30
+     minutes (:11 and :41, offset from the triage job at :05 and :35) and the confirmation says 30
+     minutes, which is now true.
+  3. *The dates were right, the label was not.* Checked end to end: `bug_reports.created_at` is
+     `TIMESTAMPTZ`, node-postgres returns it as a real instant, it is serialized as UTC, and the
+     admin card renders it in the reader's own time zone. No offset bug. What misled was the layout
+     — a bare timestamp sitting next to a green "Sent to triage" pill reads as the day it went to
+     triage. The card now says "Filed <date>".
 
 - 2026-08-02: **Deletion burn-down batch 4: bug reports join the deletion registry.** On account deletion, `bug_reports` rows are pseudonymized (`user_id` → `deleted_member`): the report stays for triage (it may already be mirrored into a GitHub issue), the reporter's identity does not.
 - 2026-07-18: **"Member view" pill removed from the admin header (owner report: it 404s).** Bug

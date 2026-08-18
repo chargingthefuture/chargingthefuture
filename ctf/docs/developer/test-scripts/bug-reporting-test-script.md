@@ -100,7 +100,8 @@ rate-limited state. Over-long input is length-capped. These are flood/abuse cont
 3. Attempt to reach the page as a plain member.
 **Expected:** The page lists reports with held ones first and shows **redacted** message/context
 only — the raw user text never leaves the database (rule 129). Status, risk flags/level, page URL,
-plugin slug, and any triage-repo issue link are shown. A non-admin is denied
+plugin slug, and any triage-repo issue link are shown, and each card's date is labelled
+**Filed** so it is not read as the date the report went to triage. A non-admin is denied
 (`requireBugReportAdminAccess`).
 **Result:** web ☐ — notes:
 
@@ -132,6 +133,21 @@ line renders on both the desktop and phone-width layouts. The triage-repo issue 
 reporter identity — it stays admin-surface only (rule 129).
 **Result:** web ☐ — notes:
 
+### BUG-A4 · A new report raises the dot on the admin landing, and forwarding does not clear it
+**Role:** admin · **Surfaces:** web (internal surface)
+**Precondition:** open `/admin` and click the **Bug Reports** tile once, to mark the area seen.
+**Steps:**
+1. As a member, file a report.
+2. Return to `/admin` as the admin and look at the Bug Reports tile.
+3. Wait for the create-issues job to forward the report (its status becomes "Sent to triage"), or
+   set that report's status to `issue_created` by hand, then reload `/admin`.
+4. Click the Bug Reports tile, then go back to `/admin`.
+**Expected:** The tile shows the amber dot after step 1 and **still** shows it after step 3 — the
+background job forwarding a report to the triage repo must not cancel the dot, because the admin
+has not seen the report yet. The dot clears at step 4 and does not come back until another report
+arrives.
+**Result:** web ☐ — notes:
+
 ---
 
 ### Account deletion pseudonymizes the reporter
@@ -157,8 +173,12 @@ no android surface to compare.)
 Carried from the inventory's "Gaps & Known Technical Debt" section. If you hit one of these, it is
 already tracked, not a new bug:
 
-- The triage agent and the human-gated build agent workflows are built but manual-dispatch only
-  until the triage repo's labels exist and the required tokens/secrets are available.
+- The human-gated build agent workflow is manual-dispatch only on purpose — the owner starts each
+  build by hand. The create-issues and triage workflows both run every 30 minutes, so a report can
+  take up to half an hour to appear as a triage issue; it is visible on `/admin/bug-reports`
+  immediately.
+- The Bug Reports dot on `/admin` clears only when the tile itself is clicked. Reaching
+  `/admin/bug-reports` by a direct link or bookmark leaves the dot showing.
 - The build workflow uses the external Claude Code GitHub Action; its version is to be pinned and
   its inputs confirmed on the first run.
 - Redaction is deterministic and conservative; a model-based restatement for higher-quality issue
