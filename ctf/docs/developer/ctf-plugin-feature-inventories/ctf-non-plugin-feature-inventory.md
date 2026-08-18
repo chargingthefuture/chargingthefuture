@@ -293,6 +293,23 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-18: **The user guide generator now reads each plugin's "Intent and Outcome" statement, and
+  the Workforce section was corrected (owner report).** The `/guide` page described Workforce as a
+  tracker of "job openings by sector and skill level" that members are "matched to". Workforce has no
+  openings: demand is a headcount worked out from `population × participation_rate` split across
+  sectors by each sector's `workforce_share`, and nothing in the plugin is posted, advertised, or
+  applied for. The wording was not in any source document — `ctf/scripts/generate-user-guide.mjs` fed
+  the model only the inventory's "User Features" bullets and the test script's "Core smoke" steps, so
+  it had feature detail but no sentence saying what the plugin IS, and supplied a familiar frame of
+  its own. The generator now also feeds the inventory's "Intent and Outcome" section (capped, framing
+  only — the model is told not to copy its developer wording, rule numbers, or file paths), and the
+  grounding rules gained a line against swapping a documented term for a familiar real-world one that
+  means something else. The shipped Workforce section in `guide-content.json` and `docs/USER_GUIDE.md`
+  was rewritten by hand to match the plugin: a live tracker of the skills the community has, sector by
+  sector, and where the gaps are. Its `updated` date is unchanged, so the next scheduled run keeps the
+  corrected wording instead of regenerating over it. Content and generator only; no schema, route, or
+  contract change.
+
 - 2026-08-12: **Mutual Time now raises the admin-landing dot (§1.14, owner request).** An admin had no
   way to know a survey had votes, or that a survey with a close time had chosen its own time, without
   opening `/apps/mutual-time` and checking — and knowing that is what tells them when to go live and

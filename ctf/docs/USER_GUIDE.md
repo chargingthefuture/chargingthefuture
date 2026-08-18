@@ -170,13 +170,13 @@ View the leaderboard to see accepted nominations ranked by points. Team leaderbo
 
 _Last updated: 2026-08-05_
 
-Workforce is a live tracker that shows job openings by sector and skill level, and displays which members have been matched to those openings.
+Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.
 
-Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, and your progress toward the recruitment goal.
+Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, your progress toward the recruitment goal, and how much of the skills list has at least one member behind it. The number of people each sector needs is worked out from the size of the population, not from posted jobs — nothing here is advertised or applied for.
 
 View your own profile as it appears in the workforce system. Your profile is read-only and pulls from your Directory profile — it shows your job title and skill level.
 
-Browse open occupations sorted by the biggest gaps between demand and who has been matched. Tap any occupation to see its details.
+Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details.
 
 **How to use it**
 

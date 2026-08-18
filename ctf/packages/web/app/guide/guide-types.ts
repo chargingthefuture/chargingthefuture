@@ -1,7 +1,8 @@
 // Shape of the generated user guide (guide-content.json). The guide is produced by
-// ctf/scripts/generate-user-guide.mjs from each plugin's inventory "User Features" section and its
-// test script's "Core smoke" block, rewritten in the project's plain voice. The page renders this
-// structure; nothing here is hand-styled per section, so a regenerated file drops straight in.
+// ctf/scripts/generate-user-guide.mjs from each plugin's inventory "Intent and Outcome" statement and
+// "User Features" section, plus its test script's "Core smoke" block, rewritten in the project's
+// plain voice. The page renders this structure; nothing here is hand-styled per section, so a
+// regenerated file drops straight in.
 
 export type GuideSection = {
   // Anchor id for the table-of-contents jump link and the "back to top" return. Kebab-case slug.
