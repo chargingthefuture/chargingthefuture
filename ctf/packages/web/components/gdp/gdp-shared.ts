@@ -160,11 +160,6 @@ export function pickGdpMetricValue(
   return row ? row.metricValue : null;
 }
 
-// Only the single Global Overview view exists. The old "By Sector" / "By Country" /
-// "Projections" entries were removed (owner decision, 2026-07-20): they were never wired to
-// any handler, so they looked clickable but did nothing.
-export const SIDEBAR_FILTERS = ["Global Overview"];
-
 // One registered recognition source's contribution to the live Community Value Index, as returned by
 // GET /api/gdp/report/current. The dashboard renders these as the per-source value breakdown.
 export interface GdpLiveSource {
