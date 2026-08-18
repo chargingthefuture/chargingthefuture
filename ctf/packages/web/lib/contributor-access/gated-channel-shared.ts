@@ -30,7 +30,7 @@ export const GATED_MAX_MESSAGE_URLS = 3;
 export const GATED_POST_RATE_LIMIT = 8;
 export const GATED_POST_RATE_WINDOW_MINUTES = 30;
 
-// Richer reaction set than the Commons' six (FEED_REACTION_EMOJIS). Fixed list — reactions are
+// Richer reaction set than the Commons' eight (FEED_REACTION_EMOJIS). Fixed list — reactions are
 // validated server-side against it. No image upload exists anywhere in this channel (proposal
 // hard guardrail: no images in v1).
 export const GATED_REACTION_EMOJIS = [

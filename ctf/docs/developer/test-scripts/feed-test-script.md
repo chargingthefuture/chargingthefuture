@@ -349,7 +349,7 @@
 **Steps:**
 1. Find a community post by another member.
 2. Open the reaction picker.
-3. Confirm the picker shows exactly these emojis: 👍 ❤️ 😂 🎉 🙏 😢 👋 (seven total, in that order).
+3. Confirm the picker shows exactly these emojis: 👍 ❤️ 😂 🎉 🙏 😢 👋 💯 (eight total, in that order).
 4. Tap 👍 to react.
 5. Confirm the 👍 chip appears with a count of 1 and is highlighted.
 6. Tap 👍 again to toggle it off.
