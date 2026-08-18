@@ -86,38 +86,50 @@ string. Trailing whitespace on a note is trimmed before the length check.
 
 ---
 
-### CL-6 · Owner-sharing is opt-in and member-controlled
+### CL-6 · Owner-sharing of untagged incidents is opt-in and member-controlled
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. Fresh member: open ClickLog and read the "share new incidents with the owner by default"
    setting and the share checkbox in the log form.
-2. Log an incident without touching either — then check its row in the history list.
-3. Turn on the global default, log another incident, and check its row.
-4. On any history row, click the Shared/Private pill to flip that one incident.
-**Expected:** Both the global setting and the form checkbox start **off**; an untouched log
-produces a **Private** row. With the default on, a new incident logs as **Shared with owner**;
-the form checkbox is seeded from the default and can be overridden per incident. The per-row
-pill flips a single incident either way at any time, and each change is logged. The copy names
+2. Log an **untagged** incident without touching either — then check its row in the history list.
+3. Turn on the global default, log another untagged incident, and check its row.
+4. On an **untagged** history row, click the Shared/Private pill to flip that one incident.
+5. On a **tagged** history row (log one via CL-7 if needed), look at the pill and try to click it.
+**Expected:** Both the global setting and the form checkbox start **off**; an untouched untagged
+log produces a **Private** row. With the default on, a new incident logs as **Shared with
+owner**; the form checkbox is seeded from the default and can be overridden per incident. On an
+untagged row the pill flips a single incident either way at any time, and each change is logged.
+On a tagged row the pill is locked at "Shared with owner" — tagged incidents always share trend
+data (its tooltip says to remove the tags to make it private), and the server rejects a
+share-off call on a tagged incident with the same explanation. The copy names
 what is shared in plain words — the global default says "only trend data — never your notes" and
 the per-incident checkbox says "only the date, rough area, and tags"; the word "coarse" appears
 nowhere on screen.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CL-7 · Tag an incident with a problem and a scheme (location required)
+### CL-7 · Tag an incident with a problem and a scheme (location and sharing required)
 **Role:** member · **Surfaces:** all
 **Steps:**
-1. Open the log form. Under "Which problem happened? (optional)", type a word (e.g. "mail") into
+1. Open the log form with the share checkbox off. Under "Which problem happened? (optional)",
+   type a word (e.g. "mail") into
    the search box and pick the matching chip. Do the same under "Which scheme was used? (optional)".
-2. Try to submit without adding a location.
-3. Add your location, then submit.
-4. Check the new row in the history list.
+2. With a tag picked, read the share checkbox.
+3. Try to submit without adding a location.
+4. Add your location, then submit.
+5. Check the new row in the history list, then remove the tags again in the form (before a later
+   log) and read the share checkbox once more.
 **Expected:** Both pickers filter the chip list as you type (same style as the Directory and
 Skills Hunt skill pickers) and show the pick as a removable chip; tapping the active chip again
-clears it. One, both, or neither tag may be picked. With a tag picked and no location, Submit is
-disabled and the form explains that tags need a location; the server enforces the same rule (a
-tagged request without latitude/longitude is rejected). After adding the location the incident
-logs, and its history row shows the problem chip and the "Scheme:" chip. An untagged incident
-still logs fine with no location.
+clears it. One, both, or neither tag may be picked. The moment a tag is picked the share
+checkbox locks **on** and its label says sharing is required for tagged incidents (only the
+date, rough area, and tags — never the note); unpicking every tag returns the checkbox to your
+own choice. With a tag picked and no location, Submit is
+disabled and the form explains that tags need a location; the server enforces both rules (a
+tagged request without latitude/longitude is rejected, and a tagged request that explicitly
+turns sharing off is rejected too). After adding the location the incident
+logs **as Shared with owner**, and its history row shows the problem chip and the "Scheme:"
+chip. An untagged incident
+still logs fine with no location and stays private unless you choose otherwise.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-8 · Suggest a new scheme via "Not listed" (Weavers only, description required)
@@ -141,11 +153,17 @@ description is stored for the owner's scheme-naming queue, not shown in the tren
 **Steps:**
 1. On a history row of an incident logged WITH a location, tap the pencil icon.
 2. Change the note, change or remove the problem/scheme tags with the pickers, save.
-3. Open the editor again on an incident logged WITHOUT a location.
-4. Try to add a tag to it (there should be no way to).
+3. On a **Private** incident that has a location, open the editor, pick a tag, and read the text
+   under the pickers before saving.
+4. Open the editor again on an incident logged WITHOUT a location.
+5. Try to add a tag to it (there should be no way to).
 **Expected:** The editor opens inline in place of the row, stating that the date and location
 stay as logged — there is no way to change either. Saving updates the note and tag chips on the
-row and the change survives a refresh. On the location-less incident the editor shows no tag
+row and the change survives a refresh. On the private incident, as soon as a tag is picked the
+editor says in plain words that saving with tags turns on sharing for this incident (only the
+date, rough area, and tags — never the note) and that removing the tags keeps it private; saving
+with the tag flips the row to "Shared with owner", while removing all tags on a shared incident
+leaves its share state alone (turn it off with the row pill afterwards if wanted). On the location-less incident the editor shows no tag
 pickers at all and explains that tags need a location and the location can't be changed after
 logging; only the note is editable. The scheme picker never offers "Not listed" unless the
 incident already carries it (keeping or removing it is allowed). The server enforces all of it:
@@ -270,3 +288,5 @@ of these, it is already tracked, not a new bug:
 > _Documentation note (2026-08-18): the guide's ClickLog section and the inventory's User Features now lead with the three privacy rules in plain words — notes always private; a private, untagged incident needs no location; tagging requires a location, and only shared incidents feed the global trends (owner directive: the earlier copy over-explained to the point of confusion). Copy only — no behavior changed, and no test steps changed: CL-1 covers optional location, CL-6 covers opt-in sharing, CL-7 covers the tags-need-location rule._
 
 > _Documentation note (2026-08-18, second): rule three is now stated as the owner-confirmed intended behavior — tagging requires a location and trend sharing — in the inventory lead and the guide. The enforcement change ships separately; when it lands, CL-7 gains the sharing requirement in its expected outcome. No steps changed yet._
+
+> _Behavior change (2026-08-18, third — the enforcement the previous note said ships separately): tagging now requires trend sharing as well as a location (owner directive — the rules as intended: tags require location and sharing; notes always private; an incident can be private only when untagged). CL-6 narrows opt-in sharing to untagged incidents and adds the locked pill on tagged rows; CL-7 adds the locked-on share checkbox and the tagged-logs-as-shared expectation; CL-9 adds the editor's saving-with-tags-turns-on-sharing notice. Already-logged tagged private incidents are brought under the rule by an idempotent schema backfill (owner approval) — after migration, no tagged row shows a Private pill._

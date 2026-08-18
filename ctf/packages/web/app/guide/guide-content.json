@@ -261,12 +261,12 @@
   {
    "id": "click-log",
    "title": "ClickLog",
-   "updated": "2026-08-07",
+   "updated": "2026-08-18",
    "summary": "ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.",
    "body": [
-    "Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: a private incident does not need a location; add one only if you want it in your own record. Three: tagging an incident with problems or schemes requires a location and trend sharing, because tags exist to feed the global map.",
+    "Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: an incident can be private only when it has no tags, and a private, untagged incident does not need a location. Three: tagging an incident with problems or schemes requires a location and trend sharing, because tags exist to feed the global map — a tagged incident is always a shared one.",
     "What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.",
-    "You can edit or delete your own incidents at any time. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required)."
+    "You can edit or delete your own incidents at any time. An untagged incident's sharing can be turned off again whenever you like; a tagged incident becomes private by removing its tags first. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required)."
    ],
    "howTo": [
     "Open ClickLog. Your total count and recent incidents load with real numbers.",

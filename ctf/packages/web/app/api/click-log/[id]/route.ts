@@ -68,6 +68,28 @@ async function parseShareBody(request: NextRequest): Promise<{ error: NextRespon
   return { shared };
 }
 
+// Authorization + rule check for a share change: only the member who logged the incident may
+// change it, and a tagged incident may not be made private (owner decision, 2026-08-18: tags
+// exist to feed the trend data, so an incident can be private only when untagged — turning
+// sharing ON stays allowed on any incident). Extracted so PATCH stays under the rule-116
+// complexity limit. Returns null when the change may proceed.
+function denyShareChange(
+  userId: string,
+  incident: { user_id: string | null; problem_tags: string[]; scheme_tags: string[] },
+  shared: boolean,
+): NextResponse | null {
+  if (!incident.user_id || !canToggleIncidentShare(userId, incident.user_id)) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  }
+  if (!shared && (incident.problem_tags.length > 0 || incident.scheme_tags.length > 0)) {
+    return NextResponse.json(
+      { error: 'A tagged incident always shares trend data with the owner — remove its tags first to make it private' },
+      { status: 400 },
+    );
+  }
+  return null;
+}
+
 // Toggles whether a single incident is shared with the owner. Only the member who logged the
 // incident may change it (canToggleIncidentShare — deliberately no admin override: consent belongs
 // to the member alone). Body: { sharedWithOwner: boolean }.
@@ -93,8 +115,9 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (!incident) {
     return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
   }
-  if (!incident.user_id || !canToggleIncidentShare(gate.auth.userId, incident.user_id)) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+  const denied = denyShareChange(gate.auth.userId, incident, shared);
+  if (denied) {
+    return denied;
   }
   const updated = await setIncidentShared(id, gate.auth.userId, shared);
   if (!updated) {

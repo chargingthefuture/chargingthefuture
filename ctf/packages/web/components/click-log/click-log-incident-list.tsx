@@ -28,6 +28,43 @@ function IncidentTagChips({ incident, tokens }: { incident: ClickLogIncident; to
   );
 }
 
+// The per-incident Shared/Private pill. Member-toggleable — except a tagged incident, which
+// always shares its trend data (owner decision, 2026-08-18): once shared it locks, and the
+// tooltip says to remove the tags (via edit) to make it private. Turning sharing ON stays
+// available on any incident. Shared = only coarse trend data (day + rounded location + tags +
+// count) reaches the owner, never the note. Extracted so the row stays under the complexity limit.
+function sharePillAriaLabel(shareLocked: boolean, shared: boolean): string {
+  if (shareLocked) {
+    return "Shared with the owner — required for tagged incidents; remove the tags to make it private";
+  }
+  return shared ? "Stop sharing this incident with the owner" : "Share this incident with the owner";
+}
+
+function IncidentSharePill({
+  incident,
+  tokens,
+  onToggleShare,
+}: {
+  incident: ClickLogIncident;
+  tokens: ClickLogTokens;
+  onToggleShare: (id: string, shared: boolean) => void;
+}) {
+  const t = tokens;
+  const tagged = incident.problem_tags.length > 0 || incident.scheme_tags.length > 0;
+  const shareLocked = tagged && incident.shared_with_owner;
+  return (
+    <button
+      onClick={() => onToggleShare(incident.id, !incident.shared_with_owner)}
+      disabled={shareLocked}
+      title={shareLocked ? "Tagged incidents always share trend data with the owner — remove the tags (edit) to make this private" : undefined}
+      aria-label={sharePillAriaLabel(shareLocked, incident.shared_with_owner)}
+      style={{ marginTop: 6, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 600, cursor: shareLocked ? "default" : "pointer", background: incident.shared_with_owner ? `${t.ACCENT}18` : t.SURFACE, border: `1px solid ${incident.shared_with_owner ? t.ACCENT + "40" : t.BORDER_SOLID}`, color: incident.shared_with_owner ? t.ACCENT : t.MUTED }}
+    >
+      {incident.shared_with_owner ? "Shared with owner" : "Private"}
+    </button>
+  );
+}
+
 // One history row: time, note, tag chips, location marker, the per-incident share toggle, and
 // delete. Extracted from the list's map callback to keep each function under the complexity limit.
 function ClickLogIncidentRow({
@@ -60,15 +97,7 @@ function ClickLogIncidentRow({
             <MapPin size={10} color={t.MUTED} /> Location recorded
           </div>
         )}
-        {/* Owner-share state, member-toggleable per incident. Shared = only coarse trend
-            data (day + rounded location + tags + count) reaches the owner, never the note. */}
-        <button
-          onClick={() => onToggleShare(incident.id, !incident.shared_with_owner)}
-          aria-label={incident.shared_with_owner ? "Stop sharing this incident with the owner" : "Share this incident with the owner"}
-          style={{ marginTop: 6, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 600, cursor: "pointer", background: incident.shared_with_owner ? `${t.ACCENT}18` : t.SURFACE, border: `1px solid ${incident.shared_with_owner ? t.ACCENT + "40" : t.BORDER_SOLID}`, color: incident.shared_with_owner ? t.ACCENT : t.MUTED }}
-        >
-          {incident.shared_with_owner ? "Shared with owner" : "Private"}
-        </button>
+        <IncidentSharePill incident={incident} tokens={t} onToggleShare={onToggleShare} />
       </div>
       {/* Edit opens the inline editor for this row: note and tags only — date and location
           are immutable once logged. */}

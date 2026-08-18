@@ -98,7 +98,9 @@ function ClickLogTagFields({
         />
       )}
       {/* A tagged incident must carry a location — without it the trend data a tag feeds is not
-          detailed enough (owner decision, 2026-08-02). The server enforces the same rule. */}
+          detailed enough (owner decision, 2026-08-02). The server enforces the same rule.
+          (Tags also require trend sharing — the share checkbox below locks on when tags are
+          picked, owner decision 2026-08-18.) */}
       {(problemTags.length > 0 || schemeTags.length > 0) && !locationAdded && (
         <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
           Tags need a location: add your location below before submitting, so the trend data is
@@ -177,6 +179,7 @@ function ClickLogNoteForm({
   onCancel: () => void;
 }) {
   const t = tokens;
+  const tagged = problemTags.length > 0 || schemeTags.length > 0;
   // Tagged incidents require a location, and "Not listed" requires its description (both
   // matching the server rules), so Submit waits for them.
   const submitDisabled = isSubmitDisabled(
@@ -210,15 +213,20 @@ function ClickLogNoteForm({
         onSchemeTagsChange={onSchemeTagsChange}
       />
       {/* Per-incident owner-share choice, seeded from the member's global default. Only coarse
-          trend data (day + rounded location + tags + count) is ever shared — never notes. */}
-      <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
+          trend data (day + rounded location + tags + count) is ever shared — never notes.
+          Tags require trend sharing (owner decision, 2026-08-18), so while tags are picked the
+          checkbox locks on; unpicking every tag returns it to the member's own choice. */}
+      <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 10, fontSize: 12, color: t.MUTED, cursor: tagged ? "default" : "pointer" }}>
         <input
           type="checkbox"
-          checked={shareWithOwner}
+          checked={tagged || shareWithOwner}
+          disabled={tagged}
           onChange={(e) => onShareChange(e.target.checked)}
           style={{ accentColor: t.ACCENT }}
         />
-        Share this incident with the owner (only the date, rough area, and tags)
+        {tagged
+          ? "Shared with the owner — required for tagged incidents (only the date, rough area, and tags; never your note)"
+          : "Share this incident with the owner (only the date, rough area, and tags)"}
       </label>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         <ClickLogLocationButton

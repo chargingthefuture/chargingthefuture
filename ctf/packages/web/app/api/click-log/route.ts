@@ -172,13 +172,31 @@ function parseIncidentTags(
   return { data: { problemTags: problemResult.data, schemeTags: schemeResult.data } };
 }
 
-// Resolve the effective owner-share flag: an explicit per-incident choice wins; otherwise the
-// member's stored global default (which itself defaults to not shared).
-async function resolveSharedWithOwner(explicit: boolean | undefined, userId: string): Promise<boolean> {
-  if (explicit !== undefined) {
-    return explicit;
+// Resolve the effective owner-share flag. A tagged incident is ALWAYS shared (owner decision,
+// 2026-08-18: tags exist to feed the trend data, so tagging requires trend sharing — an incident
+// can be private only when untagged). An explicit false alongside tags is a client bug and gets a
+// 400 rather than a silent override; tagged with no explicit choice shares regardless of the
+// stored default. Untagged incidents keep the opt-in rule: an explicit per-incident choice wins;
+// otherwise the member's stored global default (which itself defaults to not shared).
+async function resolveSharedWithOwner(
+  explicit: boolean | undefined,
+  tagged: boolean,
+  userId: string,
+): Promise<{ error: NextResponse } | { data: boolean }> {
+  if (tagged) {
+    if (explicit === false) {
+      return {
+        error: badRequest(
+          'Sharing trend data with the owner is required when tagging an incident — remove the tags to keep it private',
+        ),
+      };
+    }
+    return { data: true };
   }
-  return (await getPreferences(userId)).shareWithOwner;
+  if (explicit !== undefined) {
+    return { data: explicit };
+  }
+  return { data: (await getPreferences(userId)).shareWithOwner };
 }
 
 // Validate the optional Quora self-link on a scheme suggestion: an https quora.com link (any
@@ -251,6 +269,58 @@ async function parseSchemeSuggestion(
   return { data: { suggestion: textResult.data, quoraUrl: urlResult.data } };
 }
 
+// Validated create payload, ready for storage.
+type CreatePayload = {
+  metadata: IncidentMetadata;
+  sharedWithOwner: boolean;
+  problemTags: string[];
+  schemeTags: string[];
+  suggestion: { suggestion: string; quoraUrl: string | undefined } | undefined;
+};
+
+// Runs the whole create-body validation chain — metadata, share flag, tag lists (which require
+// a location and force sharing), and the "Not listed" suggestion — so the POST handler stays
+// under the rule-116 complexity limit.
+async function parseCreatePayload(
+  body: unknown,
+  userId: string,
+): Promise<{ error: NextResponse } | { data: CreatePayload }> {
+  const parsed = parseIncidentMetadata(body);
+  if ('error' in parsed) {
+    return parsed;
+  }
+  const metadata = parsed.data;
+  const sharedResult = parseSharedFlag((body as { sharedWithOwner?: unknown })?.sharedWithOwner);
+  if ('error' in sharedResult) {
+    return sharedResult;
+  }
+  // Optional tag lists: which known problems happened and/or which named schemes were used.
+  // Either, both, or neither may be non-empty; a tagged incident must carry a location and is
+  // always shared with the owner.
+  const tagsResult = parseIncidentTags(body, metadata);
+  if ('error' in tagsResult) {
+    return tagsResult;
+  }
+  // "Not listed" scheme suggestion: required description + optional Quora link, Weavers-only.
+  const suggestionResult = await parseSchemeSuggestion(body, tagsResult.data.schemeTags, userId);
+  if ('error' in suggestionResult) {
+    return suggestionResult;
+  }
+  const tagged = tagsResult.data.problemTags.length > 0 || tagsResult.data.schemeTags.length > 0;
+  const sharedWithOwnerResult = await resolveSharedWithOwner(sharedResult.data, tagged, userId);
+  if ('error' in sharedWithOwnerResult) {
+    return sharedWithOwnerResult;
+  }
+  return {
+    data: {
+      metadata,
+      sharedWithOwner: sharedWithOwnerResult.data,
+      ...tagsResult.data,
+      suggestion: suggestionResult.data,
+    },
+  };
+}
+
 export async function POST(req: NextRequest) {
   const csrfDenied = ensureMutationCsrf(req);
   if (csrfDenied) {
@@ -267,35 +337,14 @@ export async function POST(req: NextRequest) {
   } catch (caught) {
     return NextResponse.json({ error: 'Invalid JSON body', reason: failureReason(caught) }, { status: 400 });
   }
-  const parsed = parseIncidentMetadata(body);
-  if ('error' in parsed) {
-    return parsed.error;
+  const payload = await parseCreatePayload(body, userId);
+  if ('error' in payload) {
+    return payload.error;
   }
-  const metadata = parsed.data;
-  const sharedResult = parseSharedFlag((body as { sharedWithOwner?: unknown })?.sharedWithOwner);
-  if ('error' in sharedResult) {
-    return sharedResult.error;
-  }
-  // Optional tag lists: which known problems happened and/or which named schemes were used.
-  // Either, both, or neither may be non-empty; a tagged incident must carry a location.
-  const tagsResult = parseIncidentTags(body, metadata);
-  if ('error' in tagsResult) {
-    return tagsResult.error;
-  }
-  // "Not listed" scheme suggestion: required description + optional Quora link, Weavers-only.
-  const suggestionResult = await parseSchemeSuggestion(body, tagsResult.data.schemeTags, userId);
-  if ('error' in suggestionResult) {
-    return suggestionResult.error;
-  }
-  const sharedWithOwner = await resolveSharedWithOwner(sharedResult.data, userId);
-  const incident = await createIncident({
-    userId,
-    metadata,
-    sharedWithOwner,
-    ...tagsResult.data,
-  });
-  if (suggestionResult.data) {
-    await createSchemeSuggestion({ incidentId: incident.id, userId, ...suggestionResult.data });
+  const { metadata, sharedWithOwner, problemTags, schemeTags, suggestion } = payload.data;
+  const incident = await createIncident({ userId, metadata, sharedWithOwner, problemTags, schemeTags });
+  if (suggestion) {
+    await createSchemeSuggestion({ incidentId: incident.id, userId, ...suggestion });
   }
   logClickLogAudit({ actorId: userId, command: 'click-log.incident.create', result: 'success' });
   // Return the incident flat to match the command contract's outputSchema

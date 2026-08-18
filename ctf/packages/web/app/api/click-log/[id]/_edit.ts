@@ -99,6 +99,9 @@ export function authorizeEdit(userId: string, incident: ClickLogIncident): NextR
 // The edit rules that depend on the stored incident:
 // - Tags still require a location (same rule as create), and the location is immutable — so an
 //   incident logged without one can never gain tags, only edit its note.
+// - Tags also require trend sharing (owner decision, 2026-08-18) — that rule needs no check
+//   here: updateIncident turns shared_with_owner on whenever the saved tag lists are non-empty,
+//   and the editor states this before save.
 // - "Not listed" is a logging-time flow (its required description is written at create); an
 //   edit may keep or remove it on an incident that already carries it, but never newly pick it.
 export function validateEditRules(
