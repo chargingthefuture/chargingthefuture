@@ -1,6 +1,6 @@
 # PeerProgramming — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). The React Native screens were deleted and there is nothing to install; the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. Test on web only: desktop and the phone-width (~390px) layout. The `android` surface tags and steps that used to sit throughout this script were removed on 2026-08-18 because they kept being read as work still to do.
 
 > Generated from the feature inventory and command contracts for `peer-programming`; this is the runnable checklist for a human tester on a real device. Regenerate with: `pnpm --dir ctf test-script:generate -- peer-programming`
 
@@ -9,7 +9,7 @@
 | **Plugin** | PeerProgramming |
 | **Visibility** | member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`) · android (`PeerProgramming.tsx`, `AdminPeerProgramming.tsx`) |
+| **Surfaces** | web only (`/apps/peer-programming`, `/admin/peer-programming`) — no Android surface |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
 | **Generated** | 2026-07-18 (commit 34badcbb) |
@@ -21,7 +21,7 @@
 - Mark each surface checkbox as **✅ pass**, **❌ fail**, or **⛔ blocked**.
 - A ❌ on any checkbox becomes a row in the Bug Reporting plugin — record the case ID, surface, steps, and what you actually saw.
 - Run **Core smoke** at the start of every test session before any other section.
-- "web" means the Next.js app in a desktop browser unless stated otherwise. "android" means the React Native app on a physical Android device or EAS dev build — Expo Go will not work for live video cases.
+- "web" means the Next.js app in a browser — test both a desktop browser and the phone-width (~390px) layout, which is how phones and iOS are served.
 - The seed must complete without error before you start.
 
 ---
@@ -43,15 +43,15 @@ on its own topic, and no screen should offer to.
 These are the checks that must pass before anything else is worth testing.
 
 **1. Room loads for a seeded member**
-Sign in as a seeded member. Navigate to `/apps/peer-programming` (web) or open the PeerProgramming screen (android). The room loads without an error banner. A cohort or the "you're not in a cohort yet" / empty state is visible within a few seconds.
+Sign in as a seeded member. Navigate to `/apps/peer-programming`. The room loads without an error banner. A cohort or the "you're not in a cohort yet" / empty state is visible within a few seconds.
 web ☐
 
 **2. Admin page loads for a seeded admin**
-Sign in as a seeded admin. Navigate to `/admin/peer-programming` (web) or open the Admin PeerProgramming screen (android). The admin surface renders — topic form and cohort-assignment controls are visible, not a blank page or access-denied notice.
+Sign in as a seeded admin. Navigate to `/admin/peer-programming`. The admin surface renders — topic form and cohort-assignment controls are visible, not a blank page or access-denied notice.
 web ☐
 
 **3. Non-admin is blocked from the admin surface**
-While signed in as a regular member, navigate to `/admin/peer-programming` (web) or open the Admin screen (android). You must not see admin controls. Expect a redirect, access-denied notice, or the screen is not reachable.
+While signed in as a regular member, navigate to `/admin/peer-programming`. You must not see admin controls. Expect a redirect, access-denied notice, or the screen is not reachable.
 web ☐
 
 **4. Seed data is present**
@@ -63,7 +63,7 @@ Signed in as a cohort member, open the Session tab and press "Join Session." The
 own camera tile, and mute, camera, and leave controls are visible; leaving returns to the Session tab
 without an error. If live video is not configured in this environment, the readable "live video
 unavailable" notice counts as a pass here — the full walkthrough covers both paths in PP-10 and
-PP-11. On android this needs an EAS dev build, not Expo Go.
+PP-11.
 web ☐
 
 ---
@@ -72,12 +72,12 @@ web ☐
 
 ### PP-1 — Room header shows topic guidance and cohort info
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a seeded member who is in a cohort. Seed has been run.
 
 **Steps:**
-1. Open `/apps/peer-programming` (web) or the PeerProgramming screen (android).
+1. Open `/apps/peer-programming`.
 2. Look at the room header area.
 
 **Expected:** The weekly topic title and guidance text are displayed. A participation summary (member count or cohort label such as "C1") is also visible. No placeholder or "undefined" text appears. On web, the header back chevron returns to the page you came from (falling back to All Apps when the screen was opened directly), and an admin viewing the member shell sees the "Admin" pill in the header; the admin screen header shows a "Member view" pill opening `/apps/peer-programming`.
@@ -88,12 +88,12 @@ Result: web ☐
 
 ### PP-2 — Cohort member posts a message
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a seeded member who is a member of a cohort (not just a listener). The room has loaded.
 
 **Steps:**
-1. On web: go to the Direct Line / Session tab and find the message composer. On android: go to the Session tab.
+1. Go to the Direct Line / Session tab and find the message composer.
 2. Type a short message, e.g. "Test post from manual run".
 3. Tap/click Send.
 
@@ -121,14 +121,13 @@ Result: web ☐
 
 ### PP-3 — Message composer is hidden for a listen-in viewer
 
-**Role:** member (listening in on another cohort) · **Surfaces:** web, android
+**Role:** member (listening in on another cohort) · **Surfaces:** web
 
 **Precondition:** Signed in as a member. Single standing Cohort 1 mode is OFF (or there are multiple cohorts). Open a cohort you are not a member of using "Listen in" or `?cohortId=<other-id>`.
 
 **Steps:**
-1. On web: in the Cohorts tab, click "Listen in" on a cohort you do not belong to.
-2. On android: tap "Listen in" on a cohort in the running cohorts list.
-3. Switch to the Session / Direct Line tab.
+1. In the Cohorts tab, click "Listen in" on a cohort you do not belong to.
+2. Switch to the Session / Direct Line tab.
 
 **Expected:** No message composer is visible. A "you're listening in — read-only" notice or similar is shown instead. You can read existing messages but there is no input field or send button.
 
@@ -172,13 +171,13 @@ Result: web ☐
 
 ### PP-6 — Running cohorts list and listen-in navigation
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member. Seed has produced at least one cohort. (In single standing Cohort 1 mode, your own cohort is the only one, so the "Other running cohorts" section will be empty — skip the listen-in sub-step and just confirm your own cohort shows correctly once.)
 
 **Steps:**
-1. Open the Cohorts tab (web) or the cohorts list area (android).
-2. Confirm your own cohort shows a member count and is labeled as your cohort (an "Enter" button on web; the current cohort view on android).
+1. Open the Cohorts tab.
+2. Confirm your own cohort shows a member count and is labeled as your cohort (an "Enter" button).
 3. If another cohort is listed, tap/click "Listen in."
 4. Confirm a read-only view of that cohort opens with a "Listening in" notice.
 5. Return to your own cohort using the back/leave control.
@@ -191,7 +190,7 @@ Result: web ☐
 
 ### PP-7 — Member roster shows usernames
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member in a cohort that has at least two members (seeded).
 
@@ -207,7 +206,7 @@ Result: web ☐
 
 ### PP-8 — Feedback submission (only after your cohort has ended)
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a member of a cohort that an admin has ended (see PP-A11). Turn single standing Cohort 1 mode OFF first — the standing cohort can never be ended, so the box never appears while that mode is on.
 
@@ -256,9 +255,9 @@ Result: web ☐
 
 ### PP-10 — Join Session (live video) — cohort member
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
-**Precondition:** Signed in as a cohort member. Stream Video is configured in the environment (if not, expect a 503 — see PP-11). On android, this requires an EAS dev build, not Expo Go.
+**Precondition:** Signed in as a cohort member. Stream Video is configured in the environment (if not, expect a 503 — see PP-11).
 
 **Steps:**
 1. Open the Session tab.
@@ -273,7 +272,7 @@ Result: web ☐
 
 ### PP-11 — Join Session returns a clear error when Stream is not configured
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a cohort member. Stream Video is NOT configured (no API key/secret in env), or simulate by sending the request directly.
 
@@ -288,12 +287,12 @@ Result: web ☐
 
 ### PP-12 — Member with no cohort sees empty state, not a crash
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Sign in as a member account that has never been assigned to a cohort and is not in single standing Cohort 1 mode (or clear their membership from the DB). Alternatively, use a fresh account before the weekly assignment runs.
 
 **Steps:**
-1. Open `/apps/peer-programming` (web) or the PeerProgramming screen (android).
+1. Open `/apps/peer-programming`.
 
 **Expected:** An empty state is shown — e.g. "you haven't been assigned to a cohort yet" or a prompt to check back. No crash, no blank white screen, no unhandled error.
 
@@ -301,15 +300,14 @@ Result: web ☐
 
 ---
 
-### PP-13 — Pull-to-refresh / refresh button reloads room without full-screen flash
+### PP-13 — Refresh button reloads room without full-screen flash
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Signed in as a cohort member. Room is loaded.
 
 **Steps:**
-1. On web: click the Refresh button in the room header.
-2. On android: pull down on the cohort tab's scroll view.
+1. Click the Refresh button in the room header.
 
 **Expected:** The room content reloads (messages and cohort data refresh). The full-screen loading spinner does not appear — the refresh happens in the background while the existing content stays visible.
 
@@ -319,12 +317,12 @@ Result: web ☐
 
 ### PP-14 — Auto-join to standing Cohort 1 in single standing mode
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Single standing Cohort 1 mode is ON (the default). Sign in as a member who has NOT previously opened PeerProgramming. (Create a fresh test account or use one not in any cohort.)
 
 **Steps:**
-1. Open `/apps/peer-programming` (web) or the PeerProgramming screen (android).
+1. Open `/apps/peer-programming`.
 
 **Expected:** The member is placed into Cohort 1 automatically — no "assign me" button needed. The room loads with cohort C1 visible and the member can post.
 
@@ -336,12 +334,12 @@ Result: web ☐
 
 ### PP-A1 — Set or update the weekly topic
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. The admin surface is open.
 
 **Steps:**
-1. On web: go to `/admin/peer-programming` and find the topic form. On android: open Admin PeerProgramming and find the topic section.
+1. Go to `/admin/peer-programming` and find the topic form.
 2. Enter a title (e.g. "Manual test topic") and guidance body.
 3. Set the week start date to the current Monday's date in `YYYY-MM-DD` format.
 4. Save / publish.
@@ -370,12 +368,12 @@ Result: web ☐
 
 ### PP-A3 — Run weekly cohort assignment manually
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. There is at least one active (logged-in within 7 days, unlock-approved) member in the seed data.
 
 **Steps:**
-1. On web: find the "Run assignment" control in `/admin/peer-programming`. On android: find the equivalent control in Admin PeerProgramming.
+1. Find the "Run assignment" control in `/admin/peer-programming`.
 2. Click/tap Run (without a manual user-ID override).
 3. Wait for the response.
 
@@ -403,12 +401,12 @@ Result: web ☐
 
 ### PP-A5 — Admin cohort list shows all cohorts across weeks
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. Seed data includes cohorts from at least one prior week (the seed script creates them).
 
 **Steps:**
-1. On web: view the "Cohorts" section in `/admin/peer-programming`. On android: view the "Active cohorts" list in Admin PeerProgramming.
+1. View the "Cohorts" section in `/admin/peer-programming`.
 2. Check whether cohorts from prior weeks appear.
 
 **Expected:** Cohorts from prior weeks are listed (up to 84 days back, capped at 200). Each row shows a "Week of <date>" label, member count, and fallback-open flag. Cohorts do not disappear after the week rolls over.
@@ -419,7 +417,7 @@ Result: web ☐
 
 ### PP-A6 — Admin cohort list shows member roster with usernames
 
-**Role:** admin · **Surfaces:** web, android
+**Role:** admin · **Surfaces:** web
 
 **Precondition:** Signed in as an admin. At least one cohort has two or more members.
 
@@ -532,9 +530,11 @@ Result: web ☐
 
 ---
 
-## Parity check (web ↔ android)
+## Parity check — not applicable
 
-These cases must produce the same user-visible outcome on both surfaces. If the result differs, file a bug with both surface results.
+There is no second surface to compare against: PeerProgramming is web-only (rule 105). The cases
+below are kept as the list of behavior that matters most, and should be checked on both a desktop
+browser and the phone-width layout — but a missing Android result is never a bug.
 
 | Case | What must match |
 |---|---|
@@ -544,7 +544,7 @@ These cases must produce the same user-visible outcome on both surfaces. If the 
 | PP-6 | Cohorts list shows own cohort once; listen-in opens read-only |
 | PP-7 | Member roster shows `@username` not raw UUIDs |
 | PP-8 | Feedback form is hidden until your cohort ends, then submits successfully |
-| PP-10 | Join Session launches video call (EAS build required on android) |
+| PP-10 | Join Session launches video call |
 | PP-12 | Member with no cohort sees empty state, not a crash |
 | PP-13 | Refresh reloads room without full-screen loading flash |
 | PP-14 | Fresh member auto-joins Cohort 1 in single standing mode |
@@ -562,6 +562,8 @@ These cases must produce the same user-visible outcome on both surfaces. If the 
 
 3. **Weekly cron requires `CRON_SECRET` to be configured.** The `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow skips with a visible warning rather than failing when `CRON_SECRET` or `NEXT_PUBLIC_APP_URL` is not set in repository Actions secrets. Admins form cohorts manually from the admin screen until those secrets are configured. Do not file this as a bug.
 
-4. **Live video on android requires an EAS dev/production build.** The Stream Video SDK needs native code. Live video cases (PP-10, PP-11) cannot be tested in Expo Go — the test will be ⛔ blocked on that runtime. No automated test harness exists for live Stream calls on device; verification is manual only.
+4. **No automated test harness exists for live Stream calls.** Live video cases (PP-10, PP-11) are verified by hand in the browser. There is no Android build to test — that surface was removed on 2026-07-20 — so an EAS dev build is no longer a precondition for any case here.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+>
+> _Android removal (2026-08-18): every `android` surface tag, step, and precondition was removed from this script to match the inventory. The Android screens were deleted on 2026-07-20 and testers kept treating the leftover tags as untested work. No web step changed._

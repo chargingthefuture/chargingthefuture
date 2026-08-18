@@ -13,7 +13,13 @@ name: Bug Reports — Create Github Issues
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "26 */8 * * *"   # every 8 hours at :26 (00:26, 08:26, 16:26 UTC), off the top of the hour
+    # Every 30 minutes, at :11 and :41 — off the top of the hour and offset from the triage job
+    # (bug-reports-triage.yml, :05 and :35) so the two never start together. Was every 8 hours,
+    # which left a report sitting in the database most of a day before it became a triage issue
+    # and contradicted what the admin screen tells the owner when they release a held report
+    # (owner report, 2026-08-18). The job is small — one query, then a `gh issue create` per
+    # pending report — and does nothing at all when there is nothing to send.
+    - cron: "11,41 * * * *"
 
 jobs:
   create-triage-issues:

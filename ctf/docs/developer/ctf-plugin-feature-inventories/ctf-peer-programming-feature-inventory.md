@@ -4,7 +4,8 @@
 
 - Plugin name: `PeerProgramming`
 - Plugin slug / service key: `peer-programming`
-- Owned surfaces: `/apps/peer-programming` (web), `packages/mobile/src/features/peer-programming` (Android), `/api/peer-programming/*` routes, `peer_programming_*` tables.
+- Owned surfaces: `/apps/peer-programming` (web), `/api/peer-programming/*` routes, `peer_programming_*` tables.
+- **No Android surface.** The Android app carries only Clerk sign-in, Chyme, bug reporting, and settings (rule 105). PeerProgramming's former React Native screens under `packages/mobile/src/features/peer-programming` were deleted on 2026-07-20 (PR #1742) and that directory no longer exists. On a phone, members reach PeerProgramming through the installable web app.
 - Not owned: identity (Clerk), chat infrastructure (Chyme/Hub), notifications transport (shared notifications plugin).
 
 ## Intent and Outcome
@@ -45,7 +46,7 @@ The plugin, stated precisely:
 1. Selects active members (signed in within the last 7 days) and places them in cohorts each week,
 2. Targets 12 members per cohort; participation is voluntary, so about 5 typically take part,
 3. Writes an in-app notification for every placement, keyed so a repeated run never notifies twice,
-4. Runs one live video call per cohort, members only, on web and Android,
+4. Runs one live video call per cohort, members only, in the web app,
 5. Runs a text conversation with threaded replies whose history persists continuously and survives reconnects,
 6. Notifies the other cohort members when someone posts,
 7. Opens the room to a wider audience when fewer than 2 cohort members are present,
@@ -112,9 +113,10 @@ to the env flag, then the default. With no admin setting and no env override, th
 
 1. **The cohort meets by video.** The Session tab's "Join Session" button opens the cohort's live
    video call — the members see and hear each other like any video meeting. Shipped on web
-   2026-06-16 and on Android 2026-06-23 (issue #555); it was missing from this section until
-   2026-08-18 even though it has shipped since, which is why the public user guide described
-   PeerProgramming as text-only.
+   2026-06-16; it was missing from this section until 2026-08-18 even though it has shipped since,
+   which is why the public user guide described PeerProgramming as text-only. (A React Native
+   version also ran between 2026-06-23 and 2026-07-20, when the Android surface was removed under
+   rule 105 — see Web and Android Delivery Status.)
 2. Camera and microphone start enabled, so joining puts the member on screen; mute, camera toggle,
    and leave controls are on the call, and leaving returns to the Session tab.
 3. One call per cohort, members only: `POST /api/peer-programming/session/join` resolves the cohort
@@ -125,8 +127,8 @@ to the env flag, then the default. With no admin setting and no env override, th
    time in the model. The button disappears once the cohort has ended.
 5. Deterministic failure states: no cohort yet → "you're not in a cohort yet"; live video not
    configured in the environment → a readable "live video unavailable" notice, never a raw error.
-6. On Android the Stream Video SDK needs native code, so the call works in an EAS dev/production
-   build, not Expo Go (same constraint as Chyme and LightHouse video).
+6. The call runs in the web app only, including on a phone. There is no Android (React Native)
+   version to install or build — that surface was removed on 2026-07-20 under rule 105.
 
 ### Cohort Room Experience
 
@@ -247,11 +249,11 @@ form a cohort immediately with the manual user-id override.
 
 Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). The web surface lives under `/apps/peer-programming`. Historical parity detail: a former Android surface lived under `packages/mobile/src/features/peer-programming` (now removed).
 
-**Send a cohort message on Android (2026-07-17, issue #1597):** the Android Session tab now has a message composer for cohort members, matching web. `pp-session-tab.tsx` renders a bottom-pinned text input + send button (hidden when the viewer is only listening in / read-only) that calls the existing `postMessage(cohortId, body)` in `api.ts` (`POST /api/peer-programming/messages` with `Content-Type: application/json` and `x-ctf-csrf: '1'`; the author is derived server-side from the Clerk bearer, never sent in the body). It enforces the same constraints as the web composer — non-empty and at most `PEER_PROGRAMMING_MAX_MESSAGE_LENGTH` (2000) characters — clears on success, disables while sending, shows a readable inline error on failure, and asks the parent (`PeerProgramming.tsx`) to re-pull the room (`load(true)`) so the new message appears. Previously the mobile Session tab rendered messages read-only with no way to post.
+**History — send a cohort message on Android (2026-07-17, issue #1597; surface removed 2026-07-20):** the Android Session tab had a message composer for cohort members, matching web. `pp-session-tab.tsx` renders a bottom-pinned text input + send button (hidden when the viewer is only listening in / read-only) that calls the existing `postMessage(cohortId, body)` in `api.ts` (`POST /api/peer-programming/messages` with `Content-Type: application/json` and `x-ctf-csrf: '1'`; the author is derived server-side from the Clerk bearer, never sent in the body). It enforces the same constraints as the web composer — non-empty and at most `PEER_PROGRAMMING_MAX_MESSAGE_LENGTH` (2000) characters — clears on success, disables while sending, shows a readable inline error on failure, and asks the parent (`PeerProgramming.tsx`) to re-pull the room (`load(true)`) so the new message appears. Previously the mobile Session tab rendered messages read-only with no way to post.
 
-**Live video (web 2026-06-16, Android 2026-06-23):** the Session tab's video call is wired on web (including mobile-responsive web, which is how phones/iOS are served) via `POST /api/peer-programming/session/join` + `pp-session-call.tsx` (GetStream, per-cohort call), and now on Android (React Native) too. The Android Session tab (`packages/mobile/src/features/peer-programming/pp-session-tab.tsx`) has a "Join Session" button that calls the same join route through `joinSession()` in `api.ts` and renders the live call in `PeerProgrammingSessionCall.tsx` (reuses the Chyme `ChymeAudioRoom` lifecycle pattern and the `@stream-io/video-react-native-sdk` SDK: join, render one tile per participant, mute/camera controls, leave + teardown on unmount). Android live-video parity (issue #555) is complete.
+**Live video (web 2026-06-16):** the Session tab's video call is wired on web (including the phone-width layout, which is how phones and iOS are served) via `POST /api/peer-programming/session/join` + `pp-session-call.tsx` (GetStream, per-cohort call). History — a React Native version shipped 2026-06-23 and was removed with the rest of the Android surface on 2026-07-20. The Android Session tab (`packages/mobile/src/features/peer-programming/pp-session-tab.tsx`) has a "Join Session" button that calls the same join route through `joinSession()` in `api.ts` and renders the live call in `PeerProgrammingSessionCall.tsx` (reuses the Chyme `ChymeAudioRoom` lifecycle pattern and the `@stream-io/video-react-native-sdk` SDK: join, render one tile per participant, mute/camera controls, leave + teardown on unmount). Android live-video parity (issue #555) is complete.
 
-**Admin surface (2026-06-06):** the admin page at `/admin/peer-programming` is now a real, mobile-responsive admin UI — it replaced the former plain-text stub. The web admin shell (`components/peer-programming/pp-admin-shell.tsx` + `pp-admin-topic-form.tsx` + `pp-admin-assignments.tsx` + `pp-admin-shared.ts`) is consistent with the other `/admin/{plugin}` screens (generic admin aesthetic; matches the what-works / skills-hunt admin layout, filter/action conventions, and CSRF mutation helper). It uses `hooks/use-is-mobile.ts` so it is usable on a phone. Two actions are wired, both backed by existing endpoints: (1) set/publish the weekly topic via `PUT /api/peer-programming/admin/topics` (with the current published topic loaded via `GET`), and (2) run the weekly cohort assignment via `POST /api/peer-programming/admin/assignments/run` (with an optional manual user-id override). The Android admin screen lives at `packages/mobile/src/features/peer-programming/AdminPeerProgramming.tsx` (+ `admin-api.ts`), is registered in `App.tsx`, binds the same three endpoints, and is admin-gated server-side (a non-admin sees an access notice). No new admin actions or commands were invented — only the existing endpoints are surfaced.
+**Admin surface (2026-06-06):** the admin page at `/admin/peer-programming` is now a real, mobile-responsive admin UI — it replaced the former plain-text stub. The web admin shell (`components/peer-programming/pp-admin-shell.tsx` + `pp-admin-topic-form.tsx` + `pp-admin-assignments.tsx` + `pp-admin-shared.ts`) is consistent with the other `/admin/{plugin}` screens (generic admin aesthetic; matches the what-works / skills-hunt admin layout, filter/action conventions, and CSRF mutation helper). It uses `hooks/use-is-mobile.ts` so it is usable on a phone. Two actions are wired, both backed by existing endpoints: (1) set/publish the weekly topic via `PUT /api/peer-programming/admin/topics` (with the current published topic loaded via `GET`), and (2) run the weekly cohort assignment via `POST /api/peer-programming/admin/assignments/run` (with an optional manual user-id override). (History: an Android admin screen at `packages/mobile/src/features/peer-programming/AdminPeerProgramming.tsx` bound the same three endpoints until the Android surface was removed on 2026-07-20; admin is web-only now.) No new admin actions or commands were invented — only the existing endpoints are surfaced.
 
 Contract note: the command contract file (`docs/contracts/PEER_PROGRAMMING_PLUGIN_COMMAND_CONTRACTS.yaml`) defines `admin.topic-guidance.set` / `admin.topic-guidance.get` (topics) and `cohort.weekly.select` (assignment run); the admin UI surfaces exactly these and adds no new commands. The audit command strings the routes emit (`peer-programming.topic.upsert`, `peer-programming.cohort.weekly.select`) differ in spelling from the contract command names — a pre-existing naming nuance, not introduced by this UI work, and worth reconciling in a later contract/audit pass. Web pixel pass complete: the shell (`peer-programming-shell.tsx` + `pp-*` sub-components) is aligned to `design/.../survivor-hub/PeerProgramming.tsx` (lucide icons, encrypted-session copy) within rule-116 limits; binds real `/api/peer-programming/room` + `/messages` + `/feedback`. Android pixel pass complete (2026-05-31): `PeerProgramming.tsx` rewritten to match `design/.../survivor-hub/MobilePeerProgramming.tsx` with real-data-only binding via `GET /api/peer-programming/room`; mock data retired (`MockPeerProgramming.tsx` is no longer imported); decomposed into `pp-loading.tsx`, `pp-public.tsx`, `pp-empty.tsx`, `pp-cohort-tab.tsx`, `pp-session-tab.tsx` subcomponents within rule-116 limits. Fabricated cohort list / global stats omitted per real-data-only rule. `api.ts` updated to call real backend routes with Clerk auth token.
 
@@ -288,10 +290,11 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
    start the session. Nothing about this is committed: no schema, no route, no design. Mutual Time's
    own model (one-hour windows, a chosen window, a link to the meeting surface) is the reference, but
    the embedded version would drop the closing step that plugin has.
-6. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
+6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
 
+- 2026-08-18: **Corrected: PeerProgramming has no Android surface.** Agents kept reading this file and concluding the feature ships in the Android app. It does not — `packages/mobile/src/features/peer-programming` was deleted on 2026-07-20 (rule 105, PR #1742) and the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. The Delivery Status section already said so, but five other sections still described the Android screens in the present tense and contradicted it: Scope and Boundary listed the deleted mobile directory as an owned surface; the numbered intent statement said the video call runs "on web and Android" (that section feeds the public user guide, so it was teaching the wrong thing downstream); the Live Video Session feature list gave an Expo Go build constraint for a build that no longer exists; two Delivery Status paragraphs described the Android composer and admin screen as current; and the Gaps list carried Android live video as delivered. Each is now stated as web-only, with the removed Android work kept as dated history rather than deleted. Scope and Boundary also gained an explicit "No Android surface" line so the next agent hits the answer before it can guess. Documentation only — no code, route, schema, or contract change; the parity contract entry (`peer-programming`: `requiresMobileSurface: false`, `mobileFeatureDirs: []`) already matched the code and is untouched.
 - 2026-08-18: **Cohort-chosen topics tabled; admin control is the decision, not a shortfall (owner).**
   Recorded the same day it was raised: there is not enough usage to release topic choice out of admin
   control, so the week's topic stays admin-set. The Gaps entry now reads as a tabled decision with an

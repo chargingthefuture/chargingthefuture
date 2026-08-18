@@ -30,9 +30,19 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
     `SELECT COUNT(*)::int AS n FROM comic_review_queue
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
+  // Bug reports are an inbox, not a queue the admin drains: a clean report is forwarded to the
+  // triage repo by a background job, which flips it out of 'new' on its own. Counting only
+  // 'new'/'held_for_review' meant the job silently canceled the dot — a report filed between two
+  // runs raised the dot for a few minutes at most, and one filed while the admin was away was
+  // already 'issue_created' by the time they next opened the landing, so it never showed at all
+  // (owner report, 2026-08-18: five reports, none of them ever announced). So count every report
+  // that arrived since the admin last opened the area, whatever the background job did with it
+  // afterwards. Only the two states an admin decides by hand are left out: a rejected report was
+  // turned away by an admin who had already read it, and a resolved one is finished.
   'bug-reports': [
     `SELECT COUNT(*)::int AS n FROM bug_reports
-       WHERE status IN ('new', 'held_for_review') AND ($1::timestamptz IS NULL OR created_at > $1)`,
+       WHERE status NOT IN ('rejected', 'resolved')
+         AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
   contributions: [
     `SELECT COUNT(*)::int AS n FROM contributions_submissions
