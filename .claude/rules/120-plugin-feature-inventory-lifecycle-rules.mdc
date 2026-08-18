@@ -81,8 +81,14 @@ Known generators and their grounding sources (keep this list current as generato
   2026-08-18 after the guide called Workforce a tracker of "job openings" members are "matched to":
   with only feature bullets and no sentence saying what the plugin IS, the model supplied a familiar
   frame of its own. So the first paragraph of Intent and Outcome now ships to a public page — write it
-  as a plain, true statement of what the plugin is, not as planning notes. An inventory with no Intent
-  and Outcome heading falls back to the other two blocks.
+  as a plain, true statement of what the plugin is, not as planning notes. Every member-facing plugin
+  inventory carries the heading as of 2026-08-18 — Mood, LevelUp, and LightHouse were the last three
+  without one, and their `/guide` sections were being written from feature bullets alone. A new
+  member-facing plugin must add the section with the rest of its inventory; one that somehow lacks it
+  falls back to the other two blocks, which is the setup that produced the wrong Workforce framing.
+  The section is capped at 2500 characters, cut at a paragraph break so a long one never reaches the
+  model as a half-sentence — put the plain statement of what the plugin is in the opening paragraph,
+  not after the planning notes.
 
 Rules for every generator-grounding section (at minimum **User Features**, **Intent and Outcome**,
 **Scope and Boundary**, and the test script's **Core smoke**):

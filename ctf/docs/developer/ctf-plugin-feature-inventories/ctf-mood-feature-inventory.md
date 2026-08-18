@@ -18,6 +18,23 @@ Scope decisions locked for this rewrite:
 
 ---
 
+## Intent and Outcome
+
+Mood is a private check-in on how a member is doing. Pick a number from 1 to 5, add a note if you
+want to, and that is the whole thing; the next check-in is available 7 days later. Each check is
+stored under a server-controlled pseudonym with no account id on the row, so no one — including an
+admin — can read one member's check-in or note.
+
+What comes back is a community pulse and nothing else: the average and the number of check-ins per
+day over the trailing week, withheld entirely until at least five check-ins exist in that window.
+
+Boundaries, stated in the words they should be repeated in: Mood does not respond to a low number,
+does not alert anyone, does not notify a helper, and has no in-app admin screen. It is a shared
+sense of how the community is doing — not a support, safety, or crisis service, and not a record
+anyone can look up about a person.
+
+---
+
 ## 1) User Features
 
 ### 1.1 Mood Check Submission
@@ -115,6 +132,14 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 2. Multi-device behavior (multiple `clientId`s for one authenticated user) is allowed by current schema; the cooldown is one-per-user via the pseudonym, so multiple devices share one cooldown. No UI affordance to reconcile or merge mood history across devices.
 
 ## 9) Change Log
+
+- 2026-08-18: **Intent and Outcome statement added — it now ships to the public user guide.** As of
+  2026-08-18 the guide generator (`ctf/scripts/generate-user-guide.mjs`) reads each inventory's
+  "Intent and Outcome" section as its framing block; Mood had no such heading, so its `/guide`
+  section was written from feature bullets alone — the same setup that made the guide call Workforce
+  a list of "job openings". The new section states what Mood is in plain words and, just as
+  importantly, what it is not: no response to a low number, no alert to anyone, no admin screen, not
+  a support or crisis service. Documentation only; no schema, route, contract, or behavior change.
 
 - 2026-08-02: **Deletion burn-down batch 1: defense-in-depth entry for `mood_submissions`.** The
   registry deleted only `mood_client_identities` (correct — v3 rows store `user_id` as `''` and
