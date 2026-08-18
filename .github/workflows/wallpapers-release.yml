@@ -1,0 +1,62 @@
+name: Wallpapers — Release
+
+# Attaches the phone wallpapers committed at ctf/packages/web/public/brand/wallpapers/ to a
+# GitHub Release when a tag like `wallpapers-v1.0.0` is pushed. Members download them from the
+# same Releases page that carries the Android APK, and the landing page and the in-app account
+# hub link there. The wallpaper sources and re-render instructions live in
+# ctf/scripts/wallpapers/.
+
+on:
+  push:
+    tags:
+      - "wallpapers-v*"
+  # Lets the owner cut a release from the GitHub Actions UI (e.g. on a phone), with no terminal
+  # and no tag push. Enter the version without the "wallpapers-v" prefix; the run creates the
+  # wallpapers-v<version> tag + Release with the PNGs attached.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the wallpapers-v prefix (e.g. 1.0.0). Must be new — releases are immutable.'
+        required: true
+        type: string
+
+concurrency:
+  group: wallpapers-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish wallpapers to GitHub Releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      # On a tag push this is the tag itself (e.g. wallpapers-v1.0.0); on a manual run it is
+      # built from the version input. Used for the Release name and the tag the Release creates.
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && format('wallpapers-v{0}', inputs.version) || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail fast when no wallpapers are present
+        run: |
+          count=$(ls ctf/packages/web/public/brand/wallpapers/*.png 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No PNG files found in ctf/packages/web/public/brand/wallpapers/ — nothing to release."
+            echo "Add rendered wallpapers there (sources: ctf/scripts/wallpapers/) before cutting a release."
+            exit 1
+          fi
+          echo "Releasing $count wallpaper file(s)."
+
+      - name: Publish wallpapers to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ctf/packages/web/public/brand/wallpapers/*.png
+          name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          body: |
+            Skills Economy phone wallpapers. Pick the file that matches your phone, open it,
+            and save it to your photos, then set it as your wallpaper from your phone's settings.
+
+            - `se-wallpaper-android-1080x2400.png` — most current Android phones
+            - `se-wallpaper-iphone-16e-1170x2532.png` — iPhone 16e (also fits iPhone 13 / 14)
