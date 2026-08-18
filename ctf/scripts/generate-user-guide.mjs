@@ -125,7 +125,10 @@ function capAtParagraph(text, limit) {
   if (text.length <= limit) return text;
   const head = text.slice(0, limit);
   const cut = Math.max(head.lastIndexOf('\n\n'), 0) || head.lastIndexOf('\n');
-  return (cut > 0 ? head.slice(0, cut) : head).trimEnd();
+  const kept = (cut > 0 ? head.slice(0, cut) : head).trimEnd();
+  // A trailing lead-in ("The plugin, stated precisely:") whose list was cut promises something the
+  // model never receives, so drop the dangling line rather than hand over an unanswered colon.
+  return kept.endsWith(':') ? kept.slice(0, kept.lastIndexOf('\n')).trimEnd() : kept;
 }
 
 // Last commit date (YYYY-MM-DD) touching any of the given files; today when git is unavailable.
