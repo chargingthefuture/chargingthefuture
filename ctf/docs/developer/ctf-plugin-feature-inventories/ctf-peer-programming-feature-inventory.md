@@ -264,12 +264,16 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 1. Heuristic for partially-filled cohorts when active-user count is not divisible by 5 is implemented as best-effort packing; product sign-off on edge cases is pending.
 2. Fallback-open is now derived from the live cohort roster: the room reports a cohort as open when it has fewer than 2 members, not only from the flag snapshotted at assignment time. A richer per-session presence signal (who is actually in the room right now) is still a possible future refinement but is no longer required for the basic "too small to be a group" rule.
 3. Weekly cohort assignment now runs automatically once a week via the scheduler (the `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow calling the secret-guarded `POST /api/peer-programming/internal/assignments/run` route), with the admin manual run kept as a fallback/override. Closes issue #554. The cron is OFF until `CRON_SECRET` and the existing `NEXT_PUBLIC_APP_URL` secret are set in the repository's Actions secrets and `CRON_SECRET` is matched in the app runtime — until then it skips with a visible warning rather than failing, and admins form cohorts from the admin screen.
-4. **Cohorts do not choose their own topic.** The owner's intent (stated 2026-08-18) is that each
-   cohort picks the topic it wants to discuss. What ships today is admin-set: an admin writes the
-   week's topic guidance from `/admin/peer-programming` (`POST /api/peer-programming/admin/topics`),
-   and the room header shows it. There is no member- or cohort-facing topic route, no proposal or
-   vote, and no per-cohort topic field — a cohort's `topic_id` points at the same weekly topic row.
-   Building it needs a member-facing way to propose and settle on a topic per cohort.
+4. **Cohorts choosing their own topic — tabled, admin control stays (owner, 2026-08-18).** The
+   owner's intent is that each cohort eventually picks the topic it wants to discuss. It is not being
+   built now: there is not enough usage to release topic choice out of admin control, so the topic
+   stays admin-set until real use says otherwise. Do not build it, and do not file it as debt.
+   What ships today: an admin writes the week's topic guidance from `/admin/peer-programming`
+   (`POST /api/peer-programming/admin/topics`) and the room header shows it. There is no member- or
+   cohort-facing topic route, no proposal or vote, and no per-cohort topic field — every cohort's
+   `topic_id` points at the same weekly topic row.
+   Whenever it is picked up, it needs a member-facing way to propose and settle on a topic per cohort,
+   and a per-cohort topic field to hold the result. Both are unbuilt and undesigned.
 5. **Session timing is ad hoc by decision, not by omission (owner, 2026-08-18).** The call being open
    whenever the cohort is running is the intended behavior: a cohort holds as many or as few video
    sessions as it wants, whenever its members want them, on a rolling basis. Nothing records a meeting
@@ -287,6 +291,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. Android (React Native) live video for the Session tab is delivered (2026-06-23, issue #555) — the Session tab joins the same per-cohort GetStream call as web. The Stream Video SDK needs native code, so it works in an EAS dev/production build, not Expo Go (the same constraint as Chyme and Lighthouse video). No automated test harness exists for live Stream calls on device — verification is manual.
 
 ## Change Log
+
+- 2026-08-18: **Cohort-chosen topics tabled; admin control is the decision, not a shortfall (owner).**
+  Recorded the same day it was raised: there is not enough usage to release topic choice out of admin
+  control, so the week's topic stays admin-set. The Gaps entry now reads as a tabled decision with an
+  explicit "do not build it, do not file it as debt", alongside what ships today and what it would
+  need whenever it is picked up (a member-facing way to propose and settle on a topic per cohort, and
+  a per-cohort topic field — both unbuilt and undesigned). Documentation only.
 
 - 2026-08-18: **Ad hoc session timing recorded as a decision, not a gap (owner).** The same-day entry
   below listed "no scheduled meeting time" under Gaps, which read as debt someone should clear. It is
