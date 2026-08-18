@@ -34,6 +34,11 @@
 
 ## Core smoke (every session)
 
+LightHouse is where members offer places to stay and ask to stay in them: browsing is gated by
+nothing, listing a place is self-service with no approval step, and one member can be both host and
+seeker. Rent and terms are between the two members — LightHouse holds nothing on anyone's behalf and
+records no amount for an ongoing arrangement (inventory Intent and Outcome, added 2026-08-18).
+
 Member role unless noted.
 
 1. **Opens straight to browse.** Open LightHouse. It lands on the property browse screen — no

@@ -117,6 +117,17 @@ function extractSection(md, headingRe) {
   return out.join('\n').trim();
 }
 
+// Trim `text` to at most `limit` characters, cutting at the last paragraph break inside the limit so
+// a truncated block never ends mid-sentence (the model reads a half-sentence as a finished claim).
+// Inventory prose is hard-wrapped, so a bare line break usually sits mid-sentence; fall back to one
+// only when there is no blank line to cut at, and to a hard slice when there is neither.
+function capAtParagraph(text, limit) {
+  if (text.length <= limit) return text;
+  const head = text.slice(0, limit);
+  const cut = Math.max(head.lastIndexOf('\n\n'), 0) || head.lastIndexOf('\n');
+  return (cut > 0 ? head.slice(0, cut) : head).trimEnd();
+}
+
 // Last commit date (YYYY-MM-DD) touching any of the given files; today when git is unavailable.
 function lastUpdated(paths) {
   const real = paths.filter(Boolean);
@@ -139,6 +150,7 @@ const GROUNDING = `GROUNDING — DO NOT FABRICATE (most important rule, override
 - The three source blocks below (this plugin's "What it is", its "User Features", and its "Core smoke" steps) are your ONLY facts. Every claim you write must trace to them. If they do not say it, you do not write it.
 - Invent no capability, number, date, rating, or outcome. When unsure what something does, say less — a vaguer true sentence beats a specific false one. A short section is fine.
 - Keep the frame the docs give you. Never swap a documented term for a familiar real-world one that means something different — a headcount worked out from a population model is not a "job opening", a list of skills is not a "job board", and a count is not a rating. If a plain word for it is not in the sources, describe what the screen shows instead of naming it.
+- ServiceCredits and every in-app credit are an internal, non-fiat unit — never money, cash, a currency, or redeemable for anything outside the app. Never write "payment", "payment plan", "price", "cost", "pay", "buy", "purchase", "refund", "cash out", or a currency symbol about credits. A credit movement is a send, transfer, or exchange; a cohort deposit is held in credits, not paid. Real money unrelated to credits (a listing's actual rent, a confirmed donation in dollars) is real money and is described as such.
 - The platform verifies NO ONE's identity, background, or work, and has no trust "score". Never write "verified", "verification", "vetted", "background check", or "trust score", even for Directory, Foundation, or Trust features. Foundation helpers are fellow community members, not a formally vetted service. Trust features are peer/social information only.
 - Describe MEMBER actions only. Skip anything admin-only.`;
 
@@ -233,10 +245,11 @@ for (const [slug, title] of ORDER) {
   const ts = tsPath ? readFileSync(tsPath, 'utf-8') : '';
   // "Intent and Outcome" states what the plugin IS. Without it the model has only feature bullets
   // and reaches for a familiar frame that may be wrong (see the Workforce note at the top of this
-  // file). A few inventories have no such heading — those sections fall back to the other two blocks.
-  // Capped because these sections carry developer planning notes the model does not need; only the
-  // longest of them (PeerProgramming) is anywhere near the cap today.
-  const whatItIs = extractSection(inv, /Intent (and|&) Outcome/i).slice(0, 2500);
+  // file). Every member-facing inventory carries the heading as of 2026-08-18; one that does not
+  // falls back to the other two blocks. Capped because these sections carry developer planning notes
+  // the model does not need — only the longest (PeerProgramming) is near the cap today — and the cap
+  // lands on a paragraph break so the block never ends mid-sentence and reads as a truncated claim.
+  const whatItIs = capAtParagraph(extractSection(inv, /Intent (and|&) Outcome/i), 2500);
   const features = extractSection(inv, /User Features/i);
   const coreSmoke = extractSection(ts, /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);

@@ -29,6 +29,12 @@
 
 ## Core smoke (every session)
 
+LevelUp runs skills training: browse the open cohorts, join one, follow your own milestones. Credits
+are an internal, non-fiat unit — a cohort deposit is held in credits against that cohort's milestones
+and released as each is validated, and the member's credits view here is read-only with no spend or
+transfer action. Any screen that offers to spend, transfer, or cash out credits, or that describes a
+deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18).
+
 **Seed before starting:** `pnpm --dir ctf seed:level-up`
 
 1. Sign in as the seed **member** (trainee 1). Open the LevelUp app. The cohort browse screen loads without error and shows at least one cohort card.

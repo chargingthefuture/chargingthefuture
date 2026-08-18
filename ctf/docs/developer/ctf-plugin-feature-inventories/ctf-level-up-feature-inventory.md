@@ -7,6 +7,25 @@
 - Plugin name: `LevelUp`
 - Plugin slug: `level-up`
 
+## Intent and Outcome
+
+LevelUp is where skills training runs. A member browses the open cohorts, reads each one's
+curriculum and milestones, joins one, and follows their own progress — how many milestones are
+done, who the trainer is, and which cohorts they are in right now. Cohorts exist because Workforce
+shows the community is short of people in that occupation; an admin approves each one from that
+ranked list, so what LevelUp offers follows where the skills gaps actually are.
+
+ServiceCredits move through LevelUp, and credits are an internal, non-fiat unit — never money,
+never cash, never redeemable for anything outside the app. A cohort may ask for a deposit in
+credits, held against that cohort's milestones and released as each milestone is validated, with
+the trainer's share set as a percentage. A member's credits view inside LevelUp is read-only: it
+shows the balance, what is being held, and what was earned here, and offers no way to spend or
+transfer. Badges are awarded for reaching something, never bought and never spent.
+
+If something goes wrong with an enrollment, the member opens a dispute and writes what happened,
+with comments and attachments; an admin resolves it. Trainer profiles are browsable but read-only —
+a member reads who runs a cohort and cannot edit it.
+
 ## Implemented User Features
 
 1. Cohort listing with filters for `track`, `status`, and `startDate`.
@@ -245,6 +264,16 @@ that exist today.
 5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
 
 ## Change Log
+
+- 2026-08-18: **Intent and Outcome statement added — it now ships to the public user guide.** As of
+  2026-08-18 the guide generator (`ctf/scripts/generate-user-guide.mjs`) reads each inventory's
+  "Intent and Outcome" section as its framing block; LevelUp had no such heading, so its `/guide`
+  section was written from feature bullets alone and described joining a cohort as setting up a
+  "payment plan" — credits are an internal, non-fiat unit and are never described in money terms. The
+  new section states what LevelUp is, where its cohorts come from (the Workforce skills gaps, admin
+  approved), and how credits work here in the approved wording: a deposit in credits held against the
+  cohort's milestones, a read-only credits view with no spend or transfer, badges awarded and never
+  bought. Documentation only; no schema, route, contract, or behavior change.
 
 - 2026-08-15: **The admin and the member now count the same enrollment rows (owner report: "admin
   says 3 people enrolled but the member side says 3 cohorts are open, not members").** Three separate
