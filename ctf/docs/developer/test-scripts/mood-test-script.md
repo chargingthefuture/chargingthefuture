@@ -32,6 +32,10 @@ This is a personal-wellbeing surface. Individual check-ins are private — they 
 server-controlled pseudonym, never shown to anyone, and only an anonymous aggregate is displayed. Do
 not test for, or expect, any screen that surfaces one member's check-in to another person.
 
+Nor is Mood a support or crisis service: it does not respond to a low number, alert anyone, or notify
+a helper, and it has no in-app admin screen (see the inventory's Intent and Outcome section, added
+2026-08-18). A missing follow-up after a low check-in is the designed behavior, not a bug to file.
+
 ---
 
 ## Core smoke (every session)

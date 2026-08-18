@@ -9,6 +9,27 @@
 
 ---
 
+## Intent and Outcome
+
+LightHouse is where members offer places to stay and ask to stay in them. Browsing needs nothing at
+all: no LightHouse profile, no approval step — open it and the listings are there, each with its
+location, its rent, and its details. Listing a place is self-service, and the same member can be
+both a host and someone looking for a place at the same time.
+
+Asking to stay is the one action that needs the member's own details filled in first. The host
+accepts or rejects the request, and an accepted request opens a private chat between just those two
+people. An accepted match can also be recorded as an ongoing housing arrangement — how often it
+happens and how it is settled, confirmed by the other person in Recurring Activity. A rent
+arrangement records no amount, only that it happens and how often.
+
+Boundaries, stated in the words they should be repeated in: rent and terms are between the two
+members. LightHouse takes no part in the arrangement itself, has no approval step for a listing,
+and holds nothing on anyone's behalf. What it does carry is the product-wide member block — block
+someone and their listings leave the browse list, and neither person can request a stay from the
+other.
+
+---
+
 ## 1) User Features
 
 ### 1.1 Dashboard and Role-Based Entry
@@ -297,6 +318,16 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    than guessed at.
 
 ## 9) Change Log
+
+- 2026-08-18: **Intent and Outcome statement added — it now ships to the public user guide.** As of
+  2026-08-18 the guide generator (`ctf/scripts/generate-user-guide.mjs`) reads each inventory's
+  "Intent and Outcome" section as its framing block; LightHouse had no such heading, so its `/guide`
+  section was written from feature bullets alone — the same setup that made the guide call Workforce
+  a list of "job openings". The new section states what LightHouse is (members offer places and ask
+  to stay in them, browsing gated by nothing, listing self-service, host and seeker at once) and what
+  it is not (rent and terms are between the two members; no approval step; nothing held on anyone's
+  behalf), plus the product-wide member block it honors. Documentation only; no schema, route,
+  contract, or behavior change.
 
 - 2026-08-03: **An accepted match can be recorded as ongoing without leaving LightHouse.** Housing is the
   clearest case of something that carries on month after month, and LightHouse only ever sees the moment

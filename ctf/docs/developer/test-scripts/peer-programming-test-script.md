@@ -28,6 +28,18 @@
 
 ## Core smoke (every session)
 
+PeerProgramming puts members into a small group each week and gives that group a room to meet in:
+a live video call where the cohort sees and hears each other, and a text conversation that carries on
+between calls for whoever could not make it. What has to work is being placed in a cohort, being told
+about it, being able to join the call, and being able to post and reply whenever you get to it. A
+quiet text room is not by itself a failure. While the community is small this normally runs as one
+standing room, Cohort 1, that everyone joins (inventory Intent and Outcome, 2026-08-18).
+
+Session timing is ad hoc by decision: a cohort holds as many or as few calls as it wants, whenever
+its members want them. There is no scheduled meeting hour and no reminder, so the absence of one is
+not a bug to file. The week's topic is admin-set for the same reason — a cohort cannot pick or vote
+on its own topic, and no screen should offer to.
+
 These are the checks that must pass before anything else is worth testing.
 
 **1. Room loads for a seeded member**
@@ -44,6 +56,14 @@ web ☐
 
 **4. Seed data is present**
 After the seed, the admin cohort list shows at least one cohort and the topic form shows a topic for the current week (or a recent week).
+web ☐
+
+**5. The cohort's video call opens**
+Signed in as a cohort member, open the Session tab and press "Join Session." The call opens with your
+own camera tile, and mute, camera, and leave controls are visible; leaving returns to the Session tab
+without an error. If live video is not configured in this environment, the readable "live video
+unavailable" notice counts as a pass here — the full walkthrough covers both paths in PP-10 and
+PP-11. On android this needs an EAS dev build, not Expo Go.
 web ☐
 
 ---
