@@ -78,6 +78,9 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 2. Canonical-definition status indicator per KPI.
 3. Clear handling for unresolved/blocked metrics (not found/ambiguous).
 4. Human-readable metric definition panel (name, owner, formula summary).
+5. The "Estimate" chip beside the headline Community Value Index, shown only when the figure is
+   flagged an estimate **and** is above 0 — a 0 index has nothing rolled together to estimate, so the
+   chip is hidden rather than reading as doubt about the zero.
 
 ### 1.6 Value Waiting to Happen (projected figure)
 
@@ -355,6 +358,15 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 ---
 
 ## 10) Change Log
+
+- 2026-08-18: **The "Estimate" chip is hidden while the Community Value Index is 0.** The flag that
+  drives the chip (`gdp_metric_snapshots.is_estimate`) is set on every Community Value Index row no
+  matter what the number is, so a brand-new community saw "0 Estimate" on the hero and in the sidebar
+  ticker — which reads as if the zero itself were in doubt, when in fact nothing has been rolled
+  together yet. `deriveIsEstimate` in `components/gdp/gdp-shell.tsx` now also requires the index value
+  to be above 0, so the chip disappears at 0 and returns as soon as the first exchange is recognized.
+  Both surfaces read that one derived flag, so they stay in step. No schema, route, contract, or copy
+  change; the chip label and footnote wording are untouched.
 
 - 2026-08-10: **Launch date moved to a platform-owned constant; no visible change to GDP.** Weekly
   Performance needed the same launch date to floor its week history, and a plugin must not import

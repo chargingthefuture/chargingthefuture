@@ -60,10 +60,20 @@ function GdpContent({
 // is flagged a normalized estimate. Returns false unless the row actually carries that flag, so the
 // estimate treatment only renders where the data says it is an estimate. Never inspects per-user figures
 // — only the aggregate metric.
+//
+// A zero index also returns false. The flag is set on every Community Value Index row regardless of what
+// the number is, but nothing has been rolled together when the figure is 0, so there is nothing to call
+// an estimate — "0 Estimate" only reads as if the count itself were in doubt. The chip comes back as soon
+// as the index moves above 0.
 function deriveIsEstimate(rawMetrics: unknown): boolean {
   if (!Array.isArray(rawMetrics)) return false;
   return (rawMetrics as GdpMetricRow[]).some(
-    (m) => m && m.metricKey === COMMUNITY_VALUE_INDEX_METRIC_KEY && m.isEstimate === true,
+    (m) =>
+      m &&
+      m.metricKey === COMMUNITY_VALUE_INDEX_METRIC_KEY &&
+      m.isEstimate === true &&
+      Number.isFinite(m.metricValue) &&
+      m.metricValue > 0,
   );
 }
 
