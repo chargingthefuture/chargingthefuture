@@ -3,19 +3,12 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import { ChevronRight, Database, Download, HeartHandshake, Image as ImageIcon, ShieldCheck, ShieldOff, Smartphone, Sparkles, UserCircle } from 'lucide-react';
+import { ChevronRight, Database, HeartHandshake, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { TrustRightRailCard } from '@/components/shared/trust/TrustRightRailCard';
 import type { TrustUserExtension } from 'lib/trust/types';
-
-// Everything installable — the Android APK and the phone wallpapers — is downloaded from the repo's
-// GitHub Releases page (owner decision 2026-08-18: one page for all downloads, matching the Chyme
-// shell's "Get the Android app" card and the landing page's download links). The wallpapers link
-// pre-filters that page to the wallpapers-v* releases.
-const RELEASES_URL = 'https://github.com/chargingthefuture/chargingthefuture/releases';
-const WALLPAPERS_URL = 'https://github.com/chargingthefuture/chargingthefuture/releases?q=wallpapers';
 
 // One identity, shown wherever it lives. This hub does not store a profile — it routes the member to
 // the real place each part is edited, so they never feel like they are filling in "another profile".
@@ -134,30 +127,6 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
             last
           />
         </section>
-
-        {/* Downloads — both live on the GitHub Releases page, one place to get everything installable */}
-        <section style={cardStyle}>
-          <div style={{ ...sectionLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={12} /> Downloads
-          </div>
-          <AccountLinkRow
-            href={RELEASES_URL}
-            external
-            icon={<Smartphone size={18} />}
-            title="Android app (APK)"
-            desc="Download the native Android app from the project&apos;s GitHub releases page."
-            tok={tok}
-          />
-          <AccountLinkRow
-            href={WALLPAPERS_URL}
-            external
-            icon={<ImageIcon size={18} />}
-            title="Phone wallpapers"
-            desc="Skills Economy wallpapers for your phone, from the same releases page."
-            tok={tok}
-            last
-          />
-        </section>
         </div>
       </div>
     </div>
@@ -171,7 +140,6 @@ function AccountLinkRow({
   desc,
   tok,
   last = false,
-  external = false,
 }: {
   href: string;
   icon: ReactNode;
@@ -179,38 +147,26 @@ function AccountLinkRow({
   desc: string;
   tok: ReturnType<typeof getAccountDataTokens>;
   last?: boolean;
-  external?: boolean;
 }) {
-  const rowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '12px 4px',
-    borderBottom: last ? 'none' : `1px solid ${tok.BORDER}`,
-    textDecoration: 'none',
-    color: tok.TEXT,
-  };
-  const body = (
-    <>
+  return (
+    <Link
+      href={href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 4px',
+        borderBottom: last ? 'none' : `1px solid ${tok.BORDER}`,
+        textDecoration: 'none',
+        color: tok.TEXT,
+      }}
+    >
       <span style={{ color: tok.BRAND, flexShrink: 0, display: 'flex' }}>{icon}</span>
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{title}</span>
         <span style={{ display: 'block', fontSize: 12, color: tok.SUBTLE, lineHeight: 1.5 }}>{desc}</span>
       </span>
       <ChevronRight size={16} style={{ color: tok.SUBTLE, flexShrink: 0 }} />
-    </>
-  );
-  // External rows (GitHub releases) leave the app, so they open in a new tab and skip next/link.
-  if (external) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" style={rowStyle}>
-        {body}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} style={rowStyle}>
-      {body}
     </Link>
   );
 }
