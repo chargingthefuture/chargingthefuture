@@ -53,6 +53,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // /apps/mutual-time (MutualTimeAdmin renders there for admins), so this row points there.
   { href: '/apps/mutual-time', name: 'Mutual Time' },
   { href: '/admin/peer-programming', name: 'PeerProgramming' },
+  // Self-reports from the public Quora account-deletion survey. The only place those responses are
+  // readable, and the place the consent flags are checked before anything is quoted or named.
+  { href: '/admin/quora-deletion-survey', name: 'Quora Deletion Survey' },
   { href: '/admin/safety', name: 'Safety Reports' },
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
