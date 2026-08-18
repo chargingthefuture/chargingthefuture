@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 2400px; overflow: hidden; }
+  body {
+    background: #0F0E17;
+    position: relative;
+    font-family: "DejaVu Sans", sans-serif;
+  }
+  /* Soft brand-color glows, dim enough that lock-screen text stays readable */
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(160px);
+  }
+  .glow-teal {
+    width: 900px; height: 900px;
+    left: -300px; top: 1080px;
+    background: rgba(0, 109, 114, 0.28);
+  }
+  .glow-purple {
+    width: 950px; height: 950px;
+    right: -330px; top: 1460px;
+    background: rgba(143, 75, 178, 0.22);
+  }
+  .glow-top {
+    width: 700px; height: 700px;
+    left: 190px; top: -350px;
+    background: rgba(0, 109, 114, 0.10);
+  }
+  .center {
+    position: absolute;
+    left: 0; right: 0;
+    top: 1140px;               /* below the lock-screen clock zone */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .mark { width: 430px; height: auto; }
+  .wordmark {
+    margin-top: 96px;
+    font-size: 37px;
+    font-weight: 400;
+    letter-spacing: 24px;
+    text-indent: 24px;         /* balance the trailing letter-space */
+    color: #9B9490;
+  }
+  .rule {
+    margin-top: 72px;
+    width: 220px; height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #006D72, #8F4BB2);
+    opacity: 0.9;
+  }
+</style>
+</head>
+<body>
+  <div class="glow glow-top"></div>
+  <div class="glow glow-teal"></div>
+  <div class="glow glow-purple"></div>
+
+  <div class="center">
+    <svg class="mark" viewBox="4 67.9 100 85" role="img" aria-label="Skills Economy">
+      <linearGradient id="se-grad" x1="11.51" x2="96.71" y1="110.4" y2="110.4" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#006D72" offset="0"/>
+        <stop stop-color="#8F4BB2" offset="1"/>
+      </linearGradient>
+      <path fill="url(#se-grad)" d="m94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z"/>
+    </svg>
+    <div class="wordmark">SKILLS&nbsp;ECONOMY</div>
+    <div class="rule"></div>
+  </div>
+</body>
+</html>
