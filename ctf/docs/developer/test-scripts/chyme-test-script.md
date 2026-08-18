@@ -350,9 +350,10 @@ optimistic remove restores the message and shows a "Delete failed" alert if the 
    controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**
    the avatars and **above** the chat, and you can mute/unmute without scrolling.
 5. Android-app card: on a non-Android browser, confirm a "Get the Android app" card shows in the rail
-   and opens the repo's GitHub Releases page (`https://github.com/chargingthefuture/chargingthefuture/releases`),
-   where the APK is downloaded. On an Android device, confirm the card is hidden and the rail is just
-   the list of rooms.
+   and opens the repo's GitHub Releases page filtered to the mobile releases
+   (`https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile`), with the newest
+   `mobile-v*` release and its APK at the top. On an Android device, confirm the card is hidden and
+   the rail is just the list of rooms.
 **Expected:** The rooms rail is one compact scrollable row; the title is not duplicated and no vertical
 space is wasted. Switching rooms never tears down a live call — a member joined in one room stays
 connected while viewing the other and when switching back. The in-room controls render between the
