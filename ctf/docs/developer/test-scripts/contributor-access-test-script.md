@@ -138,6 +138,7 @@ Result: web ☐ mobile-responsive ☐
 - It states there is no application and no way to buy it.
 - It states no score is shown anywhere.
 - It mentions the same standing opens the members-only channel in the Commons and the private room in Chyme.
+- It mentions the badge also opens scheme suggestions in ClickLog (proposing a new scheme name while logging an incident).
 - No numeric score, tier, leaderboard, or ranking appears anywhere on the page.
 
 Result: web ☐ mobile-responsive ☐
