@@ -322,7 +322,7 @@ fixed, built-in `DEFAULT_CONTRIBUTION_WEIGHTS` (ServiceCredits 1:1), so it is al
 admin action. The legal hard line is unchanged: the weights are notional index inputs, never a
 redemption rate, per-wallet conversion, or the price of ServiceCredits.
 
-Estimate treatment shipped (2026-06-06, issue #312 P2): the headline GDP figure and the sidebar USD aggregate now show an understated "Estimate" chip plus a short footnote on web (`gdp-dashboard.tsx` hero — desktop and the mobile-responsive layout — and `gdp-sidebar.tsx` Live Ticker) and Android (`Gdp.tsx` overview hero), driven by the `isEstimate` flag the report projection surfaces off `gdp_metric_snapshots.is_estimate`. The chip/footnote render only where the data is flagged an estimate. Copy describes a community-wide normalized USD estimate (a morale/transparency metric, not a ledger), never a per-user redemption value, honoring the no-fiat-parity line.
+Estimate treatment shipped (2026-06-06, issue #312 P2): the headline GDP figure shows an understated "Estimate" chip plus a short footnote on web (`gdp-dashboard.tsx` hero) and Android (`Gdp.tsx` overview hero), driven by the `isEstimate` flag the report projection surfaces off `gdp_metric_snapshots.is_estimate`. The chip/footnote render only where the data is flagged an estimate and the figure is above 0. Copy describes a community-wide normalized USD estimate (a morale/transparency metric, not a ledger), never a per-user redemption value, honoring the no-fiat-parity line. The hero is the only place the chip appears: a second copy lived in `gdp-sidebar.tsx` (Live Ticker), but that component was never rendered anywhere and was deleted on 2026-08-18.
 
 World map — REMOVED (2026-07-11): the decorative "Map" tab (web `gdp-map.tsx` / `gdp-world-map.tsx`, Android `Gdp.tsx` "Home" tab) was removed. It rendered every region in one neutral state with no per-country data, so it added no real information — especially now that the "All Countries" panel on the Dashboard shows the real per-country member distribution. The GDP dashboard is now a single view (no tabs); the Community Value disclaimer the map used to carry moved to the Dashboard hero (always shown). Web + mobile-responsive + Android.
 
@@ -359,14 +359,25 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-08-18: **Deleted two GDP shell components that nothing rendered.** `gdp-sidebar.tsx` (a fixed
+  240px `<aside>` carrying the "Live Ticker" and the Global Overview filter list) and
+  `gdp-icon-rail.tsx` (a fixed 72px logo rail) were both exported but imported nowhere — the only
+  mention of either name in the repo was its own definition. They are leftovers from the pre-2026-07-20
+  desktop layout, which no longer exists: the web app ships one phone-width layout at every viewport
+  (rule 105), so a fixed-width side column has nowhere to go. Removed both files and the
+  `SIDEBAR_FILTERS` constant in `gdp-shared.ts`, which only the sidebar used. Nothing on screen
+  changes. The delivery-status note above is corrected in the same commit: it described the sidebar
+  copy of the "Estimate" chip as a shipped surface, which it never was.
+
 - 2026-08-18: **The "Estimate" chip is hidden while the Community Value Index is 0.** The flag that
   drives the chip (`gdp_metric_snapshots.is_estimate`) is set on every Community Value Index row no
-  matter what the number is, so a brand-new community saw "0 Estimate" on the hero and in the sidebar
-  ticker — which reads as if the zero itself were in doubt, when in fact nothing has been rolled
-  together yet. `deriveIsEstimate` in `components/gdp/gdp-shell.tsx` now also requires the index value
-  to be above 0, so the chip disappears at 0 and returns as soon as the first exchange is recognized.
-  Both surfaces read that one derived flag, so they stay in step. No schema, route, contract, or copy
-  change; the chip label and footnote wording are untouched.
+  matter what the number is, so a brand-new community saw "0 Estimate" on the dashboard hero — which
+  reads as if the zero itself were in doubt, when in fact nothing has been rolled together yet.
+  `deriveIsEstimate` in `components/gdp/gdp-shell.tsx` now also requires the index value to be above 0,
+  so the chip disappears at 0 and returns as soon as the first exchange is recognized. No schema,
+  route, contract, or copy change; the chip label and footnote wording are untouched. (The entry as
+  first written also named a sidebar Live Ticker as a second affected surface; that component was
+  never rendered — see the 2026-08-18 cleanup entry above.)
 
 - 2026-08-10: **Launch date moved to a platform-owned constant; no visible change to GDP.** Weekly
   Performance needed the same launch date to floor its week history, and a plugin must not import
