@@ -6,7 +6,9 @@ import { randomUUID } from 'crypto';
 // (CLICK_LOG_PLUGIN_AUDIT_CONTRACTS.yaml) requires an audit event on every successful
 // allowed operation — incident create/list/delete, the per-incident share toggle, the
 // preferences fetch/update, and the admin trends fetch — so the route handlers call
-// this after each success.
+// this after each success. The shareable trends image is audited the same way, and records
+// whether the copy carried area coordinates — that is the one owner choice on that route that
+// widens what a posted copy reveals, so it belongs in the log.
 
 type ClickLogCommand =
   | 'click-log.incident.create'
@@ -16,14 +18,16 @@ type ClickLogCommand =
   | 'click-log.incident.share.set'
   | 'click-log.preferences.fetch'
   | 'click-log.preferences.update'
-  | 'click-log.trends.fetch';
+  | 'click-log.trends.fetch'
+  | 'click-log.trends.image';
 
 type ClickLogAuditEvent = {
   actorId: string;
   command: ClickLogCommand;
   result: 'success' | 'failure';
   // Optional context identifiers (e.g. the incident id for delete). Empty/undefined
-  // values are dropped so the log never carries blank keys.
+  // values are dropped so the log never carries blank keys. Values here are never member data:
+  // an incident id, or which variant of the trends image was produced.
   target?: Record<string, string | undefined>;
   errorCategory?: string | null;
 };

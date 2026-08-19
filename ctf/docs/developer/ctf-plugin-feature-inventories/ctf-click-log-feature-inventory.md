@@ -19,6 +19,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   incident does not need a location; (3) tagging problems or schemes requires both a location
   and trend sharing — a tagged incident always shares its trend data with the owner, and only
   shared incidents feed the global trends.
+- Every share control says the grouped totals may be published (owner directive, 2026-08-19). The
+  trend report is posted publicly and given to people outside the project, so sharing and
+  publication are one decision for the member and the copy states them together, at the moment the
+  choice is made: the global default, the per-incident checkbox in the log form, the history-row
+  pill tooltip and its screen-reader label, and the notice shown before an edit turns sharing on.
+  The wording lives once in `lib/click-log/share-copy.ts` so the four surfaces cannot drift apart.
+  What may be published is the aggregate only — notes, exact locations, and member identity are
+  excluded by the report queries themselves, not by the screen.
 - Log incident (with optional location/notes)
 - Optionally tag an incident with which known problems happened ("Which problems happened?" —
   the 50+ problems list published on the public landing page) and/or which named schemes were
@@ -76,15 +84,55 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   tagged incident with the same explanation. Shared incidents contribute only grouped trend data
   (day, approximate area, tags, count) — never the note or exact location. The member-facing
   copy says so in plain words: the global default reads "only trend data — never your notes" and
-  the per-incident checkbox reads "only the date, rough area, and tags". Neither uses the word
-  "coarse".
+  the per-incident checkbox reads "only the date, rough area, and tags", and both close with
+  "Grouped totals may be published." Neither uses the word "coarse".
 
 ## 4. Admin Features
 
 - ClickLog Trends dashboard (`/admin/click-log`): aggregate counts over incidents members opted to
-  share — shared total, days with activity, per-day counts, area-cluster count (each area is a
-  ~11 km cell), and "Top problems" / "Top schemes" tag breakdowns (per-tag counts over the
-  canonical tag slugs). No notes, precise coordinates, incident ids, or member identity are visible.
+  share. Headline figures — shared incidents, members reporting (distinct members, not incidents),
+  members who logged more than one, days with activity, number of areas, tagged incidents — then
+  per-day counts, the area breakdown, a harm-category rollup, "Top problems" / "Top schemes" tag
+  breakdowns, problem-and-scheme pairs, and the method statement. No notes, precise coordinates,
+  incident ids, or member identity are visible; member identity reaches the queries only inside
+  `COUNT(DISTINCT …)`.
+- Area breakdown (added 2026-08-19): every ~11 km cell with its coordinates, how many incidents and
+  how many different members sit in it, and the span of dates it covers. The screen previously
+  counted the clusters and stopped, which said activity had a location without ever saying where.
+  Incidents logged without a location are absent from this list by construction and counted in
+  every other figure; the summary states how many.
+- Harm categories (added 2026-08-19): the 53 problem tags rolled up into six categories defined in
+  `lib/click-log/tag-categories.ts` — watched and followed, body and health, threats and
+  intimidation, blocked from work/money/services, set up to be blamed, cut off from people. Counted
+  once per incident per category (array overlap in SQL), so an incident carrying three problems from
+  one category adds one, not three. A ranked list of 53 individual problems is readable only to
+  someone who already knows the subject; the rollup is what an outside reader can follow.
+- Scheme kind labels (added 2026-08-19): each scheme row says whether it is an operation with a
+  start and an end, something that runs continuously in the background, a shape over weeks or
+  months, or not yet classified. This closes the taxonomy gap recorded in `tags.ts`, on the trigger
+  that file names — the first time a tag ranking on real data would mislead a reader. No slug is
+  renamed, removed, or reordered; the kinds live in `tag-categories.ts` beside the harm categories.
+- Problem-and-scheme pairs (added 2026-08-19): how often a named scheme was tagged on the same
+  incident as a given problem. Two separate rankings say what happened and what was used; the pair
+  list says which method was attached to which harm.
+- Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
+  report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
+  that takes an image without stitching phone screenshots together and losing rows at the seams.
+  The trends screen offers it two ways: "Show the report as one image" opens it in the browser, which
+  is the phone path (hold the picture to save it to photos or send it into another app), and "Save it
+  as a file instead" (`?download=1`) downloads it, which is the computer path. A file download on a
+  phone lands in the files app, one step away from anywhere the image is actually going.
+  Built from the same aggregate as the screen, so there is no second data path. Area coordinates are
+  left out unless `?areas=1` is passed and the download control's checkbox is ticked: at small
+  counts an ~11 km cell plus a date can point at one person, and members opted into sharing trend
+  data with the project rather than into being placed on a public map. Which variant was produced is
+  recorded in the audit log.
+- Method statement (added 2026-08-19): the words under the numbers on the screen and drawn into the
+  image — where the figures come from, what is never counted, how to read a count, what the data
+  cannot show, why scheme totals are not comparable, and location coverage. It is built from the
+  report in `lib/click-log/trend-report-view.ts` so the screen and the image can never say different
+  things. The long version, written for a reader outside the project, is
+  `ctf/docs/CLICKLOG_TREND_REPORT_METHOD.md`.
 - Scheme-naming pipeline (scheduled, outside the app): `.github/workflows/clicklog-scheme-suggestions.yml`
   runs `ctf/scripts/proposeSchemeSuggestions.mjs` twice a day. It (a) drains new "Not listed"
   suggestions into one issue per distinct text in the private triage repo
@@ -106,7 +154,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `PUT /api/click-log/[id]` — Edit an incident's note and tag lists in place. Body `{ notes, problemTags, schemeTags }`: a null note clears it, an absent/null/empty tag array untags that kind. Only the incident's owner may call it (no admin override — the note is the member's private content). The date and location are immutable: the body carries no coordinates and the SQL never touches them. Tag lists follow the create rules (canonical slugs, duplicates collapsed, at most 10 per kind; tags require the incident to carry a location — since location is immutable, a location-less incident can only edit its note, 400 otherwise). Saving with a non-empty tag list sets `shared_with_owner` to true in the same update (owner decision, 2026-08-18: tags require trend sharing; the editor states this before save); saving with both lists empty leaves the share flag as it stands. `other-scheme` ("Not listed") may be kept or removed but not newly picked on edit (400 — its description intake happens at create). An edit whose metadata duplicates another of the member's incidents returns a readable 409 (the `metadata_hash` dedupe). Returns `{ success: true }`.
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
-- `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ buckets, tagTrends }` — `buckets` of day / ~11 km location cell / count, plus `tagTrends` of tag kind (`problem` | `scheme`) / tag slug / count.
+- `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=1` includes the ~11 km area coordinates; omitted by default. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 
@@ -183,6 +232,20 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   so an authorized request is audited regardless of the storage outcome.
 - See [CLICK_LOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/CLICK_LOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml)
 
+- The trend-reporting queries are the privacy boundary, and it is enforced in SQL rather than in
+  the screen that displays the result (`lib/click-log/report-repository.ts`). Every one filters on
+  `shared_with_owner`, and projects only counts, UTC day strings, 1-decimal location cells, and
+  canonical tag slugs. `user_id` never appears in a projection — only inside `COUNT(DISTINCT …)`,
+  which yields a number of people and never a list of them. A later change to the display therefore
+  cannot widen what the report can see.
+- The shareable report image is a wider disclosure than the screen, and is treated as one. Members
+  consented to their trend data reaching the owner; an image is made to be posted. So the area
+  coordinates — the most re-identifying element at low counts, where an ~11 km cell plus a date can
+  point at one person to anyone who knows them — are omitted unless the owner explicitly asks for
+  them, the download control says why in plain words, and the audit log records which variant was
+  produced. The image also carries the method statement with the numbers, so a copy that travels
+  without any surrounding text still states what the counts are and are not.
+
 ## 8. Web and Android Delivery Status
 
 - Web (desktop + mobile-responsive): Implemented shell, complete
@@ -215,9 +278,38 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 - No admin UI for global view/delete; admin access is via direct DB tooling.
 - No rate limiting on incident creation beyond shared platform defaults.
 - No advanced search/filtering on incident history.
+- The trend report cannot answer what an outside investigation would ask next: which country an
+  incident happened in, who the member says was involved, what they did about it and what came of
+  it, what it cost them, whether corroborating material exists, and whether they consent to being
+  contacted about their own case. Each needs a new question in the log form, so each is a product
+  decision rather than a reporting change. The seven items, in order and with their blocking
+  dependencies, are in `ctf/docs/CLICKLOG_TREND_REPORT_METHOD.md` section 7. Nothing on that list is
+  built.
+- The report window is fixed at 90 days with no way to ask for another span, and the day list is
+  uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
 
+- 2026-08-19: **Trend reporting rebuilt so it says where, who, and what kind — and can be saved as
+  one image.** The screen showed a count of area clusters and never the areas themselves; it is now
+  a full breakdown of every ~11 km cell with its coordinates, incident count, distinct member count,
+  and date span, and the summary states how many shared incidents carry no location at all. Added
+  alongside it: distinct member and repeat-reporter counts (seven incidents from one member and
+  seven from seven members are different situations, and the old view could not tell them apart), a
+  rollup of the 53 problem tags into six harm categories, kind labels on scheme rows closing the
+  taxonomy gap `tags.ts` records, and a problem-and-scheme pair list. New endpoint
+  `GET /api/click-log/admin/trends/image` (`click-log.trends.image` 1.0.0) draws the whole report as
+  one tall PNG for posting; area coordinates are left out of it unless explicitly requested, because
+  members consented to sharing trend data with the project, not to an area and a date being
+  published. `click-log.trends.fetch` goes to 1.2.0 (additive — `buckets` and `tagTrends` are
+  unchanged). The method statement — how the data is collected, what is never counted, and what the
+  counts cannot show — is built once in `lib/click-log/trend-report-view.ts` and rendered by both the
+  screen and the image, so a copy of the image posted anywhere carries its own provenance; the long
+  version for readers outside the project is `ctf/docs/CLICKLOG_TREND_REPORT_METHOD.md`, which also
+  lists the seven things an investigation would still need and which are not built. No change to
+  what members are asked, to what is stored, or to the privacy boundary: every new figure is a
+  grouped query over rows members already opted to share, and member identity reaches those queries
+  only inside `COUNT(DISTINCT …)`. Android: out of scope (web-only per rule 105).
 - 2026-08-18: **Tagging now requires trend sharing, not just a location (owner directive —
   correcting the 2026-08-18 guide copy, which had restated sharing as opt-in even for tagged
   incidents).** The three rules as the owner states them: tags (problems or schemes) require a

@@ -6,6 +6,7 @@ import type { ClickLogIncident } from "../../lib/click-log/types";
 import { problemTagLabel, schemeTagLabel } from "../../lib/click-log/tags";
 import { formatIncidentTime, getClickLogTokens, hasLocation, type ClickLogTokens } from "./click-log-shared";
 import { ClickLogIncidentEditor, type IncidentEditFields } from "./click-log-incident-editor";
+import { SHARE_PILL_LOCKED_ARIA, SHARE_PILL_LOCKED_HINT } from "../../lib/click-log/share-copy";
 
 // The problem/scheme tag chips on one history row. Renders nothing on an untagged incident.
 // Extracted so the row component stays under the complexity limit.
@@ -35,7 +36,7 @@ function IncidentTagChips({ incident, tokens }: { incident: ClickLogIncident; to
 // count) reaches the owner, never the note. Extracted so the row stays under the complexity limit.
 function sharePillAriaLabel(shareLocked: boolean, shared: boolean): string {
   if (shareLocked) {
-    return "Shared with the owner — required for tagged incidents; remove the tags to make it private";
+    return SHARE_PILL_LOCKED_ARIA;
   }
   return shared ? "Stop sharing this incident with the owner" : "Share this incident with the owner";
 }
@@ -56,7 +57,7 @@ function IncidentSharePill({
     <button
       onClick={() => onToggleShare(incident.id, !incident.shared_with_owner)}
       disabled={shareLocked}
-      title={shareLocked ? "Tagged incidents always share trend data with the owner — remove the tags (edit) to make this private" : undefined}
+      title={shareLocked ? SHARE_PILL_LOCKED_HINT : undefined}
       aria-label={sharePillAriaLabel(shareLocked, incident.shared_with_owner)}
       style={{ marginTop: 6, padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 600, cursor: shareLocked ? "default" : "pointer", background: incident.shared_with_owner ? `${t.ACCENT}18` : t.SURFACE, border: `1px solid ${incident.shared_with_owner ? t.ACCENT + "40" : t.BORDER_SOLID}`, color: incident.shared_with_owner ? t.ACCENT : t.MUTED }}
     >
