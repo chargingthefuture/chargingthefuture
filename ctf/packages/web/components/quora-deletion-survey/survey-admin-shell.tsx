@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, RefreshCw } from 'lucide-react';
+import { ClipboardList, Download, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { failureText, responseFailureText } from '@/lib/errors/client-failure';
 import {
   QUORA_SURVEY_ACTION_LABEL,
@@ -58,10 +60,17 @@ export function QuoraSurveyAdminShell() {
 
   return (
     <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      {/* The shared header is the only sanctioned back control (rule 134). It carries the back
+          chevron and the report-bug / settings / account cluster, so an admin on a phone — where
+          the installed app has no browser back button — is never stranded here. The title is not
+          repeated in the page body below: the header already names the screen. */}
+      <MobileScreenHeader
+        title="Quora Account Deletion Survey"
+        accent={t.ACCENT}
+        icon={<ClipboardList size={18} color={t.ACCENT} />}
+        actions={<PluginUserShellButton href={QUORA_SURVEY_PUBLIC_PATH} accent={t.ACCENT} />}
+      />
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 16px 56px' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px' }}>
-          Quora account deletion survey
-        </h1>
         <p style={{ fontSize: 13, color: t.MUTED, margin: '0 0 16px' }}>
           Self-reports from the public form at {QUORA_SURVEY_PUBLIC_PATH}. Nothing here is verified
           against Quora, and only people who reached another platform could answer — report counts

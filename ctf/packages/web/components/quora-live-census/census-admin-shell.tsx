@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { CensusRunSummary } from 'lib/quora-live-census/repository';
 import {
   QUORA_CENSUS_FRAME_KIND_LABEL,
@@ -108,8 +109,18 @@ export function CensusAdminShell() {
 
   return (
     <main style={pageStyle(t)}>
+      {/* The shared header is the only sanctioned back control (rule 134). It carries the back
+          chevron and the report-bug / settings / account cluster, so an admin on a phone — where
+          there is no browser back button in the installed app — is never stranded here.
+          No `actions` Member view button: this surface has no member shell to link to. The census
+          is admin-only observation, and the survey's public form is a different feature, not this
+          one's member side. */}
+      <MobileScreenHeader
+        title="Quora Live Account Census"
+        accent={t.ACCENT}
+        icon={<ClipboardCheck size={18} color={t.ACCENT} />}
+      />
       <div style={columnStyle}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px' }}>Quora live account census</h1>
         <p style={{ fontSize: 13, color: t.MUTED, margin: '0 0 4px' }}>
           The other half of the deletion survey. That one records what was removed, which cannot
           show what remains; this records what is still standing on a stated date, by a stated

@@ -1,8 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ClipboardList, Plus } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import {
   QUORA_SURVEY_MAX_ACCOUNTS,
   QUORA_SURVEY_TARGETED_INDIVIDUAL,
@@ -255,8 +256,18 @@ export function QuoraSurveyPublicShell({ needsUnlock }: { needsUnlock: boolean }
 
   return (
     <main style={pageStyle(t)}>
+      {/* Rule 134: every screen carries the one shared back control. This form sits at a
+          top-level path rather than under /apps, so a signed-in member who opens it from a link
+          has no other way into the app — and in the installed web app there is no browser back
+          button to fall back on. The signed-out landing deliberately has no header: there is no
+          session behind it and nothing in-app to go back to. */}
+      <MobileScreenHeader
+        title="Quora account removals"
+        accent={t.ACCENT}
+        icon={<ClipboardList size={18} color={t.ACCENT} />}
+      />
       <div style={columnStyle}>
-        <SurveyIntro tokens={t} />
+        <SurveyIntro tokens={t} showTitle={false} />
 
         <TargetedIndividualQuestion
           value={targetedIndividual}

@@ -17,15 +17,21 @@ import { hintStyle } from './survey-fields';
 // The answer is saved with the account that sent it, and the copy now says so. What the consent
 // boxes control — whether any of it is published — is unchanged and is the promise that matters.
 
-export function SurveyIntro({ tokens }: { tokens: SurveyTokens }) {
+// `showTitle` is false on the signed-in form, where the shared screen header already names the
+// screen and carries its icon — repeating it costs most of a phone screen for no new information.
+// The signed-out landing has no header (no session behind it, nothing in-app to go back to), so it
+// keeps the title and is the default.
+export function SurveyIntro({ tokens, showTitle = true }: { tokens: SurveyTokens; showTitle?: boolean }) {
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <ClipboardList size={22} color={tokens.ACCENT} aria-hidden="true" />
-        <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, color: tokens.TITLE }}>
-          Quora account removals
-        </h1>
-      </div>
+      {showTitle ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <ClipboardList size={22} color={tokens.ACCENT} aria-hidden="true" />
+          <h1 style={{ fontSize: 23, fontWeight: 800, margin: 0, color: tokens.TITLE }}>
+            Quora account removals
+          </h1>
+        </div>
+      ) : null}
 
       <p style={{ fontSize: 15, lineHeight: 1.65, color: tokens.TEXT }}>
         People writing about being targeted keep losing their Quora accounts. That gets said a lot

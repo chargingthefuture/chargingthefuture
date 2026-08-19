@@ -351,6 +351,14 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: Added the shared screen header (`MobileScreenHeader`) to the admin surface and to
+  the signed-in public form, both of which shipped without one — no back control and no
+  report-bug / settings / account cluster, which strands anyone reaching them on a phone. The form
+  matters most: it sits at a top-level path rather than under `/apps`, so a member opening it from
+  a link had no way into the rest of the app at all. The admin header carries a "Member view" link
+  to the public form. The signed-out landing keeps no header on purpose — there is no session
+  behind it and nothing in-app to go back to — so the page title is now conditional and shows only
+  there.
 - 2026-08-19: The subject list moved to `lib/shared/quora-research-subjects.ts`, shared with the
   live census, which merged first. The two carried identical copies while this branch was open,
   and copies drift apart without anything failing to warn anyone.
