@@ -1389,7 +1389,7 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   id SERIAL,
   quora_profile_url TEXT NOT NULL,
   quora_profile_url_normalized TEXT NOT NULL,
-  review_status TEXT NOT NULL CHECK (review_status IN ('pending', 'approved', 'rejected', 'spam')),
+  review_status TEXT NOT NULL CHECK (review_status IN ('pending', 'approved', 'rejected', 'spam', 'duplicate')),
   unlock_window_expires_at TIMESTAMPTZ NOT NULL,
   reminder_stage INTEGER NOT NULL DEFAULT 0,
   reviewed_by_user_id TEXT,
@@ -1441,6 +1441,17 @@ WHERE ctid IN (
   ) ranked
   WHERE ranked.rn > 1
 );
+-- Widen the review-status check to allow 'duplicate' on databases whose constraint predates it. One
+-- Quora profile on two accounts under different emails is a common and ordinary thing, and it is not
+-- spam: the person is real, they simply already have an account. It needed its own decision because
+-- 'rejected' leaves them in the community with support access and 'spam' brands an honest member. Drop
+-- + re-add is idempotent and keeps fresh and legacy schemas identical.
+ALTER TABLE IF EXISTS unlock_verification_submissions
+  DROP CONSTRAINT IF EXISTS unlock_verification_submissions_review_status_check;
+ALTER TABLE IF EXISTS unlock_verification_submissions
+  ADD CONSTRAINT unlock_verification_submissions_review_status_check
+  CHECK (review_status IN ('pending', 'approved', 'rejected', 'spam', 'duplicate'));
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_unlock_verification_submissions_user_id
   ON unlock_verification_submissions (user_id);
 -- Supports the duplicate-identity guard: find every account that has claimed a given normalized Quora

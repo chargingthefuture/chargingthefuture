@@ -13,6 +13,19 @@ import type { SpamQuoraUrlEntry } from './types';
 // disturbed.
 export const UNLOCK_SPAM_RESTRICTION_REASON = 'unlock:spam';
 
+// The same marker for a duplicate decision. Kept distinct from the spam marker so the member-facing
+// closed-account page can say which it was — a duplicate needs telling that their original account is
+// the one to sign in with, and a spammed account gets no such invitation. A later approve/reject lifts
+// either marker, and only these two, so an unrelated admin restriction is never disturbed.
+export const UNLOCK_DUPLICATE_RESTRICTION_REASON = 'unlock:duplicate';
+
+// The restriction reasons an Unlock review decision owns. Anything else on the account was placed by a
+// different process and must be left alone.
+export const UNLOCK_RESTRICTION_REASONS: readonly string[] = [
+  UNLOCK_SPAM_RESTRICTION_REASON,
+  UNLOCK_DUPLICATE_RESTRICTION_REASON,
+];
+
 // Actor recorded on the restriction/audit when a denylisted URL is auto-blocked at submission time —
 // no admin performed the action, so it is attributed to the system rather than to the member.
 export const UNLOCK_SPAM_DENYLIST_ACTOR = 'system:unlock-spam-denylist';

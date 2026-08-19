@@ -7,6 +7,7 @@ import { getUnlockTokens } from './unlock-shared';
 import { queueEmptyMessage } from './unlock-admin-actions';
 import {
   UnlockSubmissionCard,
+  type UnlockBlockConfirm,
   type UnlockEditorState,
   type UnlockHistoryState,
 } from './unlock-admin-card';
@@ -163,8 +164,8 @@ export type UnlockQueueListProps = {
   history: UnlockHistoryState;
   confirmRevokeId: number | null;
   setConfirmRevokeId: (value: number | null) => void;
-  confirmSpamId: number | null;
-  setConfirmSpamId: (value: number | null) => void;
+  confirmBlock: UnlockBlockConfirm;
+  setConfirmBlock: (value: UnlockBlockConfirm) => void;
   onReview: (id: number, reviewStatus: ReviewStatus) => void;
   onGrantReward: (id: number) => void;
   onRevoke: (id: number) => void;
@@ -172,7 +173,7 @@ export type UnlockQueueListProps = {
 
 // The submission list (or the empty state).
 export function UnlockSubmissionList(props: UnlockQueueListProps) {
-  const { items, searchQuery, tab, busyId, editor, history, confirmRevokeId, setConfirmRevokeId, confirmSpamId, setConfirmSpamId, onReview, onGrantReward, onRevoke } = props;
+  const { items, searchQuery, tab, busyId, editor, history, confirmRevokeId, setConfirmRevokeId, confirmBlock, setConfirmBlock, onReview, onGrantReward, onRevoke } = props;
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
   if (items.length === 0) {
@@ -193,8 +194,8 @@ export function UnlockSubmissionList(props: UnlockQueueListProps) {
           history={history}
           confirmRevokeId={confirmRevokeId}
           setConfirmRevokeId={setConfirmRevokeId}
-          confirmSpamId={confirmSpamId}
-          setConfirmSpamId={setConfirmSpamId}
+          confirmBlock={confirmBlock}
+          setConfirmBlock={setConfirmBlock}
           onReview={onReview}
           onGrantReward={onGrantReward}
           onRevoke={onRevoke}

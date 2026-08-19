@@ -1,4 +1,8 @@
-export type UnlockReviewStatus = 'pending' | 'approved' | 'rejected' | 'spam';
+// 'duplicate' is a real member who already has an account — the same Quora profile signed up again
+// under a different email, which is ordinary and common. It removes app access like 'spam' does, but it
+// is deliberately not spam: their Quora URL is never added to the denylist, because that URL belongs to
+// their original account and denylisting it would lock the real person out for good.
+export type UnlockReviewStatus = 'pending' | 'approved' | 'rejected' | 'spam' | 'duplicate';
 
 export type UnlockAccessTier = 'pending_readonly' | 'locked_support_only' | 'approved_full';
 
@@ -76,6 +80,9 @@ export type UnlockDashboardSnapshot = {
   approvedCount: number;
   rejectedCount: number;
   spamCount: number;
+  duplicateCount: number;
+  // Members who actually hold support-only access. Excludes spam and duplicate: both decisions also
+  // place a platform-wide restriction, and that restriction is what decides — they reach nothing.
   lockedSupportOnlyCount: number;
 };
 
