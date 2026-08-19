@@ -104,3 +104,61 @@ export type UnlockStatus = {
   // (not the repository) from the Unleash rollout; defaults to false (control).
   earlyCommonsAccess: boolean;
 };
+
+// One account on the Unlock admin's demo/test exclusion list (unlock_excluded_accounts). Marking an
+// account here takes it out of every sign-up number on that page; it changes nothing about the member's
+// access or their submission.
+export type UnlockExcludedAccount = {
+  userId: string;
+  note: string | null;
+  excludedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// One signed-up account as the Unlock admin's sign-up panel shows it: who they are, when they joined,
+// and whether they ever gave us a Quora URL. Identity comes from the auth provider (an account that
+// never submitted has no row of ours to read a name from); the submission fields come from
+// unlock_verification_submissions.
+export type UnlockSignupAccount = {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  email: string | null;
+  createdAt: string;
+  lastSignInAt: string | null;
+  // True when an admin has marked this as a demo/test account, so the sign-up counters leave it out.
+  excluded: boolean;
+  excludedNote: string | null;
+  // True when this account has an account-scope row in account_deletion_events: the person asked to be
+  // forgotten and their data is gone. Their submission row went with it, so without this they would be
+  // counted as "signed up, never gave a Quora URL" — the opposite of what happened.
+  deletedTheirData: boolean;
+  deletedAt: string | null;
+  hasSubmission: boolean;
+  reviewStatus: UnlockReviewStatus | null;
+  submittedAt: string | null;
+};
+
+// The sign-up reading on the Unlock admin page. `available: false` means the roster could not be read
+// (the auth provider is not configured in this runtime, or the call failed) and `unavailableReason` says
+// why in plain words; every count is 0 in that case rather than pretending nobody signed up.
+export type UnlockSignupOverview = {
+  available: boolean;
+  unavailableReason: string | null;
+  // True when the roster hit the per-load account cap, so the counts cover only the accounts read.
+  truncated: boolean;
+  // Every account the auth provider holds, demo/test accounts included.
+  totalAccounts: number;
+  // How many of those an admin has marked demo/test.
+  excludedCount: number;
+  // How many of the rest deleted their data (an account-scope row in account_deletion_events).
+  deletedCount: number;
+  // totalAccounts - excludedCount - deletedCount: the people we treat as real sign-ups.
+  memberCount: number;
+  // Of memberCount, how many have a Quora URL on file, in any review state.
+  submittedCount: number;
+  // memberCount - submittedCount: signed up, never submitted a Quora URL.
+  notSubmittedCount: number;
+  accounts: UnlockSignupAccount[];
+};
