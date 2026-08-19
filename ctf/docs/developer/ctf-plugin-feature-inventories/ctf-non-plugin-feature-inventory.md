@@ -60,7 +60,14 @@
     — no CSRF needed).
   - `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
     (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
-    same-origin CSRF-guarded (`x-ctf-csrf: 1`).
+    same-origin CSRF-guarded (`x-ctf-csrf: 1`). The full-account route also removes the member's
+    **auth-provider identity** as its last step (`deleteAuthIdentity`, `lib/account/identity-deletion.ts`
+    — the same helper the operator route uses), so "delete my account" removes the sign-in and not just
+    the data. Best-effort by design: the data deletion has already committed, so a provider outage
+    reports itself in the response (`identityRemoved: false` plus `identityError`) and in the audit row
+    rather than failing a deletion that did happen; the account can then be cleared through the operator
+    route. The provider's own `user.deleted` webhook fires on success and skips, because the
+    `account_deletion_events` row written by this request already exists.
   - `GET /api/account/services/:slug/export` and `GET /api/account/full-account/export` (issue
     #1264) — download the member's own data as JSON, per service or whole account. Both gated by
     `requireAccountAccess`, read-only (no CSRF needed on GET), returned with
@@ -293,6 +300,23 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-19: **Deleting your account now removes your sign-in, not just your data (owner report).**
+  `DELETE /api/account/full-account` deleted every plugin's rows and queued the ServiceCredits reclaim
+  but left the member's auth-provider identity in place, so someone who asked to be forgotten was still
+  an account: they could sign back in to an empty app, and every roster read from the provider kept
+  counting them (the Unlock admin's sign-up panel reads exactly that roster, so the leftovers showed up
+  there as people who never verified). Only the operator route
+  (`POST /api/internal/account/delete`) and the provider's own hosted delete removed the identity — the
+  Clerk webhook receiver's comment already assumed the self-service flow did too. The removal moved into
+  a shared `lib/account/identity-deletion.ts` (`deleteAuthIdentity`) that both routes now call, so they
+  cannot drift, and the self-service route calls it as its last step. Best-effort by design: the data
+  deletion has already committed when it runs, so a provider outage reports itself
+  (`identityRemoved: false` + `identityError` in the response, `identityRemoved` on the audit row) and
+  is sent to the error reporter, instead of failing a deletion that did happen. The provider's
+  `user.deleted` webhook fires on success and skips on its existing idempotency guard, so nothing runs
+  twice. The "Deletion queued" confirmation on web and Android now says the sign-in goes too. No schema,
+  contract, or route-surface change. Note: identities left behind by past self-service deletions are
+  still in the provider and must be cleared through the operator route.
 - 2026-08-18: **The user guide generator now reads each plugin's "Intent and Outcome" statement, and
   the Workforce section was corrected (owner report).** The `/guide` page described Workforce as a
   tracker of "job openings by sector and skill level" that members are "matched to". Workforce has no

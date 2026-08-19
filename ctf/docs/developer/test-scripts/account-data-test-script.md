@@ -98,3 +98,22 @@ announcements from the operator stay exactly as they were. The second deletion f
 remove and changes nothing on screen. Replies and reactions that hung off the deleted posts are gone
 with them.
 **Result:** web ☐ — notes:
+
+## AD-7 · Full-account delete removes the sign-in too
+
+**Role:** member on a **throwaway account** · **Precondition:** a disposable account you are willing
+to lose permanently — this cannot be undone. Note its email before you start.
+**Steps:**
+1. Sign in as the throwaway account, open Account & Data, choose the full-account delete, type
+   `delete my account`, and confirm.
+2. Read the "Deletion queued" screen.
+3. Try to sign in again with that account's email.
+4. As an admin, open `/admin/unlock` and look at the "Sign-ups" panel.
+**Expected:** Step 2: the confirmation says the personal data is being removed across all services
+**and that the sign-in is removed with it**. Step 3: signing in is no longer possible — the account is
+gone from the auth provider, not merely emptied. Step 4: the account is not in the sign-up list at all
+(it no longer exists), so it is not sitting in the "No Quora URL" tab as if it were someone who never
+verified. If the auth provider is unreachable at the moment of deletion, the data deletion still
+succeeds and the response carries `identityRemoved: false` with the reason — the leftover account is
+then cleared through the operator `Delete Account (manual)` workflow.
+**Result:** web ☐ · android ☐ — notes:

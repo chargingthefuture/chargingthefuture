@@ -88,7 +88,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Deletion queued</div>
           <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
-            Your request has been received. Your personal data is being removed across all services. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
+            Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
           </div>
         </div>
       </div>
