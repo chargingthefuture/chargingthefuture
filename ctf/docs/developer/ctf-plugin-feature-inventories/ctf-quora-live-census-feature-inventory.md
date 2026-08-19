@@ -279,6 +279,12 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: Added the shared screen header (`MobileScreenHeader`) to the admin surface, which
+  shipped without one. It had no back control and no report-bug / settings / account cluster, so an
+  admin reaching it on a phone — where the installed app has no browser back button — was stranded
+  (owner report). No "Member view" button: this surface has no member shell to link to. The
+  in-page "All runs" control is a list/detail toggle within the screen, not a route back, so it
+  stays.
 - 2026-08-19: Built, on the owner's instruction, as the survivor-side half the deletion survey
   could not cover. Runs, coded entries, stance tally, close and reopen, CSV export.
 - 2026-08-19: Removed the three wellbeing stance values on the owner's decision, after a review
