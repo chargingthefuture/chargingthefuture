@@ -27,6 +27,10 @@
 - Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
   `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
   inventory was updated only where it names one of those paths. No step below changes.
+- 2026-08-19, feed card layout: the status text and the Edit / Re-post / "I can help" controls moved
+  out of a third column beside the text and onto their own row underneath it. Only where a card's
+  controls sit changes — no control was added, removed, or renamed, and no behavior changed. SR-5 and
+  SR-6 name the new position so a tester checks it.
 
 ---
 
@@ -183,7 +187,7 @@ web ☐
 **Precondition:** Signed in as a member who owns an open, non-expired request (use a request created in SR-3 or pick one from the seed).
 
 **Steps:**
-1. On web: find your request in the feed and click "Edit". On Android: tap "Edit Your Request" on your own open card.
+1. On web: find your request in the feed. The "Your request" note and the "Edit" button sit on their own row **under** the request text, right-aligned and starting at the same left edge as the title — not in a column to the right of the text. Click "Edit".
 2. Change the title and replace one tag with a different tag.
 3. Save.
 
@@ -193,6 +197,7 @@ web ☐
 - Status is unchanged (still `open`).
 - A `request_updated` lifecycle event is written to `socket_relay_request_events` for the edit.
 - A different member's request does not show an Edit control.
+- At phone width the title and details use the full card width and read as normal sentences — they must not wrap after two or three words, which is what the old three-column card did (the action column has been moved under the text).
 
 web ☐
 
@@ -211,7 +216,7 @@ web ☐
 4. Sign in as a different member. Browse the feed.
 
 **Expected:**
-- Owner sees their expired request in the **main "All" feed** (not only under "Mine") — dimmed, with an "Expired" pill plus "Re-post" and "Edit" buttons. The owner's own post never silently disappears from their feed.
+- Owner sees their expired request in the **main "All" feed** (not only under "Mine") — dimmed, with an "Expired" pill plus "Re-post" and "Edit" buttons. The owner's own post never silently disappears from their feed. The pill and both buttons sit together on the action row under the request text, at matching heights.
 - The "I Can Help" / claim button is absent or disabled for the expired card.
 - The other member does **not** see the expired request in their feed (expired posts are hidden from everyone except the owner).
 - Tapping "Re-post" (owner) makes the request live again: the Expired pill disappears, the 28-day clock resets, and the card becomes visible to other members. The re-post writes a `request_reposted` row into `socket_relay_request_events`.
