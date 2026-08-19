@@ -38,7 +38,10 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  const includeAreas = params.get('areas') === '1';
+  // Areas are in unless explicitly turned off. Location is why ClickLog records a location at all
+  // (owner directive, 2026-08-19), so leaving it out of the shareable copy by default withheld the
+  // point of the report. `?areas=0` still produces a copy without the coordinates.
+  const includeAreas = params.get('areas') !== '0';
   // Shown in the browser by default, saved as a file with ?download=1. On a phone an attachment
   // lands in the files app, which is the wrong place when the next step is posting it: the image
   // has to be on screen so it can be long-pressed and saved to the photo library or shared

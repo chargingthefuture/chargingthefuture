@@ -47,6 +47,7 @@ Counted:
 |---|---|
 | Date | The UTC day. No time of day. |
 | Location | Latitude and longitude rounded to one decimal place — an area roughly 11 km across. |
+| Country | Worked out inside the app from that rounded area, against a table of national borders held in the repository. Never asked of the member, never sent anywhere. The borders are a coarse edition and the lookup uses the ~11 km area, so an area on a border can be attributed to the wrong side of it, and an area the coarse table does not cover is shown as not matched rather than dropped. Enough to tell one town reporting from several countries reporting; not enough for anything finer. |
 | Problems | Which items the member picked from a fixed list of known problems. |
 | Schemes | Which items the member picked from a fixed list of named schemes. |
 | Member count | How many **different** members are behind a set of incidents. |
@@ -110,17 +111,24 @@ than take it from a public copy.
 ## 7. What an investigation would still need, and what to build for it
 
 The report answers *what kind of thing is being reported, by how many people, over what days, in
-roughly what places*. A human-rights body assessing whether it has a mandate and what to do next
-would still ask for the following. None of it exists yet. Each item is a change to what members are
-asked when they log, so each is a product decision for the owner, not a reporting change.
+what countries and roughly what places*. A human-rights body assessing whether it has a mandate and
+what to do next would still ask for the following. Each remaining item is a change to what members
+are asked when they log, so each is a product decision for the owner, not a reporting change.
+
+**Country was on this list and is now delivered** (2026-08-19). It turned out not to need a new
+question at all: the coordinates were already stored, so the country is worked out from them inside
+the app, against a border table held in the repository. That also means it applies to every incident
+already logged rather than only to new ones. Its limits are stated in section 3 — coarse borders,
+looked up from the ~11 km cell, unmatched cells shown as unmatched.
 
 In order, with the blocking dependencies stated:
 
-1. **Country and region on each shared incident.** The single largest gap. Today an outside reader
-   has to look up coordinate cells by hand, and incidents with no location have no place at all. A
-   country field derived from the location at logging time — coarse, stored alongside the cell —
-   makes the report readable by anyone and makes cross-border patterns visible. Nothing else in this
-   list depends on it, so it can be done first and on its own.
+1. **Region or locality below country level.** Country separates one town reporting from several
+   countries reporting, which was the gap that mattered most; it does not distinguish two clusters
+   inside one large country, where a reader currently still has to read coordinate cells. A coarse
+   region name would fix that. Unlike country it cannot be derived confidently from an ~11 km cell
+   for every country, so it needs either a finer border table or a question in the form. Nothing
+   else in this list depends on it.
 2. **Who the member says was involved.** Whether the conduct is attributed to state actors, private
    parties, or is unknown, as a coarse choice with "unknown" as a real and common answer. This
    decides which body has a mandate at all, and no aggregate can be acted on without it. Blocked by
@@ -147,8 +155,7 @@ In order, with the blocking dependencies stated:
    consenting to being contacted about before being asked.
 7. **A written statement of the sample.** How many members the app has, how many use ClickLog, and
    how many share — so a reader can see what fraction of the community the report covers. Blocked
-   by nothing; it is a reporting change, not a collection change, and it is the cheapest of the
-   seven.
+   by nothing; it is a reporting change, not a collection change, and it is the cheapest of them.
 
 Two things that are deliberately **not** on this list. Demographic data about members is not
 collected and should not be added merely because an analysis would be richer for it. And the note a

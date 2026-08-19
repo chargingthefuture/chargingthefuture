@@ -91,8 +91,9 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 - ClickLog Trends dashboard (`/admin/click-log`): aggregate counts over incidents members opted to
   share. Headline figures — shared incidents, members reporting (distinct members, not incidents),
-  members who logged more than one, days with activity, number of areas, tagged incidents — then
-  per-day counts, the area breakdown, a harm-category rollup, "Top problems" / "Top schemes" tag
+  members who logged more than one, days with activity, number of countries, number of areas,
+  tagged incidents — then per-day counts, the country rollup, the area breakdown, a harm-category
+  rollup, "Top problems" / "Top schemes" tag
   breakdowns, problem-and-scheme pairs, and the method statement. No notes, precise coordinates,
   incident ids, or member identity are visible; member identity reaches the queries only inside
   `COUNT(DISTINCT …)`.
@@ -101,6 +102,17 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   counted the clusters and stopped, which said activity had a location without ever saying where.
   Incidents logged without a location are absent from this list by construction and counted in
   every other figure; the summary states how many.
+- Country rollup (added 2026-08-19): every country with its incident count, its exact distinct
+  member count, how many areas sit in it, and the span of dates. The country is not asked of
+  members — it is worked out inside the app from the ~11 km cell already stored, against the
+  Natural Earth border table vendored at `lib/geo/country-borders.json` (rebuilt by
+  `ctf/scripts/build-country-borders.mjs`), so nothing is sent to an outside service and every
+  incident already logged gets a country. The member count per country is a `COUNT(DISTINCT
+  user_id)` taken in SQL, never a sum of the per-area counts, which would report a member who
+  logged in two cells of one country as two people. Cells the coarse table cannot place are shown
+  as "Not matched to a country" rather than dropped, so the country totals still add up to the
+  shared total. Limits are stated in the method note on the screen and in the image: coarse
+  borders, looked up from the rounded cell, so an area on a border can land on the wrong side.
 - Harm categories (added 2026-08-19): the 53 problem tags rolled up into six categories defined in
   `lib/click-log/tag-categories.ts` — watched and followed, body and health, threats and
   intimidation, blocked from work/money/services, set up to be blamed, cut off from people. Counted
@@ -155,7 +167,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
-- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=1` includes the ~11 km area coordinates; omitted by default. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=0` leaves the ~11 km area coordinates out; they are included by default (owner directive, 2026-08-19: recording where incidents happen is why ClickLog asks for a location, so a shared copy that withheld it withheld the point of the report). The country rollup is present either way. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 
@@ -299,9 +311,10 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   rollup of the 53 problem tags into six harm categories, kind labels on scheme rows closing the
   taxonomy gap `tags.ts` records, and a problem-and-scheme pair list. New endpoint
   `GET /api/click-log/admin/trends/image` (`click-log.trends.image` 1.0.0) draws the whole report as
-  one tall PNG for posting; area coordinates are left out of it unless explicitly requested, because
-  members consented to sharing trend data with the project, not to an area and a date being
-  published. `click-log.trends.fetch` goes to 1.2.0 (additive — `buckets` and `tagTrends` are
+  one tall PNG for posting. Superseded the same day: area coordinates are **included** in that image
+  by default and `?areas=0` leaves them out (owner directive — recording where incidents happen is
+  why ClickLog asks for a location, so a shared copy that withheld it withheld the point of the
+  report), and a country rollup was added, derived from the coordinates already stored. `click-log.trends.fetch` goes to 1.2.0 (additive — `buckets` and `tagTrends` are
   unchanged). The method statement — how the data is collected, what is never counted, and what the
   counts cannot show — is built once in `lib/click-log/trend-report-view.ts` and rendered by both the
   screen and the image, so a copy of the image posted anywhere carries its own provenance; the long

@@ -39,6 +39,19 @@ const report: SharedIncidentReport = {
       reporters: 2,
       firstDay: '2026-08-18',
       lastDay: '2026-08-19',
+      countryCode: 'US',
+      countryName: 'United States',
+    },
+  ],
+  countries: [
+    {
+      code: 'US',
+      name: 'United States',
+      incidents: 6,
+      reporters: 2,
+      areas: 1,
+      firstDay: '2026-08-18',
+      lastDay: '2026-08-19',
     },
   ],
   tagTrends: [

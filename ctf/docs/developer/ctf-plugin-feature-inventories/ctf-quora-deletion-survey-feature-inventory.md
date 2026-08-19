@@ -131,7 +131,7 @@ makes a member's second response findable at all.
 | `stated_reason` | TEXT | `none_given` / `spam` / `harassment` / `misinformation` / `impersonation` / `adult_content` / `ban_evasion` / `other` / `do_not_recall` |
 | `appealed` | BOOLEAN | Defaults to FALSE |
 | `reinstated` | BOOLEAN | Defaults to FALSE |
-| `topics` | TEXT[] | What the account mostly wrote about; the column that separates "accounts get removed" from "accounts writing about this get removed" |
+| `topics` | TEXT[] | What the account mostly wrote about; the column that separates "accounts get removed" from "accounts writing about this get removed". Coded from the one shared list in `lib/shared/quora-research-subjects.ts`, which the live census uses too — the two datasets only answer the question together, and a comparison between differently-coded sets means nothing. |
 | `approx_post_count` | INTEGER NULL | Optional estimate |
 | `approx_active_months` | INTEGER NULL | Optional estimate |
 | `created_at` | TIMESTAMPTZ | `NOW()` |
@@ -351,6 +351,9 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: The subject list moved to `lib/shared/quora-research-subjects.ts`, shared with the
+  live census, which merged first. The two carried identical copies while this branch was open,
+  and copies drift apart without anything failing to warn anyone.
 - 2026-08-19: Reported closures are written to the member's account history on submission, for
   every respondent. They were previously written only when a member took the verification offer,
   which meant an already-verified member's closures were never recorded and a member with no Quora

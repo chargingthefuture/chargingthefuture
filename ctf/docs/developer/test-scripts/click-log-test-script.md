@@ -258,6 +258,23 @@ notice. Each still says what is withheld ("never your notes" / "never your note"
 identical across all five.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-A6 · Countries are named, and the image keeps the coordinates
+**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Steps:**
+1. On the Trends dashboard, read the "Countries" section above the areas.
+2. Compare a country's member count against the member counts of its areas below it.
+3. Read the "Areas" rows.
+4. Press "Show the report as one image" without touching the checkbox.
+5. Tick "Leave the area coordinates out of this copy" and press it again.
+**Expected:** Each country row names a real country with its incident count, member count, number
+of areas, and date span, and the headline figures include a "Countries" tile. A country whose areas
+share a member shows fewer members than the areas add up to — it is a count of people, not a sum.
+Each area row is prefixed with its country. The first image contains the area coordinates. The
+second leaves them out but still shows every country, and says so where the areas would be. Both
+images carry the note explaining that the country is worked out from the area rather than asked,
+and that an area on a border can land on the wrong side.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-A5 · Report opens as one image, without the areas by default
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**

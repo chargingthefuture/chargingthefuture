@@ -1,3 +1,9 @@
+import {
+  QUORA_RESEARCH_SUBJECT,
+  QUORA_RESEARCH_SUBJECT_LABEL,
+  type QuoraResearchSubject,
+} from 'lib/shared/quora-research-subjects';
+
 // Shared constants for the public Quora account-deletion survey.
 //
 // The survey collects self-reports from people whose Quora accounts were removed, so the blog
@@ -77,24 +83,12 @@ export const QUORA_SURVEY_REASON_LABEL: Record<QuoraSurveyReason, string> = {
 // Q8. What the account mostly wrote about. This is the column that separates "accounts get
 // removed" from "accounts writing about this get removed", so the list names the subject matter
 // plainly rather than lumping it under one catch-all.
-export const QUORA_SURVEY_TOPIC = [
-  'targeting_and_gang_stalking',
-  'surveillance_and_harassment_tactics',
-  'coping_and_support',
-  'legal_and_reporting',
-  'organizing_and_meetups',
-  'unrelated_subjects',
-] as const;
-export type QuoraSurveyTopic = (typeof QUORA_SURVEY_TOPIC)[number];
-
-export const QUORA_SURVEY_TOPIC_LABEL: Record<QuoraSurveyTopic, string> = {
-  targeting_and_gang_stalking: 'Targeting and gang stalking',
-  surveillance_and_harassment_tactics: 'Surveillance and harassment tactics',
-  coping_and_support: 'Coping, support, encouragement',
-  legal_and_reporting: 'Legal steps and reporting',
-  organizing_and_meetups: 'Organizing, meetups, community building',
-  unrelated_subjects: 'Subjects unrelated to targeting',
-};
+// The subject list lives in lib/shared/quora-research-subjects.ts, shared with the live census.
+// The two datasets only answer the question together, and a comparison between differently-coded
+// sets means nothing. Re-exported under the survey's own names so call sites here read locally.
+export const QUORA_SURVEY_TOPIC = QUORA_RESEARCH_SUBJECT;
+export type QuoraSurveyTopic = QuoraResearchSubject;
+export const QUORA_SURVEY_TOPIC_LABEL = QUORA_RESEARCH_SUBJECT_LABEL;
 
 // Length and count caps. They bound one accidental paste and one abusive flood; they are not a
 // judgment about how much anyone has to say.

@@ -125,6 +125,11 @@ export function ClickLogTrendResults({ view }: { view: TrendReportView }) {
     <>
       <ClickLogTrendSection title="Days with shared incidents" rows={view.days} />
       <ClickLogTrendSection
+        title="Countries"
+        hint="Worked out from the area already on each incident, against a border table held inside the app — members are never asked, and nothing is sent anywhere. This is what separates one town reporting from several countries reporting."
+        rows={view.countries}
+      />
+      <ClickLogTrendSection
         title="Areas (each about 11 km across)"
         hint="Where the shared incidents were logged, rounded to about 11 km. Incidents logged without a location are absent here and counted everywhere else."
         rows={view.areas}
