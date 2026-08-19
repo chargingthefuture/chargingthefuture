@@ -97,6 +97,11 @@ This plugin must:
    again. Nothing on the account itself says it is not a real member, so the exclusion is recorded in
    `unlock_excluded_accounts` by an admin. Marking changes only the counters — never the member's
    access, submission, or reward.
+4. See who left. An account with an account-scope row in `account_deletion_events` asked to be
+   forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
+   "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
+   count, their own tab, and a line on the row saying when they asked, and they are subtracted from the
+   member count. A demo / test mark wins over a deletion mark, so no account is subtracted twice.
 
 ## 3) API Surface and Route Map
 
@@ -142,7 +147,9 @@ Admin page:
 
 - `GET /admin/unlock` — also assembles the sign-up reading server-side via `getUnlockSignupOverview()`
   (`lib/unlock/signups.ts`): the account roster from the auth provider's backend API, joined to
-  `unlock_verification_submissions` and `unlock_excluded_accounts`. Command `unlock.admin.signups.read`.
+  `unlock_verification_submissions`, `unlock_excluded_accounts`, and the account-scope rows of
+  `account_deletion_events` (retained through deletion, so it is the only remaining record that an
+  account is a former member rather than someone who never got started). Command `unlock.admin.signups.read`.
   It never throws — when the provider secret is absent from the runtime or the call fails, the overview
   comes back `available: false` with the reason in plain words and the panel prints it, so the rest of
   the admin page still renders. The roster read is capped at 5,000 accounts per load and says so when it
@@ -242,9 +249,15 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 7. The sign-up roster is fetched from the auth provider on every load of `/admin/unlock` and is not
    cached. At the current scale that is one provider call per page load; if the roster grows enough for
    that to matter, cache it for a few minutes rather than dropping the reading.
-8. An account the auth provider no longer holds (the member deleted it) drops out of the sign-up counts
-   on the next load, so the totals are "accounts that exist now", not "accounts ever created". The
-   provider dashboard's all-time sign-up chart counts differently and can read higher.
+8. The totals are "accounts the auth provider holds now", not "accounts ever created", so the provider
+   dashboard's all-time sign-up chart counts differently and can read higher.
+9. **The app's own Delete Account flow (`DELETE /api/account/full-account`) deletes the member's data
+   but leaves their auth-provider identity in place** — only the operator route
+   (`POST /api/internal/account/delete`) and the provider's own hosted delete remove the identity. So a
+   member who left through the app is still an account in the roster. The sign-up panel identifies them
+   from `account_deletion_events` and subtracts them from the member count, which keeps the numbers
+   honest, but the identity itself is a leftover the panel cannot clear. Closing that is a separate
+   change to the deletion route.
 
 ## 9) Change Log
 
@@ -261,7 +274,11 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   recording accounts so every sign-up number subtracts them — nothing on the account itself says it is
   not a real member. The exclusion is counter-only: it never changes access, submissions, or rewards.
   The roster read never throws — a missing provider secret or a failed call comes back as an unavailable
-  overview carrying the reason, and the rest of the admin page still renders. New commands
+  overview carrying the reason, and the rest of the admin page still renders. Accounts that asked to be
+  forgotten are identified from the account-scope rows of `account_deletion_events` (retained through
+  deletion) and get their own count and tab: their submission was deleted with the rest of their data,
+  so counting them among "never gave a Quora URL" would read as an onboarding failure when it was
+  someone leaving. New commands
   `unlock.admin.signups.read` and `unlock.admin.signups.exclude` added to the command, access-policy,
   and audit contracts; the new table registered `del` in the account deletion registry and documented in
   the deletion contract.

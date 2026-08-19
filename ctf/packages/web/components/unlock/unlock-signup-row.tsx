@@ -7,6 +7,7 @@ import { getUnlockTokens } from './unlock-shared';
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
 function statusChip(account: UnlockSignupAccount): { label: string; color: string } {
+  if (account.deletedTheirData) return { label: 'Deleted their data', color: '#6B7280' };
   if (!account.hasSubmission) return { label: 'No Quora URL', color: '#F59E0B' };
   if (account.reviewStatus === 'approved') return { label: 'Approved', color: '#22C55E' };
   if (account.reviewStatus === 'rejected' || account.reviewStatus === 'spam') {
@@ -36,6 +37,16 @@ function timingLine(account: UnlockSignupAccount): string {
   const lastSignIn = shortDate(account.lastSignInAt);
   const joined = signedUp ? `Signed up ${signedUp}` : 'Sign-up date unknown';
   return `${joined} · ${lastSignIn ? `last signed in ${lastSignIn}` : 'has never signed in since'}`;
+}
+
+// Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
+// data, so the row would otherwise read as "never gave a Quora URL" with nothing to explain it.
+function departureLine(account: UnlockSignupAccount): string | null {
+  if (!account.deletedTheirData) return null;
+  const on = shortDate(account.deletedAt);
+  return on
+    ? `Asked to be forgotten on ${on} — their data, this submission included, was deleted. Not counted.`
+    : 'Asked to be forgotten — their data, this submission included, was deleted. Not counted.';
 }
 
 // One muted detail line under the row heading. Renders nothing when there is nothing to say, so the row
@@ -81,6 +92,7 @@ export function UnlockSignupRow({
       <DetailLine text={handle ? `@${handle}` : null} />
       <DetailLine text={account.email} breakAll />
       <DetailLine text={timingLine(account)} />
+      <DetailLine text={departureLine(account)} />
       <DetailLine text={account.excludedNote ? `Note: ${account.excludedNote}` : null} />
 
       <button

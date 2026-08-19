@@ -86,6 +86,22 @@ async function listProviderAccounts(): Promise<{ accounts: ProviderAccount[]; tr
   }
 }
 
+// The accounts that asked to be forgotten. Their plugin data — the Unlock submission included — is
+// gone, but `account_deletion_events` is retained as the accountability record, so it is the one place
+// left that says this account is a former member rather than someone who never got started. Without
+// this read they would land in the "signed up, never gave a Quora URL" list, which is the opposite of
+// what happened and would make the onboarding signal read worse than it is.
+async function listDeletedAccountDates(): Promise<Map<string, string>> {
+  const result = await queryDb<{ user_id: string; deleted_at: Date }>(
+    `SELECT user_id, MIN(requested_at) AS deleted_at
+       FROM account_deletion_events
+      WHERE scope = 'account'
+      GROUP BY user_id`,
+  );
+
+  return new Map(result.rows.map((row) => [row.user_id, row.deleted_at.toISOString()]));
+}
+
 // Which of those accounts have a Quora URL on file, and what happened to it.
 async function listSubmissionFacts(): Promise<Map<string, SubmissionFact>> {
   const result = await queryDb<{ user_id: string; review_status: UnlockReviewStatus; created_at: Date }>(
@@ -109,6 +125,7 @@ function emptyOverview(unavailableReason: string): UnlockSignupOverview {
     truncated: false,
     totalAccounts: 0,
     excludedCount: 0,
+    deletedCount: 0,
     memberCount: 0,
     submittedCount: 0,
     notSubmittedCount: 0,
@@ -130,10 +147,16 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
 
   let submissions: Map<string, SubmissionFact>;
   let excludedUserIds: Map<string, string | null>;
+  let deletedDates: Map<string, string>;
   try {
-    const [facts, excluded] = await Promise.all([listSubmissionFacts(), listUnlockExcludedAccounts()]);
+    const [facts, excluded, deleted] = await Promise.all([
+      listSubmissionFacts(),
+      listUnlockExcludedAccounts(),
+      listDeletedAccountDates(),
+    ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
+    deletedDates = deleted;
   } catch (error) {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
@@ -144,13 +167,18 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
       ...account,
       excluded: excludedUserIds.has(account.userId),
       excludedNote: excludedUserIds.get(account.userId) ?? null,
+      deletedTheirData: deletedDates.has(account.userId),
+      deletedAt: deletedDates.get(account.userId) ?? null,
       hasSubmission: submission !== null,
       reviewStatus: submission?.reviewStatus ?? null,
       submittedAt: submission?.submittedAt ?? null,
     };
   });
 
-  const counted = accounts.filter((account) => !account.excluded);
+  // A demo/test mark wins over a deletion mark, so an account is only ever taken out of the member
+  // count once.
+  const deletedCount = accounts.filter((account) => !account.excluded && account.deletedTheirData).length;
+  const counted = accounts.filter((account) => !account.excluded && !account.deletedTheirData);
   const submittedCount = counted.filter((account) => account.hasSubmission).length;
 
   return {
@@ -158,7 +186,8 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     unavailableReason: null,
     truncated: roster.truncated,
     totalAccounts: accounts.length,
-    excludedCount: accounts.length - counted.length,
+    excludedCount: accounts.filter((account) => account.excluded).length,
+    deletedCount,
     memberCount: counted.length,
     submittedCount,
     notSubmittedCount: counted.length - submittedCount,

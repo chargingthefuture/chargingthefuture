@@ -137,6 +137,7 @@ contracts:
       - auth_provider_account_directory
       - unlock_verification_submissions
       - unlock_excluded_accounts
+      - account_deletion_events
     purpose: onboarding_funnel_measurement
     retentionClass: derived_short_lived
     idempotency: true

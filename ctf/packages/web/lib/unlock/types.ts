@@ -130,6 +130,11 @@ export type UnlockSignupAccount = {
   // True when an admin has marked this as a demo/test account, so the sign-up counters leave it out.
   excluded: boolean;
   excludedNote: string | null;
+  // True when this account has an account-scope row in account_deletion_events: the person asked to be
+  // forgotten and their data is gone. Their submission row went with it, so without this they would be
+  // counted as "signed up, never gave a Quora URL" — the opposite of what happened.
+  deletedTheirData: boolean;
+  deletedAt: string | null;
   hasSubmission: boolean;
   reviewStatus: UnlockReviewStatus | null;
   submittedAt: string | null;
@@ -147,7 +152,9 @@ export type UnlockSignupOverview = {
   totalAccounts: number;
   // How many of those an admin has marked demo/test.
   excludedCount: number;
-  // totalAccounts - excludedCount: the people we treat as real sign-ups.
+  // How many of the rest deleted their data (an account-scope row in account_deletion_events).
+  deletedCount: number;
+  // totalAccounts - excludedCount - deletedCount: the people we treat as real sign-ups.
   memberCount: number;
   // Of memberCount, how many have a Quora URL on file, in any review state.
   submittedCount: number;

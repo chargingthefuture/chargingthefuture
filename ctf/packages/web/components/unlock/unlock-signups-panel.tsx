@@ -9,26 +9,42 @@ import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
 import { UnlockSignupRow } from './unlock-signup-row';
 
-type SignupTab = 'not-submitted' | 'all' | 'excluded';
+type SignupTab = 'not-submitted' | 'all' | 'excluded' | 'deleted';
 
 const TAB_LABEL: Record<SignupTab, string> = {
   'not-submitted': 'No Quora URL',
   all: 'All sign-ups',
   excluded: 'Demo / test',
+  deleted: 'Left',
 };
+
+// Whether this account counts as a member: not a demo/test account, and not someone who deleted their
+// data. A demo/test mark wins over a deletion mark so nobody is subtracted twice.
+function isCounted(account: UnlockSignupAccount): boolean {
+  return !account.excluded && !account.deletedTheirData;
+}
 
 // The four numbers the panel leads with. Derived from the loaded accounts (not from the server's copy of
 // the counts) so marking an account demo/test moves every number at once.
 function summarize(accounts: UnlockSignupAccount[]) {
-  const counted = accounts.filter((account) => !account.excluded);
+  const counted = accounts.filter(isCounted);
   const submitted = counted.filter((account) => account.hasSubmission).length;
   return {
     totalAccounts: accounts.length,
-    excludedCount: accounts.length - counted.length,
+    excludedCount: accounts.filter((account) => account.excluded).length,
+    deletedCount: accounts.filter((account) => !account.excluded && account.deletedTheirData).length,
     memberCount: counted.length,
     submittedCount: submitted,
     notSubmittedCount: counted.length - submitted,
   };
+}
+
+// Which accounts each tab shows. Kept out of the component so its own decision count stays small.
+function accountsForTab(accounts: UnlockSignupAccount[], tab: SignupTab): UnlockSignupAccount[] {
+  if (tab === 'not-submitted') return accounts.filter((account) => isCounted(account) && !account.hasSubmission);
+  if (tab === 'excluded') return accounts.filter((account) => account.excluded);
+  if (tab === 'deleted') return accounts.filter((account) => !account.excluded && account.deletedTheirData);
+  return accounts;
 }
 
 function matchesSearch(account: UnlockSignupAccount, query: string): boolean {
@@ -71,12 +87,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
   const counts = useMemo(() => summarize(accounts), [accounts]);
   const query = search.trim().toLowerCase();
   const visible = useMemo(() => {
-    const byTab =
-      tab === 'not-submitted'
-        ? accounts.filter((account) => !account.excluded && !account.hasSubmission)
-        : tab === 'excluded'
-          ? accounts.filter((account) => account.excluded)
-          : accounts;
+    const byTab = accountsForTab(accounts, tab);
     return query ? byTab.filter((account) => matchesSearch(account, query)) : byTab;
   }, [accounts, tab, query]);
 
@@ -120,8 +131,8 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
         <>
           <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10, lineHeight: 1.6 }}>
             {counts.totalAccounts} account{counts.totalAccounts === 1 ? '' : 's'} in total, {counts.excludedCount}{' '}
-            marked demo / test. Someone who signs up and never gives a Quora URL never reaches the review
-            queue, so they are listed here instead.
+            marked demo / test and {counts.deletedCount} who deleted their data. Someone who signs up and
+            never gives a Quora URL never reaches the review queue, so they are listed here instead.
             {overview.truncated ? ' Only the most recent accounts were read, so these numbers are a floor.' : ''}
           </div>
 
@@ -130,10 +141,11 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
             <SignupStat label="Gave a Quora URL" value={counts.submittedCount} accent="#22C55E" />
             <SignupStat label="No Quora URL" value={counts.notSubmittedCount} accent="#F59E0B" />
             <SignupStat label="Demo / test" value={counts.excludedCount} />
+            <SignupStat label="Left" value={counts.deletedCount} />
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            {(['not-submitted', 'all', 'excluded'] as const).map((tabKey) => (
+            {(['not-submitted', 'all', 'excluded', 'deleted'] as const).map((tabKey) => (
               <button
                 key={tabKey}
                 type="button"
