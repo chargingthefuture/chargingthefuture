@@ -26,16 +26,32 @@ function isCounted(account: UnlockSignupAccount): boolean {
 
 // The four numbers the panel leads with. Derived from the loaded accounts (not from the server's copy of
 // the counts) so marking an account demo/test moves every number at once.
+// Has this member never signed in again since the day they signed up? A hint, not proof — the provider
+// stamps the last sign-in on a fresh sign-in, not on every visit. The Unlock-screen view count beside it
+// is the firmer reading.
+function neverReturned(account: UnlockSignupAccount): boolean {
+  if (!account.lastSignInAt) return true;
+  return account.lastSignInAt.slice(0, 10) === account.createdAt.slice(0, 10);
+}
+
 function summarize(accounts: UnlockSignupAccount[]) {
   const counted = accounts.filter(isCounted);
   const submitted = counted.filter((account) => account.hasSubmission).length;
+  const notSubmitted = counted.filter((account) => !account.hasSubmission);
+  const neverBack = notSubmitted.filter(neverReturned).length;
+  const views = notSubmitted.map((account) => account.unlockScreenViews).sort((a, b) => a - b);
   return {
     totalAccounts: accounts.length,
     excludedCount: accounts.filter((account) => account.excluded).length,
     deletedCount: accounts.filter((account) => !account.excluded && account.deletedTheirData).length,
     memberCount: counted.length,
     submittedCount: submitted,
-    notSubmittedCount: counted.length - submitted,
+    notSubmittedCount: notSubmitted.length,
+    neverReturnedCount: neverBack,
+    returnedAnywayCount: notSubmitted.length - neverBack,
+    // Median rather than mean: one member who reloaded the screen twenty times would drag an average
+    // and make the whole group look like it kept trying.
+    medianScreenViews: views.length === 0 ? 0 : views[Math.floor(views.length / 2)],
   };
 }
 
@@ -143,6 +159,22 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
             <SignupStat label="Demo / test" value={counts.excludedCount} />
             <SignupStat label="Left" value={counts.deletedCount} />
           </div>
+
+          {/* What the "No Quora URL" number is actually made of. Someone who signed up and never came
+              back is a different problem from someone who returned to the Unlock screen and still could
+              not finish, and the fix for one does nothing for the other. */}
+          {counts.notSubmittedCount > 0 ? (
+            <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.7, marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+              Of the {counts.notSubmittedCount} with no Quora URL:{' '}
+              <strong style={{ color: t.TITLE }}>{counts.neverReturnedCount}</strong> have not signed in
+              again since the day they signed up, and{' '}
+              <strong style={{ color: t.TITLE }}>{counts.returnedAnywayCount}</strong> came back and still
+              did not submit. Typically they loaded the Unlock screen{' '}
+              <strong style={{ color: t.TITLE }}>{counts.medianScreenViews}</strong>{' '}
+              time{counts.medianScreenViews === 1 ? '' : 's'}. A sign-in date only moves on a fresh
+              sign-in, so the view count is the firmer of the two.
+            </div>
+          ) : null}
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             {(['not-submitted', 'all', 'excluded', 'deleted'] as const).map((tabKey) => (

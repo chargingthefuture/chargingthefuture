@@ -642,7 +642,13 @@ export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnaps
        COUNT(*) FILTER (WHERE review_status = 'approved')::text AS approved_count,
        COUNT(*) FILTER (WHERE review_status = 'rejected')::text AS rejected_count,
        COUNT(*) FILTER (WHERE review_status = 'spam')::text AS spam_count,
-       COUNT(*) FILTER (WHERE access_tier = 'locked_support_only')::text AS locked_support_only_count
+       -- Spam is excluded on purpose. A spam decision drops the tier to locked_support_only AND places
+       -- a platform-wide account restriction, and the restriction is what actually decides: the member
+       -- reaches nothing, Commons included. Counting them as "support-only access" reported the
+       -- opposite of their real access. Rejected members are counted, because they genuinely do keep
+       -- the support surface and can correct their URL.
+       COUNT(*) FILTER (WHERE access_tier = 'locked_support_only' AND review_status <> 'spam')::text
+         AS locked_support_only_count
      FROM unlock_verification_submissions`,
   );
 

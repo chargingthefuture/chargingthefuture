@@ -123,15 +123,19 @@ export function UnlockAdminShell({
     toggle: (userId) => void toggleHistory(ctx, userId, historyOpenUser, historyByUser),
   };
 
-  // Which slice of the loaded submissions the list shows. 'support-only' filters on access tier (not
-  // review status): a member lands there from more than one route (rejected, spam, or a lapsed pending
-  // window swept by supportOnlyAfterExpiry), and the tier is the one thing all of those share — which
-  // is also exactly what the Support-only counter above counts, so the number and the list agree.
+  // Which slice of the loaded submissions the list shows. 'support-only' filters on access tier rather
+  // than review status, because a member lands there from more than one route — rejected, or a lapsed
+  // pending window swept by supportOnlyAfterExpiry — and the tier is the one thing those share.
+  //
+  // Spam is the exception and is excluded. A spam decision drops the tier to locked_support_only AND
+  // places a platform-wide account restriction; the restriction is what decides, so the member reaches
+  // nothing at all. Listing them under "support-only access" said the opposite of their real access.
+  // The dashboard counter excludes them the same way, so the number and the list still agree.
   const visible =
     tab === 'pending'
       ? submissions.filter((s) => s.reviewStatus === 'pending')
       : tab === 'support-only'
-        ? submissions.filter((s) => s.accessTier === 'locked_support_only')
+        ? submissions.filter((s) => s.accessTier === 'locked_support_only' && s.reviewStatus !== 'spam')
         : submissions;
   const searchQuery = search.trim().toLowerCase();
   const filteredVisible = searchQuery
