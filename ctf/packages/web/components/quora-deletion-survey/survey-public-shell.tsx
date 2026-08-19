@@ -12,6 +12,7 @@ import { getSurveyTokens, type SurveyTokens } from './survey-theme';
 import { CheckboxRow, ChoiceGroup, Field, YesNo, hintStyle, inputStyle } from './survey-fields';
 import { SurveyAccountCard, emptyAccountDraft, type AccountDraft } from './survey-account-card';
 import { SurveyDone, SurveyIntro } from './survey-intro';
+import { CurrentProfileQuestion, VerificationOffer } from './survey-current-profile';
 import { buildSubmission, submitSurvey } from './survey-submit';
 import {
   choiceChipStyle,
@@ -143,12 +144,52 @@ function ConsentSection({
   );
 }
 
+// The screen after sending, and the decision about whether to offer verification on it. Kept out
+// of the shell so the shell reads as the form: the offer appears only when the person said they
+// still hold an account, gave its link, and has no Unlock submission of their own yet.
+function ConfirmationScreen({
+  accountCount,
+  needsUnlock,
+  hasCurrentProfile,
+  currentProfileUrl,
+  anyAccountRemoved,
+  accounts,
+  tokens,
+}: {
+  accountCount: number;
+  needsUnlock: boolean;
+  hasCurrentProfile: boolean | null;
+  currentProfileUrl: string;
+  anyAccountRemoved: boolean | null;
+  accounts: AccountDraft[];
+  tokens: SurveyTokens;
+}) {
+  const profileUrl = currentProfileUrl.trim();
+  const offerReady = needsUnlock && hasCurrentProfile === true && profileUrl.length > 0;
+  const removedHandles =
+    anyAccountRemoved === true
+      ? accounts.map((draft) => draft.handle.trim()).filter((handle) => handle.length > 0)
+      : [];
+
+  return (
+    <SurveyDone accountCount={accountCount} tokens={tokens}>
+      {offerReady ? (
+        <VerificationOffer
+          quoraProfileUrl={profileUrl}
+          removedHandles={removedHandles}
+          tokens={tokens}
+        />
+      ) : null}
+    </SurveyDone>
+  );
+}
+
 // The survey form itself, shown to a signed-in member. The session is a spam gate only: nothing
 // about the account reaches the stored row, and no contact detail is asked for at all.
 //
 // The consent questions come last and default to no, so nothing is published unless a person
 // actively said it could be.
-export function QuoraSurveyPublicShell() {
+export function QuoraSurveyPublicShell({ needsUnlock }: { needsUnlock: boolean }) {
   const { theme } = useTheme();
   const t = getSurveyTokens(theme);
 
@@ -159,6 +200,10 @@ export function QuoraSurveyPublicShell() {
   const [targetedIndividual, setTargetedIndividual] =
     useState<QuoraSurveyTargetedIndividual | null>(null);
   const [anyAccountRemoved, setAnyAccountRemoved] = useState<boolean | null>(null);
+  // Optional, and null until answered. The URL below never leaves this component with the
+  // survey submission; it is only used by the offer on the confirmation screen.
+  const [hasCurrentProfile, setHasCurrentProfile] = useState<boolean | null>(null);
+  const [currentProfileUrl, setCurrentProfileUrl] = useState('');
   const [accounts, setAccounts] = useState<AccountDraft[]>([emptyAccountDraft('0')]);
   const [evidenceNote, setEvidenceNote] = useState('');
   const [otherNotes, setOtherNotes] = useState('');
@@ -190,6 +235,7 @@ export function QuoraSurveyPublicShell() {
       buildSubmission({
         targetedIndividual,
         anyAccountRemoved,
+        hasCurrentProfile,
         accounts,
         evidenceNote,
         otherNotes,
@@ -207,7 +253,17 @@ export function QuoraSurveyPublicShell() {
   };
 
   if (done) {
-    return <SurveyDone accountCount={done.accountCount} tokens={t} />;
+    return (
+      <ConfirmationScreen
+        accountCount={done.accountCount}
+        needsUnlock={needsUnlock}
+        hasCurrentProfile={hasCurrentProfile}
+        currentProfileUrl={currentProfileUrl}
+        anyAccountRemoved={anyAccountRemoved}
+        accounts={accounts}
+        tokens={t}
+      />
+    );
   }
 
   const blocked = submitting || targetedIndividual === null || anyAccountRemoved === null;
@@ -244,6 +300,14 @@ export function QuoraSurveyPublicShell() {
             tokens={t}
           />
         ) : null}
+
+        <CurrentProfileQuestion
+          hasCurrentProfile={hasCurrentProfile}
+          onHasCurrentProfileChange={setHasCurrentProfile}
+          url={currentProfileUrl}
+          onUrlChange={setCurrentProfileUrl}
+          tokens={t}
+        />
 
         <Field
           id="evidence-note"

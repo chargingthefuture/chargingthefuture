@@ -7,6 +7,7 @@ import {
   QUORA_SURVEY_SUBMIT_RATE_LIMIT,
   QUORA_SURVEY_SUBMIT_RATE_WINDOW_MS,
 } from 'lib/quora-deletion-survey/constants';
+import { insertSurveyAudit } from 'lib/quora-deletion-survey/repository';
 
 export type SurveyApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -16,9 +17,22 @@ export type SurveyApiGate =
 // nav shows (rule 131). There is no member-facing read of this data and no public projection:
 // the whole point of the consent questions is that nothing is published until a person decides
 // it is, and an app-wide reader would make that decision for them.
-export async function requireSurveyAdminAccess(): Promise<SurveyApiGate> {
+//
+// The command name is passed in so a refused admin read is recorded here rather than in each
+// route: a denial is exactly the event worth having, and leaving it to the caller means the one
+// route that forgets is the one that mattered. A refusal has no user id to record — the session
+// either was not there or was not an admin — so the actor stays null and the reason carries the
+// deny code.
+export async function requireSurveyAdminAccess(command: string): Promise<SurveyApiGate> {
   const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
   if (!decision.allowed) {
+    await insertSurveyAudit({
+      actorUserId: null,
+      command,
+      policyStatus: 'deny',
+      reason: decision.reason,
+      metadata: { status: decision.status, code: decision.code },
+    });
     return {
       allowed: false,
       response: NextResponse.json(decision, { status: decision.status }),

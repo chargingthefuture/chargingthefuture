@@ -4,6 +4,7 @@
 // report a person as having lost nothing, which is worse than no row at all.
 
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { failureReason } from 'lib/errors/failure';
 import {
   type QuoraSurveyAction,
   type QuoraSurveyReason,
@@ -27,6 +28,8 @@ export type SurveyAccountInput = {
 export type CreateSurveyResponseInput = {
   targetedIndividual: QuoraSurveyTargetedIndividual;
   anyAccountRemoved: boolean;
+  // Null means the optional question was skipped, which is not the same answer as no.
+  hasCurrentProfile: boolean | null;
   evidenceNote: string | null;
   otherNotes: string | null;
   consentPublishHandles: boolean;
@@ -56,6 +59,7 @@ export type SurveyResponseRow = {
   id: string;
   targeted_individual: QuoraSurveyTargetedIndividual;
   any_account_removed: boolean;
+  has_current_profile: boolean | null;
   evidence_note: string | null;
   other_notes: string | null;
   consent_publish_handles: boolean;
@@ -77,13 +81,14 @@ export async function createSurveyResponse(
   return withDbTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO quora_deletion_survey_responses (
-         targeted_individual, any_account_removed, evidence_note, other_notes,
+         targeted_individual, any_account_removed, has_current_profile, evidence_note, other_notes,
          consent_publish_handles, consent_quote, consent_attribute_quote
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id`,
       [
         input.targetedIndividual,
         input.anyAccountRemoved,
+        input.hasCurrentProfile,
         input.evidenceNote,
         input.otherNotes,
         input.consentPublishHandles,
@@ -128,7 +133,7 @@ export async function createSurveyResponse(
 // only reader; there is no public projection of this data at all.
 export async function listSurveyResponses(limit: number): Promise<SurveyResponseWithAccounts[]> {
   const responses = await queryDb<SurveyResponseRow>(
-    `SELECT id, targeted_individual, any_account_removed, evidence_note, other_notes,
+    `SELECT id, targeted_individual, any_account_removed, has_current_profile, evidence_note, other_notes,
             consent_publish_handles, consent_quote, consent_attribute_quote, created_at
        FROM quora_deletion_survey_responses
       ORDER BY created_at DESC
@@ -191,4 +196,43 @@ export async function getSurveyTotals(): Promise<SurveyTotals> {
     reportedRemovals: Number(row?.reported_removals ?? '0'),
     responsesConsentingToPublishHandles: Number(row?.consenting ?? '0'),
   };
+}
+
+export type SurveyAuditInput = {
+  // Null on every survey submit event, always: a member's submission must not name them, or the
+  // audit trail re-identifies the response the table went to lengths to keep anonymous. The
+  // identified actions do name their actor — an admin reading or exporting the table, and a
+  // respondent starting Unlock verification, which acts on their own account rather than on the
+  // survey.
+  actorUserId: string | null;
+  command: string;
+  policyStatus: 'allow' | 'deny';
+  reason: string;
+  responseId?: string | null;
+  rowCount?: number | null;
+  metadata?: Record<string, unknown>;
+};
+
+// Write one audit row. Best-effort, like the Unlock audit writer this is shaped after: the routes
+// await it, so a throw would turn a saved response into a 503 for the member. The response is
+// already stored by then; losing the audit row is the lesser failure, and the cause is logged.
+export async function insertSurveyAudit(input: SurveyAuditInput): Promise<void> {
+  try {
+    await queryDb(
+      `INSERT INTO quora_deletion_survey_audit_log (
+         actor_user_id, command, policy_status, reason, response_id, row_count, metadata
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      [
+        input.actorUserId,
+        input.command,
+        input.policyStatus,
+        input.reason,
+        input.responseId ?? null,
+        input.rowCount ?? null,
+        JSON.stringify(input.metadata ?? {}),
+      ],
+    );
+  } catch (error) {
+    console.error('[quora-deletion-survey.audit] could not write audit row', failureReason(error));
+  }
 }

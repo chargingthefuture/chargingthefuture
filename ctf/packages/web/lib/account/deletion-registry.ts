@@ -720,6 +720,28 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'quora-deletion-survey',
+    name: 'Quora account removals survey',
+    dataSummary:
+      'Nothing. Your survey answer was never linked to your account, so account deletion has nothing of yours to find here.',
+    // The two response tables hold no user column at all — that is the design, not an oversight:
+    // a response is stored with no name, no email, no address, and no member id, so there is no
+    // way to select the rows belonging to a departing member and no way for them to withdraw one
+    // by deleting their account. This is stated in the form copy before anyone answers.
+    //
+    // The audit log is the one table here that names anyone, and only for the identified actions:
+    // an admin reading or exporting the responses, or a respondent choosing to start Unlock
+    // verification. Those are accountability records of what was done to the data, so they are
+    // retained like every other audit trail in this registry.
+    serviceScopeSupported: false,
+    tables: [
+      retain(
+        'quora_deletion_survey_audit_log',
+        'Record of admin reads and exports of the survey, and of verification started from it.',
+      ),
+    ],
+  },
+  {
     slug: 'mutual-time',
     name: 'Mutual Time',
     dataSummary: 'Your votes on meeting-time surveys, and any surveys you created as an organizer.',

@@ -514,7 +514,11 @@ export async function getOwnProfile(userId: string): Promise<DirectoryProfile | 
   return withDbTransaction(async (client) => loadProfileByUser(client, userId));
 }
 
-export type QuoraUrlChangeSource = 'directory_self' | 'directory_admin' | 'unlock_onboarding';
+export type QuoraUrlChangeSource =
+  | 'directory_self'
+  | 'directory_admin'
+  | 'unlock_onboarding'
+  | 'quora_deletion_survey';
 
 export type QuoraUrlHistoryEntry = {
   id: string;
@@ -581,6 +585,38 @@ export async function recordQuoraUrlChangeStandalone(input: {
       input.newUrl,
       normalizeQuoraProfileUrl(input.previousUrl),
       normalizeQuoraProfileUrl(input.newUrl),
+      input.changedByUserId,
+      input.source,
+    ],
+  );
+}
+
+// Record an account the member says was REMOVED from Quora, as part of their own account history.
+//
+// Separate from recordQuoraUrlChangeStandalone because that one derives the normalized column from
+// the URL, and a removed account has no URL to derive it from. Inventing a plausible
+// quora.com/profile/... link would put something in the history that looks live and clickable and
+// is not; the caller passes a marker instead (see removedQuoraAccountMarker), and the NOT NULL
+// normalized column takes the same string lowercased.
+//
+// `previous_url` is always null: this is not a change from one URL to another, it is the member
+// stating that an account of theirs no longer exists.
+export async function recordRemovedQuoraAccountStandalone(input: {
+  userId: string;
+  removedAccountMarker: string;
+  changedByUserId: string;
+  source: QuoraUrlChangeSource;
+}): Promise<void> {
+  await queryDb(
+    `
+      INSERT INTO directory_quora_url_history
+        (user_id, previous_url, new_url, previous_url_normalized, new_url_normalized, changed_by_user_id, source)
+      VALUES ($1, NULL, $2, NULL, $3, $4, $5)
+    `,
+    [
+      input.userId,
+      input.removedAccountMarker,
+      input.removedAccountMarker.trim().toLowerCase(),
       input.changedByUserId,
       input.source,
     ],

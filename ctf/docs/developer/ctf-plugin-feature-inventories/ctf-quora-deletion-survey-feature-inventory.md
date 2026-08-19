@@ -56,8 +56,17 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
 - Choose, in three separate yes/no boxes that all start off, whether their handles may be
   published, whether their words may be quoted, and whether their handle may be attached to that
   quote.
+- Optionally say whether they still have a Quora account that was not removed, and give its link.
+  Both are skippable and read as skippable: naming an account someone still holds is a larger ask
+  than naming ones already gone. The link is never stored with the answer — it stays in the browser
+  and is only used if they choose the verification offer below.
 - Send the answer and see it confirmed. There is no email, no confirmation message, and no way for
   anyone here to contact them afterward, because the form asks for no contact detail at all.
+- On the confirmation screen, if they gave a link to an account they still hold and have not
+  verified here before, choose to send that link for verification instead of being asked for the
+  same thing again on the Unlock screen. It creates a pending submission for review and approves
+  nobody. A separate box, off by default, offers to also record the handles they lost on their
+  account; the copy next to it says what that links and why leaving it off keeps the two apart.
 
 Nobody is asked to type a total. The number of removals is the number of account cards filled in,
 so every removal counted carries a handle and a date.
@@ -80,6 +89,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 | Route | Method | Access | What it does |
 |---|---|---|---|
 | `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows. Session (spam gate only, never stored), same-origin CSRF header, and a per-IP brake of 5 submissions per hour. |
+| `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link the member gave. Creates a pending submission only, and does nothing for a member who already has one. Optionally records the handles they lost on their Directory account history. Same session, CSRF, and per-IP brake as the submit route. |
 | `/api/quora-deletion-survey/admin/responses` | GET | Admin | The newest 500 responses with their account rows, plus the three totals. |
 | `/api/quora-deletion-survey/admin/export` | GET | Admin | The whole survey as CSV, one row per reported removal. |
 
@@ -92,6 +102,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 | `id` | UUID PK | `gen_random_uuid()` |
 | `targeted_individual` | TEXT | `yes` / `no`, no third option. Required by the form and by the submit route, so the column default is never a recorded answer. |
 | `any_account_removed` | BOOLEAN | Yes/no only. The count of removals is derived from the account rows, not from this. |
+| `has_current_profile` | BOOLEAN NULL | Optional. NULL means the question was skipped, which is not the same answer as no. The URL that goes with a yes is deliberately not stored here — see the two-sided design below. |
 | `evidence_note` | TEXT NULL | Free text, capped at 5000 characters |
 | `other_notes` | TEXT NULL | Free text, capped at 5000 characters |
 | `consent_publish_handles` | BOOLEAN | Defaults to FALSE |
@@ -124,6 +135,35 @@ Index: `idx_quora_deletion_survey_accounts_response` on `(response_id, position)
 
 A response and its account rows are written in one transaction, so a half-saved response can never
 report a person as having lost nothing.
+
+`quora_deletion_survey_audit_log` — one row per event worth accounting for.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | `gen_random_uuid()` |
+| `actor_user_id` | TEXT NULL | Always NULL for a survey submission, allowed or refused. Populated for the identified actions: an admin reading or exporting, and a respondent starting verification. |
+| `command` | TEXT | `quora_deletion_survey.response.submit` / `.admin.read` / `.admin.export` / `.verification.link` |
+| `policy_status` | TEXT | `allow` / `deny` |
+| `reason` | TEXT NULL | Why, in one token: `stored`, `listed`, `exported`, `submitted`, `not_signed_in`, `csrf_denied`, `rate_limited`, `invalid_payload`, `persistence_unavailable`, or the auth layer's own deny reason |
+| `response_id` | UUID NULL | Set on a stored submission so a response can be tied to the event that created it. Never set on an admin read, which would put a response id next to an admin's user id for every row read. |
+| `row_count` | INTEGER NULL | How many rows the event covered: accounts on a submit, responses on a read or export, handles linked on a verification |
+| `metadata` | JSONB | Small facts about the event. Never a copy of a response's contents, which would put the survey inside its own audit log. |
+| `created_at` | TIMESTAMPTZ | `NOW()` |
+
+Index: `idx_quora_deletion_survey_audit_created_at` on `(created_at DESC)`.
+
+No IP address is written to any of the three tables, including this one, even though the rate
+limiter sees one.
+
+Written outside these tables: when a respondent takes the verification offer and ticks the
+optional box, each handle they lost is added to `directory_quora_url_history` against their user
+id, through `lib/shared/directory-interface.ts`. A removed account has no URL, and none may be
+invented — a fabricated `quora.com/profile/...` link would sit in that history looking clickable
+and current, and the next reader would take it for a live account. Each one is stored as the
+marker string `removed-quora-account:<handle>`, which cannot be mistaken for a URL, with the
+history's NOT NULL normalized column taking the same string lowercased. The history's source
+column records `quora_deletion_survey`, and the Unlock admin screen labels that source "reported
+removed, from the account survey".
 
 ## Security, Privacy, and Compliance Controls
 
@@ -163,13 +203,49 @@ survey is for, and raising the bar to `approved_full` would silently exclude the
 Read path: `requiredRoles: ['admin']` on the admin page and again on each admin route. There is no
 public projection of survey data and no member-facing view.
 
+The two-sided design, which is the part most worth understanding before changing anything here:
+this feature writes to two places that must never be joinable. The survey response is written with
+no user id. The verification submission is written with a user id and no response id. They are two
+separate requests, sent at two different moments, and the second only happens if the person presses
+a button after the first has already been stored. That is why the live profile URL — which is the
+verification URL, and therefore the strongest identifier in the whole flow — is never written to
+the survey response, and why the yes/no answer to that question is stored without it.
+
+The one real cost, stated rather than buried: the optional box that records the lost handles on the
+member's account puts those handles on an identified row while the same handles sit on the
+anonymous response. Anyone holding both tables could match a response to a member by handle. This
+is why the box is off by default, why it is on the confirmation screen rather than in the form, and
+why its copy says exactly what it links. A person who wants the handles recorded on their profile
+can have that; a person who wants the gap kept simply leaves it alone, which is the default.
+
+Verification path: `lib/quora-deletion-survey/unlock-link.ts` goes through
+`lib/shared/unlock-interface.ts` and never imports `lib/unlock` directly (owner decision
+2026-08-03, enforced by `check-plugin-boundaries.mjs`). It creates a `pending` submission in the
+ordinary queue and approves nobody. It re-checks for an existing submission immediately before
+writing, so a member who verified in another tab is neither asked twice nor overwritten, and two
+conflicting URLs can never land on one account by this path. It is audited as an ordinary
+`unlock.verification.submit` with `metadata.source` naming the survey, so a reviewer can see the
+member never saw the Unlock form.
+
+Audit trail: every path through the submit route writes a row — stored, and each refusal
+(`not_signed_in`, `csrf_denied`, `rate_limited`, `unreadable_payload`, `invalid_payload`,
+`persistence_unavailable`) — with the actor left NULL, because naming the member would undo the
+anonymity of the response the event is about. Admin reads and exports are the mirror image: the
+admin's user id, the action, and the row count, and never the responses themselves. The export row
+is written before the file is handed over, since once a CSV leaves the app it is a copy of the
+whole table outside anything this code can see.
+
 Consent: all three consent columns default to FALSE at the database as well as in the form, so a
 row created by any future path that forgets to set them is still "do not publish". The admin
 reader shows the three decisions above the handles they govern.
 
-Account deletion and data export: not applicable. Respondents are not members and no row here
-carries a user id, so there is nothing for `lib/account/deletion-registry.ts` to delete or for the
-export engine to gather. These tables are correctly absent from both.
+Account deletion and data export: the two response tables hold no user column at all, so there is
+nothing in them for `lib/account/deletion-registry.ts` to select and nothing for the export engine
+to gather. A member who deletes their account cannot withdraw a survey answer, because nothing
+records that the answer was theirs. That is the design, not an oversight, and the form says so
+before anyone answers. The audit log is registered under the `quora-deletion-survey` group as
+`retain`, like every other accountability trail in that registry: it records what was done to the
+data, including by admins, and survives the departure of anyone named in it.
 
 Trust signals (rule 132): not applicable. Responses are not member participation, are not tied to
 an account, and describe something done to a person on another platform. Nothing here may become
@@ -209,7 +285,20 @@ this is not a plugin. The steps that matter:
 6. Open `/admin/quora-deletion-survey` as a non-admin. Access is denied with the status and reason
    shown.
 7. Download the CSV. One row per reported removal, the zero-removal response present with empty
-   account columns, and free text containing commas and quotes still inside its own cell.
+   account columns, and free text containing commas and quotes still inside its own cell. The
+   `has_current_profile` cell is empty for a response that skipped that question.
+8. Skip the current-account question entirely and send. The confirmation screen shows no
+   verification offer, and the stored row has NULL rather than FALSE in `has_current_profile`.
+9. As a member with no Unlock submission, answer yes to the current-account question, give a Quora
+   profile link, list two removed handles, and send. The confirmation screen offers verification
+   with the handle box off. Press send without ticking it: Unlock shows a pending submission whose
+   audit metadata names the survey, and the member's Directory URL history has no removed handles.
+10. Repeat with the box ticked. The same pending submission appears, and the Directory history now
+   shows both handles as `removed-quora-account:<handle>`, labeled "reported removed, from the
+   account survey" on the Unlock admin screen.
+11. As a member who already has an Unlock submission, answer the same way. No offer is shown at
+   all, and a request sent to the verification route directly leaves the existing submission
+   untouched.
 
 ## Gaps & Known Technical Debt
 
@@ -224,8 +313,22 @@ this is not a plugin. The steps that matter:
   not a tighter number here.
 - No admin delete. A response the owner judges to be junk currently stays in the table and in the
   export.
+- Survey respondents who sign up are a likely source of duplicate member accounts. Someone whose
+  Quora account was removed may well have made a new one here to answer, and Unlock already has a
+  `duplicate` decision, an `/account-closed` page, and a `locked_support_only` tier from
+  `getUnlockAccessTier` for exactly that case. Nothing in this feature detects it — the survey
+  cannot, since it stores no identity — so the load falls on the Unlock reviewer, who now sees
+  `metadata.source` naming the survey on submissions that came this way.
 
 ## Change Log
+
+- 2026-08-19: Added the optional question about an account the person still holds, and an offer on
+  the confirmation screen to use that link to start Unlock verification rather than being asked for
+  the same thing twice. The link is never stored with the survey answer. Added the audit log table,
+  covering every submit path including refusals with no actor, and admin reads and exports with the
+  admin's id and the row count. Recording the lost handles on the member's Directory account is a
+  separate, off-by-default choice with its own explanation, because it is the one thing here that
+  could tie an anonymous response to a member.
 
 - 2026-08-18: Built. Public form, submit route, admin reader, CSV export, and the two tables.
   The follow-up contact field is absent on the owner's instruction the same day.

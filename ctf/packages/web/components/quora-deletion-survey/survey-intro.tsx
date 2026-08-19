@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { ClipboardList } from 'lucide-react';
 import type { SurveyTokens } from './survey-theme';
 import { cardStyle, cardTitleStyle, columnStyle, pageStyle } from './survey-styles';
@@ -113,7 +114,18 @@ export function SurveyPublicLanding({
   );
 }
 
-export function SurveyDone({ accountCount, tokens }: { accountCount: number; tokens: SurveyTokens }) {
+// The confirmation screen. Takes children so the verification offer can sit under the
+// confirmation without this file knowing anything about Unlock — what a person is told about their
+// stored answer stays here, and what they are offered next is decided by the shell.
+export function SurveyDone({
+  accountCount,
+  tokens,
+  children,
+}: {
+  accountCount: number;
+  tokens: SurveyTokens;
+  children?: ReactNode;
+}) {
   return (
     <main style={pageStyle(tokens)}>
       <div style={columnStyle}>
@@ -129,6 +141,8 @@ export function SurveyDone({ accountCount, tokens }: { accountCount: number; tok
           You can close this page. There is no confirmation message, because nothing here is
           attached to your account and the form asks for no way to reach you.
         </p>
+
+        {children}
       </div>
     </main>
   );

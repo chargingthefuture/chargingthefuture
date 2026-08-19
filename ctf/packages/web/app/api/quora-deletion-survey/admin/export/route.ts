@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireSurveyAdminAccess } from '../../_lib';
-import { listSurveyResponses } from 'lib/quora-deletion-survey/repository';
+import { insertSurveyAudit, listSurveyResponses } from 'lib/quora-deletion-survey/repository';
 import { renderSurveyCsv } from 'lib/quora-deletion-survey/csv';
-import { QUORA_SURVEY_ERROR_CODE } from 'lib/quora-deletion-survey/constants';
+import {
+  QUORA_SURVEY_AUDIT_COMMAND,
+  QUORA_SURVEY_ERROR_CODE,
+} from 'lib/quora-deletion-survey/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -12,13 +15,25 @@ const EXPORT_LIMIT = 100_000;
 
 // Admin-only CSV of every response, one row per reported account removal.
 export async function GET() {
-  const gate = await requireSurveyAdminAccess();
+  const gate = await requireSurveyAdminAccess(QUORA_SURVEY_AUDIT_COMMAND.adminExport);
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
     const responses = await listSurveyResponses(EXPORT_LIMIT);
+    // Written before the file is handed over, not after: once the CSV leaves the app it is a
+    // copy of the whole table on someone's disk, outside anything this code can see. The row
+    // says who took it and how many responses were in it, which is what a later question about
+    // where a published number came from actually needs.
+    await insertSurveyAudit({
+      actorUserId: gate.auth.userId,
+      command: QUORA_SURVEY_AUDIT_COMMAND.adminExport,
+      policyStatus: 'allow',
+      reason: 'exported',
+      rowCount: responses.length,
+      metadata: { limit: EXPORT_LIMIT, format: 'csv' },
+    });
     return new NextResponse(renderSurveyCsv(responses), {
       status: 200,
       headers: {
@@ -29,6 +44,13 @@ export async function GET() {
     });
   } catch (error) {
     reportError(error, { area: 'quora-deletion-survey', op: 'admin-export' });
+    await insertSurveyAudit({
+      actorUserId: gate.auth.userId,
+      command: QUORA_SURVEY_AUDIT_COMMAND.adminExport,
+      policyStatus: 'deny',
+      reason: 'persistence_unavailable',
+      metadata: { failure: failureReason(error) },
+    });
     return NextResponse.json(
       {
         ok: false,

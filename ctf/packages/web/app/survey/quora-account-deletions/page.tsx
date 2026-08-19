@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { QuoraSurveyPublicShell } from '@/components/quora-deletion-survey/survey-public-shell';
 import { QuoraSurveyLandingShell } from '@/components/quora-deletion-survey/survey-landing-shell';
+import { surveyRespondentNeedsUnlock } from 'lib/quora-deletion-survey/unlock-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,5 +35,9 @@ export default async function QuoraDeletionSurveyPage() {
     return <QuoraSurveyLandingShell signInUrl={getHostedSignInUrl() ?? '/sign-in'} />;
   }
 
-  return <QuoraSurveyPublicShell />;
+  // Checked here rather than in the browser so the offer on the confirmation screen is never shown
+  // to someone who already has a verification link on file. They are not asked a second time.
+  const needsUnlock = await surveyRespondentNeedsUnlock(decision.userId);
+
+  return <QuoraSurveyPublicShell needsUnlock={needsUnlock} />;
 }

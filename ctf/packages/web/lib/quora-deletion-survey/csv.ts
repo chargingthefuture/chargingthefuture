@@ -25,6 +25,7 @@ export const SURVEY_CSV_HEADERS = [
   'consent_attribute_quote',
   'targeted_individual',
   'any_account_removed',
+  'has_current_profile',
   'account_number',
   'handle',
   'what_happened',
@@ -61,6 +62,9 @@ function responseCells(response: SurveyResponseWithAccounts): (string | boolean 
     response.consent_attribute_quote,
     response.targeted_individual,
     response.any_account_removed,
+    // Empty when the optional question was skipped. csvCell writes null as an empty cell, which
+    // reads correctly in a spreadsheet as "not answered" rather than as FALSE.
+    response.has_current_profile,
   ];
 }
 

@@ -39,6 +39,14 @@ function asBoolean(value: unknown): boolean {
   return value === true;
 }
 
+// For an optional yes/no, where "did not say" is a real third state and must survive into the
+// column rather than collapsing into a no.
+function asOptionalBoolean(value: unknown): boolean | null {
+  if (value === true) return true;
+  if (value === false) return false;
+  return null;
+}
+
 // A number the person typed, or null. Anything that is not a finite whole number in range is
 // treated as "not answered" rather than rejected: an optional size estimate is not worth
 // bouncing a whole response over.
@@ -154,6 +162,7 @@ export function parseSurveySubmission(raw: unknown): ParseResult {
     value: {
       targetedIndividual,
       anyAccountRemoved,
+      hasCurrentProfile: asOptionalBoolean(body.hasCurrentProfile),
       evidenceNote: asOptionalText(body.evidenceNote),
       otherNotes: asOptionalText(body.otherNotes),
       consentPublishHandles: asBoolean(body.consentPublishHandles),

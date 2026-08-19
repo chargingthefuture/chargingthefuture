@@ -15,6 +15,7 @@ import type { AccountDraft } from './survey-account-card';
 export type SurveyFormState = {
   targetedIndividual: QuoraSurveyTargetedIndividual;
   anyAccountRemoved: boolean;
+  hasCurrentProfile: boolean | null;
   accounts: AccountDraft[];
   evidenceNote: string;
   otherNotes: string;
@@ -59,6 +60,9 @@ export function buildSubmission(state: SurveyFormState): Record<string, unknown>
   return {
     targetedIndividual: state.targetedIndividual,
     anyAccountRemoved: state.anyAccountRemoved,
+    // The yes/no travels; the URL that goes with it does not. That link is a verification link
+    // and would identify the person who sent this otherwise-unattached answer.
+    hasCurrentProfile: state.hasCurrentProfile,
     accounts,
     evidenceNote: state.evidenceNote,
     otherNotes: state.otherNotes,
@@ -89,6 +93,46 @@ export async function submitSurvey(body: Record<string, unknown>): Promise<Submi
         area: 'quora-deletion-survey',
         op: 'submit',
         fallback: SEND_FAILED,
+        audience: 'member',
+      }),
+    };
+  }
+}
+
+export type VerificationOutcome =
+  | { ok: true; status: string }
+  | { ok: false; message: string };
+
+const VERIFY_FAILED =
+  'Verification could not be started. Your survey answer is already recorded — you can verify from the Unlock screen instead.';
+
+// A second, separate request, sent only if the person presses the button on the confirmation
+// screen. It carries their account link and, if they ticked the box, the handles they lost. It
+// carries nothing identifying the survey response, which was already stored without them.
+export async function submitVerification(body: {
+  quoraProfileUrl: string;
+  removedHandles: string[];
+}): Promise<VerificationOutcome> {
+  try {
+    const response = await fetch('/api/quora-deletion-survey/verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      return { ok: false, message: await responseFailureText(response, VERIFY_FAILED, 'member') };
+    }
+
+    const payload = (await response.json()) as { status?: string };
+    return { ok: true, status: payload.status ?? 'submitted' };
+  } catch (error) {
+    return {
+      ok: false,
+      message: failureText(error, {
+        area: 'quora-deletion-survey',
+        op: 'verification-link',
+        fallback: VERIFY_FAILED,
         audience: 'member',
       }),
     };

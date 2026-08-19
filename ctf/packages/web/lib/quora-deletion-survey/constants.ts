@@ -98,6 +98,15 @@ export const QUORA_SURVEY_TOPIC_LABEL: Record<QuoraSurveyTopic, string> = {
 
 // Length and count caps. They bound one accidental paste and one abusive flood; they are not a
 // judgment about how much anyone has to say.
+// Audit command names. Submit events describe the event; admin events name the admin. See the
+// comment on quora_deletion_survey_audit_log in schema.sql for why the two differ.
+export const QUORA_SURVEY_AUDIT_COMMAND = {
+  submit: 'quora_deletion_survey.response.submit',
+  adminRead: 'quora_deletion_survey.admin.read',
+  adminExport: 'quora_deletion_survey.admin.export',
+  verificationLink: 'quora_deletion_survey.verification.link',
+} as const;
+
 export const QUORA_SURVEY_HANDLE_MAX_LENGTH = 200;
 export const QUORA_SURVEY_TEXT_MAX_LENGTH = 5000;
 export const QUORA_SURVEY_MAX_ACCOUNTS = 25;
@@ -114,3 +123,25 @@ export const QUORA_SURVEY_SUBMIT_RATE_WINDOW_MS = 60 * 60 * 1000;
 // Where the form lives. A short top-level path, not one under /apps: this link is read outside
 // the app — on Quora, on Reddit, in a blog post — and has to be easy to type and to trust.
 export const QUORA_SURVEY_PUBLIC_PATH = '/survey/quora-account-deletions';
+
+// How a removed Quora account is written into the Directory URL history.
+//
+// The account is deleted, so there is no live URL and none may be invented: a fabricated
+// quora.com/profile/... link would sit in the history looking clickable and current, and the next
+// reader would take it for a real account. The marker cannot be mistaken for a URL, and the
+// history's NOT NULL normalized column takes the same string lowercased.
+export const QUORA_SURVEY_REMOVED_ACCOUNT_PREFIX = 'removed-quora-account:';
+
+// Named in the Unlock audit metadata and in the Directory history's source column, so a reviewer
+// opening either one can see that the submission came from the survey rather than from the Unlock
+// screen — which matters, because a submission created this way was never typed into a
+// verification form.
+export const QUORA_SURVEY_UNLOCK_SOURCE = 'quora_deletion_survey';
+
+// How many removed handles one verification request may carry onto an account. The survey itself
+// allows more accounts than this; the cap is on what gets written to the identified side.
+export const QUORA_SURVEY_MAX_LINKED_HANDLES = 25;
+
+export function removedQuoraAccountMarker(handle: string): string {
+  return `${QUORA_SURVEY_REMOVED_ACCOUNT_PREFIX}${handle.trim()}`;
+}
