@@ -3,6 +3,7 @@ import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { deleteAuthIdentity } from 'lib/account/identity-deletion';
 import { requireAccountAccess, ensureMutationCsrf } from '../_lib';
 import { reportError } from 'lib/observability/report';
 
@@ -33,6 +34,18 @@ export async function DELETE(request: Request) {
     // stamps completion separately.
     const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
 
+    // Finally remove the sign-in itself. Deleting the data does not delete the account — the auth
+    // provider holds that — so without this a member who asked to be forgotten stays an account they
+    // can sign back into, and every roster read from the provider keeps counting them. Runs last and
+    // best-effort: the data deletion has already committed, so a provider outage reports itself
+    // (`identityRemoved: false` + `identityError`) instead of failing a deletion that did happen. The
+    // provider's `user.deleted` webhook fires on success and skips, because the deletion event row
+    // written above already exists.
+    const identity = await deleteAuthIdentity(userId);
+    if (identity.error) {
+      reportError(new Error(identity.error), { area: 'account', op: 'full_account_identity_delete' });
+    }
+
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',
@@ -41,6 +54,7 @@ export async function DELETE(request: Request) {
       reason: 'account_deletion_requested',
       target: {
         scope: 'account',
+        identityRemoved: String(identity.deleted),
       },
       result: 'success',
       errorCategory: null,
@@ -54,6 +68,8 @@ export async function DELETE(request: Request) {
         requestedAtIso: deletion.requestedAtIso,
         completedAtIso: deletion.completedAtIso,
         tablesAffected: deletion.tables.length,
+        identityRemoved: identity.deleted,
+        identityError: identity.error,
       },
       { status: 200 },
     );

@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClerkClient } from '@clerk/backend';
 import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { deleteAuthIdentity } from 'lib/account/identity-deletion';
 import { runWithForcedPool } from 'lib/db/postgres';
-import { getClerkSecretKey } from 'lib/auth/clerk-env';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -87,7 +86,8 @@ async function parseDeleteRequest(request: Request): Promise<{ error: NextRespon
 
 // Optionally delete the Clerk identity after the DB deletion has already succeeded. Runs only when
 // requested; a Clerk failure is surfaced (clerkError) without failing the request so the operator can
-// retry just the Clerk side (e.g. the user was already removed there).
+// retry just the Clerk side (e.g. the user was already removed there). The removal itself is the
+// shared `deleteAuthIdentity` the self-service delete route also uses, so the two cannot drift.
 async function deleteClerkAccountIfRequested(
   userId: string,
   deleteClerk: boolean,
@@ -95,18 +95,8 @@ async function deleteClerkAccountIfRequested(
   if (!deleteClerk) {
     return { clerkDeleted: false, clerkError: null };
   }
-  const secretKey = getClerkSecretKey();
-  if (!secretKey) {
-    return { clerkDeleted: false, clerkError: 'clerk_secret_not_configured' };
-  }
-  try {
-    await createClerkClient({ secretKey }).users.deleteUser(userId);
-    return { clerkDeleted: true, clerkError: null };
-  } catch (error) {
-    // The DB deletion already succeeded; surface the Clerk failure without failing the request
-    // so the operator can retry just the Clerk side (e.g. the user was already removed there).
-    return { clerkDeleted: false, clerkError: error instanceof Error ? error.message : 'clerk_delete_failed' };
-  }
+  const outcome = await deleteAuthIdentity(userId);
+  return { clerkDeleted: outcome.deleted, clerkError: outcome.error };
 }
 
 export async function POST(request: Request) {

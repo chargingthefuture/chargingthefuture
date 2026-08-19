@@ -701,8 +701,9 @@ function ConfirmDelete({
         <Text style={s.doneTitle}>Deletion queued</Text>
         <Text style={s.doneSub}>
           Your request has been received. Your personal data is being removed across all services,
-          and your ServiceCredits balance will be settled through the standard process. Some audit
-          records are retained for platform integrity.
+          and your sign-in is removed with it — you will not be able to sign back in. Your
+          ServiceCredits balance will be settled through the standard process. Some audit records are
+          retained for platform integrity.
         </Text>
       </View>
     );
