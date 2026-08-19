@@ -82,6 +82,22 @@ This plugin must:
 2. Audit service-credit governance event correlation for reward grants.
 3. Provide API contracts suitable for Retool-based admin queue UX.
 
+### 2.4 Sign-up Reading (who joined, and who never verified)
+
+1. See how many people have signed up, without opening the auth provider's dashboard. The Unlock
+   admin page reads the full account roster from the auth provider's backend API on load, because a
+   sign-up is an account and not a row of ours.
+2. See the members who signed up and never submitted a Quora URL — a count and a list with each
+   person's name, handle, email, sign-up date, and whether they have signed in since. Unlock's review
+   queue can never show these people: with no submission there is no queue row, so before this panel
+   they were invisible. A large number here is the signal to look at — either the Quora-URL step is
+   turning spam away as intended, or people are arriving from somewhere other than Quora and cannot
+   finish a step that assumes they came from there.
+3. Mark an account as demo / test so every sign-up number leaves it out, and unmark it to count it
+   again. Nothing on the account itself says it is not a real member, so the exclusion is recorded in
+   `unlock_excluded_accounts` by an admin. Marking changes only the counters — never the member's
+   access, submission, or reward.
+
 ## 3) API Surface and Route Map
 
 ### 3.1 Plugin Command Surface (Authoritative)
@@ -96,6 +112,8 @@ This plugin must:
 8. `unlock.admin.reward.grant`
 9. `unlock.admin.experiment.read`
 10. `unlock.admin.spam_denylist.remove`
+11. `unlock.admin.signups.read`
+12. `unlock.admin.signups.exclude`
 
 ### 3.2 HTTP Projection Routes
 
@@ -113,6 +131,7 @@ Admin routes:
 - `POST /api/unlock/admin/reconcile-rewards` — admin-session-gated (`requireUnlockAdminAccess`, no `CRON_SECRET`). Runs the same idempotent reward drain as the cron and returns `{ scanned, granted, alreadyGranted, withheld, failed }`. Lets an admin grant any approved-but-uncredited reward on demand from the Unlock admin screen (the "Retry pending rewards" button), independent of the GitHub cron. Audited as `unlock.admin.rewards.reconcile`.
 - `POST /api/unlock/admin/submissions/:submissionId/revoke` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Duplicate-identity determination "loser" path: claws a granted reward back (best-effort `burnCredits`, key `unlock-revoke-submission-<id>`) and sets the submission to `rejected` + `locked_support_only` with `reward_revoked_at`, so reconcile never re-grants it. Body `{ reviewNote? }`. Returns `{ ok, submission, creditsReclaimed, reclaimAmount }`; idempotent (a second call on an already-revoked submission is a no-op). Audited as `unlock.admin.submission.revoke` (+ `service-credits.governance.burn.unlock.revoke` when credits were reclaimed).
 - `POST /api/unlock/admin/submissions/:submissionId/grant-reward` — admin-session-gated + CSRF. Duplicate-identity determination "winner" path: clears the hold and grants the reward to the chosen account through the shared guard. Returns 409 `unlock_reward_still_held` (with `holderUserId`) if another account still holds the identity's reward (revoke that one first); 409 if the submission is not approved; otherwise `{ ok, submission }`. Idempotent if the reward already landed. Audited as `unlock.admin.reward.grant` (+ `service-credits.governance.mint.grant.unlock.determination` on a fresh grant).
+- `POST /api/unlock/admin/excluded-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Marks one account as demo / test so the sign-up counters leave it out, or puts it back. Body `{ userId, excluded, note? }` (`note` is capped at 200 characters); returns `{ ok: true, userId, excluded }`, 400 on a missing `userId` or a non-boolean `excluded`. Idempotent in both directions — re-marking refreshes the note, unmarking an account that was never marked is a no-op. Writes `unlock_excluded_accounts` only: it never touches the member's access tier, submission, or reward. Audited as `unlock.admin.signups.exclude`. The list itself is read server-side by the admin page (`getUnlockSignupOverview`) and shown in the admin shell's sign-up panel.
 - `POST /api/unlock/admin/spam-denylist/remove` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Removes one normalized Quora URL from `unlock_spam_quora_urls`. Body `{ quoraProfileUrlNormalized }`; returns `{ ok: true }`, 400 if missing. Only stops future submissions of that URL from being auto-blocked — it does not lift the restriction on a member already blocked for it (re-review their submission to approved/rejected for that). The denylist itself is read server-side by the admin page (`listSpamQuoraUrls`) and shown in the admin shell's denylist panel. Audited as `unlock.admin.spam_denylist.remove`.
 
 Internal (cron) routes:
@@ -121,7 +140,13 @@ Internal (cron) routes:
 
 Admin page:
 
-- `GET /admin/unlock`
+- `GET /admin/unlock` — also assembles the sign-up reading server-side via `getUnlockSignupOverview()`
+  (`lib/unlock/signups.ts`): the account roster from the auth provider's backend API, joined to
+  `unlock_verification_submissions` and `unlock_excluded_accounts`. Command `unlock.admin.signups.read`.
+  It never throws — when the provider secret is absent from the runtime or the call fails, the overview
+  comes back `available: false` with the reason in plain words and the panel prints it, so the rest of
+  the admin page still renders. The roster read is capped at 5,000 accounts per load and says so when it
+  truncates.
 
 ## 4) Data Model and Storage Contracts
 
@@ -137,6 +162,13 @@ Admin page:
    so it is retained through account/data deletion (registered `retain` in the account deletion
    registry). Written when a submission is marked spam; a row is removed when the same URL is later
    approved or rejected (the spam mark is reversible).
+
+5. `unlock_excluded_accounts` — the demo / test accounts the sign-up counters leave out. Keyed on
+   `user_id` (primary key); also stores `note` (free text, why it is excluded), `excluded_by_user_id`
+   (the admin who marked it), `created_at`, `updated_at`. Read only by the Unlock admin's sign-up panel;
+   it grants and revokes nothing. Registered `del` in the account deletion registry — if an excluded
+   account deletes their data, the marker goes with it (the account it names no longer exists, so the
+   row would count for nothing).
 
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
@@ -170,6 +202,15 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 9. **Duplicate-identity guard (one Quora profile, one reward).** A normalized Quora URL earns the verification reward on a single account. The shared reward grant (`grantUnlockRewardForSubmission`, used by the approval handler, the hourly reconcile, and the admin determination) checks `getUnlockRewardHolderForUrl` before minting: if another non-revoked account already holds the identity's reward, the reward is **held** (`reward_withheld_at`) for an admin determination rather than auto-minting a second reward for the same person. The admin then awards the chosen account (`grant-reward`) and/or revokes the others (`revoke`, which burns the credits back and locks the account). This blocks both honest cross-account reuse and a perp who pastes a victim's Quora URL onto an impersonation account. The reward verbs are admin-gated + CSRF-guarded and fully audited.
 10. **A `spam` decision is a whole-app block, not just a tier drop (2026-07-30).** `rejected` and `spam` both drop the Unlock tier to `locked_support_only`, which by itself still lets a member into the Commons/Hub support surface and every `any_authenticated` route. To make `spam` mean "removed from the app", the review handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) additionally places a platform-wide (`all`-scope) `account_restrictions` record with reason `unlock:spam`. The central auth gate (`evaluatePluginAccess`) denies every `support_only` and `approved_full` route for an `all`-scope restriction (reason `account_restricted`), so a spammed member is shut out of the Commons and all plugins — only their own status and account/data-deletion (`any_authenticated`) routes stay reachable, preserving the right to be forgotten. A subsequent `approved` or `rejected` decision lifts the restriction **only** when the stored reason is the `unlock:spam` marker, so it never clears an unrelated admin restriction; this makes a mistaken spam mark fully reversible. The restriction upsert and its audit row are written by `restrictAccount` / `unrestrictAccount` (tables `account_restrictions`, `account_restrictions_audit`).
 
+11. **The sign-up panel reads member identity from the auth provider, admin-only (2026-08-19).** The
+    roster read returns each account's name, handle, email address, sign-up time, and last sign-in time.
+    It is reachable only from `/admin/unlock`, which is gated by `evaluatePluginAccess({ requiredRoles:
+    ['admin'] })`, and the email is there for a working reason: a member who never submitted a Quora URL
+    has no Directory profile and no submission row, so the account is the only place their identity
+    exists. Nothing from this panel is rendered on any member-facing surface, and it is never used as
+    trust evidence. The exclusion write is CSRF-guarded and audited as `unlock.admin.signups.exclude`
+    with the target account id; the roster read itself performs no write.
+
 ## 6) Web and Android Delivery Strategy
 
 1. Backend-first delivery with web admin moderation shell.
@@ -183,6 +224,8 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    previously shipped 2026-06-07): added `ctf/packages/mobile/src/features/unlock/AdminUnlock.tsx` (new `unlock-admin` App.tsx key) and `admin-api.ts`. The screen lists the pending verification queue and adds per-submission Approve / Reject actions, mirroring the web admin's review action and the `MobileUnlockAdmin.tsx` mockup. Binds only existing endpoints — `GET /api/unlock/admin/submissions?reviewStatus=pending` and `POST /api/unlock/admin/submissions/:submissionId/review` (with `x-ctf-csrf: '1'`). Admin-gated server-side (`requireUnlockAdminAccess`); a 401/403 shows an "admins only" notice. Each decision is confirm-gated via `Alert.alert`. Reject sends `reviewStatus: 'rejected'` with no free-text reason (the route's `reviewNote` is optional and `Alert.prompt` is iOS-only); the `spam` decision the route also accepts is not surfaced, matching the web admin and the mockup's two-button Grant/Deny.
 7. Android A/B experiment readout (admin) — **removed 2026-07-20 (rule 105, PR #1742)** along with the
    rest of the Android Unlock admin surface (web-only now). Historical detail (#1602): the mobile Unlock admin (`AdminUnlock.tsx` + `admin-api.ts`) showed the same "Early Commons access — A/B experiment" panel the web shell renders — per-bucket treatment vs control with completion %, "N of M submitted", and the same Unleash-rollout empty state. The web reads the split server-side in the admin page component, so a new read-only admin-gated route `GET /api/unlock/admin/experiment-split` was added to expose it over HTTP; the mobile client (`fetchExperimentSplit`) fetches it alongside the queue (best-effort — a failure never blocks the queue). Read-only; no new mutation.
+8. Sign-up panel (2026-08-19) is **web-only**, like the rest of the Unlock admin surface — Android carries
+   only the member access-wall/status screen (rule 105). No React Native screen was added.
 
 ## 7) Seed Coverage Status
 
@@ -196,9 +239,32 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 4. Reminder scheduler and cadence delivery worker are pending implementation.
 5. Duplicate-identity guard: the holder check + mint are not wrapped in a per-URL advisory lock, so two brand-new accounts with the same URL approved in the same instant could in theory both be granted before either is recorded as the holder. With serialized reconcile and the per-submission idempotency this is negligible in practice; the admin revoke path cleans up any stray. A per-URL `pg_advisory_xact_lock` around the grant would close it fully.
 6. Duplicate-identity guard is web + backend only. The React Native Unlock **admin** screen (`AdminUnlock.tsx`) was **removed 2026-07-20 (rule 105, PR #1742)** — all Unlock admin (queue review, grant/revoke determination, badges) is now web-only; the earlier "Android parity follow-up" for the per-row withheld/revoked badges and grant/revoke actions no longer applies.
+7. The sign-up roster is fetched from the auth provider on every load of `/admin/unlock` and is not
+   cached. At the current scale that is one provider call per page load; if the roster grows enough for
+   that to matter, cache it for a few minutes rather than dropping the reading.
+8. An account the auth provider no longer holds (the member deleted it) drops out of the sign-up counts
+   on the next load, so the totals are "accounts that exist now", not "accounts ever created". The
+   provider dashboard's all-time sign-up chart counts differently and can read higher.
 
 ## 9) Change Log
 
+- 2026-08-19: **Sign-up reading added to the Unlock admin (owner request).** Two numbers were missing
+  from `/admin/unlock`: how many people have signed up, and how many of them never submitted a Quora
+  URL. The first lived only in the auth provider's dashboard, because a sign-up creates an account and
+  not a row of ours; the second was invisible to every surface, because Unlock's queue is built from
+  submissions and someone who never submitted has no row in it. New `lib/unlock/signups.ts` reads the
+  account roster from the auth provider's backend API (paged, capped at 5,000 per load) and joins it to
+  `unlock_verification_submissions`, and the admin page renders it in a new sign-up panel
+  (`unlock-signups-panel.tsx` + `unlock-signup-row.tsx`) with tabs for "No Quora URL", all sign-ups, and
+  demo / test. New table `unlock_excluded_accounts` plus `POST /api/unlock/admin/excluded-accounts`
+  (admin + CSRF + audited as `unlock.admin.signups.exclude`) let an admin mark the owner's demo and
+  recording accounts so every sign-up number subtracts them — nothing on the account itself says it is
+  not a real member. The exclusion is counter-only: it never changes access, submissions, or rewards.
+  The roster read never throws — a missing provider secret or a failed call comes back as an unavailable
+  overview carrying the reason, and the rest of the admin page still renders. New commands
+  `unlock.admin.signups.read` and `unlock.admin.signups.exclude` added to the command, access-policy,
+  and audit contracts; the new table registered `del` in the account deletion registry and documented in
+  the deletion contract.
 - 2026-08-09: **"Survivor Hub" retired from the Unlock copy (owner decision).** The web submission
   view said "To unlock full access to Survivor Hub", and the mobile screen said "Survivor Hub uses
   Quora profile verification". Both now say **Skills Economy** — the product's actual name in the

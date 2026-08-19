@@ -51,6 +51,7 @@ Unlock uses canonical identity for authentication, submission ownership, and mod
 - `unlock_verification_submissions`
 - `unlock_audit_log`
 - `unlock_spam_quora_urls`
+- `unlock_excluded_accounts`
 
 Retention summary:
 
@@ -63,6 +64,11 @@ Retention summary:
    the flagged member deletes their data. As shipped, `unlock_verification_submissions` is hard-deleted
    on deletion (see the account deletion registry, which is the source of truth over the intent
    described in sections 5–6 below).
+5. `unlock_excluded_accounts` holds one row per account an admin marked as demo/test so the Unlock
+   admin's sign-up counters leave it out. It is keyed on `user_id` and is hard-deleted with the member's
+   other data (registered `del` in the account deletion registry): the account it names no longer
+   exists, so the row would count for nothing and there is no abuse-prevention reason to keep it. The
+   row grants and revokes nothing — it changes only what the admin sign-up numbers count.
 
 ## 5) Service-Scoped Deletion Contract
 

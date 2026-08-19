@@ -574,6 +574,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         'unlock_spam_quora_urls',
         'Spam Quora-URL denylist; keyed on the URL (holds no member id), retained for abuse prevention so a URL an admin flagged as spam is not lost when the flagged member deletes their data.',
       ),
+      // Counter-only marker: it says "leave this account out of the admin sign-up numbers" and grants
+      // nothing. Once the account is gone the row counts for nothing, so it goes with the rest.
+      del('unlock_excluded_accounts', 'user_id', 'The admin marker that left your account out of the sign-up counts.'),
       // unlock_runtime_config is global.
     ],
   },
