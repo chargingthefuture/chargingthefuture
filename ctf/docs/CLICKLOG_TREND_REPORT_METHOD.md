@@ -89,8 +89,9 @@ change to the display cannot widen what the report can see.
 
 ## 6. Why the area cells are usually left out of a shared copy
 
-The report can be saved as a single image for posting. That image leaves the area coordinates out
-unless they are explicitly asked for, and the reason is not caution for its own sake: at low counts,
+The report can be opened and saved as a single image for posting. That image leaves the area
+coordinates out unless they are explicitly asked for, and the reason is not caution for its own
+sake: at low counts,
 an area roughly 11 km across combined with a specific date can point at one person for anyone who
 already knows them. Members consented to their trend data reaching the project. Publishing an area
 and a date is a wider disclosure than that, so it is a decision made deliberately each time rather

@@ -243,18 +243,20 @@ carrying two problems from the same category adds one to that category, not two.
 carry a line saying what kind of scheme it is. The method statement appears under the numbers.
 **Result:** web ☐ — notes:
 
-### CL-A5 · Report saves as one image, without the areas by default
-**Role:** admin · **Surfaces:** web
+### CL-A5 · Report opens as one image, without the areas by default
+**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**
-1. On the Trends dashboard, press "Save the report as one image" with the area checkbox left alone.
-2. Open the downloaded file.
-3. Tick "Include the area coordinates" and download again.
-**Expected:** Both downloads are PNG files named for today's date. The first contains every section
-of the report and the method statement, ends with the site line, and nothing is cut off at the
-bottom — and where the areas would be it says how many areas were recorded and why the coordinates
-were left out. The second is the same image with the area coordinates present. The numbers in the
+1. On the Trends dashboard, press "Show the report as one image" with the area checkbox left alone.
+2. On a phone, press and hold the picture that opens and save it to the photo library.
+3. Go back, press "Save it as a file instead", and open the downloaded file.
+4. Tick "Include the area coordinates" and repeat step 1.
+**Expected:** Step 1 opens one tall picture in a new tab rather than downloading anything, and step 2
+saves it to photos. Step 3 downloads a PNG named for today's date. Every version contains every
+section of the report and the method statement, ends with the site line, and nothing is cut off at
+the bottom. Where the areas would be, the default version says how many areas were recorded and why
+the coordinates were left out; the version from step 4 shows the coordinates. The numbers in the
 image match the numbers on the screen.
-**Result:** web ☐ — notes:
+**Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)

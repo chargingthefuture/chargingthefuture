@@ -110,6 +110,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
   report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
   that takes an image without stitching phone screenshots together and losing rows at the seams.
+  The trends screen offers it two ways: "Show the report as one image" opens it in the browser, which
+  is the phone path (hold the picture to save it to photos or send it into another app), and "Save it
+  as a file instead" (`?download=1`) downloads it, which is the computer path. A file download on a
+  phone lands in the files app, one step away from anywhere the image is actually going.
   Built from the same aggregate as the screen, so there is no second data path. Area coordinates are
   left out unless `?areas=1` is passed and the download control's checkbox is ticked: at small
   counts an ~11 km cell plus a date can point at one person, and members opted into sharing trend
@@ -143,7 +147,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
-- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=1` includes the ~11 km area coordinates; omitted by default. Responds with `Content-Disposition: attachment` and a dated filename, and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=1` includes the ~11 km area coordinates; omitted by default. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 

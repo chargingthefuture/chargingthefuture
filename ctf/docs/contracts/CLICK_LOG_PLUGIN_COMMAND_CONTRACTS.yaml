@@ -274,6 +274,12 @@ commands:
             Pass '1' to include the ~11 km area coordinates in the image. Omitted by default: an
             area cell plus a date can point at one person at small counts, and members opted into
             sharing trend data with the project rather than into being placed on a public map.
+        download:
+          type: string
+          enum: ['1']
+          description: >-
+            Pass '1' to send the image as a file download. Without it the image is served inline so
+            it opens in the browser, which is how it is saved or shared from a phone.
     outputSchema:
       type: string
       contentMediaType: image/png

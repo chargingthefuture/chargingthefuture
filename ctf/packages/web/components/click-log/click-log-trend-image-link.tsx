@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Image as ImageIcon } from 'lucide-react';
 import {
   TREND_ACCENT,
   TREND_BORDER,
@@ -10,11 +10,16 @@ import {
   TREND_TEXT,
 } from './click-log-trend-tokens';
 
-// Downloads the whole report as one tall PNG — the thing to post somewhere that takes an image,
+// Produces the whole report as one tall PNG — the thing to post somewhere that takes an image,
 // without stitching phone screenshots together and losing rows at the seams.
 //
-// A plain link, not a fetch: the endpoint answers with the image and a filename, so the browser
-// saves it and the same signed-in session that loaded this screen authorizes the request.
+// Two links, not one, because the two devices need different things. On a phone the image has to
+// open on screen: from there it can be held to save it to the photo library or shared straight
+// into another app, which is where it is going. A file download on a phone lands in the files app
+// instead, one step away from anywhere useful — so that is the second link, for a computer.
+//
+// Plain links, not a fetch: the endpoint answers with the image itself, and the same signed-in
+// session that loaded this screen authorizes the request.
 //
 // The area checkbox is off to start. Members opted into sharing trend data with the project, not
 // into having their approximate area posted publicly, and at small counts an ~11 km cell plus a
@@ -22,7 +27,9 @@ import {
 // deliberate choice made each time rather than a default.
 export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
   const [includeAreas, setIncludeAreas] = useState(false);
-  const href = `/api/click-log/admin/trends/image${includeAreas ? '?areas=1' : ''}`;
+  const query = includeAreas ? 'areas=1' : '';
+  const viewHref = `/api/click-log/admin/trends/image${query ? `?${query}` : ''}`;
+  const downloadHref = `/api/click-log/admin/trends/image?${query ? `${query}&` : ''}download=1`;
   return (
     <div
       style={{
@@ -34,7 +41,9 @@ export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
       }}
     >
       <a
-        href={href}
+        href={viewHref}
+        target="_blank"
+        rel="noopener noreferrer"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -49,8 +58,33 @@ export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
           textDecoration: 'none',
         }}
       >
-        <Download size={15} color="#fff" />
-        Save the report as one image
+        <ImageIcon size={15} color="#fff" />
+        Show the report as one image
+      </a>
+      <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 8, lineHeight: 1.5 }}>
+        Opens the whole report as one tall picture. On a phone, press and hold it to save it to your
+        photos or send it straight to another app.
+      </div>
+      <a
+        href={downloadHref}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: 10,
+          padding: '9px 14px',
+          borderRadius: 10,
+          background: 'transparent',
+          border: `1px solid ${TREND_BORDER}`,
+          color: TREND_TEXT,
+          fontSize: 12,
+          fontWeight: 600,
+          textDecoration: 'none',
+        }}
+      >
+        <Download size={14} color={TREND_SUBTLE} />
+        Save it as a file instead
       </a>
       {areaCount > 0 && (
         <label
