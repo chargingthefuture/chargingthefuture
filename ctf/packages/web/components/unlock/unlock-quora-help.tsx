@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { HelpCircle, Loader2 } from "lucide-react";
 import { failureText } from "lib/errors/client-failure";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,12 +16,18 @@ import { getUnlockTokens } from "./unlock-shared";
 // Commons to a member with no submission — see lib/unlock/help-requests.ts) and takes them straight
 // there, where they can ask in the chat and get an answer. The verification prompt follows them, so
 // the Quora URL is still asked for; it is just no longer the only thing they can do.
-export function UnlockQuoraHelp() {
-  const router = useRouter();
+export function UnlockQuoraHelp({ alreadyVerified = false }: { alreadyVerified?: boolean }) {
   const { theme } = useTheme();
   const tok = getUnlockTokens(theme);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // An approved member already has the Commons and everything else. Offering to "open the Commons"
+  // for them is at best noise on a screen that just told them they are done, and the button would
+  // record a help request nobody needs.
+  if (alreadyVerified) {
+    return null;
+  }
 
   async function askForHelp() {
     if (busy) return;
@@ -38,10 +43,13 @@ export function UnlockQuoraHelp() {
         setError(data?.message ?? "Could not open the Commons just now. Try again.");
         return;
       }
-      // Full navigation, not a client push: the access tier is resolved on the server for the home
-      // route, so the request that lands there has to be a fresh one.
-      router.refresh();
+
+      // Full navigation, not a client push: the home route resolves access on the server, so the
+      // request that lands there has to be a fresh one. Deliberately no router.refresh() first — it
+      // repaints the screen we are leaving, which reads as a flash and buys nothing, since a full
+      // navigation re-runs the server anyway.
       window.location.assign("/");
+      return;
     } catch (caught) {
       setError(failureText(caught, { area: "unlock", op: "help_request", fallback: "Network error. Try again." }));
     } finally {
@@ -90,7 +98,16 @@ export function UnlockQuoraHelp() {
         {busy ? <Loader2 size={14} /> : <HelpCircle size={14} />}
         {busy ? "Opening the Commons…" : "Ask for help in the Commons"}
       </button>
-      {error ? <div style={{ fontSize: 12, color: "#F87171", marginTop: 8 }}>{error}</div> : null}
+      {error ? (
+        <div style={{ fontSize: 12, color: "#F87171", marginTop: 8, lineHeight: 1.6 }}>
+          {error}{" "}
+          {/* Never leave them on a screen whose only action did nothing. The Commons may still be
+              reachable — if it is not, they land back here rather than nowhere. */}
+          <a href="/" style={{ color: tok.ACCENT, fontWeight: 700, textDecoration: "underline" }}>
+            Try opening the Commons anyway
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }

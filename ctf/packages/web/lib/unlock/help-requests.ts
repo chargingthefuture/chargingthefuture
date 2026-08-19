@@ -30,11 +30,19 @@ export async function recordUnlockHelpRequest(userId: string): Promise<void> {
   );
 }
 
-// May this member reach the Commons even though they have no submission on file? One query for both
-// conditions, so the access gate pays a single round trip. Best-effort: this only ever widens access,
-// so a database failure must resolve to false (the member keeps the Unlock screen) rather than throw
-// on a request that would otherwise have worked.
-export async function hasUnlockCommonsAccessWithoutSubmission(userId: string): Promise<boolean> {
+// May the Commons open for this member before they are verified? One query for both conditions, so
+// the access gate pays a single round trip.
+//
+// This applies to a member with no submission AND to one whose submission is sitting in the review
+// queue. The waiting case was missed at first, and it was the worse of the two: someone who gave a
+// URL and is waiting has a stored `pending_readonly` tier, which passes no gate at all, so pressing
+// "ask for help" sent them to a Commons that bounced them straight back to the Unlock screen. They
+// had done everything asked of them and still had nobody to ask, for up to the length of the review
+// window.
+//
+// Best-effort: this only ever widens access, so a database failure resolves to false (the member
+// keeps the Unlock screen) rather than throwing on a request that would otherwise have worked.
+export async function hasUnlockCommonsFallback(userId: string): Promise<boolean> {
   try {
     const result = await queryDb<{ asked_for_help: boolean; returned_later: boolean }>(
       `SELECT

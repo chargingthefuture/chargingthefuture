@@ -244,6 +244,54 @@ function SubmissionView({
 }
 
 // Status view (has submission — pending / approved / rejected)
+// The re-submit card shown after a rejection. Its own component so StatusView keeps one job and
+// stays inside the rule-116 complexity limit.
+function ResubmitCard({
+  s,
+  t,
+  url,
+  onUrlChange,
+  submitting,
+  error,
+  onSubmit,
+  accent,
+  onHelped,
+}: {
+  s: Styles;
+  t: ThemeTokens;
+  url: string;
+  onUrlChange: (_value: string) => void;
+  submitting: boolean;
+  error: string | null;
+  onSubmit: () => void;
+  accent: string;
+  onHelped: () => void;
+}) {
+  return (
+    <View style={s.resubCard}>
+      <Text style={s.cardHeading}>Re-submit with a new URL</Text>
+      <QuoraHelp s={s} accent={accent} onHelped={onHelped} />
+      <TextInput
+        value={url}
+        onChangeText={onUrlChange}
+        placeholder="https://quora.com/profile/…"
+        placeholderTextColor={t.textSecondary}
+        style={[s.input, { borderWidth: 1, borderColor: t.border, borderRadius: 10, padding: 10, marginBottom: 10, color: t.textPrimary }]}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      {error ? <Text style={s.errorText}>{error}</Text> : null}
+      <TouchableOpacity
+        onPress={onSubmit}
+        disabled={!url.trim() || submitting}
+        style={[s.primaryBtn, { backgroundColor: '#EF4444' }]}
+      >
+        <Text style={[s.primaryBtnText, { color: '#fff' }]}>{submitting ? 'Re-submitting…' : 'Re-submit'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function StatusView({
   status,
   onResubmitted,
@@ -322,29 +370,25 @@ function StatusView({
         )}
       </View>
 
-      {/* Re-submit form on rejection */}
+      {/* A member waiting on review gave a URL and did everything asked of them, but until they can
+          reach the Commons there is nobody to ask while they wait. Matches the web status screen; an
+          approved member sees nothing here, having no need of it. */}
+      {display === 'pending' && (
+        <QuoraHelp s={s} accent={accent} onHelped={onResubmitted} />
+      )}
+
       {display === 'rejected' && (
-        <View style={s.resubCard}>
-          <Text style={s.cardHeading}>Re-submit with a new URL</Text>
-          <QuoraHelp s={s} accent={accent} onHelped={onResubmitted} />
-          <TextInput
-            value={resubUrl}
-            onChangeText={setResubUrl}
-            placeholder="https://quora.com/profile/…"
-            placeholderTextColor={t.textSecondary}
-            style={[s.input, { borderWidth: 1, borderColor: t.border, borderRadius: 10, padding: 10, marginBottom: 10, color: t.textPrimary }]}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {error ? <Text style={s.errorText}>{error}</Text> : null}
-          <TouchableOpacity
-            onPress={handleResubmit}
-            disabled={!resubUrl.trim() || submitting}
-            style={[s.primaryBtn, { backgroundColor: '#EF4444' }]}
-          >
-            <Text style={[s.primaryBtnText, { color: '#fff' }]}>{submitting ? 'Re-submitting…' : 'Re-submit'}</Text>
-          </TouchableOpacity>
-        </View>
+        <ResubmitCard
+          s={s}
+          t={t}
+          url={resubUrl}
+          onUrlChange={setResubUrl}
+          submitting={submitting}
+          error={error}
+          onSubmit={handleResubmit}
+          accent={accent}
+          onHelped={onResubmitted}
+        />
       )}
 
       {/* What gets unlocked */}
