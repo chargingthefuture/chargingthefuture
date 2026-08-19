@@ -326,6 +326,29 @@ The server returns 401 or 403. No submission is created.
 
 ---
 
+### CONT-12b — A member who has not finished Unlock can still contribute
+
+Contributions is one of exactly three features excepted from the Unlock gate (owner decision,
+2026-06-10, recorded in the plugin inventory). Everything else in the app requires Unlock approval,
+so this is worth testing directly: if it ever silently starts requiring approval, the fundraiser
+goes quiet for the members most likely to be new, and nothing else would report it.
+
+**Role:** Member (signed in, Unlock NOT approved)
+**Surfaces:** Web
+**Precondition:** Signed in with an account that has no approved Unlock submission.
+
+**Steps:**
+1. Open `/apps/contributions`.
+2. Submit a Quora comment contribution claim.
+
+**Expected:**
+The page renders rather than denying access, and the claim is accepted. Any thank-you credits are
+held but cannot be spent in verification-gated plugins until Unlock is finished.
+
+**Result:** web ☐
+
+---
+
 ### CONT-13 — Non-admin member cannot access admin routes
 
 **Role:** Member (non-admin)
