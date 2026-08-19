@@ -10,6 +10,7 @@ function statusChip(account: UnlockSignupAccount): { label: string; color: strin
   if (account.deletedTheirData) return { label: 'Deleted their data', color: '#6B7280' };
   if (!account.hasSubmission) return { label: 'No Quora URL', color: '#F59E0B' };
   if (account.reviewStatus === 'approved') return { label: 'Approved', color: '#22C55E' };
+  if (account.reviewStatus === 'duplicate') return { label: 'Duplicate account', color: '#9CA3AF' };
   if (account.reviewStatus === 'rejected' || account.reviewStatus === 'spam') {
     return { label: account.reviewStatus === 'spam' ? 'Spam' : 'Rejected', color: '#EF4444' };
   }

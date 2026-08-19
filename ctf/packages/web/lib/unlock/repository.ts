@@ -60,6 +60,7 @@ type UnlockDashboardRow = {
   approved_count: string;
   rejected_count: string;
   spam_count: string;
+  duplicate_count: string;
   locked_support_only_count: string;
 };
 
@@ -72,6 +73,7 @@ function mapUnlockDashboardSnapshot(row: Partial<UnlockDashboardRow> = {}): Unlo
     approved_count = '0',
     rejected_count = '0',
     spam_count = '0',
+    duplicate_count = '0',
     locked_support_only_count = '0',
   } = row;
 
@@ -80,6 +82,7 @@ function mapUnlockDashboardSnapshot(row: Partial<UnlockDashboardRow> = {}): Unlo
     approvedCount: Number(approved_count),
     rejectedCount: Number(rejected_count),
     spamCount: Number(spam_count),
+    duplicateCount: Number(duplicate_count),
     lockedSupportOnlyCount: Number(locked_support_only_count),
   };
 }
@@ -433,6 +436,9 @@ export async function listApprovedUnincentivizedSubmissions(limit = 100): Promis
 }
 
 export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput): Promise<UnlockSubmission | null> {
+  // Every non-approved decision stores locked_support_only. For spam and duplicate the stored tier is
+  // not the operative fact — the platform-wide restriction the review route places is — but keeping one
+  // tier value here means nothing downstream has to special-case the column.
   const accessTier = input.reviewStatus === 'approved' ? 'approved_full' : 'locked_support_only';
 
   const result = await queryDb<UnlockSubmissionRow>(
@@ -472,10 +478,14 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
   const submission = mapUnlockSubmission(result.rows[0]);
 
   // Keep the persistent spam denylist in step with the decision. Marking spam records the normalized
-  // URL so it survives the member's data deletion and blocks re-entry on a new account; approving or
-  // rejecting removes it (the spam mark is reversible). Best-effort: the verification decision is
+  // URL so it survives the member's data deletion and blocks re-entry on a new account; every other
+  // decision removes it (the spam mark is reversible). Best-effort: the verification decision is
   // already committed above, so a denylist write failure must not fail the review — a later re-review
   // re-applies it, and the write is idempotent.
+  //
+  // A duplicate decision deliberately falls into the removal branch, NOT the spam branch. The URL
+  // belongs to a real person who already has an account here; denylisting it would auto-spam their
+  // original account's submission and lock the actual member out permanently.
   try {
     if (input.reviewStatus === 'spam') {
       await addSpamQuoraUrl({
@@ -643,7 +653,14 @@ export async function getUnlockDashboardSnapshot(): Promise<UnlockDashboardSnaps
        COUNT(*) FILTER (WHERE review_status = 'approved')::text AS approved_count,
        COUNT(*) FILTER (WHERE review_status = 'rejected')::text AS rejected_count,
        COUNT(*) FILTER (WHERE review_status = 'spam')::text AS spam_count,
-       COUNT(*) FILTER (WHERE access_tier = 'locked_support_only')::text AS locked_support_only_count
+       COUNT(*) FILTER (WHERE review_status = 'duplicate')::text AS duplicate_count,
+       -- Spam and duplicate are excluded on purpose. Both decisions drop the tier to
+       -- locked_support_only AND place a platform-wide account restriction, and the restriction is what
+       -- actually decides: the member reaches nothing, Commons included. Counting them as "support-only
+       -- access" reported the opposite of their real access. Rejected members are counted, because they
+       -- genuinely do keep the support surface and can correct their URL.
+       COUNT(*) FILTER (WHERE access_tier = 'locked_support_only' AND review_status NOT IN ('spam', 'duplicate'))::text
+         AS locked_support_only_count
      FROM unlock_verification_submissions`,
   );
 

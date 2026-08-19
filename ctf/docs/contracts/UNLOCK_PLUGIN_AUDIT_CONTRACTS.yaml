@@ -108,7 +108,7 @@ auditEvents:
     actorId: principal
     pluginId: unlock
     command: unlock.admin.submission.review
-    commandVersion: 1.0.0
+    commandVersion: 1.2.0
     purpose: moderation_and_unlock_transition
     policyDecision:
       status: allow_or_deny

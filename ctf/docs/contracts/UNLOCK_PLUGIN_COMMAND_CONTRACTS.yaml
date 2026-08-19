@@ -67,11 +67,15 @@ contracts:
 
   - pluginId: unlock
     command: unlock.admin.submission.review
-    version: 1.1.0
+    version: 1.2.0
     description: >-
-      Apply admin moderation decision and unlock access tier transition. A spam decision also places
-      a platform-wide ('all'-scope) account restriction so the member loses Commons/app access; an
-      approved or rejected decision lifts a restriction previously placed by a spam decision.
+      Apply admin moderation decision and unlock access tier transition. Accepts approved, rejected,
+      spam, and duplicate. Spam and duplicate each place a platform-wide ('all'-scope) account
+      restriction so the member loses Commons/app access, marked 'unlock:spam' or 'unlock:duplicate'
+      respectively; an approved or rejected decision lifts a restriction carrying either of those
+      markers and no others. Duplicate is for a real member who already has an account under a
+      different email — unlike spam it never adds the Quora URL to the denylist, because that URL
+      belongs to their original account and denylisting it would lock the real person out.
     inputSchema:
       submissionId:
         type: integer

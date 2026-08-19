@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, XCircle, Ban, Pencil, Key } from 'lucide-react';
+import { CheckCircle, XCircle, Ban, Copy, Pencil, Key } from 'lucide-react';
 import type { UnlockSubmission } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
@@ -13,6 +13,29 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
   approved: { bg: 'rgba(34,197,94,0.12)', color: '#22C55E', border: 'rgba(34,197,94,0.3)', label: 'approved' },
   rejected: { bg: 'rgba(239,68,68,0.12)', color: '#EF4444', border: 'rgba(239,68,68,0.3)', label: 'rejected' },
   spam: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)', label: 'spam' },
+  duplicate: { bg: 'rgba(107,114,128,0.14)', color: '#9CA3AF', border: 'rgba(107,114,128,0.3)', label: 'duplicate' },
+};
+
+// Which blocking decision an admin is being asked to confirm, and on which submission. Spam and
+// duplicate both remove the member from the whole app, so both are confirm-gated the same way the
+// reward revoke is — and one piece of state rather than two means the two prompts can never be open at
+// once on the same row.
+export type UnlockBlockConfirm = { submissionId: number; decision: 'spam' | 'duplicate' } | null;
+
+// What each blocking decision does, in the words shown on the confirm prompt. Duplicate is not spam:
+// the member is a real person who already has an account, their Quora URL is never denylisted, and the
+// closed-account page tells them to sign in with the original.
+const BLOCK_COPY: Record<'spam' | 'duplicate', { prompt: string; confirm: string; button: string }> = {
+  spam: {
+    prompt: 'Mark spam and block this member from the app?',
+    confirm: 'Confirm spam + block',
+    button: 'Spam',
+  },
+  duplicate: {
+    prompt: 'Mark as a duplicate account and block it? Their other account is unaffected.',
+    confirm: 'Confirm duplicate + block',
+    button: 'Duplicate',
+  },
 };
 
 export function StatusPill({ status }: { status: string }) {
@@ -69,8 +92,8 @@ export type UnlockCardProps = {
   history: UnlockHistoryState;
   confirmRevokeId: number | null;
   setConfirmRevokeId: (value: number | null) => void;
-  confirmSpamId: number | null;
-  setConfirmSpamId: (value: number | null) => void;
+  confirmBlock: UnlockBlockConfirm;
+  setConfirmBlock: (value: UnlockBlockConfirm) => void;
   onReview: (id: number, reviewStatus: ReviewStatus) => void;
   onGrantReward: (id: number) => void;
   onRevoke: (id: number) => void;
@@ -100,7 +123,10 @@ function CardBadges({ s }: { s: UnlockSubmission }) {
   return (
     <>
       <StatusPill status={s.reviewStatus} />
-      {s.accessTier === 'locked_support_only' ? (
+      {/* Never shown for spam or duplicate: those decisions also place a platform-wide account
+          restriction, so the member reaches nothing — the stored tier says support-only but the
+          restriction overrules it. */}
+      {s.accessTier === 'locked_support_only' && s.reviewStatus !== 'spam' && s.reviewStatus !== 'duplicate' ? (
         <span title="This member is on support-only access — they can reach support surfaces but not the full app" style={pill('rgba(148,163,184,0.14)', '#94A3B8', 'rgba(148,163,184,0.32)')}>
           Support-only
         </span>
@@ -239,18 +265,16 @@ function CardUrlHistory({ s, history }: { s: UnlockSubmission; history: UnlockHi
 function PendingActions({
   s,
   busy,
-  confirmSpamId,
-  setConfirmSpamId,
+  confirmBlock,
+  setConfirmBlock,
   onReview,
 }: {
   s: UnlockSubmission;
   busy: boolean;
-  confirmSpamId: number | null;
-  setConfirmSpamId: (value: number | null) => void;
+  confirmBlock: UnlockBlockConfirm;
+  setConfirmBlock: (value: UnlockBlockConfirm) => void;
   onReview: (id: number, reviewStatus: ReviewStatus) => void;
 }) {
-  const { theme } = useTheme();
-  const t = getUnlockTokens(theme);
   // Hoisted once so the buttons below reuse them instead of repeating the `busy` ternary.
   const busyCursor = busy ? 'not-allowed' : 'pointer';
   const busyOpacity = busy ? 0.6 : 1;
@@ -262,24 +286,55 @@ function PendingActions({
       <button type="button" disabled={busy} onClick={() => onReview(s.id, 'rejected')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
         <XCircle size={13} /> Reject
       </button>
-      {/* Marking spam blocks the member from the whole app (an 'all'-scope account restriction), so it is
-          guarded by an inline confirm the same way the reward-revoke lock is. */}
-      {confirmSpamId === s.id ? (
+      {/* Spam and duplicate both block the member from the whole app (an 'all'-scope account
+          restriction), so each is guarded by an inline confirm the same way the reward-revoke lock is. */}
+      {confirmBlock?.submissionId === s.id ? (
+        <BlockConfirmRow
+          decision={confirmBlock.decision}
+          busy={busy}
+          onConfirm={() => { setConfirmBlock(null); onReview(s.id, confirmBlock.decision); }}
+          onCancel={() => setConfirmBlock(null)}
+        />
+      ) : (
         <>
-          <span style={{ fontSize: 12, color: '#FCD34D' }}>Mark spam and block this member from the app?</span>
-          <button type="button" disabled={busy} onClick={() => { setConfirmSpamId(null); onReview(s.id, 'spam'); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: busyCursor, opacity: busyOpacity }}>
-            {busy ? 'Blocking…' : 'Confirm spam + block'}
+          <button type="button" disabled={busy} onClick={() => setConfirmBlock({ submissionId: s.id, decision: 'spam' })} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(107,114,128,0.12)', border: '1px solid rgba(107,114,128,0.3)', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
+            <Ban size={13} /> {BLOCK_COPY.spam.button}
           </button>
-          <button type="button" disabled={busy} onClick={() => setConfirmSpamId(null)} style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
-            Cancel
+          <button type="button" disabled={busy} onClick={() => setConfirmBlock({ submissionId: s.id, decision: 'duplicate' })} title="Same Quora profile as an account that already exists. Blocks this account only — their original is untouched, and this URL is never added to the spam denylist." style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(107,114,128,0.12)', border: '1px solid rgba(107,114,128,0.3)', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
+            <Copy size={13} /> {BLOCK_COPY.duplicate.button}
           </button>
         </>
-      ) : (
-        <button type="button" disabled={busy} onClick={() => setConfirmSpamId(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(107,114,128,0.12)', border: '1px solid rgba(107,114,128,0.3)', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
-          <Ban size={13} /> Spam
-        </button>
       )}
     </div>
+  );
+}
+
+// The inline "are you sure" row for a blocking decision. Its own component so PendingActions keeps one
+// job and stays inside the rule-116 complexity limit.
+function BlockConfirmRow({
+  decision,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  decision: 'spam' | 'duplicate';
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
+  const copy = BLOCK_COPY[decision];
+  return (
+    <>
+      <span style={{ fontSize: 12, color: '#FCD34D' }}>{copy.prompt}</span>
+      <button type="button" disabled={busy} onClick={onConfirm} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+        {busy ? 'Blocking…' : copy.confirm}
+      </button>
+      <button type="button" disabled={busy} onClick={onCancel} style={{ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+        Cancel
+      </button>
+    </>
   );
 }
 
@@ -336,9 +391,9 @@ function RewardActions({
 
 // Which action row (if any) a card shows below its metadata.
 function CardActions(props: UnlockCardProps) {
-  const { s, busy, confirmRevokeId, setConfirmRevokeId, confirmSpamId, setConfirmSpamId, onReview, onGrantReward, onRevoke } = props;
+  const { s, busy, confirmRevokeId, setConfirmRevokeId, confirmBlock, setConfirmBlock, onReview, onGrantReward, onRevoke } = props;
   if (s.reviewStatus === 'pending') {
-    return <PendingActions s={s} busy={busy} confirmSpamId={confirmSpamId} setConfirmSpamId={setConfirmSpamId} onReview={onReview} />;
+    return <PendingActions s={s} busy={busy} confirmBlock={confirmBlock} setConfirmBlock={setConfirmBlock} onReview={onReview} />;
   }
   const rewardHeld = Boolean(s.rewardWithheldAt) && !s.incentiveGrantedAt && !s.rewardRevokedAt;
   const canRevoke = s.reviewStatus === 'approved' && !s.rewardRevokedAt;
