@@ -800,6 +800,13 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         'quora_live_census_runs',
         'Which admin started an observation run; provenance for a research record, not member data.',
       ),
+      // The audit trail of who read and exported the census. Retained for the same reason every
+      // other audit trail here is: an access record that disappears when the accessing account does
+      // is not an access record.
+      retain(
+        'quora_live_census_audit_log',
+        'Who read or exported the census; an admin access trail, retained for accountability.',
+      ),
     ],
   },
 ];

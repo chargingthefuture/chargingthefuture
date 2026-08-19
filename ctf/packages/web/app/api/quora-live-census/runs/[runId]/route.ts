@@ -4,6 +4,7 @@ import {
   getCensusRun,
   getCensusStanceTally,
   getCensusStateCounts,
+  insertCensusAudit,
   listCensusEntries,
   setCensusRunStatus,
 } from 'lib/quora-live-census/repository';
@@ -20,7 +21,7 @@ type RouteContext = { params: Promise<{ runId: string }> };
 // One run with its entries and its stance tally. The tally is computed over live accounts only —
 // an account that was gone when checked says nothing about what remains.
 export async function GET(_request: Request, context: RouteContext) {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.run.read');
   if (!gate.allowed) {
     return gate.response;
   }
@@ -37,6 +38,14 @@ export async function GET(_request: Request, context: RouteContext) {
       getCensusStanceTally(runId),
       getCensusStateCounts(runId),
     ]);
+    await insertCensusAudit({
+      actorUserId: gate.auth.userId,
+      command: 'census.run.read',
+      policyStatus: 'allow',
+      reason: 'admin_read',
+      runId: run.id,
+      rowCount: entries.length,
+    });
     return NextResponse.json({ ok: true, run, entries, tally, stateCounts });
   } catch (error) {
     reportError(error, { area: 'quora-live-census', op: 'get-run' });
@@ -52,7 +61,7 @@ export async function GET(_request: Request, context: RouteContext) {
 // Close a finished run, or reopen one to correct it. Closing is what makes a run quotable, so it
 // is a deliberate action rather than something inferred from the row count.
 export async function PATCH(request: Request, context: RouteContext) {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.run.set_status');
   if (!gate.allowed) {
     return gate.response;
   }

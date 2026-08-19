@@ -87,23 +87,29 @@ export const QUORA_CENSUS_TOPIC_LABEL: Record<QuoraCensusTopic, string> = {
   unrelated_subjects: 'Subjects unrelated to targeting',
 };
 
-// The column the census exists for: what the surviving account actually says.
+// What the account DOES, not how the person behind it seems to be doing.
 //
-// The list includes categories that would REFUTE the claim under test — practical_help and
-// organizing — alongside the ones that would support it. That is the point. A coding scheme
-// containing only the expected answers produces the expected answer and proves nothing, so these
-// two options must never be dropped to "simplify" the list.
+// This list once carried three more values — distress with no way forward, tells others to give
+// up, says targeting is not real. They were removed on the owner's decision (2026-08-19), and the
+// reason is worth keeping in front of whoever edits this next: each was a psychological judgment
+// about an identifiable person, inferred from their public posts, stored against their handle, and
+// exportable — about a population that believes it is being catalogued and was never asked. The
+// deletion survey promises the opposite standard about the same people and asks their permission
+// three separate ways. The census does not get a looser standard just because its subjects cannot
+// object to it.
 //
-// 'unclear' is the honest default. A coder who cannot tell from the account should record that
-// rather than guess, and a run with a large unclear share is telling you the sampling or the
-// reading was too thin, not that the accounts were ambiguous.
+// What that costs, stated plainly because it is not small: the census can no longer test whether
+// what remains is discouraging. An account that is pure despair now codes as 'personal_account' or
+// 'unclear' like any other. It measures survival and subject matter — which accounts are still
+// standing and what they are about — and the question about tone needs an instrument that does not
+// keep a verdict on a named person.
+//
+// 'unclear' is the honest default and the stored default. A coder who cannot tell records that
+// rather than guessing.
 export const QUORA_CENSUS_STANCE = [
   'practical_help',
   'organizing',
   'personal_account',
-  'distress_no_coping',
-  'discouraging',
-  'dismissive',
   'unclear',
   'unrelated',
 ] as const;
@@ -112,10 +118,7 @@ export type QuoraCensusStance = (typeof QUORA_CENSUS_STANCE)[number];
 export const QUORA_CENSUS_STANCE_LABEL: Record<QuoraCensusStance, string> = {
   practical_help: 'Practical help — what to do, what worked',
   organizing: 'Organizing — groups, meetups, building something',
-  personal_account: 'Personal account — their own experience, no advice',
-  distress_no_coping: 'Distress with no way forward offered',
-  discouraging: 'Tells others to stop trying or give up',
-  dismissive: 'Says targeting is not real, or is only illness',
+  personal_account: 'Personal account — their own experience',
   unclear: 'Cannot tell from the account',
   unrelated: 'Not about targeting at all',
 };

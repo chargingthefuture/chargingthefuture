@@ -5651,10 +5651,19 @@ CREATE TABLE IF NOT EXISTS quora_live_census_entries (
   -- question together, and they cannot be compared if they are coded differently. Changing one
   -- list without the other silently breaks that comparison.
   topics TEXT[] NOT NULL DEFAULT '{}',
+  -- What the account does, NOT how the person behind it seems to be doing (owner decision,
+  -- 2026-08-19). The three wellbeing values this once had — distress with no way forward, tells
+  -- others to give up, says targeting is not real — were a psychological judgment about an
+  -- identifiable person, inferred from their posts and stored against their handle, about a
+  -- population that believes it is being catalogued and was never asked. The deletion survey
+  -- promises the opposite standard about the same people; the census does not get a looser one
+  -- because its subjects cannot object.
+  --
+  -- The cost is real and is not hidden: with these values gone the census cannot test whether what
+  -- remains is discouraging. It measures survival and subject matter. See the inventory.
   stance TEXT NOT NULL DEFAULT 'unclear'
     CHECK (stance IN (
-      'practical_help', 'organizing', 'personal_account',
-      'distress_no_coping', 'discouraging', 'dismissive', 'unclear', 'unrelated'
+      'practical_help', 'organizing', 'personal_account', 'unclear', 'unrelated'
     )),
   approx_answer_count INTEGER NULL CHECK (approx_answer_count IS NULL OR approx_answer_count >= 0),
   last_active_year INTEGER NULL
@@ -5677,9 +5686,41 @@ ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS last_ac
 ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS evidence_url TEXT NULL;
 ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS notes TEXT NULL;
 ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- A legacy row coded under one of the retired wellbeing values collapses to 'unclear' rather than
+-- being deleted: the account was still observed, and its survival still counts toward the removal
+-- rate. Runs before this change hold no such rows in production, so this is a no-op there. It also
+-- has to run before the CHECK above can be trusted on a legacy database.
+UPDATE quora_live_census_entries
+   SET stance = 'unclear'
+ WHERE stance IN ('distress_no_coping', 'discouraging', 'dismissive');
 CREATE INDEX IF NOT EXISTS idx_quora_live_census_entries_run ON quora_live_census_entries(run_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_quora_live_census_entries_run_handle
   ON quora_live_census_entries(run_id, lower(handle));
+
+-- Who read the census, and when. An admin can download a file naming third parties; without this
+-- nothing records that it happened. Shaped after unlock_audit_log (actor, command, status, reason,
+-- metadata) so the two read the same way.
+CREATE TABLE IF NOT EXISTS quora_live_census_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id TEXT,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL DEFAULT 'allow' CHECK (policy_status IN ('allow', 'deny')),
+  reason TEXT,
+  run_id UUID,
+  row_count INTEGER,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT 'allow';
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS run_id UUID;
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS row_count INTEGER;
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_live_census_audit_created_at
+  ON quora_live_census_audit_log(created_at DESC);
 
 -- === contributions plugin (voluntary fundraiser drives) ===
 -- Fundraiser cycles: each row is one time window (~3 months, owner-controlled) with

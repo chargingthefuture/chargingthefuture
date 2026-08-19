@@ -48,6 +48,31 @@ self-selected, so it can only ever be a floor. An existing-list run has neither 
 selected themselves into `directory_profiles`, and nothing about it is a report. The two are
 answering the same question from opposite sides, and the list-based run is the stronger half.
 
+### What this deliberately does not record
+
+The stance list once carried three more values: distress with no way forward, tells others to give
+up, and says targeting is not real. They were removed on the owner's decision (2026-08-19).
+
+The reason, kept here because the next reader will otherwise reinstate them: each was a
+psychological judgment about an identifiable person, inferred from their public posts, stored
+against their handle, and exportable to CSV — about a population that believes it is being
+catalogued, and who were never asked. The deletion survey holds itself to the opposite standard
+about the same people: nothing traceable to someone who did not name themselves, and three separate
+consent questions before a handle or a quote can be published. The census cannot claim a looser
+standard on the grounds that its subjects are not present to object. That is the argument for the
+looser standard, not against it.
+
+**What that costs, stated plainly because it is not small.** The census can no longer test whether
+what remains on Quora is discouraging. That was the original reason to build it. An account that is
+nothing but despair now codes as `personal_account` or `unclear` like any other, and no run will
+ever distinguish them. What survives is a real and useful measurement — which accounts are still
+standing, and what subjects they cover — and it is a narrower one than first designed.
+
+The tone question is not answered elsewhere in this repo. If it matters enough to answer, it needs
+an instrument that does not keep a verdict on a named person: a reading of the *writing* rather than
+of the writer, sampled and coded without storing who wrote it, so no row ever pairs a person with a
+judgment about their state of mind. That is not built and is not scoped.
+
 ### The rest of the method
 
 - A run names one observation date. Coding may take days; the census is only ever citable as "what
@@ -55,10 +80,9 @@ answering the same question from opposite sides, and the list-based run is the s
 - A run names what was searched and how accounts were picked from it, both required. Without both,
   the numbers are unreproducible and indistinguishable from picking the accounts that suited the
   argument.
-- The stance list includes categories that would **refute** the claim under test — practical help,
-  organizing — alongside the ones that would support it. A coding scheme containing only the
-  expected answers produces the expected answer and proves nothing. Those two options must never be
-  removed to simplify the list.
+- The stance list records what an account **does**, never how the person behind it seems to be
+  doing. See "What this deliberately does not record" below — that boundary is the most important
+  decision in this inventory and it is not a detail to tidy away.
 - `unclear` is the honest default and the stored default. A coder who cannot tell records that; a
   run with a large unclear share is telling you the reading was too thin, not that the accounts
   were ambiguous.
@@ -134,7 +158,7 @@ Index: `idx_quora_live_census_runs_observed_on` on `(observed_on DESC)`.
 | `profile_url` | TEXT NULL | Optional |
 | `account_state` | TEXT | `live` / `gone` / `renamed_or_moved` |
 | `topics` | TEXT[] | Same subject list as the deletion survey, so the two datasets stay comparable |
-| `stance` | TEXT | `practical_help` / `organizing` / `personal_account` / `distress_no_coping` / `discouraging` / `dismissive` / `unclear` / `unrelated`; defaults to `unclear` |
+| `stance` | TEXT | `practical_help` / `organizing` / `personal_account` / `unclear` / `unrelated`; defaults to `unclear`. What the account does, never how its author seems to be doing — see "What this deliberately does not record". |
 | `approx_answer_count` | INTEGER NULL | Optional estimate |
 | `last_active_year` | INTEGER NULL | 2005-2100 at the database, offered from 2010 in the form |
 | `evidence_url` | TEXT NULL | Ideally an archive link, so a later reader can check the call |
@@ -151,6 +175,22 @@ The subject list is duplicated between `lib/quora-live-census/constants.ts` and
 silently stops meaning anything. Folding them into one shared module once the survey merges is in
 the gaps list below.
 
+`quora_live_census_audit_log` — who read or changed the census.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | `gen_random_uuid()` |
+| `actor_user_id` | TEXT NULL | The admin; null on a denied request |
+| `command` | TEXT | e.g. `census.run.export`, `census.run.read`, `census.entry.create` |
+| `policy_status` | TEXT | `allow` / `deny` |
+| `reason` | TEXT NULL | Why, in the deny case the gate's own reason |
+| `run_id` | UUID NULL | Which run, where the action names one |
+| `row_count` | INTEGER NULL | How many rows were read or exported |
+| `metadata` | JSONB | Observation date, frame kind, run status on an export |
+| `created_at` | TIMESTAMPTZ | `NOW()` |
+
+Index: `idx_quora_live_census_audit_created_at` on `(created_at DESC)`.
+
 ## Security, Privacy, and Compliance Controls
 
 Admin-only throughout: `requiredRoles: ['admin']` on the page and again on all seven routes
@@ -161,12 +201,20 @@ What this holds: observations about named public Quora accounts, made from outsi
 reading them. Not member data. No row carries a user id for anyone on this platform except
 `created_by_user_id` on a run, which records which admin started it.
 
-Account deletion: `quora_live_census_runs` is registered in `lib/account/deletion-registry.ts`
+Account deletion: `quora_live_census_audit_log` is registered as `retain` — an access record that
+disappears when the accessing account does is not an access record. `quora_live_census_runs` is
+registered in `lib/account/deletion-registry.ts`
 under the `quora-live-census` slug as `retain`. A run's `created_by_user_id` is an admin provenance
 stamp on an observation — the admin/reviewer case that file already treats as an audit trail.
 Clearing it would erase who made an observation while leaving the observation standing, which is
 the wrong half to keep, and it matters more if a second coder is ever added. `quora_live_census_entries`
 has no user column at all and needs no entry: it describes third-party public accounts.
+
+Audit: every census route logs through `insertCensusAudit`. Refusals are logged in the shared gate
+rather than at each route, so a probe against any endpoint leaves a trace whichever one it hit. The
+export logs before the file is handed over, with the admin's id, the run, and the row count — that
+is the moment a list of named third parties leaves the app, and it is the action that most needs a
+record of who took it. The writer is best-effort and never fails the action it describes.
 
 Publication: nothing here is published by any code path. What reaches a reader is a count an admin
 writes by hand into a post. Naming an individual account publicly is a decision made outside this
@@ -201,7 +249,10 @@ this is not a plugin. The steps that matter:
    missing.
 3. Start a complete run. It appears in the list and opens.
 4. Code an account, leaving the stance untouched. It is stored as `unclear`, not as a substantive
-   category.
+   category. Confirm the stance options offer no judgment about the person's state of mind.
+4b. Download a CSV, then read `quora_live_census_audit_log`: a `census.run.export` row names the
+   admin, the run, and the row count. Hit any census route as a non-admin and confirm a `deny` row
+   lands with no actor id.
 5. Code the same handle again in the same run. It is refused as already coded.
 6. Code several accounts across different stances. The tally shows counts and shares over live
    accounts only — mark one `gone` and confirm it drops out of the tally but stays in the list.
@@ -230,6 +281,12 @@ this is not a plugin. The steps that matter:
 
 - 2026-08-19: Built, on the owner's instruction, as the survivor-side half the deletion survey
   could not cover. Runs, coded entries, stance tally, close and reopen, CSV export.
+- 2026-08-19: Removed the three wellbeing stance values on the owner's decision, after a review
+  pass noticed the census held itself to a looser standard than the deletion survey about the same
+  population. The census no longer tests whether what remains is discouraging; it measures survival
+  and subject matter. Reasoning and the cost are written up under "What this deliberately does not
+  record" so the values are not quietly reinstated. Added `quora_live_census_audit_log` in the same
+  pass: the CSV export could hand over a file of named third parties with nothing recording it.
 - 2026-08-19: Added `frame_kind` after the owner pointed out the app already holds a non-self-report
   set of accounts kept for being a targeted individual regardless of what they author
   (`directory_profiles`, source `admin` / `community-generated`). That is a far stronger frame than

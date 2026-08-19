@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { QUORA_CENSUS_ERROR_CODE } from 'lib/quora-live-census/constants';
+import { insertCensusAudit } from 'lib/quora-live-census/repository';
 
 export type CensusApiGate =
   | { allowed: true; auth: AllowDecision }
@@ -11,9 +12,17 @@ export type CensusApiGate =
 // accounts belonging to people who never asked to be catalogued, so it has no member-facing or
 // public surface at all — the output that reaches anyone else is a count, written by hand into a
 // post, not this table.
-export async function requireCensusAdminAccess(): Promise<CensusApiGate> {
+export async function requireCensusAdminAccess(command: string): Promise<CensusApiGate> {
   const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
   if (!decision.allowed) {
+    // Refusals are logged here rather than at each route, so a probe against any census endpoint
+    // leaves a trace whichever one it hit.
+    await insertCensusAudit({
+      actorUserId: null,
+      command,
+      policyStatus: 'deny',
+      reason: decision.reason ?? decision.code ?? 'access_denied',
+    });
     return {
       allowed: false,
       response: NextResponse.json(decision, { status: decision.status }),

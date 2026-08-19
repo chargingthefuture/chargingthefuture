@@ -10,7 +10,7 @@ const RUN_LIST_LIMIT = 200;
 
 // Every census run, newest observation date first.
 export async function GET() {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.runs.list');
   if (!gate.allowed) {
     return gate.response;
   }
@@ -31,7 +31,7 @@ export async function GET() {
 // Start a run. The observation date, the scope, and the sampling method are all required, because
 // a run missing any of them produces numbers nobody can reproduce or check.
 export async function POST(request: Request) {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.run.create');
   if (!gate.allowed) {
     return gate.response;
   }

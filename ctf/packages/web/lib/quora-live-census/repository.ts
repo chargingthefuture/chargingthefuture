@@ -1,6 +1,7 @@
 // Data access for the Quora live-account census.
 
 import { queryDb } from 'lib/db/postgres';
+import { failureReason } from 'lib/errors/failure';
 import type {
   QuoraCensusAccountState,
   QuoraCensusFrameKind,
@@ -214,4 +215,42 @@ export async function getCensusStanceTally(runId: string): Promise<CensusStanceT
     [runId],
   );
   return result.rows.map((row) => ({ stance: row.stance, count: Number(row.count) }));
+}
+
+export type CensusAuditInput = {
+  actorUserId: string | null;
+  command: string;
+  policyStatus: 'allow' | 'deny';
+  reason: string;
+  runId?: string | null;
+  rowCount?: number | null;
+  metadata?: Record<string, unknown>;
+};
+
+// Record who read or changed the census. The export is the reason this exists: an admin can
+// download a file naming third parties with a coding on each, and without a row here nothing says
+// that happened.
+//
+// Best-effort, like the Unlock audit writer it is shaped after: the routes await this, so a throw
+// (a legacy table missing a column) would turn a successful read into a 503 for the admin. Log the
+// real cause and carry on rather than failing the action the audit is only describing.
+export async function insertCensusAudit(input: CensusAuditInput): Promise<void> {
+  try {
+    await queryDb(
+      `INSERT INTO quora_live_census_audit_log (
+         actor_user_id, command, policy_status, reason, run_id, row_count, metadata
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+      [
+        input.actorUserId,
+        input.command,
+        input.policyStatus,
+        input.reason,
+        input.runId ?? null,
+        input.rowCount ?? null,
+        JSON.stringify(input.metadata ?? {}),
+      ],
+    );
+  } catch (error) {
+    console.error('[quora-live-census.audit] could not write audit row', failureReason(error));
+  }
 }

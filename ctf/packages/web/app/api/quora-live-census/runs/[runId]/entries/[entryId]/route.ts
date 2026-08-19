@@ -10,7 +10,7 @@ type RouteContext = { params: Promise<{ runId: string; entryId: string }> };
 // Remove a miscoded entry. Deleting rather than flagging is right here: a wrong row left in place
 // keeps counting toward the tally, and the census is small enough to re-add a corrected one.
 export async function DELETE(request: Request, context: RouteContext) {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.entry.delete');
   if (!gate.allowed) {
     return gate.response;
   }

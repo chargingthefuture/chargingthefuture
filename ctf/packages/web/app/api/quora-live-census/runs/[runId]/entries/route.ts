@@ -17,7 +17,7 @@ function isDuplicateHandle(error: unknown): boolean {
 
 // Add one coded account to a run.
 export async function POST(request: Request, context: RouteContext) {
-  const gate = await requireCensusAdminAccess();
+  const gate = await requireCensusAdminAccess('census.entry.create');
   if (!gate.allowed) {
     return gate.response;
   }
