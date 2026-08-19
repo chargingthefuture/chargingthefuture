@@ -329,6 +329,23 @@ completion % and "N of M submitted". Android reads it from `GET /api/unlock/admi
 The readout is read-only — no action buttons. A read failure never blocks the queue below it.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-A8c · Spam is not listed as support-only access
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one submission marked spam and one marked rejected.
+**Steps:**
+1. On `/admin/unlock`, read the **Support-only** counter at the top.
+2. Open the **Support-only** tab and read the list.
+3. Find the spam member on the **All submissions** tab and look at their pills.
+4. Find the rejected member on the **Support-only** tab.
+**Expected:** Steps 1–2: the spam member is in neither the counter nor the list. A spam decision also
+places a platform-wide account restriction, and that restriction is what decides — they reach nothing,
+Commons included — so calling them "support-only access" said the opposite of the truth. Step 3: their
+row still shows the **spam** status pill, just not the Support-only pill. Step 4: the rejected member
+**is** counted and listed, because they really do keep the support surface and can correct their URL.
+The counter and the list agree with each other. Their earlier support-only access is still readable in
+`unlock_audit_log` if you need it.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A9 · Sign-ups — total, and who never gave a Quora URL
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin; the auth provider secret is set in the app runtime.
@@ -336,7 +353,8 @@ The readout is read-only — no action buttons. A read failure never blocks the 
 1. Open `/admin/unlock` and find the "Sign-ups" panel, above the A/B experiment panel.
 2. Read the five numbers — Members, Gave a Quora URL, No Quora URL, Demo / test, Left — and the line
    above them saying how many accounts there are in total.
-3. Open the **No Quora URL** tab and read the list, then open the **Left** tab.
+3. Read the breakdown line under the numbers, then open the **No Quora URL** tab and read the list,
+   then open the **Left** tab.
 4. On any row, click **Mark as demo / test**, then watch the four numbers.
 5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
 6. Type part of a name, handle, or email into the search box.
@@ -345,7 +363,11 @@ The readout is read-only — no action buttons. A read failure never blocks the 
 **Expected:** Step 2: Members = total accounts minus demo/test minus Left; Gave a Quora URL + No Quora
 URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
 are not in the review queue below, because there is nothing to review. Each row shows a name or handle,
-the email, the sign-up date, and whether they have signed in since. On **Left**, every row says when
+the email, the sign-up date, whether they have signed in since, and how many times they opened the
+Unlock screen. The breakdown line above splits the same group into how many never signed in again after
+sign-up day and how many came back and still did not submit, with the typical number of Unlock-screen
+loads — the two groups need different answers, and the view count is the firmer signal because a
+sign-in date only moves on a fresh sign-in. On **Left**, every row says when
 that person asked to be forgotten; nobody appears on both tabs, and nobody on **Left** is counted as a
 member (their submission was deleted with the rest of their data, so they are not an onboarding
 failure). Step 4: `POST /api/unlock/admin/excluded-accounts` records the

@@ -102,6 +102,31 @@ async function listDeletedAccountDates(): Promise<Map<string, string>> {
   return new Map(result.rows.map((row) => [row.user_id, row.deleted_at.toISOString()]));
 }
 
+// How many times each member has loaded the Unlock screen, from the `unlock.status.get` audit rows.
+//
+// This is the number that separates "saw the ask once and left" from "came back to it and still could
+// not finish", and the two want different answers — the first is a discovery or first-impression
+// problem, the second is the Quora step itself being too hard. Sign-in timestamps cannot tell them
+// apart: they only move on a fresh sign-in, so somebody with a live session can return again and again
+// without the dates changing.
+//
+// Best-effort: a failure here leaves every count at 0 rather than taking the whole panel down, since
+// this is a supporting reading and not the panel's reason for existing.
+async function countUnlockScreenViews(): Promise<Map<string, number>> {
+  try {
+    const result = await queryDb<{ user_id: string; views: string }>(
+      `SELECT actor_user_id AS user_id, COUNT(*)::text AS views
+         FROM unlock_audit_log
+        WHERE command = 'unlock.status.get' AND actor_user_id IS NOT NULL
+        GROUP BY actor_user_id`,
+    );
+    return new Map(result.rows.map((row) => [row.user_id, Number(row.views)]));
+  } catch (error) {
+    console.error('[unlock] Unlock-screen view counts unavailable; showing 0', error);
+    return new Map();
+  }
+}
+
 // Which of those accounts have a Quora URL on file, and what happened to it.
 async function listSubmissionFacts(): Promise<Map<string, SubmissionFact>> {
   const result = await queryDb<{ user_id: string; review_status: UnlockReviewStatus; created_at: Date }>(
@@ -118,6 +143,14 @@ async function listSubmissionFacts(): Promise<Map<string, SubmissionFact>> {
   return byUser;
 }
 
+// Has this member never signed in again since the day they signed up? Only ever a hint: the provider
+// stamps the last sign-in on a fresh sign-in, not on every visit, so a member with a live session can
+// return without moving it. The Unlock-screen view count is the firmer reading of the same question.
+function neverReturned(account: { createdAt: string; lastSignInAt: string | null }): boolean {
+  if (!account.lastSignInAt) return true;
+  return account.lastSignInAt.slice(0, 10) === account.createdAt.slice(0, 10);
+}
+
 function emptyOverview(unavailableReason: string): UnlockSignupOverview {
   return {
     available: false,
@@ -129,6 +162,7 @@ function emptyOverview(unavailableReason: string): UnlockSignupOverview {
     memberCount: 0,
     submittedCount: 0,
     notSubmittedCount: 0,
+    notSubmittedNeverReturnedCount: 0,
     accounts: [],
   };
 }
@@ -148,15 +182,18 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
   let submissions: Map<string, SubmissionFact>;
   let excludedUserIds: Map<string, string | null>;
   let deletedDates: Map<string, string>;
+  let screenViews: Map<string, number>;
   try {
-    const [facts, excluded, deleted] = await Promise.all([
+    const [facts, excluded, deleted, views] = await Promise.all([
       listSubmissionFacts(),
       listUnlockExcludedAccounts(),
       listDeletedAccountDates(),
+      countUnlockScreenViews(),
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
     deletedDates = deleted;
+    screenViews = views;
   } catch (error) {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
@@ -172,6 +209,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
       hasSubmission: submission !== null,
       reviewStatus: submission?.reviewStatus ?? null,
       submittedAt: submission?.submittedAt ?? null,
+      unlockScreenViews: screenViews.get(account.userId) ?? 0,
     };
   });
 
@@ -180,6 +218,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
   const deletedCount = accounts.filter((account) => !account.excluded && account.deletedTheirData).length;
   const counted = accounts.filter((account) => !account.excluded && !account.deletedTheirData);
   const submittedCount = counted.filter((account) => account.hasSubmission).length;
+  const notSubmitted = counted.filter((account) => !account.hasSubmission);
 
   return {
     available: true,
@@ -190,7 +229,8 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     deletedCount,
     memberCount: counted.length,
     submittedCount,
-    notSubmittedCount: counted.length - submittedCount,
+    notSubmittedCount: notSubmitted.length,
+    notSubmittedNeverReturnedCount: notSubmitted.filter((account) => neverReturned(account)).length,
     accounts,
   };
 }
