@@ -272,6 +272,11 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
 - `POST /api/comic/contributions` (`comic.contribution.submit`) — **any signed-in member**
+  **This is one of exactly three exceptions to the Unlock gate** (with Contributions and the Quora
+  account deletion survey); every other feature requires Unlock approval to do anything. The list is
+  closed and enforced by `ctf/config/unlock-tier-exception-allowlist.json` and the `unlock-tier-gate`
+  CI job, and adding a fourth is the owner's decision, never a build step — do not read this as a
+  pattern to copy into a new surface.
   (`requireComicContributionAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
   the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
   member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an

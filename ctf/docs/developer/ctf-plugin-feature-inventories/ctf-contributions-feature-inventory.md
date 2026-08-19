@@ -20,6 +20,11 @@
   contribute and hold thank-you credits they cannot spend in verification-gated plugins until they
   finish Unlock. Keep this behavior. This note exists so the owner remembers it was an active
   choice, not an oversight.
+- That makes Contributions one of exactly three exceptions to the Unlock gate, with the knowledge
+  library contribution and the Quora account deletion survey. Every other feature requires Unlock
+  approval to do anything. The list is closed and enforced by
+  `ctf/config/unlock-tier-exception-allowlist.json` and the `unlock-tier-gate` CI job; adding a
+  fourth is the owner's decision, never a build step. Do not copy this posture into a new surface.
 
 ## 2. Intent and Outcome
 

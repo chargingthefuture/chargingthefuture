@@ -1,3 +1,9 @@
+import {
+  QUORA_RESEARCH_SUBJECT,
+  QUORA_RESEARCH_SUBJECT_LABEL,
+  type QuoraResearchSubject,
+} from 'lib/shared/quora-research-subjects';
+
 // Shared constants for the Quora live-account census.
 //
 // The census is the other half of the deletion survey. The survey records what was removed, which
@@ -64,28 +70,13 @@ export const QUORA_CENSUS_ACCOUNT_STATE_LABEL: Record<QuoraCensusAccountState, s
   renamed_or_moved: 'Renamed or moved',
 };
 
-// The subject list. Deliberately identical to the deletion survey's
-// (lib/quora-deletion-survey/constants.ts): the two datasets only answer the question together,
-// and they cannot be compared if they are coded differently. Change one list and you must change
-// the other, or the comparison silently stops meaning anything.
-export const QUORA_CENSUS_TOPIC = [
-  'targeting_and_gang_stalking',
-  'surveillance_and_harassment_tactics',
-  'coping_and_support',
-  'legal_and_reporting',
-  'organizing_and_meetups',
-  'unrelated_subjects',
-] as const;
-export type QuoraCensusTopic = (typeof QUORA_CENSUS_TOPIC)[number];
-
-export const QUORA_CENSUS_TOPIC_LABEL: Record<QuoraCensusTopic, string> = {
-  targeting_and_gang_stalking: 'Targeting and gang stalking',
-  surveillance_and_harassment_tactics: 'Surveillance and harassment tactics',
-  coping_and_support: 'Coping, support, encouragement',
-  legal_and_reporting: 'Legal steps and reporting',
-  organizing_and_meetups: 'Organizing, meetups, community building',
-  unrelated_subjects: 'Subjects unrelated to targeting',
-};
+// The subject list lives in lib/shared/quora-research-subjects.ts, shared with the deletion survey.
+// It was duplicated here while the survey was unmerged; the copies are now one list, because two
+// copies drift apart without anything failing to warn you. Re-exported under the census's own
+// names so call sites here read locally.
+export const QUORA_CENSUS_TOPIC = QUORA_RESEARCH_SUBJECT;
+export type QuoraCensusTopic = QuoraResearchSubject;
+export const QUORA_CENSUS_TOPIC_LABEL = QUORA_RESEARCH_SUBJECT_LABEL;
 
 // What the account DOES, not how the person behind it seems to be doing.
 //

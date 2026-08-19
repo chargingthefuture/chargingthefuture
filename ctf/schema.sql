@@ -5577,6 +5577,179 @@ ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPT
 CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
 
+-- === QUORA ACCOUNT DELETION SURVEY (research capture) ===
+-- Self-reports from people whose Quora accounts were removed. The blog posts cite counts of
+-- removals, and until now those counts rested on nothing a reader could check; these tables are
+-- the record behind them.
+--
+-- What this survey is for (owner, 2026-08-19), because it decides what belongs in these columns:
+-- documenting that content and handles are being scattered and removed to discredit people —
+-- history erasure. The handles are public, and a person types them here on purpose. Someone who
+-- does not want their handle history on record does not fill in the form.
+--
+-- So the response carries the member id of the account that sent it. An earlier build stored no
+-- identity, on the theory that a respondent needed protecting from the reader of this table; that
+-- was wrong for this survey and was reversed on the owner's instruction the same day. Keeping the
+-- id is what makes a duplicate answer detectable, lets a response be lined up against that
+-- member's Unlock submission, and leaves a route to reach someone about what they reported.
+--
+-- What is still deliberately absent: no IP address, no user agent, no contact detail (owner
+-- decision, 2026-08-18 — the follow-up contact field was removed from the questionnaire).
+--
+-- Publication is governed by the three consent flags below and by nothing else. Storing who
+-- answered is not permission to print it: a handle or a quote leaves this table only with the
+-- matching TRUE on that row.
+--
+-- Account deletion: `user_id` is nullable so `lib/account/deletion-registry.ts` can pseudonymize
+-- rather than destroy. A survey answer is a record of an erasure; deleting it when its author
+-- leaves would repeat the thing the survey exists to document. NULL therefore means "the account
+-- that sent this was deleted", never "this was anonymous".
+CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- The member who sent this. Always set on insert; nullable only so account deletion can clear
+  -- it and leave the answer standing. See the note above.
+  user_id TEXT,
+  -- Q1. Yes or no, no third option (owner decision, 2026-08-18). The form requires an answer
+  -- before it will send, so the default below is only ever the column default and never the
+  -- recorded answer of someone who declined to state one.
+  targeted_individual TEXT NOT NULL DEFAULT 'no'
+    CHECK (targeted_individual IN ('yes', 'no')),
+  -- Q2. Yes/no only (owner decision, 2026-08-18). The COUNT of removals is not asked as a number;
+  -- it is derived from the account rows below, so every removal counted is one backed by a handle
+  -- and a date rather than a figure someone typed.
+  any_account_removed BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Q13. Whether they still have a Quora account that was not removed. The yes/no lives here; the
+  -- URL deliberately does NOT. That URL is their Unlock verification URL — it identifies them —
+  -- and storing it on this row would make an otherwise anonymous response identifiable, which is
+  -- the one promise this table makes. It is carried to the verification step in the browser and
+  -- never written here.
+  --
+  -- Nullable, unlike the two questions above, because this one is optional and NULL is the answer
+  -- "did not say". Asking a targeted person to name an account they still hold is a larger ask
+  -- than asking about ones already gone, so skipping it is expected — and a skipped question
+  -- stored as FALSE would be counted later as "has no account left", which is a different claim
+  -- than the person made.
+  has_current_profile BOOLEAN NULL,
+  -- Q10/Q11. Free text. Evidence is whatever the person can show (the text of the notice Quora
+  -- sent, an archive.org link to the dead profile); notes is anything else they want on record.
+  evidence_note TEXT NULL,
+  other_notes TEXT NULL,
+  -- Q12. Three separate consents, each yes/no, each defaulting to NO. Publishing a handle or a
+  -- quote without the matching TRUE here is a breach of what the form promised, so the default
+  -- has to fail closed even if a future writer forgets to check.
+  consent_publish_handles BOOLEAN NOT NULL DEFAULT FALSE,
+  consent_quote BOOLEAN NOT NULL DEFAULT FALSE,
+  consent_attribute_quote BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS targeted_individual TEXT NOT NULL DEFAULT 'no';
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS any_account_removed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS has_current_profile BOOLEAN NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS evidence_note TEXT NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS other_notes TEXT NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS consent_publish_handles BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS consent_quote BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS consent_attribute_quote BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_responses_created_at
+  ON quora_deletion_survey_responses(created_at DESC);
+-- Finds every response one member sent, which is how a duplicate answer becomes visible at all.
+CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_responses_user
+  ON quora_deletion_survey_responses(user_id, created_at DESC);
+
+-- One row per removed account (Q3-Q9). A person who lost four accounts files one response with
+-- four of these, so "how many times" is a row count and each removal carries its own handle,
+-- date, outcome, and subject matter. `position` preserves the order the person listed them in.
+CREATE TABLE IF NOT EXISTS quora_deletion_survey_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  response_id UUID NOT NULL REFERENCES quora_deletion_survey_responses(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL DEFAULT 0,
+  handle TEXT NOT NULL,
+  -- Q4. What Quora actually did. 'answers_removed' and 'space_removed' matter as much as a full
+  -- deletion: an account kept but emptied is the same silencing with the evidence left standing.
+  action TEXT NOT NULL DEFAULT 'account_deleted'
+    CHECK (action IN (
+      'account_deleted', 'account_suspended', 'answers_removed', 'space_removed', 'posting_blocked'
+    )),
+  -- Q5. Month and year only. Asking for an exact date invites a guess; asking for the month gets
+  -- an answer someone can actually stand behind years later.
+  removed_month INTEGER NULL CHECK (removed_month IS NULL OR (removed_month BETWEEN 1 AND 12)),
+  removed_year INTEGER NULL CHECK (removed_year IS NULL OR (removed_year BETWEEN 2005 AND 2100)),
+  -- Q6. The reason Quora gave, in Quora's words as far as the person can recall. 'none_given' is
+  -- an answer, not a missing value, and is expected to be the most common one.
+  stated_reason TEXT NOT NULL DEFAULT 'none_given'
+    CHECK (stated_reason IN (
+      'none_given', 'spam', 'harassment', 'misinformation', 'impersonation',
+      'adult_content', 'ban_evasion', 'other', 'do_not_recall'
+    )),
+  -- Q7. Whether an appeal was made and whether anything came back.
+  appealed BOOLEAN NOT NULL DEFAULT FALSE,
+  reinstated BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Q8. What the account mostly wrote about. The load-bearing column for the blog claim: it is
+  -- what separates "accounts get removed" from "accounts writing about THIS get removed".
+  topics TEXT[] NOT NULL DEFAULT '{}',
+  -- Q9. Rough size and lifespan of the account, both optional. Someone who lost an eight-year
+  -- account with thousands of answers is reporting a different event from someone who lost a
+  -- week-old one, and the difference is invisible without these.
+  approx_post_count INTEGER NULL CHECK (approx_post_count IS NULL OR approx_post_count >= 0),
+  approx_active_months INTEGER NULL CHECK (approx_active_months IS NULL OR approx_active_months >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS response_id UUID;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS handle TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS action TEXT NOT NULL DEFAULT 'account_deleted';
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS removed_month INTEGER NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS removed_year INTEGER NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS stated_reason TEXT NOT NULL DEFAULT 'none_given';
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS appealed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS reinstated BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS topics TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS approx_post_count INTEGER NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS approx_active_months INTEGER NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_accounts_response
+  ON quora_deletion_survey_accounts(response_id, position);
+
+-- What happened at this survey, without recording who it happened to.
+--
+-- Two different things are audited here and they have opposite rules, which is the whole reason
+-- this table needs a comment. For a SUBMIT the event is recorded and the person is not: the
+-- response id, how many account rows came with it, which consent flags were set, and whether it
+-- was accepted or refused. No user id, and no IP — the rate limiter sees one, and it stops there,
+-- because an address beside a timestamp re-identifies the response this table exists to protect.
+-- For an ADMIN READ the opposite: the admin's id is the point, since the question that record
+-- answers is who looked at the responses and took a copy away.
+CREATE TABLE IF NOT EXISTS quora_deletion_survey_audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Null on every survey submit event, always: naming the member who submitted would undo the
+  -- anonymity of the response row the event is about. Populated for the identified actions —
+  -- an admin reading or exporting the table, and a respondent choosing on the confirmation
+  -- screen to start Unlock verification, which is an act on their own account rather than on
+  -- the survey. No IP address is stored on any row here.
+  actor_user_id TEXT,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL DEFAULT 'allow' CHECK (policy_status IN ('allow', 'deny')),
+  reason TEXT,
+  response_id UUID,
+  row_count INTEGER,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT;
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT 'allow';
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS response_id UUID;
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS row_count INTEGER;
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS quora_deletion_survey_audit_log ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_audit_created_at
+  ON quora_deletion_survey_audit_log(created_at DESC);
+
 -- === QUORA LIVE ACCOUNT CENSUS (admin-only observational snapshot) ===
 -- The other half of the Quora research. The deletion survey records what was REMOVED, which can
 -- never establish what REMAINS — a claim about which accounts are still standing needs someone to

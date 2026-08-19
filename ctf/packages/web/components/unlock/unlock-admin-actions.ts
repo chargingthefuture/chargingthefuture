@@ -14,7 +14,7 @@ export type QuoraHistoryEntry = {
   previousUrl: string | null;
   newUrl: string;
   changedByUserId: string;
-  source: 'directory_self' | 'directory_admin' | 'unlock_onboarding';
+  source: 'directory_self' | 'directory_admin' | 'unlock_onboarding' | 'quora_deletion_survey';
   createdAtIso: string;
 };
 
@@ -263,6 +263,8 @@ export function historySourceLabel(source: QuoraHistoryEntry['source']): string 
       return 'changed by member in Directory';
     case 'directory_admin':
       return 'changed by an admin';
+    case 'quora_deletion_survey':
+      return 'reported removed, from the account survey';
     default:
       return source;
   }

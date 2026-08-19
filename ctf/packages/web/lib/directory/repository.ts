@@ -514,7 +514,11 @@ export async function getOwnProfile(userId: string): Promise<DirectoryProfile | 
   return withDbTransaction(async (client) => loadProfileByUser(client, userId));
 }
 
-export type QuoraUrlChangeSource = 'directory_self' | 'directory_admin' | 'unlock_onboarding';
+export type QuoraUrlChangeSource =
+  | 'directory_self'
+  | 'directory_admin'
+  | 'unlock_onboarding'
+  | 'quora_deletion_survey';
 
 export type QuoraUrlHistoryEntry = {
   id: string;
@@ -587,6 +591,38 @@ export async function recordQuoraUrlChangeStandalone(input: {
   );
 }
 
+// Record an account the member says was REMOVED from Quora, as part of their own account history.
+//
+// Separate from recordQuoraUrlChangeStandalone because that one derives the normalized column from
+// the URL, and a removed account has no URL to derive it from. Inventing a plausible
+// quora.com/profile/... link would put something in the history that looks live and clickable and
+// is not; the caller passes a marker instead (see removedQuoraAccountMarker), and the NOT NULL
+// normalized column takes the same string lowercased.
+//
+// `previous_url` is always null: this is not a change from one URL to another, it is the member
+// stating that an account of theirs no longer exists.
+export async function recordRemovedQuoraAccountStandalone(input: {
+  userId: string;
+  removedAccountMarker: string;
+  changedByUserId: string;
+  source: QuoraUrlChangeSource;
+}): Promise<void> {
+  await queryDb(
+    `
+      INSERT INTO directory_quora_url_history
+        (user_id, previous_url, new_url, previous_url_normalized, new_url_normalized, changed_by_user_id, source)
+      VALUES ($1, NULL, $2, NULL, $3, $4, $5)
+    `,
+    [
+      input.userId,
+      input.removedAccountMarker,
+      input.removedAccountMarker.trim().toLowerCase(),
+      input.changedByUserId,
+      input.source,
+    ],
+  );
+}
+
 // The number of Quora URL changes recorded for each of the given users — a cheap signal for the
 // Unlock queue so an admin can spot at a glance who has changed their social-proof URL and how often.
 export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map<string, number>> {
@@ -599,6 +635,11 @@ export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map
       SELECT user_id, COUNT(*)::text AS change_count
       FROM directory_quora_url_history
       WHERE user_id = ANY($1::text[])
+        -- Closures reported through the account survey are excluded. This count is an abuse
+        -- signal about a member changing the URL they verify with; a member reporting six
+        -- accounts Quora closed has not changed anything, and counting those rows would make
+        -- the most-affected respondents look like the most suspicious accounts.
+        AND source <> 'quora_deletion_survey'
       GROUP BY user_id
     `,
     [userIds],
@@ -607,6 +648,21 @@ export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map
     counts.set(row.user_id, Number.parseInt(row.change_count, 10) || 0);
   }
   return counts;
+}
+
+// Markers already on this member's history for accounts they reported as closed. Used to skip a
+// handle that is already recorded, so answering the survey a second time does not write the same
+// closure twice into an append-only table.
+export async function listRemovedQuoraAccountMarkers(userId: string): Promise<Set<string>> {
+  const result = await queryDb<{ new_url_normalized: string }>(
+    `
+      SELECT new_url_normalized
+      FROM directory_quora_url_history
+      WHERE user_id = $1 AND source = 'quora_deletion_survey'
+    `,
+    [userId],
+  );
+  return new Set(result.rows.map((row) => row.new_url_normalized));
 }
 
 // The full Quora URL change history for one member, newest first — read by the Unlock admin queue so

@@ -720,6 +720,35 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'quora-deletion-survey',
+    name: 'Quora account removals survey',
+    dataSummary:
+      'Survey answers you sent about Quora accounts being removed (kept as research, with your account id removed).',
+    // A survey answer is a record of an erasure. Destroying it when its author leaves would repeat
+    // the thing the survey exists to document, and would silently shrink counts already quoted in
+    // published posts. So the row stays and the member's id is cleared instead — the same handling
+    // bug reports get, for the same reason: the content is still needed after the reporter is gone.
+    //
+    // The account rows have no user column of their own; they cascade from the response and are
+    // reached through it, so clearing the response's id de-identifies both.
+    //
+    // The audit log is retained like every other accountability trail here: it records what was
+    // done to this data, including by admins, and must survive the departure of anyone named in it.
+    serviceScopeSupported: false,
+    tables: [
+      pseudo(
+        'quora_deletion_survey_responses',
+        'user_id',
+        [],
+        'Survey answers you sent — the answer stays as research, your account id does not.',
+      ),
+      retain(
+        'quora_deletion_survey_audit_log',
+        'Record of admin reads and exports of the survey, and of verification started from it.',
+      ),
+    ],
+  },
+  {
     slug: 'mutual-time',
     name: 'Mutual Time',
     dataSummary: 'Your votes on meeting-time surveys, and any surveys you created as an organizer.',

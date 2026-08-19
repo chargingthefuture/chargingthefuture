@@ -383,9 +383,12 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        (SELECT COUNT(*)
           FROM unlock_verification_submissions dup
          WHERE dup.quora_profile_url_normalized = s.quora_profile_url_normalized) AS shared_url_account_count,
+       -- Excludes closures reported through the account survey: this column flags a member who
+       -- keeps changing the URL they verify with, and a reported closure is not a change.
        (SELECT COUNT(*)
           FROM directory_quora_url_history h
-         WHERE h.user_id = s.user_id) AS quora_url_change_count,
+         WHERE h.user_id = s.user_id
+           AND h.source <> 'quora_deletion_survey') AS quora_url_change_count,
        NULLIF(TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')), '') AS member_name,
        ${hasUsersTable ? 'u.username' : 'NULL::text'} AS member_username
      FROM unlock_verification_submissions s

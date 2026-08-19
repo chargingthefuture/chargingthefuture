@@ -169,11 +169,13 @@ Indexes: `idx_quora_live_census_entries_run` on `(run_id, created_at)`, and a un
 `idx_quora_live_census_entries_run_handle` on `(run_id, lower(handle))` so one account cannot be
 coded twice inside a run and count double in the tally.
 
-The subject list is duplicated between `lib/quora-live-census/constants.ts` and
-`lib/quora-deletion-survey/constants.ts` rather than shared, because the survey is not yet on
-`main`. The two must be changed together; if they drift, the comparison the census exists for
-silently stops meaning anything. Folding them into one shared module once the survey merges is in
-the gaps list below.
+The subject list is one list, in `lib/shared/quora-research-subjects.ts`, imported by both this
+plugin and the deletion survey. It was duplicated between the two while the survey was unmerged
+and was folded together when the census landed first (2026-08-19). Copies do not stay identical:
+someone adds a subject to one, the other keeps its five, and the comparison the census exists for
+silently starts comparing different things while every test still passes and every screen still
+renders. Adding or renaming a value there changes the meaning of every run already recorded, since
+nothing is recoded retroactively — treat it as a change to the research, not to a dropdown.
 
 `quora_live_census_audit_log` — who read or changed the census.
 
@@ -265,8 +267,6 @@ this is not a plugin. The steps that matter:
 
 ## Gaps & Known Technical Debt
 
-- The subject list is duplicated with the deletion survey (see above). Fold both into one shared
-  module once the survey is on `main`.
 - One coder, no second opinion. Stance coding is a judgment call, and a census coded by one person
   has no measure of how repeatable that judgment is. A second coder on a sample of the same run,
   with the disagreement rate recorded, is the standard fix and is not built.
