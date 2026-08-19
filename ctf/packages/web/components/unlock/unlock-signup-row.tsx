@@ -4,7 +4,7 @@ import type { UnlockSignupAccount } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
 
-// Colour and wording for what happened to this person's Quora URL, including the case this panel exists
+// Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
 function statusChip(account: UnlockSignupAccount): { label: string; color: string } {
   if (!account.hasSubmission) return { label: 'No Quora URL', color: '#F59E0B' };
