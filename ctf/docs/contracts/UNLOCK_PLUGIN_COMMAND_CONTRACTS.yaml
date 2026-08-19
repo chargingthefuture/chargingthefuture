@@ -29,6 +29,25 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.help.request
+    version: 1.0.0
+    description: >-
+      A signed-in member with no submission asks for help instead of giving a Quora URL. Records the
+      request, which is what admits them to the Commons (support-only) so there is somebody to ask.
+      Self-scoped — the member id comes from the session, never the request body. Grants nothing
+      beyond the Commons; approved-only surfaces stay closed and the verification prompt follows them.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - unlock_help_requests
+      - unlock_audit_log
+    purpose: onboarding_support_access
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.submission.list
     version: 1.0.0
     description: List unlock verification submissions for admin moderation queues.
@@ -49,77 +68,6 @@ contracts:
       - unlock_verification_submissions
     purpose: moderation_queue
     retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: unlock
-    command: unlock.admin.experiment.read
-    version: 1.0.0
-    description: Read the early-Commons A/B experiment split (per-bucket Quora-URL completion rate) for the admin readout.
-    inputSchema: {}
-    outputSchema:
-      experimentSplit:
-        type: array
-    dataAccess:
-      - unlock_audit_log
-    purpose: experiment_measurement
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: unlock
-    command: unlock.admin.submission.review
-    version: 1.1.0
-    description: >-
-      Apply admin moderation decision and unlock access tier transition. A spam decision also places
-      a platform-wide ('all'-scope) account restriction so the member loses Commons/app access; an
-      approved or rejected decision lifts a restriction previously placed by a spam decision.
-    inputSchema:
-      submissionId:
-        type: integer
-        required: true
-      reviewStatus:
-        type: string
-        required: true
-      reviewNote:
-        type: string
-        required: false
-    outputSchema:
-      submissionId:
-        type: integer
-      reviewStatus:
-        type: string
-      accessTier:
-        type: string
-      reviewedAt:
-        type: string
-    dataAccess:
-      - unlock_verification_submissions
-      - unlock_audit_log
-      - account_restrictions
-      - account_restrictions_audit
-      - unlock_spam_quora_urls
-    purpose: moderation_and_unlock_transition
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: unlock
-    command: unlock.admin.spam_denylist.remove
-    version: 1.0.0
-    description: >-
-      Remove a normalized Quora URL from the spam denylist. Stops future submissions of that URL from
-      being auto-blocked; does not lift the restriction on a member already blocked for it (that is
-      reversed by re-reviewing their submission to approved/rejected).
-    inputSchema:
-      quoraProfileUrlNormalized:
-        type: string
-        required: true
-    outputSchema:
-      ok:
-        type: boolean
-    dataAccess:
-      - unlock_spam_quora_urls
-      - unlock_audit_log
-    purpose: moderation_denylist_maintenance
-    retentionClass: audit_long_lived
     idempotency: true
 
   - pluginId: unlock

@@ -30,42 +30,6 @@ export type UnlockAdminSubmission = {
 // The review route accepts approved | rejected | spam (never pending).
 export type UnlockReviewDecision = Exclude<UnlockReviewStatus, 'pending'>;
 
-// Mirrors lib/unlock/types.ts UnlockExperimentBucketStat — one row of the early-Commons A/B split.
-//   bucket        — 'early_commons' (treatment) or 'control'.
-//   exposed       — distinct members seen in this bucket.
-//   submitted     — of those, how many have a successful Quora-URL submission.
-//   completionPct — submitted / exposed, as a percentage (one decimal).
-export type UnlockExperimentBucketStat = {
-  bucket: string;
-  exposed: number;
-  submitted: number;
-  completionPct: number;
-};
-
-export type ExperimentSplitFetchResult = {
-  ok: boolean;
-  forbidden: boolean;
-  rows: UnlockExperimentBucketStat[];
-  message: string | null;
-};
-
-// GET the early-Commons A/B experiment split (per-bucket Quora-URL completion rate). Admin gated;
-// returns forbidden:true for non-admins. An empty rows array is the normal "no experiment data yet"
-// state (the Unleash rollout has produced no bucketed audit rows), not an error.
-export async function fetchExperimentSplit(): Promise<ExperimentSplitFetchResult> {
-  const res = await authedFetch(`${ADMIN_API_BASE}/experiment-split`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (res.status === 401 || res.status === 403) {
-    return { ok: false, forbidden: true, rows: [], message: 'Admin access is required.' };
-  }
-  if (!res.ok) {
-    return { ok: false, forbidden: false, rows: [], message: `Could not load the experiment split (${res.status}).` };
-  }
-  const data = (await res.json()) as { experimentSplit?: UnlockExperimentBucketStat[] };
-  return { ok: true, forbidden: false, rows: data.experimentSplit ?? [], message: null };
-}
-
 export type SubmissionsFetchResult = {
   ok: boolean;
   forbidden: boolean;

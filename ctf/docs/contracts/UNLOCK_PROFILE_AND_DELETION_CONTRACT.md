@@ -52,6 +52,7 @@ Unlock uses canonical identity for authentication, submission ownership, and mod
 - `unlock_audit_log`
 - `unlock_spam_quora_urls`
 - `unlock_excluded_accounts`
+- `unlock_help_requests`
 
 Retention summary:
 
@@ -69,6 +70,12 @@ Retention summary:
    other data (registered `del` in the account deletion registry): the account it names no longer
    exists, so the row would count for nothing and there is no abuse-prevention reason to keep it. The
    row grants and revokes nothing — it changes only what the admin sign-up numbers count.
+6. `unlock_help_requests` holds one row per member who pressed "ask for help" on the Unlock screen
+   rather than submitting a Quora URL. It is keyed on `user_id` and is hard-deleted with the member's
+   other data (registered `del` in the account deletion registry). While the member is here it is what
+   admits them to the Commons without a submission; once they are gone there is nobody to admit, and
+   the aggregate signal it carries — how many people could not get through the Quora step alone — is
+   not worth retaining a departed member's identifier for.
 
 ## 5) Service-Scoped Deletion Contract
 

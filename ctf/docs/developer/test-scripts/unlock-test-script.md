@@ -313,27 +313,45 @@ completes, including on a failed request.
 
 ---
 
-### UNLOCK-A8 · A/B experiment readout parity (web ↔ android)
-**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
-**Precondition:** signed in as an admin on both surfaces.
+### UNLOCK-A8 · Ask for help opens the Commons (web ↔ android)
+**Role:** member (not yet verified, no submission) · **Surfaces:** web + mobile-responsive, android
+**Precondition:** a signed-in test account with no Quora URL submitted, on its **first** visit.
 **Steps:**
-1. Open the web admin (`/admin/unlock`) and find the "Early Commons access — A/B experiment" panel.
-2. Open the android Unlock Admin and find the same "Early Commons access — A/B experiment" panel.
-3. Compare the two while the `feature-unlock-early-commons-access` Unleash rollout is **off**, then
-   (if you can) turn it on and let a few members submit, and compare again.
-**Expected:** With the rollout off, both surfaces show the same empty state pointing at the
-`feature-unlock-early-commons-access` rollout — no fabricated numbers. With the rollout on and data
-present, both show the same per-bucket rows (Early Commons / treatment vs Control) with a matching
-completion % and "N of M submitted". Android reads it from `GET /api/unlock/admin/experiment-split`
-(admin-gated; a non-admin is denied), which returns the same split the web page reads server-side.
-The readout is read-only — no action buttons. A read failure never blocks the queue below it.
+1. Sign in. You land on the Unlock screen, not the Commons.
+2. Find "Can't find your Quora profile URL?" and read it. Press **Ask for help in the Commons**.
+3. Read the top of the Commons.
+4. Ask a question in the chat.
+5. Sign out, sign back in, and see where you land.
+6. Repeat 1–5 on Android.
+**Expected:** Step 1: a first-time member still meets the Unlock screen — the wall is not gone, it just
+stops being a dead end. Step 2: the help text offers the Commons and does **not** send you to
+skillseconomy.quora.com or anywhere else off the app. Pressing it records the request
+(`POST /api/unlock/help-request`, audited `unlock.help.request`) and lands you on the Commons. Step 3:
+the verification banner sits above the chat, asking for the Quora URL, with help pointing at the chat
+just below. Step 4: your message posts — the Commons accepts a member with no username and no profile.
+Step 5: you land on the Commons directly now, not the Unlock screen. Step 6: Android behaves the same,
+because the member Unlock screen is on the keep-list. Nothing here grants any approved-only surface —
+open a plugin and you still get its public landing page.
+**Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-A8b · Coming back a second day opens the Commons on its own
+**Role:** member (not yet verified, no submission) · **Surfaces:** web + mobile-responsive, android
+**Precondition:** a test account that signed in on an earlier calendar day (UTC) and never submitted a
+Quora URL or pressed "ask for help". A row in `login_events` from a previous day is what this reads.
+**Steps:**
+1. Sign in today and see where you land.
+2. Check that the verification banner is above the chat.
+**Expected:** Step 1: the Commons, not the Unlock screen — returning is treated as the member telling
+us the wall did not work for them. Step 2: the banner is there, so the Quora URL is still asked for. If
+this account has no prior-day login row it will still see the Unlock screen once; that is the rule
+working, not a bug.
 **Result:** web ☐ · android ☐ — notes:
 
 ### UNLOCK-A9 · Sign-ups — total, and who never gave a Quora URL
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin; the auth provider secret is set in the app runtime.
 **Steps:**
-1. Open `/admin/unlock` and find the "Sign-ups" panel, above the A/B experiment panel.
+1. Open `/admin/unlock` and find the "Sign-ups" panel, below the review counters.
 2. Read the five numbers — Members, Gave a Quora URL, No Quora URL, Demo / test, Left — and the line
    above them saying how many accounts there are in total.
 3. Open the **No Quora URL** tab and read the list, then open the **Left** tab.
@@ -387,6 +405,9 @@ tracked, not a new bug:
   cached, so the panel is the slowest part of the page to appear.
 - "Members" counts accounts the auth provider holds now, so the provider's all-time sign-up chart
   counts differently and can read higher.
+- A member who signed up but has no `login_events` row from an earlier day sees the Unlock screen once
+  more before the Commons opens to them. `login_events` does not necessarily reach back to every old
+  account.
 - Accounts stranded in the auth provider by deletions made before 2026-08-19, when the app's own delete
   flow started removing the sign-in as well as the data (PR #2259). The sign-up panel labels them "Left"
   and subtracts them, so the numbers are right, but clearing the account itself is the
