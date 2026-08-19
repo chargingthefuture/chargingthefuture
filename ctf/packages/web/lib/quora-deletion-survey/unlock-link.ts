@@ -32,13 +32,19 @@ import {
 //      the Unlock screen is not asked again and is not overwritten, so two conflicting URLs can
 //      never land on one account by this path.
 //
-// The re-identification tradeoff, stated plainly because it is the one real cost here:
-// recording the removed handles against the member's account (below) puts those handles on an
-// identified row while the same handles sit on the anonymous survey response. Anyone holding both
-// tables could match a response to a member by handle. That is why writing them is a separate,
-// off-by-default choice with its own checkbox, and why the live profile URL — which is the
-// verification URL, and therefore the strongest identifier in the flow — is never written to the
-// survey response at all.
+// Why recording the removed handles (below) is a separate, off-by-default choice:
+//
+// Not because of an outside attacker. There is no second party here — the owner holds every table
+// and already reads the raw survey, handles included, on the admin screen. A join by handle is
+// something they could do anyway, so writing the handles does not hand anyone a capability they
+// did not have.
+//
+// It is the promise in the form copy. The survey tells the respondent that nobody here can tell
+// afterward which member wrote which answer, and putting their lost handles on their own account
+// is the one thing that would make that sentence untrue for them. So it stays their choice,
+// taken knowingly, rather than something that happens to them because they verified. Same reason
+// the live profile URL — the verification URL, and the strongest identifier in the flow — is
+// never written to the survey response at all.
 
 export type SurveyUnlockLinkOutcome =
   | { status: 'submitted'; linkedHandles: number }

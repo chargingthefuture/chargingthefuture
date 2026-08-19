@@ -211,12 +211,15 @@ a button after the first has already been stored. That is why the live profile U
 verification URL, and therefore the strongest identifier in the whole flow — is never written to
 the survey response, and why the yes/no answer to that question is stored without it.
 
-The one real cost, stated rather than buried: the optional box that records the lost handles on the
-member's account puts those handles on an identified row while the same handles sit on the
-anonymous response. Anyone holding both tables could match a response to a member by handle. This
-is why the box is off by default, why it is on the confirmation screen rather than in the form, and
-why its copy says exactly what it links. A person who wants the handles recorded on their profile
-can have that; a person who wants the gap kept simply leaves it alone, which is the default.
+Why the box that records the lost handles on the member's account is off by default, correcting an
+earlier framing of this that was wrong (owner, 2026-08-19): not because of an outside party. There
+is none. The owner holds every table and already reads the raw survey with its handles on the admin
+screen, so the join is available to them regardless and writing the handles hands nobody a new
+capability. The reason is the promise the form makes — that nobody here can tell afterward which
+member wrote which answer. Attaching a member's lost handles to their account is the single thing
+that would make that untrue for them, so it stays their choice, taken knowingly, rather than a side
+effect of verifying. A person who wants those handles on their profile can have them; the default
+is that they do not.
 
 Verification path: `lib/quora-deletion-survey/unlock-link.ts` goes through
 `lib/shared/unlock-interface.ts` and never imports `lib/unlock` directly (owner decision

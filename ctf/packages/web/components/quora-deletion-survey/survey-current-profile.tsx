@@ -137,9 +137,9 @@ export function VerificationOffer({
             tokens={tokens}
           />
           <p style={hintStyle(tokens)}>
-            Off by default, and worth reading before turning on. Your survey answer lists these same
-            handles with nothing saying who wrote it. Putting them on your account too means someone
-            holding both could match the two by the handles. Leaving this off keeps that gap.
+            Off by default. Your survey answer lists these same handles with nothing on it saying
+            who wrote it. Ticking this puts them on your account as well, which is what would
+            connect the two. Leave it alone and your answer stays unattached.
           </p>
         </>
       ) : null}
