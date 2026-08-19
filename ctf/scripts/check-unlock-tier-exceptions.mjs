@@ -16,13 +16,18 @@
  *   MACHINERY — the gate cannot work if these are gated. Unlock's own submission and status
  *   routes, the account area (see and delete your own data), bug reporting (report the thing
  *   blocking your onboarding), and small feeds a gated screen needs to render. Gating these would
- *   trap a member outside the app with no way in and no way out.
+ *   trap a member outside the app with no way in and no way out. They are not features anyone
+ *   "does something" with; they are the machinery around the gate.
  *
- *   OWNER-APPROVED FEATURES — a real capability deliberately opened to unapproved members, each
- *   one an explicit owner decision recorded with its date. These are the ones that must not grow
- *   by imitation.
+ *   EXCEPTIONS — a real capability deliberately opened to unapproved members. There are exactly
+ *   three, each an explicit owner decision recorded with its date: the knowledge library
+ *   contribution (2026-07-29), Contributions (2026-06-10), and the Quora account deletion survey
+ *   (2026-08-19). Every other feature in this app requires Unlock approval to do anything at all.
+ *   These three are the ones that must not grow by imitation, so each carries `feature` and
+ *   `decision` fields and this gate refuses an exception entry without them — an undated exception
+ *   is indistinguishable from one somebody added on their own initiative.
  *
- * ADDING AN ENTRY IS AN OWNER DECISION, not a build step. If a new surface seems to need this,
+ * ADDING A FOURTH IS THE OWNER'S DECISION, not a build step. If a new surface seems to need this,
  * the answer is almost always `approved_full`; ask before adding a line here.
  *
  *   Run: pnpm --dir ctf run check:unlock-tier-exceptions
@@ -75,6 +80,13 @@ for (const file of walk(webRoot)) {
 
 const stale = [...allowed.keys()].filter((file) => !seen.has(file));
 
+// An exception with no named feature and no decision date reads as policy while being nobody's
+// decision. Machinery entries are exempt: they have no owner decision to cite because the gate
+// cannot function without them.
+const undocumented = allowlist.exceptions.filter(
+  (entry) => entry.kind === 'exception' && !(entry.feature && entry.decision),
+);
+
 if (offenders.length > 0) {
   console.error(
     'Unlock tier check failed: these files let a member who is NOT approved in Unlock use the\n' +
@@ -99,6 +111,30 @@ if (stale.length > 0) {
   process.exit(1);
 }
 
+if (undocumented.length > 0) {
+  console.error(
+    'Unlock tier check failed: these exception entries name no feature or no owner decision date:\n',
+  );
+  for (const entry of undocumented) console.error(`  • ${entry.file}`);
+  console.error(
+    '\nAn exception without a dated decision behind it is indistinguishable from one somebody added\n' +
+      'on their own initiative. Record which feature it is and when the owner decided it.',
+  );
+  process.exit(1);
+}
+
+const features = [
+  ...new Set(
+    allowlist.exceptions.filter((entry) => entry.kind === 'exception').map((entry) => entry.feature),
+  ),
+].sort();
+
+const machineryCount = allowlist.exceptions.filter((entry) => entry.kind === 'machinery').length;
+const exceptionCount = allowlist.exceptions.filter((entry) => entry.kind === 'exception').length;
+
 console.log(
-  `Unlock tier check passed: ${seen.size} approved exception(s); every other surface requires Unlock approval.`,
+  `Unlock tier check passed: ${seen.size} call site(s) on the list — ${machineryCount} machinery, ` +
+    `${exceptionCount} across ${features.length} approved feature exception(s).`,
 );
+console.log(`Feature exceptions: ${features.join(', ')}.`);
+console.log('Every other surface in this app requires Unlock approval.');

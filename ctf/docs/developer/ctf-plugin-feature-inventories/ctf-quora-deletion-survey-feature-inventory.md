@@ -143,9 +143,10 @@ same-origin `checkMutationOrigin` check, and a per-IP fixed-window brake of 5 su
 Every field is validated against a fixed option list or a length cap before it reaches the
 database, and unknown values fall back to the safe default rather than being stored.
 
-This is one of the few surfaces an unapproved member may use, and it is an exception rather than a
-precedent. Unlock approval is what grants access to this app; every other feature requires it, and
-a new surface should use the `approved_full` default. The reason this one is different is specific
+This is one of exactly three exceptions to the Unlock gate — with the knowledge library
+contribution (2026-07-29) and Contributions (2026-06-10) — and it is an exception rather than a
+precedent. A member must be approved through Unlock to do anything else in this app, and a new
+surface should use the `approved_full` default. The reason this one is different is specific
 and does not generalize: the research is about people outside this app, so approval cannot be the
 bar without sampling only the members already reached. The exception is recorded in
 `ctf/config/unlock-tier-exception-allowlist.json` and enforced by the `unlock-tier-gate` CI job —

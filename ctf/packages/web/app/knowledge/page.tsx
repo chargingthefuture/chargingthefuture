@@ -9,6 +9,12 @@ export const dynamic = 'force-dynamic';
 // Where a member lends their own public Quora writing to the assistant's reference library, and
 // where the consent that permits it is given.
 //
+// AN EXCEPTION TO THE UNLOCK GATE, not a pattern to copy. A member must be approved through Unlock
+// to do anything in this app; this is one of exactly three features excepted from that, alongside
+// Contributions and the Quora account deletion survey. The list is closed and enforced —
+// ctf/config/unlock-tier-exception-allowlist.json, CI job `unlock-tier-gate` — and adding a fourth
+// is the owner's decision, never a build step. For anything new, use the `approved_full` default.
+//
 // OPEN TO ANY SIGNED-IN MEMBER, not only verified ones (owner decision, 2026-07-29). Contributing is
 // a route INTO verification rather than something gated behind it: judging a contribution means
 // opening the contributor's Quora account and seeing a real person writing real things, which is the
