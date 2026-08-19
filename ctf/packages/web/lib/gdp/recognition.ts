@@ -351,7 +351,7 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  *     MONTHLY figure by the line's cadence (`CADENCE_MONTHLY_FACTOR`) so a weekly arrangement and a
  *     monthly one moving the same credits over a year count the same. Before that scaling, a weekly 50
  *     and a monthly 50 both contributed 50, which read a weekly arrangement as a twelfth of what it is.
- *     ServiceCredits is an internal utility token with no third-party reporting duty. This is a DECLARED
+ *     ServiceCredits is an internal credits unit with no third-party reporting duty. This is a DECLARED
  *     figure, never an executed transfer, so it never touches real balances and never double-counts the
  *     direct ServiceCredits transfer source (which reads `service_credits_transfers`, a different
  *     table). Fiat lines are unaffected: they are counted by NUMBER of relationships, not by period.

@@ -2,7 +2,7 @@
 //
 // A recurring activity is a member's self-declared, counterparty-confirmed ONGOING relationship with
 // one other member. It is deliberately NOT a ledger and NOT a payment record: no value moves, fiat
-// carries no amount, and only ServiceCredits (an internal utility token) carries a declared value.
+// carries no amount, and only ServiceCredits (an internal credits unit) carries a declared value.
 
 // Fixed sector dropdown — this doubles as the "brief description" so there is no free-text field a
 // member could over-disclose in. Keep in sync with the schema CHECK on recurring_activities.sector.

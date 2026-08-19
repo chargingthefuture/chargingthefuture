@@ -1,7 +1,7 @@
 // Shared constants, types, and helpers for the ServiceCredits web shell.
 // Palette/layout derive from design/.../survivor-hub/ServiceCredits.tsx.
 //
-// Brand rules (critical): "ServiceCredits" is one word and a utility token —
+// Brand rules (critical): "ServiceCredits" is one word and an internal credits unit —
 // it must NEVER be shown at a fiat / dollar equivalent. Balances render as
 // "credits" only.
 

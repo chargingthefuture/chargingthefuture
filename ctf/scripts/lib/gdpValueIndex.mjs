@@ -133,7 +133,7 @@ export const RECOGNITION_SOURCES = [
     // scaled to a MONTHLY figure by the line's cadence so a weekly arrangement and a monthly one moving
     // the same credits over a year count the same (mirrors CADENCE_MONTHLY_FACTOR in
     // packages/web/lib/recurring-activity/types.ts — keep the two in step). ServiceCredits is an
-    // internal utility token with no third-party reporting duty. This is a declared figure, never an
+    // internal credits unit with no third-party reporting duty. This is a declared figure, never an
     // executed transfer, so it never touches balances and never double-counts the direct ServiceCredits
     // transfer source (a different table). Only active (confirmed) rows count.
     pluginSlug: 'recurring-activity',

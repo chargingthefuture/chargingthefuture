@@ -486,3 +486,5 @@ web ☐
 
 **2.** As member B, confirm the activity. Sign in as member A, open the 🔔 tab, and confirm a "Your recurring activity was confirmed." item appears. (Repeat with decline to confirm the "…was declined." item.)
 web ☐
+
+> _Documentation note (2026-08-18): the inventory's ServiceCredits wording changed from "utility token" to "internal credits unit" per the credits rule. Comment and prose only — no behavior, no route, and no test steps changed._
