@@ -1,5 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { problemCategorySlugMap } from './tag-categories';
+import { countryForCoordinates } from 'lib/geo/country-from-coordinates';
 import type {
   SharedIncidentArea,
   SharedIncidentCategoryTrend,
@@ -123,14 +124,26 @@ export async function getSharedIncidentAreas(days = 90, limit = 200): Promise<Sh
      LIMIT $2`,
     [days, limit]
   );
-  return result.rows.map((row) => ({
-    latitudeCell: Number(row.latitude_cell),
-    longitudeCell: Number(row.longitude_cell),
-    incidents: parseInt(row.incidents, 10),
-    reporters: parseInt(row.reporters, 10),
-    firstDay: row.first_day,
-    lastDay: row.last_day,
-  }));
+  // The country is named here rather than in SQL: it comes from the border table in
+  // `lib/geo`, and the cell the query already returns is all it needs. Looking it up from the
+  // rounded cell rather than the exact position keeps the query's output unchanged — a cell
+  // sitting on a border can land on the wrong side, which the report states and which does not
+  // affect telling a local cluster from a global one.
+  return result.rows.map((row) => {
+    const latitudeCell = Number(row.latitude_cell);
+    const longitudeCell = Number(row.longitude_cell);
+    const country = countryForCoordinates(latitudeCell, longitudeCell);
+    return {
+      latitudeCell,
+      longitudeCell,
+      incidents: parseInt(row.incidents, 10),
+      reporters: parseInt(row.reporters, 10),
+      firstDay: row.first_day,
+      lastDay: row.last_day,
+      countryCode: country?.code ?? null,
+      countryName: country?.name ?? null,
+    };
+  });
 }
 
 // Problems rolled up into the harm categories in `tag-categories.ts`. Counted per incident with the

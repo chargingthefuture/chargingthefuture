@@ -111,6 +111,30 @@ export type SharedIncidentArea = {
   reporters: number;
   firstDay: string;
   lastDay: string;
+  // The country the cell falls in, worked out offline from the coordinates already stored
+  // (`lib/geo/country-from-coordinates.ts`). Null when the coarse border table has no match —
+  // open ocean, or a small island state the coarse edition leaves out.
+  countryCode: string | null;
+  countryName: string | null;
+};
+
+// One country across the whole window: how much activity sits in it and how widely spread. This is
+// what separates one town reporting from four continents reporting, and it is the first thing a
+// reader outside the project asks of the numbers.
+//
+// `reporters` is an exact distinct count, not a sum of the per-area counts — one member moving
+// between two cells in the same country is one person, and adding the cells would report them
+// twice.
+export type SharedIncidentCountry = {
+  // Two-letter code where one is assigned, else a short slug of the name. Null for cells the
+  // border table could not place.
+  code: string | null;
+  name: string | null;
+  incidents: number;
+  reporters: number;
+  areas: number;
+  firstDay: string;
+  lastDay: string;
 };
 
 // Incidents rolled up into the harm categories in `tag-categories.ts`. Counted per incident (an
@@ -137,6 +161,7 @@ export type SharedIncidentReport = {
   summary: SharedIncidentReportSummary;
   buckets: SharedIncidentTrendBucket[];
   areas: SharedIncidentArea[];
+  countries: SharedIncidentCountry[];
   tagTrends: SharedIncidentTagTrend[];
   categories: SharedIncidentCategoryTrend[];
   pairs: SharedIncidentTagPair[];
