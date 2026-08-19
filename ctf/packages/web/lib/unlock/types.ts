@@ -79,18 +79,6 @@ export type UnlockDashboardSnapshot = {
   lockedSupportOnlyCount: number;
 };
 
-// One row of the "early Commons access" A/B experiment readout, per bucket.
-//   bucket        — 'early_commons' (treatment) or 'control'.
-//   exposed       — distinct members seen in this bucket (counted from unlock.status.get audit rows).
-//   submitted     — of those, how many have a successful Quora-URL submission.
-//   completionPct — submitted / exposed, as a percentage (one decimal).
-export type UnlockExperimentBucketStat = {
-  bucket: string;
-  exposed: number;
-  submitted: number;
-  completionPct: number;
-};
-
 export type UnlockStatus = {
   userId: string;
   accessTier: UnlockAccessTier | null;
@@ -99,10 +87,11 @@ export type UnlockStatus = {
   reminderStage: number;
   incentiveGrantedAt: string | null;
   hasSubmission: boolean;
-  // A/B experiment: true when this member is in the "early Commons access" treatment bucket, so the
-  // UI can offer a link into the Commons to ask for help before verifying. Set by the status route
-  // (not the repository) from the Unleash rollout; defaults to false (control).
-  earlyCommonsAccess: boolean;
+  // True when this member may enter the Commons even though they have no submission on file —
+  // because they asked for help, or because they have been here on an earlier day. Set by the status
+  // route (not the repository), which keeps `accessTier` meaning strictly "what the submission says".
+  // The mobile app reads this to decide whether to show the Unlock wall or the app shell.
+  commonsAccess: boolean;
 };
 
 // One account on the Unlock admin's demo/test exclusion list (unlock_excluded_accounts). Marking an
@@ -138,6 +127,11 @@ export type UnlockSignupAccount = {
   hasSubmission: boolean;
   reviewStatus: UnlockReviewStatus | null;
   submittedAt: string | null;
+  // How many times this member has loaded the Unlock screen (`unlock.status.get` audit rows). This is
+  // the honest "did they try" number: sign-in timestamps only move on a fresh sign-in, so a member with
+  // a live session can come back repeatedly without the dates changing. 1 means they saw the ask once
+  // and left; several means they came back to it and still could not finish.
+  unlockScreenViews: number;
 };
 
 // The sign-up reading on the Unlock admin page. `available: false` means the roster could not be read
@@ -160,5 +154,9 @@ export type UnlockSignupOverview = {
   submittedCount: number;
   // memberCount - submittedCount: signed up, never submitted a Quora URL.
   notSubmittedCount: number;
+  // Of notSubmittedCount, how many have not signed in again since the day they signed up. The rest
+  // came back and still did not submit — the two groups need different answers, so they are counted
+  // separately rather than read off a list of rows one at a time.
+  notSubmittedNeverReturnedCount: number;
   accounts: UnlockSignupAccount[];
 };

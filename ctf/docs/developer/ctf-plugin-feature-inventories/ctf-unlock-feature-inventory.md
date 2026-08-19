@@ -42,11 +42,33 @@ This plugin must:
 1. Show concise safety copy for why Quora URL is requested.
 2. Show acceptable URL format examples.
 3. Show review state and next-step status text.
+4. **Ask for help without leaving the app.** A member who cannot produce a Quora profile URL presses
+   "Ask for help in the Commons" on the Unlock screen. That records the request and admits them to the
+   Commons, where they can ask in the chat and get an answer. Before this the help pointed out to the
+   network's Quora space — which asked a person who cannot find their way around Quora to go find their
+   way around Quora, and sent them off the app with no way back.
+
+### 1.4 Commons Access Before Verifying
+
+1. A member with no submission on file reaches the Commons (support-only) when either is true: they
+   pressed "ask for help", or they have been here on an earlier day (`login_events`). Anything else
+   about their access is unchanged — approved-only surfaces stay closed.
+2. Coming back a second day counts on its own because returning is the member telling us the wall did
+   not work for them. The Unlock screen still greets a genuinely first-time visitor.
+3. Wherever they land, the Commons shows the verification banner above the chat, so the Quora URL is
+   still asked for — it is no longer the only thing they can do.
 
 ## 2) Admin Features
 
 ### 2.1 Moderation Queue
 
+0. **Spam is not "support-only access" (2026-08-19).** A spam decision drops the tier to
+   `locked_support_only` *and* places a platform-wide (`all`-scope) account restriction, and the
+   restriction is what decides — the member reaches nothing, the Commons included. The Support-only
+   counter, the Support-only queue tab, and the per-row Support-only pill therefore all exclude spam;
+   listing them there reported the opposite of their real access. Rejected members are still counted and
+   listed, because they genuinely do keep the support surface and can correct their URL. A member's
+   past support-only access remains readable in `unlock_audit_log`.
 1. List submissions by status/access-tier filters.
 2. Review with decisions: `approved`, `rejected`, `spam`.
 3. Capture reviewer and optional moderation note.
@@ -97,7 +119,15 @@ This plugin must:
    again. Nothing on the account itself says it is not a real member, so the exclusion is recorded in
    `unlock_excluded_accounts` by an admin. Marking changes only the counters — never the member's
    access, submission, or reward.
-4. See who left. An account with an account-scope row in `account_deletion_events` asked to be
+4. **Tell a bounce from a person who is stuck.** The sign-up panel breaks the "No Quora URL" number
+   into how many never signed in again after the day they signed up, how many came back and still did
+   not submit, and how many times a typical one of them loaded the Unlock screen (counted from
+   `unlock.status.get` audit rows). Those two groups need different answers — one is a discovery or
+   first-impression problem, the other is the Quora step being too hard — so the panel separates them
+   rather than leaving an admin to read it off row by row. The view count is the firmer of the two
+   signals: a sign-in date only moves on a fresh sign-in, so a member with a live session can come back
+   repeatedly without it changing. Each row carries its own view count.
+5. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
    count, their own tab, and a line on the row saying when they asked, and they are subtracted from the
@@ -115,22 +145,22 @@ This plugin must:
 6. `unlock.admin.rewards.reconcile`
 7. `unlock.admin.submission.revoke`
 8. `unlock.admin.reward.grant`
-9. `unlock.admin.experiment.read`
-10. `unlock.admin.spam_denylist.remove`
-11. `unlock.admin.signups.read`
-12. `unlock.admin.signups.exclude`
+9. `unlock.admin.spam_denylist.remove`
+10. `unlock.admin.signups.read`
+11. `unlock.admin.signups.exclude`
+12. `unlock.help.request`
 
 ### 3.2 HTTP Projection Routes
 
 User routes:
 
 - `POST /api/unlock/submission`
+- `POST /api/unlock/help-request` — any signed-in member (`requireUnlockUserAccess`, i.e. `any_authenticated`, deliberately: the whole point is that this member has no access tier yet) + CSRF (`x-ctf-csrf: '1'` + same-origin). Records the caller in `unlock_help_requests`; no body, and the member id comes from the session, so it can only ever open the Commons to the person who pressed the button. Returns `{ ok: true }`; idempotent (pressing twice keeps the first timestamp). Grants nothing beyond the Commons — approved-only surfaces stay closed and the verification banner follows them there. Audited as `unlock.help.request`.
 
 Admin routes:
 
 - `GET /api/unlock/admin/submissions` — admin-session-gated queue list. Each row now also carries `quoraUrlChangeCount` (how many times the member changed their Quora URL, from `directory_quora_url_history`) alongside the existing `sharedUrlAccountCount`, so a member who changed their social-proof URL is visible at a glance.
 - `GET /api/unlock/admin/quora-history?userId=<id>` — admin-session-gated (`requireUnlockAdminAccess`). Returns the member's full Quora URL change history (`listQuoraUrlHistory`), newest first: each entry is `{ id, userId, previousUrl, newUrl, changedByUserId, source, createdAtIso }` where `source` is `unlock_onboarding | directory_self | directory_admin`. Read-only (no CSRF). Lets a reviewer see whether a member changed or tried to remove their Quora URL (an empty submission keeps the previous one) and manually revoke via the existing revoke route if they are gaming the low-bar proof — a change is not itself proof of anything (Quora sometimes deletes accounts). Audited as `unlock.admin.quora.history.read`.
-- `GET /api/unlock/admin/experiment-split` — admin-session-gated (`requireUnlockAdminAccess`). Read-only readout of the early-Commons A/B experiment split: calls the same `getUnlockExperimentSplit()` the web admin page reads server-side and returns `{ ok: true, experimentSplit }`, where each row is `{ bucket, exposed, submitted, completionPct }` (per-bucket Quora-URL completion rate). An empty array is the normal "rollout not started" state. No CSRF (a read). Added so the mobile Unlock admin can render the same panel the web shell renders server-side. Audited as `unlock.admin.experiment.read`.
 - `POST /api/unlock/admin/submissions/:submissionId/review`
 - `PATCH /api/unlock/admin/submissions/:submissionId` — admin-session-gated (`requireUnlockAdminAccess`). Edits a submission's Quora profile URL (e.g. fixing a typo). Body `{ quoraProfileUrl }`; the URL is re-validated and re-normalized with the same `normalizeQuoraProfileUrl` shared with the member submit path, so the stored normalized form stays canonical. Returns `{ ok: true, submission }`; 400 on missing/invalid URL, 404 if no submission matches. Does not change review status, access tier, or the verification window. Audited as `unlock.admin.submission.url.edit`. Client sends `x-ctf-csrf: '1'`, matching the review route.
 - `POST /api/unlock/admin/reconcile-rewards` — admin-session-gated (`requireUnlockAdminAccess`, no `CRON_SECRET`). Runs the same idempotent reward drain as the cron and returns `{ scanned, granted, alreadyGranted, withheld, failed }`. Lets an admin grant any approved-but-uncredited reward on demand from the Unlock admin screen (the "Retry pending rewards" button), independent of the GitHub cron. Audited as `unlock.admin.rewards.reconcile`.
@@ -177,6 +207,11 @@ Admin page:
    account deletes their data, the marker goes with it (the account it names no longer exists, so the
    row would count for nothing).
 
+6. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
+   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at`. It is what admits a
+   member with no submission to the Commons, and it doubles as the count of how many people could not
+   get through the Quora step on their own. Registered `del` in the account deletion registry.
+
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
 incentive is an internal token grant. No surface renders a ServiceCredits amount at a fiat equivalent.
@@ -203,7 +238,17 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 6. **Unlock is the single source of truth for full app access (hard cutover, 2026-06-09).** The old v2 `isApproved` flag — which came from an `x-ctf-user-approved` header the middleware never set, so it defaulted to true for everyone — has been removed entirely from the request identity, the bearer-token identity, and the access decision. The central gate `evaluatePluginAccess` now resolves the Unlock tier via `getUnlockAccessTier` (Unleash flag, then DB tier with lazy expiry) and enforces a single `minUnlockTier` option:
    - `approved_full` (default): only fully-approved members or admins may enter. Every plugin route, the Chyme service routes, and all admin pages use this. A not-yet-verified member is denied with reason `unlock_required` and sent into the Unlock flow.
    - `support_only`: approved or `locked_support_only` members may enter. Used by the Commons general channel (`/api/commons/**`), which is the support surface for not-yet-verified members — they can read and post there to ask for help (for example, finding their Quora profile link).
-   - `any_authenticated`: any signed-in member may enter regardless of tier. Used by the Unlock submission/status routes (so a gated member can always submit) and the account/profile/deletion routes (so a gated member can always see and delete their own data, i.e. exercise the right to be forgotten).
+   - `any_authenticated`: any signed-in member may enter regardless of tier. Used by the Unlock submission/status/help-request routes (so a gated member can always submit or ask for help) and the account/profile/deletion routes (so a gated member can always see and delete their own data, i.e. exercise the right to be forgotten).
+
+   **Members with no submission (2026-08-19).** `getUnlockAccessTier` used to return `null` for anyone
+   without a row in `unlock_verification_submissions`, which denied them everything except the Unlock
+   screen — including the Commons, the only place to ask for help with the step they were stuck at. It
+   now returns `locked_support_only` for a member who pressed "ask for help" (`unlock_help_requests`)
+   or who has been here on an earlier day (`login_events`). This is a tier resolution, not a new branch:
+   every gate downstream, `app/page.tsx` routing included, reads it through the same `locked_support_only`
+   clause that has always existed. `approved_full` surfaces are unaffected, an account-scope restriction
+   still overrides it, and the read is best-effort — a database failure resolves to no access rather
+   than widening it.
 7. Admins always pass the tier check.
 8. **Chyme is no longer granted to not-yet-unlocked members.** Chyme requires `approved_full`; degraded members are pointed at the Hub general channel and the Unlock flow instead. Chyme's anonymous public visitor shell (for signed-out browsing) is unchanged.
 9. **Duplicate-identity guard (one Quora profile, one reward).** A normalized Quora URL earns the verification reward on a single account. The shared reward grant (`grantUnlockRewardForSubmission`, used by the approval handler, the hourly reconcile, and the admin determination) checks `getUnlockRewardHolderForUrl` before minting: if another non-revoked account already holds the identity's reward, the reward is **held** (`reward_withheld_at`) for an admin determination rather than auto-minting a second reward for the same person. The admin then awards the chosen account (`grant-reward`) and/or revokes the others (`revoke`, which burns the credits back and locks the account). This blocks both honest cross-account reuse and a perp who pastes a victim's Quora URL onto an impersonation account. The reward verbs are admin-gated + CSRF-guarded and fully audited.
@@ -229,10 +274,17 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    (queue review, duplicate-identity determination / grant / revoke, badges) is now **web-only**; only
    the member Unlock access-wall/status screen remains on Android. Historical detail (the admin screen
    previously shipped 2026-06-07): added `ctf/packages/mobile/src/features/unlock/AdminUnlock.tsx` (new `unlock-admin` App.tsx key) and `admin-api.ts`. The screen lists the pending verification queue and adds per-submission Approve / Reject actions, mirroring the web admin's review action and the `MobileUnlockAdmin.tsx` mockup. Binds only existing endpoints — `GET /api/unlock/admin/submissions?reviewStatus=pending` and `POST /api/unlock/admin/submissions/:submissionId/review` (with `x-ctf-csrf: '1'`). Admin-gated server-side (`requireUnlockAdminAccess`); a 401/403 shows an "admins only" notice. Each decision is confirm-gated via `Alert.alert`. Reject sends `reviewStatus: 'rejected'` with no free-text reason (the route's `reviewNote` is optional and `Alert.prompt` is iOS-only); the `spam` decision the route also accepts is not surfaced, matching the web admin and the mockup's two-button Grant/Deny.
-7. Android A/B experiment readout (admin) — **removed 2026-07-20 (rule 105, PR #1742)** along with the
+7. Android A/B experiment readout (admin) — the experiment itself was removed on 2026-08-19 (see the
+   change log), so nothing below is live; kept only so a reader who finds an old reference knows where
+   it went. Originally **removed from Android 2026-07-20 (rule 105, PR #1742)** along with the
    rest of the Android Unlock admin surface (web-only now). Historical detail (#1602): the mobile Unlock admin (`AdminUnlock.tsx` + `admin-api.ts`) showed the same "Early Commons access — A/B experiment" panel the web shell renders — per-bucket treatment vs control with completion %, "N of M submitted", and the same Unleash-rollout empty state. The web reads the split server-side in the admin page component, so a new read-only admin-gated route `GET /api/unlock/admin/experiment-split` was added to expose it over HTTP; the mobile client (`fetchExperimentSplit`) fetches it alongside the queue (best-effort — a failure never blocks the queue). Read-only; no new mutation.
 8. Sign-up panel (2026-08-19) is **web-only**, like the rest of the Unlock admin surface — Android carries
-   only the member access-wall/status screen (rule 105). No React Native screen was added.
+   only the member access-wall/status screen (rule 105).
+9. Ask-for-help path (2026-08-19) ships on **both** surfaces, because the member Unlock screen is on the
+   Android keep-list. Web: `unlock-quora-help.tsx` posts to the help-request route and sends the member
+   to the Commons. Android: `Unlock.tsx` `QuoraHelp` calls `requestUnlockHelp()` and re-runs the host
+   gate in `App.tsx`, which now passes on `status.commonsAccess`. Both Commons verify banners point a
+   stuck member at the chat below rather than off to Quora. No React Native screen was added.
 
 ## 7) Seed Coverage Status
 
@@ -262,6 +314,44 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-19: **The early-Commons A/B experiment is removed; asking for help now opens the Commons for
+  everyone (owner decision).** The experiment could not answer the question it was built for. Its
+  denominator was members who reached `unlock.status.get` after the instrumentation shipped on
+  2026-06-26 — 23 people, against 88 accounts — while the members who actually stopped at the Unlock
+  screen had signed up seven months earlier and were never bucketed at all. The readout it produced
+  (control 7 of 16, treatment 4 of 7) turns on one person either way. Removed: the
+  `feature-unlock-early-commons-access` Unleash flag and `isUnlockEarlyCommonsEnabled`, the treatment
+  branch in `lib/auth/server-authz.ts`, the landing exception in `app/page.tsx`, the `experimentBucket`
+  metadata written on `unlock.status.get` / `unlock.verification.submit`, `getUnlockExperimentSplit`,
+  the admin experiment panel, `GET /api/unlock/admin/experiment-split`, and the
+  `unlock.admin.experiment.read` contract entries. Historic audit rows keep their recorded bucket.
+  In its place, two standing rules, neither behind a flag: a member with no submission reaches the
+  Commons if they pressed "ask for help" (new `unlock_help_requests` table, new
+  `POST /api/unlock/help-request`, audited as `unlock.help.request`) or if they have been here on an
+  earlier day (`login_events`). Both resolve inside `getUnlockAccessTier` as `locked_support_only`, so
+  every existing gate admits them through the clause it already had — no new branch anywhere. The
+  status payload's `earlyCommonsAccess` becomes `commonsAccess` with that meaning, and the Android gate
+  in `App.tsx` reads it. Copy: the Unlock screen's help note stopped pointing at
+  `skillseconomy.quora.com` — telling someone who cannot find their way around Quora to go comment on
+  Quora, and sending them out of the app with no way back — and is now a button that opens the Commons;
+  both Commons verify banners point at the chat below instead. The banner is no longer scoped to a
+  bucket, so a rejected support-only member finally sees the prompt that lets them correct their URL.
+  Net effect on access: any signed-in member reaches the Commons from their second visit whether or not
+  they asked. That is deliberate — the Commons is the support surface, it already hosted rejected
+  members, moderation covers it, and a spam mark is still a platform-wide block.
+- 2026-08-19: **Spam no longer counts as support-only access, and the sign-up panel separates a bounce
+  from a stuck member (owner report).** The Support-only counter, queue tab, and per-row pill were
+  keyed on `access_tier = 'locked_support_only'` alone, which a spam decision also sets — but a spam
+  decision additionally places an `all`-scope `account_restrictions` record, and that restriction is
+  what actually decides: the member reaches nothing, Commons included. So the admin reported the exact
+  opposite of a spammed member's real access. All three now exclude `review_status = 'spam'`. Rejected
+  members are deliberately unchanged: they keep the support surface and can correct their URL, so the
+  tag is accurate for them (owner decision, 2026-08-19). Past support-only access stays readable in
+  `unlock_audit_log`. Separately, the sign-up panel now breaks "No Quora URL" into never-came-back
+  versus came-back-and-still-did-not-submit, with the median number of Unlock-screen loads
+  (`unlock.status.get` audit rows, a new `unlockScreenViews` field per account and a per-row line), so
+  that reading happens in the app instead of by scrolling rows. `unlock_audit_log` added to the
+  `unlock.admin.signups.read` contract's dataAccess. No schema change; admin-only surfaces.
 - 2026-08-19: **Sign-up reading added to the Unlock admin (owner request).** Two numbers were missing
   from `/admin/unlock`: how many people have signed up, and how many of them never submitted a Quora
   URL. The first lived only in the auth provider's dashboard, because a sign-up creates an account and

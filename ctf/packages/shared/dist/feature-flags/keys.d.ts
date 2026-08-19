@@ -8,7 +8,6 @@ export declare function featureFlagKey(pluginSlug: string, featureName: string):
 export declare function releaseFlagKey(agent: string, fixName: string): FlagKey;
 export declare const UNLOCK_FLAGS: {
     readonly QUORA_ONBOARDING: "feature-unlock-quora-onboarding";
-    readonly EARLY_COMMONS_ACCESS: "feature-unlock-early-commons-access";
 };
 export type UnlockFlagKey = (typeof UNLOCK_FLAGS)[keyof typeof UNLOCK_FLAGS];
 export interface FeatureFlagContext {

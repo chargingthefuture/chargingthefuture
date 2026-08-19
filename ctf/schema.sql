@@ -1489,6 +1489,19 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS excluded
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Members who asked for help from the Unlock screen instead of submitting a Quora URL. Pressing that
+-- button is what lets them into the Commons (support-only) straight away, so there is somebody to ask.
+-- Without a row here a first-time member has no submission, so no access tier, so no way to reach the
+-- one surface where help lives — the wall and the help are on opposite sides of the same door.
+--
+-- One row per member, kept after they verify: it is also the record of how many people could not get
+-- through the Quora step on their own, which is the number that says whether that step is working.
+CREATE TABLE IF NOT EXISTS unlock_help_requests (
+  user_id TEXT PRIMARY KEY,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
 -- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action

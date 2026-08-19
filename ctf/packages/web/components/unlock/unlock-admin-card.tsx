@@ -100,7 +100,9 @@ function CardBadges({ s }: { s: UnlockSubmission }) {
   return (
     <>
       <StatusPill status={s.reviewStatus} />
-      {s.accessTier === 'locked_support_only' ? (
+      {/* Never shown for spam: that decision also places a platform-wide account restriction, so the
+          member reaches nothing — the stored tier says support-only but the restriction overrules it. */}
+      {s.accessTier === 'locked_support_only' && s.reviewStatus !== 'spam' ? (
         <span title="This member is on support-only access — they can reach support surfaces but not the full app" style={pill('rgba(148,163,184,0.14)', '#94A3B8', 'rgba(148,163,184,0.32)')}>
           Support-only
         </span>

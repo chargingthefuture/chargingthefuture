@@ -424,11 +424,6 @@
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/unlock/admin/experiment-split",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
       "route": "/api/webhooks/clerk",
       "kind": "external",
       "reason": "Called by Clerk, not by this app. Auth provider posts user lifecycle events here."

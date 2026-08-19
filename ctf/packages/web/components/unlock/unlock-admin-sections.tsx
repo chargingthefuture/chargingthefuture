@@ -1,7 +1,7 @@
 'use client';
 
 import { RefreshCw } from 'lucide-react';
-import type { UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
+import type { UnlockSubmission } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
 import { queueEmptyMessage } from './unlock-admin-actions';
@@ -21,42 +21,6 @@ export function StatBlock({ label, value, accent }: { label: string; value: numb
     <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
       <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
-    </div>
-  );
-}
-
-// Early-Commons A/B experiment readout. Empty until the Unleash rollout is on.
-export function UnlockExperimentPanel({ experimentSplit }: { experimentSplit: UnlockExperimentBucketStat[] }) {
-  const { theme } = useTheme();
-  const t = getUnlockTokens(theme);
-  return (
-    <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>Early Commons access — A/B experiment</div>
-      <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10 }}>
-        Quora-URL completion rate by bucket. Treatment members get early access to the Commons to ask for help before verifying.
-      </div>
-      {experimentSplit.length === 0 ? (
-        <div style={{ fontSize: 12, color: t.MUTED }}>
-          No experiment data yet. Turn on the <code>feature-unlock-early-commons-access</code> rollout in Unleash (sticky on userId) to start the test.
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {experimentSplit.map((row) => {
-            const label =
-              row.bucket === 'early_commons' ? 'Early Commons (treatment)' : row.bucket === 'control' ? 'Control' : row.bucket;
-            const accent = row.bucket === 'early_commons' ? t.ACCENT : t.SUBTLE;
-            return (
-              <div key={row.bucket} style={{ flex: 1, minWidth: 200, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>{row.completionPct}%</div>
-                <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>
-                  {row.submitted} of {row.exposed} submitted
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

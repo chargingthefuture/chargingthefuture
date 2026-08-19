@@ -13,11 +13,10 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Linking,
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
-import { fetchUnlockStatus, submitUnlockUrl } from './api';
+import { fetchUnlockStatus, requestUnlockHelp, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
 type DisplayStatus = 'pending' | 'approved' | 'rejected';
@@ -41,28 +40,57 @@ function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
 
 type Styles = ReturnType<typeof makeStyles>;
 
-const UNLOCK_QUORA_HELP_URL = 'https://skillseconomy.quora.com';
+// A dimmed form of the accent, used while the help request is in flight.
+function fadedAccent(accent: string): string {
+  return `${accent}99`;
+}
 
-// Prominent, universal help for a member who can't find their Quora profile URL. Shown wherever the
-// Unlock flow asks for that URL. Directs them to comment on the network's Quora space, where the team
-// replies with their profile URL. Every member sees it (not tied to the early-Commons experiment).
-function QuoraHelp({ s }: { s: Styles }) {
+// Help for a member who cannot produce a Quora profile URL.
+//
+// This used to send them to the network's Quora space to comment and wait for a reply — which asks a
+// person who cannot find their way around Quora to go find their way around Quora, and sends them out
+// of the app with no way back. Roughly half of all sign-ups stopped at this screen.
+//
+// Now the help is inside the app: the button records the request, which is what opens the Commons to a
+// member with no submission, and `onHelped` re-runs the host gate so they land in the app shell where
+// they can ask in the chat. The verification prompt follows them there, so the Quora URL is still
+// asked for — it is just no longer the only thing they can do.
+function QuoraHelp({ s, accent, onHelped }: { s: Styles; accent: string; onHelped: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function askForHelp() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await requestUnlockHelp();
+      onHelped();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open the Commons just now.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <View style={s.quoraHelp} accessibilityRole="summary">
       <Text style={s.quoraHelpTitle}>Can&apos;t find your Quora profile URL?</Text>
       <Text style={s.quoraHelpBody}>
-        Go to{' '}
-        <Text
-          style={s.quoraHelpLink}
-          accessibilityRole="link"
-          onPress={() => {
-            void Linking.openURL(UNLOCK_QUORA_HELP_URL);
-          }}
-        >
-          skillseconomy.quora.com
-        </Text>{' '}
-        and comment on any post asking for help — I&apos;ll reply with your profile URL.
+        You don&apos;t have to work it out alone. Open the Commons and ask — real people are in there,
+        and I&apos;ll help you find your profile link. You can come back and finish this whenever
+        you&apos;re ready.
       </Text>
+      <TouchableOpacity
+        onPress={() => void askForHelp()}
+        disabled={busy}
+        style={[s.primaryBtn, { backgroundColor: busy ? fadedAccent(accent) : accent, marginTop: 10 }]}
+      >
+        <Text style={[s.primaryBtnText, { color: '#fff' }]}>
+          {busy ? 'Opening the Commons…' : 'Ask for help in the Commons'}
+        </Text>
+      </TouchableOpacity>
+      {error ? <Text style={s.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -174,7 +202,7 @@ function SubmissionView({
         />
       </View>
       <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
-      <QuoraHelp s={s} />
+      <QuoraHelp s={s} accent={accent} onHelped={onSubmitted} />
       {error ? <Text style={s.errorText}>{error}</Text> : null}
       <TouchableOpacity
         onPress={handleSubmit}
@@ -298,7 +326,7 @@ function StatusView({
       {display === 'rejected' && (
         <View style={s.resubCard}>
           <Text style={s.cardHeading}>Re-submit with a new URL</Text>
-          <QuoraHelp s={s} />
+          <QuoraHelp s={s} accent={accent} onHelped={onResubmitted} />
           <TextInput
             value={resubUrl}
             onChangeText={setResubUrl}

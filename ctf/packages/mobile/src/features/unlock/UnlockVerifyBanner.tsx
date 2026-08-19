@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -61,28 +60,19 @@ function VerifyPromptForm(props: {
       </Pressable>
       {error ? <Text style={s.error}>{error}</Text> : null}
 
-      {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
+      {/* The member is already in the Commons, so the help is the chat below — not a trip off the app. */}
       <View style={s.quoraHelp}>
         <Text style={s.quoraHelpText}>
           <Text style={s.quoraHelpStrong}>Can&apos;t find your Quora profile URL? </Text>
-          Go to{" "}
-          <Text
-            style={s.quoraHelpLink}
-            accessibilityRole="link"
-            onPress={() => {
-              void Linking.openURL("https://skillseconomy.quora.com");
-            }}
-          >
-            skillseconomy.quora.com
-          </Text>{" "}
-          and comment on any post asking for help — I&apos;ll reply with your profile URL.
+          Ask in the chat just below — that is what this space is for, and I&apos;ll help you find your
+          profile link. Nothing here expires while you wait.
         </Text>
       </View>
     </>
   );
 }
 
-// Shown at the top of the mobile Commons (HubHome) for an early-Commons A/B treatment member who has
+// Shown at the top of the mobile Commons (HubHome) for any signed-in member who has
 // not yet completed Quora verification. Treatment members now land on the Commons (the client gate in
 // App.tsx lets them through, mirroring the web redirect), so — like the web `UnlockVerifyBanner` — they
 // need a prompt here or they would not know verification is still required. It prompts for the Quora
@@ -113,8 +103,9 @@ export function UnlockVerifyBanner() {
     void refresh();
   }, [refresh]);
 
-  // Only a treatment-bucket member who is not yet fully verified sees the prompt.
-  if (!status || !status.earlyCommonsAccess || status.accessTier === "approved_full") {
+  // Any member on the Commons who is not yet fully verified sees the prompt — including someone who
+  // got here by asking for help, and someone whose submission was rejected and can correct it.
+  if (!status || status.accessTier === "approved_full") {
     return null;
   }
 

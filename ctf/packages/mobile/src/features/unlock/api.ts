@@ -17,10 +17,10 @@ export type UnlockStatus = {
   reminderStage: number;
   incentiveGrantedAt: string | null;
   hasSubmission: boolean;
-  // A/B experiment: true when the member is in the early-Commons treatment bucket. Mirrored from the
-  // web status payload. Drives the client Unlock gate (treatment members reach the Commons) and the
-  // Commons verify prompt (UnlockVerifyBanner).
-  earlyCommonsAccess?: boolean;
+  // True when this member may enter the Commons even though they have no submission on file —
+  // because they asked for help, or because they have been here on an earlier day. Mirrored from the
+  // web status payload. Drives the client Unlock gate and the Commons verify prompt.
+  commonsAccess?: boolean;
 };
 
 export async function fetchUnlockStatus(): Promise<UnlockStatus> {
@@ -30,6 +30,17 @@ export async function fetchUnlockStatus(): Promise<UnlockStatus> {
   if (!res.ok) throw new Error('Unlock status unavailable.');
   const data = (await res.json()) as { ok: boolean; status: UnlockStatus };
   return data.status;
+}
+
+// "I can't do this step — let me ask somebody." Records the request, which is what opens the Commons
+// to a member with no submission, so there is somebody to ask. The caller refreshes the Unlock gate
+// afterwards, which is what actually moves them into the app shell.
+export async function requestUnlockHelp(): Promise<void> {
+  const res = await authedFetch('/api/unlock/help-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+  });
+  if (!res.ok) throw new Error('Could not open the Commons just now.');
 }
 
 export async function submitUnlockUrl(quoraProfileUrl: string): Promise<void> {

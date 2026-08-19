@@ -313,30 +313,66 @@ completes, including on a failed request.
 
 ---
 
-### UNLOCK-A8 · A/B experiment readout parity (web ↔ android)
-**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
-**Precondition:** signed in as an admin on both surfaces.
+### UNLOCK-A8 · Ask for help opens the Commons (web ↔ android)
+**Role:** member (not yet verified, no submission) · **Surfaces:** web + mobile-responsive, android
+**Precondition:** a signed-in test account with no Quora URL submitted, on its **first** visit.
 **Steps:**
-1. Open the web admin (`/admin/unlock`) and find the "Early Commons access — A/B experiment" panel.
-2. Open the android Unlock Admin and find the same "Early Commons access — A/B experiment" panel.
-3. Compare the two while the `feature-unlock-early-commons-access` Unleash rollout is **off**, then
-   (if you can) turn it on and let a few members submit, and compare again.
-**Expected:** With the rollout off, both surfaces show the same empty state pointing at the
-`feature-unlock-early-commons-access` rollout — no fabricated numbers. With the rollout on and data
-present, both show the same per-bucket rows (Early Commons / treatment vs Control) with a matching
-completion % and "N of M submitted". Android reads it from `GET /api/unlock/admin/experiment-split`
-(admin-gated; a non-admin is denied), which returns the same split the web page reads server-side.
-The readout is read-only — no action buttons. A read failure never blocks the queue below it.
+1. Sign in. You land on the Unlock screen, not the Commons.
+2. Find "Can't find your Quora profile URL?" and read it. Press **Ask for help in the Commons**.
+3. Read the top of the Commons.
+4. Ask a question in the chat.
+5. Sign out, sign back in, and see where you land.
+6. Repeat 1–5 on Android.
+**Expected:** Step 1: a first-time member still meets the Unlock screen — the wall is not gone, it just
+stops being a dead end. Step 2: the help text offers the Commons and does **not** send you to
+skillseconomy.quora.com or anywhere else off the app. Pressing it records the request
+(`POST /api/unlock/help-request`, audited `unlock.help.request`) and lands you on the Commons. Step 3:
+the verification banner sits above the chat, asking for the Quora URL, with help pointing at the chat
+just below. Step 4: your message posts — the Commons accepts a member with no username and no profile.
+Step 5: you land on the Commons directly now, not the Unlock screen. Step 6: Android behaves the same,
+because the member Unlock screen is on the keep-list. Nothing here grants any approved-only surface —
+open a plugin and you still get its public landing page.
 **Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-A8b · Coming back a second day opens the Commons on its own
+**Role:** member (not yet verified, no submission) · **Surfaces:** web + mobile-responsive, android
+**Precondition:** a test account that signed in on an earlier calendar day (UTC) and never submitted a
+Quora URL or pressed "ask for help". A row in `login_events` from a previous day is what this reads.
+**Steps:**
+1. Sign in today and see where you land.
+2. Check that the verification banner is above the chat.
+**Expected:** Step 1: the Commons, not the Unlock screen — returning is treated as the member telling
+us the wall did not work for them. Step 2: the banner is there, so the Quora URL is still asked for. If
+this account has no prior-day login row it will still see the Unlock screen once; that is the rule
+working, not a bug.
+**Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-A8c · Spam is not listed as support-only access
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** at least one submission marked spam and one marked rejected.
+**Steps:**
+1. On `/admin/unlock`, read the **Support-only** counter at the top.
+2. Open the **Support-only** tab and read the list.
+3. Find the spam member on the **All submissions** tab and look at their pills.
+4. Find the rejected member on the **Support-only** tab.
+**Expected:** Steps 1–2: the spam member is in neither the counter nor the list. A spam decision also
+places a platform-wide account restriction, and that restriction is what decides — they reach nothing,
+Commons included — so calling them "support-only access" said the opposite of the truth. Step 3: their
+row still shows the **spam** status pill, just not the Support-only pill. Step 4: the rejected member
+**is** counted and listed, because they really do keep the support surface and can correct their URL.
+The counter and the list agree with each other. Their earlier support-only access is still readable in
+`unlock_audit_log` if you need it.
+**Result:** web ☐ — notes:
 
 ### UNLOCK-A9 · Sign-ups — total, and who never gave a Quora URL
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin; the auth provider secret is set in the app runtime.
 **Steps:**
-1. Open `/admin/unlock` and find the "Sign-ups" panel, above the A/B experiment panel.
+1. Open `/admin/unlock` and find the "Sign-ups" panel, below the review counters.
 2. Read the five numbers — Members, Gave a Quora URL, No Quora URL, Demo / test, Left — and the line
    above them saying how many accounts there are in total.
-3. Open the **No Quora URL** tab and read the list, then open the **Left** tab.
+3. Read the breakdown line under the numbers, then open the **No Quora URL** tab and read the list,
+   then open the **Left** tab.
 4. On any row, click **Mark as demo / test**, then watch the four numbers.
 5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
 6. Type part of a name, handle, or email into the search box.
@@ -345,7 +381,11 @@ The readout is read-only — no action buttons. A read failure never blocks the 
 **Expected:** Step 2: Members = total accounts minus demo/test minus Left; Gave a Quora URL + No Quora
 URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
 are not in the review queue below, because there is nothing to review. Each row shows a name or handle,
-the email, the sign-up date, and whether they have signed in since. On **Left**, every row says when
+the email, the sign-up date, whether they have signed in since, and how many times they opened the
+Unlock screen. The breakdown line above splits the same group into how many never signed in again after
+sign-up day and how many came back and still did not submit, with the typical number of Unlock-screen
+loads — the two groups need different answers, and the view count is the firmer signal because a
+sign-in date only moves on a fresh sign-in. On **Left**, every row says when
 that person asked to be forgotten; nobody appears on both tabs, and nobody on **Left** is counted as a
 member (their submission was deleted with the rest of their data, so they are not an onboarding
 failure). Step 4: `POST /api/unlock/admin/excluded-accounts` records the
@@ -387,6 +427,9 @@ tracked, not a new bug:
   cached, so the panel is the slowest part of the page to appear.
 - "Members" counts accounts the auth provider holds now, so the provider's all-time sign-up chart
   counts differently and can read higher.
+- A member who signed up but has no `login_events` row from an earlier day sees the Unlock screen once
+  more before the Commons opens to them. `login_events` does not necessarily reach back to every old
+  account.
 - Accounts stranded in the auth provider by deletions made before 2026-08-19, when the app's own delete
   flow started removing the sign-in as well as the data (PR #2259). The sign-up panel labels them "Left"
   and subtracts them, so the numbers are right, but clearing the account itself is the
