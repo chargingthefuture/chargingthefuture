@@ -24,6 +24,13 @@ them.
 
 - Sharing is **off** unless the member turns it on. There is a global default (off) and a
   per-incident choice.
+- **The member is told the grouped totals may be published.** Every share control says so at the
+  moment the choice is made — the global default, the per-incident checkbox, the history-row
+  tooltip, and the notice shown before an edit turns sharing on. This report is posted publicly and
+  given to people outside the project, so consenting to share and consenting to publication are one
+  decision, and the app describes them as one decision. What is published is the aggregate only:
+  the notes, the exact locations, and the member identities behind these numbers are excluded by
+  the queries themselves (section 3).
 - An untagged incident stays entirely private if the member leaves sharing off. It never reaches
   the aggregate.
 - Tagging an incident **requires** sharing its trend data, and the app says so in plain words before
@@ -93,9 +100,9 @@ The report can be opened and saved as a single image for posting. That image lea
 coordinates out unless they are explicitly asked for, and the reason is not caution for its own
 sake: at low counts,
 an area roughly 11 km across combined with a specific date can point at one person for anyone who
-already knows them. Members consented to their trend data reaching the project. Publishing an area
-and a date is a wider disclosure than that, so it is a decision made deliberately each time rather
-than a default.
+already knows them. Members are told the grouped totals may be published, and that is what they
+agreed to: totals. An area cell paired with a date is closer to a location for one person than to a
+total, so it is a decision made deliberately each time rather than a default.
 
 Anyone requesting the underlying area detail for an investigation should ask for it directly rather
 than take it from a public copy.

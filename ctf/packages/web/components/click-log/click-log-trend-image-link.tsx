@@ -21,10 +21,11 @@ import {
 // Plain links, not a fetch: the endpoint answers with the image itself, and the same signed-in
 // session that loaded this screen authorizes the request.
 //
-// The area checkbox is off to start. Members opted into sharing trend data with the project, not
-// into having their approximate area posted publicly, and at small counts an ~11 km cell plus a
-// date can point at one person — so putting the coordinates into a copy meant for posting is a
-// deliberate choice made each time rather than a default.
+// The area checkbox is off to start. Members are told the grouped totals may be published, and a
+// total is what they agreed to — an ~11 km cell next to a date is closer to one person's location
+// than to a total, and at small counts it can point at them for anyone who already knows them. So
+// putting the coordinates into a copy meant for posting is a deliberate choice made each time
+// rather than a default.
 export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
   const [includeAreas, setIncludeAreas] = useState(false);
   const query = includeAreas ? 'areas=1' : '';

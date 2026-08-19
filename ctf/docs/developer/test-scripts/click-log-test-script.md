@@ -243,6 +243,21 @@ carrying two problems from the same category adds one to that category, not two.
 carry a line saying what kind of scheme it is. The method statement appears under the numbers.
 **Result:** web ☐ — notes:
 
+### CL-9 · Every share control says the totals may be published
+**Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Steps:**
+1. Open ClickLog and read the "share new incidents by default" setting at the top.
+2. Start logging an incident and read the share checkbox, with no tags picked.
+3. Pick a problem tag and read the same checkbox again.
+4. Save a private, untagged incident. On its history row, hover or focus the "Shared with owner"
+   pill on a tagged incident.
+5. Edit a private incident and add a tag without saving; read the notice that appears.
+**Expected:** All five places end with "Grouped totals may be published." — the global default, the
+free-choice checkbox, the locked checkbox on a tagged incident, the pill tooltip, and the edit
+notice. Each still says what is withheld ("never your notes" / "never your note"). The wording is
+identical across all five.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-A5 · Report opens as one image, without the areas by default
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**

@@ -19,6 +19,14 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   incident does not need a location; (3) tagging problems or schemes requires both a location
   and trend sharing — a tagged incident always shares its trend data with the owner, and only
   shared incidents feed the global trends.
+- Every share control says the grouped totals may be published (owner directive, 2026-08-19). The
+  trend report is posted publicly and given to people outside the project, so sharing and
+  publication are one decision for the member and the copy states them together, at the moment the
+  choice is made: the global default, the per-incident checkbox in the log form, the history-row
+  pill tooltip and its screen-reader label, and the notice shown before an edit turns sharing on.
+  The wording lives once in `lib/click-log/share-copy.ts` so the four surfaces cannot drift apart.
+  What may be published is the aggregate only — notes, exact locations, and member identity are
+  excluded by the report queries themselves, not by the screen.
 - Log incident (with optional location/notes)
 - Optionally tag an incident with which known problems happened ("Which problems happened?" —
   the 50+ problems list published on the public landing page) and/or which named schemes were
@@ -76,8 +84,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   tagged incident with the same explanation. Shared incidents contribute only grouped trend data
   (day, approximate area, tags, count) — never the note or exact location. The member-facing
   copy says so in plain words: the global default reads "only trend data — never your notes" and
-  the per-incident checkbox reads "only the date, rough area, and tags". Neither uses the word
-  "coarse".
+  the per-incident checkbox reads "only the date, rough area, and tags", and both close with
+  "Grouped totals may be published." Neither uses the word "coarse".
 
 ## 4. Admin Features
 
