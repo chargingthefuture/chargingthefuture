@@ -225,27 +225,66 @@ commands:
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.trends.fetch
-    version: 1.1.0
+    version: 1.2.0
     inputSchema:
       type: object
       properties: {}
     outputSchema:
       type: object
       properties:
+        summary:
+          $ref: '#/definitions/SharedIncidentReportSummary'
         buckets:
           type: array
           items:
             $ref: '#/definitions/SharedIncidentTrendBucket'
+        areas:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentArea'
         tagTrends:
           type: array
           items:
             $ref: '#/definitions/SharedIncidentTagTrend'
+        categories:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentCategoryTrend'
+        pairs:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentTagPair'
     dataAccess:
       - click_log_incidents (select, aggregate only — shared_with_owner rows; the SQL projects
-        only day buckets, 1-decimal location cells, counts, and per-tag counts over the
-        canonical problem/scheme tag slugs, never notes, precise coordinates, incident ids,
-        or member identity)
+        only day buckets, 1-decimal location cells, counts, distinct-member counts, and per-tag
+        counts over the canonical problem/scheme tag slugs, never notes, precise coordinates,
+        incident ids, or member identity; user_id appears only inside COUNT(DISTINCT …))
     purpose: Owner/admin-only aggregate trends over incidents members opted to share
+    retentionClass: user_event
+  - pluginId: click-log
+    command: click-log.trends.image
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        areas:
+          type: string
+          enum: ['1']
+          description: >-
+            Pass '1' to include the ~11 km area coordinates in the image. Omitted by default: an
+            area cell plus a date can point at one person at small counts, and members opted into
+            sharing trend data with the project rather than into being placed on a public map.
+    outputSchema:
+      type: string
+      contentMediaType: image/png
+      description: >-
+        The whole report drawn as one tall PNG, carrying the same numbers as click-log.trends.fetch
+        plus the method statement (how the data was collected, what is never counted, and what the
+        counts cannot show) so a reposted copy is never numbers without provenance.
+    dataAccess:
+      - click_log_incidents (select, aggregate only — identical queries to click-log.trends.fetch;
+        the image is drawn from that report and reads nothing else)
+    purpose: Owner/admin-only shareable image of the aggregate trends report
     retentionClass: user_event
 
 definitions:
@@ -322,3 +361,85 @@ definitions:
       count:
         type: integer
     required: [tagType, tag, count]
+  SharedIncidentReportSummary:
+    type: object
+    properties:
+      days:
+        type: integer
+      sharedIncidents:
+        type: integer
+      reporters:
+        type: integer
+        description: Distinct members behind the shared incidents (COUNT(DISTINCT user_id) only).
+      repeatReporters:
+        type: integer
+        description: Members with more than one shared incident in the window.
+      areas:
+        type: integer
+        description: >-
+          Distinct ~11 km cells in the window. Counted in SQL rather than taken from the length of
+          the areas array, which is capped at 200.
+      taggedIncidents:
+        type: integer
+      withLocation:
+        type: integer
+      withoutLocation:
+        type: integer
+      firstDay:
+        type:
+          - string
+          - 'null'
+      lastDay:
+        type:
+          - string
+          - 'null'
+    required:
+      - days
+      - sharedIncidents
+      - reporters
+      - repeatReporters
+      - areas
+      - taggedIncidents
+      - withLocation
+      - withoutLocation
+      - firstDay
+      - lastDay
+  SharedIncidentArea:
+    type: object
+    properties:
+      latitudeCell:
+        type: number
+      longitudeCell:
+        type: number
+      incidents:
+        type: integer
+      reporters:
+        type: integer
+      firstDay:
+        type: string
+      lastDay:
+        type: string
+    required: [latitudeCell, longitudeCell, incidents, reporters, firstDay, lastDay]
+  SharedIncidentCategoryTrend:
+    type: object
+    properties:
+      category:
+        type: string
+        description: A harm-category slug from lib/click-log/tag-categories.ts.
+      incidents:
+        type: integer
+      reporters:
+        type: integer
+    required: [category, incidents, reporters]
+  SharedIncidentTagPair:
+    type: object
+    properties:
+      problemTag:
+        type: string
+      schemeTag:
+        type: string
+      incidents:
+        type: integer
+      reporters:
+        type: integer
+    required: [problemTag, schemeTag, incidents, reporters]

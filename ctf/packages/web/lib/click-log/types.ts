@@ -74,3 +74,70 @@ export type SharedIncidentTagTrend = {
   tag: string;
   count: number;
 };
+
+// ---------------------------------------------------------------------------
+// Trend report aggregates
+//
+// Everything below is owner/admin reporting over incidents members opted to share. Same privacy
+// boundary as the two aggregates above: counts and canonical tag slugs only, computed in SQL, and
+// no notes, precise coordinates, incident ids, or member identity ever leaves the query.
+// ---------------------------------------------------------------------------
+
+// Headline figures for the report. `reporters` is the number of distinct members behind the shared
+// incidents — the figure that separates one person logging seven times from seven people logging
+// once, which is the first thing an outside reader needs and the one the old view never showed.
+export type SharedIncidentReportSummary = {
+  days: number;
+  sharedIncidents: number;
+  reporters: number;
+  // Members with more than one shared incident in the window: repetition, not isolated events.
+  repeatReporters: number;
+  // Distinct ~11 km cells across the window. Counted here rather than taken from the length of
+  // the area list, which is capped.
+  areas: number;
+  taggedIncidents: number;
+  withLocation: number;
+  withoutLocation: number;
+  firstDay: string | null;
+  lastDay: string | null;
+};
+
+// One ~11 km area cell (latitude/longitude rounded to 1 decimal place) with how much activity sits
+// in it. Coordinates are the cell corner, never a member's actual position.
+export type SharedIncidentArea = {
+  latitudeCell: number;
+  longitudeCell: number;
+  incidents: number;
+  reporters: number;
+  firstDay: string;
+  lastDay: string;
+};
+
+// Incidents rolled up into the harm categories in `tag-categories.ts`. Counted per incident (an
+// incident with three problems from one category counts once), so the numbers add up the way a
+// reader assumes they do.
+export type SharedIncidentCategoryTrend = {
+  category: string;
+  incidents: number;
+  reporters: number;
+};
+
+// How often a named scheme was tagged on the same incident as a given problem. This is the pattern
+// evidence: it shows the method attached to the harm rather than two unrelated rankings.
+export type SharedIncidentTagPair = {
+  problemTag: string;
+  schemeTag: string;
+  incidents: number;
+  reporters: number;
+};
+
+// The whole report payload, as served by the admin trends endpoint and rendered into the
+// shareable image.
+export type SharedIncidentReport = {
+  summary: SharedIncidentReportSummary;
+  buckets: SharedIncidentTrendBucket[];
+  areas: SharedIncidentArea[];
+  tagTrends: SharedIncidentTagTrend[];
+  categories: SharedIncidentCategoryTrend[];
+  pairs: SharedIncidentTagPair[];
+};

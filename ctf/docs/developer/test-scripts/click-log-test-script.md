@@ -228,6 +228,34 @@ appear. No notes, exact locations, incident ids, or member identity anywhere on 
 intro copy names day, approximate area, counts, and tags as the only shared data.
 **Result:** web ☐ — notes:
 
+### CL-A4 · Trends dashboard says where, and how many people
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. Have at least two different members each share a tagged incident with a location, on different
+   days and from different places (CL-6 + CL-7).
+2. As admin, open the ClickLog Trends dashboard (`/admin/click-log`).
+**Expected:** The headline tiles show shared incidents, members reporting, members who logged more
+than one, days with activity, number of areas, and tagged incidents — and "members reporting" is the
+number of different people, not the number of incidents. An "Areas" section lists each area with its
+coordinates to one decimal place, how many incidents and how many members are in it, and the dates it
+spans. A "Kinds of harm reported" section rolls the problems up into categories, and an incident
+carrying two problems from the same category adds one to that category, not two. Scheme rows each
+carry a line saying what kind of scheme it is. The method statement appears under the numbers.
+**Result:** web ☐ — notes:
+
+### CL-A5 · Report saves as one image, without the areas by default
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. On the Trends dashboard, press "Save the report as one image" with the area checkbox left alone.
+2. Open the downloaded file.
+3. Tick "Include the area coordinates" and download again.
+**Expected:** Both downloads are PNG files named for today's date. The first contains every section
+of the report and the method statement, ends with the site line, and nothing is cut off at the
+bottom — and where the areas would be it says how many areas were recorded and why the coordinates
+were left out. The second is the same image with the area coordinates present. The numbers in the
+image match the numbers on the screen.
+**Result:** web ☐ — notes:
+
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)
 **Steps:**
