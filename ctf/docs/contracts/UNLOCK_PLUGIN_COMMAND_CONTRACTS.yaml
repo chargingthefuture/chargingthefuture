@@ -71,6 +71,67 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.admin.submission.review
+    version: 1.2.0
+    description: >-
+      Apply admin moderation decision and unlock access tier transition. Accepts approved, rejected,
+      spam, and duplicate. Spam and duplicate each place a platform-wide ('all'-scope) account
+      restriction so the member loses Commons/app access, marked 'unlock:spam' or 'unlock:duplicate'
+      respectively; an approved or rejected decision lifts a restriction carrying either of those
+      markers and no others. Duplicate is for a real member who already has an account under a
+      different email — unlike spam it never adds the Quora URL to the denylist, because that URL
+      belongs to their original account and denylisting it would lock the real person out.
+    inputSchema:
+      submissionId:
+        type: integer
+        required: true
+      reviewStatus:
+        type: string
+        required: true
+      reviewNote:
+        type: string
+        required: false
+    outputSchema:
+      submissionId:
+        type: integer
+      reviewStatus:
+        type: string
+      accessTier:
+        type: string
+      reviewedAt:
+        type: string
+    dataAccess:
+      - unlock_verification_submissions
+      - unlock_audit_log
+      - account_restrictions
+      - account_restrictions_audit
+      - unlock_spam_quora_urls
+    purpose: moderation_and_unlock_transition
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.spam_denylist.remove
+    version: 1.0.0
+    description: >-
+      Remove a normalized Quora URL from the spam denylist. Stops future submissions of that URL from
+      being auto-blocked; does not lift the restriction on a member already blocked for it (that is
+      reversed by re-reviewing their submission to approved/rejected).
+    inputSchema:
+      quoraProfileUrlNormalized:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - unlock_spam_quora_urls
+      - unlock_audit_log
+    purpose: moderation_denylist_maintenance
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.signups.read
     version: 1.0.0
     description: >-

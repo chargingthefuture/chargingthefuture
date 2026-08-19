@@ -26,7 +26,7 @@ import {
   type QuoraHistoryEntry,
   type UnlockAdminActionCtx,
 } from './unlock-admin-actions';
-import type { UnlockEditorState, UnlockHistoryState } from './unlock-admin-card';
+import type { UnlockBlockConfirm, UnlockEditorState, UnlockHistoryState } from './unlock-admin-card';
 import {
   StatBlock,
   UnlockBanners,
@@ -71,9 +71,10 @@ export function UnlockAdminShell({
   const [editError, setEditError] = useState<string | null>(null);
   const [savingUrl, setSavingUrl] = useState(false);
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
-  // Marking spam blocks the member from the whole app (an 'all'-scope account restriction), so the Spam
-  // button is guarded by an inline confirm the same way the reward-revoke lock is.
-  const [confirmSpamId, setConfirmSpamId] = useState<number | null>(null);
+  // Spam and duplicate both block the member from the whole app (an 'all'-scope account restriction), so
+  // each is guarded by an inline confirm the same way the reward-revoke lock is. One piece of state
+  // carrying the decision means two prompts can never be open at once on the same row.
+  const [confirmBlock, setConfirmBlock] = useState<UnlockBlockConfirm>(null);
   const [historyOpenUser, setHistoryOpenUser] = useState<string | null>(null);
   const [historyByUser, setHistoryByUser] = useState<Record<string, QuoraHistoryEntry[]>>({});
   const [historyLoadingUser, setHistoryLoadingUser] = useState<string | null>(null);
@@ -135,7 +136,9 @@ export function UnlockAdminShell({
     tab === 'pending'
       ? submissions.filter((s) => s.reviewStatus === 'pending')
       : tab === 'support-only'
-        ? submissions.filter((s) => s.accessTier === 'locked_support_only' && s.reviewStatus !== 'spam')
+        ? submissions.filter(
+            (s) => s.accessTier === 'locked_support_only' && s.reviewStatus !== 'spam' && s.reviewStatus !== 'duplicate',
+          )
         : submissions;
   const searchQuery = search.trim().toLowerCase();
   const filteredVisible = searchQuery
@@ -170,6 +173,7 @@ export function UnlockAdminShell({
           <StatBlock label="Approved" value={dashboard.approvedCount} accent="#22C55E" />
           <StatBlock label="Rejected" value={dashboard.rejectedCount} accent="#EF4444" />
           <StatBlock label="Spam" value={dashboard.spamCount} />
+          <StatBlock label="Duplicate" value={dashboard.duplicateCount} />
           <StatBlock label="Support-only" value={dashboard.lockedSupportOnlyCount} />
         </div>
 
@@ -194,8 +198,8 @@ export function UnlockAdminShell({
           history={history}
           confirmRevokeId={confirmRevokeId}
           setConfirmRevokeId={setConfirmRevokeId}
-          confirmSpamId={confirmSpamId}
-          setConfirmSpamId={setConfirmSpamId}
+          confirmBlock={confirmBlock}
+          setConfirmBlock={setConfirmBlock}
           onReview={(id, reviewStatus) => void reviewSubmission(ctx, id, reviewStatus)}
           onGrantReward={(id) => void grantReward(ctx, id)}
           onRevoke={(id) => void revokeReward(ctx, id)}

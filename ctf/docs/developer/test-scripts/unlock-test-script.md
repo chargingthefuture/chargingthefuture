@@ -223,6 +223,45 @@ submissions only; a member already blocked for that URL stays blocked until thei
 re-reviewed. A non-admin cannot reach the route.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A2e · Duplicate account — blocked, but their real account is untouched
+**Role:** admin / reviewer · **Surfaces:** web (admin + the member's own view)
+**Precondition:** two test accounts on different emails that submitted the **same** Quora profile URL.
+Approve the first. Leave the second pending.
+**Steps:**
+1. On the second submission, press **Duplicate**, read the confirm prompt, and confirm.
+2. Read the top counters and open the **Support-only** tab.
+3. Scroll to the Spam Quora-URL denylist panel.
+4. Sign in as the second account and open the app.
+5. From that same session, try to open the Commons and any plugin.
+6. Sign in as the first account.
+7. Back in the admin, re-review the second submission as **rejected**.
+**Expected:** Step 1: the prompt says the other account is unaffected; confirming blocks this account
+platform-wide, the same block spam places. Step 2: the Duplicate counter goes up; the member appears in
+neither the Support-only counter nor its tab, because the restriction means they hold no access at all.
+Step 3: **the Quora URL is NOT on the denylist** — this is the whole point of the decision existing. If
+it were, the first account's submission would be auto-spammed and the real person locked out. Step 4:
+they land on `/account-closed`, not on a Commons that fails — it says they already have an account,
+offers a sign-in link for the original, and a link to manage or delete this identity. Step 5: both are
+denied. Step 6: the first account is completely unaffected — full access, reward intact. Step 7: the
+restriction lifts, because a later approved/rejected decision clears the `unlock:duplicate` marker.
+Note: credits an already-approved duplicate received are clawed back by **Revoke reward**, not by this
+decision.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A2f · A closed account lands somewhere that explains itself
+**Role:** member on a throwaway account · **Surfaces:** web + mobile-responsive
+**Precondition:** a throwaway account marked **spam** by an admin.
+**Steps:**
+1. Sign in as that account and open the app.
+2. Read the page and try each link on it.
+3. Open `/account-closed` directly as a member whose account is **not** closed.
+**Expected:** Step 1: `/account-closed`, not a Commons whose every call fails silently. Step 2: it states
+the account is closed, offers the account-management link, and points at the Quora space for a human —
+no invitation to sign in as somebody else, since for spam there is nobody else. Wording differs from the
+duplicate version (UNLOCK-A2e step 4). Step 3: you are sent back to the app, not stranded on a page that
+does not apply to you.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A3 · Approval reward — granted or pending, never double
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Precondition:** a freshly approved submission.

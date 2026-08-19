@@ -41,11 +41,13 @@ export const STATUS_CONFIG: Record<DisplayStatus, { icon: typeof CheckCircle; co
   rejected: { icon: XCircle, color: "#EF4444", bg: "rgba(239,68,68,0.08)", label: "Rejected" },
 };
 
-// Map the API review status onto the three display states. `spam` is surfaced
-// to the user the same way as `rejected` (re-submission allowed).
+// Map the API review status onto the three display states. `spam` and `duplicate` are surfaced to the
+// user the same way as `rejected`. Both of those also restrict the account platform-wide, so the member
+// is sent to the closed-account page before reaching most of the app; this mapping only covers the
+// Unlock status screen, which stays reachable so they can always see their own state.
 export function toDisplayStatus(reviewStatus: UnlockReviewStatus | null): DisplayStatus {
   if (reviewStatus === "approved") return "approved";
-  if (reviewStatus === "rejected" || reviewStatus === "spam") return "rejected";
+  if (reviewStatus === "rejected" || reviewStatus === "spam" || reviewStatus === "duplicate") return "rejected";
   return "pending";
 }
 

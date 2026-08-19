@@ -62,15 +62,24 @@ This plugin must:
 
 ### 2.1 Moderation Queue
 
-0. **Spam is not "support-only access" (2026-08-19).** A spam decision drops the tier to
-   `locked_support_only` *and* places a platform-wide (`all`-scope) account restriction, and the
-   restriction is what decides — the member reaches nothing, the Commons included. The Support-only
-   counter, the Support-only queue tab, and the per-row Support-only pill therefore all exclude spam;
-   listing them there reported the opposite of their real access. Rejected members are still counted and
-   listed, because they genuinely do keep the support surface and can correct their URL. A member's
-   past support-only access remains readable in `unlock_audit_log`.
+0. **Spam and duplicate are not "support-only access" (2026-08-19).** Both decisions drop the tier to
+   `locked_support_only` *and* place a platform-wide account restriction, and the restriction is what
+   decides — the member reaches nothing, the Commons included. The Support-only counter, the
+   Support-only queue tab, and the per-row Support-only pill therefore exclude both; listing them there
+   reported the opposite of their real access. Rejected members are still counted and listed, because
+   they genuinely do keep the support surface and can correct their URL. Past support-only access
+   remains readable in `unlock_audit_log`.
 1. List submissions by status/access-tier filters.
-2. Review with decisions: `approved`, `rejected`, `spam`.
+2. Review with decisions: `approved`, `rejected`, `spam`, `duplicate`.
+2a. **`duplicate` — a real member who already has an account (2026-08-19).** One Quora profile signed up
+   twice under different emails is common and ordinary, and neither existing decision fit it: `rejected`
+   leaves them in the community with support access, and `spam` brands an honest person and denylists a
+   URL that belongs to their real account. `duplicate` removes app access exactly as `spam` does — the
+   same platform-wide (`all`-scope) restriction, marked `unlock:duplicate` — but **never touches the
+   spam denylist**, so their original account's submission is unaffected. Their `any_authenticated`
+   routes stay open, which is what lets them delete this identity. Confirm-gated in the admin like spam.
+   Clawing back credits an already-approved duplicate received is the separate **Revoke reward** action;
+   the decision alone does not move money.
 3. Capture reviewer and optional moderation note.
 4. A `spam` decision blocks the member from the whole app, not just the Unlock tier: in addition to
    dropping the access tier to `locked_support_only`, it places a platform-wide (`all`-scope)
@@ -185,6 +194,19 @@ Admin page:
   the admin page still renders. The roster read is capped at 5,000 accounts per load and says so when it
   truncates.
 
+### 2.5 Closed-Account Landing (member-facing)
+
+1. A member whose account carries an `all`-scope restriction is redirected from the home page to
+   `/account-closed` instead of being let through to a Commons where every call answers 403. Before
+   this the app simply appeared broken to them, with nothing saying a decision had been made.
+2. The page reads the restriction marker and says which it was. A **duplicate** is told their original
+   account still works and is offered a sign-in link plus a link to delete this identity — the useful
+   thing to say to somebody whose account is sitting right there. A **spam** closure gets a plain
+   statement, the account-management link, and one route to a human (the Quora space); no invitation to
+   sign in as somebody else, because there is nobody else.
+3. Both keep the link to the provider's hosted account portal: managing or deleting their own identity
+   is the one action a closed account can still take.
+
 ## 4) Data Model and Storage Contracts
 
 ### 4.1 Domain Entities
@@ -218,7 +240,9 @@ incentive is an internal token grant. No surface renders a ServiceCredits amount
 
 ### 4.2 Stored State
 
-1. review status: `pending | approved | rejected | spam`
+1. review status: `pending | approved | rejected | spam | duplicate` (enforced by a CHECK constraint on
+   `unlock_verification_submissions.review_status`; the constraint is dropped and re-added in
+   `schema.sql` so a legacy database widens to allow `duplicate`)
 2. access tier: `pending_readonly | locked_support_only | approved_full`
 3. unlock window expiration timestamp
 4. reminder stage marker
@@ -314,6 +338,25 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-08-19: **New `duplicate` review decision, and a landing for a closed account (owner request).**
+  One Quora profile signing up twice under different emails is common and ordinary, and neither existing
+  decision fit it: `rejected` leaves the member in the community with support access, while `spam` brands
+  an honest person and — worse — adds their Quora URL to the denylist, which would auto-spam their real
+  account's submission and lock the actual person out for good. `duplicate` removes app access exactly as
+  spam does (the same `all`-scope `account_restrictions` record, marked `unlock:duplicate` rather than
+  `unlock:spam`) and deliberately falls into the denylist-removal branch, never the denylist-add branch.
+  A later approved/rejected decision lifts either marker and only those two. Schema: the
+  `review_status` CHECK constraint is dropped and re-added to allow `duplicate`, so fresh and legacy
+  databases match. Admin: a confirm-gated Duplicate button beside Spam, a Duplicate counter, a status
+  pill, and the queue filter accepting the new value; the confirm state became one
+  `{ submissionId, decision }` value so two prompts can never be open at once on a row. Both blocking
+  decisions are now excluded from the Support-only counter, tab, and pill. Clawing back credits from an
+  already-approved duplicate stays the separate Revoke reward action — the decision alone moves no money.
+  Also fixed a hole this exposed: a closed account still had a stored access tier, so the home page let
+  it through to a Commons where every call answered 403 and the app just appeared broken. New
+  member-facing `/account-closed` explains which closure it was, and offers a duplicate their original
+  account plus a link to delete this identity, which is the one action a closed account can still take.
+  `unlock.admin.submission.review` bumped to 1.2.0 across the command, access-policy, and audit contracts.
 - 2026-08-19: **The early-Commons A/B experiment is removed; asking for help now opens the Commons for
   everyone (owner decision).** The experiment could not answer the question it was built for. Its
   denominator was members who reached `unlock.status.get` after the instrumentation shipped on

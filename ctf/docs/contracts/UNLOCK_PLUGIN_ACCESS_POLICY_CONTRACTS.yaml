@@ -123,7 +123,7 @@ policies:
 
   - pluginId: unlock
     command: unlock.admin.submission.review
-    version: 1.0.0
+    version: 1.2.0
     requiredRoles:
       - admin
     attributePolicies:

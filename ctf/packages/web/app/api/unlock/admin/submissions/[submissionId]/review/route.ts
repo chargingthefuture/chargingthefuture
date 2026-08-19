@@ -5,7 +5,11 @@ import { grantUnlockRewardForSubmission } from 'lib/unlock/reconcile-rewards';
 import { insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { grantUnleashFlagForUser } from 'lib/feature-flags';
 import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
-import { UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
+import {
+  UNLOCK_DUPLICATE_RESTRICTION_REASON,
+  UNLOCK_RESTRICTION_REASONS,
+  UNLOCK_SPAM_RESTRICTION_REASON,
+} from 'lib/unlock/spam-denylist';
 import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput, UnlockSubmission } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
@@ -21,25 +25,41 @@ type ReviewBody = {
   reviewNote?: string;
 };
 
-const ALLOWED_REVIEW_STATUSES = new Set<ReviewUnlockSubmissionInput['reviewStatus']>(['approved', 'rejected', 'spam']);
+const ALLOWED_REVIEW_STATUSES = new Set<ReviewUnlockSubmissionInput['reviewStatus']>([
+  'approved',
+  'rejected',
+  'spam',
+  'duplicate',
+]);
 
-// Keep the platform-wide account restriction in step with the review decision. A spam decision places a
-// full-account ('all'-scope) restriction — dropping the Unlock tier to locked_support_only alone still
-// leaves a spammed member inside the Commons/support surfaces and every 'any_authenticated' route, so the
-// restriction is what actually removes them from the app (their own status and account/data-deletion
-// routes stay reachable). Approved/rejected lifts a restriction only when it carries our spam marker, so
-// an unrelated admin restriction is never disturbed.
-async function syncSpamAccountRestriction(
+// The decisions that remove the member from the app, and the restriction marker each one writes. Both
+// place the same platform-wide block; they are told apart only so the member can be told which it was —
+// a duplicate is a real person who should go and sign in with their original account, and telling them
+// so is the difference between a dead end and a fixable mistake.
+const BLOCKING_DECISIONS: Partial<Record<ReviewUnlockSubmissionInput['reviewStatus'], string>> = {
+  spam: UNLOCK_SPAM_RESTRICTION_REASON,
+  duplicate: UNLOCK_DUPLICATE_RESTRICTION_REASON,
+};
+
+// Keep the platform-wide account restriction in step with the review decision. A spam or duplicate
+// decision places a full-account ('all'-scope) restriction — dropping the Unlock tier to
+// locked_support_only alone still leaves the member inside the Commons/support surfaces and every
+// 'any_authenticated' route, so the restriction is what actually removes them from the app (their own
+// status and account/data-deletion routes stay reachable, which is what lets them delete this identity).
+// Approved/rejected lifts a restriction only when it carries one of our own markers, so an unrelated
+// admin restriction is never disturbed.
+async function syncUnlockAccountRestriction(
   targetUserId: string,
   reviewStatus: ReviewUnlockSubmissionInput['reviewStatus'],
   actorUserId: string,
 ): Promise<void> {
-  if (reviewStatus === 'spam') {
-    await restrictAccount({ targetUserId, actorId: actorUserId, scope: 'all', reason: UNLOCK_SPAM_RESTRICTION_REASON });
+  const blockingReason = BLOCKING_DECISIONS[reviewStatus];
+  if (blockingReason) {
+    await restrictAccount({ targetUserId, actorId: actorUserId, scope: 'all', reason: blockingReason });
     return;
   }
   const restriction = await getAccountRestrictionStatus(targetUserId, 'all');
-  if (restriction.isRestricted && restriction.reason === UNLOCK_SPAM_RESTRICTION_REASON) {
+  if (restriction.isRestricted && UNLOCK_RESTRICTION_REASONS.includes(restriction.reason ?? '')) {
     await unrestrictAccount({ targetUserId, actorId: actorUserId });
   }
 }
@@ -146,7 +166,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       },
     });
 
-    await syncSpamAccountRestriction(submission.userId, body.reviewStatus, gate.auth.userId);
+    await syncUnlockAccountRestriction(submission.userId, body.reviewStatus, gate.auth.userId);
 
     const rewardWithheld = await grantApprovalRewardBestEffort(submission, gate.auth.userId, submissionId, body.reviewStatus);
 

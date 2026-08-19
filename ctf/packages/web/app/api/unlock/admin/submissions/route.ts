@@ -4,7 +4,13 @@ import { insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository'
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
 
-const ALLOWED_REVIEW_STATUSES = new Set<UnlockReviewStatus>(['pending', 'approved', 'rejected', 'spam']);
+const ALLOWED_REVIEW_STATUSES = new Set<UnlockReviewStatus>([
+  'pending',
+  'approved',
+  'rejected',
+  'spam',
+  'duplicate',
+]);
 const ALLOWED_ACCESS_TIERS = new Set<UnlockAccessTier>(['pending_readonly', 'locked_support_only', 'approved_full']);
 
 type SubmissionFilters = {

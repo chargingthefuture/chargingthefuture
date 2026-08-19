@@ -4,6 +4,7 @@ import type { ShellCurrentUser } from '../components/community-shell/shell-types
 import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
 import { getUnlockAccessTier } from '../lib/unlock/access';
+import { getAccountRestrictionStatus } from '../lib/auth/account-restrictions';
 import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import type { UnlockAccessTier } from '../lib/unlock/types';
 import { getGdpShellStats } from '../lib/gdp/repository';
@@ -119,6 +120,17 @@ export default async function HomePage() {
   // A support_only member sees the same Hub as everyone else; the general channel is their
   // support surface, and tapping a plugin they cannot use yet shows that plugin's public
   // landing page (handled at the plugin route), not a denial wall. Nothing is hidden here.
+  // A closed account (spam or duplicate) still has a stored access tier, so without this check it would
+  // pass the tier branch below and land on a Commons where every call answers 403 — the app looking
+  // broken instead of saying a decision was made. Send them to the page that explains it and offers the
+  // one thing they can still do: sign in as their other account, or delete this identity.
+  if (userId && !isAdmin) {
+    const restriction = await getAccountRestrictionStatus(userId, 'all').catch(() => ({ isRestricted: false }));
+    if (restriction.isRestricted) {
+      redirect('/account-closed');
+    }
+  }
+
   const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
 
   if (shouldRedirectToUnlock({ userId, isAdmin, tier })) {

@@ -143,7 +143,8 @@ export function UnlockVerifyBanner({
   // rather than the input, so the member knows they are in the queue and still have Commons access.
   const isPending = justSubmitted || (hasSubmission && reviewStatus === 'pending');
   // A rejected/spam prior submission should re-prompt for a corrected URL.
-  const wasRejected = hasSubmission && (reviewStatus === 'rejected' || reviewStatus === 'spam');
+  const wasRejected =
+    hasSubmission && (reviewStatus === 'rejected' || reviewStatus === 'spam' || reviewStatus === 'duplicate');
 
   async function submit() {
     const trimmed = url.trim();
