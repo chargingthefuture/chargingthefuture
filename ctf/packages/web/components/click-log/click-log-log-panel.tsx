@@ -12,6 +12,7 @@ import {
 } from "./click-log-shared";
 import { ClickLogTagPicker } from "./click-log-tag-picker";
 import { ClickLogSchemeSuggestionFields } from "./click-log-scheme-suggestion-fields";
+import { SHARE_INCIDENT_LABEL, SHARE_INCIDENT_LOCKED_LABEL } from "../../lib/click-log/share-copy";
 
 type GeoStatus = "idle" | "locating" | "error";
 
@@ -224,9 +225,7 @@ function ClickLogNoteForm({
           onChange={(e) => onShareChange(e.target.checked)}
           style={{ accentColor: t.ACCENT }}
         />
-        {tagged
-          ? "Shared with the owner — required for tagged incidents (only the date, rough area, and tags; never your note)"
-          : "Share this incident with the owner (only the date, rough area, and tags)"}
+        {tagged ? SHARE_INCIDENT_LOCKED_LABEL : SHARE_INCIDENT_LABEL}
       </label>
       <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center" }}>
         <ClickLogLocationButton

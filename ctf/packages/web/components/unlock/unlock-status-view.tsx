@@ -41,7 +41,10 @@ export function UnlockStatusView({
         error={error}
       />
       <div style={{ display: "flex", justifyContent: "center" }}>
-        <UnlockQuoraHelp />
+        {/* An approved member is done — the help card renders nothing for them. A pending member
+            still sees it: they gave a URL and are waiting, and until this they had no way to ask
+            anything while they waited. */}
+        <UnlockQuoraHelp alreadyVerified={status === "approved"} />
       </div>
     </>
   );

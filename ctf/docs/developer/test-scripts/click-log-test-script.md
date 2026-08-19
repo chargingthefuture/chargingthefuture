@@ -228,6 +228,51 @@ appear. No notes, exact locations, incident ids, or member identity anywhere on 
 intro copy names day, approximate area, counts, and tags as the only shared data.
 **Result:** web ☐ — notes:
 
+### CL-A4 · Trends dashboard says where, and how many people
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. Have at least two different members each share a tagged incident with a location, on different
+   days and from different places (CL-6 + CL-7).
+2. As admin, open the ClickLog Trends dashboard (`/admin/click-log`).
+**Expected:** The headline tiles show shared incidents, members reporting, members who logged more
+than one, days with activity, number of areas, and tagged incidents — and "members reporting" is the
+number of different people, not the number of incidents. An "Areas" section lists each area with its
+coordinates to one decimal place, how many incidents and how many members are in it, and the dates it
+spans. A "Kinds of harm reported" section rolls the problems up into categories, and an incident
+carrying two problems from the same category adds one to that category, not two. Scheme rows each
+carry a line saying what kind of scheme it is. The method statement appears under the numbers.
+**Result:** web ☐ — notes:
+
+### CL-9 · Every share control says the totals may be published
+**Role:** member · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Steps:**
+1. Open ClickLog and read the "share new incidents by default" setting at the top.
+2. Start logging an incident and read the share checkbox, with no tags picked.
+3. Pick a problem tag and read the same checkbox again.
+4. Save a private, untagged incident. On its history row, hover or focus the "Shared with owner"
+   pill on a tagged incident.
+5. Edit a private incident and add a tag without saving; read the notice that appears.
+**Expected:** All five places end with "Grouped totals may be published." — the global default, the
+free-choice checkbox, the locked checkbox on a tagged incident, the pill tooltip, and the edit
+notice. Each still says what is withheld ("never your notes" / "never your note"). The wording is
+identical across all five.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-A5 · Report opens as one image, without the areas by default
+**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Steps:**
+1. On the Trends dashboard, press "Show the report as one image" with the area checkbox left alone.
+2. On a phone, press and hold the picture that opens and save it to the photo library.
+3. Go back, press "Save it as a file instead", and open the downloaded file.
+4. Tick "Include the area coordinates" and repeat step 1.
+**Expected:** Step 1 opens one tall picture in a new tab rather than downloading anything, and step 2
+saves it to photos. Step 3 downloads a PNG named for today's date. Every version contains every
+section of the report and the method statement, ends with the site line, and nothing is cut off at
+the bottom. Where the areas would be, the default version says how many areas were recorded and why
+the coordinates were left out; the version from step 4 shows the coordinates. The numbers in the
+image match the numbers on the screen.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)
 **Steps:**
