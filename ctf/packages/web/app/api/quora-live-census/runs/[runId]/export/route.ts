@@ -1,0 +1,54 @@
+import { NextResponse } from 'next/server';
+import { censusError, requireCensusAdminAccess } from '../../../_lib';
+import { getCensusRun, insertCensusAudit, listCensusEntries } from 'lib/quora-live-census/repository';
+import { renderCensusCsv } from 'lib/quora-live-census/csv';
+import { QUORA_CENSUS_ERROR_CODE } from 'lib/quora-live-census/constants';
+import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
+
+type RouteContext = { params: Promise<{ runId: string }> };
+
+// One run as CSV, for analysis and citation outside the app.
+export async function GET(_request: Request, context: RouteContext) {
+  const gate = await requireCensusAdminAccess('census.run.export');
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const { runId } = await context.params;
+
+  try {
+    const run = await getCensusRun(runId);
+    if (!run) {
+      return censusError('No census run with that id.', QUORA_CENSUS_ERROR_CODE.notFound, 404);
+    }
+    const entries = await listCensusEntries(runId);
+    // Logged before the file is handed over: this is the moment a list of named third parties
+    // leaves the app, and it is the one census action that most needs a record of who did it.
+    await insertCensusAudit({
+      actorUserId: gate.auth.userId,
+      command: 'census.run.export',
+      policyStatus: 'allow',
+      reason: 'csv_download',
+      runId: run.id,
+      rowCount: entries.length,
+      metadata: { observedOn: run.observed_on, frameKind: run.frame_kind, runStatus: run.status },
+    });
+    return new NextResponse(renderCensusCsv(run, entries), {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="quora-live-census-${run.observed_on}.csv"`,
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error) {
+    reportError(error, { area: 'quora-live-census', op: 'export-run' });
+    return censusError(
+      'The census export could not be built.',
+      QUORA_CENSUS_ERROR_CODE.persistenceUnavailable,
+      503,
+      failureReason(error),
+    );
+  }
+}
