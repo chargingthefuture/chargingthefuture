@@ -5577,6 +5577,97 @@ ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPT
 CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
 
+-- === QUORA LIVE ACCOUNT CENSUS (admin-only observational snapshot) ===
+-- The other half of the Quora research. The deletion survey records what was REMOVED, which can
+-- never establish what REMAINS — a claim about which accounts are still standing needs someone to
+-- look at what is standing, on a stated date, by a stated method.
+--
+-- So this is observation, not self-report: an admin opens Quora on a fixed date, works through the
+-- accounts a defined search turns up, and codes each one by what it writes about and the stance it
+-- takes. The coding list deliberately includes categories that would REFUTE the claim being tested
+-- (practical help, organizing) alongside the ones that would support it. A scheme with only the
+-- expected answers in it produces the expected answer, which is worth nothing.
+--
+-- Nothing here is member data: every row describes a public Quora account observed from outside.
+-- The one user column is `created_by_user_id` on a run, recording which admin made the
+-- observations — an audit stamp, registered in lib/account/deletion-registry.ts as `retain` for
+-- the same reason every other admin/reviewer column is. The entry rows carry no user column.
+CREATE TABLE IF NOT EXISTS quora_live_census_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- The fixed date the snapshot describes. Separate from created_at: coding a run can span days,
+  -- but the census is only citable as "what was live on this date".
+  observed_on DATE NOT NULL,
+  -- What was searched, in plain words, and how accounts were picked from it. Without both, the
+  -- numbers are unreproducible and indistinguishable from cherry-picking, so they are NOT NULL.
+  topic_scope TEXT NOT NULL,
+  sampling_method TEXT NOT NULL,
+  notes TEXT NULL,
+  -- 'open' while coding is in progress, 'closed' when the run is finished. Only a closed run should
+  -- ever be quoted: a half-coded run reports whatever was entered first, which is usually whatever
+  -- was easiest to find.
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+  created_by_user_id TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS observed_on DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS topic_scope TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS sampling_method TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS notes TEXT NULL;
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_live_census_runs_observed_on
+  ON quora_live_census_runs(observed_on DESC);
+
+-- One observed account. `stance` is the column the whole census exists for: it is what separates
+-- "accounts about this subject are still there" from "what is still there says give up".
+CREATE TABLE IF NOT EXISTS quora_live_census_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_id UUID NOT NULL REFERENCES quora_live_census_runs(id) ON DELETE CASCADE,
+  handle TEXT NOT NULL,
+  profile_url TEXT NULL,
+  -- Coded from the account as it appeared on the run's observed_on date. 'gone' is kept as an
+  -- option because a link found part-way through a run sometimes no longer resolves — recording
+  -- that is more honest than dropping the row.
+  account_state TEXT NOT NULL DEFAULT 'live'
+    CHECK (account_state IN ('live', 'gone', 'renamed_or_moved')),
+  -- Same subject list as the deletion survey, on purpose: the two datasets only answer the
+  -- question together, and they cannot be compared if they are coded differently. Changing one
+  -- list without the other silently breaks that comparison.
+  topics TEXT[] NOT NULL DEFAULT '{}',
+  stance TEXT NOT NULL DEFAULT 'unclear'
+    CHECK (stance IN (
+      'practical_help', 'organizing', 'personal_account',
+      'distress_no_coping', 'discouraging', 'dismissive', 'unclear', 'unrelated'
+    )),
+  approx_answer_count INTEGER NULL CHECK (approx_answer_count IS NULL OR approx_answer_count >= 0),
+  last_active_year INTEGER NULL
+    CHECK (last_active_year IS NULL OR (last_active_year BETWEEN 2005 AND 2100)),
+  -- Where the coder looked, ideally an archive link, so a later reader can check the call rather
+  -- than take it on trust.
+  evidence_url TEXT NULL,
+  notes TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS run_id UUID;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS handle TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS profile_url TEXT NULL;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS account_state TEXT NOT NULL DEFAULT 'live';
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS topics TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS stance TEXT NOT NULL DEFAULT 'unclear';
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS approx_answer_count INTEGER NULL;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS last_active_year INTEGER NULL;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS evidence_url TEXT NULL;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS notes TEXT NULL;
+ALTER TABLE IF EXISTS quora_live_census_entries ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_quora_live_census_entries_run ON quora_live_census_entries(run_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_quora_live_census_entries_run_handle
+  ON quora_live_census_entries(run_id, lower(handle));
+
 -- === contributions plugin (voluntary fundraiser drives) ===
 -- Fundraiser cycles: each row is one time window (~3 months, owner-controlled) with
 -- owner-editable goals on the three external surfaces (fiat gift cards, Quora comments,

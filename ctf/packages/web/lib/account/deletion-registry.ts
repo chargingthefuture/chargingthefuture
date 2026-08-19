@@ -782,6 +782,26 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('account_restrictions_audit', 'The audit trail of restriction decisions; retained for compliance.'),
     ],
   },
+  {
+    slug: 'quora-live-census',
+    name: 'Quora Live Account Census',
+    dataSummary:
+      'Admin-recorded observations of public Quora accounts. Holds no member data; the only user column is which admin started a run.',
+    // Research records, not a service a member joins.
+    serviceScopeSupported: false,
+    tables: [
+      // `created_by_user_id` is an admin provenance stamp on an observation, which is the
+      // admin/reviewer case the notes at the top of this file already call retained. Clearing it
+      // would erase who made the observation while leaving the observation standing — the wrong
+      // half to keep, and it matters more if a second coder is ever added, since the whole reason
+      // to record a coder is to be able to compare them. The entry rows themselves carry no user
+      // column at all: they describe third-party public accounts, not members.
+      retain(
+        'quora_live_census_runs',
+        'Which admin started an observation run; provenance for a research record, not member data.',
+      ),
+    ],
+  },
 ];
 
 /** Look up a plugin's deletion entry by slug. */

@@ -53,6 +53,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // /apps/mutual-time (MutualTimeAdmin renders there for admins), so this row points there.
   { href: '/apps/mutual-time', name: 'Mutual Time' },
   { href: '/admin/peer-programming', name: 'PeerProgramming' },
+  // The observational half of the Quora research: fixed-date snapshots of accounts still standing,
+  // coded by what they say. Sits beside the deletion survey, which records only what was removed.
+  { href: '/admin/quora-live-census', name: 'Quora Live Account Census' },
   { href: '/admin/safety', name: 'Safety Reports' },
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
