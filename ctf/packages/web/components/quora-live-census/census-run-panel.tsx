@@ -3,17 +3,68 @@
 import { Download, Trash2 } from 'lucide-react';
 import {
   QUORA_CENSUS_ACCOUNT_STATE_LABEL,
+  QUORA_CENSUS_FRAME_KIND_SUPPORTS,
+  frameSupportsRemovalRate,
   QUORA_CENSUS_STANCE_LABEL,
   QUORA_CENSUS_TOPIC_LABEL,
   type QuoraCensusTopic,
 } from 'lib/quora-live-census/constants';
-import type { CensusEntryRow, CensusStanceTally } from 'lib/quora-live-census/repository';
+import type { CensusEntryRow, CensusStanceTally, CensusStateCounts } from 'lib/quora-live-census/repository';
+import type { QuoraCensusFrameKind } from 'lib/quora-live-census/constants';
 import type { CensusTokens } from './census-theme';
 import { buttonStyle, cardStyle, mutedStyle } from './census-styles';
 import type { RunDetail } from './census-api';
 
 function topicLabels(topics: QuoraCensusTopic[]): string {
   return topics.map((topic) => QUORA_CENSUS_TOPIC_LABEL[topic] ?? topic).join('; ') || 'no subjects coded';
+}
+
+// What the run says about removals — which depends entirely on where its accounts came from.
+//
+// On a list assembled beforehand, `gone` over the whole set is a real rate: the denominator was
+// fixed before any of it was removed. On a fresh search it is not a rate at all, because a search
+// cannot return an account that no longer exists — so that case prints the reason instead of a
+// number. Printing the number anyway is the single easiest way to publish something false out of
+// this tool.
+export function CensusRemovalReading({
+  frameKind,
+  counts,
+  tokens,
+}: {
+  frameKind: QuoraCensusFrameKind;
+  counts: CensusStateCounts;
+  tokens: CensusTokens;
+}) {
+  const total = counts.live + counts.gone + counts.renamedOrMoved;
+
+  return (
+    <section style={cardStyle(tokens)}>
+      <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px', color: tokens.TITLE }}>
+        What is gone
+      </h3>
+
+      {total === 0 ? (
+        <p style={mutedStyle(tokens)}>Nothing coded in this run yet.</p>
+      ) : frameSupportsRemovalRate(frameKind) ? (
+        <>
+          <p style={{ fontSize: 20, fontWeight: 800, color: tokens.TITLE, margin: '4px 0 0' }}>
+            {counts.gone} of {total} gone · {Math.round((counts.gone / total) * 100)}%
+          </p>
+          <p style={mutedStyle(tokens)}>
+            A real rate: this run walked a set fixed before any of it was removed, so the accounts
+            that are missing are counted rather than invisible. {counts.renamedOrMoved} renamed or
+            moved, {counts.live} still live.
+          </p>
+        </>
+      ) : (
+        <p style={mutedStyle(tokens)}>
+          Not available for this run, and the {counts.gone} coded gone here is not a removal rate.
+          {' '}
+          {QUORA_CENSUS_FRAME_KIND_SUPPORTS.fresh_search}
+        </p>
+      )}
+    </section>
+  );
 }
 
 // The stance breakdown, over live accounts only. Shown as counts and as a share of the live

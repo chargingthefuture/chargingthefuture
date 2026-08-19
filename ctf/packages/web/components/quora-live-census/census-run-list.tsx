@@ -2,6 +2,12 @@
 
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
+import {
+  QUORA_CENSUS_FRAME_KIND,
+  QUORA_CENSUS_FRAME_KIND_LABEL,
+  QUORA_CENSUS_FRAME_KIND_SUPPORTS,
+  type QuoraCensusFrameKind,
+} from 'lib/quora-live-census/constants';
 import type { CensusRunSummary } from 'lib/quora-live-census/repository';
 import type { CensusTokens } from './census-theme';
 import { buttonStyle, cardStyle, inputStyle, labelStyle, mutedStyle } from './census-styles';
@@ -20,6 +26,7 @@ export function CensusRunForm({
   onCreate: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [observedOn, setObservedOn] = useState('');
+  const [frameKind, setFrameKind] = useState<QuoraCensusFrameKind>('existing_list');
   const [topicScope, setTopicScope] = useState('');
   const [samplingMethod, setSamplingMethod] = useState('');
   const [notes, setNotes] = useState('');
@@ -27,7 +34,7 @@ export function CensusRunForm({
 
   const submit = async () => {
     setBusy(true);
-    const created = await onCreate({ observedOn, topicScope, samplingMethod, notes });
+    const created = await onCreate({ observedOn, frameKind, topicScope, samplingMethod, notes });
     setBusy(false);
     if (created) {
       setObservedOn('');
@@ -56,6 +63,21 @@ export function CensusRunForm({
           onChange={(event) => setObservedOn(event.target.value)}
           style={inputStyle(tokens)}
         />
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label htmlFor="run-frame" style={labelStyle(tokens)}>Where the accounts come from</label>
+        <select
+          id="run-frame"
+          value={frameKind}
+          onChange={(event) => setFrameKind(event.target.value as QuoraCensusFrameKind)}
+          style={inputStyle(tokens)}
+        >
+          {QUORA_CENSUS_FRAME_KIND.map((kind) => (
+            <option key={kind} value={kind}>{QUORA_CENSUS_FRAME_KIND_LABEL[kind]}</option>
+          ))}
+        </select>
+        <p style={mutedStyle(tokens)}>{QUORA_CENSUS_FRAME_KIND_SUPPORTS[frameKind]}</p>
       </div>
 
       <div style={{ marginTop: 12 }}>
@@ -151,7 +173,8 @@ export function CensusRunList({
           }}
         >
           <span style={{ display: 'block', color: tokens.TITLE, fontWeight: 700 }}>
-            {run.observed_on} · {run.status === 'closed' ? 'closed' : 'open'}
+            {run.observed_on} · {run.status === 'closed' ? 'closed' : 'open'} ·{' '}
+            {run.frame_kind === 'existing_list' ? 'from a list' : 'from a search'}
           </span>
           <span style={{ display: 'block' }}>
             {run.live_count} live of {run.entry_count} coded

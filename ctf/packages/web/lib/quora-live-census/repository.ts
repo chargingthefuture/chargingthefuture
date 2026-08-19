@@ -3,6 +3,7 @@
 import { queryDb } from 'lib/db/postgres';
 import type {
   QuoraCensusAccountState,
+  QuoraCensusFrameKind,
   QuoraCensusRunStatus,
   QuoraCensusStance,
   QuoraCensusTopic,
@@ -11,6 +12,7 @@ import type {
 export type CensusRunRow = {
   id: string;
   observed_on: string;
+  frame_kind: QuoraCensusFrameKind;
   topic_scope: string;
   sampling_method: string;
   notes: string | null;
@@ -39,6 +41,7 @@ export type CensusRunSummary = CensusRunRow & { entry_count: number; live_count:
 
 export type CreateCensusRunInput = {
   observedOn: string;
+  frameKind: QuoraCensusFrameKind;
   topicScope: string;
   samplingMethod: string;
   notes: string | null;
@@ -61,10 +64,17 @@ export type CreateCensusEntryInput = {
 export async function createCensusRun(input: CreateCensusRunInput): Promise<CensusRunRow> {
   const result = await queryDb<CensusRunRow>(
     `INSERT INTO quora_live_census_runs (
-       observed_on, topic_scope, sampling_method, notes, created_by_user_id
-     ) VALUES ($1, $2, $3, $4, $5)
+       observed_on, frame_kind, topic_scope, sampling_method, notes, created_by_user_id
+     ) VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [input.observedOn, input.topicScope, input.samplingMethod, input.notes, input.createdByUserId],
+    [
+      input.observedOn,
+      input.frameKind,
+      input.topicScope,
+      input.samplingMethod,
+      input.notes,
+      input.createdByUserId,
+    ],
   );
 
   const row = result.rows[0];
@@ -163,6 +173,30 @@ export async function setCensusRunStatus(
     [runId, status],
   );
   return result.rows[0] ?? null;
+}
+
+export type CensusStateCounts = { live: number; gone: number; renamedOrMoved: number };
+
+// How the run's accounts split by what was found at each one. On an existing-list run this is the
+// removal measurement: `gone` against the whole set is a real rate, because the denominator was
+// fixed before anything was removed. On a fresh-search run it is close to meaningless, and the
+// screens say so rather than printing a number that invites the wrong reading.
+export async function getCensusStateCounts(runId: string): Promise<CensusStateCounts> {
+  const result = await queryDb<{ account_state: QuoraCensusAccountState; count: string }>(
+    `SELECT account_state, COUNT(*)::text AS count
+       FROM quora_live_census_entries
+      WHERE run_id = $1
+      GROUP BY account_state`,
+    [runId],
+  );
+
+  const counts: CensusStateCounts = { live: 0, gone: 0, renamedOrMoved: 0 };
+  for (const row of result.rows) {
+    if (row.account_state === 'live') counts.live = Number(row.count);
+    if (row.account_state === 'gone') counts.gone = Number(row.count);
+    if (row.account_state === 'renamed_or_moved') counts.renamedOrMoved = Number(row.count);
+  }
+  return counts;
 }
 
 export type CensusStanceTally = { stance: QuoraCensusStance; count: number };

@@ -22,6 +22,39 @@ export type QuoraCensusErrorCode =
 export const QUORA_CENSUS_RUN_STATUS = ['open', 'closed'] as const;
 export type QuoraCensusRunStatus = (typeof QUORA_CENSUS_RUN_STATUS)[number];
 
+// Where a run's accounts came from. This is not bookkeeping — it decides what the run can support,
+// and getting it wrong produces a confident number that is simply false.
+//
+// A fresh search cannot see a removed account. Search Quora today and you get survivors; the
+// accounts that were taken down are not missing from the results, they are invisible to them. So a
+// fresh-search run can describe what the survivors say, and can say NOTHING about how many were
+// removed — its "gone" count is only the handful that died between finding them and coding them.
+//
+// A list assembled beforehand, on a criterion unrelated to what the accounts say, is the frame
+// that supports both. The app already holds one: directory_profiles with source 'admin' or
+// 'community-generated' were added because the person is a targeted individual, whatever they
+// write. Walking that list today gives a removal rate against a fixed denominator and the stance
+// mix among the survivors, from the same pass.
+export const QUORA_CENSUS_FRAME_KIND = ['existing_list', 'fresh_search'] as const;
+export type QuoraCensusFrameKind = (typeof QUORA_CENSUS_FRAME_KIND)[number];
+
+export const QUORA_CENSUS_FRAME_KIND_LABEL: Record<QuoraCensusFrameKind, string> = {
+  existing_list: 'A list assembled before this run',
+  fresh_search: 'Searching Quora during this run',
+};
+
+export const QUORA_CENSUS_FRAME_KIND_SUPPORTS: Record<QuoraCensusFrameKind, string> = {
+  existing_list:
+    'Supports both: how many of a fixed set are gone, and what the survivors say. Strongest when the list was built on something other than what the accounts write — the app directory is, since profiles are added for being a targeted individual.',
+  fresh_search:
+    'Supports what the survivors say, and nothing about removals: a search today cannot return an account that no longer exists, so a removal rate cannot be read off this run.',
+};
+
+// Whether a run's frame can speak to how many accounts were removed.
+export function frameSupportsRemovalRate(frameKind: QuoraCensusFrameKind): boolean {
+  return frameKind === 'existing_list';
+}
+
 export const QUORA_CENSUS_ACCOUNT_STATE = ['live', 'gone', 'renamed_or_moved'] as const;
 export type QuoraCensusAccountState = (typeof QUORA_CENSUS_ACCOUNT_STATE)[number];
 

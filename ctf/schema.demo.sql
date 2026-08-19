@@ -5595,6 +5595,20 @@ CREATE TABLE IF NOT EXISTS quora_live_census_runs (
   -- The fixed date the snapshot describes. Separate from created_at: coding a run can span days,
   -- but the census is only citable as "what was live on this date".
   observed_on DATE NOT NULL,
+  -- Where the accounts came from, and it decides what the run can support.
+  --
+  -- 'existing_list' — a list assembled BEFORE this run, on a criterion unrelated to what the
+  -- accounts say (the app's own directory_profiles with source 'admin' or 'community-generated'
+  -- are exactly this: added because the person is a targeted individual, regardless of what they
+  -- author). Walking that list today gives a real removal rate against a fixed denominator, AND
+  -- the stance mix among the survivors.
+  --
+  -- 'fresh_search' — searching Quora today. This CANNOT see a removed account: a search returns
+  -- survivors and nothing else. Such a run says something about what the survivors say, and
+  -- nothing whatsoever about how many were removed. Recording the difference is what stops the
+  -- second kind being read as the first.
+  frame_kind TEXT NOT NULL DEFAULT 'fresh_search'
+    CHECK (frame_kind IN ('existing_list', 'fresh_search')),
   -- What was searched, in plain words, and how accounts were picked from it. Without both, the
   -- numbers are unreproducible and indistinguishable from cherry-picking, so they are NOT NULL.
   topic_scope TEXT NOT NULL,
@@ -5610,6 +5624,7 @@ CREATE TABLE IF NOT EXISTS quora_live_census_runs (
 );
 ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS observed_on DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS frame_kind TEXT NOT NULL DEFAULT 'fresh_search';
 ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS topic_scope TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS sampling_method TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS notes TEXT NULL;

@@ -6,6 +6,7 @@
 
 import {
   QUORA_CENSUS_ACCOUNT_STATE,
+  QUORA_CENSUS_FRAME_KIND,
   QUORA_CENSUS_EARLIEST_YEAR,
   QUORA_CENSUS_HANDLE_MAX_LENGTH,
   QUORA_CENSUS_STANCE,
@@ -13,6 +14,7 @@ import {
   QUORA_CENSUS_TOPIC,
   QUORA_CENSUS_URL_MAX_LENGTH,
   type QuoraCensusAccountState,
+  type QuoraCensusFrameKind,
   type QuoraCensusStance,
   type QuoraCensusTopic,
 } from 'lib/quora-live-census/constants';
@@ -67,6 +69,18 @@ export function parseCensusRun(
   if (!isCalendarDate(body.observedOn)) {
     return { ok: false, message: 'Give the observation date as YYYY-MM-DD.' };
   }
+  // No default. Guessing this wrong is how a fresh-search run gets read as a removal rate, so the
+  // caller has to say which kind of frame it is.
+  if (
+    typeof body.frameKind !== 'string' ||
+    !(QUORA_CENSUS_FRAME_KIND as readonly string[]).includes(body.frameKind)
+  ) {
+    return {
+      ok: false,
+      message: 'Say where the accounts came from: a list assembled beforehand, or a search today.',
+    };
+  }
+
   const topicScope = trimmed(body.topicScope, QUORA_CENSUS_TEXT_MAX_LENGTH);
   if (!topicScope) {
     return { ok: false, message: 'Say what was searched — the scope is what makes the run readable later.' };
@@ -80,6 +94,7 @@ export function parseCensusRun(
     ok: true,
     value: {
       observedOn: body.observedOn,
+      frameKind: body.frameKind as QuoraCensusFrameKind,
       topicScope,
       samplingMethod,
       notes: trimmed(body.notes, QUORA_CENSUS_TEXT_MAX_LENGTH),

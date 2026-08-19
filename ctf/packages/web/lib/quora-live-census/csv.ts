@@ -15,6 +15,7 @@ import type { CensusEntryRow, CensusRunRow } from 'lib/quora-live-census/reposit
 export const CENSUS_CSV_HEADERS = [
   'run_id',
   'observed_on',
+  'frame_kind',
   'run_status',
   'topic_scope',
   'sampling_method',
@@ -39,7 +40,14 @@ function topicLabels(topics: QuoraCensusTopic[]): string {
 }
 
 export function renderCensusCsv(run: CensusRunRow, entries: CensusEntryRow[]): string {
-  const runCells = [run.id, run.observed_on, run.status, run.topic_scope, run.sampling_method];
+  const runCells = [
+    run.id,
+    run.observed_on,
+    run.frame_kind,
+    run.status,
+    run.topic_scope,
+    run.sampling_method,
+  ];
   const lines = [CENSUS_CSV_HEADERS.map(csvCell).join(',')];
 
   for (const entry of entries) {

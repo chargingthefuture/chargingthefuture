@@ -4,10 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { CensusRunSummary } from 'lib/quora-live-census/repository';
+import {
+  QUORA_CENSUS_FRAME_KIND_LABEL,
+  QUORA_CENSUS_FRAME_KIND_SUPPORTS,
+} from 'lib/quora-live-census/constants';
 import { getCensusTokens } from './census-theme';
 import { buttonStyle, cardStyle, columnStyle, errorStyle, mutedStyle, pageStyle } from './census-styles';
 import { CensusRunForm, CensusRunList } from './census-run-list';
-import { CensusEntryList, CensusTally } from './census-run-panel';
+import { CensusEntryList, CensusRemovalReading, CensusTally } from './census-run-panel';
 import { CensusEntryForm, entryDraftToBody, type EntryDraft } from './census-entry-form';
 import {
   createEntry,
@@ -138,6 +142,13 @@ export function CensusAdminShell() {
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 6px', color: t.TITLE }}>
                 {detail.run.observed_on} · {detail.run.status}
               </h2>
+              <p style={{ fontSize: 13, color: t.TEXT, margin: '0 0 6px' }}>
+                <span style={{ color: t.MUTED }}>Accounts from: </span>
+                {QUORA_CENSUS_FRAME_KIND_LABEL[detail.run.frame_kind]}
+              </p>
+              <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 8px', lineHeight: 1.55 }}>
+                {QUORA_CENSUS_FRAME_KIND_SUPPORTS[detail.run.frame_kind]}
+              </p>
               <p style={{ fontSize: 13, color: t.TEXT, margin: '0 0 6px', whiteSpace: 'pre-wrap' }}>
                 <span style={{ color: t.MUTED }}>Searched: </span>
                 {detail.run.topic_scope}
@@ -152,6 +163,12 @@ export function CensusAdminShell() {
                 </p>
               ) : null}
             </section>
+
+            <CensusRemovalReading
+              frameKind={detail.run.frame_kind}
+              counts={detail.stateCounts}
+              tokens={t}
+            />
 
             <CensusTally tally={detail.tally} tokens={t} />
 

@@ -3,6 +3,7 @@ import { censusError, ensureCensusMutationCsrf, requireCensusAdminAccess } from 
 import {
   getCensusRun,
   getCensusStanceTally,
+  getCensusStateCounts,
   listCensusEntries,
   setCensusRunStatus,
 } from 'lib/quora-live-census/repository';
@@ -31,11 +32,12 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!run) {
       return censusError('No census run with that id.', QUORA_CENSUS_ERROR_CODE.notFound, 404);
     }
-    const [entries, tally] = await Promise.all([
+    const [entries, tally, stateCounts] = await Promise.all([
       listCensusEntries(runId),
       getCensusStanceTally(runId),
+      getCensusStateCounts(runId),
     ]);
-    return NextResponse.json({ ok: true, run, entries, tally });
+    return NextResponse.json({ ok: true, run, entries, tally, stateCounts });
   } catch (error) {
     reportError(error, { area: 'quora-live-census', op: 'get-run' });
     return censusError(

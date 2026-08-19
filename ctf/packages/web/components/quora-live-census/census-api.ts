@@ -6,6 +6,7 @@ import type {
   CensusRunRow,
   CensusRunSummary,
   CensusStanceTally,
+  CensusStateCounts,
 } from 'lib/quora-live-census/repository';
 
 // Client calls for the census admin screens. Every failure carries whatever the route said rather
@@ -53,6 +54,7 @@ export type RunDetail = {
   run: CensusRunRow;
   entries: CensusEntryRow[];
   tally: CensusStanceTally[];
+  stateCounts: CensusStateCounts;
 };
 
 export function fetchRun(runId: string): Promise<CensusResult<RunDetail>> {

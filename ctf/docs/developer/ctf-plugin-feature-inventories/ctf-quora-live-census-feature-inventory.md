@@ -18,7 +18,37 @@ The Quora account deletion survey (`ctf-quora-deletion-survey-feature-inventory.
 was **removed**. That can never establish what **remains**, and the blog's claim about what is
 still standing on Quora is a claim about what remains. This is the instrument for that half.
 
-The method is deliberate and the whole value rests on it:
+### Where the accounts come from decides what the run can prove
+
+This is the single most important thing about the census, and it is easy to get wrong in a way that
+produces a confident number that is simply false.
+
+**A fresh search cannot see a removed account.** Search Quora today and you get survivors; the
+accounts that were taken down are not missing from the results, they are invisible to them. A
+fresh-search run can describe what the survivors say. It can say nothing at all about how many were
+removed, and its `gone` count is only the few that died between being found and being coded.
+
+**A list assembled beforehand can.** If the set was fixed before the removals happened, and fixed on
+a criterion unrelated to what the accounts write, then walking it today gives a real removal rate
+against a real denominator *and* the stance mix among the survivors, from one pass.
+
+**The app already holds such a list.** `directory_profiles` with `source` of `admin` or
+`community-generated` — profiles added by the owner or nominated by scouts — exist because the
+person is a targeted individual, whatever they author. That criterion is independent of stance,
+which is exactly what a frame needs to be. It is the strongest frame available for this census and
+is the recommended one; a fresh search is the fallback when no suitable list exists.
+
+So every run records `frame_kind` (`existing_list` or `fresh_search`), required with no default,
+and the admin screen shows a removal rate only for the first kind. For the second it prints the
+reason instead of a number. Printing the number anyway is the easiest way to publish something
+false out of this tool.
+
+Note what this does to the survey's stated limits: the deletion survey is self-report and
+self-selected, so it can only ever be a floor. An existing-list run has neither problem — nobody
+selected themselves into `directory_profiles`, and nothing about it is a report. The two are
+answering the same question from opposite sides, and the list-based run is the stronger half.
+
+### The rest of the method
 
 - A run names one observation date. Coding may take days; the census is only ever citable as "what
   was live on this date".
@@ -46,13 +76,17 @@ None. There is no member-facing surface.
 
 At `/admin/quora-live-census`, an admin can:
 
-- Start a run by giving the observation date, what was searched, how accounts were picked, and
-  optional notes. The first three are required.
+- Start a run by giving the observation date, where the accounts come from (a list assembled
+  beforehand, or a search today), what was searched, how accounts were picked, and optional notes.
+  All but the notes are required, and the form states what each frame kind can and cannot support
+  as it is chosen.
 - See every run newest observation first, each showing how many accounts were coded and how many of
   those were still live.
 - Open a run and code accounts into it: handle, profile link, state when checked (still live, gone
   when checked, renamed or moved), what the account says, subjects, rough answer count, last active
   year, an archive link, and notes.
+- Read what is gone: a real removal rate on a run built from a list assembled beforehand, and on a
+  fresh-search run, the reason no rate is available instead of a misleading number.
 - Read the stance breakdown for the run — counts and shares, over live accounts only, because an
   account that was gone when checked says nothing about what remains.
 - Remove a miscoded entry while the run is open.
@@ -80,6 +114,7 @@ At `/admin/quora-live-census`, an admin can:
 |---|---|---|
 | `id` | UUID PK | `gen_random_uuid()` |
 | `observed_on` | DATE | The date the snapshot describes. Separate from `created_at` on purpose. |
+| `frame_kind` | TEXT | `existing_list` / `fresh_search`. Decides whether the run can support a removal rate. Required, no default at the API. |
 | `topic_scope` | TEXT | What was searched. Required. |
 | `sampling_method` | TEXT | How accounts were picked. Required. |
 | `notes` | TEXT NULL | Free text |
@@ -171,7 +206,10 @@ this is not a plugin. The steps that matter:
 6. Code several accounts across different stances. The tally shows counts and shares over live
    accounts only — mark one `gone` and confirm it drops out of the tally but stays in the list.
 7. Close the run, then try to add an entry. It is refused. Reopen and confirm it is accepted again.
-8. Download the CSV. Every row carries the run date, scope, and method, and free text containing
+8. Start a run marked as a fresh search, code one account as gone, and confirm the "what is gone"
+   panel prints the reason rather than a rate. Start one marked as a list assembled beforehand and
+   confirm the same data now reports a rate.
+9. Download the CSV. Every row carries the run date, scope, and method, and free text containing
    commas and quotes stays inside its own cell.
 
 ## Gaps & Known Technical Debt
@@ -192,3 +230,9 @@ this is not a plugin. The steps that matter:
 
 - 2026-08-19: Built, on the owner's instruction, as the survivor-side half the deletion survey
   could not cover. Runs, coded entries, stance tally, close and reopen, CSV export.
+- 2026-08-19: Added `frame_kind` after the owner pointed out the app already holds a non-self-report
+  set of accounts kept for being a targeted individual regardless of what they author
+  (`directory_profiles`, source `admin` / `community-generated`). That is a far stronger frame than
+  a fresh search, and the difference is not cosmetic: a search cannot see a removed account, so the
+  original build would have let a fresh-search run be read as a removal rate. Runs now declare their
+  frame, and the removal reading is shown only where it means something.
