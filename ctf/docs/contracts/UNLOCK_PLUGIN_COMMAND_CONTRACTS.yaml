@@ -128,7 +128,9 @@ contracts:
     description: >-
       Read the Unlock admin sign-up panel: the full account roster from the auth provider joined to the
       verification submissions, so an admin can see how many people signed up and which of them never
-      submitted a Quora URL. Read-only; performs no write.
+      submitted a Quora URL — and, of those, how many never came back versus how many returned to the
+      Unlock screen and still could not finish (counted from unlock.status.get audit rows). Read-only;
+      performs no write.
     inputSchema: {}
     outputSchema:
       signupOverview:
@@ -138,6 +140,7 @@ contracts:
       - unlock_verification_submissions
       - unlock_excluded_accounts
       - account_deletion_events
+      - unlock_audit_log
     purpose: onboarding_funnel_measurement
     retentionClass: derived_short_lived
     idempotency: true

@@ -47,6 +47,13 @@ This plugin must:
 
 ### 2.1 Moderation Queue
 
+0. **Spam is not "support-only access" (2026-08-19).** A spam decision drops the tier to
+   `locked_support_only` *and* places a platform-wide (`all`-scope) account restriction, and the
+   restriction is what decides — the member reaches nothing, the Commons included. The Support-only
+   counter, the Support-only queue tab, and the per-row Support-only pill therefore all exclude spam;
+   listing them there reported the opposite of their real access. Rejected members are still counted and
+   listed, because they genuinely do keep the support surface and can correct their URL. A member's
+   past support-only access remains readable in `unlock_audit_log`.
 1. List submissions by status/access-tier filters.
 2. Review with decisions: `approved`, `rejected`, `spam`.
 3. Capture reviewer and optional moderation note.
@@ -97,7 +104,15 @@ This plugin must:
    again. Nothing on the account itself says it is not a real member, so the exclusion is recorded in
    `unlock_excluded_accounts` by an admin. Marking changes only the counters — never the member's
    access, submission, or reward.
-4. See who left. An account with an account-scope row in `account_deletion_events` asked to be
+4. **Tell a bounce from a person who is stuck.** The sign-up panel breaks the "No Quora URL" number
+   into how many never signed in again after the day they signed up, how many came back and still did
+   not submit, and how many times a typical one of them loaded the Unlock screen (counted from
+   `unlock.status.get` audit rows). Those two groups need different answers — one is a discovery or
+   first-impression problem, the other is the Quora step being too hard — so the panel separates them
+   rather than leaving an admin to read it off row by row. The view count is the firmer of the two
+   signals: a sign-in date only moves on a fresh sign-in, so a member with a live session can come back
+   repeatedly without it changing. Each row carries its own view count.
+5. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
    count, their own tab, and a line on the row saying when they asked, and they are subtracted from the
@@ -261,6 +276,20 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-08-19: **Spam no longer counts as support-only access, and the sign-up panel separates a bounce
+  from a stuck member (owner report).** The Support-only counter, queue tab, and per-row pill were
+  keyed on `access_tier = 'locked_support_only'` alone, which a spam decision also sets — but a spam
+  decision additionally places an `all`-scope `account_restrictions` record, and that restriction is
+  what actually decides: the member reaches nothing, Commons included. So the admin reported the exact
+  opposite of a spammed member's real access. All three now exclude `review_status = 'spam'`. Rejected
+  members are deliberately unchanged: they keep the support surface and can correct their URL, so the
+  tag is accurate for them (owner decision, 2026-08-19). Past support-only access stays readable in
+  `unlock_audit_log`. Separately, the sign-up panel now breaks "No Quora URL" into never-came-back
+  versus came-back-and-still-did-not-submit, with the median number of Unlock-screen loads
+  (`unlock.status.get` audit rows, a new `unlockScreenViews` field per account and a per-row line), so
+  that reading happens in the app instead of by scrolling rows. `unlock_audit_log` added to the
+  `unlock.admin.signups.read` contract's dataAccess. No schema change; admin-only surfaces.
 
 - 2026-08-19: **Sign-up reading added to the Unlock admin (owner request).** Two numbers were missing
   from `/admin/unlock`: how many people have signed up, and how many of them never submitted a Quora
