@@ -8,7 +8,7 @@ Type: cross-cutting schema + library + contract/inventory work. Non-UI foundatio
 
 ## 1. Why
 
-ServiceCredits is a utility token. It is non-fiat, non-cash, non-withdrawable, and has no fiat
+ServiceCredits is an internal credits unit. It is non-fiat, non-cash, non-withdrawable, and has no fiat
 redemption path (already policy in the ServiceCredits inventory: "enforce non-fiat, non-cash,
 non-withdrawable credit behavior"; "fiat redemption paths are out of scope and explicitly denied").
 Showing ServiceCredits at a fiat equivalent (e.g. "≈ $242 USD", "real monetary value", "credits ≈

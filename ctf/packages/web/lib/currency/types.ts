@@ -1,5 +1,5 @@
 // Currency model shared across value-bearing plugins (issue #120).
-// ServiceCredits is the platform utility token. Its technical code is 'SC', but UI must always
+// ServiceCredits is the platform credits unit. Its technical code is 'SC', but UI must always
 // render the label 'ServiceCredits' and must never show a ServiceCredits amount at a fiat equivalent.
 
 export type CurrencyKind = 'token' | 'fiat' | 'crypto' | 'barter' | 'free';
@@ -16,7 +16,7 @@ export interface Currency {
   sortOrder: number;
 }
 
-/** Technical code of the platform utility token. Internal only — never render it in UI. */
+/** Technical code of the platform credits unit. Internal only — never render it in UI. */
 export const SERVICE_CREDITS_CODE = 'SC';
 /** The only user-facing name for the token. */
 export const SERVICE_CREDITS_LABEL = 'ServiceCredits';

@@ -92,7 +92,7 @@ async function main() {
       },
       {
         // Confirmed ServiceCredits service tie (member A pays member C 50 SC/month). ServiceCredits is
-        // an internal utility token, so a declared value is allowed — it feeds GDP by value (50 SC),
+        // an internal credits unit, so a declared value is allowed — it feeds GDP by value (50 SC),
         // never as an executed transfer.
         id: ACTIVE_SC_SERVICE,
         ownerUserId: memberA,
