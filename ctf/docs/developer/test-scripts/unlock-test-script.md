@@ -373,6 +373,23 @@ because the member Unlock screen is on the keep-list. Nothing here grants any ap
 open a plugin and you still get its public landing page.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-A8a · Asking for help works while your submission is waiting on review
+**Role:** member with a **pending** submission · **Surfaces:** web + mobile-responsive, android
+**Precondition:** a test account that submitted a Quora URL and has not been reviewed yet. This is the
+case that was broken: a waiting member has a stored `pending_readonly` tier, which passes no gate.
+**Steps:**
+1. Sign in. You land on the Verification Status screen showing "Pending Review".
+2. Find "Can't find your Quora profile URL?" and press **Ask for help in the Commons**.
+3. Watch what happens on screen.
+4. Repeat on Android.
+**Expected:** Step 2: you land on the Commons. Step 3: **no flash and no bounce back to the Unlock
+screen** — that was the bug. The screen you are leaving is not repainted first, and you do not return
+to where you started. The verification banner sits above the chat, and your pending submission is
+untouched — asking for help never changes your place in the queue. Step 4: Android shows the same help
+card on a pending status screen and behaves the same. If the grant cannot be recorded, an error appears
+with a link onward rather than a button that silently did nothing.
+**Result:** web ☐ · android ☐ — notes:
+
 ### UNLOCK-A8b · Coming back a second day opens the Commons on its own
 **Role:** member (not yet verified, no submission) · **Surfaces:** web + mobile-responsive, android
 **Precondition:** a test account that signed in on an earlier calendar day (UTC) and never submitted a
@@ -384,6 +401,16 @@ Quora URL or pressed "ask for help". A row in `login_events` from a previous day
 us the wall did not work for them. Step 2: the banner is there, so the Quora URL is still asked for. If
 this account has no prior-day login row it will still see the Unlock screen once; that is the rule
 working, not a bug.
+**Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-A8d · An approved member is not offered help they do not need
+**Role:** member with an **approved** submission · **Surfaces:** web + mobile-responsive, android
+**Steps:**
+1. Sign in as an approved member and open the Verification Status screen.
+2. Look below the "Approved — full access unlocked" card.
+**Expected:** No "Can't find your Quora profile URL?" card and no "Ask for help in the Commons" button.
+An approved member already has the Commons, so the button would grant access they hold and record a
+help request nobody needs. Android has never shown it here; web used to and no longer does.
 **Result:** web ☐ · android ☐ — notes:
 
 ### UNLOCK-A8c · Spam is not listed as support-only access
