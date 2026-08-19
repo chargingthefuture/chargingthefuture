@@ -9,7 +9,7 @@ import { ShareLink } from "@/components/shared/share-link";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
 
-const editButtonStyle = { padding: "6px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
+const editButtonStyle = { padding: "8px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
 
 function CardAction({
   status,
@@ -60,7 +60,7 @@ function CardAction({
   return <OpenCardAction isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={onClaim} onEdit={onEdit} t={t} />;
 }
 
-// The action column for an open, claimable post: the owner edits, a canceled-off helper sees a plain
+// The action row for an open, claimable post: the owner edits, a canceled-off helper sees a plain
 // note, anyone else gets the claim button. Split from CardAction to stay within the complexity limit.
 function OpenCardAction({
   isOwn,
@@ -90,7 +90,7 @@ function OpenCardAction({
   // Soft copy on purpose (owner directive): reads as "you already offered", never as being blocked
   // or as the poster having ended the earlier Direct Line.
   if (reclaimBlocked) {
-    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600, textAlign: "right" }}>You already offered to help</div>;
+    return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>You already offered to help</div>;
   }
   return (
     <button onClick={onClaim} disabled={submitting} style={{ padding: "8px 14px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer" }}>
@@ -182,9 +182,13 @@ function RequestCard({
           {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5, overflowWrap: "anywhere" }}>{r.details}</div>}
           <CardMeta request={r} t={t} />
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
-          <CardAction status={r.status} expired={expired} isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
-        </div>
+      </div>
+      {/* The status and buttons sit on their own row under the text, indented to line up with it
+          (40px icon + 12px gap). They used to be a third column beside the icon and the text, which
+          on the phone-width layout squeezed the title and details into a narrow strip that wrapped
+          after two or three words (owner report). */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 12, marginLeft: 52 }}>
+        <CardAction status={r.status} expired={expired} isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
       </div>
     </div>
   );

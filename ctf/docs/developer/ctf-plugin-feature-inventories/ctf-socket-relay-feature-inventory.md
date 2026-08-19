@@ -206,6 +206,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-08-19: **Feed request card drops its third column (owner report — "three columns looks odd here").** The status text and the Edit / Re-post / "I can help" buttons used to sit in a column to the right of the icon and the text, so on the phone-width layout the title and details were squeezed into a narrow strip that wrapped after two or three words. They now sit on their own row under the text, right-aligned and indented to line up with it, so the text uses the full card width. The Edit button's height was raised to match the other buttons now that they can share a row. Layout only (`sr-feed.tsx`); no copy, schema, route, or contract change.
 - 2026-08-06: **Split settlements — the post form now writes the accepted-currencies set (owner
   report: had to enter zero because the form could not say "ServiceCredits + USD").** The
   `socket_relay_request_accepted_currencies` join existed since issue #120 but nothing wrote or read
