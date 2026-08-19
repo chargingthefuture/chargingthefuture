@@ -12,6 +12,7 @@ import {
   type ClickLogTokens,
 } from "./click-log-shared";
 import { ClickLogTagPicker } from "./click-log-tag-picker";
+import { SHARE_EDIT_TURNS_ON_NOTICE } from "../../lib/click-log/share-copy";
 
 // What an edit can change. Tag lists use [] for untagged (picker convention).
 export type IncidentEditFields = { notes: string; problemTags: string[]; schemeTags: string[] };
@@ -126,9 +127,7 @@ export function ClickLogIncidentEditor({
           with tags turns sharing on server-side, so say it plainly before the member saves. */}
       {!incident.shared_with_owner && (problemTags.length > 0 || schemeTags.length > 0) && (
         <div style={{ marginTop: 8, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
-          Tags share trend data with the owner: saving with these tags turns on sharing for this
-          incident (only the date, rough area, and tags — never your note). Remove the tags to
-          keep it private.
+          {SHARE_EDIT_TURNS_ON_NOTICE}
         </div>
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

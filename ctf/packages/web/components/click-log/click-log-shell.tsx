@@ -15,6 +15,7 @@ import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { useOwnerShare } from "./click-log-use-owner-share";
 import { useIncidentEdit } from "./click-log-use-incident-edit";
+import { SHARE_DEFAULT_LABEL } from "../../lib/click-log/share-copy";
 
 type Geo = { latitude?: number; longitude?: number };
 
@@ -87,7 +88,7 @@ function ShareDefaultToggle({
         onChange={(e) => onChange(e.target.checked)}
         style={{ accentColor: t.ACCENT }}
       />
-      Share new incidents with the owner by default (only trend data — never your notes)
+      {SHARE_DEFAULT_LABEL}
     </label>
   );
 }
