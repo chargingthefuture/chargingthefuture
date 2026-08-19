@@ -2,8 +2,9 @@
 
 ## Scope & Boundary
 
-A public, sign-in-free survey that collects self-reports from people whose Quora accounts were
-removed, plus an admin-only reader and CSV export of those responses.
+A survey that collects self-reports from people whose Quora accounts were removed, plus an
+admin-only reader and CSV export of those responses. The page is readable by anyone; submitting
+requires a signed-in member, and that session is used only as a spam gate.
 
 Not a plugin. It has no entry in `lib/plugins/repository.ts`, no member navigation, no mobile
 surface, and no place in the apps grid. It is a research instrument with two surfaces: one page
@@ -24,9 +25,10 @@ Two limits are stated in the form copy, in the admin header, and here, because a
 not know them will over-read the results:
 
 1. Self-report. Nothing is checked against Quora. A response is what one person says happened.
-2. Selection bias runs one way. Only someone who found their way to another platform can answer,
-   so the survey counts the people who kept going and misses the ones who did not. Results are a
-   floor on the number of removals, never a share of everyone affected.
+2. Selection bias runs one way, from two causes. Only someone who found their way to another
+   platform can answer at all, and only someone willing to make a free account here can submit. So
+   the survey counts the people who kept going and were willing to sign up, and misses everyone
+   else. Results are a floor on the number of removals, never a share of everyone affected.
 
 A third limit belongs with those two, because it is what the survey cannot do at all: it measures
 removals, not survivals. A claim about which accounts are still standing on Quora needs a separate
@@ -35,7 +37,9 @@ this inventory.
 
 ## User Features
 
-Anyone, with no account and no sign-in, can open `/survey/quora-account-deletions` and:
+Anyone can open `/survey/quora-account-deletions` and read the whole explanation — what the survey
+is for, what happens to answers, and what the results can and cannot show. A signed-out visitor
+sees that plus a sign-in link, and no questions. Any signed-in member, verified or not, can:
 
 - Read what the survey is for, what happens to their answers, and what the results can and cannot
   show, before any question is asked.
@@ -75,7 +79,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 
 | Route | Method | Access | What it does |
 |---|---|---|---|
-| `/api/quora-deletion-survey/responses` | POST | Public, no session | Stores one survey response and its account rows. Same-origin CSRF header plus a per-IP brake of 5 submissions per hour stand in for identity. |
+| `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows. Session (spam gate only, never stored), same-origin CSRF header, and a per-IP brake of 5 submissions per hour. |
 | `/api/quora-deletion-survey/admin/responses` | GET | Admin | The newest 500 responses with their account rows, plus the three totals. |
 | `/api/quora-deletion-survey/admin/export` | GET | Admin | The whole survey as CSV, one row per reported removal. |
 
@@ -132,11 +136,19 @@ The cost of that choice, stated plainly because it is real: there is no way to f
 respondent, no way to detect that the same person submitted twice, and no way to verify a response
 later. The survey buys privacy with those three things.
 
-Write path: no session. Protected by a required `x-ctf-csrf: 1` header, the shared same-origin
-`checkMutationOrigin` check, and a per-IP fixed-window brake of 5 submissions per hour
+Write path: requires a signed-in member at the `any_authenticated` tier — the same bar the
+knowledge library and Mutual Time use — plus a required `x-ctf-csrf: 1` header, the shared
+same-origin `checkMutationOrigin` check, and a per-IP fixed-window brake of 5 submissions per hour
 (`lib/security/rate-limit.ts`). The IP is used for the in-memory counter only and is never stored.
 Every field is validated against a fixed option list or a length cap before it reaches the
 database, and unknown values fall back to the safe default rather than being stored.
+
+The session is a spam gate and nothing else (owner decision, 2026-08-19). It is checked at the
+route and then dropped: no user id, and nothing else derived from the account, is written to either
+table. So a member can report accounts they lost without the report ever being attributable to
+them, and an admin reading the results cannot work out who said what. The tier must stay at
+`any_authenticated` — someone who made an account minutes ago to answer this is exactly who the
+survey is for, and raising the bar to `approved_full` would silently exclude them.
 
 Read path: `requiredRoles: ['admin']` on the admin page and again on each admin route. There is no
 public projection of survey data and no member-facing view.
@@ -173,8 +185,9 @@ supporting documentation cannot afford. A demo of the admin screen shows the emp
 Not in `ctf/config/manual-test-script-manifest.json`: that manifest is one entry per plugin, and
 this is not a plugin. The steps that matter:
 
-1. Signed out, open `/survey/quora-account-deletions`. The form renders with no redirect to
-   sign-in.
+1. Signed out, open `/survey/quora-account-deletions`. The explanation and a sign-in link render,
+   with no questions and no redirect. Signed in as a brand-new unverified member, the same URL
+   renders the form.
 2. Answer no to the removal question and send. The confirmation appears; the admin list shows a
    response with zero removals.
 3. Answer yes, add two accounts with handles, leave every optional field alone, and send. The
@@ -206,6 +219,10 @@ this is not a plugin. The steps that matter:
 
 - 2026-08-18: Built. Public form, submit route, admin reader, CSV export, and the two tables.
   The follow-up contact field is absent on the owner's instruction the same day.
+- 2026-08-19: Submitting now requires a signed-in member at the `any_authenticated` tier, on the
+  owner's instruction, to keep bulk junk out of a table that is meant to be citable. The page stays
+  readable signed-out. The session is never stored, so responses remain unattributable; the cost is
+  a second source of selection bias, now stated in the form copy and above.
 - 2026-08-18: Question 1 (targeted individual) narrowed to yes/no, dropping the third
   "prefer not to say" option, on the owner's instruction. It has no safe default, so the form
   requires an answer and the submit route rejects a response that carries none rather than

@@ -143,7 +143,8 @@ function ConsentSection({
   );
 }
 
-// The public survey form. No sign-in, no account, no contact detail asked for or stored.
+// The survey form itself, shown to a signed-in member. The session is a spam gate only: nothing
+// about the account reaches the stored row, and no contact detail is asked for at all.
 //
 // The consent questions come last and default to no, so nothing is published unless a person
 // actively said it could be.

@@ -28,9 +28,27 @@ export async function requireSurveyAdminAccess(): Promise<SurveyApiGate> {
   return { allowed: true, auth: decision };
 }
 
-// The submit path takes no session at all — the people this survey is for do not have accounts
-// here, and requiring one would sample only the members we already reached. So the write is
-// protected by same-origin CSRF plus a per-IP brake instead of by identity.
+// Submitting requires a signed-in member, at the lowest tier: any authenticated account, verified
+// or not (owner decision, 2026-08-19). The bar exists to keep bulk junk out, not to identify
+// anyone — the session is checked and then dropped, and no part of it reaches the stored row.
+// Someone who made an account minutes ago to answer this is exactly who the survey is for, so the
+// gate must never be raised to `approved_full`.
+export async function requireSurveyRespondentAccess(): Promise<SurveyApiGate> {
+  const decision = await evaluatePluginAccess({
+    minUnlockTier: 'any_authenticated',
+    requireUsername: false,
+  });
+  if (!decision.allowed) {
+    return {
+      allowed: false,
+      response: NextResponse.json(decision, { status: decision.status }),
+    };
+  }
+
+  return { allowed: true, auth: decision };
+}
+
+// Same-origin CSRF, checked on top of the session above.
 export function ensureSurveyMutationCsrf(request: Request): NextResponse | null {
   if (request.headers.get('x-ctf-csrf') !== '1') {
     return NextResponse.json(
@@ -68,8 +86,10 @@ export function ensureSurveyMutationCsrf(request: Request): NextResponse | null 
   return null;
 }
 
-// Per-IP submit brake. The IP is used for the in-memory counter and is never stored — the table
-// deliberately holds no address, agent string, or contact detail for anyone.
+// Per-IP submit brake, kept alongside the sign-in requirement rather than replaced by it: one
+// signed-in member is not a license to fill the table, and accidental double-taps are common. The
+// IP is used for the in-memory counter and is never stored — the table deliberately holds no
+// address, agent string, contact detail, or user id for anyone.
 export function enforceSurveySubmitRateLimit(request: Request): NextResponse | null {
   const result = checkRateLimit(
     `quora-deletion-survey:submit:${getClientIp(request)}`,

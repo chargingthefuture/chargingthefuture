@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
-import { ensureSurveyMutationCsrf, enforceSurveySubmitRateLimit } from '../_lib';
+import {
+  ensureSurveyMutationCsrf,
+  enforceSurveySubmitRateLimit,
+  requireSurveyRespondentAccess,
+} from '../_lib';
 import { parseSurveySubmission } from 'lib/quora-deletion-survey/parse';
 import { createSurveyResponse } from 'lib/quora-deletion-survey/repository';
 import { QUORA_SURVEY_ERROR_CODE } from 'lib/quora-deletion-survey/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// Public, sign-in-free submission of one survey response.
+// Submission of one survey response by a signed-in member.
 //
-// This is the only write in the app that takes no session. That is deliberate: the people whose
-// Quora accounts were removed are, by definition, mostly not members here, and putting a sign-up
-// in front of the form would sample the members we already have instead of the population the
-// research is about. Identity is replaced by same-origin CSRF plus a per-IP brake, and nothing
-// identifying about the sender is stored.
+// The session is a spam gate and nothing else (owner decision, 2026-08-19): it is checked here and
+// then dropped, so the stored row carries no user id and no other trace of who sent it. That
+// separation is the point — a member can report accounts they lost without the report ever being
+// attributable to them, and an admin reading the results cannot work out who said what.
 export async function POST(request: Request) {
+  const gate = await requireSurveyRespondentAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
   const csrfDeny = ensureSurveyMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;

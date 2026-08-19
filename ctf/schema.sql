@@ -5577,21 +5577,24 @@ ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPT
 CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
 
--- === QUORA ACCOUNT DELETION SURVEY (public, sign-in-free research capture) ===
+-- === QUORA ACCOUNT DELETION SURVEY (research capture; sign-in gates the write, nothing more) ===
 -- Self-reports from people whose Quora accounts were removed. The blog posts cite counts of
 -- removals, and until now those counts rested on nothing a reader could check; these two tables
 -- are the record behind them.
 --
--- Deliberately holds NO identifying metadata about the respondent: no user id (respondents are
--- not members and are not asked to sign in), no IP address, no user agent, and no contact
--- detail (owner decision, 2026-08-18 — the follow-up contact field was removed from the
--- questionnaire). The only identifiers stored are the Quora handles the person chose to type,
+-- Deliberately holds NO identifying metadata about the respondent: no user id, no IP address, no
+-- user agent, and no contact detail (owner decision, 2026-08-18 — the follow-up contact field was
+-- removed from the questionnaire). Submitting requires a signed-in member (owner decision,
+-- 2026-08-19) purely to keep bulk junk out; that session is checked at the route and then dropped,
+-- so it never becomes a column here and no answer is attributable to the account that sent it.
+-- The only identifiers stored are the Quora handles the person chose to type,
 -- and whether they consented to those being published. Nothing here can be traced back to a
 -- person who did not name themselves, which is the point: the population answering this survey
 -- has good reason not to be findable.
 --
--- Because there is no respondent identity, account deletion (lib/account/deletion-registry.ts)
--- has nothing to delete here and these tables are correctly absent from it.
+-- Because no respondent identity is stored, account deletion (lib/account/deletion-registry.ts)
+-- has nothing to delete here and these tables are correctly absent from it — deleting a member's
+-- account cannot and should not remove an answer that was never linked to them.
 CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   -- Q1. Yes or no, no third option (owner decision, 2026-08-18). The form requires an answer
