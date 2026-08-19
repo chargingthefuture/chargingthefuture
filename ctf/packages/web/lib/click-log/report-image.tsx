@@ -60,6 +60,7 @@ export function estimateReportImageHeight(view: TrendReportView): number {
   const asides = (view.areasOmittedLine ? 74 : 0) + (view.areasTruncatedLine ? 60 : 0);
   const sections =
     sectionHeight(view.days) +
+    sectionHeight(view.countries) +
     sectionHeight(view.areas) +
     sectionHeight(view.categories) +
     sectionHeight(view.problems) +
@@ -187,6 +188,7 @@ export function buildReportImageElement(view: TrendReportView, generatedOn: stri
         ))}
       </div>
       <Section title="Days with shared incidents" rows={view.days} />
+      <Section title="Countries" rows={view.countries} />
       <Section title="Areas (each about 11 km across)" rows={view.areas} />
       {view.areasTruncatedLine ? <Aside text={view.areasTruncatedLine} /> : null}
       {view.areasOmittedLine ? <Aside text={view.areasOmittedLine} /> : null}

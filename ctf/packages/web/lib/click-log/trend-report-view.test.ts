@@ -30,12 +30,36 @@ const report: SharedIncidentReport = {
       reporters: 2,
       firstDay: '2026-08-18',
       lastDay: '2026-08-19',
+      countryCode: 'US',
+      countryName: 'United States',
     },
     {
       latitudeCell: 51.5,
       longitudeCell: 0.1,
       incidents: 1,
       reporters: 1,
+      firstDay: '2026-08-18',
+      lastDay: '2026-08-18',
+      countryCode: 'GB',
+      countryName: 'United Kingdom',
+    },
+  ],
+  countries: [
+    {
+      code: 'US',
+      name: 'United States',
+      incidents: 5,
+      reporters: 2,
+      areas: 1,
+      firstDay: '2026-08-18',
+      lastDay: '2026-08-19',
+    },
+    {
+      code: 'GB',
+      name: 'United Kingdom',
+      incidents: 1,
+      reporters: 1,
+      areas: 1,
       firstDay: '2026-08-18',
       lastDay: '2026-08-18',
     },
@@ -74,8 +98,8 @@ describe('buildTrendReportView', () => {
   it('shows areas with their member count and date span when asked', () => {
     const view = buildTrendReportView(report, { includeAreas: true });
     expect(view.areas).toEqual([
-      { label: '40.7°N, 74.0°W', detail: '2 members · 2026-08-18 to 2026-08-19', value: 5 },
-      { label: '51.5°N, 0.1°E', detail: '1 member · 2026-08-18', value: 1 },
+      { label: 'United States · 40.7°N, 74.0°W', detail: '2 members · 2026-08-18 to 2026-08-19', value: 5 },
+      { label: 'United Kingdom · 51.5°N, 0.1°E', detail: '1 member · 2026-08-18', value: 1 },
     ]);
     expect(view.areasOmittedLine).toBeNull();
   });
@@ -116,6 +140,49 @@ describe('buildTrendReportView', () => {
     expect(coverage?.body).toContain('2 do not');
   });
 
+  it('lists countries with their own member counts, not the sum of their areas', () => {
+    const view = buildTrendReportView(report, { includeAreas: true });
+    expect(view.countries.map((row) => row.label)).toEqual(['United States', 'United Kingdom']);
+    expect(view.countries[0].value).toBe(5);
+    expect(view.countries[0].detail).toContain('2 members');
+    expect(view.countries[0].detail).toContain('1 area');
+    expect(view.stats.find((stat) => stat.label === 'Countries')?.value).toBe('2');
+  });
+
+  it('puts the country in front of each area, so two rows can be told apart', () => {
+    const view = buildTrendReportView(report, { includeAreas: true });
+    expect(view.areas[0].label).toBe('United States · 40.7°N, 74.0°W');
+    expect(view.areas[1].label).toBe('United Kingdom · 51.5°N, 0.1°E');
+  });
+
+  it('keeps the countries in a copy with the area coordinates left out', () => {
+    const view = buildTrendReportView(report, { includeAreas: false });
+    expect(view.areas).toHaveLength(0);
+    expect(view.countries).toHaveLength(2);
+    expect(view.areasOmittedLine).toContain('countries above still show where');
+  });
+
+  it('says how the country was worked out and where that is imprecise', () => {
+    const view = buildTrendReportView(report, { includeAreas: true });
+    const note = view.notes.find((n) => n.heading === 'How the country is worked out');
+    expect(note?.body).toContain('not something members are asked');
+    expect(note?.body).toContain('wrong side');
+  });
+
+  it('names an unmatched country rather than dropping it', () => {
+    const view = buildTrendReportView(
+      {
+        ...report,
+        countries: [
+          { code: null, name: null, incidents: 2, reporters: 1, areas: 1, firstDay: '2026-08-18', lastDay: '2026-08-18' },
+        ],
+      },
+      { includeAreas: true }
+    );
+    expect(view.countries[0].label).toBe('Not matched to a country');
+    expect(view.stats.find((stat) => stat.label === 'Countries')?.value).toBe('0');
+  });
+
   it('reads sensibly when nothing has been shared yet', () => {
     const empty: SharedIncidentReport = {
       summary: {
@@ -132,6 +199,7 @@ describe('buildTrendReportView', () => {
       },
       buckets: [],
       areas: [],
+      countries: [],
       tagTrends: [],
       categories: [],
       pairs: [],

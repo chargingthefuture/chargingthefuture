@@ -21,14 +21,14 @@ import {
 // Plain links, not a fetch: the endpoint answers with the image itself, and the same signed-in
 // session that loaded this screen authorizes the request.
 //
-// The area checkbox is off to start. Members are told the grouped totals may be published, and a
-// total is what they agreed to — an ~11 km cell next to a date is closer to one person's location
-// than to a total, and at small counts it can point at them for anyone who already knows them. So
-// putting the coordinates into a copy meant for posting is a deliberate choice made each time
-// rather than a default.
+// The area coordinates are in the image by default (owner directive, 2026-08-19). Recording where
+// incidents happen is the reason location was added to ClickLog in the first place — a report that
+// withholds it by default withholds the point of the plugin, and members are told the grouped
+// totals may be published. The checkbox is kept as a way to leave the coordinates out of one
+// particular copy, not as a standing default.
 export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
-  const [includeAreas, setIncludeAreas] = useState(false);
-  const query = includeAreas ? 'areas=1' : '';
+  const [includeAreas, setIncludeAreas] = useState(true);
+  const query = includeAreas ? '' : 'areas=0';
   const viewHref = `/api/click-log/admin/trends/image${query ? `?${query}` : ''}`;
   const downloadHref = `/api/click-log/admin/trends/image?${query ? `${query}&` : ''}download=1`;
   return (
@@ -101,15 +101,15 @@ export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
         >
           <input
             type="checkbox"
-            checked={includeAreas}
-            onChange={(event) => setIncludeAreas(event.target.checked)}
+            checked={!includeAreas}
+            onChange={(event) => setIncludeAreas(!event.target.checked)}
             style={{ marginTop: 2, accentColor: TREND_ACCENT }}
           />
           <span>
-            Include the area coordinates
+            Leave the area coordinates out of this copy
             <span style={{ display: 'block', color: TREND_SUBTLE, marginTop: 2, lineHeight: 1.5 }}>
-              Off by default. With only a few incidents in an area, an area plus a date can point at
-              one person — so leave this off for anything posted in public.
+              The coordinates are included unless you tick this. The countries stay in either way,
+              so the image always says where the activity is.
             </span>
           </span>
         </label>
