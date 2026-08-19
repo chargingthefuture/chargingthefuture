@@ -387,7 +387,7 @@ tracked, not a new bug:
   cached, so the panel is the slowest part of the page to appear.
 - "Members" counts accounts the auth provider holds now, so the provider's all-time sign-up chart
   counts differently and can read higher.
-- Deleting your account through the app removes your data but leaves the auth-provider identity behind
-  (only the operator delete route and the provider's own hosted delete remove it). The sign-up panel
-  labels those accounts "Left" and subtracts them, so the numbers are right, but the leftover identity
-  is not something the panel can clear.
+- Accounts stranded in the auth provider by deletions made before 2026-08-19, when the app's own delete
+  flow started removing the sign-in as well as the data (PR #2259). The sign-up panel labels them "Left"
+  and subtracts them, so the numbers are right, but clearing the account itself is the
+  `Delete Account (manual)` workflow, not something the panel can do.

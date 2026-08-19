@@ -251,13 +251,14 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    that to matter, cache it for a few minutes rather than dropping the reading.
 8. The totals are "accounts the auth provider holds now", not "accounts ever created", so the provider
    dashboard's all-time sign-up chart counts differently and can read higher.
-9. **The app's own Delete Account flow (`DELETE /api/account/full-account`) deletes the member's data
-   but leaves their auth-provider identity in place** — only the operator route
-   (`POST /api/internal/account/delete`) and the provider's own hosted delete remove the identity. So a
-   member who left through the app is still an account in the roster. The sign-up panel identifies them
-   from `account_deletion_events` and subtracts them from the member count, which keeps the numbers
-   honest, but the identity itself is a leftover the panel cannot clear. Closing that is a separate
-   change to the deletion route.
+9. **Auth-provider accounts left behind by deletions made before 2026-08-19 are still in the roster.**
+   Until PR #2259, the app's own Delete Account flow (`DELETE /api/account/full-account`) deleted the
+   member's data but left their auth-provider identity in place; only the operator route
+   (`POST /api/internal/account/delete`) and the provider's own hosted delete removed it. That is fixed
+   for every deletion from now on, but the accounts already stranded there are still counted in the
+   roster this panel reads. It identifies them from `account_deletion_events` and puts them under
+   "Left", so the member count is right, but it cannot clear the account itself — that is the
+   `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
 
