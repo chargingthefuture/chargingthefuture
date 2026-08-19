@@ -1,5 +1,6 @@
 import { UNLOCK_FLAGS } from '@ctf/shared';
 import { evaluateBooleanFlag } from 'lib/feature-flags';
+import { hasUnlockCommonsAccessWithoutSubmission } from './help-requests';
 import { getEffectiveUnlockAccessTier } from './repository';
 import type { UnlockAccessTier } from './types';
 
@@ -26,28 +27,20 @@ export async function getUnlockAccessTier(userId: string): Promise<UnlockAccessT
 	// Fall back to DB for users approved before Unleash targeting was set, or when Unleash
 	// is unconfigured. The flag client returns the default (false) in both cases, so we
 	// consult the DB to avoid locking out previously approved users.
-	return getEffectiveUnlockAccessTier(userId);
+	const storedTier = await getEffectiveUnlockAccessTier(userId);
+	if (storedTier) return storedTier;
+
+	// No submission on file. Before, that meant no tier and therefore no access to anything except
+	// the Unlock screen — including no access to the Commons, which is the only place to ask for help
+	// with the very step they are stuck on. A member who has asked for help, or who has been here on
+	// an earlier day, gets the support-only tier instead, which is what the Commons requires. They
+	// still cannot reach any approved-only surface, and the Commons shows them the verification
+	// banner, so the ask stays in front of them.
+	return (await hasUnlockCommonsAccessWithoutSubmission(userId)) ? 'locked_support_only' : null;
 }
 
 // Returns true if the user has full (approved) access to the platform. Thin wrapper over
 // getUnlockAccessTier so existing callers keep working.
 export async function isUserUnlocked(userId: string): Promise<boolean> {
 	return (await getUnlockAccessTier(userId)) === 'approved_full';
-}
-
-// A/B experiment bucket. True when this user is in the "early Commons access" treatment group —
-// a not-yet-verified member who is allowed into the Commons (Hub general channel) to ask for help
-// before completing Quora verification. Bucketing is the Unleash flag's gradual rollout (sticky on
-// userId); the default is false, so when the flag is off or Unleash is unconfigured, behavior is
-// the current control (Unlock-only until verified). A flag-backend failure must never widen access,
-// so any error resolves to false (control).
-export async function isUnlockEarlyCommonsEnabled(userId: string): Promise<boolean> {
-	try {
-		return await evaluateBooleanFlag(UNLOCK_FLAGS.EARLY_COMMONS_ACCESS, false, {
-			targetingKey: userId,
-		});
-	} catch (error) {
-		console.error('[unlock] early-commons flag evaluation failed; defaulting to control', error);
-		return false;
-	}
 }

@@ -112,26 +112,20 @@ function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, on
           lineHeight: 1.55,
         }}
       >
-        <strong style={{ color: 'var(--ctf-text)' }}>Can’t find your Quora profile URL?</strong> Go to{' '}
-        <a
-          href="https://skillseconomy.quora.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#C084FC', fontWeight: 700 }}
-        >
-          skillseconomy.quora.com
-        </a>{' '}
-        and comment on any post asking for help — I&apos;ll reply with your profile URL.
+        <strong style={{ color: 'var(--ctf-text)' }}>Can&apos;t find your Quora profile URL?</strong> Ask
+        in the chat just below — that is what this space is for, and I&apos;ll help you find your
+        profile link. Nothing here expires while you wait.
       </div>
     </>
   );
 }
 
-// Shown at the top of the Commons for a signed-in member who has not yet completed Quora verification
-// (including members in the early-Commons A/B treatment bucket, who now land on the Commons instead of
-// the Unlock screen). Without this, a treatment member sees the chat with no indication they still need
-// to verify. It prompts for the Quora profile URL inline — posting to the same POST /api/unlock/submission
-// the Unlock screen uses — and tells a stuck member to just ask for help here in the Commons chat.
+// Shown at the top of the Commons for any signed-in member who has not yet completed Quora
+// verification — including someone who got here by pressing "ask for help" on the Unlock screen, or by
+// coming back a second day. Without it they see the chat with no indication that verification is still
+// wanted. It prompts for the Quora profile URL inline (posting to the same POST /api/unlock/submission
+// the Unlock screen uses) and, because the member is already in the Commons, the help note points at
+// the chat below rather than sending them anywhere else.
 export function UnlockVerifyBanner({
   hasSubmission,
   reviewStatus,

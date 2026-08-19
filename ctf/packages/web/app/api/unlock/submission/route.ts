@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
-import { isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
 import { restrictAccount } from 'lib/auth/account-restrictions';
 import { UNLOCK_SPAM_DENYLIST_ACTOR, UNLOCK_SPAM_RESTRICTION_REASON } from 'lib/unlock/spam-denylist';
 import { reportError } from 'lib/observability/report';
@@ -37,9 +36,6 @@ export async function POST(request: Request) {
   }
 
   const requestId = resolveUnlockRequestId(request);
-  // Experiment bucket, recorded on the submit audit so the completion rate can be compared between
-  // the early-Commons treatment group and the control group. Defaults to control when the rollout is off.
-  const experimentBucket = (await isUnlockEarlyCommonsEnabled(gate.auth.userId)) ? 'early_commons' : 'control';
 
   let body: SubmissionBody;
   try {
@@ -61,7 +57,7 @@ export async function POST(request: Request) {
       reason: 'invalid_quora_url',
       targetUserId: gate.auth.userId,
       requestId,
-      metadata: { experimentBucket },
+      metadata: {},
     });
     return unlockErrorResponse('Valid Quora profile URL is required.', 400);
   }
@@ -82,7 +78,7 @@ export async function POST(request: Request) {
       reason: submission.reviewStatus === 'spam' ? 'spam_denylisted' : 'ok',
       targetUserId: gate.auth.userId,
       requestId,
-      metadata: { submissionId: submission.id, experimentBucket },
+      metadata: { submissionId: submission.id },
     });
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });

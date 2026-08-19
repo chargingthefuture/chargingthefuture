@@ -1,9 +1,5 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import {
-  getUnlockDashboardSnapshot,
-  getUnlockExperimentSplit,
-  listUnlockSubmissions,
-} from 'lib/unlock/repository';
+import { getUnlockDashboardSnapshot, listUnlockSubmissions } from 'lib/unlock/repository';
 import { getUnlockSignupOverview } from 'lib/unlock/signups';
 import { listSpamQuoraUrls } from 'lib/unlock/spam-denylist';
 import { redirect } from 'next/navigation';
@@ -17,10 +13,9 @@ export default async function UnlockAdminPage() {
     redirect('/');
   }
 
-  const [dashboard, submissions, experimentSplit, spamDenylist, signupOverview] = await Promise.all([
+  const [dashboard, submissions, spamDenylist, signupOverview] = await Promise.all([
     getUnlockDashboardSnapshot(),
     listUnlockSubmissions({ limit: 50 }),
-    getUnlockExperimentSplit(),
     listSpamQuoraUrls(),
     // Reads the account roster from the auth provider, so the whole sign-up reading is on this page and
     // the owner does not have to open the provider dashboard. Never throws — a provider failure comes
@@ -32,7 +27,6 @@ export default async function UnlockAdminPage() {
     <UnlockAdminShell
       dashboard={dashboard}
       submissions={submissions}
-      experimentSplit={experimentSplit}
       spamDenylist={spamDenylist}
       signupOverview={signupOverview}
     />
