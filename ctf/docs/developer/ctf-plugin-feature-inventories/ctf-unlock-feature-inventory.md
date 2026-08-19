@@ -50,9 +50,11 @@ This plugin must:
 
 ### 1.4 Commons Access Before Verifying
 
-1. A member with no submission on file reaches the Commons (support-only) when either is true: they
-   pressed "ask for help", or they have been here on an earlier day (`login_events`). Anything else
-   about their access is unchanged — approved-only surfaces stay closed.
+1. A member who cannot reach the Commons on their stored tier reaches it (support-only) when either
+   is true: they pressed "ask for help", or they have been here on an earlier day (`login_events`).
+   That covers **both** a member with no submission and one whose submission is waiting in the review
+   queue (`pending_readonly`). Anything else about their access is unchanged — approved-only surfaces
+   stay closed.
 2. Coming back a second day counts on its own because returning is the member telling us the wall did
    not work for them. The Unlock screen still greets a genuinely first-time visitor.
 3. Wherever they land, the Commons shows the verification banner above the chat, so the Quora URL is
@@ -337,6 +339,28 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-08-19: **Fix: the "ask for help" button did nothing for a member waiting on review, and showed
+  on the approved screen (owner report).** Three faults in the path shipped earlier the same day.
+  (1) `getUnlockAccessTier` only applied the Commons fallback when there was **no** stored tier, but a
+  member awaiting review has one — `pending_readonly` — which passes no gate. So pressing the button
+  recorded the request, navigated to `/`, and `/` bounced them straight back to the Unlock screen: a
+  flash and nothing else, for someone who had already done everything asked of them. The fallback now
+  applies to `pending_readonly` as well as to no submission at all; `approved_full` and
+  `locked_support_only` are returned untouched as before. (2) The help card rendered on the
+  **approved** status view, where it offered to open the Commons for a member who already has it and
+  would have recorded a help request nobody needs; it now renders nothing when verified. Mobile never
+  showed it when approved but also never showed it while pending, so the waiting member had the same
+  dead end there — the mobile status screen now shows it for pending too, matching web (the re-submit
+  card moved into its own `ResubmitCard` component to stay inside the rule-116 complexity limit).
+  (3) `router.refresh()` ran immediately before the full-page navigation, repainting the screen being
+  left — the visible "flash" — and buying nothing, since a full navigation re-runs the server anyway;
+  removed. The status payload's `commonsAccess` is now resolved through `getUnlockAccessTier` rather
+  than recomputed from `hasSubmission`, so the mobile wall and the web routing cannot disagree about
+  who may enter — reading it a second way is how a member ends up bounced by a button that said it
+  would let them in. A failed grant now also offers a plain link onward instead of leaving the member
+  on a screen whose only action did nothing. `hasUnlockCommonsAccessWithoutSubmission` renamed to
+  `hasUnlockCommonsFallback`, the old name having become untrue. No schema or contract change.
 
 - 2026-08-19: **New `duplicate` review decision, and a landing for a closed account (owner request).**
   One Quora profile signing up twice under different emails is common and ordinary, and neither existing

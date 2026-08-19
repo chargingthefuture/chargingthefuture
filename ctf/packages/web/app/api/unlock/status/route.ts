@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess, resolveUnlockRequestId } from 'lib/unlock/_lib';
 import { getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
-import { hasUnlockCommonsAccessWithoutSubmission } from 'lib/unlock/help-requests';
+import { getUnlockAccessTier } from 'lib/unlock/access';
 import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
@@ -14,12 +14,13 @@ export async function GET(request: Request) {
 
   try {
     const baseStatus = await getUnlockStatusForUser(gate.auth.userId);
-    // Whether this member may enter the Commons without a submission — they asked for help, or they
-    // have been here on an earlier day. Resolved here rather than in the repository so `accessTier`
-    // keeps meaning strictly "what the submission says". The mobile app gates its Unlock wall on it.
-    const commonsAccess = baseStatus.hasSubmission
-      ? false
-      : await hasUnlockCommonsAccessWithoutSubmission(gate.auth.userId);
+    // Whether this member may enter the Commons. Resolved through the same gate the server uses, so
+    // the mobile wall and the web routing can never disagree about it — reading it any other way is
+    // how a member ends up bounced back to the Unlock screen by a button that said it would let them
+    // in. `accessTier` above still means strictly "what the submission says"; this is the effective
+    // answer, which for a waiting or unsubmitted member who asked for help is more generous.
+    const effectiveTier = await getUnlockAccessTier(gate.auth.userId).catch(() => null);
+    const commonsAccess = effectiveTier === 'approved_full' || effectiveTier === 'locked_support_only';
     const status = { ...baseStatus, commonsAccess };
 
     await insertUnlockAudit({
