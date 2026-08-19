@@ -145,6 +145,11 @@ export type UnlockSignupAccount = {
   hasSubmission: boolean;
   reviewStatus: UnlockReviewStatus | null;
   submittedAt: string | null;
+  // How many times this member has loaded the Unlock screen (`unlock.status.get` audit rows). This is
+  // the honest "did they try" number: sign-in timestamps only move on a fresh sign-in, so a member with
+  // a live session can come back repeatedly without the dates changing. 1 means they saw the ask once
+  // and left; several means they came back to it and still could not finish.
+  unlockScreenViews: number;
 };
 
 // The sign-up reading on the Unlock admin page. `available: false` means the roster could not be read
@@ -167,5 +172,9 @@ export type UnlockSignupOverview = {
   submittedCount: number;
   // memberCount - submittedCount: signed up, never submitted a Quora URL.
   notSubmittedCount: number;
+  // Of notSubmittedCount, how many have not signed in again since the day they signed up. The rest
+  // came back and still did not submit — the two groups need different answers, so they are counted
+  // separately rather than read off a list of rows one at a time.
+  notSubmittedNeverReturnedCount: number;
   accounts: UnlockSignupAccount[];
 };

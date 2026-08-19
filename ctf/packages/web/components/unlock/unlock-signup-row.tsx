@@ -40,6 +40,16 @@ function timingLine(account: UnlockSignupAccount): string {
   return `${joined} · ${lastSignIn ? `last signed in ${lastSignIn}` : 'has never signed in since'}`;
 }
 
+// How many times they loaded the Unlock screen. Said only for a member with no submission, where it is
+// the difference between seeing the ask once and coming back to it repeatedly without finishing.
+function screenViewLine(account: UnlockSignupAccount): string | null {
+  if (account.hasSubmission) return null;
+  if (account.unlockScreenViews === 0) return 'Has not opened the Unlock screen since it started being recorded';
+  return account.unlockScreenViews === 1
+    ? 'Opened the Unlock screen once'
+    : `Opened the Unlock screen ${account.unlockScreenViews} times`;
+}
+
 // Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
 // data, so the row would otherwise read as "never gave a Quora URL" with nothing to explain it.
 function departureLine(account: UnlockSignupAccount): string | null {
@@ -93,6 +103,7 @@ export function UnlockSignupRow({
       <DetailLine text={handle ? `@${handle}` : null} />
       <DetailLine text={account.email} breakAll />
       <DetailLine text={timingLine(account)} />
+      <DetailLine text={screenViewLine(account)} />
       <DetailLine text={departureLine(account)} />
       <DetailLine text={account.excludedNote ? `Note: ${account.excludedNote}` : null} />
 
