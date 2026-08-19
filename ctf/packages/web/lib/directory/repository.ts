@@ -635,6 +635,11 @@ export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map
       SELECT user_id, COUNT(*)::text AS change_count
       FROM directory_quora_url_history
       WHERE user_id = ANY($1::text[])
+        -- Closures reported through the account survey are excluded. This count is an abuse
+        -- signal about a member changing the URL they verify with; a member reporting six
+        -- accounts Quora closed has not changed anything, and counting those rows would make
+        -- the most-affected respondents look like the most suspicious accounts.
+        AND source <> 'quora_deletion_survey'
       GROUP BY user_id
     `,
     [userIds],
@@ -643,6 +648,21 @@ export async function countQuoraUrlChangesByUser(userIds: string[]): Promise<Map
     counts.set(row.user_id, Number.parseInt(row.change_count, 10) || 0);
   }
   return counts;
+}
+
+// Markers already on this member's history for accounts they reported as closed. Used to skip a
+// handle that is already recorded, so answering the survey a second time does not write the same
+// closure twice into an append-only table.
+export async function listRemovedQuoraAccountMarkers(userId: string): Promise<Set<string>> {
+  const result = await queryDb<{ new_url_normalized: string }>(
+    `
+      SELECT new_url_normalized
+      FROM directory_quora_url_history
+      WHERE user_id = $1 AND source = 'quora_deletion_survey'
+    `,
+    [userId],
+  );
+  return new Set(result.rows.map((row) => row.new_url_normalized));
 }
 
 // The full Quora URL change history for one member, newest first — read by the Unlock admin queue so

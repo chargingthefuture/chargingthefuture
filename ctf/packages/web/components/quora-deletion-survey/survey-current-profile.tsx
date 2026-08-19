@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { SurveyTokens } from './survey-theme';
-import { ChoiceGroup, Field, YesNo, hintStyle, inputStyle } from './survey-fields';
+import { ChoiceGroup, Field, YesNo, inputStyle } from './survey-fields';
 import { cardStyle, cardTitleStyle, errorStyle, primaryButtonStyle } from './survey-styles';
 import { submitVerification } from './survey-submit';
 
@@ -78,18 +78,16 @@ type OfferState =
 // pending submission for the owner to review — it approves nobody.
 export function VerificationOffer({
   quoraProfileUrl,
-  removedHandles,
   tokens,
 }: {
   quoraProfileUrl: string;
-  removedHandles: string[];
   tokens: SurveyTokens;
 }) {
   const [state, setState] = useState<OfferState>({ kind: 'idle' });
 
   const send = async () => {
     setState({ kind: 'sending' });
-    const outcome = await submitVerification({ quoraProfileUrl, removedHandles });
+    const outcome = await submitVerification({ quoraProfileUrl });
     if (outcome.ok) {
       setState({ kind: 'done', alreadyOnFile: outcome.status === 'already_on_file' });
       return;
@@ -118,13 +116,6 @@ export function VerificationOffer({
         typed. Sending it now saves being asked for the same thing again. It goes into a queue for a
         person to read; it approves nothing by itself.
       </p>
-      {removedHandles.length > 0 ? (
-        <p style={hintStyle(tokens)}>
-          The accounts you listed as lost — {removedHandles.join(', ')} — are recorded on your
-          profile as accounts you had, alongside the one you are verifying with. That is the point
-          of this: your account history in one place rather than scattered across removals.
-        </p>
-      ) : null}
 
       {state.kind === 'error' ? (
         <p role="alert" style={errorStyle(tokens)}>

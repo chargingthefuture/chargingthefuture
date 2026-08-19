@@ -42,6 +42,11 @@ export function SurveyIntro({ tokens }: { tokens: SurveyTokens }) {
             asks for no way to reach you.
           </li>
           <li style={{ marginBottom: 8 }}>
+            The accounts you list as closed are added to your account history here, permanently.
+            Nobody can edit or remove them afterward, including you. A record of accounts being
+            erased is worth little if it can be quietly changed later.
+          </li>
+          <li style={{ marginBottom: 8 }}>
             Nothing is published unless you tick the boxes at the end saying it can be. Those start
             off, and they are what decides whether a handle or a quote of yours ever appears
             anywhere.
@@ -97,9 +102,11 @@ export function SurveyPublicLanding({
             that stops it.
           </p>
           <p style={{ fontSize: 14, lineHeight: 1.65, color: tokens.TEXT, margin: 0 }}>
-            Your answer is saved with that account. This survey is a record of handles and writing
-            being removed, and the handles in it are public ones you choose to name. Whether any of
-            it is published is a separate question, and you answer it yourself at the end.
+            Your answer is saved with that account, and the accounts you list as closed become part
+            of your account history here — permanently, and not editable by anyone afterward. This
+            survey is a record of handles and writing being removed, and the handles in it are
+            public ones you choose to name. Whether any of it is published is a separate question,
+            and you answer it yourself at the end.
           </p>
         </section>
 

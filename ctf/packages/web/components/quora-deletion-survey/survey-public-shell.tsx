@@ -72,8 +72,9 @@ function AccountsSection({
   return (
     <div>
       <p style={{ ...hintStyle(tokens), marginTop: 18 }}>
-        One card per account. Add another for each one you lost — the number of cards is how the
-        count is worked out, so nobody has to total it up.
+        One card per account Quora closed. Add another for each one you lost — the number of cards
+        is how the count is worked out, so nobody has to total it up. Each handle you list here is
+        added to your account history and cannot be changed afterward.
       </p>
       {accounts.map((draft, index) => (
         <SurveyAccountCard
@@ -152,34 +153,20 @@ function ConfirmationScreen({
   needsUnlock,
   hasCurrentProfile,
   currentProfileUrl,
-  anyAccountRemoved,
-  accounts,
   tokens,
 }: {
   accountCount: number;
   needsUnlock: boolean;
   hasCurrentProfile: boolean | null;
   currentProfileUrl: string;
-  anyAccountRemoved: boolean | null;
-  accounts: AccountDraft[];
   tokens: SurveyTokens;
 }) {
   const profileUrl = currentProfileUrl.trim();
   const offerReady = needsUnlock && hasCurrentProfile === true && profileUrl.length > 0;
-  const removedHandles =
-    anyAccountRemoved === true
-      ? accounts.map((draft) => draft.handle.trim()).filter((handle) => handle.length > 0)
-      : [];
 
   return (
     <SurveyDone accountCount={accountCount} tokens={tokens}>
-      {offerReady ? (
-        <VerificationOffer
-          quoraProfileUrl={profileUrl}
-          removedHandles={removedHandles}
-          tokens={tokens}
-        />
-      ) : null}
+      {offerReady ? <VerificationOffer quoraProfileUrl={profileUrl} tokens={tokens} /> : null}
     </SurveyDone>
   );
 }
@@ -259,8 +246,6 @@ export function QuoraSurveyPublicShell({ needsUnlock }: { needsUnlock: boolean }
         needsUnlock={needsUnlock}
         hasCurrentProfile={hasCurrentProfile}
         currentProfileUrl={currentProfileUrl}
-        anyAccountRemoved={anyAccountRemoved}
-        accounts={accounts}
         tokens={t}
       />
     );

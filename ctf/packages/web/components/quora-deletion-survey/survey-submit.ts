@@ -107,11 +107,10 @@ const VERIFY_FAILED =
   'Verification could not be started. Your survey answer is already recorded — you can verify from the Unlock screen instead.';
 
 // A second, separate request, sent only if the person presses the button on the confirmation
-// screen. It carries their account link and, if they ticked the box, the handles they lost. It
-// carries nothing identifying the survey response, which was already stored without them.
+// screen. It carries the link to the account they still hold, and nothing else — the accounts they
+// reported as closed were already written to their account history when the answer was stored.
 export async function submitVerification(body: {
   quoraProfileUrl: string;
-  removedHandles: string[];
 }): Promise<VerificationOutcome> {
   try {
     const response = await fetch('/api/quora-deletion-survey/verification', {

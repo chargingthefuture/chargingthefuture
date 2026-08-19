@@ -5,6 +5,7 @@ import {
   requireSurveyRespondentAccess,
 } from '../_lib';
 import { parseSurveySubmission } from 'lib/quora-deletion-survey/parse';
+import { recordReportedClosures } from 'lib/quora-deletion-survey/account-history';
 import { createSurveyResponse, insertSurveyAudit } from 'lib/quora-deletion-survey/repository';
 import { QUORA_SURVEY_AUDIT_COMMAND, QUORA_SURVEY_ERROR_CODE } from 'lib/quora-deletion-survey/constants';
 import { reportError } from 'lib/observability/report';
@@ -97,6 +98,14 @@ export async function POST(request: Request) {
 
   try {
     const created = await createSurveyResponse({ ...parsed.value, userId: gate.auth.userId });
+
+    // The accounts they reported as closed go onto their own account history, always. Best-effort
+    // and after the response is stored, so a failure here cannot lose the answer.
+    const closuresRecorded = await recordReportedClosures({
+      userId: gate.auth.userId,
+      handles: parsed.value.accounts.map((account) => account.handle),
+    });
+
     await insertSurveyAudit({
       actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
@@ -109,6 +118,7 @@ export async function POST(request: Request) {
         consentQuote: parsed.value.consentQuote,
         consentAttributeQuote: parsed.value.consentAttributeQuote,
         anyAccountRemoved: parsed.value.anyAccountRemoved,
+        closuresRecordedOnAccount: closuresRecorded,
       },
     });
     return NextResponse.json(

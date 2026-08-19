@@ -8,4 +8,6 @@ export {
   // The survey records removed accounts as account history; a removed account has no URL, so it
   // cannot go through the URL recorder above.
   recordRemovedQuoraAccountStandalone,
+  // Read back so the same closure is not recorded twice if someone answers the survey again.
+  listRemovedQuoraAccountMarkers,
 } from 'lib/directory/repository';

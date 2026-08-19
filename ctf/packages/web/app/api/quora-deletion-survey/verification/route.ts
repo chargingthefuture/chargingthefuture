@@ -12,38 +12,26 @@ import {
 import {
   QUORA_SURVEY_AUDIT_COMMAND,
   QUORA_SURVEY_ERROR_CODE,
-  QUORA_SURVEY_HANDLE_MAX_LENGTH,
-  QUORA_SURVEY_MAX_LINKED_HANDLES,
 } from 'lib/quora-deletion-survey/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// Starting Unlock verification from the survey's confirmation screen.
+// Starting Unlock verification from the survey's confirmation screen, using the live account the
+// member named.
 //
-// Deliberately a separate route from the one that stores the response, not a field on it. The
-// response is written with no user id; this request is written with one and carries no response
-// id, so the two writes share nothing that could join them back together. Splitting them is the
-// whole reason the live profile URL never appears in the survey table.
-//
-// This route creates a pending submission. It never approves anyone, and it does nothing at all
+// A separate route from the one that stores the response, so a failure here cannot lose an answer
+// that is already saved. It creates a pending submission, approves nobody, and does nothing at all
 // for a member who already has a submission on file.
+//
+// The accounts they reported as closed are not handled here — those go onto the account history on
+// submission, for every respondent, whether or not they ever reach this route.
 
 type VerificationBody = {
   quoraProfileUrl?: unknown;
-  removedHandles?: unknown;
 };
 
-function parseHandles(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((entry): entry is string => typeof entry === 'string')
-    .map((entry) => entry.trim().slice(0, QUORA_SURVEY_HANDLE_MAX_LENGTH))
-    .filter((entry) => entry.length > 0)
-    .slice(0, QUORA_SURVEY_MAX_LINKED_HANDLES);
-}
-
 type ReadResult =
-  | { ok: true; value: { quoraProfileUrl: string; removedHandles: string[] } }
+  | { ok: true; value: { quoraProfileUrl: string } }
   | { ok: false; response: NextResponse };
 
 function invalidPayload(message: string, reason?: string): NextResponse {
@@ -73,7 +61,7 @@ async function readVerificationBody(request: Request): Promise<ReadResult> {
     };
   }
 
-  return { ok: true, value: { quoraProfileUrl, removedHandles: parseHandles(body.removedHandles) } };
+  return { ok: true, value: { quoraProfileUrl } };
 }
 
 // The two outcomes that are the member's to see and act on. Everything else is a success.
@@ -127,13 +115,11 @@ export async function POST(request: Request) {
   if (!read.ok) {
     return read.response;
   }
-  const { quoraProfileUrl, removedHandles } = read.value;
 
   try {
     const outcome = await linkSurveyRespondentToUnlock({
       userId: gate.auth.userId,
-      quoraProfileUrl,
-      removedHandles,
+      quoraProfileUrl: read.value.quoraProfileUrl,
     });
 
     const refusal = refusalResponse(outcome);
@@ -141,17 +127,11 @@ export async function POST(request: Request) {
       return refusal;
     }
 
-    const linkedHandles = outcome.status === 'submitted' ? outcome.linkedHandles : 0;
-    // The audit row names the member, because this half of the flow is identified by design. It
-    // records how many removed handles were written to their account so a later question about
-    // where a handle on a profile came from has an answer.
     await insertSurveyAudit({
       actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.verificationLink,
       policyStatus: 'allow',
       reason: outcome.status,
-      rowCount: linkedHandles,
-      metadata: { linkedRemovedHandles: linkedHandles, handlesOffered: removedHandles.length },
     });
 
     return NextResponse.json({ ok: true, status: outcome.status });

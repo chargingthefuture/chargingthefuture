@@ -56,6 +56,8 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
 - Choose, in three separate yes/no boxes that all start off, whether their handles may be
   published, whether their words may be quoted, and whether their handle may be attached to that
   quote.
+- Have every handle they listed added to their own account history here, permanently and not
+  editable by anyone afterward. This happens on submission for every respondent.
 - Optionally say whether they still have a Quora account that was not removed, and give its link.
   Both are skippable and read as skippable: naming an account someone still holds is a larger ask
   than naming ones already gone. The link is never stored with the answer — it stays in the browser
@@ -65,8 +67,8 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
 - On the confirmation screen, if they gave a link to an account they still hold and have not
   verified here before, choose to send that link for verification instead of being asked for the
   same thing again on the Unlock screen. It creates a pending submission for review and approves
-  nobody. A separate box, off by default, offers to also record the handles they lost on their
-  account; the copy next to it says what that links and why leaving it off keeps the two apart.
+  nobody. So for a new member, the live account they name in the survey is the account their
+  verification is judged on.
 
 Nobody is asked to type a total. The number of removals is the number of account cards filled in,
 so every removal counted carries a handle and a date.
@@ -88,8 +90,8 @@ At `/admin/quora-deletion-survey`, an admin can:
 
 | Route | Method | Access | What it does |
 |---|---|---|---|
-| `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows. Session (spam gate only, never stored), same-origin CSRF header, and a per-IP brake of 5 submissions per hour. |
-| `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link the member gave. Creates a pending submission only, and does nothing for a member who already has one. Optionally records the handles they lost on their Directory account history. Same session, CSRF, and per-IP brake as the submit route. |
+| `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows against the member's id, then writes each reported closure to that member's account history. Same-origin CSRF header and a per-IP brake of 5 submissions per hour. |
+| `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link to the account the member still holds. Creates a pending submission only, and does nothing for a member who already has one. Same session, CSRF, and per-IP brake as the submit route. |
 | `/api/quora-deletion-survey/admin/responses` | GET | Admin | The newest 500 responses with their account rows, plus the three totals. |
 | `/api/quora-deletion-survey/admin/export` | GET | Admin | The whole survey as CSV, one row per reported removal. |
 
@@ -224,10 +226,25 @@ them — but because a verification URL belongs in the verification queue where 
 it, rather than sitting in a research table nobody re-reads. The yes/no answer is stored; the link
 travels to the verification route instead.
 
-The handles a person reported as lost are recorded on their Directory account history when they
-take the verification offer — not behind an extra checkbox. Putting an account's history in one
-place is the thing this survey is for, and the handles are public ones the person named
-deliberately.
+Every handle a person reports as closed is written to their Directory account history on
+submission — for every respondent, whether or not they go on to verify, and not behind a choice.
+Two earlier builds tied this write to the verification step, which meant an already-verified
+member's reported closures were never recorded at all, and a member with no Quora account left
+could record nothing, despite being the strongest case in the research.
+
+That history is append-only: there is no update and no delete for it anywhere in the codebase, and
+it is `retain` on account deletion. A member cannot revise what they reported, which is the point —
+a record of accounts being erased is worth little if it can be quietly edited later. The form says
+this before anyone answers.
+
+Writing the same closure twice is prevented by reading back the member's existing survey-sourced
+markers first (`listRemovedQuoraAccountMarkers`), so answering again adds only what is new.
+
+One consequence that had to be handled: `quora_url_change_count` in the Unlock queue, and
+`countQuoraUrlChangesByUser`, count rows in this table as an abuse signal — how often a member has
+changed the URL they verify with. Closure rows are excluded from both. Without that, a member
+reporting six accounts Quora closed would show as someone who changed their verification URL six
+times, making the most-affected respondents look like the most suspicious accounts.
 
 Verification path: `lib/quora-deletion-survey/unlock-link.ts` goes through
 `lib/shared/unlock-interface.ts` and never imports `lib/unlock` directly (owner decision
@@ -334,6 +351,12 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: Reported closures are written to the member's account history on submission, for
+  every respondent. They were previously written only when a member took the verification offer,
+  which meant an already-verified member's closures were never recorded and a member with no Quora
+  account left could record none at all. Closure rows are excluded from the two URL-churn counts in
+  the Unlock queue, so reporting six closed accounts no longer reads as six suspicious URL changes.
+  Re-answering does not duplicate a closure already on the history.
 - 2026-08-19: The response now carries the member id of the account that sent it, reversing the
   earlier no-identity design on the owner's instruction. The survey is for putting handle history
   on record; the handles are public and typed deliberately, and a respondent is not being hidden
