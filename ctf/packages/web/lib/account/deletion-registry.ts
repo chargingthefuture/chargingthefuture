@@ -723,18 +723,25 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     slug: 'quora-deletion-survey',
     name: 'Quora account removals survey',
     dataSummary:
-      'Nothing. Your survey answer was never linked to your account, so account deletion has nothing of yours to find here.',
-    // The two response tables hold no user column at all — that is the design, not an oversight:
-    // a response is stored with no name, no email, no address, and no member id, so there is no
-    // way to select the rows belonging to a departing member and no way for them to withdraw one
-    // by deleting their account. This is stated in the form copy before anyone answers.
+      'Survey answers you sent about Quora accounts being removed (kept as research, with your account id removed).',
+    // A survey answer is a record of an erasure. Destroying it when its author leaves would repeat
+    // the thing the survey exists to document, and would silently shrink counts already quoted in
+    // published posts. So the row stays and the member's id is cleared instead — the same handling
+    // bug reports get, for the same reason: the content is still needed after the reporter is gone.
     //
-    // The audit log is the one table here that names anyone, and only for the identified actions:
-    // an admin reading or exporting the responses, or a respondent choosing to start Unlock
-    // verification. Those are accountability records of what was done to the data, so they are
-    // retained like every other audit trail in this registry.
+    // The account rows have no user column of their own; they cascade from the response and are
+    // reached through it, so clearing the response's id de-identifies both.
+    //
+    // The audit log is retained like every other accountability trail here: it records what was
+    // done to this data, including by admins, and must survive the departure of anyone named in it.
     serviceScopeSupported: false,
     tables: [
+      pseudo(
+        'quora_deletion_survey_responses',
+        'user_id',
+        [],
+        'Survey answers you sent — the answer stays as research, your account id does not.',
+      ),
       retain(
         'quora_deletion_survey_audit_log',
         'Record of admin reads and exports of the survey, and of verification started from it.',

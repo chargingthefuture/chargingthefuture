@@ -19,6 +19,7 @@ import type { SurveyResponseWithAccounts } from 'lib/quora-deletion-survey/repos
 
 export const SURVEY_CSV_HEADERS = [
   'response_id',
+  'member_id',
   'submitted_at',
   'consent_publish_handles',
   'consent_quote',
@@ -56,6 +57,8 @@ function topicLabels(topics: QuoraSurveyTopic[]): string {
 function responseCells(response: SurveyResponseWithAccounts): (string | boolean | null)[] {
   return [
     response.id,
+    // Empty when the account that sent this was deleted, never because the answer was anonymous.
+    response.user_id,
     response.created_at,
     response.consent_publish_handles,
     response.consent_quote,

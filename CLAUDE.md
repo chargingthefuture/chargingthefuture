@@ -119,7 +119,7 @@ fourth:
 |---|---|---|
 | Knowledge library contribution | 2026-07-29 | Contributing is a route *into* verification: judging a contribution means looking at a real person writing real things, which is the same look Unlock asks for. Gating it reviews the same account twice. |
 | Contributions | 2026-06-10 | A not-yet-verified member can contribute and hold thank-you credits they cannot spend until they finish Unlock. Recorded as deliberate and active, not an oversight. |
-| Quora account deletion survey | 2026-08-19 | The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached. The session exists to keep bulk junk out and is never stored. |
+| Quora account deletion survey | 2026-08-19 | The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached. Sign-in keeps bulk junk out; it is not a claim that the member is verified. |
 
 Every other feature requires Unlock approval. When you build anything new the answer is
 `minUnlockTier: 'approved_full'` — the default — essentially every time.

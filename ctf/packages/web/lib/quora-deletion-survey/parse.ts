@@ -25,7 +25,9 @@ import type {
 } from 'lib/quora-deletion-survey/repository';
 
 export type ParseResult =
-  | { ok: true; value: CreateSurveyResponseInput }
+  // Everything the body carries. The member id is not in the body and is never taken from it —
+  // the route reads it from the checked session and adds it on the way to the database.
+  | { ok: true; value: Omit<CreateSurveyResponseInput, 'userId'> }
   | { ok: false; message: string };
 
 function asOptionalText(value: unknown): string | null {

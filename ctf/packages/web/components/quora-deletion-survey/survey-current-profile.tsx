@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import type { SurveyTokens } from './survey-theme';
-import { CheckboxRow, ChoiceGroup, Field, YesNo, hintStyle, inputStyle } from './survey-fields';
+import { ChoiceGroup, Field, YesNo, hintStyle, inputStyle } from './survey-fields';
 import { cardStyle, cardTitleStyle, errorStyle, primaryButtonStyle } from './survey-styles';
 import { submitVerification } from './survey-submit';
 
 // The optional question about an account the person still holds, and the offer that follows it on
 // the confirmation screen.
 //
-// Why these live together: the answer to the question never reaches the survey table. The URL is
-// held in the browser through the submission and is only sent anywhere if the person presses the
-// button below, on the screen after their answer was already stored. Keeping the question and the
-// offer in one file is what keeps that true — a later edit that started storing the URL with the
-// response would have to walk past this comment to do it.
+// Why these live together: the yes/no is stored with the response, the URL is not. It is held in
+// the browser and only sent anywhere if the person presses the button below. That is not about
+// hiding them — the response carries their member id — it is that a verification URL belongs in
+// the verification queue, where a reviewer acts on it, rather than sitting in a research table
+// nobody re-reads.
 
 export function CurrentProfileQuestion({
   hasCurrentProfile,
@@ -47,7 +47,7 @@ export function CurrentProfileQuestion({
         <Field
           id="current-profile-url"
           label="Link to that account (optional)"
-          hint="Not saved with your answer. It stays in this browser, and is only used if you choose to start verification on the next screen."
+          hint="Only used if you choose to start verification on the next screen. It goes to the verification queue, not into your survey answer."
           tokens={tokens}
         >
           <input
@@ -85,15 +85,11 @@ export function VerificationOffer({
   removedHandles: string[];
   tokens: SurveyTokens;
 }) {
-  const [linkHandles, setLinkHandles] = useState(false);
   const [state, setState] = useState<OfferState>({ kind: 'idle' });
 
   const send = async () => {
     setState({ kind: 'sending' });
-    const outcome = await submitVerification({
-      quoraProfileUrl,
-      removedHandles: linkHandles ? removedHandles : [],
-    });
+    const outcome = await submitVerification({ quoraProfileUrl, removedHandles });
     if (outcome.ok) {
       setState({ kind: 'done', alreadyOnFile: outcome.status === 'already_on_file' });
       return;
@@ -122,26 +118,12 @@ export function VerificationOffer({
         typed. Sending it now saves being asked for the same thing again. It goes into a queue for a
         person to read; it approves nothing by itself.
       </p>
-      <p style={{ fontSize: 14, lineHeight: 1.65, color: tokens.TEXT, margin: '0 0 4px' }}>
-        This part is attached to your account, unlike the survey answer, which stays unattached to
-        anyone. The two are stored separately and neither one points at the other.
-      </p>
-
       {removedHandles.length > 0 ? (
-        <>
-          <CheckboxRow
-            id="link-removed-handles"
-            label={`Also record on my account that I lost these: ${removedHandles.join(', ')}`}
-            checked={linkHandles}
-            onChange={setLinkHandles}
-            tokens={tokens}
-          />
-          <p style={hintStyle(tokens)}>
-            Off by default. Your survey answer lists these same handles with nothing on it saying
-            who wrote it. Ticking this puts them on your account as well, which is what would
-            connect the two. Leave it alone and your answer stays unattached.
-          </p>
-        </>
+        <p style={hintStyle(tokens)}>
+          The accounts you listed as lost — {removedHandles.join(', ')} — are recorded on your
+          profile as accounts you had, alongside the one you are verifying with. That is the point
+          of this: your account history in one place rather than scattered across removals.
+        </p>
       ) : null}
 
       {state.kind === 'error' ? (

@@ -100,6 +100,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 | Column | Type | Notes |
 |---|---|---|
 | `id` | UUID PK | `gen_random_uuid()` |
+| `user_id` | TEXT NULL | The member who sent this. Set on every insert. NULL means the account was deleted and the id was cleared, never that the answer was anonymous. |
 | `targeted_individual` | TEXT | `yes` / `no`, no third option. Required by the form and by the submit route, so the column default is never a recorded answer. |
 | `any_account_removed` | BOOLEAN | Yes/no only. The count of removals is derived from the account rows, not from this. |
 | `has_current_profile` | BOOLEAN NULL | Optional. NULL means the question was skipped, which is not the same answer as no. The URL that goes with a yes is deliberately not stored here — see the two-sided design below. |
@@ -110,7 +111,9 @@ At `/admin/quora-deletion-survey`, an admin can:
 | `consent_attribute_quote` | BOOLEAN | Defaults to FALSE |
 | `created_at` | TIMESTAMPTZ | `NOW()` |
 
-Index: `idx_quora_deletion_survey_responses_created_at` on `(created_at DESC)`.
+Indexes: `idx_quora_deletion_survey_responses_created_at` on `(created_at DESC)`, and
+`idx_quora_deletion_survey_responses_user` on `(user_id, created_at DESC)` — the second is what
+makes a member's second response findable at all.
 
 `quora_deletion_survey_accounts` — one row per removed account.
 
@@ -167,14 +170,14 @@ removed, from the account survey".
 
 ## Security, Privacy, and Compliance Controls
 
-What is deliberately not stored: no user id, no IP address, no user agent, no email, and no
-contact detail of any kind. The follow-up contact field was removed from the questionnaire on the
-owner's instruction (2026-08-18). The only identifiers in these tables are the Quora handles a
-person chose to type, alongside the consent flags governing them.
+What is deliberately not stored: no IP address, no user agent, no email, and no contact detail of
+any kind. The follow-up contact field was removed from the questionnaire on the owner's instruction
+(2026-08-18). What is stored is the member id of the account that sent the response, the Quora
+handles the person chose to type, and the consent flags governing them.
 
-The cost of that choice, stated plainly because it is real: there is no way to follow up with a
-respondent, no way to detect that the same person submitted twice, and no way to verify a response
-later. The survey buys privacy with those three things.
+The costs that remain, stated plainly: there is still no way to reach a respondent outside the app,
+and no answer is verified against Quora. Duplicate detection, which an earlier build could not do
+at all, is now possible through the member id.
 
 Write path: requires a signed-in member at the `any_authenticated` tier — the same bar the
 knowledge library and Mutual Time use — plus a required `x-ctf-csrf: 1` header, the shared
@@ -193,33 +196,38 @@ bar without sampling only the members already reached. The exception is recorded
 copying this pattern into a new feature fails the build, and adding a line to that file is the
 owner's decision, not a build step.
 
-The session is a spam gate and nothing else (owner decision, 2026-08-19). It is checked at the
-route and then dropped: no user id, and nothing else derived from the account, is written to either
-table. So a member can report accounts they lost without the report ever being attributable to
-them, and an admin reading the results cannot work out who said what. The tier must stay at
+Sign-in keeps bulk junk out of a table that is meant to be citable. It is not a claim that the
+member is verified, and it is not what decides whether anything is published. The tier must stay at
 `any_authenticated` — someone who made an account minutes ago to answer this is exactly who the
 survey is for, and raising the bar to `approved_full` would silently exclude them.
 
 Read path: `requiredRoles: ['admin']` on the admin page and again on each admin route. There is no
 public projection of survey data and no member-facing view.
 
-The two-sided design, which is the part most worth understanding before changing anything here:
-this feature writes to two places that must never be joinable. The survey response is written with
-no user id. The verification submission is written with a user id and no response id. They are two
-separate requests, sent at two different moments, and the second only happens if the person presses
-a button after the first has already been stored. That is why the live profile URL — which is the
-verification URL, and therefore the strongest identifier in the whole flow — is never written to
-the survey response, and why the yes/no answer to that question is stored without it.
+What this survey is for, because it decides what belongs in these columns (owner, 2026-08-19):
+documenting that content and handles are being scattered and removed to discredit people — history
+erasure. The handles are public and a person types them here on purpose. Someone who does not want
+their handle history on record does not fill in the form.
 
-Why the box that records the lost handles on the member's account is off by default, correcting an
-earlier framing of this that was wrong (owner, 2026-08-19): not because of an outside party. There
-is none. The owner holds every table and already reads the raw survey with its handles on the admin
-screen, so the join is available to them regardless and writing the handles hands nobody a new
-capability. The reason is the promise the form makes — that nobody here can tell afterward which
-member wrote which answer. Attaching a member's lost handles to their account is the single thing
-that would make that untrue for them, so it stays their choice, taken knowingly, rather than a side
-effect of verifying. A person who wants those handles on their profile can have them; the default
-is that they do not.
+So the response carries the member id of the account that sent it. Two earlier drafts of this
+feature stored no identity and argued for keeping respondents unreadable to the owner; both were
+wrong for this survey and were reversed. Keeping the id is what makes a duplicate answer visible
+(`repeatRespondents` in the totals, and the tile on the admin screen), lets a response be lined up
+against that member's Unlock submission, and leaves a route to reach someone about what they
+reported.
+
+Knowing who answered is not permission to print it. Publication is governed by the three consent
+flags on the row and by nothing else, and that separation is the promise the form actually makes.
+
+The live profile URL is still not stored on the response. Not to hide the person — the row names
+them — but because a verification URL belongs in the verification queue where a reviewer acts on
+it, rather than sitting in a research table nobody re-reads. The yes/no answer is stored; the link
+travels to the verification route instead.
+
+The handles a person reported as lost are recorded on their Directory account history when they
+take the verification offer — not behind an extra checkbox. Putting an account's history in one
+place is the thing this survey is for, and the handles are public ones the person named
+deliberately.
 
 Verification path: `lib/quora-deletion-survey/unlock-link.ts` goes through
 `lib/shared/unlock-interface.ts` and never imports `lib/unlock` directly (owner decision
@@ -242,13 +250,14 @@ Consent: all three consent columns default to FALSE at the database as well as i
 row created by any future path that forgets to set them is still "do not publish". The admin
 reader shows the three decisions above the handles they govern.
 
-Account deletion and data export: the two response tables hold no user column at all, so there is
-nothing in them for `lib/account/deletion-registry.ts` to select and nothing for the export engine
-to gather. A member who deletes their account cannot withdraw a survey answer, because nothing
-records that the answer was theirs. That is the design, not an oversight, and the form says so
-before anyone answers. The audit log is registered under the `quora-deletion-survey` group as
-`retain`, like every other accountability trail in that registry: it records what was done to the
-data, including by admins, and survives the departure of anyone named in it.
+Account deletion: `quora_deletion_survey_responses` is registered under the `quora-deletion-survey`
+group as `pseudonymize` — the row stays, `user_id` is cleared. A survey answer is a record of an
+erasure, and destroying it when its author leaves would repeat the thing the survey exists to
+document, as well as silently shrinking counts already quoted in published posts. This is the same
+handling bug reports get, for the same reason: the content is still needed after the person is
+gone. The account rows have no user column of their own; they cascade from the response and are
+de-identified with it. The audit log is `retain`, like every other accountability trail in that
+registry. The form states all of this before anyone answers.
 
 Trust signals (rule 132): not applicable. Responses are not member participation, are not tied to
 an account, and describe something done to a person on another platform. Nothing here may become
@@ -325,6 +334,15 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: The response now carries the member id of the account that sent it, reversing the
+  earlier no-identity design on the owner's instruction. The survey is for putting handle history
+  on record; the handles are public and typed deliberately, and a respondent is not being hidden
+  from the person reading the results. Practical effect: a member answering twice is now visible
+  (a totals tile), a response can be lined up against that member's Unlock submission, and the
+  member id appears on the admin card and in the CSV. Account deletion clears the id and keeps the
+  answer, because a record of an erasure should not itself be erased. The form copy that promised
+  the opposite is gone, and the removed-handle recording is no longer behind an extra checkbox.
+  Publication is unchanged: still the three consent flags and nothing else.
 - 2026-08-19: Added the optional question about an account the person still holds, and an offer on
   the confirmation screen to use that link to start Unlock verification rather than being asked for
   the same thing twice. The link is never stored with the survey answer. Added the audit log table,
@@ -337,8 +355,8 @@ this is not a plugin. The steps that matter:
   The follow-up contact field is absent on the owner's instruction the same day.
 - 2026-08-19: Submitting now requires a signed-in member at the `any_authenticated` tier, on the
   owner's instruction, to keep bulk junk out of a table that is meant to be citable. The page stays
-  readable signed-out. The session is never stored, so responses remain unattributable; the cost is
-  a second source of selection bias, now stated in the form copy and above.
+  readable signed-out. The cost is a second source of selection bias — only someone willing to make
+  an account can submit — now stated in the form copy and above.
 - 2026-08-18: Question 1 (targeted individual) narrowed to yes/no, dropping the third
   "prefer not to say" option, on the owner's instruction. It has no safe default, so the form
   requires an answer and the submit route rejects a response that carries none rather than

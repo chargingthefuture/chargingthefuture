@@ -88,7 +88,7 @@
     {
       "file": "ctf/packages/web/app/survey/quora-account-deletions/page.tsx",
       "kind": "exception",
-      "reason": "Quora account deletion survey (owner decision, 2026-08-19). The research is about people outside this app, so approval cannot be the bar; the session exists only to keep bulk junk out, and is never stored.",
+      "reason": "Quora account deletion survey (owner decision, 2026-08-19). The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached; sign-in keeps bulk junk out and is not a claim that the member is verified.",
       "feature": "Quora account deletion survey",
       "decision": "2026-08-19"
     },

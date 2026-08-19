@@ -12,19 +12,23 @@ import { failureReason } from 'lib/errors/failure';
 
 // Submission of one survey response by a signed-in member.
 //
-// The session is a spam gate and nothing else (owner decision, 2026-08-19): it is checked here and
-// then dropped, so the stored row carries no user id and no other trace of who sent it. That
-// separation is the point — a member can report accounts they lost without the report ever being
-// attributable to them, and an admin reading the results cannot work out who said what.
+// The response carries the member id of the account that sent it (owner decision, 2026-08-19).
+// This survey documents handles and content being scattered and removed, the handles are public,
+// and a person types them here deliberately — someone who does not want their handle history on
+// record does not fill in the form. An earlier build stored no identity; that protected the
+// respondent from the reader, which is not what this survey needs, and it made a duplicate answer
+// invisible.
 //
-// Every path through here writes an audit row, refusals included, and none of them records who the
-// member is — not the user id the gate just checked, and not the address the rate limiter just
-// read. What is kept is what happened: which check refused, or on success the response id, how
-// many account rows came with it, and which consent flags were set. An address beside a timestamp
-// would re-identify the response, which is the one thing this table promises not to allow.
+// Publication is a separate question and is still governed only by the three consent flags.
+// Knowing who answered is not permission to print it.
+//
+// Every path through here writes an audit row, refusals included, naming the member wherever
+// there was a session to name. The one thing never recorded is the address the rate limiter just
+// read — it is used for the in-memory counter and nothing else.
 export async function POST(request: Request) {
   const gate = await requireSurveyRespondentAccess();
   if (!gate.allowed) {
+    // The only path with no actor to name: there was no session.
     await insertSurveyAudit({
       actorUserId: null,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
   const csrfDeny = ensureSurveyMutationCsrf(request);
   if (csrfDeny) {
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'deny',
       reason: 'csrf_denied',
@@ -48,7 +52,7 @@ export async function POST(request: Request) {
   const limited = enforceSurveySubmitRateLimit(request);
   if (limited) {
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'deny',
       reason: 'rate_limited',
@@ -61,7 +65,7 @@ export async function POST(request: Request) {
     body = await request.json();
   } catch (error) {
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'deny',
       reason: 'unreadable_payload',
@@ -80,7 +84,7 @@ export async function POST(request: Request) {
   const parsed = parseSurveySubmission(body);
   if (!parsed.ok) {
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'deny',
       reason: 'invalid_payload',
@@ -92,9 +96,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await createSurveyResponse(parsed.value);
+    const created = await createSurveyResponse({ ...parsed.value, userId: gate.auth.userId });
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'allow',
       reason: 'stored',
@@ -114,7 +118,7 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'quora-deletion-survey', op: 'submit' });
     await insertSurveyAudit({
-      actorUserId: null,
+      actorUserId: gate.auth.userId,
       command: QUORA_SURVEY_AUDIT_COMMAND.submit,
       policyStatus: 'deny',
       reason: 'persistence_unavailable',

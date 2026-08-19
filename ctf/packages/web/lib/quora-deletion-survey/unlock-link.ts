@@ -25,26 +25,20 @@ import {
 //   1. It is not an approval. It creates a `pending` submission in the ordinary queue, exactly as
 //      the Unlock screen would. The owner still decides.
 //   2. It does not run as part of the survey submission. It is a separate request the person
-//      starts by pressing a button after their answer is already stored. The survey response row
-//      is written first, with no user id on it, and this write happens second, with a user id and
-//      no response id. Neither row can reach the other.
+//      starts by pressing a button after their answer is already stored, so a failure here can
+//      never lose their answer.
 //   3. It never touches an account that already has a submission. A member who verified through
 //      the Unlock screen is not asked again and is not overwritten, so two conflicting URLs can
 //      never land on one account by this path.
 //
-// Why recording the removed handles (below) is a separate, off-by-default choice:
+// The removed handles are recorded on the member's account as a matter of course, not behind an
+// extra choice. Two earlier drafts of this file argued for hiding the connection between a
+// respondent and the handles they reported; both were wrong for this survey (owner, 2026-08-19).
+// It exists to put handle history on record — the handles are public, the person typed them
+// deliberately, and someone who does not want theirs recorded does not fill in the form.
 //
-// Not because of an outside attacker. There is no second party here — the owner holds every table
-// and already reads the raw survey, handles included, on the admin screen. A join by handle is
-// something they could do anyway, so writing the handles does not hand anyone a capability they
-// did not have.
-//
-// It is the promise in the form copy. The survey tells the respondent that nobody here can tell
-// afterward which member wrote which answer, and putting their lost handles on their own account
-// is the one thing that would make that sentence untrue for them. So it stays their choice,
-// taken knowingly, rather than something that happens to them because they verified. Same reason
-// the live profile URL — the verification URL, and the strongest identifier in the flow — is
-// never written to the survey response at all.
+// Publication is the separate question, and it is answered by the three consent flags on the
+// response, not here. Nothing in this file publishes anything.
 
 export type SurveyUnlockLinkOutcome =
   | { status: 'submitted'; linkedHandles: number }
@@ -103,8 +97,8 @@ async function recordRemovedHandles(userId: string, handles: string[]): Promise<
 export async function linkSurveyRespondentToUnlock(input: {
   userId: string;
   quoraProfileUrl: string;
-  // Empty unless the person ticked the box on the confirmation screen. Nothing is written here
-  // by default.
+  // The handles the person reported as removed, recorded alongside the account they are verifying
+  // with so their account history sits in one place.
   removedHandles: string[];
 }): Promise<SurveyUnlockLinkOutcome> {
   try {

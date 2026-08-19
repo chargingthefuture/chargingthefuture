@@ -5577,26 +5577,38 @@ ALTER TABLE IF EXISTS bug_reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPT
 CREATE INDEX IF NOT EXISTS idx_bug_reports_status_created_at ON bug_reports(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bug_reports_user_created_at ON bug_reports(user_id, created_at DESC);
 
--- === QUORA ACCOUNT DELETION SURVEY (research capture; sign-in gates the write, nothing more) ===
+-- === QUORA ACCOUNT DELETION SURVEY (research capture) ===
 -- Self-reports from people whose Quora accounts were removed. The blog posts cite counts of
--- removals, and until now those counts rested on nothing a reader could check; these two tables
--- are the record behind them.
+-- removals, and until now those counts rested on nothing a reader could check; these tables are
+-- the record behind them.
 --
--- Deliberately holds NO identifying metadata about the respondent: no user id, no IP address, no
--- user agent, and no contact detail (owner decision, 2026-08-18 — the follow-up contact field was
--- removed from the questionnaire). Submitting requires a signed-in member (owner decision,
--- 2026-08-19) purely to keep bulk junk out; that session is checked at the route and then dropped,
--- so it never becomes a column here and no answer is attributable to the account that sent it.
--- The only identifiers stored are the Quora handles the person chose to type,
--- and whether they consented to those being published. Nothing here can be traced back to a
--- person who did not name themselves, which is the point: the population answering this survey
--- has good reason not to be findable.
+-- What this survey is for (owner, 2026-08-19), because it decides what belongs in these columns:
+-- documenting that content and handles are being scattered and removed to discredit people —
+-- history erasure. The handles are public, and a person types them here on purpose. Someone who
+-- does not want their handle history on record does not fill in the form.
 --
--- Because no respondent identity is stored, account deletion (lib/account/deletion-registry.ts)
--- has nothing to delete here and these tables are correctly absent from it — deleting a member's
--- account cannot and should not remove an answer that was never linked to them.
+-- So the response carries the member id of the account that sent it. An earlier build stored no
+-- identity, on the theory that a respondent needed protecting from the reader of this table; that
+-- was wrong for this survey and was reversed on the owner's instruction the same day. Keeping the
+-- id is what makes a duplicate answer detectable, lets a response be lined up against that
+-- member's Unlock submission, and leaves a route to reach someone about what they reported.
+--
+-- What is still deliberately absent: no IP address, no user agent, no contact detail (owner
+-- decision, 2026-08-18 — the follow-up contact field was removed from the questionnaire).
+--
+-- Publication is governed by the three consent flags below and by nothing else. Storing who
+-- answered is not permission to print it: a handle or a quote leaves this table only with the
+-- matching TRUE on that row.
+--
+-- Account deletion: `user_id` is nullable so `lib/account/deletion-registry.ts` can pseudonymize
+-- rather than destroy. A survey answer is a record of an erasure; deleting it when its author
+-- leaves would repeat the thing the survey exists to document. NULL therefore means "the account
+-- that sent this was deleted", never "this was anonymous".
 CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- The member who sent this. Always set on insert; nullable only so account deletion can clear
+  -- it and leave the answer standing. See the note above.
+  user_id TEXT,
   -- Q1. Yes or no, no third option (owner decision, 2026-08-18). The form requires an answer
   -- before it will send, so the default below is only ever the column default and never the
   -- recorded answer of someone who declined to state one.
@@ -5631,6 +5643,7 @@ CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS targeted_individual TEXT NOT NULL DEFAULT 'no';
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS any_account_removed BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS has_current_profile BOOLEAN NULL;
@@ -5642,6 +5655,9 @@ ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS c
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_responses_created_at
   ON quora_deletion_survey_responses(created_at DESC);
+-- Finds every response one member sent, which is how a duplicate answer becomes visible at all.
+CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_responses_user
+  ON quora_deletion_survey_responses(user_id, created_at DESC);
 
 -- One row per removed account (Q3-Q9). A person who lost four accounts files one response with
 -- four of these, so "how many times" is a row count and each removal carries its own handle,

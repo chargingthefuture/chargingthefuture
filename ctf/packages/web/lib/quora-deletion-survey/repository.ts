@@ -26,6 +26,9 @@ export type SurveyAccountInput = {
 };
 
 export type CreateSurveyResponseInput = {
+  // The member who sent this. Set on every insert (owner decision, 2026-08-19 — the survey
+  // documents handle history and the respondent is not being hidden from the reader).
+  userId: string;
   targetedIndividual: QuoraSurveyTargetedIndividual;
   anyAccountRemoved: boolean;
   // Null means the optional question was skipped, which is not the same answer as no.
@@ -57,6 +60,8 @@ export type SurveyAccountRow = {
 
 export type SurveyResponseRow = {
   id: string;
+  // NULL means the account that sent this was deleted, never that the response was anonymous.
+  user_id: string | null;
   targeted_individual: QuoraSurveyTargetedIndividual;
   any_account_removed: boolean;
   has_current_profile: boolean | null;
@@ -81,11 +86,12 @@ export async function createSurveyResponse(
   return withDbTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO quora_deletion_survey_responses (
-         targeted_individual, any_account_removed, has_current_profile, evidence_note, other_notes,
-         consent_publish_handles, consent_quote, consent_attribute_quote
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         user_id, targeted_individual, any_account_removed, has_current_profile, evidence_note,
+         other_notes, consent_publish_handles, consent_quote, consent_attribute_quote
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
       [
+        input.userId,
         input.targetedIndividual,
         input.anyAccountRemoved,
         input.hasCurrentProfile,
@@ -133,8 +139,8 @@ export async function createSurveyResponse(
 // only reader; there is no public projection of this data at all.
 export async function listSurveyResponses(limit: number): Promise<SurveyResponseWithAccounts[]> {
   const responses = await queryDb<SurveyResponseRow>(
-    `SELECT id, targeted_individual, any_account_removed, has_current_profile, evidence_note, other_notes,
-            consent_publish_handles, consent_quote, consent_attribute_quote, created_at
+    `SELECT id, user_id, targeted_individual, any_account_removed, has_current_profile, evidence_note,
+            other_notes, consent_publish_handles, consent_quote, consent_attribute_quote, created_at
        FROM quora_deletion_survey_responses
       ORDER BY created_at DESC
       LIMIT $1`,
@@ -172,6 +178,9 @@ export type SurveyTotals = {
   responses: number;
   reportedRemovals: number;
   responsesConsentingToPublishHandles: number;
+  // How many members sent more than one response. Anything above zero means the response count
+  // is larger than the number of people behind it.
+  repeatRespondents: number;
 };
 
 // The three numbers worth stating in a blog post, counted in the database rather than in a
@@ -182,12 +191,21 @@ export async function getSurveyTotals(): Promise<SurveyTotals> {
     responses: string;
     reported_removals: string;
     consenting: string;
+    repeat_respondents: string;
   }>(
     `SELECT
        (SELECT COUNT(*)::text FROM quora_deletion_survey_responses) AS responses,
        (SELECT COUNT(*)::text FROM quora_deletion_survey_accounts) AS reported_removals,
        (SELECT COUNT(*)::text FROM quora_deletion_survey_responses
-         WHERE consent_publish_handles = TRUE) AS consenting`,
+         WHERE consent_publish_handles = TRUE) AS consenting,
+       -- Members who sent more than one response. The whole reason the member id is on the row:
+       -- without it a person answering twice is indistinguishable from two people answering, and
+       -- a count quoted in a post would be wrong with nothing to show that it was.
+       (SELECT COUNT(*)::text FROM (
+          SELECT user_id FROM quora_deletion_survey_responses
+           WHERE user_id IS NOT NULL
+           GROUP BY user_id HAVING COUNT(*) > 1
+        ) AS repeats) AS repeat_respondents`,
   );
 
   const row = result.rows[0];
@@ -195,15 +213,14 @@ export async function getSurveyTotals(): Promise<SurveyTotals> {
     responses: Number(row?.responses ?? '0'),
     reportedRemovals: Number(row?.reported_removals ?? '0'),
     responsesConsentingToPublishHandles: Number(row?.consenting ?? '0'),
+    repeatRespondents: Number(row?.repeat_respondents ?? '0'),
   };
 }
 
 export type SurveyAuditInput = {
-  // Null on every survey submit event, always: a member's submission must not name them, or the
-  // audit trail re-identifies the response the table went to lengths to keep anonymous. The
-  // identified actions do name their actor — an admin reading or exporting the table, and a
-  // respondent starting Unlock verification, which acts on their own account rather than on the
-  // survey.
+  // Who did it. Set on every event that has a session behind it — a submission, an admin read or
+  // export, a verification. Null only where there was no session to name, which in practice means
+  // a submission refused before sign-in.
   actorUserId: string | null;
   command: string;
   policyStatus: 'allow' | 'deny';

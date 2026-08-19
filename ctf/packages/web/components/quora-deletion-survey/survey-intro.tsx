@@ -9,8 +9,13 @@ import { hintStyle } from './survey-fields';
 // What the person reads before the first question, and what they read after the last one.
 //
 // The order is deliberate: what this is, what happens to the answers, then what the results can
-// and cannot show. Someone whose account was taken for writing about being targeted has every
-// reason to want the second of those settled before typing a handle.
+// and cannot show.
+//
+// This copy said, until 2026-08-19, that nobody here could tell which member wrote which answer.
+// That was wrong for what this survey is (owner): the point is to put handle history on record,
+// the handles are public, and someone who does not want theirs recorded does not fill in the form.
+// The answer is saved with the account that sent it, and the copy now says so. What the consent
+// boxes control — whether any of it is published — is unchanged and is the promise that matters.
 
 export function SurveyIntro({ tokens }: { tokens: SurveyTokens }) {
   return (
@@ -32,17 +37,22 @@ export function SurveyIntro({ tokens }: { tokens: SurveyTokens }) {
         <h2 style={cardTitleStyle(tokens)}>What happens to your answers</h2>
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, lineHeight: 1.65, color: tokens.TEXT }}>
           <li style={{ marginBottom: 8 }}>
-            Signing in keeps out bulk junk, and that is all it does. Your answer is stored with no
-            link to your account — no name, no email, no address, no browser. Nobody here can tell
-            afterward which member wrote which answer.
+            Your answer is saved with the account you signed in with, so we can tell two answers
+            from one person answering twice. No email, no address, no browser details, and the form
+            asks for no way to reach you.
           </li>
           <li style={{ marginBottom: 8 }}>
             Nothing is published unless you tick the boxes at the end saying it can be. Those start
-            off.
+            off, and they are what decides whether a handle or a quote of yours ever appears
+            anywhere.
           </li>
-          <li style={{ marginBottom: 0 }}>
+          <li style={{ marginBottom: 8 }}>
             Counts drawn from these answers may appear in the blog. Handles and quotes only ever
             appear with your permission.
+          </li>
+          <li style={{ marginBottom: 0 }}>
+            If you delete your account, the answer stays and your account id is removed from it.
+            The record of an account being erased should not itself be erased.
           </li>
         </ul>
       </section>
@@ -87,8 +97,9 @@ export function SurveyPublicLanding({
             that stops it.
           </p>
           <p style={{ fontSize: 14, lineHeight: 1.65, color: tokens.TEXT, margin: 0 }}>
-            It is not used to identify you. Your answer is saved with nothing linking it back to the
-            account you signed in with.
+            Your answer is saved with that account. This survey is a record of handles and writing
+            being removed, and the handles in it are public ones you choose to name. Whether any of
+            it is published is a separate question, and you answer it yourself at the end.
           </p>
         </section>
 
@@ -134,12 +145,12 @@ export function SurveyDone({
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.65, color: tokens.TEXT }}>
           {accountCount === 0
-            ? 'Your answer is on record. Nothing was published, and nothing about you was stored beyond what you typed.'
-            : `${accountCount} account${accountCount === 1 ? '' : 's'} recorded. Nothing was published, and nothing about you was stored beyond what you typed.`}
+            ? 'Your answer is on record. Nothing was published — that only happens for the boxes you ticked.'
+            : `${accountCount} account${accountCount === 1 ? '' : 's'} recorded. Nothing was published — that only happens for the boxes you ticked.`}
         </p>
         <p style={hintStyle(tokens)}>
-          You can close this page. There is no confirmation message, because nothing here is
-          attached to your account and the form asks for no way to reach you.
+          You can close this page. There is no confirmation message, because the form asks for no
+          way to reach you.
         </p>
 
         {children}

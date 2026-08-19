@@ -112,6 +112,9 @@ function TotalsRow({ totals, tokens }: { totals: SurveyTotals; tokens: ReturnTyp
     { label: 'Responses', value: totals.responses },
     { label: 'Removals described', value: totals.reportedRemovals },
     { label: 'Consent to publish handles', value: totals.responsesConsentingToPublishHandles },
+    // Anything above zero means the response count is larger than the number of people behind it,
+    // so a figure quoted from this survey needs saying which of the two it is.
+    { label: 'Members who answered twice', value: totals.repeatRespondents },
   ];
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
@@ -176,6 +179,17 @@ function ResponseCard({
           {new Date(response.created_at).toISOString().slice(0, 10)} · targeted individual:{' '}
           {response.targeted_individual.replace(/_/g, ' ')}
         </span>
+      </div>
+
+      <div style={{ fontSize: 12, color: tokens.MUTED, marginTop: 4 }}>
+        {response.user_id
+          ? `member ${response.user_id}`
+          : 'member account deleted — the answer was kept, the account id was cleared'}
+        {response.has_current_profile === null
+          ? ''
+          : response.has_current_profile
+            ? ' · still has a Quora account'
+            : ' · has no Quora account left'}
       </div>
 
       <ConsentLine response={response} tokens={tokens} />

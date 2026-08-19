@@ -43,10 +43,10 @@ export async function requireSurveyAdminAccess(command: string): Promise<SurveyA
 }
 
 // Submitting requires a signed-in member, at the lowest tier: any authenticated account, verified
-// or not (owner decision, 2026-08-19). The bar exists to keep bulk junk out, not to identify
-// anyone — the session is checked and then dropped, and no part of it reaches the stored row.
-// Someone who made an account minutes ago to answer this is exactly who the survey is for, so the
-// gate must never be raised to `approved_full`.
+// or not (owner decision, 2026-08-19). The bar keeps bulk junk out; it is not a claim that the
+// member is verified, and the response records which account sent it. Someone who made an account
+// minutes ago to answer this is exactly who the survey is for, so the gate must never be raised to
+// `approved_full`.
 export async function requireSurveyRespondentAccess(): Promise<SurveyApiGate> {
   const decision = await evaluatePluginAccess({
     minUnlockTier: 'any_authenticated',
@@ -102,8 +102,8 @@ export function ensureSurveyMutationCsrf(request: Request): NextResponse | null 
 
 // Per-IP submit brake, kept alongside the sign-in requirement rather than replaced by it: one
 // signed-in member is not a license to fill the table, and accidental double-taps are common. The
-// IP is used for the in-memory counter and is never stored — the table deliberately holds no
-// address, agent string, contact detail, or user id for anyone.
+// IP is used for the in-memory counter and is never stored — no row here holds an address, an
+// agent string, or any contact detail.
 export function enforceSurveySubmitRateLimit(request: Request): NextResponse | null {
   const result = checkRateLimit(
     `quora-deletion-survey:submit:${getClientIp(request)}`,
