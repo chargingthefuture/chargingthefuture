@@ -1469,6 +1469,24 @@ ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS first_flag
 ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS last_flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_spam_quora_urls ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Accounts the Unlock admin's sign-up counters leave out: the owner's own demo/recording accounts and
+-- any other test account. The Unlock admin reads the full sign-up roster from the auth provider so the
+-- owner does not have to open the provider dashboard to see how many people have joined; those totals
+-- are only useful once the handful of accounts that are not real members are taken out, and there is no
+-- marker on the account itself that says so. An admin marks them here, one row per excluded account, and
+-- every sign-up counter on that page subtracts them.
+CREATE TABLE IF NOT EXISTS unlock_excluded_accounts (
+  user_id TEXT PRIMARY KEY,
+  note TEXT,
+  excluded_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS excluded_by_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
 -- actor_user_id/command/policy_status/reason columns and does NOT populate the legacy user_id/action

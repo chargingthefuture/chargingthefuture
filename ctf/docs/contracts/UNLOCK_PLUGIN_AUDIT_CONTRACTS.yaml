@@ -44,6 +44,28 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: unlock
+    command: unlock.admin.signups.exclude
+    commandVersion: 1.0.0
+    purpose: onboarding_funnel_measurement
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - unlock_excluded_accounts
+    targetContext:
+      adminUserId: user_identifier
+      userId: user_identifier
+      excluded: boolean_flag
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
     command: unlock.admin.experiment.read
     commandVersion: 1.0.0
     purpose: experiment_measurement

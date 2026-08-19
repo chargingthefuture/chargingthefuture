@@ -123,6 +123,56 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.admin.signups.read
+    version: 1.0.0
+    description: >-
+      Read the Unlock admin sign-up panel: the full account roster from the auth provider joined to the
+      verification submissions, so an admin can see how many people signed up and which of them never
+      submitted a Quora URL. Read-only; performs no write.
+    inputSchema: {}
+    outputSchema:
+      signupOverview:
+        type: object
+    dataAccess:
+      - auth_provider_account_directory
+      - unlock_verification_submissions
+      - unlock_excluded_accounts
+      - account_deletion_events
+    purpose: onboarding_funnel_measurement
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: unlock
+    command: unlock.admin.signups.exclude
+    version: 1.0.0
+    description: >-
+      Mark one account as demo/test so the Unlock admin sign-up counters leave it out, or put it back in
+      the counts. Counter-only: it never changes the member's access tier, submission, or reward.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      excluded:
+        type: boolean
+        required: true
+      note:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      userId:
+        type: string
+      excluded:
+        type: boolean
+    dataAccess:
+      - unlock_excluded_accounts
+      - unlock_audit_log
+    purpose: onboarding_funnel_measurement
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.submission.url.edit
     version: 1.0.0
     description: Admin correction of a submission's Quora profile URL (e.g. fixing a typo). Re-validates and re-normalizes the URL with the same rules as the member submit path. Does not change review status, access tier, or the verification window.

@@ -4,6 +4,7 @@ import {
   getUnlockExperimentSplit,
   listUnlockSubmissions,
 } from 'lib/unlock/repository';
+import { getUnlockSignupOverview } from 'lib/unlock/signups';
 import { listSpamQuoraUrls } from 'lib/unlock/spam-denylist';
 import { redirect } from 'next/navigation';
 import { UnlockAdminShell } from '@/components/unlock/unlock-admin-shell';
@@ -16,11 +17,15 @@ export default async function UnlockAdminPage() {
     redirect('/');
   }
 
-  const [dashboard, submissions, experimentSplit, spamDenylist] = await Promise.all([
+  const [dashboard, submissions, experimentSplit, spamDenylist, signupOverview] = await Promise.all([
     getUnlockDashboardSnapshot(),
     listUnlockSubmissions({ limit: 50 }),
     getUnlockExperimentSplit(),
     listSpamQuoraUrls(),
+    // Reads the account roster from the auth provider, so the whole sign-up reading is on this page and
+    // the owner does not have to open the provider dashboard. Never throws — a provider failure comes
+    // back as an unavailable overview carrying the reason.
+    getUnlockSignupOverview(),
   ]);
 
   return (
@@ -29,6 +34,7 @@ export default async function UnlockAdminPage() {
       submissions={submissions}
       experimentSplit={experimentSplit}
       spamDenylist={spamDenylist}
+      signupOverview={signupOverview}
     />
   );
 }

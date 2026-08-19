@@ -6,9 +6,16 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { Unlock } from 'lucide-react';
 import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
-import type { SpamQuoraUrlEntry, UnlockDashboardSnapshot, UnlockExperimentBucketStat, UnlockSubmission } from 'lib/unlock/types';
+import type {
+  SpamQuoraUrlEntry,
+  UnlockDashboardSnapshot,
+  UnlockExperimentBucketStat,
+  UnlockSignupOverview,
+  UnlockSubmission,
+} from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
+import { UnlockSignupsPanel } from './unlock-signups-panel';
 import { UnlockSpamDenylistPanel } from './unlock-spam-denylist-panel';
 import {
   grantReward,
@@ -45,11 +52,13 @@ export function UnlockAdminShell({
   submissions: initialSubmissions,
   experimentSplit = [],
   spamDenylist = [],
+  signupOverview,
 }: {
   dashboard: UnlockDashboardSnapshot;
   submissions: UnlockSubmission[];
   experimentSplit?: UnlockExperimentBucketStat[];
   spamDenylist?: SpamQuoraUrlEntry[];
+  signupOverview?: UnlockSignupOverview;
 }) {
   const router = useRouter();
   const { theme } = useTheme();
@@ -163,6 +172,8 @@ export function UnlockAdminShell({
           <StatBlock label="Spam" value={dashboard.spamCount} />
           <StatBlock label="Support-only" value={dashboard.lockedSupportOnlyCount} />
         </div>
+
+        {signupOverview ? <UnlockSignupsPanel overview={signupOverview} /> : null}
 
         <UnlockExperimentPanel experimentSplit={experimentSplit} />
 

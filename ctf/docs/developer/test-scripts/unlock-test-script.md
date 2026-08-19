@@ -329,6 +329,34 @@ completion % and "N of M submitted". Android reads it from `GET /api/unlock/admi
 The readout is read-only — no action buttons. A read failure never blocks the queue below it.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-A9 · Sign-ups — total, and who never gave a Quora URL
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** signed in as an admin; the auth provider secret is set in the app runtime.
+**Steps:**
+1. Open `/admin/unlock` and find the "Sign-ups" panel, above the A/B experiment panel.
+2. Read the five numbers — Members, Gave a Quora URL, No Quora URL, Demo / test, Left — and the line
+   above them saying how many accounts there are in total.
+3. Open the **No Quora URL** tab and read the list, then open the **Left** tab.
+4. On any row, click **Mark as demo / test**, then watch the four numbers.
+5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
+6. Type part of a name, handle, or email into the search box.
+7. Compare the "Members" number against the sign-up total in the auth provider's own dashboard, minus
+   however many accounts you have marked demo / test.
+**Expected:** Step 2: Members = total accounts minus demo/test minus Left; Gave a Quora URL + No Quora
+URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
+are not in the review queue below, because there is nothing to review. Each row shows a name or handle,
+the email, the sign-up date, and whether they have signed in since. On **Left**, every row says when
+that person asked to be forgotten; nobody appears on both tabs, and nobody on **Left** is counted as a
+member (their submission was deleted with the rest of their data, so they are not an onboarding
+failure). Step 4: `POST /api/unlock/admin/excluded-accounts` records the
+account (audited `unlock.admin.signups.exclude`); Members and Demo / test both move by one immediately,
+and the row is no longer counted. The member's access, submission, and reward are untouched — check
+their status if you marked someone with a submission. Step 5: the numbers move back. Step 6: the list
+filters and says so when nothing matches. Step 7: the two totals agree. A non-admin cannot reach the
+page or the route. If the auth provider secret is missing from the runtime, the panel prints the reason
+in plain words and the rest of the admin page still loads.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
@@ -355,3 +383,11 @@ tracked, not a new bug:
 - The duplicate-identity guard is web + backend only; the android admin screen has status tabs and
   shows withheld/error counts but does not yet surface the per-row withheld/revoked badges or the
   grant/revoke determination actions.
+- The sign-up roster is re-read from the auth provider on every load of `/admin/unlock` and is not
+  cached, so the panel is the slowest part of the page to appear.
+- "Members" counts accounts the auth provider holds now, so the provider's all-time sign-up chart
+  counts differently and can read higher.
+- Accounts stranded in the auth provider by deletions made before 2026-08-19, when the app's own delete
+  flow started removing the sign-in as well as the data (PR #2259). The sign-up panel labels them "Left"
+  and subtracts them, so the numbers are right, but clearing the account itself is the
+  `Delete Account (manual)` workflow, not something the panel can do.
