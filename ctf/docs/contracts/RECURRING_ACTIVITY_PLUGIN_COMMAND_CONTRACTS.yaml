@@ -23,7 +23,7 @@ contracts:
       directory profile, a recorded sign-in, or the accounts table where it exists). A fiat
       (non-ServiceCredits) line MUST NOT carry an amount — the value firewall is enforced server-side,
       not just in the UI — so the platform never holds a summable recurring-fiat-payment total. Only
-      ServiceCredits (an internal utility token) may carry a declared value, and even that is a declared
+      ServiceCredits (an internal credits unit) may carry a declared value, and even that is a declared
       figure, never an executed transfer. No free-text is accepted; sector is a fixed enum. Callable
       both from this plugin's own form and from the inline "this happens regularly" control other apps
       render beside a finished arrangement, which passes originPlugin. Implemented by

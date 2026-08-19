@@ -110,7 +110,7 @@ function resolveParticipants(input: CreateRecurringActivityInput): {
 function resolveScValue(currency: Currency, scValue: number | null | undefined): number | null {
   const isServiceCredits = currency.isServiceCredits || currency.code === SERVICE_CREDITS_CODE;
   if (isServiceCredits) {
-    // ServiceCredits is an internal utility token, so a declared value is allowed here (still not an
+    // ServiceCredits is an internal credits unit, so a declared value is allowed here (still not an
     // executed transfer). Optional — a member may leave it blank.
     if (scValue !== undefined && scValue !== null) {
       // Reject zero as well as negatives: a declared value of 0 is meaningless and only useful to

@@ -32,7 +32,7 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
    "description."
 2. **No fiat amount, ever.** A fiat-denominated activity stores only the currency label + cadence, never
    a number. The platform therefore never holds a summable recurring-fiat-payment total — the thing that
-   would look like money transmission. Only ServiceCredits (an internal utility token with no third-party
+   would look like money transmission. Only ServiceCredits (an internal credits unit with no third-party
    reporting duty) carries a declared value, and even that is a declared figure, never an executed
    transfer, so it never touches real balances or the SC ledger.
 

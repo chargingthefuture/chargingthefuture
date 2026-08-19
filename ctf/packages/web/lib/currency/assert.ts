@@ -1,6 +1,6 @@
 // No-fiat-parity guard (issue #120 — the legal line).
 //
-// ServiceCredits is a utility token with no fiat redemption path. A *single* ServiceCredits value
+// ServiceCredits is an internal credits unit with no fiat redemption path. A *single* ServiceCredits value
 // must NEVER be rendered as a fiat equivalent (e.g. "2,420 credits ≈ $242 USD", "purchasing power",
 // "real monetary value"). This guard detects that pattern in a single value/label string.
 //
