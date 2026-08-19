@@ -178,8 +178,8 @@ this is not a plugin. The steps that matter:
 
 - The subject list is duplicated with the deletion survey (see above). Fold both into one shared
   module once the survey is on `main`.
-- One coder, no second opinion. Stance coding is a judgement call, and a census coded by one person
-  has no measure of how repeatable that judgement is. A second coder on a sample of the same run,
+- One coder, no second opinion. Stance coding is a judgment call, and a census coded by one person
+  has no measure of how repeatable that judgment is. A second coder on a sample of the same run,
   with the disagreement rate recorded, is the standard fix and is not built.
 - No entry editing. A miscoded row is removed and re-added rather than corrected in place.
 - Nothing links a census entry to a survey response about the same handle. That join would be
