@@ -242,6 +242,10 @@ commands:
           type: array
           items:
             $ref: '#/definitions/SharedIncidentArea'
+        countries:
+          type: array
+          items:
+            $ref: '#/definitions/SharedIncidentCountry'
         tagTrends:
           type: array
           items:
@@ -258,7 +262,10 @@ commands:
       - click_log_incidents (select, aggregate only — shared_with_owner rows; the SQL projects
         only day buckets, 1-decimal location cells, counts, distinct-member counts, and per-tag
         counts over the canonical problem/scheme tag slugs, never notes, precise coordinates,
-        incident ids, or member identity; user_id appears only inside COUNT(DISTINCT …))
+        incident ids, or member identity; user_id appears only inside COUNT(DISTINCT …). The
+        country rollup adds one query for the distinct 1-decimal cells and one grouped query
+        joined against the app-side cell-to-country mapping; both keep the same projection and the
+        same COUNT(DISTINCT …) boundary, and no coordinate leaves the server)
     purpose: Owner/admin-only aggregate trends over incidents members opted to share
     retentionClass: user_event
   - pluginId: click-log
@@ -269,11 +276,12 @@ commands:
       properties:
         areas:
           type: string
-          enum: ['1']
+          enum: ['0']
           description: >-
-            Pass '1' to include the ~11 km area coordinates in the image. Omitted by default: an
-            area cell plus a date can point at one person at small counts, and members opted into
-            sharing trend data with the project rather than into being placed on a public map.
+            Pass '0' to leave the ~11 km area coordinates out of this image. Included by default
+            (owner directive, 2026-08-19): recording where incidents happen is why ClickLog asks
+            for a location, so a shared copy that withheld it withheld the point of the report.
+            The country rollup is present either way and is not affected by this parameter.
         download:
           type: string
           enum: ['1']
@@ -425,7 +433,54 @@ definitions:
         type: string
       lastDay:
         type: string
-    required: [latitudeCell, longitudeCell, incidents, reporters, firstDay, lastDay]
+      countryCode:
+        type:
+          - string
+          - 'null'
+        description: >-
+          Two-letter code where one is assigned, else a short slug of the name. Null when the
+          coarse border table has no match. Derived in the app from the rounded cell — never asked
+          of the member and never sent to an outside service.
+      countryName:
+        type:
+          - string
+          - 'null'
+    required:
+      - latitudeCell
+      - longitudeCell
+      - incidents
+      - reporters
+      - firstDay
+      - lastDay
+      - countryCode
+      - countryName
+  SharedIncidentCountry:
+    type: object
+    description: >-
+      One country across the window. reporters is an exact COUNT(DISTINCT user_id) taken in SQL,
+      not a sum of the per-area counts — a member who logged in two cells of one country is one
+      person here.
+    properties:
+      code:
+        type:
+          - string
+          - 'null'
+      name:
+        type:
+          - string
+          - 'null'
+        description: Null for cells the coarse border table could not place; shown as not matched.
+      incidents:
+        type: integer
+      reporters:
+        type: integer
+      areas:
+        type: integer
+      firstDay:
+        type: string
+      lastDay:
+        type: string
+    required: [code, name, incidents, reporters, areas, firstDay, lastDay]
   SharedIncidentCategoryTrend:
     type: object
     properties:

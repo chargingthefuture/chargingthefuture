@@ -24,6 +24,7 @@ export type TrendReportView = {
   windowLine: string;
   stats: { label: string; value: string }[];
   days: ReportRow[];
+  countries: ReportRow[];
   areas: ReportRow[];
   areasOmittedLine: string | null;
   areasTruncatedLine: string | null;
@@ -56,14 +57,29 @@ function dayRows(report: SharedIncidentReport): ReportRow[] {
     .map(([day, count]) => ({ label: day, value: count }));
 }
 
+function dayRange(firstDay: string, lastDay: string): string {
+  return firstDay === lastDay ? firstDay : `${firstDay} to ${lastDay}`;
+}
+
 function areaRows(report: SharedIncidentReport): ReportRow[] {
   return report.areas.map((area) => ({
-    label: areaCellLabel(area.latitudeCell, area.longitudeCell),
-    detail:
-      area.firstDay === area.lastDay
-        ? `${plural(area.reporters, 'member', 'members')} · ${area.firstDay}`
-        : `${plural(area.reporters, 'member', 'members')} · ${area.firstDay} to ${area.lastDay}`,
+    // The country leads the label. A reader scanning a column of coordinates cannot tell whether
+    // two rows are neighboring towns or opposite hemispheres; with the country in front, they can.
+    label: area.countryName
+      ? `${area.countryName} · ${areaCellLabel(area.latitudeCell, area.longitudeCell)}`
+      : areaCellLabel(area.latitudeCell, area.longitudeCell),
+    detail: `${plural(area.reporters, 'member', 'members')} · ${dayRange(area.firstDay, area.lastDay)}`,
     value: area.incidents,
+  }));
+}
+
+// One row per country. The member count is the exact distinct count from the query, not a sum of
+// the areas below it — a member who logged in two cells of one country is one person here.
+function countryRows(report: SharedIncidentReport): ReportRow[] {
+  return report.countries.map((country) => ({
+    label: country.name ?? 'Not matched to a country',
+    detail: `${plural(country.reporters, 'member', 'members')} · ${plural(country.areas, 'area', 'areas')} · ${dayRange(country.firstDay, country.lastDay)}`,
+    value: country.incidents,
   }));
 }
 
@@ -130,6 +146,11 @@ function notes(report: SharedIncidentReport): ReportNote[] {
         'Some named schemes run continuously in the background and can be reported almost any day; others are single operations with a start and an end. A larger count on a continuous one does not make it more serious or more frequent than a smaller count on an operation. Each row below its name says which kind it is.',
     },
     {
+      heading: 'How the country is worked out',
+      body:
+        'The country is not something members are asked. It is worked out from the approximate area already on the incident, against a table of national borders held inside the app — nothing about a member is sent anywhere to produce it. The borders are a coarse edition, and the lookup uses the ~11 km area rather than an exact position, so an area sitting on a border can be attributed to the wrong side of it, and an area the coarse table does not cover is listed as not matched rather than dropped. That precision is enough to tell one town reporting from several countries reporting, which is what this column is for, and not enough for anything finer.',
+    },
+    {
       heading: 'Location coverage',
       body:
         summary.withoutLocation === 0
@@ -159,15 +180,20 @@ export function buildTrendReportView(
       { label: 'Members reporting', value: String(summary.reporters) },
       { label: 'Members who logged more than one', value: String(summary.repeatReporters) },
       { label: 'Days with activity', value: String(dayRows(report).length) },
+      { label: 'Countries', value: String(report.countries.filter((c) => c.name !== null).length) },
       { label: 'Areas (about 11 km each)', value: String(summary.areas) },
       { label: 'Tagged incidents', value: String(summary.taggedIncidents) },
     ],
     days: dayRows(report),
+    // The country rollup is in every copy, including a shared one. A country is not a location —
+    // it is the scale of the thing, and without it the report cannot tell one town reporting from
+    // several continents reporting, which is the first question anyone asks of it.
+    countries: countryRows(report),
     areas: options.includeAreas ? areas : [],
     areasOmittedLine:
       options.includeAreas || summary.areas === 0
         ? null
-        : `${plural(summary.areas, 'area', 'areas')} recorded. Coordinates are left out of this shared copy: at these counts an area plus a date can point at one person.`,
+        : `${plural(summary.areas, 'area', 'areas')} recorded. The exact cell coordinates were left out of this copy; the countries above still show where the activity is.`,
     // The area list is capped in the query. Saying so is the difference between a short list and a
     // short list a reader wrongly believes is everything.
     areasTruncatedLine:
