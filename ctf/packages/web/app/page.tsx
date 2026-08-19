@@ -3,7 +3,7 @@ import { CommunityShell, type ShellVerification } from '../components/community-
 import type { ShellCurrentUser } from '../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
-import { getUnlockAccessTier, isUnlockEarlyCommonsEnabled } from '../lib/unlock/access';
+import { getUnlockAccessTier } from '../lib/unlock/access';
 import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import type { UnlockAccessTier } from '../lib/unlock/types';
 import { getGdpShellStats } from '../lib/gdp/repository';
@@ -43,53 +43,32 @@ function resolveIdentityFields(identity: RequestIdentity | null): {
   return { userId, isAdmin };
 }
 
-// A/B experiment: a not-yet-verified member in the early-Commons treatment bucket lands on the
-// Commons (the Hub) instead of being redirected to the Unlock screen, so they can ask for help —
-// e.g. trouble finding their Quora URL. Only evaluated for users who would otherwise be redirected,
-// and defaults to false (control), so production routing is unchanged until the rollout is enabled.
-async function resolveEarlyCommons(
-  userId: string | null,
-  tier: UnlockAccessTier | null,
-): Promise<boolean> {
-  if (!userId) {
-    return false;
-  }
-  if (tier === 'approved_full' || tier === 'locked_support_only') {
-    return false;
-  }
-  return isUnlockEarlyCommonsEnabled(userId).catch(() => false);
-}
-
-// Unlock is the single source of truth for who reaches the Hub. Everyone else is redirected into
-// the Unlock flow. Admins and approved_full/locked_support_only members reach the Hub; an
-// early-Commons treatment member is also allowed to stay.
+// Unlock is the single source of truth for who reaches the Hub. Everyone else is redirected into the
+// Unlock flow. Admins and approved_full/locked_support_only members reach the Hub — and a member who
+// asked for help, or who has been here on an earlier day, now resolves to locked_support_only in
+// getUnlockAccessTier, so they are covered by the same clause rather than by a branch of their own.
 function shouldRedirectToUnlock(params: {
   userId: string | null;
   isAdmin: boolean;
   tier: UnlockAccessTier | null;
-  earlyCommons: boolean;
 }): boolean {
-  const { userId, isAdmin, tier, earlyCommons } = params;
+  const { userId, isAdmin, tier } = params;
   return (
-    Boolean(userId) &&
-    !isAdmin &&
-    tier !== 'approved_full' &&
-    tier !== 'locked_support_only' &&
-    !earlyCommons
+    Boolean(userId) && !isAdmin && tier !== 'approved_full' && tier !== 'locked_support_only'
   );
 }
 
-// Early-Commons treatment members land on the Commons instead of the Unlock screen, so without a
-// prompt here they have no idea verification is still required. Give them a persistent verify prompt
-// in the shell to submit their Quora URL. Scoped to the treatment bucket only: submitting moves a
-// member to `pending_readonly`, and only a treatment member stays on the Commons afterward (a
-// support-only member would be redirected to /plugin/unlock), so we do not prompt support-only
-// members here and create that trap.
+// A member on the Commons who is not yet fully verified gets a persistent prompt above the chat to
+// submit their Quora URL — without it they see the chat with nothing telling them verification is
+// still required, which is the bug this banner was added for. Shown for every non-approved member
+// here, not a subset: someone who asked for help needs the ask kept in front of them, someone whose
+// submission was rejected needs the chance to correct it, and someone awaiting review gets a calm
+// "under review" note from the banner itself. An approved member sees nothing.
 async function resolveVerification(
-  earlyCommons: boolean,
+  tier: UnlockAccessTier | null,
   userId: string | null,
 ): Promise<ShellVerification | null> {
-  if (!earlyCommons || !userId) {
+  if (!userId || tier === 'approved_full') {
     return null;
   }
   const unlockStatus = await getUnlockStatusForUser(userId).catch(() => null);
@@ -142,13 +121,11 @@ export default async function HomePage() {
   // landing page (handled at the plugin route), not a denial wall. Nothing is hidden here.
   const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
 
-  const earlyCommons = await resolveEarlyCommons(userId, tier);
-
-  if (shouldRedirectToUnlock({ userId, isAdmin, tier, earlyCommons })) {
+  if (shouldRedirectToUnlock({ userId, isAdmin, tier })) {
     redirect('/plugin/unlock');
   }
 
-  const verification = await resolveVerification(earlyCommons, userId);
+  const verification = await resolveVerification(tier, userId);
 
   const isAuthenticated = Boolean(userId);
 

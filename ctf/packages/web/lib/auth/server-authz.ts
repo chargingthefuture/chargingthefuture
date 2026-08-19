@@ -1,6 +1,6 @@
 import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
-import { getUnlockAccessTier, isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
+import { getUnlockAccessTier } from 'lib/unlock/access';
 import { getAccountRestrictionStatus } from './account-restrictions';
 import { recordLoginEvent } from 'lib/engagement/login-activity';
 
@@ -91,19 +91,15 @@ async function resolveUnlockTierDeny(
   if (normalizedRole === 'admin' || minUnlockTier === 'any_authenticated') {
     return null;
   }
+  // A not-yet-verified member who asked for help (or came back a second day) resolves to
+  // `locked_support_only` here rather than to no tier at all, so the Commons admits them through the
+  // ordinary support-only path below — see lib/unlock/help-requests.ts. There is no separate branch
+  // for them: the tier is the whole rule, and approved-only surfaces stay closed either way.
   const tier = await getUnlockAccessTier(userId);
-  let allowed =
+  const allowed =
     minUnlockTier === 'support_only'
       ? tier === 'approved_full' || tier === 'locked_support_only'
       : tier === 'approved_full';
-  // A/B experiment: a not-yet-verified member in the "early Commons access" treatment bucket is
-  // allowed into support-only surfaces (the Commons / Hub general channel) so they can ask for help
-  // before completing verification. Scoped strictly to support_only — full (approved_full) plugin
-  // surfaces are unaffected, and the flag defaults to false (control) so production is unchanged
-  // until the rollout is enabled in Unleash.
-  if (!allowed && minUnlockTier === 'support_only') {
-    allowed = await isUnlockEarlyCommonsEnabled(userId);
-  }
   return allowed ? null : pluginAuthDeny.forbiddenPolicy('unlock_required');
 }
 

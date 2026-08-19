@@ -9,7 +9,6 @@ import { UNLOCK_REWARD_SLA_HOURS } from 'lib/unlock/constants';
 import type {
   SpamQuoraUrlEntry,
   UnlockDashboardSnapshot,
-  UnlockExperimentBucketStat,
   UnlockSignupOverview,
   UnlockSubmission,
 } from 'lib/unlock/types';
@@ -31,7 +30,6 @@ import type { UnlockEditorState, UnlockHistoryState } from './unlock-admin-card'
 import {
   StatBlock,
   UnlockBanners,
-  UnlockExperimentPanel,
   UnlockQueueTabs,
   UnlockRetryRewardsBar,
   UnlockSearchBox,
@@ -50,13 +48,11 @@ const TAB_LABEL: Record<Tab, string> = {
 export function UnlockAdminShell({
   dashboard,
   submissions: initialSubmissions,
-  experimentSplit = [],
   spamDenylist = [],
   signupOverview,
 }: {
   dashboard: UnlockDashboardSnapshot;
   submissions: UnlockSubmission[];
-  experimentSplit?: UnlockExperimentBucketStat[];
   spamDenylist?: SpamQuoraUrlEntry[];
   signupOverview?: UnlockSignupOverview;
 }) {
@@ -178,8 +174,6 @@ export function UnlockAdminShell({
         </div>
 
         {signupOverview ? <UnlockSignupsPanel overview={signupOverview} /> : null}
-
-        <UnlockExperimentPanel experimentSplit={experimentSplit} />
 
         <UnlockRetryRewardsBar reconciling={reconciling} pendingRewardCount={pendingRewardCount} onRetry={() => void retryRewards(ctx)} />
 

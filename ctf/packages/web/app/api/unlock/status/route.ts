@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockUserAccess, resolveUnlockRequestId } from 'lib/unlock/_lib';
 import { getUnlockStatusForUser, insertUnlockAudit } from 'lib/unlock/repository';
-import { isUnlockEarlyCommonsEnabled } from 'lib/unlock/access';
+import { hasUnlockCommonsAccessWithoutSubmission } from 'lib/unlock/help-requests';
 import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
@@ -14,10 +14,13 @@ export async function GET(request: Request) {
 
   try {
     const baseStatus = await getUnlockStatusForUser(gate.auth.userId);
-    // A/B experiment bucket — resolved here (not in the repository) so the UI can offer the Commons
-    // help link to the treatment group. Defaults to false (control) when the rollout is off.
-    const earlyCommonsAccess = await isUnlockEarlyCommonsEnabled(gate.auth.userId);
-    const status = { ...baseStatus, earlyCommonsAccess };
+    // Whether this member may enter the Commons without a submission — they asked for help, or they
+    // have been here on an earlier day. Resolved here rather than in the repository so `accessTier`
+    // keeps meaning strictly "what the submission says". The mobile app gates its Unlock wall on it.
+    const commonsAccess = baseStatus.hasSubmission
+      ? false
+      : await hasUnlockCommonsAccessWithoutSubmission(gate.auth.userId);
+    const status = { ...baseStatus, commonsAccess };
 
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
@@ -29,8 +32,7 @@ export async function GET(request: Request) {
       metadata: {
         accessTier: status.accessTier,
         reviewStatus: status.reviewStatus,
-        // Recorded so the experiment's effect on completion rate can be measured per bucket.
-        experimentBucket: earlyCommonsAccess ? 'early_commons' : 'control',
+        commonsAccess: status.commonsAccess,
       },
     });
 
