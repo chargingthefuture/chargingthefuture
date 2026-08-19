@@ -28,6 +28,7 @@ Provide mandatory context so implementation decisions protect users and prevent 
 - Require keyboard navigability for all core workflows.
 - Require semantic labels and compatibility with screen readers.
 - Preserve accessibility in all responsive breakpoints.
+- Page every list that can grow; never an endless scroll and never a screen that renders its whole collection at once (owner directive, 2026-08-19). Endless scroll traps keyboard and screen-reader users before the footer, gives no sense of position or length, and makes a place in a list impossible to return to. Put the page in the URL so it can be linked and the back button works, say which range of how many is on screen, and clamp an out-of-range page rather than showing nothing.
 - Any public accessibility claim (landing page, marketing, in-app) must be backed by the dated Accessibility Statement (`ctf/docs/developer/ACCESSIBILITY_STATEMENT.md`), which records the target, the last test date, and the known gaps. Until an audit backs it, phrase a claim as an aim ("built to WCAG 2.2 AA"), not a present-tense guarantee.
 
 ## User Safety and Harm Prevention
