@@ -109,6 +109,27 @@ chargingthefuture/          ← repo root
 
 **Do not** create app code outside `ctf/packages/*`. Scripts go in `ctf/scripts/`.
 
+## Unlock Approval Is the Gate (Critical — all agents)
+
+Unlock approval is what grants access to this app. A member who has not been approved can use only
+a short, closed list of surfaces, and **that list is not a pattern to copy**. When you build
+anything new, the answer is `minUnlockTier: 'approved_full'` — the default — essentially every
+time.
+
+The exceptions are of two kinds. **Machinery**: things the gate cannot function without — the
+Unlock flow itself, the account area (anyone must be able to see and delete their own data), bug
+reporting (the member most likely to hit a bug is the one stuck in onboarding), and small feeds a
+gated screen needs to render. **Owner-approved capabilities**: a real feature deliberately opened
+to unapproved members by a dated owner decision — currently the knowledge library contribution
+(2026-07-29), Contributions, and the Quora account deletion survey (2026-08-19).
+
+The complete list is `ctf/config/unlock-tier-exception-allowlist.json`, and CI fails on any call
+site missing from it (`ctf/scripts/check-unlock-tier-exceptions.mjs`, job `unlock-tier-gate`). This
+is enforced rather than described because an agent building a new surface copies whatever nearby
+code does, and a bypass added by copy-and-paste does not look like a decision in review — it looks
+like the house style. **Adding a line to that file is the owner's decision, not a build step. Ask
+first.**
+
 ## Credits Are Not Money (Critical — all agents)
 
 ServiceCredits and every in-app credit are a **non-fiat internal credits unit** — not money, not

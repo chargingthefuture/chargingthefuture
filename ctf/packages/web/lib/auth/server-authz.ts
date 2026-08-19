@@ -19,9 +19,18 @@ export type PluginAuthDecision = AllowDecision | PluginDenyResponse;
 //  - 'approved_full' (default): only fully-approved users (or admins) may enter.
 //  - 'support_only': approved OR support-only users may enter (e.g. the Hub general
 //    channel, which is the support surface for not-yet-verified members).
-//  - 'any_authenticated': any signed-in user may enter regardless of tier (e.g. the
-//    Unlock submission/status routes and the account/profile/deletion routes, so a
-//    gated user can always submit and can always manage or delete their own data).
+//  - 'any_authenticated': any signed-in user may enter regardless of tier — a member who
+//    has NOT been approved in Unlock can use the surface behind it.
+//
+// 'any_authenticated' IS A CLOSED LIST, NOT A STYLE CHOICE. Unlock approval is what grants
+// access to this app; for a new surface the answer is 'approved_full' essentially every
+// time. The existing exceptions are either machinery the gate cannot function without (the
+// Unlock flow itself, the account area, bug reporting, small feeds a gated screen needs) or
+// a capability the owner deliberately opened by a dated decision. Do not add a new one by
+// copying a nearby file: the complete list lives in
+// ctf/config/unlock-tier-exception-allowlist.json, CI fails on any call site missing from
+// it (ctf/scripts/check-unlock-tier-exceptions.mjs), and adding a line is the owner's
+// decision to make rather than a build step. Ask first.
 type MinUnlockTier = 'approved_full' | 'support_only' | 'any_authenticated';
 
 type EvaluatePluginAccessOptions = {

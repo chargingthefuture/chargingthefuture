@@ -1,0 +1,91 @@
+{
+  "_comment": "Every surface allowed to run with minUnlockTier 'any_authenticated' — that is, usable by a signed-in member who has NOT been approved in Unlock. Unlock approval is what grants access to this app; this file is the complete list of exceptions, enforced by ctf/scripts/check-unlock-tier-exceptions.mjs. Adding a line is an owner decision, never a build step: for a new surface the answer is almost always 'approved_full'. 'kind' is machinery (the gate cannot function if this is gated) or feature (a real capability deliberately opened, by a dated owner decision).",
+  "version": 1,
+  "exceptions": [
+    {
+      "file": "ctf/packages/web/app/plugin/unlock/page.tsx",
+      "kind": "machinery",
+      "reason": "The Unlock flow itself. A member with no tier yet has to be able to reach the thing that grants one."
+    },
+    {
+      "file": "ctf/packages/web/app/api/unlock/_lib.ts",
+      "kind": "machinery",
+      "reason": "Unlock submission and status routes — same reason as the page above."
+    },
+    {
+      "file": "ctf/packages/web/app/account/page.tsx",
+      "kind": "machinery",
+      "reason": "Your own account screen. Nobody may be locked out of seeing or deleting their own data by a tier."
+    },
+    {
+      "file": "ctf/packages/web/app/account/blocks/page.tsx",
+      "kind": "machinery",
+      "reason": "Your own block list; same posture as the rest of the account area."
+    },
+    {
+      "file": "ctf/packages/web/app/account/data/page.tsx",
+      "kind": "machinery",
+      "reason": "Your own data export and deletion screen."
+    },
+    {
+      "file": "ctf/packages/web/app/api/account/_lib.ts",
+      "kind": "machinery",
+      "reason": "Account, profile, and deletion routes behind the account area."
+    },
+    {
+      "file": "ctf/packages/web/app/api/account/chyme-profile/route.ts",
+      "kind": "machinery",
+      "reason": "Your own Chyme profile record, reachable from the account area."
+    },
+    {
+      "file": "ctf/packages/web/app/api/account/skills-hunt-profile/route.ts",
+      "kind": "machinery",
+      "reason": "Your own SkillsHunt profile record, reachable from the account area."
+    },
+    {
+      "file": "ctf/packages/web/app/api/bug-reports/_lib.ts",
+      "kind": "machinery",
+      "reason": "Filing a problem report. The member most likely to hit a bug is the one stuck in onboarding, and gating this would silence exactly them."
+    },
+    {
+      "file": "ctf/packages/web/app/api/commons/first-visit-notice/route.ts",
+      "kind": "machinery",
+      "reason": "The one-time notice state for a screen a not-yet-approved member can already see."
+    },
+    {
+      "file": "ctf/packages/web/app/api/currencies/route.ts",
+      "kind": "machinery",
+      "reason": "The currency options feed for a dropdown on a gated screen. Reads a global catalog, not anyone's data."
+    },
+    {
+      "file": "ctf/packages/web/app/knowledge/page.tsx",
+      "kind": "feature",
+      "reason": "Knowledge library contribution (owner decision, 2026-07-29). Contributing is a route INTO verification: judging a contribution means looking at a real person writing real things, which is the same look Unlock asks for."
+    },
+    {
+      "file": "ctf/packages/web/app/api/comic/_lib.ts",
+      "kind": "feature",
+      "reason": "The routes behind the knowledge library contribution above."
+    },
+    {
+      "file": "ctf/packages/web/app/apps/contributions/page.tsx",
+      "kind": "feature",
+      "reason": "Contributions is open to any signed-in member; a fundraiser nobody may reach raises nothing."
+    },
+    {
+      "file": "ctf/packages/web/app/api/contributions/_lib.ts",
+      "kind": "feature",
+      "reason": "The routes behind the Contributions screen above."
+    },
+    {
+      "file": "ctf/packages/web/app/survey/quora-account-deletions/page.tsx",
+      "kind": "feature",
+      "reason": "Quora account deletion survey (owner decision, 2026-08-19). The research is about people outside this app, so approval cannot be the bar; the session exists only to keep bulk junk out, and is never stored."
+    },
+    {
+      "file": "ctf/packages/web/app/api/quora-deletion-survey/_lib.ts",
+      "kind": "feature",
+      "reason": "The submit route behind the survey above."
+    }
+  ]
+}

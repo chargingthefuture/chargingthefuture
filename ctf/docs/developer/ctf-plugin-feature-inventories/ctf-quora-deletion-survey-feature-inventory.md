@@ -143,6 +143,15 @@ same-origin `checkMutationOrigin` check, and a per-IP fixed-window brake of 5 su
 Every field is validated against a fixed option list or a length cap before it reaches the
 database, and unknown values fall back to the safe default rather than being stored.
 
+This is one of the few surfaces an unapproved member may use, and it is an exception rather than a
+precedent. Unlock approval is what grants access to this app; every other feature requires it, and
+a new surface should use the `approved_full` default. The reason this one is different is specific
+and does not generalize: the research is about people outside this app, so approval cannot be the
+bar without sampling only the members already reached. The exception is recorded in
+`ctf/config/unlock-tier-exception-allowlist.json` and enforced by the `unlock-tier-gate` CI job —
+copying this pattern into a new feature fails the build, and adding a line to that file is the
+owner's decision, not a build step.
+
 The session is a spam gate and nothing else (owner decision, 2026-08-19). It is checked at the
 route and then dropped: no user id, and nothing else derived from the account, is written to either
 table. So a member can report accounts they lost without the report ever being attributable to
