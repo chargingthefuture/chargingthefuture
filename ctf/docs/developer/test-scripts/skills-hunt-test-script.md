@@ -715,6 +715,29 @@ Result: web ☐
 
 ---
 
+### SH-A16 — Skill-proposal pipeline: a paused classification API loses no proposals
+
+**Role:** owner / operator · **Surfaces:** operational (scheduled workflow, no UI)
+
+**Precondition:** At least one accepted nomination proposes a free-text skill that is not in the taxonomy (run SH-7, then accept it in SH-A3), and that skill has no `skill-proposal` issue yet.
+
+**Steps:**
+1. With the Anthropic API unavailable (paused for lack of funds, or run `node ctf/scripts/proposeSkillPromotions.mjs` locally with an invalid `ANTHROPIC_API_KEY`), trigger the `Skills Hunt — Propose Skill Promotions` workflow.
+2. Read the run log and the job's result.
+3. Query `skills_hunt_proposed_skill_promotions` for that skill.
+4. Restore a working key with credit and run the workflow again.
+5. Run it a third time with nothing else changed.
+
+**Expected:**
+- Step 2: the run stops at the first candidate instead of trying the rest, prints the API status and the vendor's own message, and the job **fails** — a run that files nothing must never report success.
+- Step 3: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
+- Step 4: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
+- Step 5: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
+
+Result: web ☐
+
+---
+
 ### Account deletion pseudonymizes filed reports
 
 **Expected:** After a member deletes their account, reports they filed about submissions remain as
