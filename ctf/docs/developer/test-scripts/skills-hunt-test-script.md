@@ -730,11 +730,16 @@ Result: web ☐
 6. Run it a third time with nothing else changed.
 
 **Expected:**
-- Step 2: the run stops at the first candidate instead of trying the rest, and the job **fails** — a run that files nothing must never report success. The log names which state it is (`no_credit`, `key_rejected`, `rate_limited`, or `vendor_down`), quotes the vendor's own sentence with the HTTP status, says nothing is broken and no proposal is lost, and says what to do. For an unfunded account that reads as "add funds whenever suits; nothing in this repo needs changing".
+- Step 2: the run stops at the first candidate instead of trying the rest, and the job **fails** — a run that files nothing must never report success. The log names which state it is (`no_credit`, `key_rejected`, `access_denied`, `rate_limited`, `vendor_down`, or `unclassified`), quotes the vendor's own sentence with the HTTP status, says nothing is broken and no proposal is lost, and says what to do. The state is read from the vendor's `error.type`, so a `permission_error` and a `billing_error` — which share HTTP 403 — never get the same label. For an unfunded account that reads as "add funds whenever suits; nothing in this repo needs changing".
 - Step 3: the annotation reads like `Skill proposals paused — the Anthropic account is out of credit (not a code failure).`, and the job summary repeats the state, the vendor sentence, what to do, and "Are the proposals lost? No." The point of this step: a person seeing the red run weeks later can tell it is a funding state, not a defect, without reading the log or the code.
 - Step 4: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
+
+**Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
+- a 403 `permission_error` → `access_denied`, and the text says outright it is NOT a funding problem;
+- a 403 with no readable error type → `unclassified`, "NOT a known funding or throttling state — do not read it as 'the account needs topping up'";
+- a plain 400 `invalid_request_error` (a malformed request, i.e. a real defect) → no state label at all: it fails per-skill, the run ends `every candidate in this run failed`, and nothing claims the account is out of credit.
 
 Result: web ☐
 

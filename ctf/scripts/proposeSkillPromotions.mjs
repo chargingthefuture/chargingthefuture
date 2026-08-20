@@ -36,10 +36,13 @@
 // the first such failure instead of burning the rest of the candidates, and exits
 // non-zero so the workflow run goes red rather than passing quietly with nothing filed.
 // The red run then has to earn itself: it names WHICH state it is (out of credit, key
-// rejected, rate limited, vendor down), says in as many words that nothing is broken and
-// nothing is lost, and says what to do — on the Actions run page, not just in the log.
-// An out-of-credit account and a broken pipeline are the same red X otherwise, and the
-// months an account can sit unpaid are exactly when that difference matters.
+// rejected, permission refused, rate limited, vendor down), says in as many words that
+// nothing is broken and nothing is lost, and says what to do — on the Actions run page,
+// not just in the log. An out-of-credit account and a broken pipeline are the same red X
+// otherwise, and the months an account can sit unpaid are exactly when that difference
+// matters. The naming comes from the vendor's own machine-readable error type, never from
+// reading its prose, and an unrecognized failure is reported as unrecognized rather than
+// guessed at — a wrong "out of credit" label once would make every later one unreliable.
 //
 // Required environment:
 //   DATABASE_URL        Postgres connection string (the app database).
@@ -131,37 +134,102 @@ const API_UNAVAILABLE_REASONS = {
     whatToDo:
       'Add funds to the Anthropic account whenever suits. Nothing in this repo needs changing, and no ' +
       'proposal needs re-entering.',
+    titleSuffix: 'not a code failure',
   },
   key_rejected: {
     summary: 'the Anthropic API rejected the key',
     detail:
-      'The key is expired, revoked, or the account is suspended. This is an account/key state, not a defect ' +
-      'in the pipeline.',
+      'The key is expired, revoked, or otherwise not accepted. This is an account/key state, not a defect in ' +
+      'the pipeline — and it is NOT a funding problem.',
     whatToDo:
       'Check ANTHROPIC_API_KEY in Infisical (production) and the standing of the Anthropic account. No code ' +
       'change is involved.',
+    titleSuffix: 'not a code failure',
+  },
+  access_denied: {
+    summary: 'the Anthropic API refused the key permission for this request',
+    detail:
+      'The key is valid but is not allowed to use what this run asked for (commonly the model). This is NOT a ' +
+      'funding problem and NOT a defect in the pipeline — nothing here is out of credit.',
+    whatToDo:
+      'Check what the key is scoped to in the Anthropic dashboard against the model this script asks for ' +
+      "(see ANTHROPIC_MODEL at the top of the file).",
+    titleSuffix: 'not a code failure',
   },
   rate_limited: {
     summary: 'the Anthropic API rate-limited this run',
-    detail: 'A temporary throttle on their side, not a defect in the pipeline.',
+    detail: 'A temporary throttle on their side. Not a funding problem and not a defect in the pipeline.',
     whatToDo: 'Nothing. The next scheduled run picks the same skills back up.',
+    titleSuffix: 'not a code failure',
   },
   vendor_down: {
     summary: 'the Anthropic API is erroring on their side',
-    detail: 'An outage or server error at the vendor, not a defect in the pipeline.',
+    detail: 'An outage or server error at the vendor. Not a funding problem and not a defect in the pipeline.',
     whatToDo: 'Nothing. The next scheduled run picks the same skills back up.',
+    titleSuffix: 'not a code failure',
+  },
+  // The honest answer when the vendor's own error type is not one this script knows. Guessing here is
+  // what makes a red run untrustworthy: label an unknown failure "out of credit" once and every future
+  // out-of-credit reading has to be double-checked. So this state says plainly that it is NOT a known
+  // funding state and asks for a look.
+  unclassified: {
+    summary: 'the Anthropic API refused in a way this script does not recognize',
+    detail:
+      'This is NOT a known funding or throttling state — do not read it as "the account needs topping up". ' +
+      'It could be a request this script sends wrongly, or a vendor error type added since this was written.',
+    whatToDo:
+      'Read the message above. If it names billing or a credit balance, the account needs funds. Otherwise ' +
+      'treat it as something to investigate in the script.',
+    titleSuffix: 'needs a look',
   },
 };
 
-// Which reason above this answer is, or null when the failure is specific to one skill and
-// the rest of the run should carry on. A paused account with no funds answers 400 with a
-// credit-balance message, which is why that case is matched on the body text.
+// The vendor names the failure in its response envelope: {"type":"error","error":{"type":…,"message":…}}.
+// That type string is the reliable signal, and the only way to tell the two cases that share HTTP 403
+// apart — billing_error (out of funds) from permission_error (key not allowed). Reading the prose
+// instead is how a non-funding failure ends up labeled a funding one.
+const REASON_BY_ERROR_TYPE = {
+  billing_error: 'no_credit',
+  authentication_error: 'key_rejected',
+  permission_error: 'access_denied',
+  rate_limit_error: 'rate_limited',
+  api_error: 'vendor_down',
+  overloaded_error: 'vendor_down',
+};
+
+// Which reason above this answer is, or null when the failure does not obviously hit every
+// candidate and the run should carry on to the next skill.
+//
+// The vendor's own error type decides it whenever the body carries one — never the prose, and never
+// the status alone. Two rules keep a non-funding failure from ever reading as a funding one:
+//   * 403 with no readable type stays `unclassified`, because billing_error and permission_error
+//     share that status and guessing between them is exactly the mislabel worth avoiding.
+//   * a 400 is only `no_credit` if the message actually names the credit balance (the documented
+//     wording for an unfunded account). Every other 400 is a malformed request — a defect — so it is
+//     left to fail per-skill and read as one, not dressed up as an account state.
 function apiUnavailableReason(status, body) {
+  const errorType = vendorErrorTypeFrom(body);
+  if (errorType && REASON_BY_ERROR_TYPE[errorType]) return REASON_BY_ERROR_TYPE[errorType];
+
+  // 402 is not part of the documented set, but Payment Required is unambiguous if a proxy sends it.
   if (status === 402) return 'no_credit';
-  if (status === 400 && /credit balance|billing|quota|insufficient|payment/i.test(body)) return 'no_credit';
-  if (status === 401 || status === 403) return 'key_rejected';
+  if (status === 400) return /credit balance/i.test(body) ? 'no_credit' : null;
+  if (status === 401) return 'key_rejected';
+  if (status === 403) return 'unclassified';
   if (status === 429) return 'rate_limited';
   if (status >= 500) return 'vendor_down';
+  return null;
+}
+
+// The machine-readable failure name from the vendor envelope, or null when the body carries none
+// (a proxy or gateway page). Kept separate from the human message so neither has to guess at the other.
+function vendorErrorTypeFrom(body) {
+  try {
+    const errorType = JSON.parse(body)?.error?.type;
+    return typeof errorType === 'string' && errorType.trim() ? errorType.trim() : null;
+  } catch {
+    // no-trace: a non-JSON body is normal for a proxy or gateway error page; the caller falls back to status.
+  }
   return null;
 }
 
@@ -651,8 +719,8 @@ async function main() {
   // is, says outright that nothing is broken and nothing is lost, and says what to do — so
   // the run can be read at a glance weeks later without anyone debugging a non-defect.
   if (blocked) {
-    const { summary, detail, whatToDo } = API_UNAVAILABLE_REASONS[blocked.reason];
-    const headline = `Skill proposals paused — ${summary} (not a code failure).`;
+    const { summary, detail, whatToDo, titleSuffix } = API_UNAVAILABLE_REASONS[blocked.reason];
+    const headline = `Skill proposals paused — ${summary} (${titleSuffix}).`;
     console.error(
       [
         `proposeSkillPromotions: STOPPED — ${summary}.`,
