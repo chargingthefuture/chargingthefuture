@@ -6,6 +6,44 @@ This guide explains what each part of the app does and how to use it, in plain w
 The app is made of small apps, each doing one job. Open any of them from the main menu.
 Below, each app has a short summary, a few notes on what a member can do, and simple steps where they help.
 
+## Commons
+
+_Last updated: 2026-08-18_
+
+Commons is the home page: one shared channel to read and post in, and the list of every app.
+
+Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with her name, answers from the assistant, and posts from other members.
+
+You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant.
+
+The other half is a grid of every app, with a search box and a choice of order — most recent, alphabetical, or most used. You do not need an account to read: a visitor sees the posts and the live community figures at the top of the page. Signing in, which is free, is what lets you post and reach the rest of the apps.
+
+**How to use it**
+
+1. Open the app. You land on Commons with the chat showing.
+2. Read the channel. Official notes carry a shield badge and Farah's name; every other post shows the member who wrote it.
+3. Type in the box at the bottom to post. Use Reply on a message to quote it, or the small add-reaction control under a post to react.
+4. Tap the grid button in the top bar for All Apps, then search the grid or change its order to find the one you want.
+
+## Unlock
+
+_Last updated: 2026-08-19_
+
+Unlock is how a new account gets approved: you send the web address of your Quora profile, and a person reads it.
+
+Almost everything in the app waits on this one step. You paste the web address of your own Quora profile and send it. The screen shows what that address should look like, why it is asked for, and where your submission has got to. Sending a new one replaces the one before it.
+
+While you wait you can look but not take part. If nothing has been sent for a while, access narrows to support only. Once you are approved everything opens, and a one-time thank-you of 100 ServiceCredits is sent to you.
+
+If you cannot find the address of your own profile, the screen carries a note telling you what to do: go to skillseconomy.quora.com, comment on any post asking for help, and Farah will reply with your profile address. The same note sits beside the re-send box if a submission was turned down, so you are never left without a next step.
+
+**How to use it**
+
+1. Open the app on a new account. The Unlock screen asks for the web address of your Quora profile.
+2. Paste that address and send it. The screen changes to say it is under review.
+3. If you cannot find the address, use the note on the same screen: comment on any post at skillseconomy.quora.com asking for help, and you will be sent your profile address.
+4. Wait for the decision. If your submission is turned down, you can send another address from the same screen.
+
 ## Directory
 
 _Last updated: 2026-07-31_
@@ -59,6 +97,25 @@ You can send ServiceCredits as a tip to another member in the room right now usi
 2. Press the join button to connect to the live audio. You'll start muted. You can mute and unmute yourself anytime.
 3. Type a message in the chat and send it. It will show up in the list right away and stay there when you come back.
 4. If you're not signed in, you can listen to the room but won't be able to speak or chat.
+
+## Mutual Time
+
+_Last updated: 2026-08-13_
+
+Mutual Time finds an hour a group can meet, from one link everyone opens — no calendar is collected from anyone.
+
+You reach Mutual Time from a link that is shared with you, on Quora or Signal or anywhere else. There is no tile for it in your app list. Open the link and you see the event, and a line saying where the meeting will happen — for example 'We'll meet in Chyme' — with a button straight to it. That line is there from the moment you open the link, not only after a time is picked.
+
+While voting is open you pick up to three one-hour windows you are free. The times are shown in your own timezone, which is worked out for you and can be changed if you are traveling or on a VPN. Days come as chips, and each day's hours are grouped into morning, afternoon, and evening. You can change or clear your picks as often as you like while voting is open. The days on offer are always the next seven from the moment you open the link, so an event that has been open a while still shows days ahead of you. If a time you picked earlier has since gone by, the form says so and asks you to pick again rather than dropping your vote quietly.
+
+Anyone can open the link, whether or not they are signed in or approved. A visitor sees the event, the times on offer grayed out so they can see what would be on the table, and a note that they are welcome to come and listen in at whatever time is chosen. Signing in is only needed to have a say in the time. Once voting closes, the same link shows the winning hour in your own timezone and how many members can make it. Every version of the page has a copy-link button, so you can pass it on.
+
+**How to use it**
+
+1. Open the link someone shared with you. You do not need to find Mutual Time in your app list — the link is the way in.
+2. Sign in if you want a say in the time. Without signing in you can still read the event and come along to whatever hour is chosen.
+3. Pick up to three one-hour windows you are free, choosing from the day chips and the morning, afternoon, and evening groups. Check the timezone shown is yours, and change it if it is not. Save.
+4. Open the same link after voting closes to see the chosen hour, how many members can make it, and the button through to where the meeting happens.
 
 ## SocketRelay
 
@@ -374,5 +431,23 @@ The GDP dashboard loads when you sign in and visit the app. It displays data abo
 1. Sign in to your account.
 2. Go to the GDP dashboard. The page loads without errors.
 3. View the community metrics displayed on the dashboard.
+
+## Reporting a problem
+
+_Last updated: 2026-08-18_
+
+Reporting a problem sends a note about anything that went wrong, from wherever you are in the app.
+
+The control sits behind the Help '?' in the top bar: 'Report a problem'. It opens a small form on top of whatever you were doing, so you do not lose your place. There is no tile for it in the app list and no separate page to find.
+
+The form asks two things: what went wrong, which you have to fill in, and what you were trying to do, which is optional. Nothing technical is ever asked of you — the page you were on and the app you were in are attached for you. Send it and you get a short, plain confirmation.
+
+Your report is stored privately the moment you send it. What you wrote is not posted anywhere public, and a report holding an email address, a phone number, or strong language waits for a person to read it before it goes any further. Anyone signed in can report a problem, including a member still waiting on approval — the person most likely to hit a problem is the one stuck at the start.
+
+**How to use it**
+
+1. Tap the Help '?' control in the top bar, then 'Report a problem'.
+2. Write one line about what went wrong. Add what you were trying to do if it helps.
+3. Send it. You get a short confirmation, and the report is stored privately straight away.
 
 The code is open source at https://github.com/chargingthefuture/chargingthefuture.
