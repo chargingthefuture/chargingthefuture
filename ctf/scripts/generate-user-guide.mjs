@@ -57,6 +57,16 @@ const ORDER = [
   // members still need it explained (owner decision, 2026-08-18) — it leads the reading order as
   // the surface everyone lands on first.
   ['commons', 'Commons'],
+  [
+    'unlock',
+    'Unlock',
+    {
+      // Unlock's "Core smoke" is the admin review queue; the member half is the walkthrough below it.
+      smokeHeading: /Member walkthrough/i,
+      focus:
+        'This section is ONLY about what a member does to get approved: sending their Quora profile link, what they can reach while they wait, and where to get help finding that link. The review queue and every approve/reject/spam decision is the owner\'s side; write nothing about it.',
+    },
+  ],
   ['directory', 'Directory'],
   ['foundation', 'Foundation'],
   ['chyme', 'Chyme'],
@@ -99,6 +109,14 @@ const ORDER = [
   ['click-log', 'ClickLog'],
   ['recurring-activity', 'Recurring Activity'],
   ['gdp', 'GDP'],
+  [
+    'bug-reporting',
+    'Reporting a problem',
+    {
+      focus:
+        'This section is ONLY about a member reporting a problem: where the control is, what the form asks, and what happens to the report afterwards. The triage queue and everything downstream of it is the owner\'s side; write nothing about it.',
+    },
+  ],
 ];
 
 // Trust and Knowledge Library were both missing from the guide for months because ORDER is a
@@ -331,7 +349,7 @@ for (const [slug, title, sources] of ORDER) {
   // falls back to the other two blocks. Capped because these sections carry developer planning notes
   // the model does not need — only the longest (PeerProgramming) is near the cap today — and the cap
   // lands on a paragraph break so the block never ends mid-sentence and reads as a truncated claim.
-  const whatItIs = capAtParagraph(extractSection(inv, /Intent (and|&) Outcome/i), 2500);
+  const whatItIs = capAtParagraph(extractSection(inv, /Intent( (and|&) Outcome)?/i), 2500);
   const features = extractSection(inv, /User Features/i);
   const coreSmoke = extractSection(ts, sources?.smokeHeading ?? /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);

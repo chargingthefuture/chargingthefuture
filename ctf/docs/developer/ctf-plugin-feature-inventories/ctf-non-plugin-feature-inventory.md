@@ -300,6 +300,23 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-20: **Commons, Unlock, Mutual Time, and Reporting a problem added to the user guide (owner
+  request); Weekly Performance stays out.** Four surfaces every member passes through had no section.
+  Commons was already in the reading order (added 2026-08-18) but the guide had not been regenerated
+  since, so no section existed for it. Unlock and Bug Reporting are `isVisible: false` — no launcher
+  tile — yet a member meets both: Unlock is the gate every account starts behind, and the Help control
+  is how anyone reports a problem. Mutual Time reaches members through a shared event link rather than
+  a tile. None of the three had been in the reading order at all. Weekly Performance stays out: its own
+  inventory says "Weekly Performance is admin-only; there is no general user-facing dashboard", so a
+  member-guide section would describe a screen no member can open (owner confirmed, 2026-08-20). The
+  missing-section notice deliberately stays scoped to launcher tiles rather than being widened to
+  cover hidden-but-member-facing plugins — widening it would report every operator surface as a gap.
+  Unlock's reading-order entry points at its test script's "Member walkthrough" instead of "Core
+  smoke", which is the admin review queue. The framing-block lookup now also matches an inventory
+  whose heading is plainly "Intent" (four of them, Bug Reporting among them) rather than "Intent and
+  Outcome". The new sections were written by hand for the same no-credits reason as the earlier ones,
+  dated to their source docs' last commit so the next scheduled run keeps them. Content and generator
+  only; no schema, route, or contract change.
 - 2026-08-20: **Mutual Time added to the user guide; the new missing-section notice was over-reporting
   (owner request).** The notice added earlier the same day counted a plugin as a gap on `isVisible`
   alone, and named Weekly Performance and Mutual Time. Both are in `ADMIN_ONLY_PLUGIN_SLUGS`, so
