@@ -300,6 +300,25 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-20: **Trust and Knowledge Library now have user-guide sections, and the generator can see
+  when a plugin is missing one (owner report).** Both are member-facing plugins in the launcher, and
+  neither appeared on `/guide`. The reading order in `ctf/scripts/generate-user-guide.mjs` is a
+  hand-kept list and nothing ever compared it to the plugins members can actually open, so an
+  omission stayed invisible. Trust was simply absent from that list. Knowledge Library was absent for
+  a second reason: it is its own registry entry (`knowledge`, the `/knowledge` page) but its
+  documentation lives inside the AI assistant's (`comic`) inventory and test script, so the
+  generator's `ctf-<slug>-feature-inventory.md` / `<slug>-test-script.md` lookup found nothing for it.
+  A reading-order entry can now name its source files, the test-script heading that holds the member
+  walkthrough (the assistant's script has no "Core smoke" heading), and a one-line scope note telling
+  the model which part of a shared document the section covers — without that note the assistant's own
+  features would have been written up as Knowledge Library. Every run now also prints any launcher
+  plugin with no guide section; today that is Weekly Performance and Mutual Time, left for the owner
+  to decide on. The two new sections were written by hand rather than generated, because there were no
+  API credits to run the workflow; their `updated` dates are the last-commit dates of their source
+  docs, so the next scheduled run keeps them instead of paying to regenerate. `docs/USER_GUIDE.md` was
+  rebuilt from `guide-content.json` in the same pass, which also picked up the ClickLog section that
+  had been corrected in the JSON on 2026-08-18 without the markdown copy being rebuilt. Content and
+  generator only; no schema, route, or contract change.
 - 2026-08-19: **Deleting your account now removes your sign-in, not just your data (owner report).**
   `DELETE /api/account/full-account` deleted every plugin's rows and queued the ServiceCredits reclaim
   but left the member's auth-provider identity in place, so someone who asked to be forgotten was still
