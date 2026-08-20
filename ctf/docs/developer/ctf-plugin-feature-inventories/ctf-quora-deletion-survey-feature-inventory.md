@@ -37,6 +37,21 @@ this inventory.
 
 ## User Features
 
+Members reach the form from two places inside the app (owner report, 2026-08-19 — until then the
+only link anywhere in the product was the admin screen's "Member view" button, so no member could
+find it):
+
+- The Unlock verification screens, beside the existing "can't find your Quora profile URL?" help.
+  That is where an unapproved member is held, and the survey is one of only three things they may
+  do before approval — so without a link there, the exception carved out for them was unreachable
+  by them. It also fits: the person who cannot produce a profile URL is usually the person whose
+  accounts were taken.
+- The Directory profile edit screen, under the member's own Quora URL field, whose help text
+  already covers an account that changed. A removal is the harder version of that case.
+
+Both render the one shared `SurveyInviteNote` (`components/shared/survey-invite-note.tsx`) so the
+wording cannot drift, and both are invitations — nothing in either flow depends on answering.
+
 Anyone can open `/survey/quora-account-deletions` and read the whole explanation — what the survey
 is for, what happens to answers, and what the results can and cannot show. A signed-out visitor
 sees that plus a sign-in link, and no questions. Any signed-in member, verified or not, can:
@@ -359,6 +374,10 @@ this is not a plugin. The steps that matter:
   to the public form. The signed-out landing keeps no header on purpose — there is no session
   behind it and nothing in-app to go back to — so the page title is now conditional and shows only
   there.
+- 2026-08-19: Added the two member-facing links to the form (Unlock screens, Directory profile
+  edit) through one shared note component. Before this the form had no in-app entry point at all —
+  the only link was the admin surface's "Member view" button, so the members most likely to have
+  something to report, the unapproved ones held in the Unlock flow, could not reach it.
 - 2026-08-19: The subject list moved to `lib/shared/quora-research-subjects.ts`, shared with the
   live census, which merged first. The two carried identical copies while this branch was open,
   and copies drift apart without anything failing to warn anyone.

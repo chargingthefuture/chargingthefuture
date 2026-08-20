@@ -7,6 +7,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { STATUS_CONFIG, getUnlockTokens, type DisplayStatus } from "./unlock-shared";
 import { UnlockStatusCard } from "./unlock-status-card";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
+import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 
 export function UnlockStatusView({
   status,
@@ -45,6 +46,9 @@ export function UnlockStatusView({
             still sees it: they gave a URL and are waiting, and until this they had no way to ask
             anything while they waited. */}
         <UnlockQuoraHelp alreadyVerified={status === "approved"} />
+        {/* Shown whatever the verification status is: having accounts taken is independent of
+            being approved, and an approved member is just as likely to have lost some. */}
+        <SurveyInviteNote accent={t.ACCENT} muted={t.MUTED} title={t.TITLE} />
       </div>
     </>
   );
