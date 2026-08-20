@@ -366,6 +366,11 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: Added `ctf/docs/QUORA_RESEARCH_BLOG_AGENT_BRIEF.md`, the brief fed to the agent that
+  writes the blog: what both datasets record, the public survey link, and the rules for what may be
+  published (consent per handle and per quote, counts never shares, self-report stated, removal
+  rates readable only from a run whose list predates the removals, and no tone claim from the
+  census). This file and that brief must move together.
 - 2026-08-19: Added the shared screen header (`MobileScreenHeader`) to the admin surface and to
   the signed-in public form, both of which shipped without one — no back control and no
   report-bug / settings / account cluster, which strands anyone reaching them on a phone. The form

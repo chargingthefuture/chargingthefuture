@@ -279,6 +279,10 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-08-19: Added `ctf/docs/QUORA_RESEARCH_BLOG_AGENT_BRIEF.md`, the brief fed to the blog-writing
+  agent. The two limits it must carry from here: a removal rate is readable only from a run whose
+  frame is a list assembled before the removals, and the census cannot speak to tone since those
+  stance values were removed. Keep the brief and this inventory in step.
 - 2026-08-19: Added the shared screen header (`MobileScreenHeader`) to the admin surface, which
   shipped without one. It had no back control and no report-bug / settings / account cluster, so an
   admin reaching it on a phone — where the installed app has no browser back button — was stranded
