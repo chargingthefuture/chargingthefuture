@@ -12,6 +12,13 @@ name: Github Workflows — Health Check
 # blocked-by-an-outside-state, and this check believes it: those runs are listed separately as
 # "paused, not broken" and never open or hold open the issue.
 #
+# The issue also carries each failure's actual error output, pulled from the failing job's log. The
+# workflows here do say why they fail — scripts print a reason before exiting, shell steps echo one —
+# but none of that reached this issue, so triaging any entry meant opening its log first. With the
+# reason in the issue, an agent session can tell at a glance whether an entry is worth working or
+# dismissing. Log text is masked by Actions for registered secrets and scrubbed again here before it
+# goes into a public issue.
+#
 # How a workflow declares it: print a GitHub Actions error annotation whose text contains
 # `CTF_RUN_BLOCKED_EXTERNAL:<reason>` — e.g.
 #   console.log(`::error title=...::... [CTF_RUN_BLOCKED_EXTERNAL:no_credit]`)
@@ -91,6 +98,91 @@ jobs:
               return null;
             }
 
+            // Per-failure log excerpt budget. The issue body is capped by GitHub, and a long excerpt
+            // buries the next entry — a couple of dozen lines is enough to tell "work it" from "dismiss it".
+            const EXCERPT_MAX_LINES = 24;
+            const EXCERPT_MAX_CHARS = 1600;
+            const CONTEXT_BEFORE = 20;
+            const CONTEXT_AFTER = 6;
+            const TOTAL_EXCERPT_BUDGET = 30000;
+
+            // Defense in depth before log text goes into a public issue. Actions already masks every
+            // registered secret as ***, so this is the second line, not the first: it catches shapes that
+            // were never registered as secrets (a URL with credentials, a bearer token echoed by a tool).
+            function scrub(line) {
+              return line
+                .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s:@/]+:[^\s@/]+@/gi, '$1***:***@')
+                .replace(/\b(bearer|token|api[_-]?key|secret|password)(["']?\s*[:=]\s*["']?)[^\s"',;]+/gi, '$1$2***')
+                .replace(/\b[A-Za-z0-9_-]{40,}\b/g, '***');
+            }
+
+            // The part of a failing job's log worth reading. Anchors on the first ##[error] line that
+            // says something — "Process completed with exit code 1" is the runner's boilerplate, not a
+            // reason — and keeps the lines around it, which is where a script prints why it gave up.
+            function errorExcerptFrom(logText) {
+              const lines = logText
+                .split(/\r?\n/)
+                .map((l) => l.replace(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\s?/, ''))
+                .map((l) => l.replace(/\u001b\[[0-9;]*m/g, ''));
+
+              const isBoilerplate = (l) =>
+                /^##\[error\](Process completed with exit code|The operation was canceled|The process .* failed with exit code)/.test(l);
+              const errorLines = [];
+              lines.forEach((l, i) => {
+                if (l.startsWith('##[error]')) errorLines.push(i);
+              });
+              const meaningful = errorLines.filter((i) => !isBoilerplate(lines[i]));
+              const anchor = meaningful.length
+                ? meaningful[0]
+                : errorLines.length
+                  ? errorLines[errorLines.length - 1]
+                  : lines.length - 1;
+
+              const raw = lines.slice(
+                Math.max(0, anchor - CONTEXT_BEFORE),
+                Math.min(lines.length, anchor + CONTEXT_AFTER + 1),
+              );
+              // Everything from "Post job cleanup" on is the runner tearing the job down — never a reason.
+              const cleanupAt = raw.findIndex((l) => /^Post job cleanup/.test(l.trim()));
+              const window = (cleanupAt === -1 ? raw : raw.slice(0, cleanupAt))
+                .filter((l) => l.trim() && !/^##\[(group|endgroup|debug|command)\]/.test(l))
+                .map((l) => scrub(l.replace(/^##\[error\]/, 'ERROR: ')))
+                .map((l) => (l.length > 220 ? l.slice(0, 220) + ' …' : l));
+
+              const kept = window.slice(-EXCERPT_MAX_LINES);
+              const text = kept.join('\n');
+              return text.length > EXCERPT_MAX_CHARS ? text.slice(-EXCERPT_MAX_CHARS) : text;
+            }
+
+            // Which job and step failed, plus the readable part of that job's log. Best effort — a
+            // failure to read it never hides the entry, it just leaves the excerpt out.
+            async function failureDetailFor(runId) {
+              try {
+                const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                  owner, repo, run_id: runId, per_page: 100,
+                });
+                const job = jobs.find((j) => j.conclusion === 'failure');
+                if (!job) return null;
+                const step = (job.steps || []).find((st) => st.conclusion === 'failure');
+                let excerpt = '';
+                try {
+                  const log = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                    owner, repo, job_id: job.id,
+                  });
+                  const text =
+                    typeof log.data === 'string' ? log.data : Buffer.from(log.data).toString('utf8');
+                  excerpt = errorExcerptFrom(text);
+                } catch (e) {
+                  // Logs expire, and a very large log can time out. The entry still lists without one.
+                  core.warning('Could not read the log for job ' + job.id + ': ' + e.message);
+                }
+                return { job: job.name, step: step ? step.name : null, excerpt };
+              } catch (e) {
+                core.warning('Could not read jobs for run ' + runId + ': ' + e.message);
+                return null;
+              }
+            }
+
             const failing = [];
             const blocked = [];
             for (const wf of workflows) {
@@ -122,6 +214,8 @@ jobs:
                 if (reason) {
                   blocked.push({ ...entry, reason });
                 } else {
+                  // Only for real failures — a paused run's reason is already the whole story.
+                  entry.detail = latest.conclusion === 'failure' ? await failureDetailFor(latest.id) : null;
                   failing.push(entry);
                 }
               }
@@ -171,12 +265,40 @@ jobs:
             }
 
             failing.sort((a, b) => a.name.localeCompare(b.name));
-            const lines = failing.map(
-              (f) => '- **' + f.name + '** — last run ' + f.conclusion + ' ([logs](' + f.url + ')), ' + f.when,
-            );
+            let excerptBudget = TOTAL_EXCERPT_BUDGET;
+            const lines = failing.map((f) => {
+              const head =
+                '- **' + f.name + '** — last run ' + f.conclusion + ' ([logs](' + f.url + ')), ' + f.when;
+              const where = f.detail
+                ? [f.detail.job && 'job `' + f.detail.job + '`', f.detail.step && 'step `' + f.detail.step + '`']
+                    .filter(Boolean)
+                    .join(', ')
+                : '';
+              const parts = [head];
+              if (where) parts.push('  - Failed in ' + where + '.');
+              const excerpt = f.detail && f.detail.excerpt;
+              if (excerpt && excerpt.length <= excerptBudget) {
+                excerptBudget -= excerpt.length;
+                parts.push(
+                  '',
+                  '  <details><summary>What it said</summary>',
+                  '',
+                  '  ```text',
+                  ...excerpt.split('\n').map((l) => '  ' + l),
+                  '  ```',
+                  '',
+                  '  </details>',
+                );
+              } else if (excerpt) {
+                parts.push('  - (Error output omitted — this issue is already at its size limit. Open the logs.)');
+              }
+              return parts.join('\n');
+            });
             const body = [
               marker,
               'These workflows\' most recent run on `' + branch + '` did not pass. Updated automatically by the health check that runs every 8 hours (' + new Date().toISOString() + ').',
+              '',
+              'Each entry carries the error its run actually printed, so you can tell whether it is worth working without opening the logs first. The text is an excerpt around the failure, with secrets masked.',
               '',
               ...lines,
               '',

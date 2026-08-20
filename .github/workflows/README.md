@@ -10,6 +10,25 @@ remove, or rename a workflow, update this table in the same change.
 workflows together in the Actions tab. Full rule:
 [`119-github-actions-ci-rules.mdc`](../instructions/119-github-actions-ci-rules.mdc).
 
+## The triage issue carries each failure's actual error
+
+`workflow-health-check.yml` collects failing workflows into one triage issue. Each entry names the job
+and step that failed and includes an excerpt of what that run actually printed, in a collapsed
+"What it said" block — so an agent session picking the issue up can tell whether an entry is worth
+working or dismissing without opening the logs first.
+
+The excerpt is pulled from the failing job's log and anchored on the first `##[error]` line that says
+something (`Process completed with exit code 1` is the runner's boilerplate, not a reason), keeping the
+lines around it — which is where a script prints why it gave up. Post-job cleanup output is dropped,
+lines and totals are capped so one noisy failure cannot bury the rest, and the text is scrubbed for
+credential shapes before it goes into what is a public issue. If a log cannot be read (they expire) the
+entry still lists, just without the excerpt.
+
+**What this asks of a workflow: print the reason before you exit.** A script should say which step
+failed and why (rule 137 covers this and CI enforces it for app code); a shell step should `echo` a
+reason before `exit 1`. A failure whose log says only "exit code 1" produces an entry nobody can
+triage without opening it, which is the situation this replaced.
+
 ## When a red run is not a defect: `CTF_RUN_BLOCKED_EXTERNAL`
 
 Some workflows call a paid API. This project funds its APIs some months and not others, so those
@@ -118,4 +137,4 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `unlock-reward-reconciliation.yml` | Unlock — Reward Reconciliation | Hourly at :17; manual | Self-heals missed Unlock approval rewards by minting any pending ServiceCredits rewards (safe to repeat). |
 | `update-neon-db.yml` | Neon — Update DB (Migrations + schema.sql) | Push to `main` touching schema/migrations; manual | Applies pre-schema migrations, the canonical `schema.sql`, then post-schema migrations to the Neon database in order (all safe to repeat). |
 | `weekly-performance-goal-snapshot.yml` | Weekly Performance — Goal Snapshot Capture | Daily 05:35 UTC; manual | Records the Weekly Performance goal readings into `weekly_performance_goal_snapshots` via the app's internal capture route; the last capture of the week wins. |
-| `workflow-health-check.yml` | Github Workflows — Health Check | Every 8 hours; manual | Checks each active workflow's most recent run on `main`, collects failures into one always-current triage issue, and closes it when everything is green. A run that marks itself blocked by an outside state (`CTF_RUN_BLOCKED_EXTERNAL`, see above) is listed as paused rather than failing, and never opens or holds open the issue. |
+| `workflow-health-check.yml` | Github Workflows — Health Check | Every 8 hours; manual | Checks each active workflow's most recent run on `main`, collects failures into one always-current triage issue, and closes it when everything is green. Each entry names the failing job and step and quotes what the run printed, so it can be triaged without opening the logs. A run that marks itself blocked by an outside state (`CTF_RUN_BLOCKED_EXTERNAL`, see above) is listed as paused rather than failing, and never opens or holds open the issue. |
