@@ -33,6 +33,14 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
       'No. Picking a few posts is the recommended way and needs nothing from Quora — you open each post, copy the link, and paste the text. The export is for the rarer case where nearly everything you have written publicly belongs here.',
   },
   {
+    // The owner checked Quora on 2026-08-20: there is no such screen, and this page told members to
+    // look for one until then. Answering it head-on stops the next person hunting for a button that
+    // was never there.
+    question: 'Where is the download button in Quora’s settings?',
+    answer:
+      'There is not one. The archive is asked for by hand — by email, or through Quora’s contact form — and it is emailed back to you. If you are looking through Quora’s settings for an export screen, stop looking; use the two ways above.',
+  },
+  {
     question: 'How long does it take to arrive?',
     answer:
       'Quora says the archive usually reaches you within 72 hours of their team confirming they got the request. It comes to the email address on your Quora account.',
