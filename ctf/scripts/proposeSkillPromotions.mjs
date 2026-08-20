@@ -14,18 +14,28 @@
 // What it does, in order:
 //   1. Find distinct normalized (trim+lowercase) proposed-skill labels from accepted
 //      SkillsHunt submissions AND pending Directory "skill not listed" entries that are
-//      NOT already in the taxonomy (name or alias) and NOT already tracked in
-//      skills_hunt_proposed_skill_promotions. One row per distinct skill (the earliest
+//      NOT already in the taxonomy (name or alias) and do NOT already have a filed issue
+//      in skills_hunt_proposed_skill_promotions. One row per distinct skill (the earliest
 //      source wins as the representative). Cap at PROPOSAL_LIMIT.
 //   2. Load the allowed sectors and allowed occupations (job titles with their sector)
 //      from the taxonomy — the model must choose from these.
 //   3. For each candidate, ask the Anthropic API to classify it into one allowed
 //      sector + one allowed occupation. Validate the answer is in the lists; if not,
 //      mark it "needs manual mapping" (never invent values).
-//   4. Insert the tracking row with ON CONFLICT (normalized_skill) DO NOTHING. Only if
-//      the insert won (a row was returned) do we create the GitHub issue, then update
+//   4. Claim the tracking row before filing: insert it, or re-claim an existing row that
+//      never got an issue filed and whose claim is older than CLAIM_LEASE_MINUTES. Only
+//      if the claim won (a row was returned) do we create the GitHub issue, then update
 //      the row with the issue number/url and the suggestion. This makes reruns and
-//      overlapping schedules safe — one issue per distinct skill, ever.
+//      overlapping schedules safe — one issue per distinct skill, ever — while making
+//      sure a skill whose earlier attempt died mid-way is tried again rather than being
+//      skipped for good.
+//
+// WHEN THE ANTHROPIC API IS UNAVAILABLE (no credit, no key, rate limited, vendor down):
+// nothing is lost. The failing skill keeps no issue and its claimed row is released, so
+// the next scheduled run picks it up again from the same submissions. The run stops at
+// the first such failure instead of burning the rest of the candidates, and exits
+// non-zero so the workflow run goes red and says why, rather than passing quietly with
+// nothing filed.
 //
 // Required environment:
 //   DATABASE_URL        Postgres connection string (the app database).
@@ -40,6 +50,10 @@
 import pg from 'pg';
 
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+// How long a claimed-but-unfiled tracking row is left alone before another run may
+// re-claim it. Long enough that two overlapping runs never both file for the same skill,
+// short enough that a row left behind by a failed run is retried on the next schedule.
+const CLAIM_LEASE_MINUTES = 30;
 const LABEL = 'skill-proposal';
 const DEFAULT_LIMIT = 10;
 
@@ -70,6 +84,17 @@ function ghHeaders() {
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'ctf-propose-skill-promotions',
   };
+}
+
+// True when the API answer means the API is unavailable for EVERY candidate, not just this
+// one: no key or no credit (401/402/403), rate limited (429), or the vendor is down (5xx).
+// A paused account with no funds answers 400 with a credit-balance message, so that counts
+// too. There is no point trying the remaining candidates in the same run.
+function isApiUnavailable(status, body) {
+  if (status === 401 || status === 402 || status === 403 || status === 429 || status >= 500) {
+    return true;
+  }
+  return status === 400 && /credit balance|billing|quota|insufficient/i.test(body);
 }
 
 // Models sometimes wrap JSON in markdown code fences despite instructions not to.
@@ -148,7 +173,10 @@ async function classifySkill(skillLabel, sectorNames, occupations) {
   if (!response.ok) {
     // Do not surface the key; just the status and a short body for debugging.
     const body = await response.text();
-    throw new Error(`Anthropic API error (HTTP ${response.status}): ${body.slice(0, 300)}`);
+    const error = new Error(`Anthropic API error (HTTP ${response.status}): ${body.slice(0, 300)}`);
+    // Tells the caller this failure will hit every candidate, so stop the run here.
+    error.apiUnavailable = isApiUnavailable(response.status, body);
+    throw error;
   }
 
   const result = await response.json();
@@ -287,12 +315,18 @@ async function main() {
   let proposed = 0;
   let skippedExisting = 0;
   let failed = 0;
+  // Set when the API answered in a way that will hit every candidate, so the run stops
+  // and reports instead of retrying the same outage nine more times.
+  let blockedReason = null;
 
   try {
     // 1. Candidate distinct normalized skills from BOTH sources (accepted SkillsHunt
     //    nominations + pending Directory "skill not listed" entries), excluding any that
-    //    already exist in the taxonomy (by name or alias) or are already tracked. Keep one
-    //    representative label per normalized skill (earliest wins), with its source.
+    //    already exist in the taxonomy (by name or alias) or already have an issue filed.
+    //    A tracking row with no issue number is NOT excluded: it is a claim from an
+    //    earlier run that never finished, so the skill stays a candidate and the claim
+    //    step below decides whether this run may take it. Keep one representative label
+    //    per normalized skill (earliest wins), with its source.
     const candidatesResult = await client.query(
       `WITH proposed AS (
          -- SkillsHunt: free-text skills on accepted nominations.
@@ -343,6 +377,7 @@ async function main() {
          AND r.normalized_skill NOT IN (SELECT normalized_skill FROM taxonomy_names)
          AND r.normalized_skill NOT IN (
            SELECT normalized_skill FROM skills_hunt_proposed_skill_promotions
+           WHERE issue_number IS NOT NULL
          )
        ORDER BY r.skill_label ASC
        LIMIT $1`,
@@ -382,18 +417,36 @@ async function main() {
     for (const candidate of candidates) {
       // Set once we own the dedupe row; cleared once the issue is fully recorded. If the
       // classify/issue steps throw in between, the catch deletes this row so the skill is
-      // retried on the next run instead of being permanently skipped by the unique index.
+      // retried on the next run. The claim lease below is the backstop for when even that
+      // delete cannot run (the database went away), so a skill is never dropped for good.
       let rollbackRowId = null;
       try {
-        // 4a. Win the dedupe race FIRST. If another run already inserted this skill,
-        //     this returns no row and we skip — no duplicate issue is ever filed.
+        // 4a. Win the dedupe race FIRST. A skill nobody has claimed inserts. A row an
+        //     earlier run claimed but never filed an issue for is re-claimed once its
+        //     lease has expired. A row that already carries an issue number, or that
+        //     another run claimed moments ago, returns nothing and is skipped — so no
+        //     duplicate issue is ever filed.
         const insertResult = await client.query(
           `INSERT INTO skills_hunt_proposed_skill_promotions
              (normalized_skill, skill_label, source_submission_id, source, status)
            VALUES ($1, $2, $3, $4, 'proposed')
-           ON CONFLICT (normalized_skill) DO NOTHING
+           ON CONFLICT (normalized_skill) DO UPDATE
+             SET skill_label = EXCLUDED.skill_label,
+                 source_submission_id = EXCLUDED.source_submission_id,
+                 source = EXCLUDED.source,
+                 status = 'proposed',
+                 updated_at = NOW()
+             WHERE skills_hunt_proposed_skill_promotions.issue_number IS NULL
+               AND skills_hunt_proposed_skill_promotions.updated_at
+                     < NOW() - make_interval(mins => $5::int)
            RETURNING id`,
-          [candidate.normalized_skill, candidate.skill_label, candidate.source_submission_id, candidate.source],
+          [
+            candidate.normalized_skill,
+            candidate.skill_label,
+            candidate.source_submission_id,
+            candidate.source,
+            CLAIM_LEASE_MINUTES,
+          ],
         );
 
         if (insertResult.rowCount === 0) {
@@ -450,9 +503,23 @@ async function main() {
               'DELETE FROM skills_hunt_proposed_skill_promotions WHERE id = $1 AND issue_number IS NULL',
               [rollbackRowId],
             );
-          } catch {
-            // no-trace: best-effort cleanup, and if it fails the row simply stays and is skipped later.
+          } catch (cleanupError) {
+            // Non-fatal: the claim lease lets a later run re-take this row anyway, so the
+            // skill is still retried. Say what failed so the leftover row is explainable.
+            console.error(
+              `proposeSkillPromotions: could not release the claim on "${candidate.skill_label}" after ` +
+                `the failure above: ${cleanupError?.message || cleanupError}. The row stays claimed and a ` +
+                `later run re-takes it after ${CLAIM_LEASE_MINUTES} minutes.`,
+            );
           }
+        }
+        if (error?.apiUnavailable) {
+          blockedReason = error?.message || String(error);
+          console.error(
+            'proposeSkillPromotions: the Anthropic API is unavailable for every candidate, so the rest of this run is skipped. ' +
+              'No proposal is lost — a skill with no issue filed stays a candidate and the next run picks it up from the same submissions.',
+          );
+          break;
         }
       }
     }
@@ -463,6 +530,23 @@ async function main() {
   console.log(
     `proposeSkillPromotions: scanned ${scanned}, proposed ${proposed}, skipped-existing ${skippedExisting}, failed ${failed}.`,
   );
+
+  // A scheduled script that fails and still exits 0 hides the outage: the run stays green
+  // while nothing gets filed, and nobody finds out until someone goes looking for the
+  // issues. Exit non-zero when the API blocked the run, or when everything tried failed.
+  if (blockedReason) {
+    console.error(
+      `proposeSkillPromotions: run stopped early because the classification API is unavailable — ${blockedReason}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (failed > 0 && proposed === 0) {
+    console.error(
+      'proposeSkillPromotions: every candidate in this run failed; see the per-skill reasons above. Each one stays a candidate for the next run.',
+    );
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {
