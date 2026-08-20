@@ -7,6 +7,7 @@ import { getDirectoryTokens, type DirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
+import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 import { failureText } from 'lib/errors/client-failure';
 
@@ -421,6 +422,7 @@ function ProfileFormFields({
           account changed, just paste your new profile link here — the previous one is kept until you replace
           it with a valid Quora URL.
         </div>
+        <SurveyInviteNote variant="inline" accent={t.ACCENT} muted={t.SUBTLE} />
         {saveNotice ? (
           <div style={{ fontSize: 12, color: t.ACCENT, marginTop: 6, lineHeight: 1.5 }}>{saveNotice}</div>
         ) : null}

@@ -5,6 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
+import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 
 const WHY = [
   { icon: "🔗", t: "Real-person proof", d: "Quora activity proves you're a real person with history online." },
@@ -84,6 +85,7 @@ export function UnlockSubmissionView({
             </button>
 
             <UnlockQuoraHelp />
+            <SurveyInviteNote accent={tok.ACCENT} muted={tok.MUTED} title={tok.TITLE} />
           </div>
         </div>
 
