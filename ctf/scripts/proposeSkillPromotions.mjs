@@ -34,8 +34,12 @@
 // nothing is lost. The failing skill keeps no issue and its claimed row is released, so
 // the next scheduled run picks it up again from the same submissions. The run stops at
 // the first such failure instead of burning the rest of the candidates, and exits
-// non-zero so the workflow run goes red and says why, rather than passing quietly with
-// nothing filed.
+// non-zero so the workflow run goes red rather than passing quietly with nothing filed.
+// The red run then has to earn itself: it names WHICH state it is (out of credit, key
+// rejected, rate limited, vendor down), says in as many words that nothing is broken and
+// nothing is lost, and says what to do — on the Actions run page, not just in the log.
+// An out-of-credit account and a broken pipeline are the same red X otherwise, and the
+// months an account can sit unpaid are exactly when that difference matters.
 //
 // Required environment:
 //   DATABASE_URL        Postgres connection string (the app database).
@@ -47,6 +51,7 @@
 //
 // Never prints secret values.
 
+import { appendFileSync } from 'node:fs';
 import pg from 'pg';
 
 const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
@@ -61,6 +66,31 @@ function requireEnv(name) {
   const value = process.env[name];
   if (!value || !String(value).trim()) {
     console.error(`proposeSkillPromotions: required environment variable ${name} is not set.`);
+    // A missing classification key is the same situation as an unpaid one — an account state,
+    // not a defect — so it gets the same plain reading rather than a bare "not set".
+    if (name === 'ANTHROPIC_API_KEY') {
+      console.error(
+        'proposeSkillPromotions: that key is what classifies each proposed skill, so no issues can be ' +
+          'filed without it. Nothing is broken and nothing is lost: proposals stay queued on the ' +
+          'nominations and Directory entries, and the next run after the key is restored files them all.',
+      );
+      reportToActions({
+        title: 'Skill proposals paused — no Anthropic API key configured (not a code failure).',
+        oneLine:
+          'ANTHROPIC_API_KEY is not set, so proposed skills cannot be classified. Restore it in Infisical ' +
+          '(production). No proposal is lost; the next run after it is restored files the backlog.',
+        summaryMarkdown: [
+          '## Skill proposals paused — no Anthropic API key configured (not a code failure).',
+          '',
+          '`ANTHROPIC_API_KEY` is not set, so proposed skills cannot be classified and no issues can be filed.',
+          '',
+          '**What to do:** restore the key in Infisical (production).',
+          '',
+          '**Are the proposals lost?** No. They stay queued on the nominations and Directory entries, and the',
+          'next run after the key is restored files the whole backlog on its own.',
+        ].join('\n'),
+      });
+    }
     process.exit(1);
   }
   return value;
@@ -86,15 +116,88 @@ function ghHeaders() {
   };
 }
 
-// True when the API answer means the API is unavailable for EVERY candidate, not just this
-// one: no key or no credit (401/402/403), rate limited (429), or the vendor is down (5xx).
-// A paused account with no funds answers 400 with a credit-balance message, so that counts
-// too. There is no point trying the remaining candidates in the same run.
-function isApiUnavailable(status, body) {
-  if (status === 401 || status === 402 || status === 403 || status === 429 || status >= 500) {
-    return true;
+// Why the API refused, in plain words, for the cases that will hit EVERY candidate rather
+// than just one skill. The run is meant to go red when this happens — but a red scheduled
+// run found weeks later is only useful if it says which of these it was. Without that, a
+// paid-account-out-of-credit reads exactly like a broken pipeline, and the next person
+// (owner or agent) goes looking for a bug that is not there. Each entry says what the state
+// is, that it is not a defect, and what — if anything — to do about it.
+const API_UNAVAILABLE_REASONS = {
+  no_credit: {
+    summary: 'the Anthropic account is out of credit',
+    detail:
+      'This is a billing state, not a defect. The pipeline, the database, and the proposals are all fine — ' +
+      'the classification step simply cannot be paid for right now.',
+    whatToDo:
+      'Add funds to the Anthropic account whenever suits. Nothing in this repo needs changing, and no ' +
+      'proposal needs re-entering.',
+  },
+  key_rejected: {
+    summary: 'the Anthropic API rejected the key',
+    detail:
+      'The key is expired, revoked, or the account is suspended. This is an account/key state, not a defect ' +
+      'in the pipeline.',
+    whatToDo:
+      'Check ANTHROPIC_API_KEY in Infisical (production) and the standing of the Anthropic account. No code ' +
+      'change is involved.',
+  },
+  rate_limited: {
+    summary: 'the Anthropic API rate-limited this run',
+    detail: 'A temporary throttle on their side, not a defect in the pipeline.',
+    whatToDo: 'Nothing. The next scheduled run picks the same skills back up.',
+  },
+  vendor_down: {
+    summary: 'the Anthropic API is erroring on their side',
+    detail: 'An outage or server error at the vendor, not a defect in the pipeline.',
+    whatToDo: 'Nothing. The next scheduled run picks the same skills back up.',
+  },
+};
+
+// Which reason above this answer is, or null when the failure is specific to one skill and
+// the rest of the run should carry on. A paused account with no funds answers 400 with a
+// credit-balance message, which is why that case is matched on the body text.
+function apiUnavailableReason(status, body) {
+  if (status === 402) return 'no_credit';
+  if (status === 400 && /credit balance|billing|quota|insufficient|payment/i.test(body)) return 'no_credit';
+  if (status === 401 || status === 403) return 'key_rejected';
+  if (status === 429) return 'rate_limited';
+  if (status >= 500) return 'vendor_down';
+  return null;
+}
+
+// The vendor answers with a JSON envelope. Pull out its human sentence so the log reads as a
+// sentence rather than as raw JSON. Never includes the key — the body carries no secret, and
+// it is capped either way.
+function vendorMessageFrom(body) {
+  try {
+    const message = JSON.parse(body)?.error?.message;
+    if (typeof message === 'string' && message.trim()) return message.trim().slice(0, 300);
+  } catch {
+    // no-trace: a non-JSON body is normal for a proxy or gateway error page; the raw text below is the message.
   }
-  return status === 400 && /credit balance|billing|quota|insufficient/i.test(body);
+  return body.trim().slice(0, 300) || '(the response body was empty)';
+}
+
+// Put the same explanation on the GitHub Actions run page — the annotation line and the job
+// summary — so the red run says why without anyone opening the log and reading vendor JSON.
+// Does nothing outside Actions.
+function reportToActions({ title, oneLine, summaryMarkdown }) {
+  if (!process.env.GITHUB_ACTIONS) return;
+  // Annotations are single-line; collapse newlines and neutralize the :: delimiter.
+  const clean = (text) => text.replace(/\r?\n/g, ' ').replace(/::/g, ':');
+  console.log(`::error title=${clean(title)}::${clean(oneLine)}`);
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (!summaryPath) return;
+  try {
+    appendFileSync(summaryPath, `${summaryMarkdown}\n`);
+  } catch (summaryError) {
+    // Non-fatal: the summary only mirrors the log, which already carries the same text. Say
+    // why it could not be written rather than leaving an unexplained missing summary.
+    console.error(
+      `proposeSkillPromotions: could not write the job summary: ${summaryError?.message || summaryError}`,
+    );
+  }
 }
 
 // Models sometimes wrap JSON in markdown code fences despite instructions not to.
@@ -171,11 +274,15 @@ async function classifySkill(skillLabel, sectorNames, occupations) {
   });
 
   if (!response.ok) {
-    // Do not surface the key; just the status and a short body for debugging.
+    // Do not surface the key; just the status and the vendor's own sentence.
     const body = await response.text();
-    const error = new Error(`Anthropic API error (HTTP ${response.status}): ${body.slice(0, 300)}`);
-    // Tells the caller this failure will hit every candidate, so stop the run here.
-    error.apiUnavailable = isApiUnavailable(response.status, body);
+    const vendorMessage = vendorMessageFrom(body);
+    const error = new Error(`Anthropic API error (HTTP ${response.status}): ${vendorMessage}`);
+    // Set when this failure will hit every candidate, so the caller stops the run here and
+    // reports which state it was rather than retrying the same outage nine more times.
+    error.apiUnavailableReason = apiUnavailableReason(response.status, body);
+    error.apiStatus = response.status;
+    error.vendorMessage = vendorMessage;
     throw error;
   }
 
@@ -316,8 +423,8 @@ async function main() {
   let skippedExisting = 0;
   let failed = 0;
   // Set when the API answered in a way that will hit every candidate, so the run stops
-  // and reports instead of retrying the same outage nine more times.
-  let blockedReason = null;
+  // and reports which state it was instead of retrying the same outage nine more times.
+  let blocked = null;
 
   try {
     // 1. Candidate distinct normalized skills from BOTH sources (accepted SkillsHunt
@@ -513,10 +620,14 @@ async function main() {
             );
           }
         }
-        if (error?.apiUnavailable) {
-          blockedReason = error?.message || String(error);
+        if (error?.apiUnavailableReason) {
+          blocked = {
+            reason: error.apiUnavailableReason,
+            status: error.apiStatus,
+            vendorMessage: error.vendorMessage || error?.message || String(error),
+          };
           console.error(
-            'proposeSkillPromotions: the Anthropic API is unavailable for every candidate, so the rest of this run is skipped. ' +
+            'proposeSkillPromotions: this failure hits every candidate, so the rest of this run is skipped. ' +
               'No proposal is lost — a skill with no issue filed stays a candidate and the next run picks it up from the same submissions.',
           );
           break;
@@ -534,10 +645,48 @@ async function main() {
   // A scheduled script that fails and still exits 0 hides the outage: the run stays green
   // while nothing gets filed, and nobody finds out until someone goes looking for the
   // issues. Exit non-zero when the API blocked the run, or when everything tried failed.
-  if (blockedReason) {
+  //
+  // Red is the point, but red alone is a false alarm: an out-of-credit account and a broken
+  // pipeline look identical from the Actions list. So the report below names which state it
+  // is, says outright that nothing is broken and nothing is lost, and says what to do — so
+  // the run can be read at a glance weeks later without anyone debugging a non-defect.
+  if (blocked) {
+    const { summary, detail, whatToDo } = API_UNAVAILABLE_REASONS[blocked.reason];
+    const headline = `Skill proposals paused — ${summary} (not a code failure).`;
     console.error(
-      `proposeSkillPromotions: run stopped early because the classification API is unavailable — ${blockedReason}`,
+      [
+        `proposeSkillPromotions: STOPPED — ${summary}.`,
+        `  What this is: ${detail}`,
+        `  The API said (HTTP ${blocked.status}): ${blocked.vendorMessage}`,
+        `  Reason code: ${blocked.reason}`,
+        '  Nothing is broken and nothing is lost. Every proposed skill is still queued: the pipeline reads',
+        '  them off the accepted nominations and the Directory entries on every run and never marks them',
+        '  used, so the next run after this clears files the whole backlog on its own.',
+        `  Issues filed this run: ${proposed}.`,
+        `  What to do: ${whatToDo}`,
+        '  This run is red on purpose — a scheduled run that files nothing must not look healthy.',
+      ].join('\n'),
     );
+    reportToActions({
+      title: headline,
+      oneLine: `${detail} ${whatToDo} No proposal is lost; the next run after this clears files the backlog.`,
+      summaryMarkdown: [
+        `## ${headline}`,
+        '',
+        detail,
+        '',
+        `**The API said (HTTP ${blocked.status}):** ${blocked.vendorMessage}`,
+        '',
+        `**What to do:** ${whatToDo}`,
+        '',
+        '**Are the proposals lost?** No. The pipeline reads proposed skills off the accepted nominations and',
+        'the Directory entries on every run and never marks them used, so nothing needs re-entering — the',
+        'next run after this clears files the whole backlog on its own.',
+        '',
+        `Issues filed this run: ${proposed}. This run is red on purpose: a scheduled run that files nothing`,
+        'must not look healthy.',
+      ].join('\n'),
+    });
     process.exitCode = 1;
     return;
   }
