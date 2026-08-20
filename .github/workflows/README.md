@@ -10,6 +10,39 @@ remove, or rename a workflow, update this table in the same change.
 workflows together in the Actions tab. Full rule:
 [`119-github-actions-ci-rules.mdc`](../instructions/119-github-actions-ci-rules.mdc).
 
+## When a red run is not a defect: `CTF_RUN_BLOCKED_EXTERNAL`
+
+Some workflows call a paid API. This project funds its APIs some months and not others, so those
+workflows are red for long stretches by design — nothing is broken, there is just no credit to spend.
+
+That matters because of `workflow-health-check.yml`, which sweeps every workflow every 8 hours and
+collects the failing ones into a single triage issue. Left alone, one unfunded workflow keeps that
+issue open for as long as the account stays unfunded, and every agent that picks the issue up goes
+hunting for a bug in a pipeline that is working exactly as written.
+
+So a run can say for itself that its failure is not a defect. Print a GitHub Actions error annotation
+whose text contains `CTF_RUN_BLOCKED_EXTERNAL:<reason>`:
+
+```js
+console.log(`::error title=Skill proposals paused — the account is out of credit (not a code failure).::… [CTF_RUN_BLOCKED_EXTERNAL:no_credit]`);
+```
+
+The health check reads the annotations of every run it finds failing. A run carrying the marker is
+listed under "Paused, not broken — no ticket, no fix" and does **not** open or hold open the triage
+issue. The run itself stays red — that is still the signal that the workflow is not doing its job.
+
+Rules for claiming it:
+
+- **Only for a state outside this repo**: no funds on a paid API, a revoked or missing key, the vendor
+  erroring or rate-limiting. Nothing that a code change would fix.
+- **Never for a failure you cannot explain.** An unrecognized error is a defect until proven otherwise
+  — leave the marker off so it stays on the triage list. Claiming it wrongly is worse than not
+  claiming it at all: it hides a real break, and it teaches the next reader to distrust the label.
+- **Say the reason in plain words too**, in the same annotation, for whoever reads the run page.
+
+Worked example: `ctf/scripts/proposeSkillPromotions.mjs` — it maps the vendor's own machine-readable
+error type to a named state and only marks the states that are genuinely outside the repo.
+
 ## "Render — Deploy Re-fresh" vs "Render — Build and push Docker images" — are they the same?
 
 No — they are **two separate workflows**, but they work together:
@@ -85,4 +118,4 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `unlock-reward-reconciliation.yml` | Unlock — Reward Reconciliation | Hourly at :17; manual | Self-heals missed Unlock approval rewards by minting any pending ServiceCredits rewards (safe to repeat). |
 | `update-neon-db.yml` | Neon — Update DB (Migrations + schema.sql) | Push to `main` touching schema/migrations; manual | Applies pre-schema migrations, the canonical `schema.sql`, then post-schema migrations to the Neon database in order (all safe to repeat). |
 | `weekly-performance-goal-snapshot.yml` | Weekly Performance — Goal Snapshot Capture | Daily 05:35 UTC; manual | Records the Weekly Performance goal readings into `weekly_performance_goal_snapshots` via the app's internal capture route; the last capture of the week wins. |
-| `workflow-health-check.yml` | Github Workflows — Health Check | Every 8 hours; manual | Checks each active workflow's most recent run on `main`, collects failures into one always-current triage issue, and closes it when everything is green. |
+| `workflow-health-check.yml` | Github Workflows — Health Check | Every 8 hours; manual | Checks each active workflow's most recent run on `main`, collects failures into one always-current triage issue, and closes it when everything is green. A run that marks itself blocked by an outside state (`CTF_RUN_BLOCKED_EXTERNAL`, see above) is listed as paused rather than failing, and never opens or holds open the issue. |

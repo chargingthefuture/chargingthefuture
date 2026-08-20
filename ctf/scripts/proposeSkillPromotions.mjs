@@ -62,6 +62,15 @@ const ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
 // re-claim it. Long enough that two overlapping runs never both file for the same skill,
 // short enough that a row left behind by a failed run is retried on the next schedule.
 const CLAIM_LEASE_MINUTES = 30;
+// Marker the workflow health check looks for in this run's annotations. It means: this run is red
+// because of an account or vendor state outside the repo, so it is NOT a defect and nobody should be
+// opening a ticket or writing a fix for it. The health check keeps one rolling triage issue for
+// failing workflows; without this marker an unfunded account would hold that issue open for as long
+// as it stays unfunded, and every agent working the issue would go looking for a bug in a pipeline
+// that is working correctly. Deliberately NOT emitted for `unclassified` — an unrecognized failure
+// might well be a defect, and it should stay on the triage list. Convention documented in
+// .github/workflows/README.md.
+const BLOCKED_EXTERNAL_MARKER = 'CTF_RUN_BLOCKED_EXTERNAL';
 const LABEL = 'skill-proposal';
 const DEFAULT_LIMIT = 10;
 
@@ -81,7 +90,8 @@ function requireEnv(name) {
         title: 'Skill proposals paused — no Anthropic API key configured (not a code failure).',
         oneLine:
           'ANTHROPIC_API_KEY is not set, so proposed skills cannot be classified. Restore it in Infisical ' +
-          '(production). No proposal is lost; the next run after it is restored files the backlog.',
+          '(production). No proposal is lost; the next run after it is restored files the backlog. ' +
+          `[${BLOCKED_EXTERNAL_MARKER}:no_key]`,
         summaryMarkdown: [
           '## Skill proposals paused — no Anthropic API key configured (not a code failure).',
           '',
@@ -735,9 +745,15 @@ async function main() {
         '  This run is red on purpose — a scheduled run that files nothing must not look healthy.',
       ].join('\n'),
     );
+    // Only the states that are definitely an outside-the-repo condition carry the marker;
+    // `unclassified` stays on the health check's triage list because it might be a defect.
+    const externalMarker =
+      blocked.reason === 'unclassified' ? '' : ` [${BLOCKED_EXTERNAL_MARKER}:${blocked.reason}]`;
     reportToActions({
       title: headline,
-      oneLine: `${detail} ${whatToDo} No proposal is lost; the next run after this clears files the backlog.`,
+      oneLine:
+        `${detail} ${whatToDo} No proposal is lost; the next run after this clears files the backlog.` +
+        externalMarker,
       summaryMarkdown: [
         `## ${headline}`,
         '',

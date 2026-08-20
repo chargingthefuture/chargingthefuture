@@ -4,6 +4,21 @@ name: Github Workflows — Health Check
 # GitHub API for every active workflow's most recent run on `main`; any whose latest run failed or
 # timed out are collected into ONE always-current triage issue. When everything is green again the
 # issue closes itself. This is visibility only — it never edits code or reruns anything.
+#
+# Not every red run is a defect. A workflow that calls a paid API is red for as long as that account
+# is unfunded, and this project pays for its APIs some months and not others. Left alone, one such
+# workflow holds the triage issue open indefinitely and every agent that picks the issue up goes
+# hunting for a bug in a pipeline that is working exactly as written. So a run may declare itself
+# blocked-by-an-outside-state, and this check believes it: those runs are listed separately as
+# "paused, not broken" and never open or hold open the issue.
+#
+# How a workflow declares it: print a GitHub Actions error annotation whose text contains
+# `CTF_RUN_BLOCKED_EXTERNAL:<reason>` — e.g.
+#   console.log(`::error title=...::... [CTF_RUN_BLOCKED_EXTERNAL:no_credit]`)
+# Only claim it when the failure is genuinely outside the repo (no funds, key revoked, vendor down,
+# rate limited). A failure you cannot explain is a defect until proven otherwise — leave the marker
+# off so it stays on the triage list. Worked example: ctf/scripts/proposeSkillPromotions.mjs.
+# See .github/workflows/README.md.
 
 on:
   schedule:
@@ -12,6 +27,7 @@ on:
 
 permissions:
   actions: read
+  checks: read      # reading each failing run's annotations, to spot the blocked-by-outside-state marker
   issues: write
   contents: read
 
@@ -43,7 +59,40 @@ jobs:
             // latest-main run older than this so those orphaned runs drop off the triage list.
             const staleAfterMs = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+            // A run says "this is not a defect" by printing this in an annotation. See the note at the
+            // top of this file for when a workflow may claim it.
+            const blockedMarker = 'CTF_RUN_BLOCKED_EXTERNAL';
+
+            // The reason a run gave for being blocked, or null when it made no such claim. Reads the
+            // run's job annotations rather than its log — the log needs a download, annotations are a
+            // couple of cheap calls and only ever made for a run that already failed.
+            async function blockedReasonFor(runId) {
+              try {
+                const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                  owner, repo, run_id: runId, per_page: 100,
+                });
+                for (const job of jobs) {
+                  if (job.conclusion !== 'failure') continue;
+                  const annotations = await github.rest.checks.listAnnotations({
+                    owner, repo, check_run_id: job.id, per_page: 100,
+                  });
+                  for (const annotation of annotations.data) {
+                    const text = `${annotation.title || ''} ${annotation.message || ''}`;
+                    const match = text.match(new RegExp(blockedMarker + ':([A-Za-z0-9_-]+)'));
+                    if (match) return match[1];
+                  }
+                }
+              } catch (e) {
+                // Non-fatal: annotations are an extra signal on top of the run conclusion. If they
+                // cannot be read the run is simply treated as failing, which is the safe direction —
+                // a real failure is never hidden by this call going wrong. Say why it could not be read.
+                core.warning('Could not read annotations for run ' + runId + ': ' + e.message);
+              }
+              return null;
+            }
+
             const failing = [];
+            const blocked = [];
             for (const wf of workflows) {
               if (wf.state !== 'active') continue;
               // Skip this workflow itself — its current run is in progress and would never be flagged,
@@ -63,12 +112,18 @@ jobs:
               const when = latest.run_started_at || latest.created_at;
               if (when && Date.now() - new Date(when).getTime() > staleAfterMs) continue;
               if (latest.conclusion === 'failure' || latest.conclusion === 'timed_out') {
-                failing.push({
+                const entry = {
                   name: wf.name,
                   conclusion: latest.conclusion,
                   url: latest.html_url,
                   when: latest.run_started_at || latest.created_at,
-                });
+                };
+                const reason = latest.conclusion === 'failure' ? await blockedReasonFor(latest.id) : null;
+                if (reason) {
+                  blocked.push({ ...entry, reason });
+                } else {
+                  failing.push(entry);
+                }
               }
             }
 
@@ -77,17 +132,41 @@ jobs:
             });
             const existing = open.find((i) => (i.body || '').includes(marker));
 
+            blocked.sort((a, b) => a.name.localeCompare(b.name));
+            const blockedLines = blocked.map(
+              (b) => '- **' + b.name + '** — paused: `' + b.reason + '` ([run](' + b.url + ')), ' + b.when,
+            );
+            const blockedSection = blocked.length
+              ? [
+                  '',
+                  '### Paused, not broken — no ticket, no fix',
+                  '',
+                  'These runs are red because of a state outside this repo (no funds on a paid API, a revoked',
+                  'key, the vendor erroring) and said so themselves. They are **not** defects: do not open',
+                  'tickets for them and do not change code because of them. Each goes green on its own once',
+                  'the outside state clears. They are listed here only so nobody wonders why the run is red.',
+                  '',
+                  ...blockedLines,
+                ].join('\n')
+              : '';
+
             if (failing.length === 0) {
               if (existing) {
                 await github.rest.issues.createComment({
                   owner, repo, issue_number: existing.number,
-                  body: 'All workflows are green again on `' + branch + '`. Closing automatically.',
+                  body:
+                    'No workflow is failing on `' + branch + '` any more. Closing automatically.' +
+                    (blocked.length
+                      ? ' (' + blocked.length + ' still red because of an outside state — paused, not broken.)'
+                      : ''),
                 });
                 await github.rest.issues.update({
                   owner, repo, issue_number: existing.number, state: 'closed',
                 });
               }
-              core.info('No failing workflows on ' + branch + '.');
+              core.info(
+                'No failing workflows on ' + branch + ' (' + blocked.length + ' paused by an outside state).',
+              );
               return;
             }
 
@@ -102,6 +181,7 @@ jobs:
               ...lines,
               '',
               'A workflow drops off this list once its next run on `' + branch + '` passes; this issue closes when all are green.',
+              blockedSection,
             ].join('\n');
             const title = 'Workflow health: ' + failing.length + ' not passing on ' + branch;
 

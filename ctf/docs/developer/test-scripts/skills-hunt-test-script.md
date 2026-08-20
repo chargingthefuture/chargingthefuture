@@ -741,6 +741,10 @@ Result: web ☐
 - a 403 with no readable error type → `unclassified`, "NOT a known funding or throttling state — do not read it as 'the account needs topping up'";
 - a plain 400 `invalid_request_error` (a malformed request, i.e. a real defect) → no state label at all: it fails per-skill, the run ends `every candidate in this run failed`, and nothing claims the account is out of credit.
 
+**And that a funding pause leaves no ticket behind.** After a run blocked by an outside state, trigger `Github Workflows — Health Check` and read its triage issue (label `ci-health`).
+
+**Expected:** the paused workflow appears under "Paused, not broken — no ticket, no fix" with its reason, and is not counted among the failing ones — so if nothing else is red the issue closes (or never opens). A run blocked as `unclassified` is the opposite: it carries no marker, so it counts as failing and belongs on the triage list.
+
 Result: web ☐
 
 ---
