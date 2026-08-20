@@ -202,7 +202,11 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
      quality judgment — a couple of lines cannot ground an answer, and saying so now saves the wait).
    - **Whole export.** For the rarer member whose public writing is nearly all on-topic: they get the
      Quora export (Settings → Privacy → Download your information) and upload the `.zip` exactly as
-     it arrived. On the same page they read and tick
+     it arrived. A FAQ card on the same page — **Getting a copy of your Quora data** — carries
+     Quora's own help article quoted in full (request by email to `privacy@quora.com`, or
+     `quora.com/contact` → "I want a copy of my data"; the archive normally arrives within 72 hours
+     to the account's email address), plus the link to the original. It is quoted rather than only
+     linked so the page still works when the help article moves. On the same page they read and tick
    six consent statements — one checkbox each, no bundled "agree to all" — covering: it is their own
    public writing; the one use permitted; they keep every right; they can withdraw; a human reads it
    and not everything is used; parts naming other people may be cut. An optional box asks whether
@@ -719,10 +723,27 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-08-20 (latest): **The knowledge library now says how to get a Quora export, in Quora's own
+  words.** `/knowledge` offered "Send my whole Quora export" and a one-line pointer at Quora's
+  settings, but nothing told a member how the archive is actually requested or how long it takes —
+  a step that happens entirely on Quora's side, where nothing in this app can help. Added a FAQ card
+  (`components/comic/comic-quora-export-faq.tsx`) under the two sending options, showing Quora's help
+  article "Can I get a copy of my data?" quoted in full, with the byline, the date it was read, and a
+  link to the original. The quote lives in `lib/comic/quora-export-help.ts` so the displayed text has
+  one source and can be re-checked as a unit. Quoted rather than only linked because help-center
+  article ids get renumbered, and a contributor who lands on a 404 cannot tell whether the process
+  changed or the page merely moved. Three short answers sit under it: the export is optional (picking
+  posts needs nothing from Quora), it usually takes up to 72 hours, and the `.zip` is sent exactly as
+  it arrived. Placed under both options rather than only the export one, because the days of waiting
+  are part of choosing between them. Copy and data only — no route, schema, or contract change.
+  **Open question for the owner:** the shipped mode hint says "In Quora: Settings → Privacy →
+  Download your information", which is not the route Quora's help article describes; that line was
+  left exactly as it ships and needs an owner decision.
+
 - 2026-07-29: **One canonical `content_hash` formula, so the importer and the contribution path agree.** `content_hash` is what stops the same writing being stored twice in `comic_knowledge_entries`, and the places that computed it had drifted: `importComicKnowledge.mjs` joined the fields with a **NUL** character while the member-contribution accept path (`app/api/comic/admin/contributions/[id]/review/route.ts`) joined them with a **space**, under a comment claiming it matched the importer. Effect: a member contributing a post whose text was already in the library hashed differently, hit no conflict, and was stored a second time. The formula now lives once as `contentHashOf` in `ctf/scripts/lib/comicDatasetShared.mjs`, imported by the importer; the web route is outside that package and cannot import it, so it keeps a deliberate second copy with a comment naming the canonical definition and requiring both to change together. NUL is kept because it produced every live row hash (no stored hash is invalidated) and because it cannot occur in the text — a space join collides `(question "a b", content "c")` with `(question "a", content "b c")`, which NUL keeps distinct. Verified: the canonical function reproduces the importer previous hash for every case, both sites now agree, and the old space formula does not. **Known data gap, not fixed here:** the one-time identifier scrub (`scrubComicKnowledgeIdentifiers.mjs`, removed in #1954 after its production run) used the same space formula and *rewrote* `content_hash` on every row it touched, so those production rows hold hashes the importer will not reproduce and will not dedupe against a re-import until recomputed. Tracked in the corpus-refresh issue.
 - 2026-07-29: **`importComicKnowledge.mjs` is plain text again, so its diffs are reviewable.** The NUL separator was stored as a literal NUL byte, which made git classify the source as binary and print "Binary files differ" instead of a diff — a loader script that writes to the knowledge base could be changed without the change being visible in review. Moving the formula into `comicDatasetShared.mjs` (written with the `\u0000` escape rather than a raw byte) removes the last raw NUL from the file. The runtime string, and therefore every hash, is unchanged. This commit's own diff still shows binary because the base version on `main` contains the raw bytes; every diff after it is text.
 - 2026-07-29: **Reconciled the `source_ref` knowledge-import change with the merged member-contribution feature (schema-compatible).** After the member Quora-contribution feature (`comic_contributions`, `comic_contribution_entries`, `comic_knowledge_entries.contribution_id`) and the Quora space rename merged to `main`, this branch was rebased on top. The contribution accept path (`acceptContribution` in `lib/comic/contribution-repository.ts`) promoted rows with a bare `ON CONFLICT (content_hash) DO NOTHING`, which no longer matches the schema once the global `UNIQUE(content_hash)` is replaced by the partial index `uq_comic_knowledge_entries_content_hash` (`WHERE source_ref IS NULL`). Updated that insert and its already-present backfill lookup to key on `... WHERE source_ref IS NULL`: contributed rows carry a null `source_ref`, so they still dedupe against legacy and contribution rows exactly as before, while Markdown-repo rows (`source_ref` set) form a separate identity space and never collide with them. Confirmed the two partial indexes coexist with `contribution_id` and its `ON DELETE CASCADE`. Re-verified end to end on an embedded Postgres including the contribution insert path. **Owner note:** the pedigree101 content now has two ingestion routes — the already-imported legacy seed rows and the Markdown-repo `source_ref` path — so before importing the Markdown, decide which is authoritative for that account and retire the other's rows (`active = FALSE`) so the bot is not grounded on two copies.
-- 2026-08-09 (latest): **The signed-out Knowledge library page had no way back (owner report).**
+- 2026-08-09: **The signed-out Knowledge library page had no way back (owner report).**
   `comic-knowledge-public-shell.tsx` builds its own header — the BookOpen mark and the title — and
   carried no back control at all, so a visitor who reached `/knowledge` from inside the app was
   stranded there at phone width, where there is no browser back button in the installed web app.
