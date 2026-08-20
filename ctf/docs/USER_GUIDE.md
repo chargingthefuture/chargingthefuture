@@ -60,6 +60,25 @@ You can send ServiceCredits as a tip to another member in the room right now usi
 3. Type a message in the chat and send it. It will show up in the list right away and stay there when you come back.
 4. If you're not signed in, you can listen to the room but won't be able to speak or chat.
 
+## Mutual Time
+
+_Last updated: 2026-08-13_
+
+Mutual Time finds an hour a group can meet, from one link everyone opens — no calendar is collected from anyone.
+
+You reach Mutual Time from a link that is shared with you, on Quora or Signal or anywhere else. There is no tile for it in your app list. Open the link and you see the event, and a line saying where the meeting will happen — for example 'We'll meet in Chyme' — with a button straight to it. That line is there from the moment you open the link, not only after a time is picked.
+
+While voting is open you pick up to three one-hour windows you are free. The times are shown in your own timezone, which is worked out for you and can be changed if you are travelling or on a VPN. Days come as chips, and each day's hours are grouped into morning, afternoon, and evening. You can change or clear your picks as often as you like while voting is open. The days on offer are always the next seven from the moment you open the link, so an event that has been open a while still shows days ahead of you. If a time you picked earlier has since gone by, the form says so and asks you to pick again rather than dropping your vote quietly.
+
+Anyone can open the link, whether or not they are signed in or approved. A visitor sees the event, the times on offer greyed out so they can see what would be on the table, and a note that they are welcome to come and listen in at whatever time is chosen. Signing in is only needed to have a say in the time. Once voting closes, the same link shows the winning hour in your own timezone and how many members can make it. Every version of the page has a copy-link button, so you can pass it on.
+
+**How to use it**
+
+1. Open the link someone shared with you. You do not need to find Mutual Time in your app list — the link is the way in.
+2. Sign in if you want a say in the time. Without signing in you can still read the event and come along to whatever hour is chosen.
+3. Pick up to three one-hour windows you are free, choosing from the day chips and the morning, afternoon, and evening groups. Check the timezone shown is yours, and change it if it is not. Save.
+4. Open the same link after voting closes to see the chosen hour, how many members can make it, and the button through to where the meeting happens.
+
 ## SocketRelay
 
 _Last updated: 2026-08-09_

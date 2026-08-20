@@ -60,6 +60,17 @@ const ORDER = [
   ['directory', 'Directory'],
   ['foundation', 'Foundation'],
   ['chyme', 'Chyme'],
+  [
+    'mutual-time',
+    'Mutual Time',
+    {
+      // Mutual Time is in ADMIN_ONLY_PLUGIN_SLUGS, so it is not a tile in the member launcher — the
+      // owner runs the polls. Members still use it, every time: they open the shared event link and
+      // pick their times. That member half is what this section covers.
+      focus:
+        'This section is ONLY about what a member does with a shared Mutual Time link at /mutual-time/<slug> — seeing the event, picking the hours they are free, and reading the chosen time afterwards. Creating, opening, and closing an event is the owner\'s side; write nothing about it.',
+    },
+  ],
   ['socket-relay', 'SocketRelay'],
   ['beacon', 'Beacon'],
   ['peer-programming', 'PeerProgramming'],
@@ -92,24 +103,36 @@ const ORDER = [
 
 // Trust and Knowledge Library were both missing from the guide for months because ORDER is a
 // hand-kept list and nothing compared it to the plugins members can actually see. This prints the
-// difference on every run: any plugin the registry shows in the launcher but the guide never
-// mentions. It is a notice, not a failure — some launcher entries genuinely do not belong in a
-// member guide — but the omission is now visible in the run log instead of waiting to be noticed.
+// difference on every run: any plugin a member finds in their launcher that the guide never
+// mentions. It is a notice, not a failure, but the omission is now visible in the run log instead of
+// waiting to be noticed.
+//
+// A plugin is only counted when a member can see its tile: `isVisible: true` in the registry AND not
+// in `ADMIN_ONLY_PLUGIN_SLUGS`, which is the set the launcher filters out for everyone but the owner.
+// Reading `isVisible` alone reported Weekly Performance (an operator analytics screen with no member
+// side at all) and Mutual Time as gaps, which they are not.
 function noticeMissingFromGuide() {
   const registryFile = join(ctfRoot, 'packages/web/lib/plugins/repository.ts');
   if (!existsSync(registryFile)) return;
   const src = readFileSync(registryFile, 'utf-8');
+  const adminOnly = new Set(
+    (/ADMIN_ONLY_PLUGIN_SLUGS = new Set<string>\(\[([^\]]*)\]/.exec(src)?.[1] ?? '')
+      .split(',')
+      .map((s) => s.trim().replace(/^'|'$/g, ''))
+      .filter(Boolean),
+  );
   const covered = new Set(ORDER.map(([slug]) => slug));
   const missing = [];
   const entry = /slug: '([^']+)',[\s\S]{0,600}?isVisible: (true|false),/g;
   let m = entry.exec(src);
   while (m) {
-    if (m[2] === 'true' && !covered.has(m[1])) missing.push(m[1]);
+    const slug = m[1];
+    if (m[2] === 'true' && !adminOnly.has(slug) && !covered.has(slug)) missing.push(slug);
     m = entry.exec(src);
   }
   if (missing.length) {
     console.error(
-      `notice: these plugins appear in the launcher but have no guide section: ${missing.join(', ')}. ` +
+      `notice: these plugins appear in the member launcher but have no guide section: ${missing.join(', ')}. ` +
         'Add each one to ORDER, or decide it is not something a member needs explained.',
     );
   }
