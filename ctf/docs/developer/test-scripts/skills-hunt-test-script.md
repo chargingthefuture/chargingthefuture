@@ -715,7 +715,7 @@ Result: web ☐
 
 ---
 
-### SH-A16 — Skill-proposal pipeline: a paused classification API loses no proposals
+### SH-A16 — Skill-proposal pipeline: a paused classification API loses no proposals and says why
 
 **Role:** owner / operator · **Surfaces:** operational (scheduled workflow, no UI)
 
@@ -724,15 +724,17 @@ Result: web ☐
 **Steps:**
 1. With the Anthropic API unavailable (paused for lack of funds, or run `node ctf/scripts/proposeSkillPromotions.mjs` locally with an invalid `ANTHROPIC_API_KEY`), trigger the `Skills Hunt — Propose Skill Promotions` workflow.
 2. Read the run log and the job's result.
-3. Query `skills_hunt_proposed_skill_promotions` for that skill.
-4. Restore a working key with credit and run the workflow again.
-5. Run it a third time with nothing else changed.
+3. On the workflow run page, read the error annotation at the top and the job summary — without opening the log.
+4. Query `skills_hunt_proposed_skill_promotions` for that skill.
+5. Restore a working key with credit and run the workflow again.
+6. Run it a third time with nothing else changed.
 
 **Expected:**
-- Step 2: the run stops at the first candidate instead of trying the rest, prints the API status and the vendor's own message, and the job **fails** — a run that files nothing must never report success.
-- Step 3: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
-- Step 4: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
-- Step 5: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
+- Step 2: the run stops at the first candidate instead of trying the rest, and the job **fails** — a run that files nothing must never report success. The log names which state it is (`no_credit`, `key_rejected`, `rate_limited`, or `vendor_down`), quotes the vendor's own sentence with the HTTP status, says nothing is broken and no proposal is lost, and says what to do. For an unfunded account that reads as "add funds whenever suits; nothing in this repo needs changing".
+- Step 3: the annotation reads like `Skill proposals paused — the Anthropic account is out of credit (not a code failure).`, and the job summary repeats the state, the vendor sentence, what to do, and "Are the proposals lost? No." The point of this step: a person seeing the red run weeks later can tell it is a funding state, not a defect, without reading the log or the code.
+- Step 4: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
+- Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
+- Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
 
 Result: web ☐
 
