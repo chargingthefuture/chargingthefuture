@@ -98,6 +98,31 @@ the tests worth running slowly.
 
 ---
 
+## CMC-C1b2 · The Quora export FAQ
+**Role:** any signed-in member
+**Precondition:** none — no export or upload is needed for this check.
+
+**Steps:**
+1. Open `/knowledge` and read the card **Getting a copy of your Quora data**, under the two sending
+   options.
+2. Switch between **Pick a few posts** and **Send my whole Quora export**.
+3. Tap the `privacy@quora.com` address, then **Open the original page**.
+
+**Expected:**
+- The card shows Quora's help article "Can I get a copy of my data?" quoted word for word — the
+  request goes by email to `privacy@quora.com` or through `quora.com/contact` by choosing "I want a
+  copy of my data", and the archive normally arrives within 72 hours to the account's email address.
+  Under the quote is the byline, the date the page was read, and a link to the original.
+- The card stays visible for **both** options — the wait is part of choosing between them.
+- Three answers follow: the export is optional, it usually takes up to 72 hours, and the `.zip` is
+  sent exactly as it arrived.
+- The address opens a mail draft; the link opens Quora's page in a new tab. **The quote must still
+  read correctly with no network at all** — that is the point of quoting it.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C1c · Whole export (the secondary path)
 **Role:** signed-in member
 **Precondition:** a real Quora export `.zip` (Settings → Privacy → Download your information).

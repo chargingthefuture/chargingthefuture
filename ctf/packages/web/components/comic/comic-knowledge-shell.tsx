@@ -12,6 +12,7 @@ import {
 } from '../../lib/comic/contribution-consent';
 import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
 import { failureText } from 'lib/errors/client-failure';
+import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
 // The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
 // assistant's reference library, and where the consent that permits it is given.
@@ -282,6 +283,10 @@ export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl
         </p>
 
         <ModeSelector t={t} mode={c.mode} onSelectMode={c.selectMode} />
+        {/* Sits under the two options, for both of them: the export route depends on a request made
+            on Quora's side that takes days, and someone choosing between the options needs to know
+            that before they pick. */}
+        <QuoraExportFaqSection t={t} />
         <WhatHappensSection t={t} />
         <WhatIsUsedSection t={t} />
         <ConsentSection
