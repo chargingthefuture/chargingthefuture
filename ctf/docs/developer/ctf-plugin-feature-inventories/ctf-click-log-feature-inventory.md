@@ -303,7 +303,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 ## Change Log
 
 - 2026-08-20: **New scheme tag: The Sensitization Skit (`sensitization-skit`).** Named by the
-  owner from the Greyhound incident and prior experience. The scheme: first prime the member by
+  owner from the cross-country bus incident and prior experience. The scheme: first prime the member by
   repeating an ordinary thing (an item, a mannerism, a question) around them until it reads as
   a signal; then stage a public confrontation about that primed thing — an operative approaches,
   refuses to disengage while the member backs away, escalates until the member reacts, and a
