@@ -95,7 +95,15 @@ function AccountsSection({
           <Plus size={15} aria-hidden="true" />
           Add another account
         </button>
-      ) : null}
+      ) : (
+        // Say why rather than just removing the button. The limit sits far past any realistic
+        // answer, so nobody should see this — but a control that disappears without explanation is
+        // how the old cap failed people, and the fix is worth having in both places.
+        <p style={hintStyle(tokens)}>
+          That is {QUORA_SURVEY_MAX_ACCOUNTS} accounts, which is as many as one response holds. Send
+          this one, then start another for the rest.
+        </p>
+      )}
     </div>
   );
 }

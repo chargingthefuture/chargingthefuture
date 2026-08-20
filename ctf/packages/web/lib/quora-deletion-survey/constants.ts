@@ -103,7 +103,27 @@ export const QUORA_SURVEY_AUDIT_COMMAND = {
 
 export const QUORA_SURVEY_HANDLE_MAX_LENGTH = 200;
 export const QUORA_SURVEY_TEXT_MAX_LENGTH = 5000;
-export const QUORA_SURVEY_MAX_ACCOUNTS = 25;
+// How many closed accounts one response may list.
+//
+// Not a research limit — a spam bound, and it is set where only a script reaches it (owner,
+// 2026-08-20). The earlier figure of 25 was arbitrary and could plausibly have cut off a real
+// person: someone cycled through ban-evasion accounts over a decade might pass it, and that person
+// is the most-targeted respondent in the study. A limit that bites hardest on the strongest case
+// is the wrong limit.
+//
+// Nobody hand-documents hundreds of handles — most people struggle to find even one, which is why
+// half of sign-ups stop at the Quora URL question. So 500 is roughly twenty times any realistic
+// answer, and anything above it came from automation rather than a person.
+//
+// It matters that the bound exists at all, because the survey is the one write path a spammer can
+// reach without ever producing a Quora URL: it runs at the `any_authenticated` tier, before the
+// Unlock gate that filters everyone else. And a response and its account rows are written in one
+// transaction, one INSERT per account — so an unbounded body is a single request holding a
+// transaction open across arbitrarily many round trips, which is a cheap way to hurt the database.
+//
+// Over the limit the response is REJECTED, never trimmed. Silently dropping the extra rows was the
+// real defect in the old cap: a person who reported more than 25 lost the rest with nothing said.
+export const QUORA_SURVEY_MAX_ACCOUNTS = 500;
 
 // The earliest year worth offering: Quora opened to the public in 2010, and a report of a
 // removal before that is a typing mistake rather than an event.
@@ -132,9 +152,10 @@ export const QUORA_SURVEY_REMOVED_ACCOUNT_PREFIX = 'removed-quora-account:';
 // verification form.
 export const QUORA_SURVEY_UNLOCK_SOURCE = 'quora_deletion_survey';
 
-// How many removed handles one verification request may carry onto an account. The survey itself
-// allows more accounts than this; the cap is on what gets written to the identified side.
-export const QUORA_SURVEY_MAX_LINKED_HANDLES = 25;
+// Closures written to a member's account history are bounded by the same number as the response
+// that produced them — they come from an already-validated response, so a second, smaller limit
+// here would silently drop handles the survey accepted.
+export const QUORA_SURVEY_MAX_LINKED_HANDLES = QUORA_SURVEY_MAX_ACCOUNTS;
 
 export function removedQuoraAccountMarker(handle: string): string {
   return `${QUORA_SURVEY_REMOVED_ACCOUNT_PREFIX}${handle.trim()}`;
