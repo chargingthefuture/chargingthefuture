@@ -369,11 +369,17 @@ function ModeSelector({ t, mode, onSelectMode }: { t: ComicTokens; mode: Mode; o
         ))}
       </div>
 
+      {/* No in-app settings path is named here. This line used to read "In Quora: Settings → Privacy
+          → Download your information"; the owner checked on 2026-08-20 and that screen does not
+          exist. Quora's own help article says the archive is requested by hand — by email or through
+          their contact form — and that article is quoted in full in the FAQ card directly below, so
+          the only instructions on this page are Quora's own. Do not reinstate a settings path unless
+          Quora publishes one. */}
       {mode === 'export' ? (
         <p style={{ ...bodyStyle(t), marginTop: 12, marginBottom: 0 }}>
-          In Quora: Settings → Privacy → Download your information. It arrives by email as a{' '}
-          <strong>.zip</strong>. Send it exactly as it arrived — do not unzip it, and do not try to
-          clean it out first. You do not have to.
+          You ask Quora for the archive by hand and they email it to you — how to ask is right below,
+          in Quora&apos;s own words. It arrives as a <strong>.zip</strong>. Send it exactly as it
+          arrived — do not unzip it, and do not try to clean it out first. You do not have to.
         </p>
       ) : (
         <p style={{ ...bodyStyle(t), marginTop: 12, marginBottom: 0 }}>

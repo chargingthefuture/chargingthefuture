@@ -103,8 +103,8 @@ the tests worth running slowly.
 **Precondition:** none — no export or upload is needed for this check.
 
 **Steps:**
-1. Open `/knowledge` and read the card **Getting a copy of your Quora data**, under the two sending
-   options.
+1. Open `/knowledge`, choose **Send my whole Quora export**, and read the line under the two
+   options and then the card **Getting a copy of your Quora data**.
 2. Switch between **Pick a few posts** and **Send my whole Quora export**.
 3. Tap the `privacy@quora.com` address, then **Open the original page**.
 
@@ -114,8 +114,11 @@ the tests worth running slowly.
   copy of my data", and the archive normally arrives within 72 hours to the account's email address.
   Under the quote is the byline, the date the page was read, and a link to the original.
 - The card stays visible for **both** options — the wait is part of choosing between them.
-- Three answers follow: the export is optional, it usually takes up to 72 hours, and the `.zip` is
-  sent exactly as it arrived.
+- **No Quora settings path is named anywhere on the page.** There is no screen in Quora that produces
+  an export (checked 2026-08-20); the line under the options says the archive is asked for by hand
+  and points at the card. A settings path reappearing here is a defect.
+- Four answers follow: the export is optional, there is no download button in Quora's settings, it
+  usually takes up to 72 hours, and the `.zip` is sent exactly as it arrived.
 - The address opens a mail draft; the link opens Quora's page in a new tab. **The quote must still
   read correctly with no network at all** — that is the point of quoting it.
 
@@ -125,7 +128,10 @@ the tests worth running slowly.
 
 ## CMC-C1c · Whole export (the secondary path)
 **Role:** signed-in member
-**Precondition:** a real Quora export `.zip` (Settings → Privacy → Download your information).
+**Precondition:** a real Quora export `.zip`. Ask Quora for it by hand — email `privacy@quora.com`,
+or use `quora.com/contact` and choose "I want a copy of my data" — and allow up to 72 hours. There is
+no settings screen that produces one; if you find this script telling you otherwise, the route is
+wrong, not Quora.
 
 **Steps:**
 1. On `/knowledge`, choose **Send my whole Quora export**.
