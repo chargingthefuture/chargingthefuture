@@ -12,6 +12,7 @@ import {
 } from '../../lib/comic/contribution-consent';
 import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
 import { failureText } from 'lib/errors/client-failure';
+import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
 // The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
 // assistant's reference library, and where the consent that permits it is given.
@@ -282,6 +283,10 @@ export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl
         </p>
 
         <ModeSelector t={t} mode={c.mode} onSelectMode={c.selectMode} />
+        {/* Sits under the two options, for both of them: the export route depends on a request made
+            on Quora's side that takes days, and someone choosing between the options needs to know
+            that before they pick. */}
+        <QuoraExportFaqSection t={t} />
         <WhatHappensSection t={t} />
         <WhatIsUsedSection t={t} />
         <ConsentSection
@@ -364,11 +369,17 @@ function ModeSelector({ t, mode, onSelectMode }: { t: ComicTokens; mode: Mode; o
         ))}
       </div>
 
+      {/* No in-app settings path is named here. This line used to read "In Quora: Settings → Privacy
+          → Download your information"; the owner checked on 2026-08-20 and that screen does not
+          exist. Quora's own help article says the archive is requested by hand — by email or through
+          their contact form — and that article is quoted in full in the FAQ card directly below, so
+          the only instructions on this page are Quora's own. Do not reinstate a settings path unless
+          Quora publishes one. */}
       {mode === 'export' ? (
         <p style={{ ...bodyStyle(t), marginTop: 12, marginBottom: 0 }}>
-          In Quora: Settings → Privacy → Download your information. It arrives by email as a{' '}
-          <strong>.zip</strong>. Send it exactly as it arrived — do not unzip it, and do not try to
-          clean it out first. You do not have to.
+          You ask Quora for the archive by hand and they email it to you — how to ask is right below,
+          in Quora&apos;s own words. It arrives as a <strong>.zip</strong>. Send it exactly as it
+          arrived — do not unzip it, and do not try to clean it out first. You do not have to.
         </p>
       ) : (
         <p style={{ ...bodyStyle(t), marginTop: 12, marginBottom: 0 }}>
