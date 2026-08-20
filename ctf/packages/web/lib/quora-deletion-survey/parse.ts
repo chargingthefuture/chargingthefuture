@@ -121,12 +121,29 @@ function parseAccount(raw: unknown): SurveyAccountInput | null {
   };
 }
 
-function parseAccounts(raw: unknown): SurveyAccountInput[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .slice(0, QUORA_SURVEY_MAX_ACCOUNTS)
-    .map(parseAccount)
-    .filter((account): account is SurveyAccountInput => account !== null);
+type AccountsResult =
+  | { ok: true; accounts: SurveyAccountInput[] }
+  | { ok: false; message: string };
+
+// Over the limit the whole response is refused, never trimmed to fit. Trimming was the old
+// behavior and it was wrong in the one direction that matters here: a person reporting more
+// accounts than the cap lost the rest with nothing on screen and nothing in the audit row saying
+// anything had been dropped. A refusal at least tells them, and the limit sits far enough out
+// (see QUORA_SURVEY_MAX_ACCOUNTS) that only automation should ever meet it.
+function parseAccounts(raw: unknown): AccountsResult {
+  if (!Array.isArray(raw)) return { ok: true, accounts: [] };
+  if (raw.length > QUORA_SURVEY_MAX_ACCOUNTS) {
+    return {
+      ok: false,
+      message: `That is more than ${QUORA_SURVEY_MAX_ACCOUNTS} accounts in one response. Nothing was recorded — send them in more than one response, or get in touch if you really did lose that many.`,
+    };
+  }
+  return {
+    ok: true,
+    accounts: raw
+      .map(parseAccount)
+      .filter((account): account is SurveyAccountInput => account !== null),
+  };
 }
 
 // A response is worth storing when it says something. Answering "yes, accounts of mine were
@@ -140,7 +157,11 @@ export function parseSurveySubmission(raw: unknown): ParseResult {
 
   const body = raw as Record<string, unknown>;
   const anyAccountRemoved = asBoolean(body.anyAccountRemoved);
-  const accounts = parseAccounts(body.accounts);
+  const parsedAccounts = parseAccounts(body.accounts);
+  if (!parsedAccounts.ok) {
+    return { ok: false, message: parsedAccounts.message };
+  }
+  const accounts = parsedAccounts.accounts;
 
   // Q1 has no third option and therefore no safe default: storing an unanswered response as
   // either 'yes' or 'no' would count the person as having said something they did not say.

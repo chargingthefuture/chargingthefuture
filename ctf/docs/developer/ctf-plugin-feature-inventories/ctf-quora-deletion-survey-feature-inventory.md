@@ -61,7 +61,7 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
 - Say whether they consider themselves a targeted individual — yes or no. Required; the form will
   not send without it.
 - Say yes or no to whether at least one of their Quora accounts was removed.
-- Describe each removed account on its own card, adding as many cards as they lost (up to 25): the
+- Describe each removed account on its own card, adding as many cards as they lost: the
   handle, what happened (deleted, banned or suspended, answers removed but account kept, a Space
   removed, blocked from posting), the month and year, the reason Quora gave (including "no reason
   was given" and "I do not remember"), whether they appealed, whether anything was put back, what
@@ -366,6 +366,17 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+
+- 2026-08-20: The per-response account limit went from 25 to 500, and an over-limit response is now
+  refused rather than trimmed. The old number was arbitrary and could have cut off a real
+  respondent — someone cycled through ban-evasion accounts over years might pass 25, and that is
+  the most-targeted person in the study. Worse, it failed silently: extra rows were dropped with
+  nothing on screen and nothing in the audit row. The limit is a spam bound only, and it stays
+  rather than going away entirely for two reasons: the survey is the one write path reachable
+  without a Quora URL, since it runs before the Unlock gate that stops roughly half of sign-ups;
+  and a response plus its account rows are written in one transaction with one INSERT per account,
+  so an unbounded body would hold a transaction open across arbitrarily many round trips. The form
+  also now explains the limit instead of quietly removing the "add another account" button.
 - 2026-08-19: Added `ctf/docs/QUORA_RESEARCH_BLOG_AGENT_BRIEF.md`, the brief fed to the agent that
   writes the blog: what both datasets record, the public survey link, and the rules for what may be
   published (consent per handle and per quote, counts never shares, self-report stated, removal
