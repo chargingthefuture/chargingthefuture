@@ -302,6 +302,22 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-20: **New scheme tag: The Sensitization Skit (`sensitization-skit`).** Named by the
+  owner from the cross-country bus incident and prior experience. The scheme: first prime the member by
+  repeating an ordinary thing (an item, a mannerism, a question) around them until it reads as
+  a signal; then stage a public confrontation about that primed thing — an operative approaches,
+  refuses to disengage while the member backs away, escalates until the member reacts, and a
+  second operative frames the reaction for bystanders as overreaction ("they only asked a
+  simple question") or reports it as violence. The manufactured "overreaction to an everyday
+  thing" becomes evidence of instability that people not in on it repeat in good faith. Two
+  variants recorded in the tags.ts comment: escalate-to-force-engagement (not yet sensitized)
+  and repeat-until-agitated (already sensitized). Distinct from the ambient
+  `road-sensitization`/`color-sensitization` (the priming step alone) and from
+  `planted-witness` (which this chains into). Kind mapping: `operation` in
+  `tag-categories.ts` (coverage-asserting unit test updated by the same entry). Mirrored to
+  the landing-page /schemes list. No schema, route, or contract change — canonical list
+  addition only.
+
 - 2026-08-19: **Trend reporting rebuilt so it says where, who, and what kind — and can be saved as
   one image.** The screen showed a count of area clusters and never the areas themselves; it is now
   a full breakdown of every ~11 km cell with its coordinates, incident count, distinct member count,

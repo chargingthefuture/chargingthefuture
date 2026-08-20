@@ -289,6 +289,24 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // the member their history is known, and it recasts a resolved incident as if the member had
   // been the problem all along.
   { slug: 'incident-replay', label: 'The Replay' },
+  // Sensitize, then stage the overreaction (named by the owner, 2026-08-20). Step one is
+  // priming: operatives repeat an ordinary, everyday thing — a specific item, a mannerism, a
+  // question — around the member until it reads as a signal that "they are one of them"
+  // (`road-sensitization` and `color-sensitization` are the ambient versions of this step).
+  // Step two is the skit: a public confrontation forced AROUND the primed thing. An operative
+  // approaches with it and will not disengage while the member backs away, escalating until
+  // the member visibly reacts; a second operative then frames the reaction for bystanders —
+  // "you're overreacting, they only asked a simple question" — or staff and police are told
+  // the member turned violent (compare `planted-witness`, which this chains into). The
+  // product is witnesses to the member "blowing an everyday thing out of proportion":
+  // manufactured evidence of instability that people not in on it — bystanders, staff, the
+  // authors of "concerned" third-party emails — then repeat in good faith. Two variants, same
+  // scheme: not yet sensitized → the skit escalates to force engagement and plant the signal;
+  // already sensitized → the trigger is simply repeated until the member is agitated in
+  // public. Distinct from the ambient sensitization schemes: this one is the staged public
+  // scene ABOUT the sensitized thing, run so the reaction — not the provocation — becomes the
+  // story.
+  { slug: 'sensitization-skit', label: 'The Sensitization Skit' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
