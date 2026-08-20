@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-19_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -233,6 +233,25 @@ You can dismiss the fundraiser banner for two months if you want. It collapses t
 2. Pick a contribution type (gift card, Quora comment, or GitHub profile) and fill in the form with the required information.
 3. If you're submitting a gift card, send the code to the owner over Signal, not in the app.
 
+## Knowledge Library
+
+_Last updated: 2026-08-19_
+
+Knowledge Library is where you lend your own public Quora writing to the assistant, so it can answer from more than one person's experience.
+
+The page is at /knowledge and it is open to any signed-in member, whether or not you have finished Unlock. If you have not been approved yet, sending your writing is a way in rather than something you have to wait for: your Quora profile link goes into the same review queue at the same time. Open the page signed out and you get a public page instead, explaining what the library is, what happens to your writing, and that you can take it back.
+
+There are two ways to give. Picking a few posts is the one selected for you: for each post you paste its link on Quora and the post's text, up to twenty in one submission. Nothing ever opens the link — it is there so the person reading your writing can see the post is public and yours. Only quora.com links are accepted, the same link twice is refused, and a post of only a line or two is refused straight away, because a couple of lines is not enough for the assistant to answer from. The other way is a whole Quora export, for the rarer case where nearly all of your public writing fits. You ask Quora for that export yourself, and the page carries Quora's own instructions for doing it. The file is read as it arrives, only the public parts are kept, and the file itself is never stored.
+
+Before you can type anything you tick six separate lines of consent — one box each, with no single 'agree to all'. They cover that this is your own public writing, the one use it is for, that you keep every right to it, that you can take it back, that a person reads it and not everything gets used, and that parts naming other people may be cut. After you send, a receipt tells you how many pieces were kept. Your submission then sits under 'What you have sent' as waiting to be read, and you can withdraw it at any time from the same page — withdrawing really does stop the assistant using your writing.
+
+**How to use it**
+
+1. Open /knowledge. Signed out you get the public page; signed in you get the form.
+2. Tick all six consent lines. Until you do, the boxes for your posts stay switched off.
+3. Leave 'Pick a few posts' selected, paste one post's Quora link and its full text, and use 'Add another post' for each one after that. Send, then read the receipt saying how many pieces were kept.
+4. Come back to the same page whenever you want to see what you have sent, or to withdraw it.
+
 ## LevelUp
 
 _Last updated: 2026-08-05_
@@ -250,6 +269,25 @@ If a problem comes up with an enrollment, you can open a dispute and add comment
 1. Sign in and open the LevelUp app. You'll see cohort cards to browse.
 2. Go to the Wallet tab to see your ServiceCredits balance and escrow totals.
 3. Pick a cohort and follow the enrollment flow to sign up. If a deposit is required, you'll set that up as part of enrollment.
+
+## Trust
+
+_Last updated: 2026-08-14_
+
+Trust shows what you have actually done in the app, written as plain lines other members can read.
+
+Your trust card is a list of real things you have done here — how often you sign in, your ServiceCredits activity, your connections with other members, the cohorts you have finished. Each one is a plain sentence, not a number. There is no score, no badge, and no status. The app does not check anyone's identity, background, or work, so nothing on the card says a person has been checked out.
+
+Signing in shows up as two separate lines. 'Active on 162 days' counts every day you have ever signed in on, and it never goes down. 'Active 12 days in a row' counts the run you are on right now, and it only shows while that run reaches today or yesterday — miss a day and the line goes away. Nothing asks you to keep a run going, nothing reminds you about it, and losing it takes nothing else away.
+
+Your own card has two parts. 'Your trust' is everything you have. 'What members see' shows the exact lines any other member gets about you. You cannot change either part: what others see is set the same way for everyone, so trust cannot be hidden by the person it describes. The second part is there so you are never guessing what is on show about you.
+
+**How to use it**
+
+1. Sign in and open your account page. Your trust card is on it, with a line for each thing you have done.
+2. Open the app list and tap Trust to land on that same card.
+3. Read the 'What members see' part of the card to see exactly what other members are shown about you.
+4. Open Trust without signing in to read the public page, which lists the four kinds of signals: how often you sign in, ServiceCredits activity, community connections, and cohort completion record.
 
 ## TrustTransport
 
@@ -289,15 +327,15 @@ If a host makes you uncomfortable, you can block them from any listing. When you
 
 ## ClickLog
 
-_Last updated: 2026-08-07_
+_Last updated: 2026-08-18_
 
-ClickLog is a private place to record incidents and track patterns over time.
+ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.
 
-Open ClickLog and press Log Incident to add a new entry. You can add a location and notes. Only you see your incident list.
+Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: an incident can be private only when it has no tags, and a private, untagged incident does not need a location. Three: tagging an incident with problems or schemes requires a location and trend sharing, because tags exist to feed the global map — a tagged incident is always a shared one.
 
-When you log an incident, you can tag it with a problem type from the 50+ published problems list, or a scheme name from the canonical list. If you know of a scheme that is not listed, you can suggest a new one with a description (up to 200 characters) — this option is only available if you hold the Weavers of the Commons badge. Tagging requires a location so trend data stays useful.
+What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.
 
-By default, new incidents are not shared. You can turn on sharing per incident or set a global default. When sharing is on, only grouped trend data (date, rough area, and tags) goes to the owner — never your notes or exact location. You can delete any of your own incidents, and you can turn off sharing for any incident at any time.
+You can edit or delete your own incidents at any time. An untagged incident's sharing can be turned off again whenever you like; a tagged incident becomes private by removing its tags first. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required).
 
 **How to use it**
 

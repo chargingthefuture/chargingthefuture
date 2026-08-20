@@ -42,7 +42,16 @@ const OUT_JSON = join(ctfRoot, 'packages/web/app/guide/guide-content.json');
 const OUT_MD = join(ctfRoot, 'docs/USER_GUIDE.md');
 
 // Reading order for the guide — people/connection first, then the ways to contribute, then the
-// quieter tools and stats. Each entry: [slug, display name]. Only member-facing plugins appear.
+// quieter tools and stats. Only member-facing plugins appear.
+//
+// Each entry is [slug, display name] plus, when that plugin's docs do not follow the usual
+// `ctf-<slug>-feature-inventory.md` / `<slug>-test-script.md` naming, a third entry naming the
+// source files. Knowledge Library is the one that needs it today: it is a member-facing plugin of
+// its own in the registry, but its documentation lives inside the AI assistant's (`comic`) docs,
+// which is exactly why earlier passes silently left it out of the guide. That third entry can also
+// carry `smokeHeading` (the test-script heading holding the member walkthrough, when the script does
+// not use "Core smoke") and `focus` (one line telling the model which part of a shared document this
+// section covers, so it does not write about the rest of the file).
 const ORDER = [
   // Commons is the home page and the app list itself, so earlier passes left it out of the guide;
   // members still need it explained (owner decision, 2026-08-18) — it leads the reading order as
@@ -61,13 +70,50 @@ const ORDER = [
   ['skills-taxonomy', 'Skills Taxonomy'],
   ['service-credits', 'ServiceCredits'],
   ['contributions', 'Contributions'],
+  [
+    'knowledge',
+    'Knowledge Library',
+    {
+      inventory: 'ctf-comic-feature-inventory.md',
+      testScript: 'comic-test-script.md',
+      smokeHeading: /Pick a few posts/i,
+      focus:
+        'This section is ONLY about the Knowledge Library at /knowledge — lending your own public Quora writing to the assistant, and taking it back. The source documents also describe the AI assistant itself (asking it questions, rating its answers); ignore all of that and write nothing about it.',
+    },
+  ],
   ['level-up', 'LevelUp'],
+  ['trust', 'Trust'],
   ['trust-transport', 'TrustTransport'],
   ['lighthouse', 'LightHouse'],
   ['click-log', 'ClickLog'],
   ['recurring-activity', 'Recurring Activity'],
   ['gdp', 'GDP'],
 ];
+
+// Trust and Knowledge Library were both missing from the guide for months because ORDER is a
+// hand-kept list and nothing compared it to the plugins members can actually see. This prints the
+// difference on every run: any plugin the registry shows in the launcher but the guide never
+// mentions. It is a notice, not a failure — some launcher entries genuinely do not belong in a
+// member guide — but the omission is now visible in the run log instead of waiting to be noticed.
+function noticeMissingFromGuide() {
+  const registryFile = join(ctfRoot, 'packages/web/lib/plugins/repository.ts');
+  if (!existsSync(registryFile)) return;
+  const src = readFileSync(registryFile, 'utf-8');
+  const covered = new Set(ORDER.map(([slug]) => slug));
+  const missing = [];
+  const entry = /slug: '([^']+)',[\s\S]{0,600}?isVisible: (true|false),/g;
+  let m = entry.exec(src);
+  while (m) {
+    if (m[2] === 'true' && !covered.has(m[1])) missing.push(m[1]);
+    m = entry.exec(src);
+  }
+  if (missing.length) {
+    console.error(
+      `notice: these plugins appear in the launcher but have no guide section: ${missing.join(', ')}. ` +
+        'Add each one to ORDER, or decide it is not something a member needs explained.',
+    );
+  }
+}
 
 const repoUrl = 'https://github.com/chargingthefuture/chargingthefuture';
 
@@ -77,7 +123,11 @@ const brandVoice = existsSync(join(ctfRoot, 'docs/BRAND_VOICE_LEXICON.md'))
 
 // ── Source resolution ──────────────────────────────────────────────────────────
 
-function inventoryPath(slug) {
+function inventoryPath(slug, override) {
+  if (override) {
+    const named = join(INVENTORY_DIR, override);
+    return existsSync(named) ? named : null;
+  }
   const direct = join(INVENTORY_DIR, `ctf-${slug}-feature-inventory.md`);
   if (existsSync(direct)) return direct;
   // A few slugs map to a differently-named inventory file (e.g. gdp → gross-domestic-product).
@@ -92,8 +142,8 @@ function inventoryPath(slug) {
   return null;
 }
 
-function testScriptPath(slug) {
-  const p = join(TEST_SCRIPT_DIR, `${slug}-test-script.md`);
+function testScriptPath(slug, override) {
+  const p = join(TEST_SCRIPT_DIR, override ?? `${slug}-test-script.md`);
   return existsSync(p) ? p : null;
 }
 
@@ -183,7 +233,7 @@ function extractJson(text) {
   return t;
 }
 
-async function rewrite(slug, title, whatItIs, features, coreSmoke) {
+async function rewrite(slug, title, whatItIs, features, coreSmoke, focus) {
   if (!process.env.ANTHROPIC_API_KEY) return null;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -199,7 +249,7 @@ async function rewrite(slug, title, whatItIs, features, coreSmoke) {
       messages: [
         {
           role: 'user',
-          content: `Write the "${title}" section of the user guide, grounded ONLY in the three source blocks below.\n\n=== ${title} — What it is (developer notes on the point of this plugin) ===\n${whatItIs || '(none documented)'}\n\nUse that first block only to get the framing right — what this plugin is and is not. It is written for developers, so never copy its wording, its rule numbers, its file paths, or its planning notes into the guide. Everything a member can DO comes from the two blocks below.\n\n=== ${title} — User Features (what a member can do) ===\n${features || '(none documented)'}\n\n=== ${title} — Core smoke (plain member steps) ===\n${coreSmoke || '(none documented)'}\n\nReturn ONLY a JSON object with these exact keys:\n- summary: one plain sentence saying what ${title} is for.\n- body: an array of 1 to 3 short plain paragraphs on what a member can do here (strings).\n- howTo: an array of 2 to 4 plain steps for using it, drawn from the Core smoke block (strings). Use an empty array if there is no meaningful walkthrough.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
+          content: `Write the "${title}" section of the user guide, grounded ONLY in the three source blocks below.\n${focus ? `\nSCOPE: ${focus}\n` : ''}\n=== ${title} — What it is (developer notes on the point of this plugin) ===\n${whatItIs || '(none documented)'}\n\nUse that first block only to get the framing right — what this plugin is and is not. It is written for developers, so never copy its wording, its rule numbers, its file paths, or its planning notes into the guide. Everything a member can DO comes from the two blocks below.\n\n=== ${title} — User Features (what a member can do) ===\n${features || '(none documented)'}\n\n=== ${title} — Core smoke (plain member steps) ===\n${coreSmoke || '(none documented)'}\n\nReturn ONLY a JSON object with these exact keys:\n- summary: one plain sentence saying what ${title} is for.\n- body: an array of 1 to 3 short plain paragraphs on what a member can do here (strings).\n- howTo: an array of 2 to 4 plain steps for using it, drawn from the Core smoke block (strings). Use an empty array if there is no meaningful walkthrough.\n\nReturn ONLY valid JSON. No markdown fences. No preamble.`,
         },
       ],
     }),
@@ -244,10 +294,12 @@ const prev = new Map(
 );
 const prevIntro = existsSync(OUT_JSON) ? JSON.parse(readFileSync(OUT_JSON, 'utf-8')).intro : null;
 
+noticeMissingFromGuide();
+
 const sections = [];
-for (const [slug, title] of ORDER) {
-  const invPath = inventoryPath(slug);
-  const tsPath = testScriptPath(slug);
+for (const [slug, title, sources] of ORDER) {
+  const invPath = inventoryPath(slug, sources?.inventory);
+  const tsPath = testScriptPath(slug, sources?.testScript);
   const inv = invPath ? readFileSync(invPath, 'utf-8') : '';
   const ts = tsPath ? readFileSync(tsPath, 'utf-8') : '';
   // "Intent and Outcome" states what the plugin IS. Without it the model has only feature bullets
@@ -258,7 +310,7 @@ for (const [slug, title] of ORDER) {
   // lands on a paragraph break so the block never ends mid-sentence and reads as a truncated claim.
   const whatItIs = capAtParagraph(extractSection(inv, /Intent (and|&) Outcome/i), 2500);
   const features = extractSection(inv, /User Features/i);
-  const coreSmoke = extractSection(ts, /Core smoke/i);
+  const coreSmoke = extractSection(ts, sources?.smokeHeading ?? /Core smoke/i);
   const updated = lastUpdated([invPath, tsPath]);
 
   // Cost control: the guide is regenerated on a schedule (see the workflow), so most runs happen
@@ -273,7 +325,7 @@ for (const [slug, title] of ORDER) {
   }
 
   console.error(`generating ${slug}…`);
-  const written = await rewrite(slug, title, whatItIs, features, coreSmoke);
+  const written = await rewrite(slug, title, whatItIs, features, coreSmoke, sources?.focus);
   if (!written || !written.summary || !written.body.length) {
     // Model call failed or returned nothing usable. Keep the reviewed section as-is (only bumping
     // its date); fail only if there is no prior section to preserve.
