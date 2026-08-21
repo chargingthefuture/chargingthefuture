@@ -302,6 +302,20 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-20: **New scheme tag: The Staged Run-In (`staged-run-in`).** Named by the owner from
+  the cross-country bus incident: the two operatives from the St. Louis false-assault claim
+  had been placed on the same Denver leg beforehand. The scheme: sabotage the member's
+  logistics — delays, rebooked trips, added legs — so their route bends through places
+  operatives are waiting; dress each crossing as chance (a meet-cute, a small altercation, a
+  memorable exchange); collect the payoff later when the operative claims to know the member,
+  turning a manufactured stranger into a credible "witness" or acquaintance. Distinct from
+  `lure-to-location` (member baited to a place — here the member's own legitimate trip is
+  bent), from `scapegoating-by-proxy` (operatives sync to the member to stage chaos — here
+  the sync builds claimable acquaintance), and from `engineered-delay`/`altered-ticket` (the
+  sabotage tools this scheme uses for a further end). Kind mapping: `operation` in
+  `tag-categories.ts`. Mirrored to the landing-page /schemes list. No schema, route, or
+  contract change — canonical list addition only.
+
 - 2026-08-20: **New scheme tag: The Sensitization Skit (`sensitization-skit`).** Named by the
   owner from the cross-country bus incident and prior experience. The scheme: first prime the member by
   repeating an ordinary thing (an item, a mannerism, a question) around them until it reads as
