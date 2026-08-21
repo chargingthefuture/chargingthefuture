@@ -77,6 +77,11 @@ export const CLICK_LOG_PROBLEM_TAGS: readonly ClickLogTag[] = [
   // (`chargingthefuture/landing-page` → `LOOK_MA_ITEMS`) so the two lists stay one-for-one.
   { slug: 'travel-sabotage', label: 'Trips sabotaged — delays, missed connections, canceled tickets' },
   { slug: 'false-accusations', label: 'Falsely accused of violence / crimes to bystanders' },
+  // Added 2026-08-21 (owner). Covers the range many members report — assault and rape at the
+  // worst, and short of contact, deliberate exposure and sexual humiliation (see the
+  // `staged-exposure` scheme for the engineered form). Coarse on purpose: the tag names the
+  // harm so it can be counted; what happened stays in the member's private note.
+  { slug: 'sexual-violence', label: 'Sexually assaulted / deliberately exposed or humiliated' },
 ] as const;
 
 // Known taxonomy gap, recorded 2026-08-04 (owner raised it about `color-sensitization`, and it
@@ -320,6 +325,19 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // happens "naturally"; and distinct from `scapegoating-by-proxy` (operatives sync to the
   // member to stage chaos) — here the sync exists to build claimable acquaintance.
   { slug: 'staged-run-in', label: 'The Staged Run-In' },
+  // Sexual humiliation, engineered (named by the owner, 2026-08-21). The fallback when the
+  // `honey-pot` lure is refused: if the member cannot be drawn into engagement — and cannot
+  // be assaulted — the operation goes for exposure instead. The mechanism leans on venue
+  // rules that sound reasonable on their own: transitional housing and shelters where
+  // showers and doors cannot lock (staff must be able to open them), staff who control the
+  // keys, and timing. In the owner's case: keyed into a shower, and the moment they had
+  // undressed the door was opened, exposing them to a male bystander — with laughter, which
+  // is the tell that the "accident" was the point. Related but distinct: `honey-pot` is the
+  // lure (manufactured romance, the emotional rollercoaster, staged domestic-violence
+  // setups); this is the no-consent fallback that needs nothing from the member but presence.
+  // Many members report the worst end of this range — assault and rape; the harm itself is
+  // the `sexual-violence` problem tag, and this scheme names the engineered-exposure method.
+  { slug: 'staged-exposure', label: 'The Staged Exposure' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names

@@ -106,6 +106,7 @@ export const CLICK_LOG_PROBLEM_TAG_CATEGORY: Readonly<Record<string, string>> = 
   'mirroring-behavior': 'threats-and-intimidation',
   'police-harassment': 'threats-and-intimidation',
   'sexual-solicitation': 'threats-and-intimidation',
+  'sexual-violence': 'threats-and-intimidation',
   'ride-prostitution-offers': 'threats-and-intimidation',
   'theft-detector-beep': 'threats-and-intimidation',
 
@@ -170,6 +171,7 @@ export const CLICK_LOG_SCHEME_TAG_KIND: Readonly<Record<string, ClickLogSchemeKi
   'planted-witness': 'operation',
   'sensitization-skit': 'operation',
   'staged-run-in': 'operation',
+  'staged-exposure': 'operation',
 
   'thats-a-nice': 'ambient',
   'staged-narratives': 'ambient',

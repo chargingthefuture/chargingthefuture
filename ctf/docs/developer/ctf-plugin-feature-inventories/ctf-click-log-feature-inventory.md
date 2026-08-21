@@ -302,6 +302,20 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-21: **New problem tag "Sexually assaulted / deliberately exposed or humiliated"
+  (`sexual-violence`) and new scheme tag The Staged Exposure (`staged-exposure`).** Owner
+  decision. The problem tag names the harm range many members report — assault and rape at
+  the worst, and short of contact, deliberate exposure and sexual humiliation — coarse on
+  purpose, with what happened staying in the private note. The scheme names the engineered
+  form the owner experienced: the fallback when the `honey-pot` lure is refused, leaning on
+  venue rules that sound reasonable alone (transitional-housing showers that cannot lock,
+  staff-held keys) plus timing — keyed into a shower, the door opened the moment they had
+  undressed, exposure to a bystander, laughter as the tell. `honey-pot` stays the lure
+  variant; an incident can carry the `sexual-violence` problem with either scheme. Category
+  mappings: problem → `threats-and-intimidation` (beside `sexual-solicitation`), scheme →
+  `operation`. Mirrored to the landing /look-ma and /schemes pages. No schema, route, or
+  contract change — canonical list additions only.
+
 - 2026-08-20: **New scheme tag: The Staged Run-In (`staged-run-in`).** Named by the owner from
   the cross-country bus incident: the two operatives from the St. Louis false-assault claim
   had been placed on the same Denver leg beforehand. The scheme: sabotage the member's
