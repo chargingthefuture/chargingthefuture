@@ -181,6 +181,7 @@ export const CLICK_LOG_SCHEME_TAG_KIND: Readonly<Record<string, ClickLogSchemeKi
   'incident-replay': 'ambient',
 
   'performed-kindness': 'pattern',
+  'good-day-bad-day': 'pattern',
 
   'other-scheme': 'unclassified',
 };

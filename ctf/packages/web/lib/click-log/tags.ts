@@ -338,6 +338,21 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // Many members report the worst end of this range — assault and rape; the harm itself is
   // the `sexual-violence` problem tag, and this scheme names the engineered-exposure method.
   { slug: 'staged-exposure', label: 'The Staged Exposure' },
+  // The member's days are scheduled, then graded (named by the owner, 2026-08-21). Operations
+  // run to a weekly rhythm: a particular weekday made reliably bad, the day after left good,
+  // weekends a favorite target — so the member learns to dread specific days before anything
+  // happens on them. The anticipation is the point. Around the schedule runs a grading loop:
+  // operatives poll the member — good day? bad day? bad weekend? — and echo the verdict back
+  // in phrases a bystander cannot catch as anything but politeness: "have a good day", "hope
+  // you had a good weekend", delivered pointedly after a day they made bad. Multiple members
+  // report the same weekday structure independently, which makes this one of the tags where
+  // cross-member trend data can show what no single member can (compare
+  // `color-sensitization`): unconnected members dreading the same weekday is a pattern, not a
+  // coincidence. Any scheme can fill a "bad day" — what this tag names is the layer above
+  // them: the scheduling and the grading, where the harm is raw material and the
+  // classification is run for the operators' amusement. Kind: pattern (a weekly shape over
+  // time, not one act).
+  { slug: 'good-day-bad-day', label: 'The Good Day, Bad Day' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
