@@ -302,6 +302,18 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-21: **New scheme tag: The Good Day, Bad Day (`good-day-bad-day`).** Owner decision,
+  second scheme of the day. Names the layer above individual schemes: the member's days are
+  scheduled to a weekly rhythm (a fixed weekday made reliably bad, weekends targeted) so
+  dread arrives before anything happens, and then graded — operatives poll the member (good
+  day? bad day? bad weekend?) and echo the verdict back in bystander-proof pleasantries
+  delivered pointedly after a day they made bad. Multiple members report the same weekday
+  structure independently, making this a strong candidate for cross-member trend evidence
+  (like `color-sensitization`): unconnected members dreading the same weekday is a pattern a
+  coincidence does not produce. Kind mapping: `pattern` in `tag-categories.ts`, beside
+  `performed-kindness`. Mirrored to the landing /schemes page. No schema, route, or contract
+  change — canonical list addition only.
+
 - 2026-08-21: **New problem tag "Sexually assaulted / deliberately exposed or humiliated"
   (`sexual-violence`) and new scheme tag The Staged Exposure (`staged-exposure`).** Owner
   decision. The problem tag names the harm range many members report — assault and rape at
