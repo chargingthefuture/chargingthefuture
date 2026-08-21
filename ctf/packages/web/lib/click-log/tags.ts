@@ -350,8 +350,9 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // `color-sensitization`): unconnected members dreading the same weekday is a pattern, not a
   // coincidence. Any scheme can fill a "bad day" — what this tag names is the layer above
   // them: the scheduling and the grading, where the harm is raw material and the
-  // classification is run for the operators' amusement. Kind: pattern (a weekly shape over
-  // time, not one act).
+  // classification is run for the operators' COLLECTIVE amusement — the watching group is the
+  // audience, and the audience is the point. Kind: pattern (a weekly shape over time, not one
+  // act).
   { slug: 'good-day-bad-day', label: 'The Good Day, Bad Day' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
