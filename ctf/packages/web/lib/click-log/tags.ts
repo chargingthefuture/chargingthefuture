@@ -82,6 +82,12 @@ export const CLICK_LOG_PROBLEM_TAGS: readonly ClickLogTag[] = [
   // `staged-exposure` scheme for the engineered form). Coarse on purpose: the tag names the
   // harm so it can be counted; what happened stays in the member's private note.
   { slug: 'sexual-violence', label: 'Sexually assaulted / deliberately exposed or humiliated' },
+  // Added 2026-08-21 (owner). The discrediting label itself, which several schemes are built
+  // to manufacture: a member reacting normally to engineered provocation is written up as
+  // unstable, paranoid, or dangerous. Distinct from `false-accusations` (a specific claimed
+  // crime told to bystanders) — this is the standing character verdict that follows the
+  // member into medical, housing, family, and legal settings.
+  { slug: 'false-mental-health-label', label: 'Falsely labeled mentally ill or dangerous' },
 ] as const;
 
 // Known taxonomy gap, recorded 2026-08-04 (owner raised it about `color-sensitization`, and it
@@ -354,6 +360,24 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // audience, and the audience is the point. Kind: pattern (a weekly shape over time, not one
   // act).
   { slug: 'good-day-bad-day', label: 'The Good Day, Bad Day' },
+  // Engineered destitution that ends with the member back in an abusive family home (named by
+  // the owner, 2026-08-21, from more than a decade of repeated attempts on them — this is a
+  // campaign that is re-run, not a one-time operation). The arc: strip the member's income and
+  // housing options (`workplace-sabotage`, `denied-jobs-housing`, `banking-blocked`) until the
+  // only remaining roof belongs to family who abuse them and who they now depend on
+  // financially; then saturate that address — buy up the neighborhood, station full-time
+  // operatives to circle all day (`parked-cars-outside-home`, `neighbors-replaced`), and pay
+  // the family in perks, jobs, friends, and sex to run the harassment from inside the house.
+  // The owner names the "perverse fixation on the past" behind it: an adult is pushed back
+  // into the household they left, regardless of age. Two payoffs. It makes `good-day-bad-day`
+  // trivial to run, because an operator now lives with the member and controls the day. And it
+  // is the cheapest route to `false-mental-health-label`: a member isolated with their abusers,
+  // with no independent income and no witness who is not paid, has no way to be believed. The
+  // owner strongly discourages the arrangement — in their observation it is where the worst
+  // outcomes cluster, self-harm and violence alike, because the harassment never stops and
+  // there is nowhere in the house to go. Kind: operation (each attempt has an arc), though it
+  // recurs for years.
+  { slug: 'forced-homecoming', label: 'The Forced Homecoming' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names

@@ -302,6 +302,25 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-21: **New scheme tag The Forced Homecoming (`forced-homecoming`) and new problem tag
+  "Falsely labeled mentally ill or dangerous" (`false-mental-health-label`).** Owner decision,
+  third addition of the day. The scheme: engineered destitution that ends with the member back
+  in an abusive family home — strip income and housing options until the only roof belongs to
+  family who abuse them, then saturate that address (neighborhood bought up, full-time
+  operatives circling, the family paid in perks, jobs, friends, and sex to run the harassment
+  from inside). Named by the owner from more than a decade of repeated attempts, so the
+  comment records it as a campaign that is re-run rather than a one-time operation. Two
+  payoffs recorded: it makes `good-day-bad-day` trivial (an operator lives with the member and
+  controls the day), and it is the cheapest route to the new `false-mental-health-label`
+  problem — a member isolated with their abusers, with no independent income and no unpaid
+  witness, has no way to be believed. The owner strongly discourages the arrangement; the
+  comment records that this is where the worst outcomes cluster. The problem tag names the
+  standing character verdict itself, distinct from `false-accusations` (a specific claimed
+  crime told to bystanders), because several schemes are built to manufacture exactly that
+  label. Category mappings: scheme → `operation`, problem → `set-up-for-blame` beside
+  `false-accusations`. Mirrored to the landing /schemes and /look-ma pages. No schema, route,
+  or contract change — canonical list additions only.
+
 - 2026-08-21: **New scheme tag: The Good Day, Bad Day (`good-day-bad-day`).** Owner decision,
   second scheme of the day. Names the layer above individual schemes: the member's days are
   scheduled to a weekly rhythm (a fixed weekday made reliably bad, weekends targeted) so
