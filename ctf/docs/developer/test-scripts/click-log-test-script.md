@@ -360,3 +360,5 @@ of these, it is already tracked, not a new bug:
 > _Tag additions (2026-08-21): one new problem, "Sexually assaulted / deliberately exposed or humiliated" (`sexual-violence`), and one new scheme, The Staged Exposure (`staged-exposure`). No test steps change; in CL-7, confirm both appear in their pickers (search "sexually" and "exposure")._
 
 > _Tag addition (2026-08-21, second of the day): one new scheme, The Good Day, Bad Day (`good-day-bad-day`). No test steps change; in CL-7, confirm it appears in the scheme picker search (type "good day")._
+
+> _Tag additions (2026-08-21, third of the day): one new scheme, The Forced Homecoming (`forced-homecoming`), and one new problem, "Falsely labeled mentally ill or dangerous" (`false-mental-health-label`). No test steps change; in CL-7, confirm both appear in their pickers (search "homecoming" and "labeled")._
