@@ -356,3 +356,5 @@ of these, it is already tracked, not a new bug:
 > _Tag addition (2026-08-20): one new scheme, The Sensitization Skit (`sensitization-skit`). No test steps change; in CL-7, confirm the new scheme appears in the scheme picker search (type "sensitization")._
 
 > _Tag addition (2026-08-20, second of the day): one new scheme, The Staged Run-In (`staged-run-in`). No test steps change; in CL-7, confirm it appears in the scheme picker search (type "run-in")._
+
+> _Tag additions (2026-08-21): one new problem, "Sexually assaulted / deliberately exposed or humiliated" (`sexual-violence`), and one new scheme, The Staged Exposure (`staged-exposure`). No test steps change; in CL-7, confirm both appear in their pickers (search "sexually" and "exposure")._
