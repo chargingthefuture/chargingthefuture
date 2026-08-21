@@ -169,6 +169,7 @@ export const CLICK_LOG_SCHEME_TAG_KIND: Readonly<Record<string, ClickLogSchemeKi
   'pretext-search': 'operation',
   'planted-witness': 'operation',
   'sensitization-skit': 'operation',
+  'staged-run-in': 'operation',
 
   'thats-a-nice': 'ambient',
   'staged-narratives': 'ambient',

@@ -354,3 +354,5 @@ of these, it is already tracked, not a new bug:
 > _Behavior change (2026-08-18, third — the enforcement the previous note said ships separately): tagging now requires trend sharing as well as a location (owner directive — the rules as intended: tags require location and sharing; notes always private; an incident can be private only when untagged). CL-6 narrows opt-in sharing to untagged incidents and adds the locked pill on tagged rows; CL-7 adds the locked-on share checkbox and the tagged-logs-as-shared expectation; CL-9 adds the editor's saving-with-tags-turns-on-sharing notice. Already-logged tagged private incidents are brought under the rule by an idempotent schema backfill (owner approval) — after migration, no tagged row shows a Private pill._
 
 > _Tag addition (2026-08-20): one new scheme, The Sensitization Skit (`sensitization-skit`). No test steps change; in CL-7, confirm the new scheme appears in the scheme picker search (type "sensitization")._
+
+> _Tag addition (2026-08-20, second of the day): one new scheme, The Staged Run-In (`staged-run-in`). No test steps change; in CL-7, confirm it appears in the scheme picker search (type "run-in")._

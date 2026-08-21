@@ -307,6 +307,19 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // scene ABOUT the sensitized thing, run so the reaction — not the provocation — becomes the
   // story.
   { slug: 'sensitization-skit', label: 'The Sensitization Skit' },
+  // Cross the member's path on purpose, then claim the crossing was a relationship (named by
+  // the owner, 2026-08-20). The mechanism: the member's logistics are sabotaged — delays,
+  // rebooked trips, added legs (`engineered-delay`, `altered-ticket`) — so their route bends
+  // through places operatives are waiting. Each crossing is dressed as chance: a meet-cute, a
+  // small altercation, a memorable exchange. The payoff comes later, when the operative can
+  // say "I know this person" — false familiarity that turns a stranger into a credible
+  // "witness" or acquaintance. It also explains why the operation reads bigger than it is: a
+  // member's real inner circle is small, so the many "familiar strangers" are manufactured by
+  // these synced crossings, not known from life. Distinct from `lure-to-location` (the member
+  // is baited to a place) — here the member's own legitimate trip is bent so the crossing
+  // happens "naturally"; and distinct from `scapegoating-by-proxy` (operatives sync to the
+  // member to stage chaos) — here the sync exists to build claimable acquaintance.
+  { slug: 'staged-run-in', label: 'The Staged Run-In' },
   // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
   // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
   // description of the scheme (see click-log.incident.create) — that is the intake that names
