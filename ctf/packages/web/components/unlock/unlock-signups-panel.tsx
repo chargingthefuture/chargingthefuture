@@ -2,81 +2,56 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users } from 'lucide-react';
-import type { UnlockSignupAccount, UnlockSignupOverview } from 'lib/unlock/types';
+import { ChevronDown, ChevronUp, Users } from 'lucide-react';
+import type { UnlockSignupOverview } from 'lib/unlock/types';
 import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
-import { getUnlockTokens } from './unlock-shared';
+import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
 import { UnlockSignupRow } from './unlock-signup-row';
+import { UnlockSignupsSummary, signupHeadline } from './unlock-signups-summary';
+import {
+  accountsForTab,
+  matchesSearch,
+  summarize,
+  SIGNUP_TABS,
+  TAB_LABEL,
+  type SignupTab,
+} from './unlock-signups-counts';
 
-type SignupTab = 'not-submitted' | 'all' | 'excluded' | 'deleted';
+// How many sign-ups the list shows before you ask for more. The panel sits above the review queue, so an
+// unbounded list of everyone who never gave a Quora URL pushed the queue off the bottom of the screen.
+const PAGE_SIZE = 10;
 
-const TAB_LABEL: Record<SignupTab, string> = {
-  'not-submitted': 'No Quora URL',
-  all: 'All sign-ups',
-  excluded: 'Demo / test',
-  deleted: 'Left',
-};
-
-// Whether this account counts as a member: not a demo/test account, and not someone who deleted their
-// data. A demo/test mark wins over a deletion mark so nobody is subtracted twice.
-function isCounted(account: UnlockSignupAccount): boolean {
-  return !account.excluded && !account.deletedTheirData;
-}
-
-// The four numbers the panel leads with. Derived from the loaded accounts (not from the server's copy of
-// the counts) so marking an account demo/test moves every number at once.
-// Has this member never signed in again since the day they signed up? A hint, not proof — the provider
-// stamps the last sign-in on a fresh sign-in, not on every visit. The Unlock-screen view count beside it
-// is the firmer reading.
-function neverReturned(account: UnlockSignupAccount): boolean {
-  if (!account.lastSignInAt) return true;
-  return account.lastSignInAt.slice(0, 10) === account.createdAt.slice(0, 10);
-}
-
-function summarize(accounts: UnlockSignupAccount[]) {
-  const counted = accounts.filter(isCounted);
-  const submitted = counted.filter((account) => account.hasSubmission).length;
-  const notSubmitted = counted.filter((account) => !account.hasSubmission);
-  const neverBack = notSubmitted.filter(neverReturned).length;
-  const views = notSubmitted.map((account) => account.unlockScreenViews).sort((a, b) => a - b);
-  return {
-    totalAccounts: accounts.length,
-    excludedCount: accounts.filter((account) => account.excluded).length,
-    deletedCount: accounts.filter((account) => !account.excluded && account.deletedTheirData).length,
-    memberCount: counted.length,
-    submittedCount: submitted,
-    notSubmittedCount: notSubmitted.length,
-    neverReturnedCount: neverBack,
-    returnedAnywayCount: notSubmitted.length - neverBack,
-    // Median rather than mean: one member who reloaded the screen twenty times would drag an average
-    // and make the whole group look like it kept trying.
-    medianScreenViews: views.length === 0 ? 0 : views[Math.floor(views.length / 2)],
-  };
-}
-
-// Which accounts each tab shows. Kept out of the component so its own decision count stays small.
-function accountsForTab(accounts: UnlockSignupAccount[], tab: SignupTab): UnlockSignupAccount[] {
-  if (tab === 'not-submitted') return accounts.filter((account) => isCounted(account) && !account.hasSubmission);
-  if (tab === 'excluded') return accounts.filter((account) => account.excluded);
-  if (tab === 'deleted') return accounts.filter((account) => !account.excluded && account.deletedTheirData);
-  return accounts;
-}
-
-function matchesSearch(account: UnlockSignupAccount, query: string): boolean {
-  return [account.name, account.username, account.email, account.userId].some(
-    (field) => field != null && field.toLowerCase().includes(query),
-  );
-}
-
-function SignupStat({ label, value, accent }: { label: string; value: number; accent?: string }) {
-  const { theme } = useTheme();
-  const t = getUnlockTokens(theme);
+// The panel's one visible line when it is closed: title, the two numbers worth knowing at a glance, and
+// the open/close control. The whole row is the button so it is easy to hit on a phone.
+function SignupsHeader({
+  t,
+  open,
+  onToggle,
+  headline,
+}: {
+  t: UnlockTokens;
+  open: boolean;
+  onToggle: () => void;
+  headline: string;
+}) {
   return (
-    <div style={{ flex: 1, minWidth: 92, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color: accent ?? t.TITLE }}>{value}</div>
-      <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{label}</div>
-    </div>
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls="unlock-signups-body"
+      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: 0, background: 'transparent', border: 'none', color: 'inherit', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
+    >
+      <Users size={15} color={t.ACCENT} />
+      <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Sign-ups</span>
+      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <span style={{ fontSize: 11, color: t.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {headline}
+        </span>
+        {open ? <ChevronUp size={16} color={t.MUTED} /> : <ChevronDown size={16} color={t.MUTED} />}
+      </span>
+    </button>
   );
 }
 
@@ -90,13 +65,20 @@ function SignupStat({ label, value, accent }: { label: string; value: number; ac
 //
 // Demo and test accounts are marked from this panel and subtracted from every number above, since
 // nothing on the account itself says it is not a real member.
+//
+// The panel starts closed. The admin's daily job is the review queue underneath it, and the full list of
+// everyone who never submitted stood between the two; the headline keeps the number in sight either way.
 export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOverview }) {
   const router = useRouter();
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
   const [accounts, setAccounts] = useState(overview.accounts);
+  // Closed by default, EXCEPT when the roster could not be read: an error nobody can see is worse
+  // than a long panel, so that one case opens itself and says why.
+  const [open, setOpen] = useState(!overview.available);
   const [tab, setTab] = useState<SignupTab>('not-submitted');
   const [search, setSearch] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,6 +88,20 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
     const byTab = accountsForTab(accounts, tab);
     return query ? byTab.filter((account) => matchesSearch(account, query)) : byTab;
   }, [accounts, tab, query]);
+  const shown = visible.slice(0, limit);
+  const remaining = visible.length - shown.length;
+
+  // Any change to what the list is showing starts it back at one page, so a switched tab or a new search
+  // never opens on a list already scrolled long.
+  function pickTab(next: SignupTab) {
+    setTab(next);
+    setLimit(PAGE_SIZE);
+  }
+
+  function changeSearch(value: string) {
+    setSearch(value);
+    setLimit(PAGE_SIZE);
+  }
 
   async function toggleExcluded(userId: string, excluded: boolean) {
     setBusyUserId(userId);
@@ -132,94 +128,78 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
     }
   }
 
+  const headline = overview.available ? signupHeadline(counts) : 'Could not be read';
+
   return (
     <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-        <Users size={15} color={t.ACCENT} />
-        <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Sign-ups</div>
-      </div>
+      <SignupsHeader t={t} open={open} onToggle={() => setOpen((prev) => !prev)} headline={headline} />
 
-      {!overview.available ? (
-        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginTop: 6 }}>
-          {overview.unavailableReason ?? 'The sign-up list could not be read.'}
-        </div>
-      ) : (
-        <>
-          <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10, lineHeight: 1.6 }}>
-            {counts.totalAccounts} account{counts.totalAccounts === 1 ? '' : 's'} in total, {counts.excludedCount}{' '}
-            marked demo / test and {counts.deletedCount} who deleted their data. Someone who signs up and
-            never gives a Quora URL never reaches the review queue, so they are listed here instead.
-            {overview.truncated ? ' Only the most recent accounts were read, so these numbers are a floor.' : ''}
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <SignupStat label="Members" value={counts.memberCount} />
-            <SignupStat label="Gave a Quora URL" value={counts.submittedCount} accent="#22C55E" />
-            <SignupStat label="No Quora URL" value={counts.notSubmittedCount} accent="#F59E0B" />
-            <SignupStat label="Demo / test" value={counts.excludedCount} />
-            <SignupStat label="Left" value={counts.deletedCount} />
-          </div>
-
-          {/* What the "No Quora URL" number is actually made of. Someone who signed up and never came
-              back is a different problem from someone who returned to the Unlock screen and still could
-              not finish, and the fix for one does nothing for the other. */}
-          {counts.notSubmittedCount > 0 ? (
-            <div style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.7, marginBottom: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-              Of the {counts.notSubmittedCount} with no Quora URL:{' '}
-              <strong style={{ color: t.TITLE }}>{counts.neverReturnedCount}</strong> have not signed in
-              again since the day they signed up, and{' '}
-              <strong style={{ color: t.TITLE }}>{counts.returnedAnywayCount}</strong> came back and still
-              did not submit. Typically they loaded the Unlock screen{' '}
-              <strong style={{ color: t.TITLE }}>{counts.medianScreenViews}</strong>{' '}
-              time{counts.medianScreenViews === 1 ? '' : 's'}. A sign-in date only moves on a fresh
-              sign-in, so the view count is the firmer of the two.
-            </div>
-          ) : null}
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            {(['not-submitted', 'all', 'excluded', 'deleted'] as const).map((tabKey) => (
-              <button
-                key={tabKey}
-                type="button"
-                onClick={() => setTab(tabKey)}
-                aria-pressed={tab === tabKey}
-                style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-              >
-                {TAB_LABEL[tabKey]}
-              </button>
-            ))}
-          </div>
-
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search sign-ups by name, handle, email, or user id"
-            aria-label="Search sign-ups"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, marginBottom: 10 }}
-          />
-
-          {error ? (
-            <div role="alert" style={{ fontSize: 12, color: '#EF4444', marginBottom: 10 }}>{error}</div>
-          ) : null}
-
-          {visible.length === 0 ? (
-            <div style={{ fontSize: 12, color: t.MUTED }}>
-              {query ? 'No sign-up matches that search.' : 'Nothing to show on this tab.'}
+      {!open ? null : (
+        <div id="unlock-signups-body" style={{ marginTop: 10 }}>
+          {!overview.available ? (
+            <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6 }}>
+              {overview.unavailableReason ?? 'The sign-up list could not be read.'}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {visible.map((account) => (
-                <UnlockSignupRow
-                  key={account.userId}
-                  account={account}
-                  busy={busyUserId === account.userId}
-                  onToggleExcluded={(userId, excluded) => void toggleExcluded(userId, excluded)}
-                />
-              ))}
-            </div>
+            <>
+              <UnlockSignupsSummary counts={counts} truncated={overview.truncated} />
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                {SIGNUP_TABS.map((tabKey) => (
+                  <button
+                    key={tabKey}
+                    type="button"
+                    onClick={() => pickTab(tabKey)}
+                    aria-pressed={tab === tabKey}
+                    style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {TAB_LABEL[tabKey]}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => changeSearch(event.target.value)}
+                placeholder="Search sign-ups by name, handle, email, or user id"
+                aria-label="Search sign-ups"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, marginBottom: 10 }}
+              />
+
+              {error ? (
+                <div role="alert" style={{ fontSize: 12, color: '#EF4444', marginBottom: 10 }}>{error}</div>
+              ) : null}
+
+              {shown.length === 0 ? (
+                <div style={{ fontSize: 12, color: t.MUTED }}>
+                  {query ? 'No sign-up matches that search.' : 'Nothing to show on this tab.'}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {shown.map((account) => (
+                    <UnlockSignupRow
+                      key={account.userId}
+                      account={account}
+                      busy={busyUserId === account.userId}
+                      onToggleExcluded={(userId, excluded) => void toggleExcluded(userId, excluded)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {remaining > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setLimit((prev) => prev + PAGE_SIZE)}
+                  style={{ marginTop: 10, width: '100%', padding: '8px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Show {Math.min(PAGE_SIZE, remaining)} more · {remaining} still hidden
+                </button>
+              ) : null}
+            </>
           )}
-        </>
+        </div>
       )}
     </div>
   );
