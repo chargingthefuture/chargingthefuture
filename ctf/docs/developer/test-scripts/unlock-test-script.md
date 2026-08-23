@@ -434,7 +434,8 @@ The counter and the list agree with each other. Their earlier support-only acces
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin; the auth provider secret is set in the app runtime.
 **Steps:**
-1. Open `/admin/unlock` and find the "Sign-ups" panel, below the review counters.
+1. Open `/admin/unlock` and find the "Sign-ups" panel, below the review counters. It is closed: read
+   the one line on its header, then press the header to open it.
 2. Read the five numbers — Members, Gave a Quora URL, No Quora URL, Demo / test, Left — and the line
    above them saying how many accounts there are in total.
 3. Read the breakdown line under the numbers, then open the **No Quora URL** tab and read the list,
@@ -442,7 +443,9 @@ The counter and the list agree with each other. Their earlier support-only acces
 4. On any row, click **Mark as demo / test**, then watch the four numbers.
 5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
 6. Type part of a name, handle, or email into the search box.
-7. Compare the "Members" number against the sign-up total in the auth provider's own dashboard, minus
+7. Clear the search, then press **Show 10 more** at the bottom of the list until it disappears, and
+   press the panel header again to close it.
+8. Compare the "Members" number against the sign-up total in the auth provider's own dashboard, minus
    however many accounts you have marked demo / test.
 **Expected:** Step 2: Members = total accounts minus demo/test minus Left; Gave a Quora URL + No Quora
 URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
@@ -458,9 +461,12 @@ failure). Step 4: `POST /api/unlock/admin/excluded-accounts` records the
 account (audited `unlock.admin.signups.exclude`); Members and Demo / test both move by one immediately,
 and the row is no longer counted. The member's access, submission, and reward are untouched — check
 their status if you marked someone with a submission. Step 5: the numbers move back. Step 6: the list
-filters and says so when nothing matches. Step 7: the two totals agree. A non-admin cannot reach the
-page or the route. If the auth provider secret is missing from the runtime, the panel prints the reason
-in plain words and the rest of the admin page still loads.
+filters and says so when nothing matches, and starts again at ten rows. Step 7: the list starts at ten
+rows and grows by ten each press, with the button naming how many are still hidden until none are;
+closing the panel leaves only the header line, so the review queue sits directly under it. Step 8: the
+two totals agree. A non-admin cannot reach the
+page or the route. If the auth provider secret is missing from the runtime, the panel opens
+itself and prints the reason in plain words, and the rest of the admin page still loads.
 **Result:** web ☐ — notes:
 
 ---

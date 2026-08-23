@@ -138,7 +138,14 @@ This plugin must:
    rather than leaving an admin to read it off row by row. The view count is the firmer of the two
    signals: a sign-in date only moves on a fresh sign-in, so a member with a live session can come back
    repeatedly without it changing. Each row carries its own view count.
-5. See who left. An account with an account-scope row in `account_deletion_events` asked to be
+5. **The panel opens and closes, and the list comes a page at a time.** The panel starts closed with
+   one line of its own — the member count and how many have no Quora URL — so the review queue below it
+   is the first thing on the page instead of being pushed past a full roster. Opening it shows the
+   counts, the tabs, the search box, and the first ten sign-ups; "Show 10 more" adds another ten and
+   says how many are still hidden. Switching tab or typing a search starts the list back at ten. The
+   one case that opens itself is a roster the auth provider would not give us: an error nobody can
+   see is worse than a long panel, so the panel opens and prints the reason.
+6. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
    count, their own tab, and a line on the row saying when they asked, and they are subtracted from the
@@ -339,6 +346,18 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-08-23: **The sign-up panel opens and closes, and its list is paged (owner report).** On a phone
+  the panel sat between the snapshot counters and the review queue with every sign-up listed, so
+  reaching the queue meant scrolling past dozens of rows. The panel now starts closed behind a header
+  that still shows the two numbers worth seeing at a glance (members, and how many have no Quora URL),
+  and the list inside shows ten at a time with a "Show 10 more" button that names how many are still
+  hidden; changing tab or search resets it to ten. An unavailable roster is the one case that still
+  opens itself, so the reason is never hidden behind a click. No data, route, contract, or counting change — the
+  same accounts, counts, tabs, search, and demo / test marking as before. The panel file was split so
+  it stays inside the rule-116 limits: `unlock-signups-counts.ts` (the counting and filtering rules)
+  and `unlock-signups-summary.tsx` (the counters and the breakdown paragraph) alongside
+  `unlock-signups-panel.tsx`.
 
 - 2026-08-19: **Fix: the "ask for help" button did nothing for a member waiting on review, and showed
   on the approved screen (owner report).** Three faults in the path shipped earlier the same day.
