@@ -20,10 +20,16 @@ export async function GET(request: Request) {
 
   try {
     const list = await getReaderList(null);
-    const problems = list.problems.slice(0, PUBLIC_PREVIEW_PROBLEM_LIMIT).map((problem) => ({
-      ...problem,
-      products: problem.products.slice(0, PUBLIC_PREVIEW_PRODUCTS_PER_PROBLEM),
-    }));
+    // The signed-out teaser is a sample of the real list, so a problem with no approved tools yet
+    // is skipped here — it would show a heading with nothing under it. Signed-in members do see
+    // those problems (that is where a tool gets suggested for one).
+    const problems = list.problems
+      .filter((problem) => problem.products.length > 0)
+      .slice(0, PUBLIC_PREVIEW_PROBLEM_LIMIT)
+      .map((problem) => ({
+        ...problem,
+        products: problem.products.slice(0, PUBLIC_PREVIEW_PRODUCTS_PER_PROBLEM),
+      }));
     // Stats describe only the teaser that is actually returned, not the full list — so the
     // public payload never advertises counts a signed-out visitor cannot see.
     const stats = {

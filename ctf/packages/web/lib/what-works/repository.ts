@@ -78,8 +78,13 @@ function toPublicProduct(row: ProductProjectionRow): WhatWorksPublicProduct {
   };
 }
 
-// Single shared reader list: active problems that have at least one approved product,
-// each with the approved products beneath it. `viewerId` toggles the per-row endorsed flag.
+// Single shared reader list: every active problem, each with its approved products beneath it.
+// `viewerId` toggles the per-row endorsed flag.
+//
+// A problem with no approved tools yet is still returned. It used to be dropped here, which meant
+// a problem an admin had just added was invisible to members until someone had already suggested a
+// tool for it — and nobody could suggest one against a category they could not see. The reader UI
+// renders those problems with an "add the first tool" empty state instead.
 //
 // Scale note: this returns every active problem and every approved product in two unbounded
 // queries (no LIMIT/cursor). The list is admin-curated and expected to stay in the low hundreds
@@ -122,9 +127,6 @@ export async function getReaderList(viewerId: string | null): Promise<WhatWorksL
   let verifiedTools = 0;
   for (const problem of problemsResult.rows) {
     const products = productsByProblem.get(problem.id) ?? [];
-    if (products.length === 0) {
-      continue;
-    }
     verifiedTools += products.length;
     problems.push({
       id: problem.id,

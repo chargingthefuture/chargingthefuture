@@ -12,6 +12,9 @@ import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
 
 type Props = {
   problems: WhatWorksProblemOption[];
+  // Problem to open the form on, when the member started from that problem's own section.
+  // Empty string means no preselection — they pick from the dropdown.
+  initialProblemId?: string;
   isFirst: boolean;
   onSubmit: (draft: SuggestDraft) => Promise<string | null>;
   onBack?: () => void;
@@ -169,11 +172,11 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
   );
 }
 
-export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: Props) {
+export function WhatWorksSuggestPanel({ problems, initialProblemId = '', isFirst, onSubmit, onBack }: Props) {
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
   const inputStyle = makeInputStyle(t);
-  const [problemId, setProblemId] = useState('');
+  const [problemId, setProblemId] = useState(initialProblemId);
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
   const [why, setWhy] = useState('');
@@ -193,7 +196,7 @@ export function WhatWorksSuggestPanel({ problems, isFirst, onSubmit, onBack }: P
       setError(failure);
       return;
     }
-    setProblemId('');
+    setProblemId(initialProblemId);
     setName('');
     setLink('');
     setWhy('');

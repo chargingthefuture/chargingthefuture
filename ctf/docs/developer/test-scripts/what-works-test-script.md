@@ -44,6 +44,9 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
    Toggle off; it drops back. → web ☐ mobile ☐
 4. **Suggested tool is held for review.** Suggest a tool. It does **not** appear in the public list;
    the screen confirms it was submitted for review. → web ☐ mobile ☐
+5. **A problem with no tools yet still shows.** A problem an admin added but that has no approved
+   tool renders with its heading and a "no tools on this one yet" panel with a **Suggest a tool**
+   button — it is not missing from the list. → web ☐ mobile ☐
 
 ---
 
@@ -112,6 +115,20 @@ state.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), admins see the shared Admin pill in the member shell header, and the admin screen
 header shows a "Member view" pill opening `/apps/what-works`.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WW-7 · A newly added problem shows with no tools yet
+**Role:** admin then member · **Surfaces:** all
+**Steps:**
+1. As an admin at `/admin/what-works`, add a new problem (emoji, title, short context). Do not add
+   any tool to it.
+2. Switch to the member view at `/apps/what-works` and refresh.
+3. Find the new problem and tap **Suggest a tool** inside it.
+**Expected:** The new problem appears in the member list straight away, under a "no tools on this
+one yet" panel with a **Suggest a tool** button — it is not hidden because it has no tools. The
+"N problems" chip at the top counts it. Tapping the button opens the suggest form with that problem
+already picked in the dropdown. Signed out at `/plugin/what-works`, the preview does not show the
+empty problem.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
