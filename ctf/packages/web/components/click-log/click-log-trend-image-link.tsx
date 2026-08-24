@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Download, Image as ImageIcon } from 'lucide-react';
 import {
   TREND_ACCENT,
@@ -21,16 +20,14 @@ import {
 // Plain links, not a fetch: the endpoint answers with the image itself, and the same signed-in
 // session that loaded this screen authorizes the request.
 //
-// The area coordinates are in the image by default (owner directive, 2026-08-19). Recording where
-// incidents happen is the reason location was added to ClickLog in the first place — a report that
-// withholds it by default withholds the point of the plugin, and members are told the grouped
-// totals may be published. The checkbox is kept as a way to leave the coordinates out of one
-// particular copy, not as a standing default.
-export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
-  const [includeAreas, setIncludeAreas] = useState(true);
-  const query = includeAreas ? '' : 'areas=0';
-  const viewHref = `/api/click-log/admin/trends/image${query ? `?${query}` : ''}`;
-  const downloadHref = `/api/click-log/admin/trends/image?${query ? `${query}&` : ''}download=1`;
+// The image never carries the area coordinates, and there is no control to put them back (owner
+// directive, 2026-08-24). An exported image is made to be shared publicly, so the choice was
+// removed rather than defaulted: an ~11 km cell with a date can point at one person at small
+// counts. The countries stay in, so the image still says where the activity is, and the trends
+// screen above still lists every area for the owner.
+export function ClickLogTrendImageLink() {
+  const viewHref = '/api/click-log/admin/trends/image';
+  const downloadHref = '/api/click-log/admin/trends/image?download=1';
   return (
     <div
       style={{
@@ -87,36 +84,11 @@ export function ClickLogTrendImageLink({ areaCount }: { areaCount: number }) {
         <Download size={14} color={TREND_SUBTLE} />
         Save it as a file instead
       </a>
-      {areaCount > 0 && (
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 8,
-            marginTop: 12,
-            fontSize: 12,
-            color: TREND_TEXT,
-            cursor: 'pointer',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={!includeAreas}
-            onChange={(event) => setIncludeAreas(!event.target.checked)}
-            style={{ marginTop: 2, accentColor: TREND_ACCENT }}
-          />
-          <span>
-            Leave the area coordinates out of this copy
-            <span style={{ display: 'block', color: TREND_SUBTLE, marginTop: 2, lineHeight: 1.5 }}>
-              The coordinates are included unless you tick this. The countries stay in either way,
-              so the image always says where the activity is.
-            </span>
-          </span>
-        </label>
-      )}
-      <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 10, lineHeight: 1.5 }}>
-        The image carries the numbers and the note below them, so anyone who sees the counts also
-        sees where they came from and what they cannot show.
+      <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 12, lineHeight: 1.5 }}>
+        The image leaves the area coordinates out, because it is made to be shared — the countries in
+        it still say where the activity is, and the full area list stays on this screen. It carries
+        the numbers and the note below them, so anyone who sees the counts also sees where they came
+        from and what they cannot show.
       </div>
     </div>
   );

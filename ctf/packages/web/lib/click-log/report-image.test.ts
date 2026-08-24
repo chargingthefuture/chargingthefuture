@@ -85,7 +85,7 @@ describe('ClickLog report image', () => {
     expect(png.readUInt32BE(20)).toBeGreaterThan(1200);
   }, 30_000);
 
-  it('renders the copy that leaves area coordinates out', async () => {
+  it('renders the shared copy, which always leaves the area coordinates out', async () => {
     const png = await render(false);
     expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   }, 30_000);

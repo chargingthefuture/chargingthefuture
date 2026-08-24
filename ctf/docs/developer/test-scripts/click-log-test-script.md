@@ -258,36 +258,38 @@ notice. Each still says what is withheld ("never your notes" / "never your note"
 identical across all five.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CL-A6 · Countries are named, and the image keeps the coordinates
+### CL-A6 · Countries are named on screen and in the image; the image has no coordinates
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**
 1. On the Trends dashboard, read the "Countries" section above the areas.
 2. Compare a country's member count against the member counts of its areas below it.
 3. Read the "Areas" rows.
-4. Press "Show the report as one image" without touching the checkbox.
-5. Tick "Leave the area coordinates out of this copy" and press it again.
+4. Press "Show the report as one image" and read it where the areas would be.
+5. Open `/api/click-log/admin/trends/image?areas=1` directly in the address bar and read the same
+   place again.
 **Expected:** Each country row names a real country with its incident count, member count, number
 of areas, and date span, and the headline figures include a "Countries" tile. A country whose areas
 share a member shows fewer members than the areas add up to — it is a count of people, not a sum.
-Each area row is prefixed with its country. The first image contains the area coordinates. The
-second leaves them out but still shows every country, and says so where the areas would be. Both
-images carry the note explaining that the country is worked out from the area rather than asked,
+Each area row on screen is prefixed with its country. The image contains no coordinates anywhere:
+in their place it says how many areas were recorded and why they were left out, and it still lists
+every country. The hand-typed `?areas=1` changes nothing — the image is identical, because there is
+no way to ask for the coordinates. There is no checkbox on the download control. Both the screen and
+the image carry the note explaining that the country is worked out from the area rather than asked,
 and that an area on a border can land on the wrong side.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CL-A5 · Report opens as one image, without the areas by default
+### CL-A5 · Report opens as one image, and the image never carries the coordinates
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**
-1. On the Trends dashboard, press "Show the report as one image" with the area checkbox left alone.
+1. On the Trends dashboard, press "Show the report as one image".
 2. On a phone, press and hold the picture that opens and save it to the photo library.
 3. Go back, press "Save it as a file instead", and open the downloaded file.
-4. Tick "Include the area coordinates" and repeat step 1.
 **Expected:** Step 1 opens one tall picture in a new tab rather than downloading anything, and step 2
-saves it to photos. Step 3 downloads a PNG named for today's date. Every version contains every
-section of the report and the method statement, ends with the site line, and nothing is cut off at
-the bottom. Where the areas would be, the default version says how many areas were recorded and why
-the coordinates were left out; the version from step 4 shows the coordinates. The numbers in the
-image match the numbers on the screen.
+saves it to photos. Step 3 downloads a PNG named for today's date. Both contain every section of the
+report and the method statement, end with the site line, and nothing is cut off at the bottom.
+Neither carries any area coordinates: where the areas would be, each says how many areas were
+recorded and why the coordinates were left out. The area count tile and the countries are still
+there. Every other number in the image matches the number on the screen.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A2 · Left icon-rail chrome has no dead controls

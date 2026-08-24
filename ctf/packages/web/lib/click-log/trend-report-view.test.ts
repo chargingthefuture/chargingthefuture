@@ -104,10 +104,13 @@ describe('buildTrendReportView', () => {
     expect(view.areasOmittedLine).toBeNull();
   });
 
-  it('withholds area coordinates by default and says how many were held back', () => {
+  it('holds the area coordinates back for a shared copy and says how many were held back', () => {
     const view = buildTrendReportView(report, { includeAreas: false });
     expect(view.areas).toEqual([]);
     expect(view.areasOmittedLine).toContain('2 areas recorded');
+    // The reason travels with the omission: a reader of a posted copy should not read the gap as
+    // the report having nothing to say about where.
+    expect(view.areasOmittedLine).toContain('can point at one person');
   });
 
   it('says when the area list is only part of what was recorded', () => {
@@ -155,7 +158,7 @@ describe('buildTrendReportView', () => {
     expect(view.areas[1].label).toBe('United Kingdom · 51.5°N, 0.1°E');
   });
 
-  it('keeps the countries in a copy with the area coordinates left out', () => {
+  it('keeps the countries in a shared copy with the area coordinates left out', () => {
     const view = buildTrendReportView(report, { includeAreas: false });
     expect(view.areas).toHaveLength(0);
     expect(view.countries).toHaveLength(2);

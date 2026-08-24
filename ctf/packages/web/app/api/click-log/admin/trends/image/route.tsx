@@ -20,10 +20,12 @@ import { requireClickLogAdminAccess } from '../../../_lib';
 // sees the counts also sees where they came from and what they cannot show, even when the image is
 // reposted with no surrounding text.
 //
-// Area coordinates are left out unless `?areas=1` is passed. At small counts an ~11 km cell plus a
-// date can point at one person, and members opted into sharing with the project, not into being
-// placed on a public map — so putting the cells in a copy meant for posting is a deliberate choice
-// the owner makes each time, not the default.
+// The image never carries the ~11 km area coordinates (owner directive, 2026-08-24). Exporting the
+// image is how the report gets shared publicly, so the coordinates cannot be an option on this
+// route: at small counts a cell plus a date can point at one person, and members opted into sharing
+// with the project, not into being placed on a public map. The country rollup stays in every copy,
+// so the image still says where the activity is. The trends screen keeps the coordinates for the
+// owner — that is the admin view, which nobody outside the project sees.
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,24 +40,23 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  // Areas are in unless explicitly turned off. Location is why ClickLog records a location at all
-  // (owner directive, 2026-08-19), so leaving it out of the shareable copy by default withheld the
-  // point of the report. `?areas=0` still produces a copy without the coordinates.
-  const includeAreas = params.get('areas') !== '0';
   // Shown in the browser by default, saved as a file with ?download=1. On a phone an attachment
   // lands in the files app, which is the wrong place when the next step is posting it: the image
   // has to be on screen so it can be long-pressed and saved to the photo library or shared
   // straight into another app. The download stays for the desktop case.
   const asDownload = params.get('download') === '1';
   const report = await buildSharedIncidentReport();
-  const view = buildTrendReportView(report, { includeAreas });
+  // Not a parameter: no query string can put the coordinates back into the image.
+  const view = buildTrendReportView(report, { includeAreas: false });
   const generatedOn = new Date().toISOString().slice(0, 10);
 
   logClickLogAudit({
     actorId: gate.auth.userId,
     command: 'click-log.trends.image',
     result: 'success',
-    target: { areas: includeAreas ? 'included' : 'omitted' },
+    // Kept in the log so a copy of the image can be matched to what it carried, now that the
+    // answer is fixed rather than chosen.
+    target: { areas: 'omitted' },
   });
 
   return new ImageResponse(buildReportImageElement(view, generatedOn), {
