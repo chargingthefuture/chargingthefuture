@@ -43,6 +43,7 @@ import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
@@ -88,6 +89,9 @@ export interface AdminDirectoryProfile {
   jobTitleId: string | null;
   jobTitleName: string | null;
   skills: Array<{ id: string; name: string; displayOrder: number }>;
+  // Free-text "skill not listed" labels stored on the profile, pending review. Editable here so an
+  // admin can record a skill the taxonomy does not carry yet (the member self-edit form does the same).
+  proposedSkills?: string[];
   isActive: boolean;
   source: ProfileSource;
   invitedByUsername: string | null;
@@ -117,6 +121,7 @@ type EditForm = {
   bio: string;
   profileUrl: string;
   skillIds: string[];
+  proposedSkills: string[];
   city: string;
   state: string;
   country: string;
@@ -126,7 +131,7 @@ type TaxonomyOption = { id: string; name: string };
 type JobTitleOption = { id: string; name: string; sectorId: string };
 type SkillOption = { id: string; name: string; jobTitleId: string };
 
-type FieldDef = { label: string; key: Exclude<keyof EditForm, "skillIds">; placeholder: string };
+type FieldDef = { label: string; key: Exclude<keyof EditForm, "skillIds" | "proposedSkills">; placeholder: string };
 
 const EDIT_FIELDS: FieldDef[] = [
   { label: "First name", key: "firstName", placeholder: "First name" },
@@ -161,17 +166,24 @@ function handleText(p: AdminDirectoryProfile): string {
   return "—";
 }
 
+// Collapse a nullable profile field to the form's string in one place: each inline `?? ""` costs a
+// complexity point, and toForm carries more fields than the budget allows (rule 116).
+function formText(value: string | null | undefined): string {
+  return value ?? "";
+}
+
 function toForm(p: AdminDirectoryProfile): EditForm {
   return {
-    firstName: p.firstName ?? "",
-    lastName: p.lastName ?? "",
-    headline: p.headline ?? "",
-    bio: p.bio ?? "",
-    profileUrl: p.profileUrl ?? "",
+    firstName: formText(p.firstName),
+    lastName: formText(p.lastName),
+    headline: formText(p.headline),
+    bio: formText(p.bio),
+    profileUrl: formText(p.profileUrl),
     skillIds: (p.skills ?? []).map((s) => s.id),
-    city: p.city ?? "",
-    state: p.state ?? "",
-    country: p.country ?? "",
+    proposedSkills: p.proposedSkills ?? [],
+    city: formText(p.city),
+    state: formText(p.state),
+    country: formText(p.country),
   };
 }
 
@@ -197,6 +209,7 @@ function buildProfilePayload(form: EditForm, editing: AdminDirectoryProfile) {
     sectorId: editing.sectorId,
     jobTitleId: editing.jobTitleId,
     skillIds: form.skillIds,
+    proposedSkills: form.proposedSkills,
     city: form.city.trim(),
     state: form.state.trim(),
     country: form.country.trim(),
@@ -312,7 +325,9 @@ function useProfileEditor(
   setProfiles: Dispatch<SetStateAction<AdminDirectoryProfile[]>>,
 ) {
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [], city: "", state: "", country: "" });
+  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [], proposedSkills: [], city: "", state: "", country: "" });
+  // Draft text for the "skill not listed" box, before it is committed to form.proposedSkills.
+  const [proposedInput, setProposedInput] = useState("");
   const [assignInput, setAssignInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
@@ -323,6 +338,7 @@ function useProfileEditor(
   const startEdit = useCallback((p: AdminDirectoryProfile) => {
     setEditId(p.id);
     setForm(toForm(p));
+    setProposedInput("");
     setAssignInput("");
     setDrawerError(null);
     setDrawerNotice(null);
@@ -332,8 +348,29 @@ function useProfileEditor(
     setEditId(null);
     setDrawerError(null);
     setDrawerNotice(null);
+    setProposedInput("");
     setAssignInput("");
   }, []);
+
+  // Commit the "skill not listed" draft as a free-text proposed skill on the profile being edited.
+  // Skips blanks, anything past the count cap, and a label already in the list (case-insensitive).
+  // The server normalizes the same way; a label that matches a selected taxonomy skill is collapsed
+  // on display, so it is not filtered here.
+  function addProposedSkill() {
+    const label = proposedInput.trim().replace(/\s+/g, " ").slice(0, DIRECTORY_MAX_PROPOSED_SKILL_LENGTH);
+    if (label.length === 0) return;
+    const lower = label.toLowerCase();
+    setForm((prev) => {
+      if (prev.proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS) return prev;
+      if (prev.proposedSkills.some((s) => s.toLowerCase() === lower)) return prev;
+      return { ...prev, proposedSkills: [...prev.proposedSkills, label] };
+    });
+    setProposedInput("");
+  }
+
+  function removeProposedSkill(label: string) {
+    setForm((prev) => ({ ...prev, proposedSkills: prev.proposedSkills.filter((s) => s !== label) }));
+  }
 
   async function handleSave() {
     if (!editing) return;
@@ -459,6 +496,10 @@ function useProfileEditor(
   return {
     form,
     setForm,
+    proposedInput,
+    setProposedInput,
+    addProposedSkill,
+    removeProposedSkill,
     assignInput,
     setAssignInput,
     saving,
@@ -541,6 +582,14 @@ interface DrawerBodyProps {
   jobTitles: JobTitleOption[];
   skills: SkillOption[];
   taxonomyLoading: boolean;
+  // Free-text "skill not listed" draft plus its commit/remove handlers. Bundled into one prop so the
+  // proposal controls do not add four more parameters to this component (rule 116).
+  proposed: {
+    input: string;
+    onInputChange: (value: string) => void;
+    onAdd: () => void;
+    onRemove: (label: string) => void;
+  };
   assignInput: string;
   setAssignInput: Dispatch<SetStateAction<string>>;
   setDrawerError: Dispatch<SetStateAction<string | null>>;
@@ -561,6 +610,7 @@ function DrawerBody(props: DrawerBodyProps) {
     jobTitles,
     skills,
     taxonomyLoading,
+    proposed,
     assignInput,
     setAssignInput,
     setDrawerError,
@@ -616,9 +666,10 @@ function DrawerBody(props: DrawerBodyProps) {
         />
       </div>
 
-      {/* Skills use the same structured picker as the member self-edit form and SkillsHunt.
-          Free-text proposed skills are member-owned, so the picker's proposed section is omitted
-          (the admin update contract has no proposedSkills). */}
+      {/* Skills use the same structured picker as the member self-edit form and SkillsHunt, including
+          the free-text proposal box: the taxonomy does not carry every skill, and an admin recording a
+          community-generated profile hits that gap first. Proposals save as pending-review labels on
+          the profile, the same rows a member's own additions create. */}
       <DirectorySkillsPicker
         tokens={pickerTokens}
         sectors={sectors}
@@ -632,6 +683,12 @@ function DrawerBody(props: DrawerBodyProps) {
             skillIds: f.skillIds.includes(id) ? f.skillIds.filter((s) => s !== id) : [...f.skillIds, id],
           }))
         }
+        proposedSkills={form.proposedSkills}
+        proposedInput={proposed.input}
+        proposedContext="admin"
+        onProposedInputChange={proposed.onInputChange}
+        onAddProposed={proposed.onAdd}
+        onRemoveProposed={proposed.onRemove}
       />
 
       <AttachAccountSection
@@ -866,6 +923,12 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
           jobTitles={data.jobTitles}
           skills={data.skills}
           taxonomyLoading={data.taxonomyLoading}
+          proposed={{
+            input: editor.proposedInput,
+            onInputChange: editor.setProposedInput,
+            onAdd: editor.addProposedSkill,
+            onRemove: editor.removeProposedSkill,
+          }}
           assignInput={editor.assignInput}
           setAssignInput={editor.setAssignInput}
           setDrawerError={editor.setDrawerError}

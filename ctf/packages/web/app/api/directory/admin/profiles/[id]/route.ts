@@ -21,6 +21,13 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+// Free-text proposed skills are optional in the admin payload. An absent field stays undefined so
+// updateAdminProfile preserves whatever is already stored; an array (including an empty one) replaces
+// the stored labels.
+function optionalStringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value) ? stringArray(value) : undefined;
+}
+
 // Maps a persistence error to the response used by PUT. A message mentioning a "_not_found" selector
 // is a client validation problem (400); anything else is a persistence failure (503).
 function mapSelectorError(error: unknown): NextResponse {
@@ -47,6 +54,7 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
     sectorId: asString(body.sectorId, null),
     jobTitleId: asString(body.jobTitleId, null),
     skillIds: stringArray(body.skillIds),
+    proposedSkills: optionalStringArray(body.proposedSkills),
     // Fields the admin form may leave out stay undefined so updateAdminProfile preserves
     // the stored value instead of nulling it (payment addresses are member-owned and are
     // never sent by the admin drawer; location is sent, and an empty string clears it).
