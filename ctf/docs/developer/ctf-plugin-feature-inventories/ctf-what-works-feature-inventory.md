@@ -27,8 +27,11 @@ the problem categories and review every suggestion before it joins the shared li
 
 ## 3. User Features
 
-- Browse the shared list: active problems, each with its approved tools (emoji, name, type, a short
-  "why it works" note, a verified count, and a direct purchase link).
+- Browse the shared list: every active problem, each with its approved tools (emoji, name, type, a
+  short "why it works" note, a verified count, and a direct purchase link).
+- A problem that has no approved tools yet still appears in the list, with a short "no tools on this
+  one yet" panel and a **Suggest a tool** button that opens the suggest form with that problem
+  already chosen. That is how a newly added problem gets its first tool.
 - Mark a tool **Helpful** ("this helped me") — a one-per-survivor endorsement whose tally renders as
   "N survivors verified"; toggle off to withdraw it.
 - Suggest a tool: choose an existing problem, add a product name, a direct purchase link, and an
@@ -55,7 +58,7 @@ the problem categories and review every suggestion before it joins the shared li
 ## 5. API Surface and Route Map
 
 - `GET /api/what-works` — Authenticated read of the shared list (problems + approved tools + per-viewer endorsement state + stats + `viewer.isAdmin`).
-- `GET /api/what-works/public` — Public, identity-free teaser slice of the list + stats. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
+- `GET /api/what-works/public` — Public, identity-free teaser slice of the list + stats. The teaser skips problems that have no approved tool yet (a heading with nothing under it is not a preview of anything); signed-in members do see those problems. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
 - `GET /api/what-works/problems` — Active problems for the suggest form (authenticated).
 - `POST /api/what-works/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier).
 - `POST /api/what-works/products/[id]/endorse` — Mark an approved tool helpful.
@@ -160,6 +163,17 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   deletion orchestrator is a platform-level task tracked outside this plugin.
 
 ## Change Log
+
+- 2026-08-24: **Fixed: a newly added problem was invisible to members.** `getReaderList` dropped any
+  problem with zero approved tools, so a problem an admin had just created showed in the admin
+  surface but not in the member list, and the hero chip under-counted (three problems, "1 problem").
+  Because a member could only suggest a tool against a problem they could see, an empty problem could
+  never get its first tool — it was stuck. The reader list now returns every active problem, and the
+  member list renders a tool-less one with a "no tools on this one yet" panel plus a **Suggest a
+  tool** button that opens the suggest form with that problem preselected (new `initialProblemId`
+  prop on the suggest panel). The signed-out teaser (`/api/what-works/public`) still skips tool-less
+  problems, so the public preview keeps showing real tools. Stats now read: `problems` = active
+  problems, `verifiedTools` = approved tools (unchanged). No schema, route, or contract change.
 
 - 2026-08-02: **Deletion burn-down batch 1: WhatWorks gains its first deletion-registry entry.** The
   plugin had none at all, while its deletion contract promised `DELETE FROM what_works_endorsements

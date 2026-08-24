@@ -53,6 +53,9 @@ export function WhatWorksShell() {
   const [problemOptions, setProblemOptions] = useState<WhatWorksProblemOption[]>([]);
   const [query, setQuery] = useState('');
   const [showSuggest, setShowSuggest] = useState(false);
+  // Which problem the suggest form opens on. Set when a member starts from a problem's own
+  // "Suggest a tool" button; empty when they use the header button and pick for themselves.
+  const [suggestProblemId, setSuggestProblemId] = useState('');
   const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const { theme } = useTheme();
@@ -138,7 +141,14 @@ export function WhatWorksShell() {
     }
   }
 
+  function openSuggest(problemId: string): void {
+    setSuggestProblemId(problemId);
+    setShowSuggest(true);
+  }
+
   const visibleProblems = useMemo(() => filterProblems(problems, query), [problems, query]);
+  // No approved tool anywhere yet — the suggest form says so instead of "suggest another".
+  const listHasNoTools = problems.every((problem) => problem.products.length === 0);
 
   if (loading) {
     return <WhatWorksLoading />;
@@ -167,7 +177,8 @@ export function WhatWorksShell() {
     return (
       <WhatWorksSuggestPanel
         problems={problemOptions}
-        isFirst={problems.length === 0}
+        initialProblemId={suggestProblemId}
+        isFirst={listHasNoTools}
         onSubmit={submitSuggestion}
         onBack={problems.length === 0 ? undefined : () => setShowSuggest(false)}
       />
@@ -190,6 +201,7 @@ export function WhatWorksShell() {
               problem={problem}
               busyProductId={busyProductId}
               onToggleHelpful={(product) => void toggleHelpful(product)}
+              onSuggestForProblem={openSuggest}
               sectionRef={(node) => { sectionRefs.current[problem.id] = node; }}
             />
           ))}
@@ -231,7 +243,7 @@ export function WhatWorksShell() {
           <div style={{ padding: '0 12px 10px' }}>
             <button
               type="button"
-              onClick={() => setShowSuggest(true)}
+              onClick={() => openSuggest('')}
               style={{ width: '100%', padding: '10px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
             >
               <Plus size={15} /> Suggest an item
