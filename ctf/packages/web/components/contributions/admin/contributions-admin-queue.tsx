@@ -295,9 +295,11 @@ export function ContributionsAdminQueue(props: QueueProps) {
                 style={{ padding: '12px 14px', cursor: 'pointer', background: expanded ? `${t.ACCENT}06` : 'transparent' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>{row.userId}</span>
-                    <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    {/* A member id is one long unbroken string, so it has nowhere to wrap: without the
+                        truncation below it runs past this column and paints over the status pill. */}
+                    <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.userId}</div>
+                    <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {submissionLabel(row)} · {claimedValueLabel(row)} · {shortDate(row.createdAt)}
                     </div>
                     {row.signalContact && <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Signal: {row.signalContact}</div>}
