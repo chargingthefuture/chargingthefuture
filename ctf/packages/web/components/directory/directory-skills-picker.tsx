@@ -34,14 +34,16 @@ interface DirectorySkillsPickerProps {
   loading: boolean;
   selectedSkillIds: string[];
   onToggleSkill: (id: string) => void;
-  // Free-text "pending review" proposals are member-owned: the member self-edit form passes all of
-  // these; the admin edit form omits them (the admin update contract has no proposedSkills), which
-  // hides the free-text section entirely.
+  // Free-text "pending review" proposals. Both the member self-edit form and the Directory admin
+  // drawer pass these; a caller that omits them hides the free-text section entirely.
   proposedSkills?: string[];
   proposedInput?: string;
   onProposedInputChange?: (value: string) => void;
   onAddProposed?: () => void;
   onRemoveProposed?: (label: string) => void;
+  // Whose profile is being edited. Only wording differs: "your profile" for a member editing their
+  // own, "this profile" for an admin editing someone else's.
+  proposedContext?: "self" | "admin";
 }
 
 // Group the ID-based taxonomy by sector for the accordion. Within a sector, same-named skills are
@@ -316,11 +318,12 @@ function SkillSectorAccordion({ categoryCount, query, categories, selectedIds, o
   );
 }
 
-// Free-text fallback for a skill the taxonomy does not have yet (member self-edit only).
-function ProposedSkillsField({ allowProposed, proposedInput, proposedFull, tokens, onProposedInputChange, onAddProposed }: {
+// Free-text fallback for a skill the taxonomy does not have yet.
+function ProposedSkillsField({ allowProposed, proposedInput, proposedFull, proposedContext, tokens, onProposedInputChange, onAddProposed }: {
   allowProposed: boolean;
   proposedInput: string;
   proposedFull: boolean;
+  proposedContext: "self" | "admin";
   tokens: DirectoryTokens;
   onProposedInputChange?: (value: string) => void;
   onAddProposed?: () => void;
@@ -362,7 +365,9 @@ function ProposedSkillsField({ allowProposed, proposedInput, proposedFull, token
       <div style={{ fontSize: 11, color: tokens.FAINT, marginTop: 6, lineHeight: 1.5 }}>
         {proposedFull
           ? `That's the most you can add (${DIRECTORY_MAX_PROPOSED_SKILLS}). Remove one to add another.`
-          : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
+          : proposedContext === "admin"
+            ? "Yellow chips = pending review — they show on this profile until the skill is added to the official list."
+            : "Yellow chips = pending review — they show on your profile until an admin adds them to the official list."}
       </div>
     </>
   );
@@ -380,6 +385,7 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   } = props;
   const proposedSkills = props.proposedSkills ?? [];
   const proposedInput = props.proposedInput ?? "";
+  const proposedContext = props.proposedContext ?? "self";
   const allowProposed = Boolean(onProposedInputChange && onAddProposed && onRemoveProposed);
 
   const [openSector, setOpenSector] = useState<string | null>(null);
@@ -507,11 +513,12 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
         onToggleEntry={toggleEntry}
       />
 
-      {/* Free-text fallback for a skill the taxonomy does not have yet (member self-edit only). */}
+      {/* Free-text fallback for a skill the taxonomy does not have yet. */}
       <ProposedSkillsField
         allowProposed={allowProposed}
         proposedInput={proposedInput}
         proposedFull={proposedFull}
+        proposedContext={proposedContext}
         tokens={tokens}
         onProposedInputChange={onProposedInputChange}
         onAddProposed={onAddProposed}

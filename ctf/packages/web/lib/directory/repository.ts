@@ -1541,6 +1541,10 @@ export async function updateAdminProfile(
     const sectorId = input.sectorId ?? null;
     const jobTitleId = input.jobTitleId ?? null;
     const skillIds = normalizeSkillIds(input.skillIds);
+    // An admin editing a profile may record a skill the taxonomy does not carry yet, the same way a
+    // member can on their own profile. A caller that omits the field entirely (an older client) leaves
+    // it undefined and the stored labels are preserved; sending an array replaces them.
+    const proposedSkills = input.proposedSkills === undefined ? undefined : normalizeProposedSkills(input.proposedSkills);
     const venmoAddress = preserveIfUndefined(input.venmoAddress, current.venmo_address);
     const moneroAddress = preserveIfUndefined(input.moneroAddress, current.monero_address);
     const bitcoinAddress = preserveIfUndefined(input.bitcoinAddress, current.bitcoin_address);
@@ -1593,6 +1597,9 @@ export async function updateAdminProfile(
     );
 
     await replaceProfileSkills(client, profileId, skillIds);
+    if (proposedSkills !== undefined) {
+      await replaceProfileProposedSkills(client, profileId, proposedSkills);
+    }
 
     await client.query(
       `

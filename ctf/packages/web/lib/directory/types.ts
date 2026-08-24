@@ -81,7 +81,9 @@ export type DirectoryProfileInput = {
   sectorId?: string | null;
   jobTitleId?: string | null;
   skillIds?: string[];
-  // Free-text "skill not listed" labels for the member's own profile (see DirectoryProfile.proposedSkills).
+  // Free-text "skill not listed" labels on the profile (see DirectoryProfile.proposedSkills). Sent by
+  // the member's own edit form and by the Directory admin drawer; an absent field preserves what is
+  // stored rather than clearing it.
   proposedSkills?: string[];
   venmoAddress?: string | null;
   moneroAddress?: string | null;
