@@ -292,6 +292,21 @@ recorded and why the coordinates were left out. The area count tile and the coun
 there. Every other number in the image matches the number on the screen.
 **Result:** web ☐ mobile ☐ — notes:
 
+### CL-A7 · The screen is named ClickLog, and an admin can cross to the trends dashboard
+**Role:** member, admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Steps:**
+1. As a member, open ClickLog and read the header title.
+2. As an admin, open the same screen and look at the header.
+3. Press the "Admin" pill, then press "Member view" on the screen it opens.
+4. Press the browser back button once.
+5. At ~390px, check that no control in the header is cut off at the right edge.
+**Expected:** The header reads "ClickLog" with the incident total under it, for everyone. A member
+sees no "Admin" pill. An admin sees one, and it opens the ClickLog Trends dashboard; "Member view"
+there comes straight back. After crossing both ways, one press of back leaves the pair entirely
+rather than bouncing between the two screens. At phone width the header row wraps onto a second line
+if it has to; nothing is clipped.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### CL-A2 · Left icon-rail chrome has no dead controls
 **Role:** member · **Surfaces:** web (desktop)
 **Steps:**

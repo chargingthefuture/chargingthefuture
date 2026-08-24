@@ -26,7 +26,8 @@ import {
 //
 // The screen shows every area cell with its coordinates. The old view counted the clusters and
 // stopped there, which told the owner activity had a location without ever saying where. The
-// shareable image leaves the coordinates out unless they are asked for — see the download control.
+// shareable image never carries those coordinates — it is made to be posted, and nothing on this
+// screen can put them into it.
 export function ClickLogAdminTrends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

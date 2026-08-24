@@ -188,7 +188,7 @@ function renderPluginShellA(selectedPlugin: SelectedPlugin, decision: AllowDecis
   }
 
   if (selectedPlugin.slug === 'click-log') {
-    return <ClickLogShell />;
+    return <ClickLogShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'what-works') {
