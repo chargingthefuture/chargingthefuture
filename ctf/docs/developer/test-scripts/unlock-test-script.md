@@ -213,11 +213,13 @@ URL to approved/rejected (in the admin queue) removes it from the denylist and l
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Precondition:** at least one URL on the denylist (mark a submission spam first, per UNLOCK-A2c).
 **Steps:**
-1. On `/admin/unlock`, scroll to the "Spam Quora-URL denylist" panel.
+1. On `/admin/unlock`, find the "Spam Quora-URL denylist" panel and open it (it starts closed, showing
+   only its title and how many URLs are on the list).
 2. Confirm the flagged URL is listed with its last-flagged date (and flag count if more than one).
 3. Click **Remove**, then **Confirm remove**.
 4. Re-submit that URL as a member (per UNLOCK-A2c).
-**Expected:** Step 2: the panel lists every denylisted URL. Step 3: `POST
+**Expected:** Step 1: the panel is closed on arrival and its headline shows the URL count; opening it
+reveals the explanation and the list. Step 2: the panel lists every denylisted URL. Step 3: `POST
 /api/unlock/admin/spam-denylist/remove` deletes the row (audited
 `unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
 longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
@@ -232,7 +234,7 @@ Approve the first. Leave the second pending.
 **Steps:**
 1. On the second submission, press **Duplicate**, read the confirm prompt, and confirm.
 2. Read the top counters and open the **Support-only** tab.
-3. Scroll to the Spam Quora-URL denylist panel.
+3. Open the Spam Quora-URL denylist panel (closed by default).
 4. Sign in as the second account and open the app.
 5. From that same session, try to open the Commons and any plugin.
 6. Sign in as the first account.
