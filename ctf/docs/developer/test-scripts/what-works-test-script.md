@@ -44,7 +44,10 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
    Toggle off; it drops back. → web ☐ mobile ☐
 4. **Suggested tool is held for review.** Suggest a tool. It does **not** appear in the public list;
    the screen confirms it was submitted for review. → web ☐ mobile ☐
-5. **A problem with no tools yet still shows.** A problem an admin added but that has no approved
+5. **Lists end.** The problem list shows a page of problems with Previous / Page N of M / Next
+   underneath — nothing keeps loading as you scroll — and a problem with more than two tools shows
+   two plus a "Show N more tools" control. → web ☐ mobile ☐
+6. **A problem with no tools yet still shows.** A problem an admin added but that has no approved
    tool renders with its heading and a "no tools on this one yet" panel with a **Suggest a tool**
    button — it is not missing from the list. → web ☐ mobile ☐
 
@@ -117,7 +120,23 @@ directly), admins see the shared Admin pill in the member shell header, and the 
 header shows a "Member view" pill opening `/apps/what-works`.
 **Result:** web ☐ mobile ☐ — notes:
 
-### WW-7 · A newly added problem shows with no tools yet
+### WW-7 · Lists are paged and long problems stay short
+**Role:** member · **Surfaces:** all
+**Precondition:** more than five active problems, and one problem with more than two approved tools
+(seed, then add a few problems as an admin).
+**Steps:**
+1. Open `/apps/what-works` and scroll to the bottom of the list.
+2. Tap **Next**, then **Previous**.
+3. On a problem with more than two tools, tap **Show N more tools**, then **Show fewer**.
+4. Type a word into the search box that narrows the list.
+**Expected:** The list ends — five problems per page, with Previous / Page N of M / Next underneath
+and no auto-loading as you scroll. Next and Previous move a page and return you to the top of the
+list; Previous is disabled on page 1 and Next on the last page. A problem shows only its first two
+tools until expanded, and the control names how many are hidden. Searching puts you back on page 1
+and the page count matches the narrowed list.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WW-8 · A newly added problem shows with no tools yet
 **Role:** admin then member · **Surfaces:** all
 **Steps:**
 1. As an admin at `/admin/what-works`, add a new problem (emoji, title, short context). Do not add
@@ -187,6 +206,20 @@ name/note/link **without** unpublishing it — it stays `approved`, keeps its ve
 change shows on the member list. The tool's problem, status, and verified count are unchanged, and no
 submitter identity appears. The non-http(s) link is rejected server-side with an error, and the tool
 keeps its previous link.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WW-A5 · Admin lists are paged
+**Role:** admin · **Surfaces:** all
+**Precondition:** more than five problems, and more than five suggestions in one status.
+**Steps:**
+1. Open `/admin/what-works` and look at the bottom of the Suggestions list, then the Problems list.
+2. Page through each with Next and Previous.
+3. Switch the status filter (Pending → All).
+4. Approve or delete a row on the last page.
+**Expected:** Each list shows five rows per page with Previous / Page N of M / Next; the controls
+are absent when there is only one page. Changing the filter returns to page 1. Acting on a row on
+the last page never leaves an empty screen — the view falls back to the last page that still has
+rows.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

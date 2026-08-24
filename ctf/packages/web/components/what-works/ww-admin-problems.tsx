@@ -7,7 +7,10 @@ import { useState } from 'react';
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { AdminProblem } from './ww-admin-shared';
-import { getWhatWorksTokens, type WhatWorksTokens } from './ww-shared';
+import {
+  ADMIN_PROBLEMS_PER_PAGE, clampPage, getWhatWorksTokens, pageCountFor, type WhatWorksTokens,
+} from './ww-shared';
+import { WhatWorksPager } from './ww-pager';
 
 const makeInputStyle = (t: WhatWorksTokens): React.CSSProperties => ({
   borderRadius: 8,
@@ -148,6 +151,16 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
   // Inline two-step delete confirmation (replaces window.confirm).
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
+  // The problem list is paged rather than rendered in full, so the admin screen stays a screenful
+  // however many categories exist. The index is clamped because deleting a row can shorten the list.
+  const [page, setPage] = useState(0);
+  const pageCount = pageCountFor(problems.length, ADMIN_PROBLEMS_PER_PAGE);
+  const currentPage = clampPage(page, pageCount);
+  const pagedProblems = problems.slice(
+    currentPage * ADMIN_PROBLEMS_PER_PAGE,
+    currentPage * ADMIN_PROBLEMS_PER_PAGE + ADMIN_PROBLEMS_PER_PAGE,
+  );
+
   const createDisabled = !title.trim() || creating;
 
   async function create(): Promise<void> {
@@ -196,7 +209,7 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
           No problems yet. Add the first one above.
         </div>
       ) : (
-        problems.map((problem) => {
+        pagedProblems.map((problem) => {
           const busy = busyId === problem.id;
           return editingId === problem.id ? (
             <ProblemEditCard
@@ -229,6 +242,13 @@ export function WhatWorksAdminProblems({ problems, busyId, creating, onCreate, o
           );
         })
       )}
+
+      <WhatWorksPager
+        page={currentPage}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        summary={`${problems.length} ${problems.length === 1 ? 'problem' : 'problems'}`}
+      />
     </section>
   );
 }
