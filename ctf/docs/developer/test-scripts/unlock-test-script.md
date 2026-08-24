@@ -143,9 +143,11 @@ the card.
 3. Switch between the Pending, Support-only, and All views.
 4. On the Support-only view, compare the number of rows listed against the Support-only counter in
    the snapshot, and check that each row carries a gray "Support-only" pill.
-4. Check that every card names the member — first and last name with their handle, e.g.
-   `Jane Doe (@jane)` — not a bare `user_…` id. A member with no directory profile and no handle is
-   the only case where the raw id stands alone.
+5. Check that every card names the member — the first and last name on their Clerk account, with
+   their handle when they have one, e.g. `Jane Doe (@jane)` — not a bare `user_…` id. Include a
+   pending row from someone who has no Directory profile: the name still shows, because the name is
+   read from Clerk and has nothing to do with the Directory. The raw id stands alone only when Clerk
+   could not be reached from this runtime or the account no longer exists.
 **Expected:** The queue lists submissions; the Pending view shows only pending rows, the All view
 shows every status. Each row shows the submitter's Quora profile link and its review status. A
 non-admin cannot reach this page (`requireUnlockAdminAccess`). Step 3/4: the Support-only view shows

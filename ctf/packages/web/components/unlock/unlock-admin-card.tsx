@@ -105,9 +105,10 @@ function pill(bg: string, color: string, border: string) {
 
 // Name first, then handle, with the Clerk id last. Reviewing a verification means deciding about a
 // person, and a raw id says nothing about who that is — an admin had to copy it out and cross-
-// reference elsewhere to find out whose account they were approving (owner report). The id is still
-// printed after the name for support and debugging, and stands alone only for a member who has
-// neither a directory profile nor a handle on file.
+// reference elsewhere to find out whose account they were approving (owner report). Both the name and
+// the handle come from Clerk, which is where identity lives in v3. The id is still printed after the
+// name for support and debugging, and stands alone only when Clerk could not be reached or the account
+// is gone.
 function memberLabel(
   name: string | null | undefined,
   username: string | null | undefined,

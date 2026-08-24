@@ -46,10 +46,6 @@ type UnlockSubmissionRow = {
   shared_url_account_count?: string;
   // Only present on the admin queue list: how many times this member changed their Quora URL.
   quora_url_change_count?: string;
-  // Only present on the admin queue list: who the member actually is. Null when they have no
-  // directory profile / no handle on file.
-  member_name?: string | null;
-  member_username?: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -108,8 +104,6 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     ...(row.quora_url_change_count !== undefined
       ? { quoraUrlChangeCount: Number(row.quora_url_change_count) }
       : {}),
-    ...(row.member_name !== undefined ? { memberName: row.member_name } : {}),
-    ...(row.member_username !== undefined ? { memberUsername: row.member_username } : {}),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -351,18 +345,9 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
 
   const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
 
-  // Who the member is, so the queue does not make an admin reverse-look-up a Clerk id to find out who
-  // they are approving (owner report). The name comes from directory_profiles; the handle comes from
-  // the legacy `public.users` table, which a fresh database may not have — probe first and fall back
-  // to a null handle, the same pattern lib/bug-reports/repository.ts uses for the same reason.
-  const usersTable = await queryDb<{ reg: string | null }>(
-    `SELECT to_regclass('public.users')::text AS reg`,
-  );
-  const hasUsersTable = usersTable.rows[0]?.reg != null;
-
+  // Who the member is does not come from here: Clerk holds the name, and lib/unlock/member-identity.ts
+  // puts it on each row after this query returns. This one reads submissions and nothing else.
   const result = await queryDb<UnlockSubmissionRow>(
-    // Every column is table-qualified: directory_profiles and users both have an `id`, so an
-    // unqualified list would fail with "column reference is ambiguous" once they are joined.
     `SELECT
        s.id,
        s.user_id,
@@ -388,13 +373,8 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        (SELECT COUNT(*)
           FROM directory_quora_url_history h
          WHERE h.user_id = s.user_id
-           AND h.source <> 'quora_deletion_survey') AS quora_url_change_count,
-       NULLIF(TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')), '') AS member_name,
-       ${hasUsersTable ? 'u.username' : 'NULL::text'} AS member_username
+           AND h.source <> 'quora_deletion_survey') AS quora_url_change_count
      FROM unlock_verification_submissions s
-     LEFT JOIN directory_profiles dp
-       ON dp.claimed_by_user_id = s.user_id AND dp.deleted_at IS NULL
-     ${hasUsersTable ? 'LEFT JOIN users u ON u.id::text = s.user_id' : ''}
      ${whereClause}
      ORDER BY s.created_at DESC
      LIMIT $${values.length}`,
