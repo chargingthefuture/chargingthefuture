@@ -109,7 +109,10 @@ This plugin must:
    denylisted URL with when/how many times it was flagged, and a confirm-gated **Remove** button
    (`POST /api/unlock/admin/spam-denylist/remove`). Removing a URL only stops future submissions of it
    from being auto-blocked; it does not unblock a member already restricted for it (re-review their
-   submission to approved/rejected for that).
+   submission to approved/rejected for that). The panel **starts closed**, like the sign-ups panel above
+   the queue: its one visible line is the title, the number of URLs on the list, and the open/close
+   control. Nothing in it needs doing on a normal day and the list only grows, so it is opened when the
+   admin wants it rather than filling the bottom of the screen every visit.
 
 ### 2.2 Incentive Governance
 
@@ -354,6 +357,16 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-08-24: **The spam denylist panel opens on demand instead of always being open (owner report).**
+  The panel sat at the bottom of the admin shell fully open every visit: a paragraph of explanation
+  plus every denylisted URL, each with its own Remove button. The list only ever grows and nothing in
+  it needs doing on a normal day — a URL is added by marking a submission spam, not from here — so it
+  was a block the admin scrolled past to get anywhere. `unlock-spam-denylist-panel.tsx` now uses the
+  same closed-by-default header the sign-ups panel above the queue already uses: one row with the
+  title, how many URLs are on the list, and a chevron (`aria-expanded` / `aria-controls`, whole row is
+  the button so it is easy to hit on a phone). Opening it shows exactly what it showed before —
+  explanation, entries, dates, flag counts, confirm-gated Remove. No behavior, route, or data change.
 
 - 2026-08-24: **The review queue reads the member's name from Clerk, not from the Directory (owner
   report).** Cards showed a name for some members and a bare `user_…` id for others. The name was
