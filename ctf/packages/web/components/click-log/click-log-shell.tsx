@@ -12,6 +12,7 @@ import { ClickLogEmptyState } from "./click-log-empty-state";
 import { ClickLogLoading } from "./click-log-loading";
 import { AlertTriangle } from "lucide-react";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { useOwnerShare } from "./click-log-use-owner-share";
 import { useIncidentEdit } from "./click-log-use-incident-edit";
@@ -93,7 +94,47 @@ function ShareDefaultToggle({
   );
 }
 
-export function ClickLogShell() {
+// The screen header: name, running total, and the row of controls. Module-level to keep
+// ClickLogShell under the function-length limit. The title is the plugin's registry name, so a
+// member who tapped ClickLog lands on a screen with the same name on it.
+function ClickLogHeader({
+  tokens,
+  total,
+  isAdmin,
+  onRefresh,
+}: {
+  tokens: ReturnType<typeof getClickLogTokens>;
+  total: number;
+  isAdmin?: boolean;
+  onRefresh: () => void;
+}) {
+  const t = tokens;
+  return (
+    <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
+      {/* flexWrap: with the admin shortcut in the row, the plugin actions plus the three global
+          ones overflow a 390px phone. Wrapping reflows instead of clipping the last control off
+          the right edge; on a wider viewport it still renders as one line. */}
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 10, padding: "10px 14px" }}>
+        <BackChevronButton accent={t.ACCENT} />
+        <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Title and subtitle truncate so the trailing controls stay on screen */}
+          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>ClickLog</div>
+          <div style={{ fontSize: 11, color: t.MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{total} incidents total</div>
+        </div>
+        {/* Counterpart of the "Member view" pill on the trends dashboard, so the pair can be
+            crossed both ways. Renders nothing for a non-admin. */}
+        <PluginAdminButton href="/admin/click-log" isAdmin={isAdmin} accent={t.ACCENT} />
+        <RefreshButton onRefresh={onRefresh} title="Refresh incidents" />
+        <MobileTopActions />
+      </div>
+    </div>
+  );
+}
+
+// `isAdmin` only decides whether the header shows the shortcut to the trends screen; every
+// admin-only figure comes from an admin-gated API, so a wrong value here reveals nothing.
+export function ClickLogShell({ isAdmin }: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -301,19 +342,12 @@ export function ClickLogShell() {
 
   return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
-            <BackChevronButton accent={t.ACCENT} />
-            <AlertTriangle size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              {/* Title and subtitle truncate so the trailing controls stay on screen */}
-              <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Incident Log</div>
-              <div style={{ fontSize: 11, color: t.MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayTotal} incidents total</div>
-            </div>
-            <RefreshButton onRefresh={() => fetchIncidents()} title="Refresh incidents" />
-            <MobileTopActions />
-          </div>
-        </div>
+        <ClickLogHeader
+          tokens={t}
+          total={displayTotal}
+          isAdmin={isAdmin}
+          onRefresh={() => fetchIncidents()}
+        />
         <div style={{ padding: 16 }}>{content}</div>
       </div>
     );

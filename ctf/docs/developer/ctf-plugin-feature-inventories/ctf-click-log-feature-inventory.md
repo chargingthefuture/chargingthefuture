@@ -89,6 +89,12 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 4. Admin Features
 
+- Admin shortcut in the member header (added 2026-08-24): an admin opening ClickLog sees an "Admin"
+  pill in the header that goes to the trends dashboard, matching the "Member view" pill the trends
+  dashboard already carries, so the pair can be crossed in both directions without typing a URL or
+  going back through `/admin`. Both navigate with replace semantics, so toggling does not grow the
+  browser history. The pill renders for nobody else; it is a shortcut only, and every figure behind
+  it still comes from an admin-gated API.
 - ClickLog Trends dashboard (`/admin/click-log`): aggregate counts over incidents members opted to
   share. Headline figures — shared incidents, members reporting (distinct members, not incidents),
   members who logged more than one, days with activity, number of countries, number of areas,
@@ -306,6 +312,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
+
+- 2026-08-24: **The member screen is named ClickLog and carries the admin shortcut.** The header
+  read "Incident Log" — a name that appears nowhere else in the product, so the screen did not match
+  the plugin a member had just opened; it now reads "ClickLog", the registry name. Added the "Admin"
+  pill beside it for admins (`PluginAdminButton` → `/admin/click-log`), the counterpart of the
+  "Member view" pill the trends dashboard already had; the header row now wraps rather than clipping
+  its last control on a narrow phone. No change to data, gating, or copy anywhere else.
+  Android: out of scope (web-only per rule 105).
 
 - 2026-08-24: **The exported report image never carries the area coordinates (owner directive).**
   Exporting the image is how the report gets shared publicly, so the ~11 km cell coordinates are no
