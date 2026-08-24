@@ -14,7 +14,10 @@ import {
 } from 'lib/what-works/constants';
 import type { AdminProduct } from './ww-admin-shared';
 import { useTheme } from '@/hooks/useTheme';
-import { getWhatWorksTokens, type WhatWorksTokens } from './ww-shared';
+import {
+  ADMIN_PRODUCTS_PER_PAGE, clampPage, getWhatWorksTokens, pageCountFor, type WhatWorksTokens,
+} from './ww-shared';
+import { WhatWorksPager } from './ww-pager';
 
 const makeEditInputStyle = (t: WhatWorksTokens): React.CSSProperties => ({
   borderRadius: 8,
@@ -260,6 +263,17 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ProductEditDraft>({ emoji: '', name: '', kind: '', note: '', purchaseUrl: '' });
 
+  // The queue is paged rather than rendered in full: a long pending backlog would otherwise leave
+  // the admin scrolling for the end of it. Reviewing a row shortens the list, so the index is
+  // clamped instead of trusted.
+  const [page, setPage] = useState(0);
+  const pageCount = pageCountFor(products.length, ADMIN_PRODUCTS_PER_PAGE);
+  const currentPage = clampPage(page, pageCount);
+  const pagedProducts = products.slice(
+    currentPage * ADMIN_PRODUCTS_PER_PAGE,
+    currentPage * ADMIN_PRODUCTS_PER_PAGE + ADMIN_PRODUCTS_PER_PAGE,
+  );
+
   function openReject(id: string): void {
     setRejectingId(id);
     setReason('');
@@ -309,7 +323,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
               <button
                 key={filter.value}
                 type="button"
-                onClick={() => onChangeFilter(filter.value)}
+                onClick={() => { setPage(0); onChangeFilter(filter.value); }}
                 aria-pressed={active}
                 style={{ padding: '6px 14px', borderRadius: 8, background: active ? t.ACCENT : t.SURFACE, border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`, color: active ? t.BG : t.MUTED, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
@@ -325,7 +339,7 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
           No suggestions in this view.
         </div>
       ) : (
-        products.map((product) => {
+        pagedProducts.map((product) => {
           const busy = busyId === product.id;
           return (
             <ProductCard
@@ -355,6 +369,13 @@ export function WhatWorksAdminProducts({ products, busyId, statusFilter, onChang
           );
         })
       )}
+
+      <WhatWorksPager
+        page={currentPage}
+        pageCount={pageCount}
+        onPageChange={setPage}
+        summary={`${products.length} ${products.length === 1 ? 'suggestion' : 'suggestions'}`}
+      />
     </section>
   );
 }

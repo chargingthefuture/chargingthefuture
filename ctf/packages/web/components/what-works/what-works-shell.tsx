@@ -4,21 +4,16 @@
 // endorsement toggle, the suggest flow, client-side search, and an admin entry point.
 // Layout + tokens are matched to design/.../survivor-hub/WhatWorks.tsx.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ListChecks, Plus, Search } from 'lucide-react';
-import { BackChevronButton } from '@/lib/nav/back-history';
-import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { useTheme } from '@/hooks/useTheme';
 import {
-  BG, BRAND, TEXT, getWhatWorksTokens,
+  BG, BRAND, PROBLEMS_PER_PAGE, TEXT, clampPage, getWhatWorksTokens, pageCountFor,
   type SuggestDraft, type WhatWorksListResponse, type WhatWorksProblem,
   type WhatWorksProblemOption, type WhatWorksProduct, type WhatWorksStats,
 } from './ww-shared';
 import { WhatWorksLoading } from './ww-loading';
-import { WhatWorksHero } from './ww-hero';
-import { WhatWorksProblemSection } from './ww-problem-section';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
-import { MobileTopActions } from '@/components/shared/mobile-top-actions';
-import { RefreshButton } from '@/components/shared/refresh-button';
+import { WhatWorksShellHeader } from './ww-shell-header';
+import { WhatWorksListBody } from './ww-list-body';
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
 
@@ -52,6 +47,8 @@ export function WhatWorksShell() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [problemOptions, setProblemOptions] = useState<WhatWorksProblemOption[]>([]);
   const [query, setQuery] = useState('');
+  // Which page of problems is on screen. The list is paged, not endlessly scrolled.
+  const [page, setPage] = useState(0);
   const [showSuggest, setShowSuggest] = useState(false);
   // Which problem the suggest form opens on. Set when a member starts from a problem's own
   // "Suggest a tool" button; empty when they use the header button and pick for themselves.
@@ -141,12 +138,32 @@ export function WhatWorksShell() {
     }
   }
 
+  function search(next: string): void {
+    setQuery(next);
+    // A narrower list can have fewer pages than the one being viewed, so start back at the first.
+    setPage(0);
+  }
+
+  function goToPage(next: number): void {
+    setPage(next);
+    // Paging is a jump to a new set of problems, so start the reader at the top of it.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function openSuggest(problemId: string): void {
     setSuggestProblemId(problemId);
     setShowSuggest(true);
   }
 
   const visibleProblems = useMemo(() => filterProblems(problems, query), [problems, query]);
+  const pageCount = pageCountFor(visibleProblems.length, PROBLEMS_PER_PAGE);
+  // The list can shrink under a page index that is already set (a search narrows it, a refresh
+  // returns fewer problems), so the index is clamped rather than trusted.
+  const currentPage = clampPage(page, pageCount);
+  const pagedProblems = visibleProblems.slice(
+    currentPage * PROBLEMS_PER_PAGE,
+    currentPage * PROBLEMS_PER_PAGE + PROBLEMS_PER_PAGE,
+  );
   // No approved tool anywhere yet — the suggest form says so instead of "suggest another".
   const listHasNoTools = problems.every((problem) => problem.products.length === 0);
 
@@ -185,75 +202,34 @@ export function WhatWorksShell() {
     );
   }
 
-  const content = (
-    <>
-      <WhatWorksHero stats={stats} />
-      {error ? (
-        <div style={{ marginBottom: 20, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#fecaca', fontSize: 13 }}>{error}</div>
-      ) : null}
-      {visibleProblems.length === 0 ? (
-        <div style={{ fontSize: 14, color: t.MUTED, padding: '24px 0' }}>No tools or problems match “{query}”.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-          {visibleProblems.map((problem) => (
-            <WhatWorksProblemSection
-              key={problem.id}
-              problem={problem}
-              busyProductId={busyProductId}
-              onToggleHelpful={(product) => void toggleHelpful(product)}
-              onSuggestForProblem={openSuggest}
-              sectionRef={(node) => { sectionRefs.current[problem.id] = node; }}
-            />
-          ))}
-        </div>
-      )}
-    </>
-  );
-
-    return (
-      <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
-        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER_SOLID}` }}>
-          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
-              together overflow a 390px phone — the last control was clipped off the right
-              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
-              off; on a wider viewport it still renders as one line. */}
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, gap: 8, padding: '10px 14px' }}>
-            <BackChevronButton accent={t.ACCENT} />
-            <ListChecks size={18} color={t.ACCENT} style={{ flexShrink: 0 }} />
-            {/* Title shrinks and truncates so the trailing controls stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>What Works</span>
-            <PluginAdminButton href="/admin/what-works" isAdmin={isAdmin} accent={t.ACCENT} />
-            <RefreshButton onRefresh={refreshAll} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          <div style={{ padding: '0 12px 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER_SOLID}` }}>
-              <Search size={14} color={t.MUTED} />
-              <input
-                aria-label="Search tools or problems"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search tools or problems…"
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: t.TITLE, fontFamily: 'inherit' }}
-              />
-            </div>
-          </div>
-          {/* The Suggest entry point lives in the desktop sidebar; mobile has no sidebar, so add it
-              here so a phone user can still add an item to the shared list. */}
-          <div style={{ padding: '0 12px 10px' }}>
-            <button
-              type="button"
-              onClick={() => openSuggest('')}
-              style={{ width: '100%', padding: '10px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
-            >
-              <Plus size={15} /> Suggest an item
-            </button>
-          </div>
-        </div>
-        <div style={{ padding: '16px' }}>
-          <div style={{ maxWidth: 760, margin: '0 auto' }}>{content}</div>
+  return (
+    <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+      <WhatWorksShellHeader
+        isAdmin={isAdmin}
+        query={query}
+        onSearch={search}
+        onRefresh={refreshAll}
+        onSuggest={() => openSuggest('')}
+      />
+      <div style={{ padding: '16px' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <WhatWorksListBody
+            stats={stats}
+            error={error}
+            query={query}
+            pageProblems={pagedProblems}
+            matchCount={visibleProblems.length}
+            page={currentPage}
+            pageCount={pageCount}
+            onPageChange={goToPage}
+            busyProductId={busyProductId}
+            onToggleHelpful={(product) => void toggleHelpful(product)}
+            onSuggestForProblem={openSuggest}
+            registerSection={(problemId, node) => { sectionRefs.current[problemId] = node; }}
+          />
         </div>
       </div>
-    );
+    </div>
+  );
 
 }
