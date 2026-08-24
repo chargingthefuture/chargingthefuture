@@ -25,6 +25,26 @@ export function getWhatWorksTokens(theme: ThemeName): WhatWorksTokens {
   return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: '#1E2A3A' };
 }
 
+// List sizing (owner directive, 2026-08-24: lists are paged, never scrolled without end).
+// A problem shows its first two tools; the rest are behind an expand control, so one problem can
+// never stretch the page on its own. Problems and admin rows are paged a screenful at a time.
+export const TOOLS_SHOWN_COLLAPSED = 2;
+export const PROBLEMS_PER_PAGE = 5;
+export const ADMIN_PROBLEMS_PER_PAGE = 5;
+export const ADMIN_PRODUCTS_PER_PAGE = 5;
+
+// Page index that is always in range for the current list length: the list can shrink under the
+// reader (a search narrows it, an admin deletes a row) while the page index stays where it was.
+export function clampPage(page: number, pageCount: number): number {
+  return Math.min(Math.max(page, 0), Math.max(pageCount - 1, 0));
+}
+
+// How many pages a list of this length needs. Always at least 1, so "Page 1 of 1" holds for an
+// empty list.
+export function pageCountFor(itemCount: number, perPage: number): number {
+  return Math.max(1, Math.ceil(itemCount / perPage));
+}
+
 // The external long-form explainer the right-rail footnote points at (owner-confirmed).
 export const LOOK_MA_URL = 'https://www.chargingthefuture.com/look-ma';
 
