@@ -666,11 +666,15 @@ async function computeWorkforceModelUncached(): Promise<WorkforceModel> {
   };
 }
 
+// Keep six decimal places, not two. The goal is the full headcount target (~2,000,000 people), so
+// the early figures are tiny — 100 recruited is 0.005% — and two decimals flattened them to 0 (or,
+// on the half-up boundary, doubled 0.005 to 0.01). The payload carries the true ratio; the display
+// layer (`formatPercentOfGoal`) decides how many decimal places to print.
 function percentRecruited(recruited: number, target: number): number {
   if (target <= 0) {
     return 0;
   }
-  return Math.round(((recruited / target) * 100 + Number.EPSILON) * 100) / 100;
+  return Math.round(((recruited / target) * 100 + Number.EPSILON) * 1e6) / 1e6;
 }
 
 // Parse a `COUNT(*)::text AS total` result into a non-negative integer, treating a missing row or
