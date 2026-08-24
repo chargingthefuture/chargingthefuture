@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository';
+import { withMemberIdentities } from 'lib/unlock/member-identity';
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
 
@@ -70,7 +71,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const submissions = await listUnlockSubmissions(parsed.filters);
+    // Same reading as the admin page: the name comes from Clerk, not from any table of ours.
+    const submissions = await withMemberIdentities(await listUnlockSubmissions(parsed.filters));
 
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,

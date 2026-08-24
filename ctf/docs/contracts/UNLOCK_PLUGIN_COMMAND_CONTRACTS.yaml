@@ -49,8 +49,12 @@ contracts:
 
   - pluginId: unlock
     command: unlock.admin.submission.list
-    version: 1.0.0
-    description: List unlock verification submissions for admin moderation queues.
+    version: 1.1.0
+    description: >-
+      List unlock verification submissions for admin moderation queues. Each row carries the member's
+      name and handle, read from the auth provider (identity lives there, not in any table of ours) so
+      a reviewer is deciding about a person and not a raw user id. Best-effort: an id the provider
+      cannot resolve keeps a null name and the card falls back to printing the id.
     inputSchema:
       reviewStatus:
         type: string
@@ -66,6 +70,8 @@ contracts:
         type: array
     dataAccess:
       - unlock_verification_submissions
+      - directory_quora_url_history
+      - auth_provider_account_directory
     purpose: moderation_queue
     retentionClass: derived_short_lived
     idempotency: true
