@@ -49,6 +49,20 @@ Provide mandatory context so implementation decisions protect users and prevent 
 - Plugin commands must degrade safely and fail with clear, non-technical messaging.
 - New features must include impact assessment for user overwhelm and accessibility regressions.
 
+## List Length and Pagination (owner directive, 2026-08-24)
+- Lists are paged. Endless scrolling is not allowed anywhere in the product: no scroll-triggered
+  auto-loading, no "load more" that keeps growing one screen without a bottom.
+- Every list that can grow shows a fixed number of rows with page controls (Previous · Page N of M ·
+  Next). A reader must always be able to reach the end of what is on screen.
+- A list nested inside another list — the tools under one problem, the replies under one post —
+  shows its first two rows and hides the rest behind an expand control that names how many are
+  hidden. One nested list must never stretch the page on its own.
+- Rationale: a member arrives in crisis and needs to find one thing. A page with no bottom hides how
+  much there is, makes a spot on the list unfindable a second time, and keeps loading on a phone
+  connection that is already poor.
+- Scope: every member-facing and admin surface, web and mobile. When adding a list, page it in the
+  same change — this is not follow-up work.
+
 ## Naming Guardrails
 - Do not refer to product features as generic "services" or "plugins".
 - Do not refer to "chat" as a standalone product.

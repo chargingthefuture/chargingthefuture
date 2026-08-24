@@ -1,9 +1,13 @@
 'use client';
 
 // A problem heading plus its survivor-verified tools, from design/.../survivor-hub/WhatWorks.tsx.
-import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { getWhatWorksTokens, type WhatWorksProblem, type WhatWorksProduct, type WhatWorksTokens } from './ww-shared';
+import {
+  TOOLS_SHOWN_COLLAPSED, getWhatWorksTokens,
+  type WhatWorksProblem, type WhatWorksProduct, type WhatWorksTokens,
+} from './ww-shared';
 import { WhatWorksProductCard } from './ww-product-card';
 
 type Props = {
@@ -34,9 +38,36 @@ function NoToolsYet({ t, onSuggest }: { t: WhatWorksTokens; onSuggest: () => voi
   );
 }
 
+// Expand / collapse control for the tools this problem keeps hidden. It names the number so a
+// reader knows what is behind it before tapping.
+function MoreToolsToggle({ t, hiddenCount, expanded, onToggle }: { t: WhatWorksTokens; hiddenCount: number; expanded: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.SUBTLE, fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
+    >
+      {expanded ? (
+        <>
+          <ChevronUp size={14} /> Show fewer
+        </>
+      ) : (
+        <>
+          <ChevronDown size={14} /> Show {hiddenCount} more {hiddenCount === 1 ? 'tool' : 'tools'}
+        </>
+      )}
+    </button>
+  );
+}
+
 export function WhatWorksProblemSection({ problem, busyProductId, onToggleHelpful, onSuggestForProblem, sectionRef }: Props) {
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
+  // Collapsed by default: a problem with many tools would otherwise stretch the page on its own.
+  const [expanded, setExpanded] = useState(false);
+  const hiddenCount = Math.max(problem.products.length - TOOLS_SHOWN_COLLAPSED, 0);
+  const shownProducts = expanded ? problem.products : problem.products.slice(0, TOOLS_SHOWN_COLLAPSED);
   return (
     <section ref={sectionRef}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
@@ -58,7 +89,7 @@ export function WhatWorksProblemSection({ problem, busyProductId, onToggleHelpfu
         <NoToolsYet t={t} onSuggest={() => onSuggestForProblem(problem.id)} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {problem.products.map((product) => (
+          {shownProducts.map((product) => (
             <WhatWorksProductCard
               key={product.id}
               product={product}
@@ -66,6 +97,9 @@ export function WhatWorksProblemSection({ problem, busyProductId, onToggleHelpfu
               onToggleHelpful={onToggleHelpful}
             />
           ))}
+          {hiddenCount > 0 ? (
+            <MoreToolsToggle t={t} hiddenCount={hiddenCount} expanded={expanded} onToggle={() => setExpanded(!expanded)} />
+          ) : null}
         </div>
       )}
     </section>

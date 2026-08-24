@@ -36,7 +36,11 @@ the problem categories and review every suggestion before it joins the shared li
   "N survivors verified"; toggle off to withdraw it.
 - Suggest a tool: choose an existing problem, add a product name, a direct purchase link, and an
   optional note. Suggestions are reviewed before they appear (anonymous to other members).
-- Client-side search across tools and problems.
+- Paged lists, no endless scrolling. The problem list shows five problems per page with
+  Previous / Page N of M / Next controls; moving a page returns to the top of the list.
+- Each problem shows its first two tools; any beyond that sit behind a "Show N more tools" control
+  on that problem, so one problem cannot stretch the page on its own.
+- Client-side search across tools and problems. Searching returns to the first page.
 - Jump-nav sidebar that scrolls to a chosen problem.
 - Public (signed-out) preview: a readable teaser slice plus a sign-in/sign-up gate to see the full
   list and to suggest.
@@ -48,7 +52,10 @@ the problem categories and review every suggestion before it joins the shared li
 - Edit a tool's own details (emoji, name, type, note, purchase link) at any status — including after
   it is approved — to fix a typo or a broken link without unpublishing it. Status, verified count,
   and submitter identity are left untouched.
-- Status filter across pending / approved / rejected / all.
+- Status filter across pending / approved / rejected / all. Changing the filter returns to the first
+  page.
+- The suggestions queue and the problems list are paged, five rows per page, with the same
+  Previous / Page N of M / Next controls as the member list.
 - Curate problems: create, rename, re-emoji, reorder, deactivate/reactivate, and delete (cascading
   to that problem's tools and endorsements).
 - Submitter identity is never surfaced to admins — moderation is of content, not of people.
@@ -163,6 +170,23 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   deletion orchestrator is a platform-level task tracked outside this plugin.
 
 ## Change Log
+
+- 2026-08-24: **Lists are paged; no endless scrolling** (owner directive, recorded in rule 100).
+  The member problem list, the admin suggestions queue, and the admin problems list each show five
+  rows per page behind shared Previous / Page N of M / Next controls (`ww-pager.tsx`); page controls
+  hide themselves when there is only one page. Within a problem, only the first two tools render and
+  the rest sit behind a "Show N more tools" control, so a problem with many tools cannot stretch the
+  page. Paging the member list scrolls back to the top; searching, and changing the admin status
+  filter, return to the first page; every page index is clamped, so a list that shrinks under the
+  reader (a search narrows it, an admin deletes a row) cannot leave them on a page that no longer
+  exists. Page sizes live in `ww-shared.ts` (`PROBLEMS_PER_PAGE`, `TOOLS_SHOWN_COLLAPSED`,
+  `ADMIN_PROBLEMS_PER_PAGE`, `ADMIN_PRODUCTS_PER_PAGE`). Paging is client-side over the list the API
+  already returns in one pass — no route, contract, or schema change; the server-side cursor noted
+  in the `getReaderList` scale note is still the follow-up for when the approved-tool count grows
+  past a few hundred. The signed-out teaser is unchanged (two problems, two tools each). The member
+  shell grew past the rule-116 size and complexity limits with the paging state added, so its sticky
+  header moved to `ww-shell-header.tsx` and the list itself (hero, error banner, problem sections,
+  page controls) to `ww-list-body.tsx` — no behavior change in that split.
 
 - 2026-08-24: **Fixed: a newly added problem was invisible to members.** `getReaderList` dropped any
   problem with zero approved tools, so a problem an admin had just created showed in the admin
