@@ -3,11 +3,11 @@
    directory cards keep a hover affordance while the page stays a server component. */
 
 .page {
-  /* Own scroller: on desktop globals.css locks html/body to height:100vh + overflow:hidden
-     (each shell scrolls internally), so this landing page must scroll itself or its lower
-     rows (e.g. Bug Reports) get clipped and unreachable. */
-  height: 100dvh;
-  overflow-y: auto;
+  /* The page itself scrolls. This used to be its own scroller (height: 100dvh; overflow-y: auto)
+     because globals.css locked html/body to one viewport on desktop — that lock is gone, and an
+     inner scroller now only hides the page's real length from the browser, which is what stops
+     Safari's "Full Page" screenshot from reaching past the first viewport. */
+  min-height: 100dvh;
   background: var(--ctf-bg, #0f1117);
   color: var(--ctf-text, #f9fafb);
   font-family: 'Inter', system-ui, sans-serif;

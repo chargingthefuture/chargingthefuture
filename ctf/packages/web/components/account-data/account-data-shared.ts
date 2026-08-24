@@ -97,3 +97,8 @@ export function glyphForService(slug: string): string {
 
 // The exact phrase the user must type to confirm full-account deletion (matches the mockup).
 export const FULL_ACCOUNT_CONFIRM_PHRASE = 'delete my account';
+
+// Which of the two Account & Data views is showing: the per-service data list, or the
+// danger zone (full-account deletion). Lived in the desktop layout until that never-rendered
+// layout was removed; it is shared state, so it belongs here with the other shared types.
+export type AccountDataView = 'data' | 'danger';

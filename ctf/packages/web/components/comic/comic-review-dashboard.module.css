@@ -783,14 +783,18 @@
 }
 
 /* Mobile-first: formerly @media (max-width: 900px); applies at every width now. */
-/* The wrapper becomes a full-height flex column: the shared mobile header on top, then the
-   collapsed dashboard filling the rest. The queue/detail panes size to that remaining space
-   (height: 100% of a flex:1 parent) instead of a raw 100vh, so the sticky header never pushes
-   the content past the viewport. */
+/* The wrapper becomes a flex column at least one viewport tall: the shared mobile header on top,
+   then the collapsed dashboard filling whatever is left. The queue/detail panes size to that
+   space (height: 100% of a flex:1 parent) instead of a raw 100vh, so the sticky header never
+   pushes the content past the viewport, and a queue longer than the screen extends the page
+   rather than scrolling inside a box. */
 .mobileFrame {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* At least one viewport tall, never exactly one: the page itself scrolls, so a long queue or a
+     long answer runs down the document instead of inside a box. Pinning this to 100dvh left the
+     document unscrollable, which stops Safari's "Full Page" screenshot past the first viewport. */
+  min-height: 100dvh;
 }
 
 .mobileFrame > .dashboard {
@@ -799,6 +803,9 @@
   /* Override the desktop height: 100vh so the grid fills only the space left below the
      sticky header, not the whole viewport (which would overflow by the header's height). */
   height: auto;
+  /* And the desktop overflow: hidden, which would clip a sticky child and hide the page's real
+     length now that the document is the scroller. */
+  overflow: visible;
 }
 
 /* Single-column master/detail. The four-column desktop layout collapses to one

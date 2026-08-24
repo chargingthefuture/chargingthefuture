@@ -1,7 +1,7 @@
 .banner {
-  /* Desktop: the admin shells own a fixed 100dvh internal scroll area (globals.css
-     locks html/body to 100vh + overflow:hidden), so the banner overlays as a fixed
-     element and never shifts that layout. */
+  /* Fixed rather than in flow: the banner sits over the top of whatever screen is showing and
+     never shifts that layout, so an admin shell's own spacing is unchanged whether it is on
+     or off. */
   position: fixed;
   top: 0;
   left: 0;

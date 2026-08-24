@@ -141,6 +141,15 @@ Current status:
 
 ## Change Log
 
+- 2026-08-24: **The signed-out Chyme view scrolls as a page, and its never-rendered desktop layout is
+  gone.** The guest shell was pinned to exactly one viewport (`height: 100dvh; overflow: hidden`) with
+  the room list scrolling inside it, so the document never scrolled and Safari's "Full Page"
+  screenshot stopped after one screenful. It is now `minHeight: 100dvh` with no inner scrollbox, and
+  the green header keeps its always-visible behavior with `position: sticky`. Same file also drops
+  `DesktopChymePublic`: since the mobile-first switch (2026-07-20) it was hidden by CSS at every
+  width, so it rendered for nobody — with it gone, the `.ctf-bp-desktop` / `.ctf-bp-mobile` helpers in
+  `globals.css` had no users left and were removed too. Signed-in Chyme is untouched (it already used
+  `minHeight`). No API, schema, or contract change; Chyme test script CH-7 updated to match.
 - 2026-08-18: **"Get the Android app" card links to the filtered Releases view (owner request).** The Releases page now also carries `wallpapers-v*` releases, so the newest APK no longer sits at the top of the unfiltered page — a non-technical visitor had to scroll and work out which release was the app. The card's link adds `?q=mobile`, so the page opens showing only the `mobile-v*` releases with the newest APK first. `chyme-shell.tsx` constant only; Chyme test script step updated to match. No schema, route, or contract change. Verified: `@ctf/web` typecheck + eslint clean.
 - 2026-08-02: **Deletion burn-down batch 2: the back-channel call log joins the deletion registry.**
   On account deletion, `chyme_back_channel_calls` rows where the member was the initiator or the

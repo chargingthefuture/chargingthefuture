@@ -34,10 +34,14 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
     marginBottom: 10,
   };
 
+  // The page itself scrolls: the screen is only *at least* one viewport tall and nothing inside it
+  // owns a scrollbar. Pinning the screen to exactly 100dvh and scrolling an inner box instead leaves
+  // the document unscrollable, which stops Safari's "Full Page" screenshot from reaching past the
+  // first viewport. The shared header below pins itself with position: sticky.
   return (
-    <div style={{ display: 'flex', height: '100dvh', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
       {/* The shared header carries the back + account controls at phone width, matching every plugin shell. */}
-      <div style={{ flex: 1, minWidth: 0, height: '100dvh', overflowY: 'auto' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <MobileScreenHeader title="Your account" accent={tok.BRAND} icon={<UserCircle size={18} color={tok.BRAND} />} />
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 64px' }}>
           <header style={{ marginBottom: 24 }}>

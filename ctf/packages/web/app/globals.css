@@ -238,21 +238,6 @@ a {
   min-width: 0 !important;
 }
 
-/*
- * Breakpoint switch helpers. Shells that render a desktop layout and a phone
- * layout side by side wrap each in `.ctf-bp-desktop` / `.ctf-bp-mobile`.
- * Mobile-first: the phone layout is now the only one shown, at every width.
- * The desktop markup keeps rendering (hidden) until those branches are
- * removed from the shells.
- */
-.ctf-bp-mobile {
-  display: block;
-}
-
-.ctf-bp-desktop {
-  display: none;
-}
-
 /* First-party spinner. The app's Tailwind utilities never compile (v3 directives with the v4
  * postcss plugin), so the `animate-spin` class used across shells was dead CSS and spinners
  * never moved. This is the working replacement; keep using it (not animate-spin) for rotation. */

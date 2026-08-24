@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getAccountDataTokens } from './account-data-shared';
-import type { AccountService, AccountServicesResponse } from './account-data-shared';
+import type { AccountDataView, AccountService, AccountServicesResponse } from './account-data-shared';
 
 // Loading and error states are intentionally NOT theme-aware: per COMIC_THEME_TOKENS.md §11 loading
 // screens never adopt the comic theme, and the error state matches that default-dark treatment.
 const { BG, TEXT } = getAccountDataTokens('default');
-import { type AccountDataView } from './account-data-desktop';
 import { AccountDataMobile } from './account-data-mobile';
 import { AccountDataConfirmDelete } from './account-data-confirm-delete';
 
