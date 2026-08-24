@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width |
 
 ## How to run this
 
@@ -127,10 +127,15 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 **Steps:**
 1. Sign out. Open the Chyme plugin route.
 2. Listen to the live room; look for any speak control.
+3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
 **Expected:** You see the public view and can listen to the live room, joined muted with no speak
 control. The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. Sign-in and join point at the hosted sign-in URL. When the room
-is not live, there is no listen audio.
+is not live, there is no listen audio. The public view is one phone-width layout at every window
+size — never a two-column desktop version. The page itself scrolls: the green header stays pinned at
+the top while the content moves under it, the "Join Free →" bar sits at the bottom of a short page,
+and Safari's **Full Page** screenshot reaches the bottom of the content rather than stopping at one
+screenful.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

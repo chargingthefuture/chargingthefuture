@@ -300,6 +300,21 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-24: **"Your account" and the admin landing page scroll as pages; the last leftovers of the
+  removed desktop viewport lock are gone (owner report: Safari's "Full Page" screenshot only captured
+  one screenful).** Both screens were pinned to exactly one viewport with an inner `overflow` box —
+  `/account` as `height: 100dvh` around an `overflowY: auto` column, `/admin` as
+  `.page { height: 100dvh; overflow-y: auto }`. That made sense while `globals.css` locked html/body
+  to one viewport on desktop; that lock was removed in the mobile-first switch (2026-07-20), so an
+  inner scroller now only hides the page's real length from the browser. Both are `min-height: 100dvh`
+  with no inner scrollbox; the shared `MobileScreenHeader` on `/account` already pins itself with
+  `position: sticky`, so nothing moves visually. Also removed, all provably unreachable: the
+  `.ctf-bp-desktop` / `.ctf-bp-mobile` breakpoint helpers (last user deleted with the Chyme guest
+  desktop layout), `components/account-data/account-data-desktop.tsx` (never rendered since the
+  mobile-first switch — its live `AccountDataView` type moved to `account-data-shared.ts`), and
+  `components/workforce/workforce-sidebar.tsx` (imported by nothing). Eleven admin shells carried a
+  comment claiming desktop still locks html/body; the comment was wrong, not the code — corrected in
+  place, `minHeight: 100dvh` unchanged. No API, schema, or contract change.
 - 2026-08-20: **Commons, Unlock, Mutual Time, and Reporting a problem added to the user guide (owner
   request); Weekly Performance stays out.** Four surfaces every member passes through had no section.
   Commons was already in the reading order (added 2026-08-18) but the guide had not been regenerated

@@ -198,9 +198,8 @@ export function WhatWorksAdminShell() {
   return (
     <div
       style={{
-        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each admin shell must
-        // own its vertical scroll or its lower rows are clipped and unreachable. On mobile the document
-        // scrolls, so only set a min-height there. Matches the unlock / skills-hunt admin shells.
+        // At least one viewport tall, never exactly one: the document is the scroller at every
+        // width, so a min-height fills a short page without hiding a long one's real length.
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,

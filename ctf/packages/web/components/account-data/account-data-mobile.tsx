@@ -6,9 +6,8 @@ import {
 import { BackChevronButton } from '@/lib/nav/back-history';
 import {
   getAccountDataTokens,
-  glyphForService, type AccountService, type AccountDataTokens,
+  glyphForService, type AccountService, type AccountDataTokens, type AccountDataView,
 } from './account-data-shared';
-import type { AccountDataView } from './account-data-desktop';
 import { useTheme } from '@/hooks/useTheme';
 import { ThemeToggle } from '../theme/theme-toggle';
 

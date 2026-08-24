@@ -743,6 +743,12 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-08-24: **The owner review dashboard scrolls as a page.** Its wrapper was pinned to exactly one
+  viewport (`.mobileFrame { height: 100dvh }`), so a queue or an answer longer than the screen
+  scrolled inside a box while the document stayed put — which also stopped Safari's "Full Page"
+  screenshot from reaching past the first screenful. The wrapper is now `min-height: 100dvh` and the
+  collapsed grid inside it is `overflow: visible`, so the page carries the scroll. CSS only: same
+  layout, same panes, same master/detail swap. No API, schema, or contract change.
 - 2026-08-24 (latest): **The training export now records what it took, so the "awaiting export" count
   can actually go down.** The dashboard line "Training examples collected: N (N awaiting export · N
   exported · …)" reads `comic_training_examples.status`, but nothing in the code ever wrote

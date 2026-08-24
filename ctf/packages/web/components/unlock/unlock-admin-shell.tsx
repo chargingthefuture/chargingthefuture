@@ -155,8 +155,8 @@ export function UnlockAdminShell({
   return (
     <div
       style={{
-        // Desktop locks html/body to 100vh + overflow:hidden (globals.css), so each shell owns its own
-        // vertical scroll; on mobile the document scrolls, so only set a min-height there.
+        // At least one viewport tall, never exactly one: the document is the scroller at every
+        // width, so a min-height fills a short page without hiding a long one's real length.
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
