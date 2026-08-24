@@ -14,17 +14,29 @@ import { getClerkSecretKey } from '../auth/clerk-env';
 
 const CHUNK = 100;
 
-function displayName(user: { username?: string | null; firstName?: string | null; lastName?: string | null }): string | null {
-  const username = user.username?.trim();
-  if (username) return username;
-  const full = [user.firstName, user.lastName].filter((part) => part && part.trim().length > 0).join(' ').trim();
-  return full.length > 0 ? full : null;
+// What Clerk holds about one account, for surfaces that need the person's name and their handle
+// separately (a review queue wants "Ada Lovelace (@ada)", not one or the other).
+export type MemberIdentity = { name: string | null; username: string | null };
+
+const UNKNOWN: MemberIdentity = { name: null, username: null };
+
+function trimmed(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  return text && text.length > 0 ? text : null;
 }
 
-export async function resolveUsernames(userIds: string[]): Promise<Map<string, string | null>> {
-  const result = new Map<string, string | null>();
+function fullName(user: { firstName?: string | null; lastName?: string | null }): string | null {
+  const joined = [user.firstName, user.lastName].filter((part) => part && part.trim().length > 0).join(' ').trim();
+  return joined.length > 0 ? joined : null;
+}
+
+// Name and handle for each id, straight from Clerk. Best-effort: an id Clerk cannot resolve (deleted
+// account, failed call, no secret key in this runtime) comes back with both fields null and the caller
+// falls back to the raw id.
+export async function resolveMemberIdentities(userIds: string[]): Promise<Map<string, MemberIdentity>> {
+  const result = new Map<string, MemberIdentity>();
   const unique = Array.from(new Set(userIds.filter((id) => typeof id === 'string' && id.trim().length > 0)));
-  for (const id of unique) result.set(id, null);
+  for (const id of unique) result.set(id, UNKNOWN);
   if (unique.length === 0) return result;
 
   const secretKey = getClerkSecretKey();
@@ -42,12 +54,21 @@ export async function resolveUsernames(userIds: string[]): Promise<Map<string, s
     try {
       const response = await client.users.getUserList({ userId: chunk, limit: chunk.length });
       for (const user of response.data) {
-        result.set(user.id, displayName(user));
+        result.set(user.id, { name: fullName(user), username: trimmed(user.username) });
       }
     } catch {
-      // no-trace: best-effort, so this chunk's ids stay unresolved (null)
+      // no-trace: best-effort, so this chunk's ids stay unresolved (both fields null)
     }
   }
 
+  return result;
+}
+
+// One label per id — the handle when there is one, otherwise the full name. Callers that want the two
+// apart use resolveMemberIdentities instead.
+export async function resolveUsernames(userIds: string[]): Promise<Map<string, string | null>> {
+  const identities = await resolveMemberIdentities(userIds);
+  const result = new Map<string, string | null>();
+  for (const [id, identity] of identities) result.set(id, identity.username ?? identity.name);
   return result;
 }

@@ -72,6 +72,14 @@ This plugin must:
    they genuinely do keep the support surface and can correct their URL. Past support-only access
    remains readable in `unlock_audit_log`.
 1. List submissions by status/access-tier filters.
+1a. **Every card names the member, read from Clerk (2026-08-24).** Clerk is identity in v3 and holds
+   the first and last name each account gives at sign-up, so `lib/unlock/member-identity.ts` resolves
+   the ids on the loaded page of submissions against the Clerk backend API and the card renders
+   `Name (@handle)` with the raw id beside it for support. The name is **not** read from
+   `directory_profiles`: Unlock has nothing to do with the Directory, and a Directory profile only
+   exists after the fact — an admin attaches one, or the member builds one once they are already
+   approved — so a Directory join printed a bare id for exactly the people waiting to be reviewed.
+   Best-effort: the queue renders whether or not Clerk answers, and an unresolved id prints as itself.
 2. Review with decisions: `approved`, `rejected`, `spam`, `duplicate`.
 2a. **`duplicate` — a real member who already has an account (2026-08-19).** One Quora profile signed up
    twice under different emails is common and ordinary, and neither existing decision fit it: `rejected`
@@ -346,6 +354,23 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-08-24: **The review queue reads the member's name from Clerk, not from the Directory (owner
+  report).** Cards showed a name for some members and a bare `user_…` id for others. The name was
+  joined from `directory_profiles`, so it only appeared for someone who already had a Directory
+  profile — which is always after the fact (an admin attaches one, or the member builds one once
+  approved), meaning the people actually waiting in the queue were the ones with no name. The handle
+  came from a legacy `public.users` table that this database does not have, so it was always null and
+  the label fell straight through to the id. Both joins are gone: `listUnlockSubmissions` now reads
+  `unlock_verification_submissions` and nothing else (the `to_regclass('public.users')` probe went with
+  them), and new `lib/unlock/member-identity.ts` puts `memberName` / `memberUsername` on each row from
+  Clerk — identity in v3 — for both queue callers (the admin page and
+  `POST /api/unlock/admin/submissions`). Shared `lib/identity/resolve-usernames.ts` gained
+  `resolveMemberIdentities`, which returns name and handle separately; `resolveUsernames` is now a
+  wrapper over it and its behavior for existing callers is unchanged. Best-effort by design: an id
+  Clerk cannot resolve keeps a null name and the card prints the id, so the queue always renders.
+  Command contract `unlock.admin.submission.list` → 1.1.0, dataAccess now naming
+  `auth_provider_account_directory` (and no longer implying a Directory read). No schema change.
 
 - 2026-08-23: **The sign-up panel opens and closes, and its list is paged (owner report).** On a phone
   the panel sat between the snapshot counters and the review queue with every sign-up listed, so
