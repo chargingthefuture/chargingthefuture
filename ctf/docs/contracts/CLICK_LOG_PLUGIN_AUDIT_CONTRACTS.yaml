@@ -57,10 +57,11 @@ auditEvents:
     targetContext: admin
   - pluginId: click-log
     command: click-log.trends.image
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     eventId: click-log.trends.image
     policyDecision: allow
     dataClassesAccessed: [user_event]
-    # Records whether the produced image carried the ~11 km area coordinates. That is the one
-    # choice on this route that widens what a posted copy reveals, so it belongs in the log.
+    # Records that the produced image carried no ~11 km area coordinates. Since 1.1.0 that is fixed
+    # rather than chosen, and the line stays so a posted copy can still be matched to what it
+    # carried.
     targetContext: admin

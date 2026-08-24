@@ -270,18 +270,10 @@ commands:
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.trends.image
-    version: 1.0.0
+    version: 1.1.0
     inputSchema:
       type: object
       properties:
-        areas:
-          type: string
-          enum: ['0']
-          description: >-
-            Pass '0' to leave the ~11 km area coordinates out of this image. Included by default
-            (owner directive, 2026-08-19): recording where incidents happen is why ClickLog asks
-            for a location, so a shared copy that withheld it withheld the point of the report.
-            The country rollup is present either way and is not affected by this parameter.
         download:
           type: string
           enum: ['1']
@@ -294,7 +286,12 @@ commands:
       description: >-
         The whole report drawn as one tall PNG, carrying the same numbers as click-log.trends.fetch
         plus the method statement (how the data was collected, what is never counted, and what the
-        counts cannot show) so a reposted copy is never numbers without provenance.
+        counts cannot show) so a reposted copy is never numbers without provenance. The ~11 km area
+        coordinates are never in the image and no input can put them back (owner directive,
+        2026-08-24: exporting the image is how the report is shared publicly, and a cell that small
+        with a date on it can point at one person). The country rollup is in every image, so the
+        image still says where the activity is, and it states how many areas were held back and why.
+        Version 1.1.0 removed the `areas` input that 1.0.0 accepted.
     dataAccess:
       - click_log_incidents (select, aggregate only — identical queries to click-log.trends.fetch;
         the image is drawn from that report and reads nothing else)

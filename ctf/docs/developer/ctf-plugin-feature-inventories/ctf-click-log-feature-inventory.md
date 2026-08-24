@@ -134,11 +134,12 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   is the phone path (hold the picture to save it to photos or send it into another app), and "Save it
   as a file instead" (`?download=1`) downloads it, which is the computer path. A file download on a
   phone lands in the files app, one step away from anywhere the image is actually going.
-  Built from the same aggregate as the screen, so there is no second data path. Area coordinates are
-  left out unless `?areas=1` is passed and the download control's checkbox is ticked: at small
-  counts an ~11 km cell plus a date can point at one person, and members opted into sharing trend
-  data with the project rather than into being placed on a public map. Which variant was produced is
-  recorded in the audit log.
+  Built from the same aggregate as the screen, so there is no second data path. The image never
+  carries the area coordinates and nothing can ask for them (owner directive, 2026-08-24): an
+  exported image is made to be shared publicly, and at small counts an ~11 km cell plus a date can
+  point at one person — members opted into sharing trend data with the project rather than into
+  being placed on a public map. The countries stay in, and the image says how many areas were held
+  back and why. The audit log records that the image carried none.
 - Method statement (added 2026-08-19): the words under the numbers on the screen and drawn into the
   image — where the figures come from, what is never counted, how to read a count, what the data
   cannot show, why scheme totals are not comparable, and location coverage. It is built from the
@@ -167,7 +168,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
-- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. Optional `?areas=0` leaves the ~11 km area coordinates out; they are included by default (owner directive, 2026-08-19: recording where incidents happen is why ClickLog asks for a location, so a shared copy that withheld it withheld the point of the report). The country rollup is present either way. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. The ~11 km area coordinates are never in the image and no parameter can put them back (owner directive, 2026-08-24: exporting the image is how the report gets shared publicly, so the coordinates cannot be an option on this route). The country rollup is in every image, and where the areas would be the image says how many were recorded and why they were left out. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 
@@ -253,9 +254,13 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - The shareable report image is a wider disclosure than the screen, and is treated as one. Members
   consented to their trend data reaching the owner; an image is made to be posted. So the area
   coordinates — the most re-identifying element at low counts, where an ~11 km cell plus a date can
-  point at one person to anyone who knows them — are omitted unless the owner explicitly asks for
-  them, the download control says why in plain words, and the audit log records which variant was
-  produced. The image also carries the method statement with the numbers, so a copy that travels
+  point at one person to anyone who knows them — are never in the image, and there is no input, no
+  checkbox, and no query string that puts them back (owner directive, 2026-08-24). The route calls
+  the report builder with the coordinates off as a constant, so the omission cannot be undone by a
+  request. The country rollup is in every image, so a shared copy still says where the activity is,
+  and the image states how many areas were held back and why. The audit log still records that the
+  image carried none. The coordinates remain on the admin trends screen, which nobody outside the
+  project sees. The image also carries the method statement with the numbers, so a copy that travels
   without any surrounding text still states what the counts are and are not.
 
 ## 8. Web and Android Delivery Status
@@ -301,6 +306,18 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
+
+- 2026-08-24: **The exported report image never carries the area coordinates (owner directive).**
+  Exporting the image is how the report gets shared publicly, so the ~11 km cell coordinates are no
+  longer a choice on that route: `GET /api/click-log/admin/trends/image` builds its view with the
+  coordinates off as a constant, the `?areas=` input is gone (`click-log.trends.image` goes to
+  1.1.0), and the checkbox on the download control is removed. This supersedes the 2026-08-19
+  decision to include them by default — that one weighed a copy sent to a few people, and the reason
+  to record a location is served by the country rollup, which is in every image. Where the areas
+  would be, the image says how many were recorded and why the coordinates were left out. The admin
+  trends screen is unchanged and still lists every area with its coordinates. No change to what is
+  stored, to what members are asked, or to the queries — only to what leaves in an image.
+  Android: out of scope (web-only per rule 105).
 
 - 2026-08-21: **New scheme tag The Forced Homecoming (`forced-homecoming`) and new problem tag
   "Falsely labeled mentally ill or dangerous" (`false-mental-health-label`).** Owner decision,

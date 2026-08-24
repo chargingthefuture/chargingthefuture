@@ -155,11 +155,15 @@ function notes(report: SharedIncidentReport): ReportNote[] {
       body:
         summary.withoutLocation === 0
           ? `All ${plural(summary.sharedIncidents, 'shared incident', 'shared incidents')} carry an approximate area.`
-          : `${plural(summary.withLocation, 'shared incident', 'shared incidents')} carry an approximate area; ${summary.withoutLocation} do not and are absent from the area list, though they are counted in every other figure. An untagged incident can be logged without a location.`,
+          : `${plural(summary.withLocation, 'shared incident', 'shared incidents')} carry an approximate area; ${summary.withoutLocation} do not and count toward no area or country, though they are counted in every other figure. An untagged incident can be logged without a location.`,
     },
   ];
 }
 
+// `includeAreas` is the ~11 km cell coordinates, and only the owner's own trends screen passes
+// true. The shareable image passes false and has no way to pass anything else (owner directive,
+// 2026-08-24): exporting the image is how the report is shared publicly, and a cell that small with
+// a date on it can point at one person.
 export function buildTrendReportView(
   report: SharedIncidentReport,
   options: { includeAreas: boolean }
@@ -193,7 +197,7 @@ export function buildTrendReportView(
     areasOmittedLine:
       options.includeAreas || summary.areas === 0
         ? null
-        : `${plural(summary.areas, 'area', 'areas')} recorded. The exact cell coordinates were left out of this copy; the countries above still show where the activity is.`,
+        : `${plural(summary.areas, 'area', 'areas')} recorded. The exact cell coordinates are left out of a copy made to be shared, because an area this small with a date on it can point at one person; the countries above still show where the activity is.`,
     // The area list is capped in the query. Saying so is the difference between a short list and a
     // short list a reader wrongly believes is everything.
     areasTruncatedLine:
