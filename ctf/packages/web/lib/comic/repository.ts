@@ -42,6 +42,7 @@ import type {
   ComicReviewResolveResult,
   ComicReviewStatus,
   ComicTrainingExample,
+  ComicTrainingExportResult,
   ComicTrainingStats,
   ComicTurnEngine,
 } from './types';
@@ -143,6 +144,12 @@ type ReviewRow = {
 type TrainingExportRow = {
   intent_label: string;
   text: string;
+};
+
+// The export also reads the row id and status so it can report which rows it just put in the file.
+type TrainingExportStatusRow = TrainingExportRow & {
+  id: string;
+  status: string;
 };
 
 function toIso(value: Date): string {
@@ -993,30 +1000,63 @@ export async function resolveComicReview(
 // Export accumulated training examples (asker questions + the intent labels assigned during
 // owner correction) grouped by intent. Supersedes the feed category-only export by sourcing real
 // turns + corrections. A single loop — no double counting.
-export async function exportComicTrainingExamples(): Promise<Record<string, string[]>> {
-  const result = await queryDb<TrainingExportRow>(
+//
+// Every non-discarded row is included on every call — the export is the whole dataset, not a
+// take-once queue — but the ids of the rows still sitting at 'pending' come back alongside it so
+// the caller can mark them exported (markComicTrainingExamplesExported). Rows whose text is blank
+// after trimming are left out of both the grouped map and the id list, so nothing is marked as
+// exported that did not actually reach the file.
+export async function exportComicTrainingExamples(): Promise<ComicTrainingExportResult> {
+  const result = await queryDb<TrainingExportStatusRow>(
     `
-      SELECT intent_label, text
+      SELECT id, status, intent_label, text
       FROM comic_training_examples
       WHERE status <> 'discarded'
       ORDER BY intent_label ASC, created_at ASC
     `,
   );
 
-  const grouped: Record<string, string[]> = {};
+  const byIntent: Record<string, string[]> = {};
+  const pendingIds: string[] = [];
   for (const row of result.rows) {
     const label = row.intent_label || 'general';
     const text = row.text.replace(/\n/g, ' ').trim();
     if (text.length === 0) {
       continue;
     }
-    if (!grouped[label]) {
-      grouped[label] = [];
+    if (!byIntent[label]) {
+      byIntent[label] = [];
     }
-    grouped[label].push(text);
+    byIntent[label].push(text);
+    if (row.status === 'pending') {
+      pendingIds.push(row.id);
+    }
   }
 
-  return grouped;
+  return { byIntent, pendingIds };
+}
+
+// Record that the given training examples have been downloaded: flip 'pending' -> 'exported' and
+// stamp exported_at. Called with the ids exportComicTrainingExamples just returned, so a row added
+// while the file was being built stays 'pending' and is picked up by the next download. Only
+// 'pending' rows are touched, which makes a repeated download a no-op rather than a re-stamp.
+// Returns how many rows changed so the caller can report it.
+export async function markComicTrainingExamplesExported(ids: readonly string[]): Promise<number> {
+  if (ids.length === 0) {
+    return 0;
+  }
+
+  const result = await queryDb<{ id: string }>(
+    `
+      UPDATE comic_training_examples
+      SET status = 'exported', exported_at = NOW()
+      WHERE id = ANY($1::uuid[]) AND status = 'pending'
+      RETURNING id
+    `,
+    [ids],
+  );
+
+  return result.rows.length;
 }
 
 // Flat list helper (intent + text) for callers that want raw rows rather than the grouped map.

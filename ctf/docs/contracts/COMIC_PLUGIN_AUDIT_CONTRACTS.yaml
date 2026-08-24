@@ -173,7 +173,7 @@ auditEvents:
     actorId: principal
     pluginId: comic
     command: comic.training.export
-    commandVersion: 1.1.0
+    commandVersion: 1.2.0
     purpose: assistant_training_export
     policyDecision:
       status: allow_or_deny
@@ -188,6 +188,8 @@ auditEvents:
     targetContext:
       workspaceId: workspace_identifier
       exportFormat: export_format
+      # How many training examples this run moved from awaiting export to exported (0 in preview).
+      markedExported: count_of_rows_marked
     requestId: request_identifier
     traceId: trace_identifier
     result:

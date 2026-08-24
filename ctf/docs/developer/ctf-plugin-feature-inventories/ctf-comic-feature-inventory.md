@@ -320,6 +320,10 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   question text, published answer text, and most-recent helpful/not_helpful/flagged rating + when it
   was rated (`ratedAnswers` in JSON; YAML comments in the download). No user id or other PII — text +
   rating value + timestamps only. JSON via `?format=json`; YAML is the default download.
+  Running it also records the download: every owner-correction row that reached the file and was
+  still awaiting export is set to `exported` with an `exported_at` stamp (JSON `markedExported`;
+  the `X-Marked-Exported` header on the YAML download). `?preview=1` returns the same file without
+  marking anything.
 - `GET /api/comic/admin/ai-status` (`comic.ai.status`) — admin. Read-only live status of the Ollama
   drafting backend (configured / reachable / latency). An admin diagnostic probe only — it no longer
   backs a UI badge. The always-"reachable" engine badges were removed because they only pinged the
@@ -413,7 +417,11 @@ DBs converge: `comic_conversations(channel, status)`, `comic_turns(role, engine,
    `entities` jsonb default `[]`, `story` jsonb null, `status` ∈ pending|exported|discarded,
    `exported_at` null, `created_at`). Indexed on `intent_label`, `status`, `source_turn_id`. A row is
    written whenever the owner *corrects* a draft in review (`resolveComicReview`). Exported by
-   `exportComicTrainingExamples()` as the intent→texts map.
+   `exportComicTrainingExamples()` as the intent→texts map. A row starts at `pending` and is moved to
+   `exported` with an `exported_at` stamp by `markComicTrainingExamplesExported()` the first time a
+   real (non-preview) run of `GET /api/comic/training/export` includes it; `discarded` is set by hand
+   and is excluded from both the export and the counts. Nothing marked the rows before 2026-08-24, so
+   older rows can still read as awaiting export until the next download.
 5. `comic_answer_ratings` — **training input #2: the human feedback signal.** One rating per answered
    turn per user (`user_id` text, `turn_id` uuid FK→comic_turns ON DELETE CASCADE, `rating` ∈
    helpful|not_helpful|flagged, `created_at`, `updated_at`; composite pk `(user_id, turn_id)`).
@@ -514,14 +522,25 @@ The export logic is in `ctf/packages/web/lib/comic/repository.ts`:
 
 **How to export it.** Call `GET /api/comic/training/export` (admin only, same gate as the rest of the
 @comic admin). Two formats:
-  - `?format=json` → `{ ok, totalExamples, byIntent, ratedAnswers }`, where `byIntent` is the
-    corrections map (`intent → [question text]`) and `ratedAnswers` is
+  - `?format=json` → `{ ok, totalExamples, byIntent, ratedAnswers, markedExported, markSkippedReason }`,
+    where `byIntent` is the corrections map (`intent → [question text]`) and `ratedAnswers` is
     `{ question, answer, rating, ratedAt }[]` — every rated answer, de-identified.
   - default (no `format`) → a downloadable NLU-style YAML file with the corrections as the `nlu:`
     block and the rated answers appended as YAML comments so the file stays a valid training file
     while still carrying the feedback signal.
   No user id or any other PII is ever included in either format — question/answer text, the rating
   value, and timestamps only.
+
+**Running the export marks what it took.** Every owner-correction row that reached the file and was
+still awaiting export is set to `exported` with an `exported_at` stamp
+(`markComicTrainingExamplesExported()`), which is what moves the counter below. The file is the whole
+non-discarded dataset on every call — marking does not shrink it, it only records that a row has been
+downloaded at least once, so a repeat download changes nothing. A row added while the file was being
+built keeps its awaiting-export status and is picked up by the next download. Two things to know:
+  - `?preview=1` returns the file without marking anything, for a look before a real export run.
+  - The file is built first and marked afterwards, so if the update fails the export still comes back
+    in full and says why the counts did not move (`markSkippedReason` in JSON; the failure is also
+    reported to the error tracker as `training_export_mark`).
 
 **Privacy note.** Because Ollama is self-hosted (server-side only, no third-party LLM egress), the
 exported text never has to leave our infrastructure to be used for training.
@@ -724,7 +743,27 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-08-20 (latest): **Removed the Quora settings path that does not exist.** The knowledge
+- 2026-08-24 (latest): **The training export now records what it took, so the "awaiting export" count
+  can actually go down.** The dashboard line "Training examples collected: N (N awaiting export · N
+  exported · …)" reads `comic_training_examples.status`, but nothing in the code ever wrote
+  `exported` or `exported_at` — the export endpoint read every non-discarded row and left the status
+  alone. So "awaiting export" only ever grew, "exported" stayed at 0 whatever the owner downloaded,
+  and the only way to move a row was editing the database by hand. Now `GET
+  /api/comic/training/export` marks the owner-correction rows it put in the file: new repository
+  helper `markComicTrainingExamplesExported(ids)` flips `pending` → `exported` and stamps
+  `exported_at`; `exportComicTrainingExamples()` returns `{ byIntent, pendingIds }` so only rows that
+  actually reached the file are marked (blank-text rows are skipped, and a row written while the file
+  was being built stays awaiting export for the next run). The file itself is unchanged — still the
+  whole non-discarded dataset every time, so a repeat download is a no-op rather than a re-stamp.
+  `?preview=1` returns the file without marking anything. The count comes back as `markedExported`
+  in JSON and the `X-Marked-Exported` header on the YAML download; because the file is built before
+  the update runs, a failed update still returns the full export and says why the counts did not
+  move (`markSkippedReason`, plus an error report under `training_export_mark`) instead of failing
+  the download. No schema change — `status` and `exported_at` already existed. Contracts:
+  `comic.training.export` bumped to 1.2.0 in the command, access-policy, and audit contracts (new
+  `preview` input, `markedExported` / `markSkippedReason` outputs, `markedExported` in the audit
+  target context). Parity: web + mobile-responsive + android (admin API only; no member surface).
+- 2026-08-20: **Removed the Quora settings path that does not exist.** The knowledge
   library's export hint read "In Quora: Settings → Privacy → Download your information", and the
   same route was repeated in this inventory and in the test script's precondition. The owner checked
   Quora on 2026-08-20: there is no such screen. Its most likely origin is a bot that invented a

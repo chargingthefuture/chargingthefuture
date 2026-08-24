@@ -315,6 +315,29 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 
 ---
 
+## CMC-A7 · The training export marks what it took (added 2026-08-24)
+**Role:** admin
+**Precondition:** at least one owner correction exists — resolve a queued `@comic` draft with **Edit & approve** so a `comic_training_examples` row is written. Note the "Training examples collected" line on `/admin/comic` first.
+
+**Steps:**
+1. On `/admin/comic`, read the line "Training examples collected: N (N awaiting export · N exported · N rated answers)".
+2. Open `GET /api/comic/training/export?format=json&preview=1` and read `markedExported` and `markSkippedReason`; go back to `/admin/comic` and reload.
+3. Open `GET /api/comic/training/export?format=json` (no preview) and read `markedExported`; reload `/admin/comic`.
+4. Open the same URL a second time.
+5. Download the YAML form (`GET /api/comic/training/export`) and read the `X-Marked-Exported` response header.
+6. Make one more correction, then run the export again.
+
+**Expected:**
+- Step 2: the file comes back in full; `markedExported` is 0 and `markSkippedReason` says preview mode. The counts on the dashboard are unchanged — a preview costs nothing.
+- Step 3: `markedExported` equals the number that was awaiting export; the dashboard now reads 0 awaiting export and that many exported.
+- Step 4: the file is identical (the export is the whole dataset, not a queue that drains) but `markedExported` is 0 — nothing is re-stamped.
+- Step 5: the YAML download carries `X-Marked-Exported`, counting only rows still awaiting export at that moment.
+- Step 6: the new correction shows as 1 awaiting export, and the next export moves it.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)
 **Steps:**
