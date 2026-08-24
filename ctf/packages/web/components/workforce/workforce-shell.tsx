@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart2, Target } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from '@/hooks/useTheme';
 import { AppLoading } from '@/components/shared/app-loading';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
@@ -234,7 +233,7 @@ function WorkforceDashboardContent({
   }
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <div style={{ flex: 1 }}>
       <div style={{ padding: '24px' }}>
         {warning ? <WorkforceWarningBanner message={warning} /> : null}
         <WorkforceHeroStats dashboard={dashboard} />
@@ -247,7 +246,7 @@ function WorkforceDashboardContent({
           occupationItems={occupationItems}
         />
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -416,11 +415,16 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       { key: 'occupations', label: 'Occupations' },
       { key: 'community-planning', label: 'Community' },
     ];
-    // ctf-self-responsive opts out of the global mobile de-flex so this flex
-    // column keeps a real height — the dashboard's ScrollArea needs it to scroll.
+    // The whole document scrolls here, like every other screen: the shell is only
+    // *at least* one viewport tall and nothing inside it owns a scrollbar. Pinning the
+    // shell to exactly 100dvh and scrolling an inner box instead leaves the document
+    // itself unscrollable, which is what broke Safari's "Full Page" screenshot on this
+    // screen — it captured one viewport and stopped. The header stays put via
+    // position: sticky, the same way the shared MobileScreenHeader does.
+    // ctf-self-responsive opts out of the global mobile de-flex so this stays a flex column.
     return (
-      <div className="ctf-self-responsive" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
-        <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0 }}>
+      <div className="ctf-self-responsive" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+        <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0, position: 'sticky', top: 0, zIndex: 40 }}>
           {/* flexWrap: this row carries the plugin actions plus the three global ones, which
               together overflow a 390px phone — the last control was clipped off the right
               edge and the title collapsed to nothing. Wrapping reflows instead of cutting
