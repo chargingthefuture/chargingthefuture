@@ -9,7 +9,7 @@ import { buildTrendReportView } from "../../lib/click-log/trend-report-view";
 import {
   ClickLogTrendMethod,
   ClickLogTrendResults,
-  ClickLogTrendStat,
+  ClickLogTrendStatGrid,
 } from "./click-log-trend-sections";
 import { ClickLogTrendImageLink } from "./click-log-trend-image-link";
 import {
@@ -75,11 +75,7 @@ export function ClickLogAdminTrends() {
               day, an approximate area (about 11 km), counts, and which problem/scheme tags members
               picked — no notes, exact locations, or member identity.
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
-              {view.stats.map((stat) => (
-                <ClickLogTrendStat key={stat.label} label={stat.label} value={Number(stat.value)} />
-              ))}
-            </div>
+            <ClickLogTrendStatGrid stats={view.stats} />
             <ClickLogTrendResults view={view} />
             <ClickLogTrendImageLink />
             <ClickLogTrendMethod notes={view.notes} />

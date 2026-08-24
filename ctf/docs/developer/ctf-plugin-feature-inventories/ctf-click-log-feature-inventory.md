@@ -314,6 +314,16 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-08-24: **The trends headline tiles wrap two to a row instead of being crushed onto one line
+  (owner report).** The seven tiles were one flex row of `flex: 1` tiles with `minWidth: 0`, so they
+  never wrapped: on a phone all seven shared a single line about 40 px wide each, every label was cut
+  mid-word ("Membe", "Countr", "Tagged incident"), and the row was as tall as the longest label
+  stacked a word at a time. New `ClickLogTrendStatGrid` in `click-log-trend-sections.tsx` lays them
+  out as a grid with a 150 px minimum column, so a phone shows two per row — the same shape the
+  shareable report image already used — a wider screen fits a third, and tiles in a row share a
+  height. Labels wrap on word boundaries. Numbers, labels, order, and the data behind them are
+  unchanged; this is layout only.
+
 - 2026-08-24: **The report image is saved as a file and nothing else (owner test on iOS).** Opening
   it in the browser produced a bare picture with no page around it and no way back to the trends
   screen. The route now always answers as a file download — the `?download=1` input is gone and
