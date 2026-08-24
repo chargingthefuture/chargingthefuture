@@ -95,15 +95,18 @@ change to the display cannot widen what the report can see.
 - **The window is 90 days.** Older incidents still exist for the member; they are outside the
   report.
 
-## 6. Why the area cells are usually left out of a shared copy
+## 6. Why the area cells are left out of a shared copy
 
-The report can be opened and saved as a single image for posting. That image leaves the area
-coordinates out unless they are explicitly asked for, and the reason is not caution for its own
-sake: at low counts,
-an area roughly 11 km across combined with a specific date can point at one person for anyone who
-already knows them. Members are told the grouped totals may be published, and that is what they
-agreed to: totals. An area cell paired with a date is closer to a location for one person than to a
-total, so it is a decision made deliberately each time rather than a default.
+The report can be opened and saved as a single image for posting. That image never carries the area
+coordinates, and nothing can ask for them, and the reason is not caution for its own sake: at low
+counts, an area roughly 11 km across combined with a specific date can point at one person for
+anyone who already knows them. Members are told the grouped totals may be published, and that is
+what they agreed to: totals. An area cell paired with a date is closer to a location for one person
+than to a total. Since the image exists in order to be shared, that is settled once in the code
+rather than decided again each time it is exported.
+
+The country of each incident is in every image, so a shared copy still says where the activity is,
+and the image says how many areas were recorded and why the coordinates are not shown.
 
 Anyone requesting the underlying area detail for an investigation should ask for it directly rather
 than take it from a public copy.

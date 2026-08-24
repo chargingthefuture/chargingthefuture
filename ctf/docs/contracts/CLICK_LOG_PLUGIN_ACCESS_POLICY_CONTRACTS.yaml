@@ -92,9 +92,10 @@ policies:
     consentRequirements: [owner_share_opt_in]
   - pluginId: click-log
     command: click-log.trends.image
-    version: 1.0.0
+    version: 1.1.0
     # Same gate and same data as click-log.trends.fetch — the image is drawn from that report and
-    # reads nothing else. Area coordinates are left out of the image unless explicitly requested.
+    # reads nothing else. The ~11 km area coordinates are never in the image and no input can put
+    # them back; the country rollup is.
     requiredRoles: [admin]
     attributePolicies: []
     consentRequirements: [owner_share_opt_in]

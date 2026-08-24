@@ -80,7 +80,7 @@ export function ClickLogAdminTrends() {
               ))}
             </div>
             <ClickLogTrendResults view={view} />
-            <ClickLogTrendImageLink areaCount={report?.areas.length ?? 0} />
+            <ClickLogTrendImageLink />
             <ClickLogTrendMethod notes={view.notes} />
           </>
         )}
