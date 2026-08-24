@@ -12,8 +12,10 @@ import { logClickLogAudit } from 'lib/click-log/audit';
 import { requireClickLogAdminAccess } from '../../../_lib';
 
 // The whole shared-incident report as one tall PNG, for posting somewhere that takes an image.
-// Opens in the browser by default so it can be saved or shared from there; `?download=1` saves it
-// as a file instead.
+// Always answered as a file download (owner test on iOS, 2026-08-24): shown in the browser instead,
+// the response is a bare image with no page around it and no way back to the trends screen — the
+// browser had nothing to draw a back control on. Saving the file leaves the trends screen where it
+// was, and from the saved file the image can be shared like any other photo.
 //
 // Admin-only and built from exactly the same aggregate as the trends screen, so there is no second
 // data path to keep honest. The image carries the method statement with the numbers: anyone who
@@ -30,7 +32,7 @@ import { requireClickLogAdminAccess } from '../../../_lib';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: Request) {
+export async function GET() {
   const gate = await requireClickLogAdminAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -39,12 +41,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
   }
 
-  const params = new URL(request.url).searchParams;
-  // Shown in the browser by default, saved as a file with ?download=1. On a phone an attachment
-  // lands in the files app, which is the wrong place when the next step is posting it: the image
-  // has to be on screen so it can be long-pressed and saved to the photo library or shared
-  // straight into another app. The download stays for the desktop case.
-  const asDownload = params.get('download') === '1';
   const report = await buildSharedIncidentReport();
   // Not a parameter: no query string can put the coordinates back into the image.
   const view = buildTrendReportView(report, { includeAreas: false });
@@ -63,7 +59,7 @@ export async function GET(request: Request) {
     width: REPORT_IMAGE_WIDTH,
     height: estimateReportImageHeight(view),
     headers: {
-      'Content-Disposition': `${asDownload ? 'attachment' : 'inline'}; filename="clicklog-trends-${generatedOn}.png"`,
+      'Content-Disposition': `attachment; filename="clicklog-trends-${generatedOn}.png"`,
       'Cache-Control': 'no-store',
     },
   });

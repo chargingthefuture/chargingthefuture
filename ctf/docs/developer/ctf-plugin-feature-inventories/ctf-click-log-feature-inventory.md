@@ -136,10 +136,11 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
   report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
   that takes an image without stitching phone screenshots together and losing rows at the seams.
-  The trends screen offers it two ways: "Show the report as one image" opens it in the browser, which
-  is the phone path (hold the picture to save it to photos or send it into another app), and "Save it
-  as a file instead" (`?download=1`) downloads it, which is the computer path. A file download on a
-  phone lands in the files app, one step away from anywhere the image is actually going.
+  The trends screen offers one control, "Save the report as one image", which saves the PNG and
+  leaves the screen where it was. It used to offer a second one that opened the image in the browser
+  for phones; tested on iOS that path stranded the reader on a bare picture with no way back, and
+  saving works on a phone anyway — from the downloads the picture goes to the photo library or into
+  another app (owner report, 2026-08-24).
   Built from the same aggregate as the screen, so there is no second data path. The image never
   carries the area coordinates and nothing can ask for them (owner directive, 2026-08-24): an
   exported image is made to be shared publicly, and at small counts an ~11 km cell plus a date can
@@ -174,7 +175,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
-- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. The ~11 km area coordinates are never in the image and no parameter can put them back (owner directive, 2026-08-24: exporting the image is how the report gets shared publicly, so the coordinates cannot be an option on this route). The country rollup is in every image, and where the areas would be the image says how many were recorded and why they were left out. Optional `?download=1` responds with `Content-Disposition: attachment`; without it the image is `inline`, so it opens in the browser and can be held to save to the photo library or shared into another app — the phone path, which is where the image is normally going. Both carry a dated filename and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. The ~11 km area coordinates are never in the image and no parameter can put them back (owner directive, 2026-08-24: exporting the image is how the report gets shared publicly, so the coordinates cannot be an option on this route). The country rollup is in every image, and where the areas would be the image says how many were recorded and why they were left out. Takes no parameters. Always responds with `Content-Disposition: attachment` (owner test on iOS, 2026-08-24: served inline it is a bare image with no page around it and no way back to the trends screen), a dated filename, and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 
@@ -312,6 +313,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
+
+- 2026-08-24: **The report image is saved as a file and nothing else (owner test on iOS).** Opening
+  it in the browser produced a bare picture with no page around it and no way back to the trends
+  screen. The route now always answers as a file download — the `?download=1` input is gone and
+  `click-log.trends.image` goes to 1.2.0 — and the trends screen offers one control, "Save the
+  report as one image", which leaves the screen exactly where it was. Saving is the better path on a
+  phone as well: from the downloads the picture can go to the photo library or straight into another
+  app. Android: out of scope (web-only per rule 105).
 
 - 2026-08-24: **The member screen is named ClickLog and carries the admin shortcut.** The header
   read "Incident Log" — a name that appears nowhere else in the product, so the screen did not match

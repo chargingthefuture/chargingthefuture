@@ -1,24 +1,26 @@
 'use client';
 
-import { Download, Image as ImageIcon } from 'lucide-react';
+import { Download } from 'lucide-react';
 import {
   TREND_ACCENT,
   TREND_BORDER,
   TREND_SUBTLE,
   TREND_SURFACE,
-  TREND_TEXT,
 } from './click-log-trend-tokens';
 
-// Produces the whole report as one tall PNG — the thing to post somewhere that takes an image,
+// Saves the whole report as one tall PNG — the thing to post somewhere that takes an image,
 // without stitching phone screenshots together and losing rows at the seams.
 //
-// Two links, not one, because the two devices need different things. On a phone the image has to
-// open on screen: from there it can be held to save it to the photo library or shared straight
-// into another app, which is where it is going. A file download on a phone lands in the files app
-// instead, one step away from anywhere useful — so that is the second link, for a computer.
+// One control, not two. There used to be a second link that opened the image in the browser, on
+// the reasoning that a phone needs the picture on screen to hold and save it. Tested on iOS that
+// reasoning was wrong twice over (owner report, 2026-08-24): the response is a bare image with no
+// page around it, so there was no way back to the trends screen, and saving the file works fine on
+// a phone anyway — from the Files app the picture can be saved to photos or shared into another
+// app. So the save is all that is left, and it never leaves this screen.
 //
-// Plain links, not a fetch: the endpoint answers with the image itself, and the same signed-in
-// session that loaded this screen authorizes the request.
+// A plain link, not a fetch: the endpoint answers with the image itself, and the same signed-in
+// session that loaded this screen authorizes the request. The route sends it as an attachment, so
+// the browser saves it and this screen stays exactly where it was.
 //
 // The image never carries the area coordinates, and there is no control to put them back (owner
 // directive, 2026-08-24). An exported image is made to be shared publicly, so the choice was
@@ -26,8 +28,6 @@ import {
 // counts. The countries stay in, so the image still says where the activity is, and the trends
 // screen above still lists every area for the owner.
 export function ClickLogTrendImageLink() {
-  const viewHref = '/api/click-log/admin/trends/image';
-  const downloadHref = '/api/click-log/admin/trends/image?download=1';
   return (
     <div
       style={{
@@ -39,9 +39,8 @@ export function ClickLogTrendImageLink() {
       }}
     >
       <a
-        href={viewHref}
-        target="_blank"
-        rel="noopener noreferrer"
+        href="/api/click-log/admin/trends/image"
+        download
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -56,34 +55,14 @@ export function ClickLogTrendImageLink() {
           textDecoration: 'none',
         }}
       >
-        <ImageIcon size={15} color="#fff" />
-        Show the report as one image
+        <Download size={15} color="#fff" />
+        Save the report as one image
       </a>
       <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 8, lineHeight: 1.5 }}>
-        Opens the whole report as one tall picture. On a phone, press and hold it to save it to your
-        photos or send it straight to another app.
+        Saves the whole report as one tall picture, named for today&apos;s date. You stay on this
+        screen. On a phone, open it from your downloads to save it to your photos or send it to
+        another app.
       </div>
-      <a
-        href={downloadHref}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          marginTop: 10,
-          padding: '9px 14px',
-          borderRadius: 10,
-          background: 'transparent',
-          border: `1px solid ${TREND_BORDER}`,
-          color: TREND_TEXT,
-          fontSize: 12,
-          fontWeight: 600,
-          textDecoration: 'none',
-        }}
-      >
-        <Download size={14} color={TREND_SUBTLE} />
-        Save it as a file instead
-      </a>
       <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 12, lineHeight: 1.5 }}>
         The image leaves the area coordinates out, because it is made to be shared — the countries in
         it still say where the activity is, and the full area list stays on this screen. It carries

@@ -264,9 +264,9 @@ identical across all five.
 1. On the Trends dashboard, read the "Countries" section above the areas.
 2. Compare a country's member count against the member counts of its areas below it.
 3. Read the "Areas" rows.
-4. Press "Show the report as one image" and read it where the areas would be.
-5. Open `/api/click-log/admin/trends/image?areas=1` directly in the address bar and read the same
-   place again.
+4. Press "Save the report as one image", open the saved file, and read it where the areas would be.
+5. Open `/api/click-log/admin/trends/image?areas=1` directly in the address bar and read the saved
+   file again.
 **Expected:** Each country row names a real country with its incident count, member count, number
 of areas, and date span, and the headline figures include a "Countries" tile. A country whose areas
 share a member shows fewer members than the areas add up to — it is a count of people, not a sum.
@@ -278,18 +278,21 @@ the image carry the note explaining that the country is worked out from the area
 and that an area on a border can land on the wrong side.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CL-A5 · Report opens as one image, and the image never carries the coordinates
+### CL-A5 · The report saves as one image, and the screen stays put
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
 **Steps:**
-1. On the Trends dashboard, press "Show the report as one image".
-2. On a phone, press and hold the picture that opens and save it to the photo library.
-3. Go back, press "Save it as a file instead", and open the downloaded file.
-**Expected:** Step 1 opens one tall picture in a new tab rather than downloading anything, and step 2
-saves it to photos. Step 3 downloads a PNG named for today's date. Both contain every section of the
-report and the method statement, end with the site line, and nothing is cut off at the bottom.
-Neither carries any area coordinates: where the areas would be, each says how many areas were
-recorded and why the coordinates were left out. The area count tile and the countries are still
-there. Every other number in the image matches the number on the screen.
+1. On the Trends dashboard, press "Save the report as one image".
+2. Look at the screen you are on immediately after pressing it.
+3. Open the saved file and read it top to bottom.
+4. On a phone, from the saved file, save the picture to the photo library or send it to another app.
+**Expected:** There is one control, not two — no separate link that opens the picture in the
+browser. The file downloads with a name carrying today's date, and the Trends dashboard is still on
+screen and still scrolled where it was; nothing navigated away and no back press is needed. The
+saved picture contains every section of the report and the method statement, ends with the site
+line, and nothing is cut off at the bottom. It carries no area coordinates: where the areas would
+be, it says how many areas were recorded and why they were left out. The area count tile and the
+countries are still there, and every other number matches the screen. On a phone the saved file
+reaches the photo library or another app in the normal way.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A7 · The screen is named ClickLog, and an admin can cross to the trends dashboard

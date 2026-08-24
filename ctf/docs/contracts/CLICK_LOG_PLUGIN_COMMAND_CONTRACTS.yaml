@@ -270,16 +270,10 @@ commands:
     retentionClass: user_event
   - pluginId: click-log
     command: click-log.trends.image
-    version: 1.1.0
+    version: 1.2.0
     inputSchema:
       type: object
-      properties:
-        download:
-          type: string
-          enum: ['1']
-          description: >-
-            Pass '1' to send the image as a file download. Without it the image is served inline so
-            it opens in the browser, which is how it is saved or shared from a phone.
+      properties: {}
     outputSchema:
       type: string
       contentMediaType: image/png
@@ -291,7 +285,10 @@ commands:
         2026-08-24: exporting the image is how the report is shared publicly, and a cell that small
         with a date on it can point at one person). The country rollup is in every image, so the
         image still says where the activity is, and it states how many areas were held back and why.
-        Version 1.1.0 removed the `areas` input that 1.0.0 accepted.
+        Always sent as a file download (`Content-Disposition: attachment`). Version 1.1.0 removed
+        the `areas` input that 1.0.0 accepted; 1.2.0 removed the `download` input as well, since an
+        image shown in the browser is a bare picture with no page around it and no way back to the
+        trends screen (owner test on iOS, 2026-08-24).
     dataAccess:
       - click_log_incidents (select, aggregate only — identical queries to click-log.trends.fetch;
         the image is drawn from that report and reads nothing else)
