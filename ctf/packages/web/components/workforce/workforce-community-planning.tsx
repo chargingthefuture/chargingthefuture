@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Loader2, Users } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import { WorkforceMemberList } from './workforce-member-list';
@@ -165,7 +164,7 @@ export function WorkforceCommunityPlanning() {
   const teams = report?.teams ?? [];
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <div style={{ flex: 1 }}>
       <div style={{ padding: '24px' }}>
         <div
           style={{
@@ -214,6 +213,6 @@ export function WorkforceCommunityPlanning() {
           )}
         </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 }

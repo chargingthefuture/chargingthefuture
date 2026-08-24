@@ -515,6 +515,16 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ### Change Log
 
+- 2026-08-24: **The Workforce screen now scrolls the page itself, so Safari's "Full Page"
+  screenshot captures the whole screen (owner report).** The shell used to be pinned to exactly one
+  viewport tall (`height: 100dvh`) with the dashboard, Occupations, and Community views each
+  scrolling inside their own box. Nothing scrolled the document, so Safari's Full Page capture had
+  nothing to extend and returned a single viewport. The shell is now *at least* one viewport tall
+  (`minHeight: 100dvh`), the inner scroll boxes are gone, and the header/tab row stays put with
+  `position: sticky` — the same pattern the shared mobile header already uses on screens where Full
+  Page works (for example the knowledge library). Layout and copy are otherwise unchanged; no API,
+  schema, or contract change.
+
 - 2026-07-19: **Android parity for the overview (owner: "parity android now").** The Android
   Overview tab drops its "Headcount Target" tile (same duplicate-of-Workforce-Total reasoning as
   web), and the screen subtitle now reads "{recruited} recruited · {min recruitable} goal" instead

@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen |
 
 ## How to run this
 
@@ -198,6 +198,23 @@ reopen. On **web**, each member name is a link that opens that member's Director
 (`/apps/directory/profile/:profileId`); on **android** the names are still plain text (parity ticket
 #1615). Member names appear only for a signed-in member — the view is behind the member read gate,
 never public.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WF-11 · The page itself scrolls (Safari "Full Page" screenshot captures the whole screen)
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Open the Workforce dashboard on iOS Safari, signed in, on a view long enough to run past the
+   bottom of the screen (Overview, or the Occupations tab).
+2. Scroll down. Watch the header (back chevron, title, admin/refresh controls) and the tab row
+   underneath it.
+3. Take a screenshot, tap the preview, and choose **Full Page**.
+4. Repeat on the Occupations tab and the Community tab.
+**Expected:** The whole page scrolls — there is no separate scrolling box inside the screen, and the
+browser's own address bar hides and shows as you scroll, the way it does on the knowledge library.
+The header and tab row stay pinned to the top while the content moves under them. The screenshot
+preview offers a **Full Page** option and it captures the screen all the way to the bottom of the
+content, not just the one screenful that was visible. This is checked on every view because each one
+used to carry its own scrolling box.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
