@@ -41,7 +41,9 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    screen subtitle reads "{recruited} recruited · {goal} goal". → web ☐ mobile ☐
 2. **Top-line numbers reconcile.** Recruited equals the count of all active Directory members, and
    the Skills Economy Summary statement uses that same recruited count and the Skills Coverage
-   percent — no progress bar, no repeated card. → web ☐ mobile ☐
+   percent — no progress bar, no repeated card. Whenever Recruited is 1 or more, the "% of goal"
+   line beneath it shows a non-zero percentage (e.g. 100 recruited reads "0.005% of goal"), never
+   "0% of goal". → web ☐ mobile ☐
 3. **No write controls on the profile.** Open the Workforce profile view. There is no profile editor
    — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐
 4. **Empty state is handled.** If there are no sectors/occupations and no Directory members, the
@@ -57,7 +59,10 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 1. Open the Workforce dashboard for a signed-in member.
 2. Read the four hero cards (Population, Workforce Total, Recruited, Skills Coverage) and the Skills Economy Summary card beneath them.
 **Expected:** All four cards show numbers. Workforce Total = population × participation rate.
-Recruited = the count of all active Directory members. Skills Coverage shows a whole-number percent
+Recruited = the count of all active Directory members, with "% of goal" beneath it. That percentage
+is printed with as many decimal places as it needs — one decimal above 1%, more below it — so any
+count of 1 or more reads as a real fraction of a percent (100 recruited → "0.005% of goal", 384 →
+"0.019%", 1,000 → "0.05%", 20,000 → "1%"). It reads "0% of goal" only when nobody is recruited. Skills Coverage shows a whole-number percent
 with "{listed} of {catalog} skills" beneath — both numbers live: listed = the count of DIFFERENT
 skills at least one active Directory member has listed; catalog = the current count of ALL active
 skills in the Skills Taxonomy (not a hardcoded figure — adding or removing a taxonomy skill moves

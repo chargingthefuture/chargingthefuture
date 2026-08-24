@@ -34,7 +34,7 @@ Workforce is a **read-only live tracker** of how the skills/talent of a populati
 
 ### 1.1 Workforce Dashboard and Drilldowns
 
-1. Live dashboard: Population, Workforce Total, Recruited (with "% of goal" progress), Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), the Skills Economy Summary statement (below), Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
+1. Live dashboard: Population, Workforce Total, Recruited (with "% of goal" progress — printed with as many decimal places as the figure needs, so a real recruited count is never shown as "0% of goal"; see `lib/workforce/percent.ts`), Skills Coverage (the whole-number percentage of the skills taxonomy with at least one active Directory member behind it, shown as "{listed} of {catalog} skills" — both numbers are live: the numerator is the distinct active skills members have listed, the denominator is the current active-skill catalog count, so the tile tracks skills being added and removed), the Skills Economy Summary statement (below), Sector Gaps, Skill Level Breakdown, and Top Training Gaps.
 2. Demand is population-scale: `population × participation_rate` (workforce config), spread across sectors by each sector's Skills Taxonomy `workforce_share`, then split across the sector's job titles. Supply is read live from Directory: members = active profiles; recruited = the V2 aspirational 3-way match (profiles matching a bucket by sector, job title, or a skill registered under the job title), with the top-line recruited mirroring V2 as the count of all active profiles. Gap = demand − recruited. See section 5 for the exact definition.
 3. Drilldowns by sector, skill level, and occupation (the per-occupation training gaps).
 4. Deterministic loading/empty/error states for the core screens.
@@ -231,6 +231,19 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 Profile read + compliance-delete surface: the profile is read-only (owner decision 2026-06-16, reaffirmed) — there is no `PUT`. `GET /api/workforce/profile` emits a `workforce.profile.fetch` audit and reads the real extension preferences/marker; `DELETE /api/workforce/profile` is the only mutation — a service-scoped soft delete per the deletion contract. The web profile panel and the mobile `WorkforceProfileCard` remain display-only; the member-facing delete control lives on the Account & Data screen (`/account/data`) — see Gaps item 6.
 
 ## 10) Change Log
+
+- 2026-08-24: **The Recruited card's "% of goal" no longer rounds a real count down to "0%".** The
+  goal is the full headcount target (~2,000,000 people), so the percentage is a fraction of one for
+  a long time — 100 people recruited is 0.005% — and the card rounded that to one decimal place and
+  printed "0% of goal" next to a card reading 100. Two changes, both display-side: `percentRecruited`
+  in `lib/workforce/repository.ts` now keeps six decimal places instead of two (two flattened small
+  values to 0, and on the half-up boundary doubled 0.005 to 0.01), and a new
+  `lib/workforce/percent.ts` `formatPercentOfGoal` prints one decimal place above 1% and enough
+  places below it to keep two meaningful digits, down to a floor of 0.0001% (anything smaller shows
+  "<0.0001%"). So 100 people shows 0.005%, 384 shows 0.019%, 1,000 shows 0.05%, 20,000 shows 1%.
+  A genuine zero still shows "0%". Display-only: no schema, route, or contract change; the dashboard
+  payload carries the same ratio, just with more precision. Web-only (rule 105). Test script WF-1
+  and the core smoke updated to match.
 
 - 2026-08-17: **Dropped the word "only" from the Skills Economy Summary opening line** (owner
   direction — it read as filler). The statement now opens "With {recruited} people recruited, we

@@ -7,6 +7,7 @@ import {
   WORKFORCE_BENCHMARK_GDP_PER_PERSON_USD,
   WORKFORCE_EARNINGS_SHARE_OF_GDP,
 } from '../../lib/workforce/constants';
+import { formatPercentOfGoal } from '../../lib/workforce/percent';
 
 interface WorkforceHeroStatsProps {
   dashboard: WorkforceDashboard;
@@ -49,8 +50,10 @@ export function WorkforceHeroStats({ dashboard }: WorkforceHeroStatsProps) {
       label: 'Recruited',
       value: dashboard.recruitedTotal.toLocaleString(),
       // Recruited mirrors V2 (all active Directory profiles), so it equals the directory headcount;
-      // show progress toward the target instead of repeating the same number.
-      delta: `${dashboard.percentRecruited.toLocaleString(undefined, { maximumFractionDigits: 1 })}% of goal`,
+      // show progress toward the target instead of repeating the same number. The goal is millions
+      // of people, so the percentage is a fraction of one for a long time — `formatPercentOfGoal`
+      // prints the decimal places that figure needs so a real count never shows as "0% of goal".
+      delta: `${formatPercentOfGoal(dashboard.percentRecruited)}% of goal`,
       color: '#22C55E',
     },
     {
