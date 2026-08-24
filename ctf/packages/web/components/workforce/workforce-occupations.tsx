@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Eye, Loader2 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { WORKFORCE_SKILL_LEVELS } from '../../lib/workforce/skill-level';
 import type { WorkforceOccupation } from '../../lib/workforce/types';
 import { useTheme } from '@/hooks/useTheme';
@@ -219,7 +218,7 @@ export function WorkforceOccupations() {
   };
 
   return (
-    <ScrollArea style={{ flex: 1 }}>
+    <div style={{ flex: 1 }}>
       <div style={{ padding: 24 }}>
         {selectedId ? (
           <OccupationDetail id={selectedId} onBack={() => setSelectedId(null)} />
@@ -337,6 +336,6 @@ export function WorkforceOccupations() {
           </>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
