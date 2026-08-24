@@ -902,8 +902,9 @@ where you can reach the next multiple of 50 without posting hundreds of times â€
 1. As admin, open `/admin/commons`, find that question and hide it.
 2. As the member who asked, reload the Commons.
 3. Attempt to generate an answer for it (`POST /api/feed/questions/<id>/answer`).
-4. As admin, run the training export (`GET /api/comic/training/export` / the questions export) and search
-   it for the hidden question's text.
+4. As admin, run the training export (`GET /api/comic/training/export?preview=1` / the questions export)
+   and search it for the hidden question's text. Use `preview=1` so this read does not mark any
+   training example as exported.
 5. Put the question back and repeat step 4.
 
 **Expected:**

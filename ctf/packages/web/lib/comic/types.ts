@@ -96,6 +96,14 @@ export type ComicTrainingExample = {
   text: string;
 };
 
+// One run of the owner-correction training export: the questions grouped by intent label (what
+// goes into the downloaded file) plus the ids of the rows in that file still sitting at 'pending',
+// so the caller can record that they have now been downloaded.
+export type ComicTrainingExportResult = {
+  byIntent: Record<string, string[]>;
+  pendingIds: string[];
+};
+
 export type ComicAnswerRatingValue = 'helpful' | 'not_helpful' | 'flagged';
 
 // One answered @comic turn paired with its rating, for the de-identified training export. Holds the

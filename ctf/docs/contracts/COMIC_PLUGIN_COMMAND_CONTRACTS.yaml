@@ -325,7 +325,7 @@ contracts:
 
   - pluginId: comic
     command: comic.training.export
-    version: 1.1.0
+    version: 1.2.0
     description: >-
       Export accumulated AI Assistant training data as NLU-style training YAML (or JSON). The dataset
       now has two parts. 1) Owner corrections — asker questions plus owner-assigned intent labels from
@@ -334,12 +334,22 @@ contracts:
       not_helpful / flagged rating plus when it was rated (ratedAnswers). The rated-answer data is
       de-identified: no user id and no other PII is included, only question/answer text, the rating
       value, and timestamps. Supersedes the feed category-only export by sourcing real turns,
-      corrections, and human feedback ratings.
+      corrections, and human feedback ratings. Running the export also records it: every owner
+      correction that reached the file and was still awaiting export is set to exported with an
+      exported_at stamp, which is what moves the admin dashboard's awaiting-export / exported counts.
+      The file is unchanged by this — it is the whole dataset on every call, not a take-once queue.
+      Pass preview=1 to read it without marking anything.
     inputSchema:
       format:
         type: string
         enum: [yaml, json]
         required: false
+      preview:
+        type: string
+        enum: ['1', 'true']
+        required: false
+        description: >-
+          When set, return the file without marking any training example as exported.
     outputSchema:
       totalExamples:
         type: integer
@@ -350,6 +360,16 @@ contracts:
         description: >-
           De-identified answered turns with their rating: { question, answer, rating, ratedAt }. No
           user id or other PII.
+      markedExported:
+        type: integer
+        description: >-
+          How many training examples this run moved from awaiting export to exported. Also returned
+          on the YAML download as the X-Marked-Exported header.
+      markSkippedReason:
+        type: string
+        description: >-
+          Null when the rows were marked. Otherwise a plain reason they were not — preview mode, or
+          the update failing after the file was already built.
     dataAccess:
       - comic_training_examples
       - comic_answer_ratings

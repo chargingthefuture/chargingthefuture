@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { exportComicRatedAnswers, exportComicTrainingExamples } from 'lib/comic/repository';
+import {
+  exportComicRatedAnswers,
+  exportComicTrainingExamples,
+  markComicTrainingExamplesExported,
+} from 'lib/comic/repository';
 import type { ComicRatedAnswerExample } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
 
@@ -16,6 +20,13 @@ import { reportError } from 'lib/observability/report';
 // Both parts are admin-gated (the same gate as before). JSON returns both under one object; the YAML
 // download keeps the NLU block and appends the rated answers as YAML comments so the file stays a
 // valid training file while still carrying the feedback signal for review.
+//
+// Downloading also records what it took: every owner-correction row that reached the file and was
+// still at 'pending' is flipped to 'exported' with an exported_at stamp, which is what moves the
+// admin dashboard's "N awaiting export · N exported" line. The file itself is unchanged by this —
+// it is still the whole dataset every time, not a take-once queue; the status only records that a
+// row has been downloaded at least once. Pass ?preview=1 to read the file without marking
+// anything, e.g. to look at it before a real export run.
 function escapeTrainingExample(text: string): string {
   return text.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&').replace(/\n/g, ' ').trim();
 }
@@ -55,6 +66,32 @@ function buildTrainingNluYaml(
   return lines.join('\n') + '\n';
 }
 
+// What the bookkeeping half of the request did, so the caller is told plainly either way. The file
+// is built first and the marking happens after it: if the update fails, the admin still gets the
+// full export and a reason for why the counts did not move, rather than a 503 that loses both.
+type MarkOutcome = {
+  marked: number;
+  // Plain-language reason the marking did not happen, or null when it did (or was not asked for).
+  skippedReason: string | null;
+};
+
+async function markExportedRows(pendingIds: string[], preview: boolean): Promise<MarkOutcome> {
+  if (preview) {
+    return { marked: 0, skippedReason: 'preview=1 — nothing was marked as exported.' };
+  }
+
+  try {
+    return { marked: await markComicTrainingExamplesExported(pendingIds), skippedReason: null };
+  } catch (error) {
+    reportError(error, { area: 'comic', op: 'training_export_mark' });
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      marked: 0,
+      skippedReason: `The export file is complete, but recording it against the training examples failed, so they still count as awaiting export: ${detail}`,
+    };
+  }
+}
+
 export async function GET(request: Request) {
   const gate = await requireComicAdminAccess();
   if (!gate.allowed) {
@@ -63,17 +100,27 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const format = searchParams.get('format') ?? 'yaml';
+  const preview = searchParams.get('preview') === '1' || searchParams.get('preview') === 'true';
 
   try {
-    const [grouped, ratedAnswers] = await Promise.all([
+    const [examples, ratedAnswers] = await Promise.all([
       exportComicTrainingExamples(),
       exportComicRatedAnswers(),
     ]);
+    const grouped = examples.byIntent;
     const totalExamples = Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0);
+    const mark = await markExportedRows(examples.pendingIds, preview);
 
     if (format === 'json') {
       return NextResponse.json(
-        { ok: true, totalExamples, byIntent: grouped, ratedAnswers },
+        {
+          ok: true,
+          totalExamples,
+          byIntent: grouped,
+          ratedAnswers,
+          markedExported: mark.marked,
+          markSkippedReason: mark.skippedReason,
+        },
         { status: 200 },
       );
     }
@@ -86,6 +133,7 @@ export async function GET(request: Request) {
         'Content-Disposition': `attachment; filename="comic-nlu-${new Date().toISOString().slice(0, 10)}.yml"`,
         'X-Total-Examples': String(totalExamples),
         'X-Rated-Answers': String(ratedAnswers.length),
+        'X-Marked-Exported': String(mark.marked),
       },
     });
   } catch (error) {
