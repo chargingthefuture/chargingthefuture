@@ -366,7 +366,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   same closed-by-default header the sign-ups panel above the queue already uses: one row with the
   title, how many URLs are on the list, and a chevron (`aria-expanded` / `aria-controls`, whole row is
   the button so it is easy to hit on a phone). Opening it shows exactly what it showed before —
-  explanation, entries, dates, flag counts, confirm-gated Remove. No behaviour, route, or data change.
+  explanation, entries, dates, flag counts, confirm-gated Remove. No behavior, route, or data change.
 
 - 2026-08-24: **The review queue reads the member's name from Clerk, not from the Directory (owner
   report).** Cards showed a name for some members and a bare `user_…` id for others. The name was
