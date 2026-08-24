@@ -13,13 +13,34 @@ import {
 // them, and the method statement. Split out of the screen itself (rule 116) so the screen file
 // stays one component doing one job — fetching the report and laying its sections out.
 
+// The tiles sit two to a row on a phone, the same shape the shareable image uses, and a wider
+// screen fits a third. They were laid out as one flex row of `flex: 1` tiles, which never wrapped —
+// seven tiles shared one phone-width line, each about 40 px across, so every label was cut mid-word
+// ("Membe", "Countr") and the row grew as tall as the longest label stacked one letter at a time.
+// A grid with a minimum column width wraps instead of shrinking, and rows the tiles to equal height.
+export function ClickLogTrendStatGrid({ stats }: { stats: { label: string; value: string }[] }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: 10,
+        marginBottom: 4,
+      }}
+    >
+      {stats.map((stat) => (
+        <ClickLogTrendStat key={stat.label} label={stat.label} value={Number(stat.value)} />
+      ))}
+    </div>
+  );
+}
+
 export function ClickLogTrendStat({ label, value }: { label: string; value: number }) {
   return (
     <div
       style={{
-        flex: 1,
         minWidth: 0,
-        padding: '14px 16px',
+        padding: '14px 12px',
         borderRadius: 12,
         background: TREND_SURFACE,
         border: `1px solid ${TREND_BORDER}`,
@@ -27,7 +48,9 @@ export function ClickLogTrendStat({ label, value }: { label: string; value: numb
       }}
     >
       <div style={{ fontSize: 22, fontWeight: 800, color: TREND_ACCENT }}>{value}</div>
-      <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 2, lineHeight: 1.3 }}>{label}</div>
+      <div style={{ fontSize: 11, color: TREND_SUBTLE, marginTop: 2, lineHeight: 1.3, overflowWrap: 'break-word' }}>
+        {label}
+      </div>
     </div>
   );
 }

@@ -236,7 +236,9 @@ intro copy names day, approximate area, counts, and tags as the only shared data
 2. As admin, open the ClickLog Trends dashboard (`/admin/click-log`).
 **Expected:** The headline tiles show shared incidents, members reporting, members who logged more
 than one, days with activity, number of areas, and tagged incidents — and "members reporting" is the
-number of different people, not the number of incidents. An "Areas" section lists each area with its
+number of different people, not the number of incidents. On a phone the tiles sit two to a row and
+wrap onto further rows, with every label readable in full: no label is cut mid-word, and tiles in the
+same row are the same height. An "Areas" section lists each area with its
 coordinates to one decimal place, how many incidents and how many members are in it, and the dates it
 spans. A "Kinds of harm reported" section rolls the problems up into categories, and an incident
 carrying two problems from the same category adds one to that category, not two. Scheme rows each
