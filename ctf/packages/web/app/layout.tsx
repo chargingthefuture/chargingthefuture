@@ -23,12 +23,13 @@ import {
 import { SENTRY_DSN_GLOBAL } from '@/lib/observability/sentry-config';
 import './globals.css';
 
-// The site title doubles as the link-preview descriptor other sites (e.g. Quora) show when a page
-// here is shared: they read og:title, falling back to <title>. Both are set to the same string so
-// the unfurl reads exactly this, on every surface.
-// The parenthetical short form belongs here (owner decision, 2026-07-27): a link preview is where
-// most people meet the product for the first time, so it introduces the abbreviation. Elsewhere in
-// the app, once the name is established, plain "Skills Economy" or plain "SE" is correct.
+// No sharing-preview metadata (owner decision, 2026-08-25). We used to publish og:title and a
+// twitter:card carrying the site title, so a pasted link on other sites was rewritten to show that
+// phrase instead of the address. On Quora that turned a post listing several app links into the
+// same sentence repeated once per link, and the reader could no longer tell where any of them went.
+// The addresses are short and self-explaining on their own (/guide, /apps/socketrelay), so a plain
+// URL reads better than a masked one. SITE_TITLE stays the browser tab title only — do not add
+// openGraph or twitter blocks back without the owner asking for them.
 const SITE_TITLE = 'Skills Economy (SE); Exit their economy, exit the psyop.';
 const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
 
@@ -48,16 +49,6 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icon-192.png',
     apple: '/icon-192.png',
-  },
-  openGraph: {
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    siteName: 'Skills Economy',
-  },
-  twitter: {
-    card: 'summary',
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
   },
 };
 
