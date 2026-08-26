@@ -14,11 +14,11 @@ export function ScrollToHash() {
     const hash = window.location.hash;
     if (!hash) return undefined;
 
-    let cancelled = false;
+    let canceled = false;
     const deadline = Date.now() + 3000;
 
     const attempt = () => {
-      if (cancelled) return;
+      if (canceled) return;
       let target: Element | null = null;
       try {
         target = document.getElementById(decodeURIComponent(hash.slice(1)));
@@ -36,7 +36,7 @@ export function ScrollToHash() {
 
     attempt();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 
