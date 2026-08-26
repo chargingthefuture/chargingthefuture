@@ -156,18 +156,28 @@ Value delivered (each plugin's defining action, windowed on the event's own time
 
 Adoption (honest non-value rows):
 
-- `adoption.daily_active_members` — average number of distinct members active on a day of the week, from
-  `login_events`. That table holds at most one row per member per UTC day, so one row is one member-day; the
-  count is still taken as distinct (member, day) pairs so an older database without the once-per-day unique
-  index cannot inflate the average. The divisor is the number of days of the window that have already started
-  (1–7), so the live current week averages over the days it has actually had and every past week divides by 7.
-  Aggregate only — never a per-member figure. This is adoption, not value: signing in is not a plugin's defining
-  action and carries no positive weight in value scoring.
+- `adoption.active_members` — how many different members did something in the app during the week: the plain
+  turnout headcount, and the number "Daily Active Members" is easiest to misread as.
+- `adoption.daily_active_members` — average number of members active on a day of the week: member-days divided
+  by the days of the window that have already started (1–7), so the live current week averages over the days it
+  has actually had and every past week divides by 7. The divisor is computed in UTC, matching the day boundary
+  the member-days are bucketed on.
+
+Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
+is a (member, UTC day) pair on which that member did something the app recorded, drawn from the union of every
+member-attributed activity source — `login_events`, `click_log_incidents`, `mood_submissions`,
+`feed_community_posts`, `feed_community_replies`, `feed_community_post_reactions`,
+`peer_programming_messages` — each windowed on its own date column, `UNION`ed so a member seen in several
+sources on one day is still one member-day. Rows whose timestamp is written by a counterparty or an admin
+rather than by the member (a trip completion, a nomination review, a disbursement) are deliberately not
+sources: those say something happened to the member, not that the member turned up. Both rows are aggregate
+only — never a per-member figure — and both are adoption, not value: turning up is not a plugin's defining
+action and carries no positive weight in value scoring.
 - `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
 - `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
 - `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
 
-V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.daily_active_members` reads "Daily Active Members".
+V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.active_members` reads "Active Members" and `adoption.daily_active_members` reads "Daily Active Members".
 
 ## 7) Gaps and Known Technical Debt
 
@@ -177,6 +187,37 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-08-26: **Turnout was undercounting whole members (owner report: "there are two daily active
+  users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`
+  row and the `/current-week` rolling `activeUsersLast7Days` — read `login_events` and nothing else.
+  That table has exactly one writer: a fire-and-forget insert in
+  `lib/engagement/login-activity.ts`, called from the shared access gate, whose failures were caught
+  and dropped without a word. So any member whose sign-in row never landed was invisible to the
+  dashboard even while the database held that member's own rows, timestamped, from the same day — a
+  member logging ClickLog incidents every day could read as nobody. Three changes:
+  (a) a new `lib/engagement/member-activity.ts` defines a member-day as a (member, UTC day) pair
+  taken from the union of every member-attributed activity source (`login_events`,
+  `click_log_incidents`, `mood_submissions`, `feed_community_posts`, `feed_community_replies`,
+  `feed_community_post_reactions`, `peer_programming_messages`), each guarded on table existence;
+  both turnout readings and PeerProgramming's cohort-forming active set now read it, so the
+  dashboard and the cohort run can no longer disagree about who turned up.
+  (b) the sign-in write itself is repaired: it no longer names the `(user_id, UTC-day)` index
+  expression in its `ON CONFLICT` target — an inference target matching no index raises `42P10` and
+  fails the insert outright, which is how a database whose index build stalled could end up
+  recording nobody at all — and it now guards with `WHERE NOT EXISTS`, keeping a bare
+  `ON CONFLICT DO NOTHING` as the race-closer where the index does exist. A failure is logged with
+  its reason (rule 137) instead of vanishing.
+  (c) a new adoption row, `adoption.active_members`, reports the plain headcount of members who
+  turned up in the week, next to the average that reads as "Daily Active Members". The average's
+  divisor also moved from `CURRENT_DATE` (database session timezone) to UTC, matching the day
+  boundary the member-days use.
+  `ctf/scripts/audit-active-members.mjs` prints a week's member-days per source so an operator can
+  see which source a low number came from; it only runs `SELECT`s and never names a member.
+  Registered `wp_adoption_active_members` and rewrote `wp_adoption_daily_active_members` in
+  `ctf/config/canonical_metrics.yaml`; added `feed_community_posts` to the `dataAccess` lists of
+  `weekly-performance.metrics.get` and `weekly-performance.comparison.get`. No schema, route, or
+  access-policy change.
 
 - 2026-08-15: **The dashboard reports daily active members again (owner report: "Weekly performance
   does not have a state on daily active users").** The 2026-07-18 rebuild dropped every sign-in
