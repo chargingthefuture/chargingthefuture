@@ -2019,29 +2019,99 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
-  - id: wp_adoption_daily_active_members
-    name: Weekly Daily Active Members
-    description: Average number of distinct members active on a day of the week window — the dashboard's daily-active-members reading. login_events holds at most one row per member per UTC day, so one row is one member-day; the distinct count is used anyway so a database cloned before the once-per-day unique index existed cannot inflate the average. The divisor is the number of days of the window that have already started (1-7), so the live current week averages over the days it has actually had and every past week divides by the full 7. Aggregate only — never a per-member figure. Adoption, not value; signing in is not a plugin's defining action and carries no positive weight in value scoring.
+  - id: wp_adoption_active_members
+    name: Weekly Active Members
+    description: How many different members did something in the app during the week window — the plain turnout headcount. Built from the member-day set below, so a member counts if any first-party record of their own action falls in the window, whether or not a sign-in row was written for them. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
     owner: analytics-owner@chargingthefuture.org
-    data_type: number
-    unit: per day
+    data_type: integer
+    unit: members
     calculation: |
-      SELECT ROUND(
-               COUNT(DISTINCT (user_id, (created_at AT TIME ZONE 'UTC')::date))::numeric
-                 / GREATEST(LEAST(7, (CURRENT_DATE - :week_start) + 1), 1),
-               2) AS v
-      FROM login_events
-      WHERE created_at >= :week_start
-        AND created_at < :week_end;
+      -- member_days is the UNION (not UNION ALL) of (member, UTC day) pairs across every
+      -- member-attributed activity source: login_events, click_log_incidents, mood_submissions,
+      -- feed_community_posts, feed_community_replies, feed_community_post_reactions and
+      -- peer_programming_messages, each windowed on its own date column and skipping blank ids.
+      SELECT COUNT(DISTINCT user_id) AS v FROM member_days;
     inputs:
       - name: login_events.user_id
         type: string
       - name: login_events.created_at
         type: datetime
+      - name: click_log_incidents.user_id
+        type: string
+      - name: click_log_incidents.created_at
+        type: datetime
+      - name: mood_submissions.user_id
+        type: string
+      - name: mood_submissions.submitted_at
+        type: datetime
+      - name: feed_community_posts.author_user_id
+        type: string
+      - name: feed_community_posts.created_at
+        type: datetime
+      - name: feed_community_replies.author_user_id
+        type: string
+      - name: feed_community_replies.created_at
+        type: datetime
+      - name: feed_community_post_reactions.user_id
+        type: string
+      - name: feed_community_post_reactions.created_at
+        type: datetime
+      - name: peer_programming_messages.author_user_id
+        type: string
+      - name: peer_programming_messages.created_at
+        type: datetime
+    example_values:
+      - 2
+      - 47
+    last_updated: "2026-08-26T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_adoption_daily_active_members
+    name: Weekly Daily Active Members
+    description: Average number of members active on a day of the week window — the dashboard's daily-active-members reading, and the companion to the plain headcount in wp_adoption_active_members. A member-day is a (member, UTC day) pair on which that member did something the app recorded; it is drawn from every member-attributed activity source, not from login_events alone, so a member whose sign-in row was never written still counts on the days their own rows carry. The divisor is the number of days of the window that have already started (1-7), computed in UTC to match the day the member-days are bucketed on, so the live current week averages over the days it has actually had and every past week divides by the full 7. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: number
+    unit: per day
+    calculation: |
+      -- member_days is the same UNION described in wp_adoption_active_members.
+      -- elapsed_days = LEAST(7, GREATEST(1, days of the window that have already started, in UTC)).
+      SELECT ROUND(COUNT(*)::numeric / :elapsed_days, 2) AS v FROM member_days;
+    inputs:
+      - name: login_events.user_id
+        type: string
+      - name: login_events.created_at
+        type: datetime
+      - name: click_log_incidents.user_id
+        type: string
+      - name: click_log_incidents.created_at
+        type: datetime
+      - name: mood_submissions.user_id
+        type: string
+      - name: mood_submissions.submitted_at
+        type: datetime
+      - name: feed_community_posts.author_user_id
+        type: string
+      - name: feed_community_posts.created_at
+        type: datetime
+      - name: feed_community_replies.author_user_id
+        type: string
+      - name: feed_community_replies.created_at
+        type: datetime
+      - name: feed_community_post_reactions.user_id
+        type: string
+      - name: feed_community_post_reactions.created_at
+        type: datetime
+      - name: peer_programming_messages.author_user_id
+        type: string
+      - name: peer_programming_messages.created_at
+        type: datetime
     example_values:
       - 12.43
       - 18
-    last_updated: "2026-08-15T00:00:00Z"
+    last_updated: "2026-08-26T00:00:00Z"
     update_cadence: weekly
     retention: 24 months
     allowed_thresholds:

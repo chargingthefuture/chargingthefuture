@@ -108,13 +108,19 @@ is no "set active week" action and no per-week status.
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
    USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, LevelUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters, Beacon engagement per unique broadcast); **Adoption** — Daily Active Members, Directory
-   findable members, Mood check-ins + average, ClickLog incidents + distinct loggers. The Daily
-   Active Members card reads "N per day": the average number of distinct members active on a day of
-   the selected week, from `login_events`; on the current week it divides by the days of the week so
-   far, on a past week by the full 7. It is an aggregate — no member is ever named. There are NO
-   other login/engagement cards, NO feed cards, NO LevelUp enrollments-started card, and nothing for
-   GentlePulse or Skills Taxonomy. No revenue/MRR/ARR/CLV.
+   posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
+   Members, Directory findable members, Mood check-ins + average, ClickLog incidents + distinct
+   loggers. The Active Members card reads "N members": how many different members did something in
+   the app during the selected week. The Daily Active Members card reads "N per day": the average
+   number of members active on a day of that week; on the current week it divides by the days of the
+   week so far, on a past week by the full 7. Both count a member as active on a day when any of
+   their own rows carries that day — a sign-in, a ClickLog incident, a Mood check-in, a Commons post,
+   reply or reaction, a PeerProgramming message — so a member who used the app is counted even if no
+   sign-in row was written for them. Check this against the ClickLog cards on the same screen: Active
+   Members can never read lower than ClickLog's distinct loggers for the same week. Both are
+   aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
+   LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
+   revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
 3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab

@@ -1,4 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
+import { countActiveMembersLastDays, listActiveMemberIdsLastDays } from 'lib/engagement/member-activity';
+import { failureReason } from 'lib/errors/failure';
 
 // Per-instance memory of who we already recorded today (UTC), so a signed-in
 // member browsing the app does not write a `login_events` row on every request.
@@ -39,16 +41,31 @@ export function recordLoginEvent(userId: string): void {
   }
   recordedToday.seen.add(trimmed);
 
-  // ON CONFLICT against the (user_id, UTC-day) unique index makes the once-per-day dedupe
-  // atomic at the database level, so concurrent requests/instances cannot write two rows for
-  // the same member on the same UTC day. The in-memory marker above just spares the database
-  // from repeated no-op inserts; correctness does not depend on it.
+  // Once per member per UTC day, two ways over. The `WHERE NOT EXISTS` guard is the one that
+  // always applies: it holds on any database, including one where the (user_id, UTC-day) unique
+  // index was never built. The bare `ON CONFLICT DO NOTHING` closes the race between two
+  // concurrent requests wherever that index does exist. It is deliberately bare rather than
+  // naming the index expression: an inference target that matches no index raises `42P10` and
+  // fails the insert outright, which is exactly how a database with a stalled index build used to
+  // end up recording nobody at all. The in-memory marker above only spares the database repeated
+  // no-op inserts; correctness does not depend on it.
   void queryDb(
     `INSERT INTO login_events (user_id, created_at)
-     VALUES ($1, NOW())
-     ON CONFLICT (user_id, ((created_at AT TIME ZONE 'UTC')::date)) DO NOTHING`,
+     SELECT $1, NOW()
+     WHERE NOT EXISTS (
+       SELECT 1 FROM login_events
+       WHERE user_id = $1
+         AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date
+     )
+     ON CONFLICT DO NOTHING`,
     [trimmed],
-  ).catch(() => {
+  ).catch((error: unknown) => {
+    // Say what failed and why (rule 137). This write used to fail in silence, and a silent failure
+    // here does not look like a failure — it looks like a quiet week, which is the harder thing to
+    // notice. The member id is not logged: the failure is what an operator needs, not who.
+    console.error(
+      `[engagement.login-activity] could not record a member-day in login_events; the active-member readings will undercount until this succeeds: ${failureReason(error)}`,
+    );
     // Let a later request try again rather than silently never recording this member.
     // Guarded on the day so a failure that resolves after a UTC-day rollover does not
     // clear a marker that now belongs to the new day.
@@ -58,29 +75,19 @@ export function recordLoginEvent(userId: string): void {
   });
 }
 
-export async function getActiveUserIdsLastDays(days: number): Promise<string[]> {
-  const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 7;
-  const result = await queryDb<{ user_id: string }>(
-    `SELECT DISTINCT user_id
-     FROM login_events
-     WHERE created_at >= NOW() - make_interval(days => $1::int)
-     ORDER BY user_id ASC`,
-    [safeDays],
-  );
+// Both readers below answer "who has been active lately", and both read the shared member-day set in
+// lib/engagement/member-activity.ts rather than `login_events` alone. A member whose sign-in row is
+// missing but who logged an incident, posted, or checked in yesterday was active yesterday, and both
+// the Weekly Performance reading and PeerProgramming cohort formation should see them. Keeping the
+// two on one definition also stops the dashboard and the cohort run from disagreeing about who
+// turned up.
 
-  return result.rows.map((row) => row.user_id);
+export async function getActiveUserIdsLastDays(days: number): Promise<string[]> {
+  return listActiveMemberIdsLastDays(days);
 }
 
 export async function countActiveUsersLastDays(days: number): Promise<number> {
-  const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 7;
-  const result = await queryDb<{ total: string }>(
-    `SELECT COUNT(DISTINCT user_id)::text AS total
-     FROM login_events
-     WHERE created_at >= NOW() - make_interval(days => $1::int)`,
-    [safeDays],
-  );
-
-  return Number.parseInt(result.rows[0]?.total ?? '0', 10);
+  return countActiveMembersLastDays(days);
 }
 
 // Whether the `users` table exists, probed once per process. The table is created (or not) at

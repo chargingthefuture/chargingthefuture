@@ -86,6 +86,7 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
+      - feed_community_posts
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -136,6 +137,7 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
+      - feed_community_posts
     purpose: operational_metrics_comparison
     retentionClass: derived_short_lived
     idempotency: true
