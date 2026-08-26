@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import guideData from './guide-content.json';
 import type { UserGuide } from './guide-types';
 import styles from './guide.module.css';
+import { ScrollToHash } from './scroll-to-hash';
 
 // Public user guide at /guide — a static server component with no auth gate, reachable by
 // signed-out visitors (the middleware only sets identity headers and never protects routes), so the
@@ -36,6 +37,7 @@ export default function GuidePage() {
   return (
     <main className={styles.page}>
       <div className={styles.container} id="top">
+        <ScrollToHash />
         <PublicPageNav />
         <header className={styles.header}>
           <p className={styles.brand}>Charging the Future</p>
