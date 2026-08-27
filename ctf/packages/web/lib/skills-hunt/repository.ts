@@ -1044,11 +1044,26 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
         FROM skills_hunt_submissions
         WHERE round_id = $1::uuid AND deleted_at IS NULL
         GROUP BY submitter_user_id
+      ),
+      -- Mission bonuses earned in this round. Points are a ranking figure (owner directive
+      -- 2026-08-27), so completing a mission adds its bonus_points to the scout's score.
+      -- An archived mission stops counting, the same way a removed submission's points stop
+      -- counting — archiving is how an admin voids a mission.
+      mission_bonus AS (
+        SELECT
+          mp.user_id AS submitter_user_id,
+          SUM(m.bonus_points)::int AS mission_bonus
+        FROM skills_hunt_mission_progress mp
+        JOIN skills_hunt_missions m ON m.id = mp.mission_id
+        WHERE m.round_id = $1::uuid
+          AND m.status <> 'archived'
+          AND mp.completed_at IS NOT NULL
+        GROUP BY mp.user_id
       )
       SELECT
         a.submitter_user_id,
         a.submitter_username,
-        a.score,
+        (a.score::int + COALESCE(mb.mission_bonus, 0))::text AS score,
         a.accepted_count,
         a.rare_skill_bonus,
         a.first_match_count,
@@ -1057,8 +1072,9 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
       FROM accepted a
       LEFT JOIN pending p ON p.submitter_user_id = a.submitter_user_id
       LEFT JOIN activity act ON act.submitter_user_id = a.submitter_user_id
+      LEFT JOIN mission_bonus mb ON mb.submitter_user_id = a.submitter_user_id
       ORDER BY
-        a.score::int DESC,
+        (a.score::int + COALESCE(mb.mission_bonus, 0)) DESC,
         a.first_match_count::int DESC,
         act.last_submission_at ASC NULLS LAST,
         a.submitter_user_id ASC
@@ -2115,23 +2131,9 @@ async function handleAcceptedReview(
 
   await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
 
-  // Mission progress recompute on accept — newlyCompleted gives us the
-  // missions that crossed the goal threshold for the user in this
-  // transaction; fan out one mission-complete notification each.
-  const { newlyCompleted } = await recomputeMissionProgressForUser(
-    client,
-    existing.round_id,
-    existing.submitter_user_id,
-  );
-  for (const mission of newlyCompleted) {
-    await emitMissionComplete(
-      client,
-      existing.submitter_user_id,
-      mission.id,
-      mission.title,
-      mission.bonusPoints,
-    );
-  }
+  // Mission progress is recomputed by the caller before the leaderboard rebuild (a completed
+  // mission's bonus counts toward the score), and the mission-complete notifications go out
+  // there too.
 
   const attributionUsername = existing.submitter_username ?? actorUsername ?? 'system';
   // Generating the Directory profile is a best-effort follow-up to the accept: it must
@@ -2252,6 +2254,14 @@ export async function reviewSubmission(
       ],
     );
 
+    // Mission progress is recomputed BEFORE the leaderboard rebuild: a completed mission's
+    // bonus_points count toward the round score, so rebuilding first would leave the score a
+    // review behind. The notifications for anything newly completed go out after the rebuild,
+    // with the rest of the accept side effects.
+    const newlyCompletedMissions = status === 'accepted'
+      ? (await recomputeMissionProgressForUser(client, existing.round_id, existing.submitter_user_id)).newlyCompleted
+      : [];
+
     // Capture top-10 before the rebuild so we can diff and fan out
     // emitLeaderboardTopTen() for anyone newly inside the cap.
     const topTenBefore = new Set(await captureTopTenUserIds(client, existing.round_id));
@@ -2259,6 +2269,10 @@ export async function reviewSubmission(
     await rebuildLeaderboard(client, existing.round_id);
 
     await emitNewTopTenEntries(client, existing.round_id, topTenBefore);
+
+    for (const mission of newlyCompletedMissions) {
+      await emitMissionComplete(client, existing.submitter_user_id, mission.id, mission.title, mission.bonusPoints);
+    }
 
     if (status === 'accepted') {
       await handleAcceptedReview(
@@ -2369,12 +2383,17 @@ export async function listAllTimeLeaderboard(
     last_submission_at: Date | null;
   };
 
+  // Mission bonuses count toward the all-time score too, on the same terms as the per-round
+  // leaderboard: completed progress on a mission that has not been archived, summed across
+  // every round. Team mode below is deliberately left on submission points alone — a scout's
+  // mission bonus belongs to the scout, and there is no honest way to split it across the
+  // professions their nominees claimed.
   const sqlIndividual = `
     WITH agg AS (
       SELECT
         submitter_user_id AS identity,
         MAX(submitter_username) AS submitter_username,
-        SUM(points_awarded)::text AS score,
+        SUM(points_awarded)::int AS score,
         COUNT(*)::text AS accepted_count,
         SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
         COUNT(*) FILTER (
@@ -2384,8 +2403,31 @@ export async function listAllTimeLeaderboard(
       FROM skills_hunt_submissions
       WHERE status = 'accepted' AND deleted_at IS NULL
       GROUP BY submitter_user_id
+    ),
+    mission_bonus AS (
+      SELECT
+        mp.user_id AS identity,
+        SUM(m.bonus_points)::int AS mission_bonus
+      FROM skills_hunt_mission_progress mp
+      JOIN skills_hunt_missions m ON m.id = mp.mission_id
+      WHERE m.status <> 'archived' AND mp.completed_at IS NOT NULL
+      GROUP BY mp.user_id
     )
-    SELECT * FROM agg
+    SELECT * FROM (
+      SELECT
+        agg.identity,
+        agg.submitter_username,
+        (agg.score + COALESCE(mb.mission_bonus, 0))::text AS score,
+        agg.accepted_count,
+        agg.rare_skill_bonus,
+        agg.first_match_count,
+        agg.last_submission_at
+      FROM agg
+      LEFT JOIN mission_bonus mb ON mb.identity = agg.identity
+    ) ranked
+    -- The wrapper matters: orderTail sorts on \`score\`, and without it that name would resolve to
+    -- agg.score inside the join — the figure before the mission bonus — so rows would be ordered by
+    -- a different number than the one displayed.
     ${orderTail}
   `;
 
