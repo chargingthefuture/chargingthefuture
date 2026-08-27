@@ -123,7 +123,9 @@ is no "set active week" action and no per-week status.
    missing renders as 0, and that line is what tells you the 0 is not a real count. Then run
    `node ctf/scripts/audit-active-members.mjs --week=<that week>` (through Infisical, read-only): it
    prints the same count plus the sign-in record's earliest and latest row, which says whether the
-   week was quiet or the record does not reach that far back. Both are
+   week was quiet or the record does not reach that far back. With no terminal to hand, paste
+   `ctf/scripts/sql/active-members-audit.sql` into the Neon dashboard instead — same questions, plain
+   SELECTs. Both are
    aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.

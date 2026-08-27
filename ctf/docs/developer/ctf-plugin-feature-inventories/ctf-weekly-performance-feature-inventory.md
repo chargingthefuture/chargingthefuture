@@ -187,7 +187,8 @@ metric whose read failed or whose table is missing, because such a card renders 
 exactly like a real one (`[weekly-performance.live-metrics] could not read …`). And
 `ctf/scripts/audit-active-members.mjs` prints the sign-in record's earliest and latest row alongside the
 week's count, so a zero before the earliest row is visibly the record not reaching that far rather than
-nobody turning up.
+nobody turning up. The same questions are in `ctf/scripts/sql/active-members-audit.sql` as plain SELECTs to
+paste into the Neon dashboard, for when there is no terminal to run the script from.
 
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
@@ -232,7 +233,9 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   (`ctf/packages/web/lib/engagement/member-activity.test.ts`) fails if any other table reaches the
   SQL. `ctf/scripts/audit-active-members.mjs` now reads only the sign-in record too, and prints the
   record's earliest and latest row next to each week's count so a zero week is answerable from data:
-  a zero before the earliest row is missing history, not a week nobody turned up. Removed
+  a zero before the earliest row is missing history, not a week nobody turned up. The same questions
+  are in `ctf/scripts/sql/active-members-audit.sql` as paste-able SELECTs for the Neon dashboard,
+  since the owner works from mobile with no terminal to run the script from. Removed
   `feed_community_posts` from the `dataAccess` lists of `weekly-performance.metrics.get` and
   `.comparison.get` (it was there only for the widened set, and no other metric reads it), and added
   `login_events` to `weekly-performance.week.get`, which returns `activeUsersLast7Days` and had never
