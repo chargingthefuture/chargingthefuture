@@ -773,6 +773,30 @@ Result: web ☐
 
 ---
 
+### SH-A18 — Auto-mission settings reach missions that are already open
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** An active round with at least one auto mission (SH-A17), ideally one already at the per-round cap.
+
+**Steps:**
+1. On the admin Missions tab, set Bonus points to 3 and press **Save settings**. Read the confirmation.
+2. Press **Run now** and read the result line.
+3. Look at the auto missions in the list below.
+4. Press **Run now** a second time without changing anything.
+
+**Expected:**
+- Step 1: the confirmation says the settings apply on the next run and points at Run now — saving alone does not rewrite missions already open.
+- Step 2: the result names how many missions were updated (e.g. "updated 3 missions to these settings"), not just how many were opened.
+- Step 3: every live auto mission now reads `+3 pts`. This is the reported bug: before this change a round already at its cap kept the settings it was created with, so the new number appeared nowhere.
+- Step 4: the run reports nothing updated and nothing opened — a run that changes nothing says so.
+
+**Points are not credits.** A mission's bonus points are a leaderboard ranking figure; completing a mission sends no ServiceCredits, and no balance should move. (Today they do not reach the leaderboard either — see the inventory Gaps.)
+
+Result: web ☐
+
+---
+
 ### Account deletion pseudonymizes filed reports
 
 **Expected:** After a member deletes their account, reports they filed about submissions remain as
