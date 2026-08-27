@@ -617,10 +617,14 @@ Result:
 1. Navigate to the Missions tab of the admin shell.
 2. Select the active round.
 3. Create a new mission: enter a title, a goal count, and optionally a `colorHex` value.
-4. Save.
-5. Observe the mission appears in the admin list.
+4. Confirm the form asks for nothing else — there is **no Status field**. A mission is always created active.
+4a. In Goal target and Bonus points, select the existing digit and delete it. The box must go empty and accept a fresh number typed straight in — no typing the new number in front of the old one. Leaving a box empty and clicking away puts the field's minimum back (1 for Goal target, 0 for Bonus points). Repeat in the four auto-mission settings fields above.
+5. Save.
+6. Observe the mission appears in the admin list.
 
-**Expected:** Mission is created and listed. Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears with a progress bar at 0% and the configured color.
+**Expected:** Mission is created and listed, and its row shows no status word (the label appears only when a mission is not active). Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears immediately, with a progress bar at 0% and the configured color.
+
+**Why there is no status picker:** missions have no draft state (owner directive 2026-08-27). The round already carries its own draft/active lifecycle, and since there is no mission edit control, a mission created as draft could only ever be archived — never shown to members.
 
 Result: web ☐
 
@@ -672,6 +676,8 @@ Result: web ☐
 3. Navigate to the member-facing Missions tab.
 
 **Expected:** The archived mission no longer appears to members. It may still be visible in the admin view with `status=archived` — it is not hard-deleted.
+
+**Then bring it back:** on that archived row the button now reads **Activate**. Press it (no confirmation — activating is the harmless direction) and re-check the member Missions tab: the mission appears again, with any progress members had already earned intact. Archiving stays confirm-gated because it takes a mission away from members.
 
 Result: web ☐
 

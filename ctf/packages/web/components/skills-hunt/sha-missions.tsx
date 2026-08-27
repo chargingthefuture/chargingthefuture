@@ -1,13 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type {
-  SkillsHuntMission,
-  SkillsHuntMissionGoalType,
-  SkillsHuntMissionStatus,
-} from "lib/skills-hunt/types";
+import type { SkillsHuntMission, SkillsHuntMissionGoalType } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { AdminNumberField } from "./sha-number-field";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
 
 const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
@@ -20,7 +17,6 @@ const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat
 const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
   "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds", "count_distinct_sectors",
 ];
-const STATUSES: SkillsHuntMissionStatus[] = ["draft", "active", "locked", "archived"];
 
 function Labeled({ id, text, children }: { id: string; text: string; children: React.ReactNode }) {
   const { theme } = useTheme();
@@ -42,9 +38,37 @@ function missionGoalMetadata(isSector: boolean, sectorName: string, sectorId: st
   return base;
 }
 
-function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArchive: (id: string) => void }) {
+// Shared error-shaping for the mission calls, kept out of the handlers so each stays within the
+// complexity limit (rule 116).
+async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = (await res.json().catch(() => null)) as { message?: string } | null;
+  return body?.message ?? fallback;
+}
+
+function errorText(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+// No request body on the soft-archive DELETE, so no Content-Type — only the CSRF confirmation header.
+function archiveRequest(): RequestInit {
+  return { method: "DELETE", headers: { "x-ctf-csrf": "1" } };
+}
+
+function activateRequest(status: "active" | "archived"): RequestInit {
+  return {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+    body: JSON.stringify({ status }),
+  };
+}
+
+function MissionRow({ mission, onSetStatus }: {
+  mission: SkillsHuntMission;
+  onSetStatus: (id: string, status: "active" | "archived") => void;
+}) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
+  const isArchived = mission.status === "archived";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: `1px solid ${t.BORDER}` }}>
       {mission.colorHex && <span style={{ width: 12, height: 12, borderRadius: 3, background: mission.colorHex, flexShrink: 0 }} aria-hidden />}
@@ -58,16 +82,15 @@ function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArch
           )}
         </div>
         <div style={{ fontSize: 11, color: t.MUTED }}>
-          {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts · {mission.status}
+          {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts
+          {mission.status !== "active" && ` · ${mission.status}`}
           {mission.autoCreated && mission.sourceSector && ` · from ${mission.sourceSector} gap`}
         </div>
       </div>
-      {mission.status !== "archived" && (
-        <button type="button" onClick={() => onArchive(mission.id)}
-          style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-          Archive
-        </button>
-      )}
+      <button type="button" onClick={() => onSetStatus(mission.id, isArchived ? "active" : "archived")}
+        style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: isArchived ? t.ACCENT : t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+        {isArchived ? "Activate" : "Archive"}
+      </button>
     </div>
   );
 }
@@ -82,7 +105,6 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
   const [bonusPoints, setBonusPoints] = useState(0);
   const [description, setDescription] = useState("");
   const [colorHex, setColorHex] = useState("");
-  const [status, setStatus] = useState<SkillsHuntMissionStatus>("active");
   const [sectorName, setSectorName] = useState("");
   const [sectorId, setSectorId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -101,7 +123,7 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
           title: title.trim(), goalType, goalTarget, bonusPoints,
-          description: description.trim() || null, colorHex: colorHex.trim() || null, status, goalMetadata,
+          description: description.trim() || null, colorHex: colorHex.trim() || null, goalMetadata,
         }),
       });
       if (!res.ok) {
@@ -122,9 +144,8 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
         <Labeled id="shm-title" text="Title"><input id="shm-title" style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Find 5 rare skills" /></Labeled>
         <div style={row}>
           <Labeled id="shm-goal" text="Goal type"><select id="shm-goal" style={field} value={goalType} onChange={(e) => setGoalType(e.target.value as SkillsHuntMissionGoalType)}>{GOAL_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}</select></Labeled>
-          <Labeled id="shm-target" text="Goal target"><input id="shm-target" type="number" min={1} style={field} value={goalTarget} onChange={(e) => setGoalTarget(Number(e.target.value))} /></Labeled>
-          <Labeled id="shm-bonus" text="Bonus points"><input id="shm-bonus" type="number" min={0} style={field} value={bonusPoints} onChange={(e) => setBonusPoints(Number(e.target.value))} /></Labeled>
-          <Labeled id="shm-status" text="Status"><select id="shm-status" style={field} value={status} onChange={(e) => setStatus(e.target.value as SkillsHuntMissionStatus)}>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></Labeled>
+          <AdminNumberField id="shm-target" label="Goal target" min={1} value={goalTarget} onChange={setGoalTarget} />
+          <AdminNumberField id="shm-bonus" label="Bonus points" min={0} value={bonusPoints} onChange={setBonusPoints} />
           <Labeled id="shm-color" text="Color (optional)"><input id="shm-color" style={field} value={colorHex} onChange={(e) => setColorHex(e.target.value)} placeholder="#FBBF24" /></Labeled>
         </div>
         {goalType === "count_skills_in_sector" && (
@@ -179,22 +200,26 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  async function archive(missionId: string) {
+  // Archiving and bringing a mission back are the same operation in opposite directions, so both
+  // run through here. Archiving takes a mission away from members and is confirm-gated; activating
+  // is the harmless direction and is not. Archive keeps using DELETE (the soft-archive route);
+  // activating uses PUT, which has always existed but had no caller until now.
+  async function setStatus(missionId: string, status: "active" | "archived") {
     if (!roundId) return;
-    if (!window.confirm("Archive this mission? It will no longer be active for players.")) return;
+    const archiving = status === "archived";
+    if (archiving && !window.confirm("Archive this mission? It will no longer be active for players.")) return;
+    const failure = archiving ? "Unable to archive mission." : "Unable to activate mission.";
     try {
-      const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions/${missionId}`, {
-        method: "DELETE",
-        // No request body on this DELETE, so no Content-Type — only the CSRF confirmation header.
-        headers: { "x-ctf-csrf": "1" },
-      });
+      const res = await fetch(
+        `/api/skills-hunt/admin/rounds/${roundId}/missions/${missionId}`,
+        archiving ? archiveRequest() : activateRequest(status),
+      );
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message ?? "Unable to archive mission.");
+        throw new Error(await readErrorMessage(res, failure));
       }
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to archive mission.");
+      setError(errorText(e, failure));
     }
   }
 
@@ -222,7 +247,7 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
         <div style={{ color: t.MUTED, fontSize: 13 }}>No missions for this round yet.</div>
       ) : (
         <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}`, overflow: "hidden" }}>
-          {missions.map((m) => <MissionRow key={m.id} mission={m} onArchive={archive} />)}
+          {missions.map((m) => <MissionRow key={m.id} mission={m} onSetStatus={setStatus} />)}
         </div>
       )}
     </div>
