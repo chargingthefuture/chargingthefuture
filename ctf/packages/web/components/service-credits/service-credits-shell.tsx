@@ -106,11 +106,13 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
 
   const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} wallet={wallet} onSent={refreshWallet} />;
 
+    // Send sits before Economy: the first three tabs are the member's own wallet — what they hold,
+    // how they get more, how they send it — and Economy is the community's figures, so it reads last.
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
       { key: "earn", label: "Earn" },
-      { key: "economy", label: "Economy" },
       { key: "send", label: "Send" },
+      { key: "economy", label: "Economy" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
