@@ -302,6 +302,20 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-08-27: **Saving the treasury policy did nothing on a database with no policy row yet.**
+  `updateTreasuryConfig` ran a bare `UPDATE service_credits_treasury_config ... WHERE id = TRUE`, and
+  nothing in `schema.sql`, a migration, or any seed ever inserts that singleton row. So on a database
+  where no admin had written a policy by hand, the update matched zero rows, wrote nothing, and still
+  returned 200 — the panel showed "Treasury policy saved.", then reloaded empty, and an audit row was
+  written for a change that never happened. The practical consequence: `mutualCredit.enabled` could
+  not be switched on from the admin surface at all, so the mutual-credit rail was stuck off for every
+  member and `setCreditLimit` rejected every per-account grant above 0 (`maxLimit` defaults to 0).
+  The write is now an upsert — `INSERT ... ON CONFLICT (id) DO UPDATE` — so the first save creates the
+  row. Read paths (`getTreasuryConfig`, `readTreasuryPolicy`) already fall back to `{}` when the row is
+  missing and are unchanged, as is the policy shape and every reader of it. Note the sibling singletons
+  (`contributions_runtime_config`, `unlock_runtime_config`) already upsert; this table was the only one
+  that did not.
+
 - 2026-08-27: **Sending moved into its own tab.** The send panel rendered outside the tab body in
   `service-credits-shell.tsx`, so it was pinned to the bottom of Wallet, Earn, and Economy alike —
   one form shown four times, and every tab, however long, ended in it. The shell now has a fourth

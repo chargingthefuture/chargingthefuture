@@ -374,12 +374,14 @@ Result: web ☐
 
 **Steps:**
 1. Open the Treasury panel on the admin dashboard.
-2. Confirm the current treasury policy is displayed (GET loads successfully).
+2. Confirm the current treasury policy is displayed (GET loads successfully). On a database where no policy has ever been saved this reads `{}` — that is the empty policy, not a load failure.
 3. Edit one policy field (e.g. change a description or a numeric threshold that won't break active flows).
 4. Submit the update (PUT). Confirm the CSRF header `x-ctf-csrf: 1` is sent (automatic in the UI).
 5. Reload the treasury panel and confirm the new value persists.
+6. **First save on an empty policy (2026-08-27):** on a database that has never had a treasury policy saved, paste a policy such as `{"mutualCredit":{"enabled":true,"defaultLimit":25,"maxLimit":100}}`, save, then reload the panel. The policy must come back with those values. Before this was fixed the save reported success and the panel reloaded empty, because the write was an `UPDATE` against a row that had never been created.
+7. Sign in as a member and open the ServiceCredits wallet: with the policy above saved, the community-credit line reads that they can send down to −25 credits, and the mutual-credit option in the Send tab is selectable. That is the end-to-end proof the save landed.
 
-**Expected:** Policy loads on open. Edit saves successfully. Reloaded view shows the updated value. No fiat figure appears anywhere in the panel.
+**Expected:** Policy loads on open. Edit saves successfully. Reloaded view shows the updated value, including on the very first save when no policy row existed. A saved `mutualCredit` block takes effect on the member surface. No fiat figure appears anywhere in the panel.
 
 Result: web ☐
 
