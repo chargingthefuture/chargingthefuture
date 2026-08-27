@@ -773,30 +773,25 @@ Result: web ☐
 
 ---
 
-### SH-A18 — Mission bonus is sent on completion, and auto-mission settings reach missions already open
+### SH-A18 — Auto-mission settings reach missions that are already open
 
-**Role:** admin + member · **Surfaces:** web
+**Role:** admin · **Surfaces:** web
 
-**Precondition:** An active round with at least one auto mission (SH-A17) and a member with a pending nomination whose skills sit in that mission's sector.
+**Precondition:** An active round with at least one auto mission (SH-A17), ideally one already at the per-round cap.
 
 **Steps:**
 1. On the admin Missions tab, set Bonus points to 3 and press **Save settings**. Read the confirmation.
 2. Press **Run now** and read the result line.
 3. Look at the auto missions in the list below.
-4. Accept enough of the member's nominations in that sector to reach the mission's goal target.
-5. As that member, open the Missions tab and the notifications panel, then check the member's ServiceCredits balance.
-6. Accept one more nomination in the same sector, then re-check the balance.
-7. In the admin panel set Bonus points back to 0, Save, Run now, and check the missions the member already completed.
+4. Press **Run now** a second time without changing anything.
 
 **Expected:**
 - Step 1: the confirmation says the settings apply on the next run and points at Run now — saving alone does not rewrite missions already open.
 - Step 2: the result names how many missions were updated (e.g. "updated 3 missions to these settings"), not just how many were opened.
-- Step 3: every live auto mission now reads `+3 pts`. This is the reported bug: before this change a round already at its cap kept the settings it was created with, and the new number appeared nowhere.
-- Step 4–5: the mission shows complete, the notification reads "you completed … and earned 3 bonus credits" (credits, never money), and the member's balance is 3 higher. The ledger entry is a mint by `skills-hunt-incentive-system`.
-- Step 6: the balance does **not** move again — one payout per mission per member, no matter how many further nominations land.
-- Step 7: nothing is clawed back from the completed mission; the settled amount is fixed at what the mission was worth when it was completed.
+- Step 3: every live auto mission now reads `+3 pts`. This is the reported bug: before this change a round already at its cap kept the settings it was created with, so the new number appeared nowhere.
+- Step 4: the run reports nothing updated and nothing opened — a run that changes nothing says so.
 
-**Also check the reverse direction:** complete a mission while its bonus is 0, then raise the bonus to 3 and run. The already-completed mission must **not** pay retroactively — a completion is settled at the moment it happens.
+**Points are not credits.** A mission's bonus points are a leaderboard ranking figure; completing a mission sends no ServiceCredits, and no balance should move. (Today they do not reach the leaderboard either — see the inventory Gaps.)
 
 Result: web ☐
 

@@ -199,13 +199,8 @@ auditEvents:
     # block the skills-hunt audit log uses). targetId is the governance event id.
     targetType: governance_event
     targetId: governance_event_identifier
-    # Two mint reasons share this command: 'skills_hunt_accept_reward' (the round's per-accept
-    # reward, keyed by skillsHuntSubmissionId + roundId) and 'skills_hunt_mission_bonus' (a
-    # completed mission's bonus, keyed by skillsHuntMissionId). Each carries the key for its own
-    # source; both carry targetUserId, amount, and idempotencyKey.
     metadata:
       skillsHuntSubmissionId: submission_identifier
-      skillsHuntMissionId: mission_identifier
       roundId: round_identifier
       targetUserId: scout_identifier
       amount: credit_amount
@@ -506,31 +501,6 @@ auditEvents:
 
   - eventId: uuid
     timestamp: rfc3339
-    actorId: skills-hunt-incentive-system
-    pluginId: skills-hunt
-    command: skills-hunt.mission.bonus_grant
-    commandVersion: 1.0.0
-    purpose: incentive_issuance
-    policyDecision:
-      status: allow_or_deny
-      reason: mission_completed
-    dataClassesAccessed:
-      - skills_hunt_mission_progress
-      - skills_hunt_missions
-      - service_credits_governance_events
-    targetContext:
-      workspaceId: workspace_identifier
-      missionId: mission_identifier
-      targetUserId: member_identifier
-      amount: credits_amount
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.mission.auto_config_update
@@ -560,5 +530,3 @@ changelog:
     change: Bumped commandVersion to 1.1.0 for skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review (ServiceCredits reward additions), and added the service-credits.governance.mint.grant.skills-hunt audit event for accept-reward minting.
   - date: 2026-08-27
     change: Added audit event templates for the mission commands (create/update/archive) and the auto-mission commands (auto_generate, auto_config_update).
-  - date: 2026-08-27
-    change: Added the skills-hunt.mission.bonus_grant audit event (mission completion bonus minted as ServiceCredits) and recorded the second mint reason on the service-credits.governance.mint.grant.skills-hunt template.

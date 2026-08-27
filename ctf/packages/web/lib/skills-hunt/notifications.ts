@@ -95,10 +95,8 @@ export async function emitMissionComplete(
     userId,
     SKILLS_HUNT_NOTIFICATION_KIND.missionComplete,
     `Mission complete: ${missionTitle}`,
-    // Completing a mission now sends the bonus as ServiceCredits (see lib/skills-hunt/mission-bonus.ts),
-    // so the wording names credits rather than the older "bonus points", which nothing paid out.
     bonusPoints > 0
-      ? `You completed "${missionTitle}" and earned ${bonusPoints} bonus credits.`
+      ? `You completed "${missionTitle}" and earned ${bonusPoints} bonus points.`
       : `You completed "${missionTitle}".`,
     { missionId, bonusPoints },
   );

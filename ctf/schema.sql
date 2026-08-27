@@ -808,18 +808,6 @@ ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS d
 ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS default_bonus_points INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Mission completion bonuses became real ServiceCredits mints on 2026-08-27 (continuity §2.9:
--- completion writes "a service-credits ledger entry of the mission's bonus_points"). Completions
--- recorded BEFORE that cutover are settled here at zero rather than paid: they were earned under a
--- feature that credited nothing, and switching the payout on must not retroactively mint for every
--- past completion. The date bound also makes this safe to re-run — a completion recorded after the
--- cutover is never swept up here, it is left for the settlement path to pay.
-UPDATE skills_hunt_mission_progress
-SET bonus_credited_at = NOW(),
-    metadata = metadata || '{"bonusSettledAmount": 0, "bonusSettledReason": "predates_bonus_payout"}'::jsonb
-WHERE completed_at IS NOT NULL
-  AND bonus_credited_at IS NULL
-  AND completed_at < TIMESTAMPTZ '2026-08-27 00:00:00+00';
 COMMIT;
 
 -- === account deletion events (cross-plugin orchestration log) ===
