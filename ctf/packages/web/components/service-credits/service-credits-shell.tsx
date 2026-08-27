@@ -30,13 +30,28 @@ function TabButton({ label, active, onSelect, t }: { label: string; active: bool
   );
 }
 
-// The active tab's body: wallet, earn, or economy.
-function ShellTabContent({ tab, balance, escrow, wallet }: { tab: Tab; balance: number; escrow: number; wallet: WalletData | null }) {
+// The active tab's body: wallet, earn, economy, or send. Sending is a tab of its own rather than a
+// panel under every tab — it used to render below whichever tab was open, so the same form appeared
+// four times over and every screen ended in it, however far the member had scrolled to get there.
+function ShellTabContent({
+  tab,
+  balance,
+  escrow,
+  wallet,
+  onSent,
+}: {
+  tab: Tab;
+  balance: number;
+  escrow: number;
+  wallet: WalletData | null;
+  onSent: () => Promise<void>;
+}) {
   return (
     <>
       {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} wallet={wallet} />}
       {tab === "earn" && <ServiceCreditsEarnTab />}
       {tab === "economy" && <ServiceCreditsCirculationTab />}
+      {tab === "send" && <ServiceCreditsSendPanel wallet={wallet} onSent={onSent} />}
     </>
   );
 }
@@ -89,17 +104,13 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const balance = wallet?.availableBalance ?? 0;
   const escrow = wallet?.escrowBalance ?? 0;
 
-  const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} wallet={wallet} />;
-  const sendPanel = <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />;
-  // On the Economy tab the send form comes first: those figures are the whole community's, while
-  // sending is the member's own wallet, and the member's own thing belongs above the community's.
-  // Wallet and Earn already lead with the member's own balance, so the form stays under them.
-  const sendFirst = tab === "economy";
+  const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} wallet={wallet} onSent={refreshWallet} />;
 
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
       { key: "earn", label: "Earn" },
       { key: "economy", label: "Economy" },
+      { key: "send", label: "Send" },
     ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
@@ -124,9 +135,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             ))}
           </div>
         </div>
-        {sendFirst ? sendPanel : null}
         {content}
-        {sendFirst ? null : sendPanel}
       </div>
     );
 }

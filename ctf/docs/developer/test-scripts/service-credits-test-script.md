@@ -51,7 +51,7 @@ Sign in as a seeded admin account. Navigate to the admin surface (web: `/admin/s
 web ☐
 
 **3. A plain send delivers credits immediately**
-From a seeded member wallet with a positive balance, send a small amount (e.g. 5 credits) to a second seeded member. After the send completes, check the sender's balance (should be reduced by 5) and the recipient's balance (should be increased by 5). Both changes must be visible on reload without any pending state.
+From a seeded member wallet with a positive balance, open the **Send** tab and send a small amount (e.g. 5 credits) to a second seeded member. After the send completes, check the sender's balance (should be reduced by 5) and the recipient's balance (should be increased by 5). Both changes must be visible on reload without any pending state.
 web ☐
 
 **4. Economy tab shows aggregate numbers — no fiat**
@@ -105,6 +105,25 @@ Result: web ☐
 12. Send a credit to another member (or have one sent to you) and come back to the wallet: the list re-reads and lands on page 1, with the new row at the top.
 
 **Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. A refund and a release are labeled distinctly. The list shows 10 rows a page with working `Previous` / `Page N of M` / `Next` controls, and no controls at all when everything fits on one page. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
+
+Result: web ☐
+
+---
+
+### SC-2b — Sending is on its own tab, and only there
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Seeded member is signed in on the ServiceCredits screen.
+
+**Steps:**
+1. Read the tab row under the header: it must show four tabs — `Wallet`, `Earn`, `Economy`, `Send` — all four legible at phone width (~390px), none clipped off the right edge.
+2. Open Wallet and scroll to the bottom. The send form must **not** be there.
+3. Do the same on Earn, then on Economy. The form must not be on either.
+4. Open the Send tab. The form appears here, with the "Send credits" heading, the recipient and amount boxes, the "Send with" rail picker, the "Accepted everywhere" list, and the Formance ledger note.
+5. Send a small amount from this tab and confirm it goes through, then open Wallet: the balance and the transaction list reflect the send.
+
+**Expected:** Four tabs. The send form appears exactly once, on the Send tab, and nowhere else. Sending from that tab works and updates the wallet as it did when the form sat under every tab.
 
 Result: web ☐
 
@@ -222,10 +241,9 @@ Result: web ☐
 2. Read the displayed figures: credits in circulation, total issued, total burned, treasury balance, and "Sent in last 30 days" (transferVolume30d).
 3. Confirm no figure is presented as a fiat amount.
 4. Confirm numbers are not hardcoded zeroes (seed data should produce non-zero values for at least some fields).
-5. Check the order on the page (web, 2026-08-27): the "Send credits" form appears **above** "The economy" heading and its figures, so a member reaching this tab sees their own wallet's action before the community-wide numbers.
-6. Switch to the Wallet tab and then the Earn tab and confirm the send form is still **below** the tab body there — those two open with the member's own balance already.
+5. Check that the send form is **not** on this tab (web, 2026-08-27): sending lives on its own Send tab, so the Economy tab shows the figures and nothing else.
 
-**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present. On web the send form is above the figures on the Economy tab and below the body on the Wallet and Earn tabs.
+**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present. The send form is not on this tab.
 
 Result: web ☐
 

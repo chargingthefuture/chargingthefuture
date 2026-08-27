@@ -168,11 +168,14 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   );
 }
 
+// The body of the Send tab. It was a panel pinned under every tab until 2026-08-27; now it renders
+// once, only when the member opens Send, so the sticky tab bar above it is the only divider it needs
+// (the old borderTop would double up with the header's own).
 export function ServiceCreditsSendPanel({ wallet, onSent }: { wallet: WalletData | null; onSent: () => Promise<void>; isMobile?: boolean }) {
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
   return (
-    <aside style={{ width: "100%", borderLeft: "none", borderTop: "1px solid rgba(255,255,255,0.06)", background: t.HEADER, padding: "20px 16px", flexShrink: 0, boxSizing: "border-box" }}>
+    <aside style={{ width: "100%", border: "none", background: t.HEADER, padding: "20px 16px", flexShrink: 0, boxSizing: "border-box" }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.FAINT, textTransform: "uppercase", marginBottom: 12 }}>Send Credits</div>
       <SendForm wallet={wallet} onSent={onSent} />
 
