@@ -13,7 +13,7 @@ import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
 const VALID_GOAL_TYPES = ['count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors'] as const;
-const VALID_MISSION_STATUSES = ['draft', 'active', 'locked', 'archived'] as const;
+const VALID_MISSION_STATUSES = ['active', 'locked', 'archived'] as const;
 
 type MissionBodyResult =
   | { ok: true; input: MissionCreateInput }
