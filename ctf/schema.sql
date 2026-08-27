@@ -708,7 +708,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_missions (
   round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT NULL,
-  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors')),
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds')),
   goal_target INTEGER NOT NULL CHECK (goal_target > 0),
   goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
@@ -785,6 +785,15 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skill
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
+-- The count_distinct_sectors mission goal type is removed (owner directive 2026-08-27). It counted
+-- distinct claimed professions on a scout's accepted nominations, and the nomination form stopped
+-- collecting professions, so it always counted zero — the goal could never be completed. Any mission
+-- using it is deleted (progress rows cascade; every one of them is zero by construction), then the
+-- allowed set is narrowed so it cannot be chosen again. The stack bonus, which had the same cause,
+-- needed no migration: it was a computed figure, never a column.
+DELETE FROM skills_hunt_missions WHERE goal_type = 'count_distinct_sectors';
+ALTER TABLE IF EXISTS skills_hunt_missions DROP CONSTRAINT IF EXISTS skills_hunt_missions_goal_type_check;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD CONSTRAINT skills_hunt_missions_goal_type_check CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds'));
 -- Missions have no draft state (owner directive 2026-08-27: "no drafts are needed"). A mission lives
 -- inside a round that already carries its own draft/active lifecycle, so a second gate inside it
 -- gated nothing — and because the admin surface has no mission edit control, a mission created as

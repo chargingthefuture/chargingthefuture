@@ -1044,8 +1044,9 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
       ),
       -- Mission bonuses earned in this round. Points are a ranking figure (owner directive
       -- 2026-08-27), so completing a mission adds its bonus_points to the scout's score.
-      -- An archived mission stops counting, the same way a removed submission's points stop
-      -- counting — archiving is how an admin voids a mission.
+      -- Earned is earned: the mission's current status is not consulted. Archiving a mission
+      -- closes it to new completions (the member-facing list only returns active/locked ones),
+      -- but it never takes back points a scout already earned in this round.
       mission_bonus AS (
         SELECT
           mp.user_id AS submitter_user_id,
@@ -1053,7 +1054,6 @@ export async function rebuildLeaderboard(client: PoolClient, roundId: string): P
         FROM skills_hunt_mission_progress mp
         JOIN skills_hunt_missions m ON m.id = mp.mission_id
         WHERE m.round_id = $1::uuid
-          AND m.status <> 'archived'
           AND mp.completed_at IS NOT NULL
         GROUP BY mp.user_id
       )
@@ -1131,8 +1131,6 @@ function resolveScoreWeights(scoringConfig: unknown): ResolvedScoreWeights {
   return {
     matchBase: pickInt('matchBase'),
     firstMatchBonus: pickInt('firstMatchBonus'),
-    stackBonus: pickInt('stackBonus'),
-    stackBonusProfessionThreshold: pickInt('stackBonusProfessionThreshold'),
     rareSkillBonus: pickInt('rareSkillBonus'),
     qualityBonus: pickInt('qualityBonus'),
     participationOnReject: pickInt('participationOnReject'),
@@ -1167,7 +1165,6 @@ async function scoreSubmission(
   }
 
   const skills = asStringArray(submission.skills);
-  const claimedProfessions = asStringArray(submission.claimed_professions);
 
   const roundResult = await client.query<{ scoring_config: unknown }>(
     `SELECT scoring_config FROM skills_hunt_rounds WHERE id = $1::uuid LIMIT 1`,
@@ -1195,10 +1192,6 @@ async function scoreSubmission(
   const acceptedSameUrlCount = Number.parseInt(firstMatchResult.rows[0]?.total ?? '0', 10);
   const firstMatchBonus = acceptedSameUrlCount === 0 ? weights.firstMatchBonus : 0;
 
-  // Skill Stack (+3): only when 2+ professions are claimed. Replaces the
-  // pre-rewrite linear `count * 2`.
-  const stackBonus = claimedProfessions.length >= weights.stackBonusProfessionThreshold ? weights.stackBonus : 0;
-
   // Rare Skill (+7 default): driven by `skills_hunt_rare_skills_lookup`,
   // which the Workforce snapshot helper repopulates at round-create time.
   // Per-skill row may override the default bonus.
@@ -1224,11 +1217,10 @@ async function scoreSubmission(
   // The 'edit' action signals admin had to fix something, so quality drops.
   const qualityBonus = reviewAction === 'accept' ? weights.qualityBonus : 0;
 
-  const pointsAwarded = matchBase + firstMatchBonus + stackBonus + rareSkillBonus + qualityBonus;
+  const pointsAwarded = matchBase + firstMatchBonus + rareSkillBonus + qualityBonus;
   const scoreBreakdown = {
     matchBase,
     firstMatchBonus,
-    stackBonus,
     rareSkillBonus,
     qualityBonus,
     weightsApplied: weights,
@@ -2348,7 +2340,7 @@ export async function listAllTimeLeaderboard(
         SUM(m.bonus_points)::int AS mission_bonus
       FROM skills_hunt_mission_progress mp
       JOIN skills_hunt_missions m ON m.id = mp.mission_id
-      WHERE m.status <> 'archived' AND mp.completed_at IS NOT NULL
+      WHERE mp.completed_at IS NOT NULL
       GROUP BY mp.user_id
     )
     SELECT * FROM (

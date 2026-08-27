@@ -358,18 +358,6 @@ function computeProgressForMission(
       return acceptedSubmissions.length;
     case 'count_rare_skill_finds':
       return acceptedSubmissions.filter((s) => s.rareSkillBonus > 0).length;
-    case 'count_distinct_sectors': {
-      // goalMetadata may carry sector aliases; v1 uses claimed_professions
-      // as the proxy for sector since the taxonomy table isn't joined here.
-      // The Workforce-driven taxonomy join is a Wave 2 follow-up.
-      const distinctSectors = new Set<string>();
-      for (const s of acceptedSubmissions) {
-        for (const p of s.claimedProfessions) {
-          distinctSectors.add(p.toLowerCase());
-        }
-      }
-      return distinctSectors.size;
-    }
     case 'count_skills_in_sector': {
       const sectorName = typeof mission.goalMetadata.sectorName === 'string'
         ? (mission.goalMetadata.sectorName as string).toLowerCase()
@@ -565,7 +553,7 @@ function validateDescription(input: MissionCreateInput): string | null {
 
 function validateGoalType(input: MissionCreateInput): string | null {
   const validGoalTypes: SkillsHuntMissionGoalType[] = [
-    'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_distinct_sectors',
+    'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds',
   ];
   if (!validGoalTypes.includes(input.goalType)) return 'invalid goalType';
   return null;

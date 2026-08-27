@@ -655,7 +655,7 @@ Result: web ☐
 
 **Expected:**
 - Step 3: the score has risen by exactly the mission's bonus points, in the round leaderboard **and** the all-time view, and the rank reflects it — a scout on fewer submission points can now sit above one with more. The rise shows on the same review that completed the mission, not the next one.
-- Step 5: the archived mission's bonus is gone from the score. Archiving is how an admin voids a mission, the same way removing a submission takes its points back.
+- Step 5: the score does **not** change. Earned is earned — the leaderboard reports a round, so archiving closes a mission to new completions but never takes back points already earned. (A member starts a fresh points count in a new round.)
 - **No ServiceCredits move at any point.** Points are a ranking figure and have no connection to credits.
 
 Result: web ☐

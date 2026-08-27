@@ -546,7 +546,7 @@ contracts:
       goalType:
         type: string
         required: true
-        description: One of count_total_accepted, count_skills_in_sector, count_rare_skill_finds, count_distinct_sectors.
+        description: One of count_total_accepted, count_skills_in_sector, count_rare_skill_finds. (count_distinct_sectors was removed 2026-08-27 — it counted claimed professions, which are no longer collected, so it could never be completed.)
       goalTarget:
         type: integer
         required: true
@@ -682,3 +682,5 @@ changelog:
     change: Added the previously undocumented mission commands (mission.list, mission.create, mission.update, mission.archive) and the new auto-mission commands (mission.auto_generate, mission.auto_config_update) for missions auto-opened from Workforce sector gaps.
   - date: 2026-08-27
     change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.
+  - date: 2026-08-27
+    change: Removed the count_distinct_sectors mission goal type from skills-hunt.mission.create — it counted claimed professions, which the nomination form no longer collects, so the goal could never be completed. The stack bonus was deleted from submission scoring for the same reason; it was a computed figure with no contract surface.

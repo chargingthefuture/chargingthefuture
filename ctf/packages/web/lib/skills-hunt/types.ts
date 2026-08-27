@@ -250,12 +250,10 @@ export type SkillsHuntReputationProfile = {
 //   count_total_accepted     -> {} (no extra config)
 //   count_skills_in_sector   -> { sectorId: string, sectorName: string }
 //   count_rare_skill_finds   -> {} (uses round's rare_skills_lookup)
-//   count_distinct_sectors   -> {} (target = number of distinct sectors required)
 export type SkillsHuntMissionGoalType =
   | 'count_total_accepted'
   | 'count_skills_in_sector'
-  | 'count_rare_skill_finds'
-  | 'count_distinct_sectors';
+  | 'count_rare_skill_finds';
 
 // No draft state (owner directive 2026-08-27): missions are created active and the only
 // lifecycle action on the admin surface is Archive. The round they belong to already carries
