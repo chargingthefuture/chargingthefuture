@@ -341,29 +341,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
-    command: skills-hunt.directory-profile.generate
-    commandVersion: 1.0.0
-    purpose: directory_projection_generation
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - skills_hunt_submissions
-      - skills_hunt_directory_profiles
-    targetContext:
-      workspaceId: workspace_identifier
-      submissionId: submission_identifier
-      generatedProfileId: profile_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: skills-hunt
     command: skills-hunt.profile.delete
     commandVersion: 1.0.0
     purpose: gdpr_self_delete
@@ -516,3 +493,9 @@ changelog:
       singling one out. Directory owns this instead — an admin takes a community-generated profile
       down from the Directory admin screen, which deletes it and blocks its Quora URL from being
       listed again until the block is lifted.
+  - date: 2026-08-27
+    change: >-
+      Removed skills-hunt.directory-profile.generate — regenerating a Directory profile is out of
+      scope for SkillsHunt. Nothing in the app called it, and Directory owns the profile lifecycle
+      end to end, including creating or repairing one from its own admin screen. SkillsHunt still
+      creates the profile automatically on accept; that path is unchanged.

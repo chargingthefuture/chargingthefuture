@@ -162,16 +162,6 @@ export type SkillsHuntFeatureRewardCardInput = {
   isActive: boolean;
 };
 
-export type SkillsHuntGeneratedDirectoryProfile = {
-  submissionId: string;
-  generatedProfileId: string;
-  profileStatus: 'unclaimed';
-  invitedByUsername: string;
-  unclaimedHandle: string | null;
-  source: 'community-generated';
-  createdAtIso: string;
-};
-
 // Reputation tier computed on demand from accepted/rejected submission counts.
 type SkillsHuntReputationTier = 'new' | 'standard' | 'trusted' | 'restricted';
 
