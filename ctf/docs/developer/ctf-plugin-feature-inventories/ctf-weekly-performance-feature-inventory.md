@@ -210,6 +210,26 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-27: **The launch-week hole in the sign-in record is repaired (owner approved).** The record
+  carries real v2 history from 2025-12-15, but v2 wrote its last row on 2026-05-26 and v3's writer
+  did not exist until 2026-06-19 — 23 days in which nothing wrote anything down, with the 2026-06-12
+  launch inside them. That is why the oldest week the picker offers reported nobody while the app was
+  in daily use. `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilds the
+  missing days from first-party evidence that an authenticated session existed: a command trail row
+  naming the member as actor, or a row the member wrote themselves. It does not change or widen the
+  definition — only the record for those days. Scoped to `[2026-05-27, 2026-06-19)`, guarded on every
+  source table existing, idempotent (`WHERE NOT EXISTS` on the member/UTC-day pair plus
+  `ON CONFLICT DO NOTHING`), and where the table has v2's `source` column the rebuilt rows are marked
+  `backfill_launch_gap` so a reconstructed day is never mistaken for one recorded live. Non-person
+  actor ids are excluded by name. It reports as it runs — evidence found, a line per day, rows
+  written — so running it is its own preview; there is no second copy of the source list to drift.
+  Verified on a scratch Postgres 16 across four database shapes (production's `id`/`source` columns
+  with the unique index, the `schema.sql` shape with neither, a database with no unique index where
+  only the `WHERE NOT EXISTS` guard prevents duplicates, and one with no `login_events` at all) and
+  the cases that matter: earliest-action-of-day wins, days either side of the gap untouched, the
+  UTC-midnight boundary splitting into two days, an existing real row never duplicated, and a second
+  run writing nothing.
+
 - 2026-08-27: **A sign-in is now recorded where Clerk identity is resolved, not where a plugin access
   check runs (owner decision).** `recordLoginEvent` fired from `evaluatePluginAccess`, so a member's
   day only reached `login_events` if a plugin access check happened on that request — a session that
