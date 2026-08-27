@@ -626,6 +626,17 @@ Result: web ☐
 
 ---
 
+### SH-A9b — Round form fits the phone-width column
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** On `/admin/skills-hunt` → Rounds, editing an existing round.
+
+**Steps:**
+1. On a phone (or a narrow window), scroll the round edit form top to bottom.
+2. Look at Status, Starts and Ends, and at the two ServiceCredits fields below them.
+
+**Expected:** Every field sits fully inside the column — nothing is cut off at the right edge and the page never scrolls sideways. The date fields each take a full row rather than sharing one. (Starts used to run off-screen: `datetime-local` reports a wide intrinsic size on iOS Safari and grew its grid track.)
 ### SH-A10b — Completing a mission moves the scout up the leaderboard
 
 **Role:** admin + member · **Surfaces:** web
