@@ -165,8 +165,11 @@ Adoption (honest non-value rows):
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
 is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
-`login_events` — written once per member per UTC day from the shared plugin access gate — and it is the whole
-definition (**owner decision, 2026-08-27**). No other table feeds these two rows.
+`login_events`, and it is the whole definition (**owner decision, 2026-08-27**). No other table feeds these two
+rows. Every member reaches the app through Clerk, so a sign-in is a sign-in whatever plugin they then open —
+which plugin they used is not part of this and never has been, in v2 or v3. `login_events` is a preexisting
+table carried from v2 (it is in the April 2026 production schema snapshot with its own history); v3 added
+`recordLoginEvent` in the shared access gate on 2026-06-16 to keep writing it, once per member per UTC day.
 
 **Do not widen this.** It has drifted twice, each time on the same argument: the app holds a member's own dated
 rows (a ClickLog incident, a Commons post, a command-trail entry), so a member with Tuesday rows plainly used
@@ -179,9 +182,9 @@ write, not the definition. `ctf/scripts/audit-active-members.mjs` is the tool fo
 record for a week and, separately and only as a cross-check, what the per-plugin tables saw, so a member
 visible there but not here identifies a sign-in write that did not land.
 
-One consequence to know rather than work around: `login_events` got its writer on 2026-06-16 and the platform
-launched on 2026-06-12, so the oldest week the picker offers (Jun 8–14) and the first days of the next have no
-sign-in rows and read zero. That is the record being empty for those days, not a fault in the reading.
+If a week reads zero, `ctf/scripts/audit-active-members.mjs` says whether that is a quiet week or missing
+history: it prints the record's earliest and latest row alongside the week's count, so a zero before the
+earliest row is visibly the record not reaching that far rather than nobody turning up.
 
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
@@ -211,9 +214,9 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   `activeUsersLast7Days`, and for PeerProgramming's cohort-forming active set. Section 6 records the
   decision and why not to widen it again; a unit test
   (`ctf/packages/web/lib/engagement/member-activity.test.ts`) fails if any other table reaches the
-  SQL. `ctf/scripts/audit-active-members.mjs` keeps the per-plugin tables, but as a labeled
-  cross-check that is never added to the reading: it reports how many members used the app with no
-  sign-in row for them, which is the sign-in write failing and the thing to fix. Removed
+  SQL. `ctf/scripts/audit-active-members.mjs` now reads only the sign-in record too, and prints the
+  record's earliest and latest row next to each week's count so a zero week is answerable from data:
+  a zero before the earliest row is missing history, not a week nobody turned up. Removed
   `feed_community_posts` from the `dataAccess` lists of `weekly-performance.metrics.get` and
   `.comparison.get` (it was there only for the widened set, and no other metric reads it), and added
   `login_events` to `weekly-performance.week.get`, which returns `activeUsersLast7Days` and had never

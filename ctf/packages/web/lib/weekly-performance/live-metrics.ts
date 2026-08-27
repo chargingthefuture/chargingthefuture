@@ -215,8 +215,8 @@ const beaconBroadcastEngagement = (weekStart: string) =>
 // member did once they were here is a different question and is already answered by the per-plugin
 // cards above, from each plugin's own rows; folding those into the headcount makes a number that
 // moves when a plugin changes what it writes and cannot be compared across weeks. If a reading here
-// looks low, the sign-in write is what to check, not this definition — run
-// ctf/scripts/audit-active-members.mjs, which cross-checks the record against what the plugins saw.
+// looks low, the sign-in record is what to check, not this definition — run
+// ctf/scripts/audit-active-members.mjs, which prints the record's span next to the week's count.
 // Aggregate only — never a per-member figure.
 
 // Active members: how many different people turned up at all this week. This is the plain headcount

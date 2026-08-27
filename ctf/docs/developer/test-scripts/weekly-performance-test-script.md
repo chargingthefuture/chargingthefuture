@@ -114,13 +114,13 @@ is no "set active week" action and no per-week status.
    during the selected week. The Daily Active Members card reads "N per day": the average
    number of members active on a day of that week; on the current week it divides by the days of the
    week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in
-   record holds a row for them that day, and nothing else (owner decision, 2026-08-27) —
-   so these two cards can read lower than the ClickLog or Mood cards on the same screen, and that is
-   correct rather than a bug: those count what members did, these count who signed in. If a number
-   here looks too low, run `node ctf/scripts/audit-active-members.mjs` (through Infisical,
-   read-only): it counts the same record and separately reports how many members used the app with no
-   sign-in row, which is the sign-in write failing and the thing to fix. Note that the oldest week in
-   the picker (Jun 8–14, 2026) reads zero because the sign-in record got its writer on 2026-06-16. Both are
+   record (`login_events`) holds a row for them that day, and nothing else (owner decision,
+   2026-08-27). Everyone reaches the app through Clerk, so which plugin a member used is not part of
+   this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
+   is correct rather than a bug — those count what members did, these count who signed in. If a week
+   reads zero or looks too low, run `node ctf/scripts/audit-active-members.mjs --week=<that week>`
+   (through Infisical, read-only): it prints the same count plus the record's earliest and latest
+   row, which says whether the week was quiet or the record does not reach that far back. Both are
    aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.

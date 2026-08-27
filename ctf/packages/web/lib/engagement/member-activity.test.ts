@@ -90,12 +90,20 @@ describe('the audit script', () => {
   );
 
   it('audits the same table the reading counts', () => {
-    expect(script).toContain(`const SIGN_IN_SOURCE = { table: '${MEMBER_ACTIVITY_TABLE}'`);
+    expect(script).toContain(`const SIGN_IN_TABLE = '${MEMBER_ACTIVITY_TABLE}'`);
   });
 
-  it('keeps the plugin tables as a cross-check, separate from the definition', () => {
-    expect(script).toContain('const CROSS_CHECK_SOURCES = [');
-    expect(script).toContain('Not part of the numbers above.');
+  it('reads no other table', () => {
+    for (const table of [
+      'click_log_incidents',
+      'mood_submissions',
+      'feed_community_posts',
+      'peer_programming_messages',
+      'audit_trail',
+      'audit_log',
+    ]) {
+      expect(script).not.toContain(table);
+    }
   });
 });
 

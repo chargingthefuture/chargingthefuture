@@ -3,10 +3,15 @@ import { queryDb } from 'lib/db/postgres';
 // What "active" means on this platform, in one place.
 //
 // A member is active on a day when the sign-in record holds a row for them on that day. That record
-// is `login_events`, written once per member per UTC day from the shared plugin access gate, and it
-// is the whole definition (owner decision, 2026-08-27). Every reading below — the dashboard's Active
-// Members and Daily Active Members rows, and PeerProgramming's cohort-forming active set — counts
-// that table and nothing else.
+// is `login_events`, and it is the whole definition (owner decision, 2026-08-27). Every reading
+// below — the dashboard's Active Members and Daily Active Members rows, and PeerProgramming's
+// cohort-forming active set — counts that table and nothing else.
+//
+// Which plugin somebody used is not part of this and never has been, in v2 or v3: everyone reaches
+// the app through Clerk, so a sign-in is a sign-in whatever they open next. `login_events` is the
+// preexisting table that has always recorded it — it is in the April 2026 production schema snapshot
+// with its own history — and v3 keeps writing it from the shared access gate (`recordLoginEvent`),
+// once per member per UTC day.
 //
 // This has drifted twice, so the reasoning is worth keeping. Both times the argument for widening it
 // was that the app holds a member's own dated rows — a ClickLog incident, a Commons post, a command
@@ -19,8 +24,8 @@ import { queryDb } from 'lib/db/postgres';
 //
 // So a low reading here is a fact about the sign-in record, and if that record is wrong the fix is to
 // the write, not to the definition. `ctf/scripts/audit-active-members.mjs` is the tool for that: it
-// counts this table for a week and, separately and only as a cross-check, what the per-plugin tables
-// saw in the same week. A member visible there but not here means the sign-in write did not land.
+// counts this table for a week and prints the record's own span, so a zero week is answerable from
+// data — either the record covers the week and nobody signed in, or it does not reach that far back.
 //
 // The reading is guarded on the table existing, so an environment without it reports nobody rather
 // than failing the dashboard. All table and column names are fixed literals — no caller input is ever

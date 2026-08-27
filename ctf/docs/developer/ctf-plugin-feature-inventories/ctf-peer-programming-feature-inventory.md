@@ -222,8 +222,8 @@ The sign-in record is the whole definition of "active" here, as it is on the Wee
 Performance dashboard (**owner decision, 2026-08-27**). Do not widen the selection to
 members who merely have rows of their own from the last 7 days — that is a different
 measurement, and this plugin and the dashboard must not disagree about who turned up. If
-somebody is using the app but not being selected, the sign-in write is what to fix; run
-`ctf/scripts/audit-active-members.mjs`, which reports exactly that case.
+somebody is using the app but not being selected, the sign-in record is what to fix; run
+`ctf/scripts/audit-active-members.mjs`, which prints what that record holds.
 
 ### Tables Owned by This Plugin
 
