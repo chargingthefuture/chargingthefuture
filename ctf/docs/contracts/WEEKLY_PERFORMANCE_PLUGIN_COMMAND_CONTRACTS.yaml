@@ -39,6 +39,49 @@ contracts:
         type: boolean
     dataAccess:
       - weekly_performance_weeks
+      # The /current-week response also carries activeUsersLast7Days, a rolling headcount taken from
+      # the shared member-day set in lib/engagement/member-activity.ts. Aggregate only.
+      - login_events
+      - click_log_incidents
+      - mood_submissions
+      - feed_community_posts
+      - feed_community_replies
+      - feed_community_post_reactions
+      - peer_programming_messages
+      # Command trails, read by the two turnout rows through the shared member-day set in
+      # lib/engagement/member-activity.ts: each records one row per command a member ran, with that
+      # member as the actor and the member's own request time on it. They are read only as an
+      # aggregate (member, UTC day) count — no per-member figure is produced or returned.
+      - level_up_dispute_comments
+      - weekly_performance_audit_trail
+      - gdp_admin_audit_trail
+      - workforce_admin_audit_trail
+      - trust_admin_audit_trail
+      - trust_transport_admin_audit_trail
+      - trust_transport_status_events
+      - socket_relay_admin_audit_trail
+      - socket_relay_request_events
+      - foundation_admin_audit_trail
+      - foundation_quote_status_events
+      - lighthouse_admin_audit_trail
+      - service_credits_admin_audit_trail
+      - peer_programming_admin_audit_trail
+      - beacon_events_admin_audit_trail
+      - safety_admin_audit_trail
+      - contributor_access_audit_trail
+      - recurring_activity_audit_trail
+      - skills_hunt_audit_log
+      - skills_taxonomy_change_events
+      - level_up_audit_events
+      - contributions_audit_log
+      - directory_profile_change_events
+      - account_restrictions_audit
+      - unlock_audit_log
+      - quora_deletion_survey_audit_log
+      - quora_live_census_audit_log
+      - feed_membership_events
+      - announcement_membership_events
+      - llm_inference_log
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -87,6 +130,40 @@ contracts:
       - click_log_incidents
       - login_events
       - feed_community_posts
+      # Command trails, read by the two turnout rows through the shared member-day set in
+      # lib/engagement/member-activity.ts: each records one row per command a member ran, with that
+      # member as the actor and the member's own request time on it. They are read only as an
+      # aggregate (member, UTC day) count — no per-member figure is produced or returned.
+      - level_up_dispute_comments
+      - weekly_performance_audit_trail
+      - gdp_admin_audit_trail
+      - workforce_admin_audit_trail
+      - trust_admin_audit_trail
+      - trust_transport_admin_audit_trail
+      - trust_transport_status_events
+      - socket_relay_admin_audit_trail
+      - socket_relay_request_events
+      - foundation_admin_audit_trail
+      - foundation_quote_status_events
+      - lighthouse_admin_audit_trail
+      - service_credits_admin_audit_trail
+      - peer_programming_admin_audit_trail
+      - beacon_events_admin_audit_trail
+      - safety_admin_audit_trail
+      - contributor_access_audit_trail
+      - recurring_activity_audit_trail
+      - skills_hunt_audit_log
+      - skills_taxonomy_change_events
+      - level_up_audit_events
+      - contributions_audit_log
+      - directory_profile_change_events
+      - account_restrictions_audit
+      - unlock_audit_log
+      - quora_deletion_survey_audit_log
+      - quora_live_census_audit_log
+      - feed_membership_events
+      - announcement_membership_events
+      - llm_inference_log
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -138,6 +215,40 @@ contracts:
       - click_log_incidents
       - login_events
       - feed_community_posts
+      # Command trails, read by the two turnout rows through the shared member-day set in
+      # lib/engagement/member-activity.ts: each records one row per command a member ran, with that
+      # member as the actor and the member's own request time on it. They are read only as an
+      # aggregate (member, UTC day) count — no per-member figure is produced or returned.
+      - level_up_dispute_comments
+      - weekly_performance_audit_trail
+      - gdp_admin_audit_trail
+      - workforce_admin_audit_trail
+      - trust_admin_audit_trail
+      - trust_transport_admin_audit_trail
+      - trust_transport_status_events
+      - socket_relay_admin_audit_trail
+      - socket_relay_request_events
+      - foundation_admin_audit_trail
+      - foundation_quote_status_events
+      - lighthouse_admin_audit_trail
+      - service_credits_admin_audit_trail
+      - peer_programming_admin_audit_trail
+      - beacon_events_admin_audit_trail
+      - safety_admin_audit_trail
+      - contributor_access_audit_trail
+      - recurring_activity_audit_trail
+      - skills_hunt_audit_log
+      - skills_taxonomy_change_events
+      - level_up_audit_events
+      - contributions_audit_log
+      - directory_profile_change_events
+      - account_restrictions_audit
+      - unlock_audit_log
+      - quora_deletion_survey_audit_log
+      - quora_live_census_audit_log
+      - feed_membership_events
+      - announcement_membership_events
+      - llm_inference_log
     purpose: operational_metrics_comparison
     retentionClass: derived_short_lived
     idempotency: true

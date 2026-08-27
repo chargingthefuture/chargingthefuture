@@ -370,14 +370,14 @@ Result: web ☐
 
 **Role:** admin · **Surfaces:** web
 
-**Precondition:** Signed in as an admin. There is at least one active (logged-in within 7 days, unlock-approved) member in the seed data.
+**Precondition:** Signed in as an admin. There is at least one active, unlock-approved member in the seed data. "Active" means the member did anything the app recorded in the last 7 days — a sign-in, something they wrote, or any command they ran in a plugin — not only a sign-in row.
 
 **Steps:**
 1. Find the "Run assignment" control in `/admin/peer-programming`.
 2. Click/tap Run (without a manual user-ID override).
 3. Wait for the response.
 
-**Expected:** A success message is shown with a count of users selected and cohorts created (or "1 cohort" in single standing Cohort 1 mode). Running the same action a second time does not create duplicate cohorts or duplicate notifications — the run is idempotent.
+**Expected:** A success message is shown with a count of users selected and cohorts created (or "1 cohort" in single standing Cohort 1 mode). Running the same action a second time does not create duplicate cohorts or duplicate notifications — the run is idempotent. The selected count never includes a non-person: the scheduled runs, the platform-authored Commons notice, and the `anonymous` / `system` fallbacks are excluded, so no cohort is ever formed around one.
 
 Result: web ☐
 

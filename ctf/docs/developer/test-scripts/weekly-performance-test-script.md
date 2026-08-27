@@ -115,15 +115,24 @@ is no "set active week" action and no per-week status.
    number of members active on a day of that week; on the current week it divides by the days of the
    week so far, on a past week by the full 7. Both count a member as active on a day when any of
    their own rows carries that day — a sign-in, a ClickLog incident, a Mood check-in, a Commons post,
-   reply or reaction, a PeerProgramming message — so a member who used the app is counted even if no
-   sign-in row was written for them. Check this against the ClickLog cards on the same screen: Active
-   Members can never read lower than ClickLog's distinct loggers for the same week. Both are
+   reply or reaction, a PeerProgramming message, or a row in any plugin's command trail naming them
+   as the actor — so a member who used the app is counted even if no sign-in row was written for
+   them, and a member who only reads and reviews is counted too. Check this against the ClickLog
+   cards on the same screen: Active Members can never read lower than ClickLog's distinct loggers for
+   the same week. Both are
    aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
-2. Supply a compare week so the route returns a comparison
+2. **Pick the oldest week in the picker (Jun 8–14, 2026, the launch week) and read the Adoption
+   cards.** Active Members must not read 0 for a week anyone used: the sign-in table got its writer
+   on 2026-06-16, so that week is read entirely from the other sources, chiefly the per-plugin
+   command trails. If it reads 0, run
+   `node ctf/scripts/audit-active-members.mjs --week=2026-06-08` (through Infisical, read-only) and
+   compare its COMBINED line with the card — the script names which sources contributed and says
+   when a week predates the sign-in writer.
+3. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
-3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
+4. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
    focus, so the numbers refresh without a manual reload. Past weeks are settled and do not poll.
 **Expected:** Metric cards render humanized labels from `metric_key` (acronyms read correctly: GDP,
 USD) and real values computed live for the selected week window from upstream tables. The two Goal

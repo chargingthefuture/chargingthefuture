@@ -164,15 +164,42 @@ Adoption (honest non-value rows):
   the member-days are bucketed on.
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
-is a (member, UTC day) pair on which that member did something the app recorded, drawn from the union of every
-member-attributed activity source — `login_events`, `click_log_incidents`, `mood_submissions`,
-`feed_community_posts`, `feed_community_replies`, `feed_community_post_reactions`,
-`peer_programming_messages` — each windowed on its own date column, `UNION`ed so a member seen in several
-sources on one day is still one member-day. Rows whose timestamp is written by a counterparty or an admin
-rather than by the member (a trip completion, a nomination review, a disbursement) are deliberately not
-sources: those say something happened to the member, not that the member turned up. Both rows are aggregate
-only — never a per-member figure — and both are adoption, not value: turning up is not a plugin's defining
-action and carries no positive weight in value scoring.
+is a (member, UTC day) pair on which that member did something the app recorded, drawn from the union of 37
+member-attributed activity sources, each windowed on its own date column and `UNION`ed so a member seen in
+several sources on one day is still one member-day. The sources are of three kinds:
+
+- the sign-in record, `login_events` — the broadest single source, but only from 2026-06-16, the day it got
+  its writer;
+- what the member made or wrote: `click_log_incidents`, `mood_submissions`, `feed_community_posts`,
+  `feed_community_replies`, `feed_community_post_reactions`, `peer_programming_messages`,
+  `level_up_dispute_comments`;
+- the per-plugin command trails, one row per command a member ran (reads included), carrying that member as
+  the actor and the member's own request time: `weekly_performance_audit_trail`, `gdp_admin_audit_trail`,
+  `workforce_admin_audit_trail`, `trust_admin_audit_trail`, `trust_transport_admin_audit_trail`,
+  `trust_transport_status_events`, `socket_relay_admin_audit_trail`, `socket_relay_request_events`,
+  `foundation_admin_audit_trail`, `foundation_quote_status_events`, `lighthouse_admin_audit_trail`,
+  `service_credits_admin_audit_trail`, `peer_programming_admin_audit_trail`,
+  `beacon_events_admin_audit_trail`, `safety_admin_audit_trail`, `contributor_access_audit_trail`,
+  `recurring_activity_audit_trail`, `skills_hunt_audit_log`, `skills_taxonomy_change_events`,
+  `level_up_audit_events`, `contributions_audit_log`, `directory_profile_change_events`,
+  `account_restrictions_audit`, `unlock_audit_log`, `quora_deletion_survey_audit_log`,
+  `quora_live_census_audit_log`, `feed_membership_events`, `announcement_membership_events`,
+  `llm_inference_log`.
+
+The command trails are what make the launch weeks readable: they have been written since each plugin shipped,
+where `login_events` starts on 2026-06-16 and the content tables above stay empty for a member who reads and
+reviews rather than posts.
+
+Actor ids that are not a person are excluded by name (`NON_MEMBER_ACTIVITY_ACTOR_IDS`): the scheduled runs
+(`skills-hunt-auto-mission-scheduler`, `level-up-auto-cohort-scheduler`, `unlock-incentive-system`,
+`internal_service_credits_reclaimer`), the platform-authored Commons standing notice
+(`system:commons-guidance`), and the `anonymous` / `system` fallbacks. Rows whose timestamp is written by a
+counterparty or an admin rather than by the member (a trip completion, a nomination review, a disbursement),
+and rows the platform scores about a member rather than records the member doing
+(`trust_transport_risk_signals`), are deliberately not sources: those say something happened to the member,
+not that the member turned up. Both rows are aggregate only — never a per-member figure — and both are
+adoption, not value: turning up is not a plugin's defining action and carries no positive weight in value
+scoring.
 - `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
 - `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
 - `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
@@ -185,8 +212,44 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 2. The `operations` role now passes the admin gate (week-selection) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. Read routes already admit any approved member.
 3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
+5. The member-day union now reads 37 tables, and most of the command trails have no index on `created_at`, so
+   each turnout read scans them. At today's row counts that is milliseconds and it is not worth a schema
+   change yet, but if any command trail grows large the fix is a `created_at` index on it rather than dropping
+   it from the source list.
 
 ## 8) Change Log
+
+- 2026-08-27: **The launch weeks reported nobody, and a platform-authored post counted as a member
+  (owner report: "all weeks should have at least one active user — I use the app every day, yet week
+  one and others show no active users").** Two separate faults, both in what counts as a member
+  turning up:
+  (a) **The early weeks had no readable source.** `login_events` got its writer on 2026-06-16; the
+  platform opened on 2026-06-12, so the first week the picker offers (Jun 8–14) and the first days of
+  the second had no sign-in rows at all. The other six sources were narrow content tables — an owner
+  who reads dashboards and reviews submissions logs no incident, posts nothing, and checks in
+  nowhere — so a week someone used every day still read zero. The member-day set in
+  `lib/engagement/member-activity.ts` now also reads the per-plugin command trails (30 tables, listed
+  in section 6): each holds one row per command a member ran, reads included, with that member as the
+  actor and the member's own request time on it, and each has been written since its plugin shipped.
+  Those weeks now report what actually happened in them, and the reading no longer depends on a
+  single table that started late.
+  (b) **A non-person was being counted.** The Commons standing notice is authored by
+  `system:commons-guidance` and written into `feed_community_posts`, an existing source, so it added
+  a member to the headcount on the day it was written. Actor ids that are not people are now excluded
+  by name (`NON_MEMBER_ACTIVITY_ACTOR_IDS`), covering the scheduled runs and the `anonymous` /
+  `system` fallbacks as well.
+  Also: the "which of these tables exist" probe went from one round trip per table on every call to
+  one round trip covering all of them, remembered for the life of the process — otherwise widening the
+  list would have multiplied that cost. `ctf/scripts/audit-active-members.mjs` mirrors the new source
+  list and the actor exclusions, prints only the sources that contributed (37 rows of mostly zeroes
+  buries the ones that matter) with a count of the quiet and missing ones, and says plainly when a
+  week predates the sign-in writer so a zero there is not read as a broken write. A new unit test,
+  `ctf/packages/web/lib/engagement/member-activity.test.ts`, checks that every source reaches the SQL,
+  that the actor exclusions are bound, that the probe runs once, and that the audit script's copy of
+  both lists still matches the module's. Added the new tables to the `dataAccess` lists of
+  `weekly-performance.metrics.get`, `weekly-performance.comparison.get`, and `weekly-performance.week.get`
+  (the last also names the member-day sources behind its `activeUsersLast7Days` field, which it had
+  never listed). No schema, route, or access-policy change.
 
 - 2026-08-26: **Turnout was undercounting whole members (owner report: "there are two daily active
   users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`

@@ -211,10 +211,15 @@ const beaconBroadcastEngagement = (weekStart: string) =>
 
 // Two adoption readings about turnout, both built from the shared member-day set in
 // lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member did something,
-// drawn from the sign-in record AND from the member's own dated rows across the product. Reading
-// `login_events` alone made both numbers hostage to one fire-and-forget insert: when that write
-// failed the member simply vanished from the dashboard, even with their incidents and posts sitting
-// in the database with that day's timestamp on them. Aggregate only — never a per-member figure.
+// drawn from the sign-in record, from the member's own dated rows across the product, and from the
+// per-plugin command trails that record each command a member ran. Reading `login_events` alone made
+// both numbers hostage to one fire-and-forget insert: when that write failed the member simply
+// vanished from the dashboard, even with their incidents and posts sitting in the database with that
+// day's timestamp on them. It also left the launch weeks unreadable, because that table got its
+// writer on 2026-06-16 and the platform opened on 2026-06-12: the first week the picker offers had
+// no sign-in rows to read at all, so a week somebody used every day still reported nobody. The
+// command trails go back to each plugin shipping, so those weeks now report what happened in them.
+// Aggregate only — never a per-member figure.
 
 // Active members: how many different people turned up at all this week. This is the plain headcount
 // the average below is easy to misread as.

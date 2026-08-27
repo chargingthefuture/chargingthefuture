@@ -23,7 +23,9 @@
 
 // Keep this list identical to MEMBER_ACTIVITY_SOURCES in
 // ctf/packages/web/lib/engagement/member-activity.ts — the app and this audit must agree on what
-// "active" means, or the audit explains a number the dashboard is not showing.
+// "active" means, or the audit explains a number the dashboard is not showing. A unit test
+// (ctf/packages/web/lib/engagement/member-activity.test.ts) compares the two lists and fails when
+// they drift apart.
 const SOURCES = [
   { table: 'login_events', userColumn: 'user_id', dateColumn: 'created_at' },
   { table: 'click_log_incidents', userColumn: 'user_id', dateColumn: 'created_at' },
@@ -32,7 +34,53 @@ const SOURCES = [
   { table: 'feed_community_replies', userColumn: 'author_user_id', dateColumn: 'created_at' },
   { table: 'feed_community_post_reactions', userColumn: 'user_id', dateColumn: 'created_at' },
   { table: 'peer_programming_messages', userColumn: 'author_user_id', dateColumn: 'created_at' },
+  { table: 'level_up_dispute_comments', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'weekly_performance_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'gdp_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'workforce_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'trust_admin_audit_trail', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'trust_transport_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'trust_transport_status_events', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'socket_relay_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'socket_relay_request_events', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'foundation_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'foundation_quote_status_events', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'lighthouse_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'service_credits_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'peer_programming_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'beacon_events_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'safety_admin_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'contributor_access_audit_trail', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'recurring_activity_audit_trail', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'skills_hunt_audit_log', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'skills_taxonomy_change_events', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'level_up_audit_events', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'contributions_audit_log', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'directory_profile_change_events', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'account_restrictions_audit', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'unlock_audit_log', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'quora_deletion_survey_audit_log', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'quora_live_census_audit_log', userColumn: 'actor_user_id', dateColumn: 'created_at' },
+  { table: 'feed_membership_events', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'announcement_membership_events', userColumn: 'actor_id', dateColumn: 'created_at' },
+  { table: 'llm_inference_log', userColumn: 'actor_user_id', dateColumn: 'created_at' },
 ];
+
+// Mirrors NON_MEMBER_ACTIVITY_ACTOR_IDS in the same module: actor ids the app writes that are not a
+// person (a scheduled run, the platform-authored Commons notice, a request with nobody signed in).
+const NON_MEMBER_ACTOR_IDS = [
+  'anonymous',
+  'system',
+  'system:commons-guidance',
+  'skills-hunt-auto-mission-scheduler',
+  'level-up-auto-cohort-scheduler',
+  'unlock-incentive-system',
+  'internal_service_credits_reclaimer',
+];
+
+// The day the sign-in record got its writer. Before this, `login_events` was empty no matter who was
+// using the app, so a week ending before it rests entirely on the other sources.
+const LOGIN_EVENTS_WRITER_SINCE = '2026-06-16';
 
 function readArg(name) {
   const match = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -73,7 +121,8 @@ function sourceDaysSql(source) {
           WHERE ${source.dateColumn} >= $1::date
             AND ${source.dateColumn} < $1::date + INTERVAL '7 days'
             AND ${source.userColumn} IS NOT NULL
-            AND btrim(${source.userColumn}) <> ''`;
+            AND btrim(${source.userColumn}) <> ''
+            AND btrim(${source.userColumn}) <> ALL ($2::text[])`;
 }
 
 async function auditWeek(pool, weekStartDate, now) {
@@ -89,7 +138,7 @@ async function auditWeek(pool, weekStartDate, now) {
     const counts = await pool.query(
       `SELECT COUNT(*)::int AS member_days, COUNT(DISTINCT user_id)::int AS members
        FROM (${sourceDaysSql(source)}) source_days`,
-      [weekStartDate],
+      [weekStartDate, NON_MEMBER_ACTOR_IDS],
     );
     perSource.push({
       table: source.table,
@@ -106,7 +155,7 @@ async function auditWeek(pool, weekStartDate, now) {
     const combined = await pool.query(
       `SELECT COUNT(*)::int AS member_days, COUNT(DISTINCT user_id)::int AS members
        FROM (${union}) member_days`,
-      [weekStartDate],
+      [weekStartDate, NON_MEMBER_ACTOR_IDS],
     );
     memberDays = combined.rows[0].member_days;
     members = combined.rows[0].members;
@@ -120,12 +169,22 @@ function printWeek(report) {
   console.info(`\nWeek starting ${report.weekStartDate} (UTC), ${report.days} day(s) counted`);
   const NAME_WIDTH = 36;
   console.info(`  ${'Source'.padEnd(NAME_WIDTH)}${'member-days'.padStart(11)}${'members'.padStart(10)}`);
-  for (const row of report.perSource) {
-    const counts = row.present
-      ? String(row.memberDays).padStart(11) + String(row.members).padStart(10)
-      : '  (table not in this database)';
-    console.info(`  ${row.table.padEnd(NAME_WIDTH)}${counts}`);
+
+  // Only the sources that actually contributed are listed: the full list is 37 tables and a wall of
+  // zeroes buries the ones that matter. The two counts under the table say what was left out.
+  const contributing = report.perSource.filter((row) => row.present && row.memberDays > 0);
+  for (const row of contributing) {
+    console.info(
+      `  ${row.table.padEnd(NAME_WIDTH)}${String(row.memberDays).padStart(11)}${String(row.members).padStart(10)}`,
+    );
   }
+  if (contributing.length === 0) {
+    console.info('  (no source recorded anybody this week)');
+  }
+
+  const quiet = report.perSource.filter((row) => row.present && row.memberDays === 0).length;
+  const missing = report.perSource.filter((row) => !row.present).length;
+  console.info(`  ${quiet} source(s) present with no rows this week; ${missing} not in this database.`);
   console.info(
     `  ${'COMBINED (what the dashboard reads)'.padEnd(NAME_WIDTH)}${String(report.memberDays).padStart(11)}${String(report.members).padStart(10)}`,
   );
@@ -133,7 +192,19 @@ function printWeek(report) {
   console.info(`  Daily Active Members: ${(Math.round(report.dailyAverage * 100) / 100).toFixed(2)} per day (${report.memberDays} member-days / ${report.days} day(s))`);
 
   const login = report.perSource.find((row) => row.table === 'login_events');
-  if (login && login.present && login.members < report.members) {
+  // The day after the window closes (shifting back by -1 week moves forward one week).
+  const weekEndExclusive = shiftWeeks(report.weekStartDate, -1);
+  if (report.weekStartDate < LOGIN_EVENTS_WRITER_SINCE) {
+    const coverage =
+      weekEndExclusive <= LOGIN_EVENTS_WRITER_SINCE
+        ? "this week's number rests entirely on the other sources"
+        : 'the first days of this week rest entirely on the other sources';
+    console.info(
+      `  NOTE: nothing wrote login_events until ${LOGIN_EVENTS_WRITER_SINCE}, so ${coverage}.\n` +
+        '        A zero here means the app recorded no member action at all in that window,\n' +
+        '        not that the sign-in write failed.',
+    );
+  } else if (login && login.present && login.members < report.members) {
     console.info(
       `  NOTE: ${report.members - login.members} member(s) are visible in the product's own rows but have no sign-in record this week.\n` +
         '        The sign-in write in packages/web/lib/engagement/login-activity.ts is failing or not reached for them;\n' +

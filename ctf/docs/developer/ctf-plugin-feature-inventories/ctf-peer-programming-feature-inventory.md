@@ -207,16 +207,20 @@ These admin routes are now surfaced by a real admin UI on web (the former Androi
 2. Plugin extension state is linked by `user_id` (Clerk subject) and cohort id.
 3. Participation tier resolution derives from auth state + cohort membership.
 
-### Shared Data Dependency: active-member signal (`login_events`)
+### Shared Data Dependency: active-member signal
 
-Weekly cohort assignment selects "active members" from the shared `login_events` table
-(`lib/engagement/login-activity.ts`), which is the single dedicated sign-in table also
-read by the Weekly Performance review — this plugin does not own it and must not create a
-duplicate. The table is now populated by `recordLoginEvent`, called from the shared access
-gate (`evaluatePluginAccess`) for every signed-in member, deduplicated to one row per
-member per UTC day. Before this writer existed the table was always empty, so the default
-assignment run found zero active members and could never form a cohort; an admin can still
-form a cohort immediately with the manual user-id override.
+Weekly cohort assignment selects "active members" from the shared member-day set in
+`lib/engagement/member-activity.ts` (reached through `getActiveUserIdsLastDays`), which the
+Weekly Performance review reads too — this plugin does not own it and must not create a
+duplicate. A member counts as active on a day they did anything the app recorded: a sign-in
+row in `login_events`, something they made or wrote, or a row in any per-plugin command
+trail naming them as the actor. `login_events` itself is populated by `recordLoginEvent`,
+called from the shared access gate (`evaluatePluginAccess`) for every signed-in member and
+deduplicated to one row per member per UTC day. Before that writer existed the table was
+always empty, so the default assignment run found zero active members and could never form a
+cohort; an admin can still form a cohort immediately with the manual user-id override.
+Actor ids that are not a person (the scheduled runs, the platform-authored Commons notice,
+the `anonymous` / `system` fallbacks) are excluded, so a cohort is never formed around one.
 
 ### Tables Owned by This Plugin
 
@@ -293,6 +297,15 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-08-27: The active set this plugin forms cohorts from widened with the shared member-day
+  reading in `lib/engagement/member-activity.ts`: alongside the sign-in record and the member's own
+  content, it now counts the per-plugin command trails, which record one row per command a member ran
+  with that member as the actor. Actor ids that are not a person (scheduled runs, the
+  platform-authored Commons notice, the `anonymous` / `system` fallbacks) are excluded by name, so a
+  cohort can no longer be formed around one. No change in this plugin's own code, routes, schema, or
+  contracts — `cohort.weekly.select` already names the source abstractly as `auth_login_activity`.
+  Full reasoning in the Weekly Performance inventory's 2026-08-27 entry.
 
 - 2026-08-18: **Corrected: PeerProgramming has no Android surface.** Agents kept reading this file and concluding the feature ships in the Android app. It does not — `packages/mobile/src/features/peer-programming` was deleted on 2026-07-20 (rule 105, PR #1742) and the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. The Delivery Status section already said so, but five other sections still described the Android screens in the present tense and contradicted it: Scope and Boundary listed the deleted mobile directory as an owned surface; the numbered intent statement said the video call runs "on web and Android" (that section feeds the public user guide, so it was teaching the wrong thing downstream); the Live Video Session feature list gave an Expo Go build constraint for a build that no longer exists; two Delivery Status paragraphs described the Android composer and admin screen as current; and the Gaps list carried Android live video as delivered. Each is now stated as web-only, with the removed Android work kept as dated history rather than deleted. Scope and Boundary also gained an explicit "No Android surface" line so the next agent hits the answer before it can guess. Documentation only — no code, route, schema, or contract change; the parity contract entry (`peer-programming`: `requiresMobileSurface: false`, `mobileFeatureDirs: []`) already matched the code and is untouched.
 - 2026-08-18: **Cohort-chosen topics tabled; admin control is the decision, not a shortfall (owner).**
