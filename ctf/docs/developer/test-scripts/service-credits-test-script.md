@@ -202,8 +202,10 @@ Result: web ☐
 2. Read the displayed figures: credits in circulation, total issued, total burned, treasury balance, and "Sent in last 30 days" (transferVolume30d).
 3. Confirm no figure is presented as a fiat amount.
 4. Confirm numbers are not hardcoded zeroes (seed data should produce non-zero values for at least some fields).
+5. Check the order on the page (web, 2026-08-27): the "Send credits" form appears **above** "The economy" heading and its figures, so a member reaching this tab sees their own wallet's action before the community-wide numbers.
+6. Switch to the Wallet tab and then the Earn tab and confirm the send form is still **below** the tab body there — those two open with the member's own balance already.
 
-**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present.
+**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present. On web the send form is above the figures on the Economy tab and below the body on the Wallet and Earn tabs.
 
 Result: web ☐
 

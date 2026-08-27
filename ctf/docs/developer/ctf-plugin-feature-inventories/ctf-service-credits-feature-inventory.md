@@ -61,6 +61,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    goes through, an "Is this ongoing?" prompt appears under the success line: pick how often, and it
    records a standing arrangement with the member you just sent to, who confirms it in the Recurring
    Activity app. The prompt does not appear when an arrangement with that member is already recorded.
+5. **On the Economy tab the send form sits above the figures (2026-08-27).** The economy numbers are
+   the whole community's; sending is the member's own wallet, so the member's own thing comes first.
+   On the Wallet and Earn tabs the form stays below, because those already open with the member's own
+   balance.
 
 ### 1.4 Trust and Safety Adjustments
 
@@ -286,6 +290,14 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 ---
 
 ## 10) Change Log
+
+- 2026-08-27: **Send form moved above the figures on the Economy tab.** The send panel renders after
+  the tab body on every tab, which put "Send credits" below a full screen of community-wide
+  circulation numbers — a member had to scroll past everyone else's totals to reach their own
+  wallet's one action. `service-credits-shell.tsx` now places the panel before the tab body when the
+  Economy tab is active and leaves it after the body on Wallet and Earn, which already open with the
+  member's own balance. Ordering only: no copy, styling, route, contract, or schema change, and the
+  send panel itself is untouched.
 
 - 2026-08-27: **Wallet "Recent Transactions" now pages instead of running on down the screen.** The
   list rendered every ledger row the route returned, so a member with a long history got a wallet
