@@ -223,6 +223,10 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   `backfill_launch_gap` so a reconstructed day is never mistaken for one recorded live. Non-person
   actor ids are excluded by name. It reports as it runs — evidence found, a line per day, rows
   written — so running it is its own preview; there is no second copy of the source list to drift.
+  The `source` column itself came from v2 and production has carried it all along, but `ctf/schema.sql`
+  never declared it — so a database built from the canonical schema lacked a column production has
+  always had. It is declared now, `VARCHAR(50) NOT NULL DEFAULT 'webapp'`, matching production; the
+  guarded `ADD COLUMN IF NOT EXISTS` is a no-op there and fills the gap everywhere else.
   Verified on a scratch Postgres 16 across four database shapes (production's `id`/`source` columns
   with the unique index, the `schema.sql` shape with neither, a database with no unique index where
   only the `WHERE NOT EXISTS` guard prevents duplicates, and one with no `login_events` at all) and
