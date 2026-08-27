@@ -115,8 +115,9 @@ is no "set active week" action and no per-week status.
    number of members active on a day of that week; on the current week it divides by the days of the
    week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in
    record (`login_events`) holds a row for them that day, and nothing else (owner decision,
-   2026-08-27). Everyone reaches the app through Clerk, so which plugin a member used is not part of
-   this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
+   2026-08-27). Everyone reaches the app through Clerk, and the sign-in is recorded when Clerk
+   identity is resolved, so it lands whether the member opens a plugin, an admin page, or nothing at
+   all beyond signing in. Which plugin a member used is not part of this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
    is correct rather than a bug — those count what members did, these count who signed in. If a week
    reads zero or looks too low, two things say why. Check the server log for
    `[weekly-performance.live-metrics] could not read …` — a card whose read failed or whose table is

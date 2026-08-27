@@ -169,7 +169,10 @@ is a (member, UTC day) pair on which the sign-in record holds a row for that mem
 rows. Every member reaches the app through Clerk, so a sign-in is a sign-in whatever plugin they then open —
 which plugin they used is not part of this and never has been, in v2 or v3. `login_events` is a preexisting
 table carried from v2 (it is in the April 2026 production schema snapshot with its own history); v3 added
-`recordLoginEvent` in the shared access gate on 2026-06-16 to keep writing it, once per member per UTC day.
+`recordLoginEvent` on 2026-06-16 to keep writing it, once per member per UTC day. That writer runs in the
+Clerk identity layer (`resolveRequestIdentity`, `lib/auth/request-identity.ts`) — the one place every
+authenticated request resolves its identity, on the verified web-session path and the verified bearer-token
+path alike — so the day is recorded whatever the member opens next.
 
 **Do not widen this.** It has drifted twice, each time on the same argument: the app holds a member's own dated
 rows (a ClickLog incident, a Commons post, a command-trail entry), so a member with Tuesday rows plainly used
@@ -206,6 +209,20 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-08-27: **A sign-in is now recorded where Clerk identity is resolved, not where a plugin access
+  check runs (owner decision).** `recordLoginEvent` fired from `evaluatePluginAccess`, so a member's
+  day only reached `login_events` if a plugin access check happened on that request — a session that
+  reached an SSR page, or a route using the identity layer directly, counted as nobody turning up.
+  Signing in is a Clerk event and has nothing to do with which plugin gets opened next, which is the
+  same principle the read side was corrected to earlier today, applied to the write side. The call
+  moved to `resolveRequestIdentity` (`lib/auth/request-identity.ts`), covering both authenticated
+  paths: the verified web session and the verified bearer token the mobile app arrives with. It stays
+  fire-and-forget and deduplicated to one row per member per UTC day, so the busier path costs a set
+  lookup per request rather than a write. A new test
+  (`ctf/packages/web/lib/auth/request-identity.test.ts`) drives both paths, checks that an
+  unauthenticated request and unvouched-for identity headers record nobody, and fails if the access
+  gate ever carries its own copy of the recording again. No schema, route, or contract change.
 
 - 2026-08-27: **A card that could not be read was rendering as 0 in silence.** Every metric on this
   dashboard went through `guardedScalar`/`safeCount` in `lib/weekly-performance/live-metrics.ts`,
@@ -245,7 +262,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`
   row and the `/current-week` rolling `activeUsersLast7Days` — read `login_events` and nothing else.
   That table has exactly one writer: a fire-and-forget insert in
-  `lib/engagement/login-activity.ts`, called from the shared access gate, whose failures were caught
+  `lib/engagement/login-activity.ts`, called at the time from the shared access gate, whose failures were caught
   and dropped without a word. So any member whose sign-in row never landed was invisible to the
   dashboard even while the database held that member's own rows, timestamped, from the same day — a
   member logging ClickLog incidents every day could read as nobody. Three changes:

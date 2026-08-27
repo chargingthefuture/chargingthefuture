@@ -212,9 +212,10 @@ These admin routes are now surfaced by a real admin UI on web (the former Androi
 Weekly cohort assignment selects "active members" from the shared `login_events` table
 (`lib/engagement/login-activity.ts`), which is the single dedicated sign-in table also
 read by the Weekly Performance review — this plugin does not own it and must not create a
-duplicate. The table is now populated by `recordLoginEvent`, called from the shared access
-gate (`evaluatePluginAccess`) for every signed-in member, deduplicated to one row per
-member per UTC day. Before this writer existed the table was always empty, so the default
+duplicate. The table is populated by `recordLoginEvent`, called from the Clerk identity
+layer (`resolveRequestIdentity`) for every authenticated request and deduplicated to one
+row per member per UTC day. It used to be called from the plugin access gate, which meant
+a member's day went unrecorded unless a plugin access check ran on that request. Before this writer existed the table was always empty, so the default
 assignment run found zero active members and could never form a cohort; an admin can still
 form a cohort immediately with the manual user-id override.
 
@@ -300,6 +301,12 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-08-27: The active set this plugin selects from now sees a member on any day they signed in,
+  not only days a plugin access check happened to run: `recordLoginEvent` moved from
+  `evaluatePluginAccess` to the Clerk identity layer (owner decision — see the Weekly Performance
+  inventory's entry for the same date). No change to this plugin's own code, routes, schema, or
+  contracts.
 
 - 2026-08-27: Cohort selection is back to the sign-in record alone (owner decision — see the Weekly
   Performance inventory's entry for the same date). A 2026-08-26 pass had widened the shared active
