@@ -172,36 +172,6 @@ export type SkillsHuntGeneratedDirectoryProfile = {
   createdAtIso: string;
 };
 
-// Moderation report — backs `skills_hunt_submission_reports` and the
-// community-driven "this profile was added without permission" flow.
-export type SkillsHuntSubmissionReportReason =
-  | 'no_permission'
-  | 'inaccurate'
-  | 'duplicate'
-  | 'spam'
-  | 'other';
-
-export type SkillsHuntSubmissionReportStatus =
-  | 'open'
-  | 'dismissed'
-  | 'archived'
-  | 'removed';
-
-export type SkillsHuntSubmissionReport = {
-  id: string;
-  submissionId: string | null;
-  directoryProfileId: string | null;
-  reporterUserId: string;
-  reporterUsername: string | null;
-  reason: SkillsHuntSubmissionReportReason;
-  details: string | null;
-  status: SkillsHuntSubmissionReportStatus;
-  resolutionNotes: string | null;
-  resolvedByUserId: string | null;
-  resolvedAtIso: string | null;
-  createdAtIso: string;
-};
-
 // Reputation tier computed on demand from accepted/rejected submission counts.
 type SkillsHuntReputationTier = 'new' | 'standard' | 'trusted' | 'restricted';
 

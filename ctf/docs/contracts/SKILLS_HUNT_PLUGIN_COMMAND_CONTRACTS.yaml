@@ -462,36 +462,6 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
-    command: skills-hunt.submission.report
-    version: 1.0.0
-    description: File a community moderation report against a submission or a community-generated Directory profile.
-    inputSchema:
-      submissionId:
-        type: string
-        required: false
-      directoryProfileId:
-        type: string
-        required: false
-      reason:
-        type: string
-        required: true
-        description: One of no_permission | inaccurate | duplicate | spam | other.
-      details:
-        type: string
-        required: false
-        description: Optional free-text context (max 1000 chars).
-    outputSchema:
-      report:
-        type: object
-        description: The created report row including status ('open').
-    dataAccess:
-      - skills_hunt_submission_reports
-      - skills_hunt_audit_log
-    purpose: community_moderation
-    retentionClass: transactional_long_lived
-    idempotency: false
-
-  - pluginId: skills-hunt
     command: skills-hunt.profile.delete
     version: 1.0.0
     description: GDPR-style soft-delete of every submission authored by the caller. Audit log retained.
@@ -683,3 +653,12 @@ changelog:
     change: Removed the count_distinct_sectors mission goal type from skills-hunt.mission.create — it counted claimed professions, which the nomination form no longer collects, so the goal could never be completed. The stack bonus was deleted from submission scoring for the same reason; it was a computed figure with no contract surface.
   - date: 2026-08-27
     change: Removed the claimedProfessions input from skills-hunt.submission.create — the nomination form stopped collecting professions when the taxonomy skills picker replaced that field, every reader has been removed, and the underlying column is dropped.
+  - date: 2026-08-27
+    change: >-
+      Removed skills-hunt.submission.report — community moderation reports are gone. A member
+      could never file one (the route had no button anywhere in the app), resolving a report as
+      'removed' only flipped a status column without deleting or blocking anything, and its first
+      reason 'no_permission' described every community-generated profile by definition rather than
+      singling one out. Directory owns this instead — an admin takes a community-generated profile
+      down from the Directory admin screen, which deletes it and blocks its Quora URL from being
+      listed again until the block is lifted.

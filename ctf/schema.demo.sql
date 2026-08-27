@@ -679,21 +679,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_audit_log (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS skills_hunt_submission_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  submission_id UUID NULL REFERENCES skills_hunt_submissions(id) ON DELETE SET NULL,
-  directory_profile_id TEXT NULL,
-  reporter_user_id TEXT NOT NULL,
-  reporter_username TEXT NULL,
-  reason TEXT NOT NULL CHECK (reason IN ('no_permission', 'inaccurate', 'duplicate', 'spam', 'other')),
-  details TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'dismissed', 'archived', 'removed')),
-  resolution_notes TEXT NULL,
-  resolved_by_user_id TEXT NULL,
-  resolved_at TIMESTAMPTZ NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (submission_id IS NOT NULL OR directory_profile_id IS NOT NULL)
-);
 -- Missions: themed sub-goals within a round (post-design lock 2026-05-11,
 -- continuity 2.9). One mission belongs to one round; per-user progress is
 -- tracked in skills_hunt_mission_progress and recomputed on accept by the
@@ -780,6 +765,15 @@ ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderb
 -- `skills_hunt_leaderboard.team_key` (only ever set by the team aggregation removed above) and
 -- `skills_hunt_mission_progress.bonus_credited_at` (the marker for a ServiceCredits payout that is
 -- not being built — mission points are a leaderboard ranking figure, not credits).
+-- Community moderation reports removed (owner directive 2026-08-27). A member could never file one:
+-- the route had no button anywhere in the app, so the admin queue could only ever be empty. And
+-- resolving a report as 'removed' only flipped this table's status column — it never deleted the
+-- profile or blocked anything, so an admin marking one resolved would believe a profile had come
+-- down when nothing had. Its first reason, 'no_permission', described every community-generated
+-- profile by definition rather than singling one out. Directory owns this properly: an admin takes
+-- down a community-generated profile from the Directory admin screen, which deletes it and blocks
+-- its Quora URL from being listed again until the block is lifted.
+DROP TABLE IF EXISTS skills_hunt_submission_reports;
 ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP COLUMN IF EXISTS team_key;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress DROP COLUMN IF EXISTS bonus_credited_at;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
@@ -788,9 +782,6 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achi
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_round ON skills_hunt_achievements (round_id) WHERE round_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_notifications_user_unread ON skills_hunt_notifications (user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_audit_log_lookup ON skills_hunt_audit_log (created_at DESC, actor_id, command);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_status ON skills_hunt_submission_reports (status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_submission ON skills_hunt_submission_reports (submission_id) WHERE submission_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skills_hunt_submission_reports (directory_profile_id) WHERE directory_profile_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
