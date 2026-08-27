@@ -23,9 +23,10 @@ import { queryDb } from 'lib/db/postgres';
 // the platform itself writes with a member id on it. One table, one meaning.
 //
 // So a low reading here is a fact about the sign-in record, and if that record is wrong the fix is to
-// the write, not to the definition. `ctf/scripts/audit-active-members.mjs` is the tool for that: it
-// counts this table for a week and prints the record's own span, so a zero week is answerable from
-// data — either the record covers the week and nobody signed in, or it does not reach that far back.
+// the write, not to the definition. `ctf/scripts/sql/active-members-audit.sql` is the tool for that:
+// paste it into the Neon dashboard and it counts this table for a week and prints the record's own
+// span, so a zero week is answerable from data — either the record covers the week and nobody signed
+// in, or it does not reach that far back.
 //
 // The reading is guarded on the table existing, so an environment without it reports nobody rather
 // than failing the dashboard. All table and column names are fixed literals — no caller input is ever

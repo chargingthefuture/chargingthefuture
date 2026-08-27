@@ -27,13 +27,11 @@
 --   * people only — actor ids the platform writes for itself (scheduled runs, the platform-authored
 --                  Commons notice, the `anonymous`/`system` fallbacks) are excluded by name.
 --
--- It reports as it goes: the evidence it found, a line per day naming how many members that day has
--- evidence for, and how many rows it actually wrote. Because it is scoped and idempotent, running it
--- IS the preview — a second run writes nothing and prints the same breakdown. There is deliberately
--- no separate dry-run copy of the source list below; one list, in one place, that cannot drift.
---
--- Apply:  pnpm --dir ctf run migrate:file -- --file=./db/migrations/post/0008_login_events_backfill_launch_gap.sql
--- or paste this whole file into the Neon dashboard, where the report appears in the Notices.
+-- Applied by the "Neon — Update DB" GitHub Action, which runs every post/ migration on a push to
+-- main that touches this folder — so merging is what runs it, with no command to type. It reports as
+-- it goes in the workflow log: the evidence it found, a line per day naming how many members that day
+-- has evidence for, and how many rows it wrote. Being idempotent, it is re-applied on every later run
+-- of that workflow and on every fresh database clone, writing nothing the second time.
 
 DO $$
 DECLARE

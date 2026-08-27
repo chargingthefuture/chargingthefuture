@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // The active-member reading is one SQL query over the sign-in record, so these tests read the SQL
@@ -78,32 +76,6 @@ describe('what counts as active', () => {
     await countActiveMembersInWeek('2026-08-24');
     await countActiveMembersInWeek('2026-08-17');
     expect(probes).toHaveLength(1);
-  });
-});
-
-// The audit script names the same table. If the two disagree, the audit explains a number the
-// dashboard is not showing.
-describe('the audit script', () => {
-  const script = readFileSync(
-    resolve(__dirname, '../../../../scripts/audit-active-members.mjs'),
-    'utf8',
-  );
-
-  it('audits the same table the reading counts', () => {
-    expect(script).toContain(`const SIGN_IN_TABLE = '${MEMBER_ACTIVITY_TABLE}'`);
-  });
-
-  it('reads no other table', () => {
-    for (const table of [
-      'click_log_incidents',
-      'mood_submissions',
-      'feed_community_posts',
-      'peer_programming_messages',
-      'audit_trail',
-      'audit_log',
-    ]) {
-      expect(script).not.toContain(table);
-    }
   });
 });
 

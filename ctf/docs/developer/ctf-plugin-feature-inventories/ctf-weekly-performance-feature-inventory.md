@@ -181,17 +181,18 @@ rows measure; what a member did once they were here is a different thing, alread
 plugin's own rows in the cards above. Folding the second into the first makes a headcount that moves when a
 plugin changes what it writes, cannot be compared across weeks, and quietly counts whatever the platform itself
 writes carrying a member id. A low reading here is a fact about the sign-in record: if it is wrong, fix the
-write, not the definition. `ctf/scripts/audit-active-members.mjs` is the tool for that — it counts the sign-in
+write, not the definition. `ctf/scripts/sql/active-members-audit.sql` is the tool for that — pasted into the
+Neon dashboard it counts the sign-in
 record for a week and, separately and only as a cross-check, what the per-plugin tables saw, so a member
 visible there but not here identifies a sign-in write that did not land.
 
 If a week reads zero, two things say why rather than leaving it to guesswork. The server log now names any
 metric whose read failed or whose table is missing, because such a card renders as 0 and a wrong zero looks
 exactly like a real one (`[weekly-performance.live-metrics] could not read …`). And
-`ctf/scripts/audit-active-members.mjs` prints the sign-in record's earliest and latest row alongside the
+`ctf/scripts/sql/active-members-audit.sql` prints the sign-in record's earliest and latest row alongside the
 week's count, so a zero before the earliest row is visibly the record not reaching that far rather than
-nobody turning up. The same questions are in `ctf/scripts/sql/active-members-audit.sql` as plain SELECTs to
-paste into the Neon dashboard, for when there is no terminal to run the script from.
+nobody turning up. It is SQL to paste into the Neon dashboard rather than a script, because there is no
+terminal to run a script from.
 
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
@@ -209,6 +210,17 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-08-27: **Removed the terminal-only audit script (owner directive: there is no terminal).**
+  `ctf/scripts/audit-active-members.mjs` could only be run from a shell, so the person who needed it
+  could never run it — dead weight in an open-source tree, and a second copy of the source list to
+  keep in step. Deleted. `ctf/scripts/sql/active-members-audit.sql` answers the same questions as
+  plain SELECTs pasted into the Neon dashboard, and is now the only audit tool for this. The unit
+  test that existed to keep the two lists matching went with it; the part that pins the definition
+  stays.
+  The launch-gap repair needs no command either: `post/0008` is applied by the "Neon — Update DB"
+  workflow, which runs every `post/` migration on a push to `main` that touches that folder, so
+  merging is what runs it. Added its row to `ctf/db/migrations/README.md`.
 
 - 2026-08-27: **The launch-week hole in the sign-in record is repaired (owner approved).** The record
   carries real v2 history from 2025-12-15, but v2 wrote its last row on 2026-05-26 and v3's writer
@@ -272,7 +284,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   `activeUsersLast7Days`, and for PeerProgramming's cohort-forming active set. Section 6 records the
   decision and why not to widen it again; a unit test
   (`ctf/packages/web/lib/engagement/member-activity.test.ts`) fails if any other table reaches the
-  SQL. `ctf/scripts/audit-active-members.mjs` now reads only the sign-in record too, and prints the
+  SQL. `ctf/scripts/sql/active-members-audit.sql` reads only the sign-in record too, and prints the
   record's earliest and latest row next to each week's count so a zero week is answerable from data:
   a zero before the earliest row is missing history, not a week nobody turned up. The same questions
   are in `ctf/scripts/sql/active-members-audit.sql` as paste-able SELECTs for the Neon dashboard,
@@ -306,7 +318,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   turned up in the week, next to the average that reads as "Daily Active Members". The average's
   divisor also moved from `CURRENT_DATE` (database session timezone) to UTC, matching the day
   boundary the member-days use.
-  `ctf/scripts/audit-active-members.mjs` prints a week's member-days per source so an operator can
+  a new audit tool prints a week's member-days per source so an operator can
   see which source a low number came from; it only runs `SELECT`s and never names a member.
   Registered `wp_adoption_active_members` and rewrote `wp_adoption_daily_active_members` in
   `ctf/config/canonical_metrics.yaml`; added `feed_community_posts` to the `dataAccess` lists of

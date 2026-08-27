@@ -1,7 +1,7 @@
 -- Active-member audit, as SQL to paste into the Neon dashboard.
 --
--- Same questions as ctf/scripts/audit-active-members.mjs, for when there is no terminal to run it
--- from. Read-only: these are SELECTs and nothing here writes, locks, or deletes.
+-- Paste into the Neon dashboard. Read-only: these are SELECTs and nothing here writes, locks, or
+-- deletes. SQL rather than a script on purpose — there is no terminal to run a script from.
 --
 -- Run against the `public` schema. Demo mode reads a parallel `demo` schema, so a query run there
 -- reports seeded synthetic data rather than real members — query 3 tells the two apart.

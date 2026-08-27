@@ -122,11 +122,9 @@ is no "set active week" action and no per-week status.
    reads zero or looks too low, two things say why. Check the server log for
    `[weekly-performance.live-metrics] could not read …` — a card whose read failed or whose table is
    missing renders as 0, and that line is what tells you the 0 is not a real count. Then run
-   `node ctf/scripts/audit-active-members.mjs --week=<that week>` (through Infisical, read-only): it
-   prints the same count plus the sign-in record's earliest and latest row, which says whether the
-   week was quiet or the record does not reach that far back. With no terminal to hand, paste
-   `ctf/scripts/sql/active-members-audit.sql` into the Neon dashboard instead — same questions, plain
-   SELECTs. The launch week (Jun 8–14, 2026) fell in a gap where nothing was writing sign-ins;
+   paste `ctf/scripts/sql/active-members-audit.sql` into the Neon dashboard (read-only): it prints
+   the same count plus the sign-in record's earliest and latest row, which says whether the week was
+   quiet or the record does not reach that far back. The launch week (Jun 8–14, 2026) fell in a gap where nothing was writing sign-ins;
    `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilt those days from
    first-party evidence, so that week should read at least one member. Rows it rebuilt carry
    `source = 'backfill_launch_gap'`, which is how to tell a reconstructed day from one recorded live.
