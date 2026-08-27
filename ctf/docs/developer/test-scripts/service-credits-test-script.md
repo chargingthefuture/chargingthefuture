@@ -117,7 +117,7 @@ Result: web ☐
 **Precondition:** Seeded member is signed in on the ServiceCredits screen.
 
 **Steps:**
-1. Read the tab row under the header: it must show four tabs — `Wallet`, `Earn`, `Economy`, `Send` — all four legible at phone width (~390px), none clipped off the right edge.
+1. Read the tab row under the header: it must show four tabs in this order — `Wallet`, `Earn`, `Send`, `Economy` — all four legible at phone width (~390px), none clipped off the right edge.
 2. Open Wallet and scroll to the bottom. The send form must **not** be there.
 3. Do the same on Earn, then on Economy. The form must not be on either.
 4. Open the Send tab. The form appears here, with the "Send credits" heading, the recipient and amount boxes, the "Send with" rail picker, the "Accepted everywhere" list, and the Formance ledger note.

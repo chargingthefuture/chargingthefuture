@@ -68,7 +68,9 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    goes through, an "Is this ongoing?" prompt appears under the success line: pick how often, and it
    records a standing arrangement with the member you just sent to, who confirms it in the Recurring
    Activity app. The prompt does not appear when an arrangement with that member is already recorded.
-5. **Sending has its own tab (2026-08-27).** The shell's tabs are Wallet, Earn, Economy, and Send.
+5. **Sending has its own tab (2026-08-27).** The shell's tabs are Wallet, Earn, Send, and Economy —
+   the member's own wallet first (what they hold, how they get more, how they send it), the
+   community's figures last.
    The send form appears once, on the Send tab, together with the "Accepted everywhere" list and the
    ledger note. It used to sit under whichever tab was open, so the same form was on the screen four
    times over and every tab ended in it.
@@ -303,7 +305,8 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 - 2026-08-27: **Sending moved into its own tab.** The send panel rendered outside the tab body in
   `service-credits-shell.tsx`, so it was pinned to the bottom of Wallet, Earn, and Economy alike —
   one form shown four times, and every tab, however long, ended in it. The shell now has a fourth
-  tab, `Send` (`Tab` in `sc-shared.ts` gains `"send"`), and the panel renders only as that tab's body,
+  tab, `Send` (`Tab` in `sc-shared.ts` gains `"send"`), placed before Economy so the member's own
+  wallet reads first and the community's figures last, and the panel renders only as that tab's body,
   bringing the "Accepted everywhere" list and the ledger note with it. This also retires the
   Economy-tab ordering added earlier the same day (`sendFirst`), which existed only to decide where
   the always-present panel sat relative to those figures — there is nothing left to order. The panel
