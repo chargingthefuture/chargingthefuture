@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; flag reversal + re-add after remove — SH-A6, SH-A6b) |
 
 ---
 
@@ -542,8 +542,36 @@ Result: web ☐
 **Steps:**
 1. In the admin submissions view, locate a pending submission.
 2. Use the Flag action.
+3. Switch the status filter to **Flagged**. Confirm all four status chips are visible and reachable at phone width — none is cut off at the right edge.
+4. Confirm the submission appears there, with **Accept** and **Reject** buttons and a line saying the flag clears by accepting or rejecting.
+5. Use Accept (or Reject). Confirm the row leaves the Flagged filter and appears under the status you chose.
 
-**Expected:** Submission status changes to "flagged". It no longer appears in the pending filter. The action requires a confirm gesture on Android.
+**Expected:** Flagging moves the submission out of Pending and into Flagged. From Flagged it can go either way — flag is a holding state for a second look, not a dead end. The action requires a confirm gesture on Android.
+
+Notes:
+- Steps 3–5 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no Accept or Reject and no way back. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap.
+- Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+
+Result: web ☐
+
+---
+
+### SH-A6b — A removed submission frees the person to be nominated again
+
+**Role:** admin/moderator, then member · **Surfaces:** web
+
+**Precondition:** A submission exists for a nominee whose Quora URL you can re-enter.
+
+**Steps:**
+1. In the admin submissions view, use **Remove** on that submission.
+2. As a member, open Scout and nominate the same person again — same Quora profile URL and the same skills.
+
+**Expected:** The nomination is accepted. Removing a submission voids it, so the person can be nominated again in the same round.
+
+Notes:
+- This was broken until 2026-08-27: the table carried a blanket `UNIQUE (round_id, signature_hash)` with no predicate, so a removed row held its slot for the rest of the round and the re-add failed with "Duplicate submission signature for this round" — even though the insert path's own rule says a removed row must not block a re-nomination. The constraint is now a partial index carrying that same rule.
+- A **pending, accepted or flagged** submission still blocks a duplicate. Un-flag it (SH-A6) rather than re-adding.
+- A **rejected** submission also no longer blocks a re-nomination.
 
 Result: web ☐
 

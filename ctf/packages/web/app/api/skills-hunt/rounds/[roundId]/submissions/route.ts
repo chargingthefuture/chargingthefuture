@@ -62,7 +62,7 @@ function mapSubmissionCreateError(message: string): { status: number; code: stri
     return {
       status: 409,
       code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
-      responseMessage: 'Duplicate submission signature for this round.',
+      responseMessage: 'This person has already been nominated in this round. An admin can reject or remove the existing nomination if it should not stand.',
     };
   }
   if (message === 'skills_hunt_invalid_quora_url') {

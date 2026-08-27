@@ -47,6 +47,14 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 // accidentally accept/reject on a paid surface (the old inline table crammed four tiny buttons into
 // a scrolling cell). Accept and Reject are the two halves of the primary row; Flag/Remove are a
 // quieter secondary row.
+//
+// Flag is a holding state, not a verdict — it parks a submission for a second look. So a flagged row
+// keeps Accept and Reject, which is how it comes back out. Until 2026-08-27 every non-pending status
+// took the same terminal branch, which left a flagged submission with no way forward: it was gone
+// from the Pending list, the round's duplicate guard would not let the same person be nominated
+// again, and Remove (which does not free that guard either) was the only button on offer. Accepted
+// and rejected stay terminal — reversing those moves points and can pay a reward, so they are not
+// one tap away.
 function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -62,6 +70,23 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
       Remove
     </button>
   );
+  const verdictRow = (
+    <div style={{ display: "flex", gap: 8 }}>
+      <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
+      <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
+    </div>
+  );
+
+  if (submission.status === "flagged") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look — accept or reject it to clear the flag.</span>
+        {verdictRow}
+        <div style={{ display: "flex", gap: 8 }}>{removeBtn}</div>
+      </div>
+    );
+  }
+
   if (submission.status !== "pending") {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
@@ -70,12 +95,10 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
       </div>
     );
   }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
-        <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
-      </div>
+      {verdictRow}
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" disabled={acting} onClick={() => onFlag(submission.id)} style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Flag</button>
         {removeBtn}

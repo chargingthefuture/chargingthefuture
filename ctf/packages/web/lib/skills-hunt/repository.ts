@@ -1714,6 +1714,40 @@ export async function getRoundRewardSummary(
   };
 }
 
+// The submission insert throws in a dozen places — its own guards, and the database's constraints.
+// Each maps to one caller-facing reason the route turns into a status code and a sentence. Kept as
+// a lookup rather than a chain of ifs so adding a reason does not grow one function's branching.
+const SUBMISSION_INSERT_ERRORS: ReadonlyArray<{ match: string; reason: string }> = [
+  { match: 'skills_hunt_round_not_active', reason: 'skills_hunt_round_not_active' },
+  { match: 'skills_hunt_round_not_found', reason: 'skills_hunt_round_not_found' },
+  { match: 'skills_hunt_pre_approval_required', reason: 'skills_hunt_pre_approval_required' },
+  { match: 'skills_hunt_rejection_guard_violation', reason: 'skills_hunt_rejection_guard_violation' },
+  { match: 'skills_hunt_invalid_quora_url', reason: 'skills_hunt_invalid_quora_url' },
+  { match: 'skills_hunt_url_dead', reason: 'skills_hunt_url_dead' },
+  // The blanket constraint (a legacy database that has not run the current schema yet) and the
+  // partial index that replaced it on 2026-08-27 mean the same thing to a caller: this person
+  // already has a live nomination in this round.
+  { match: 'skills_hunt_submissions_round_id_signature_hash_key', reason: 'skills_hunt_duplicate_submission' },
+  { match: 'uq_skills_hunt_submissions_round_signature_live', reason: 'skills_hunt_duplicate_submission' },
+];
+
+function rethrowSubmissionInsertError(error: unknown): never {
+  const message = error instanceof Error ? error.message : 'unknown';
+
+  // Passed through whole rather than mapped: the message may carry a `:<reset ISO>` suffix the
+  // route reads to tell the scout when they can submit again.
+  if (message.includes('skills_hunt_submission_limit_exceeded')) {
+    throw new Error(message);
+  }
+
+  const matched = SUBMISSION_INSERT_ERRORS.find((entry) => message.includes(entry.match));
+  if (matched) {
+    throw new Error(matched.reason);
+  }
+
+  throw error;
+}
+
 export async function createSubmission(
   submitterUserId: string,
   submitterUsername: string | null,
@@ -1861,36 +1895,7 @@ export async function createSubmission(
     );
 
     return mapSubmission(inserted.rows[0]);
-  }).catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : 'unknown';
-    if (message.includes('skills_hunt_round_not_active')) {
-      throw new Error('skills_hunt_round_not_active');
-    }
-    if (message.includes('skills_hunt_round_not_found')) {
-      throw new Error('skills_hunt_round_not_found');
-    }
-    if (message.includes('skills_hunt_submission_limit_exceeded')) {
-      // Preserve the whole message — it may carry a `:<reset ISO>` suffix the
-      // route uses to tell the scout when they can submit again.
-      throw new Error(message);
-    }
-    if (message.includes('skills_hunt_pre_approval_required')) {
-      throw new Error('skills_hunt_pre_approval_required');
-    }
-    if (message.includes('skills_hunt_rejection_guard_violation')) {
-      throw new Error('skills_hunt_rejection_guard_violation');
-    }
-    if (message.includes('skills_hunt_invalid_quora_url')) {
-      throw new Error('skills_hunt_invalid_quora_url');
-    }
-    if (message.includes('skills_hunt_url_dead')) {
-      throw new Error('skills_hunt_url_dead');
-    }
-    if (message.includes('skills_hunt_submissions_round_id_signature_hash_key')) {
-      throw new Error('skills_hunt_duplicate_submission');
-    }
-    throw error;
-  });
+  }).catch(rethrowSubmissionInsertError);
 }
 
 export async function listSubmissions(

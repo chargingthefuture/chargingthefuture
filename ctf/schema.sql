@@ -595,8 +595,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   reviewed_at TIMESTAMPTZ NULL,
   directory_profile_generated_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (round_id, signature_hash)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -759,6 +758,18 @@ CREATE TABLE IF NOT EXISTS skills_hunt_proposed_skill_promotions (
 ALTER TABLE IF EXISTS skills_hunt_proposed_skill_promotions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'skills-hunt';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_proposed_skill_promotions_normalized ON skills_hunt_proposed_skill_promotions (normalized_skill);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_rounds (status, starts_at DESC, ends_at DESC);
+-- Re-nominating the same person (owner bug report 2026-08-27). The blanket
+-- UNIQUE (round_id, signature_hash) on this table contradicted the rule the insert path already
+-- enforces in code, which reads: block a nomination when a row for the same normalized Quora URL is
+-- still live, where a rejected or removed row is NOT live. The constraint ignored both conditions,
+-- so a submission an admin had removed went on occupying its signature for the rest of the round
+-- and the same person could never be nominated again — Remove looked like it voided a submission
+-- and did not. Replaced by a partial unique index carrying the same predicate the code uses, so the
+-- database and the code now say one thing. A pending, accepted or flagged row still holds the slot.
+ALTER TABLE IF EXISTS skills_hunt_submissions DROP CONSTRAINT IF EXISTS skills_hunt_submissions_round_id_signature_hash_key;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_submissions_round_signature_live
+  ON skills_hunt_submissions (round_id, signature_hash)
+  WHERE deleted_at IS NULL AND status <> 'rejected';
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;
