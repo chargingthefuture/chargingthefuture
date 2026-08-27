@@ -55,7 +55,6 @@ export type SkillsHuntSubmission = {
   quoraProfileUrl: string;
   skills: string[];
   proposedSkills: string[];
-  claimedProfessions: string[];
   status: SkillsHuntSubmissionStatus;
   pointsAwarded: number;
   participationPoints: number;
@@ -84,7 +83,6 @@ export type SkillsHuntSubmissionInput = {
   quoraProfileUrl: string;
   skills: string[];
   proposedSkills?: string[];
-  claimedProfessions: string[];
   // Nominee location. `country` is required (validated); `state`/`city` are optional. Plain names per
   // the shared location standard; carried into the generated directory profile on accept.
   country: string;

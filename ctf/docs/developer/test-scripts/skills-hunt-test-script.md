@@ -277,7 +277,7 @@ Result: web ☐
 2. Observe the submissions list: each entry shows full name, status (pending/accepted/rejected), and relative date.
 3. Observe the achievements/badges row — seeded badges (e.g. First Finder) appear if awarded.
 
-**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion.
+**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion. **Diversity Champion** is awarded for accepted nominations spanning 3+ distinct taxonomy sectors, resolved from the submitted skills — it counted claimed professions until 2026-08-27, a field the nomination form no longer collects, which made it unearnable. The nomination form asks for skills, never professions.
 
 Result: web ☐
 

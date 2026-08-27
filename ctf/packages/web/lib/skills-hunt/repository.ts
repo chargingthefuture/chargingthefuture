@@ -83,7 +83,6 @@ type SkillsHuntSubmissionRow = {
   quora_profile_url: string;
   skills: unknown;
   proposed_skills?: unknown;
-  claimed_professions: unknown;
   status: 'pending' | 'accepted' | 'rejected' | 'flagged';
   points_awarded: number;
   participation_points?: number | null;
@@ -318,7 +317,6 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
     quoraProfileUrl: row.quora_profile_url,
     skills: asStringArray(row.skills),
     proposedSkills: asStringArray(row.proposed_skills),
-    claimedProfessions: asStringArray(row.claimed_professions),
     status: row.status,
     pointsAwarded: row.points_awarded,
     participationPoints: row.participation_points ?? 0,
@@ -464,7 +462,6 @@ type NormalizedSubmissionFields = {
   bio: string;
   skills: string[];
   proposedSkills: string[];
-  claimedProfessions: string[];
   country: string;
   state: string | null;
   city: string | null;
@@ -476,7 +473,6 @@ function normalizeSubmissionFields(input: SkillsHuntSubmissionInput): Normalized
     bio: normalizeText(input.bio ?? ''),
     skills: normalizeArray(input.skills),
     proposedSkills: normalizeArray(input.proposedSkills ?? []),
-    claimedProfessions: normalizeArray(input.claimedProfessions),
     // Location: country is REQUIRED (a nominee's country matters, especially for non-US members and
     // the GDP country breakdown); state/city are optional.
     country: normalizeText(input.country ?? ''),
@@ -533,7 +529,7 @@ function hasValidSubmissionSkills(skills: string[], proposedSkills: string[]): b
 
 function hasUnsafeSubmissionText(fields: NormalizedSubmissionFields): boolean {
   return hasUnsafeCollectionText([
-    fields.fullName, fields.bio, ...fields.skills, ...fields.proposedSkills, ...fields.claimedProfessions,
+    fields.fullName, fields.bio, ...fields.skills, ...fields.proposedSkills,
   ]);
 }
 
@@ -546,7 +542,6 @@ export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boole
     hasValidSubmissionBio(fields.bio),
     hasValidSubmissionUrl(input),
     hasValidSubmissionSkills(fields.skills, fields.proposedSkills),
-    fields.claimedProfessions.length <= 20,
     hasValidSubmissionLocation(fields),
     !hasUnsafeSubmissionText(fields),
   ];
@@ -912,8 +907,11 @@ async function maybeAwardRareTalentScout(
   }
 }
 
-// diversity-champion — accepted submissions spanning 3+ distinct claimed
-// professions. claimed_professions is a JSONB array, so we unnest into rows.
+// diversity-champion — accepted submissions spanning 3+ distinct sectors, which is what the badge
+// has always promised ("Skills spanning 3+ sectors"). It used to count distinct claimed professions
+// instead, and the nomination form stopped collecting those, so the count was always 0 and the badge
+// was unearnable. Sectors now come from the skills the scout actually submits, resolved through the
+// Skills Taxonomy (skill -> job title -> sector), the same join the sector missions use.
 async function maybeAwardDiversityChampion(
   client: PoolClient,
   userId: string,
@@ -921,20 +919,22 @@ async function maybeAwardDiversityChampion(
 ): Promise<void> {
   const diversityResult = await client.query<{ total: string }>(
     `
-      SELECT COUNT(DISTINCT prof)::text AS total
-      FROM (
-        SELECT jsonb_array_elements_text(claimed_professions) AS prof
-        FROM skills_hunt_submissions
-        WHERE submitter_user_id = $1
-          AND status = 'accepted'
-          AND deleted_at IS NULL
-          AND jsonb_typeof(claimed_professions) = 'array'
-      ) p
+      SELECT COUNT(DISTINCT sec.id)::text AS total
+      FROM skills_hunt_submissions s
+      JOIN LATERAL jsonb_array_elements_text(s.skills) skill(value) ON TRUE
+      JOIN skills_taxonomy_skills ts
+        ON LOWER(ts.name) = LOWER(TRIM(skill.value)) AND ts.is_active = TRUE
+      JOIN skills_taxonomy_job_titles jt ON jt.id = ts.job_title_id AND jt.is_active = TRUE
+      JOIN skills_taxonomy_sectors sec ON sec.id = jt.sector_id AND sec.is_active = TRUE
+      WHERE s.submitter_user_id = $1
+        AND s.status = 'accepted'
+        AND s.deleted_at IS NULL
+        AND jsonb_typeof(s.skills) = 'array'
     `,
     [userId],
   );
-  const distinctProfessionCount = parseCount(diversityResult.rows[0]?.total);
-  if (distinctProfessionCount >= 3) {
+  const distinctSectorCount = parseCount(diversityResult.rows[0]?.total);
+  if (distinctSectorCount >= 3) {
     await ensureAchievement(
       client, userId,
       NAMED_BADGES.diversityChampion.code, NAMED_BADGES.diversityChampion.title, NAMED_BADGES.diversityChampion.description,
@@ -1147,11 +1147,10 @@ async function scoreSubmission(
     round_id: string;
     quora_profile_url_normalized: string;
     skills: unknown;
-    claimed_professions: unknown;
     bio: string;
   }>(
     `
-      SELECT id, round_id, quora_profile_url_normalized, skills, claimed_professions, bio
+      SELECT id, round_id, quora_profile_url_normalized, skills, bio
       FROM skills_hunt_submissions
       WHERE id = $1::uuid
       LIMIT 1
@@ -1249,7 +1248,6 @@ async function maybeAutoGenerateDirectoryProfile(
     full_name: string;
     bio: string;
     quora_profile_url: string;
-    claimed_professions: unknown;
     skills: unknown;
     proposed_skills: unknown;
     country: string | null;
@@ -1257,7 +1255,7 @@ async function maybeAutoGenerateDirectoryProfile(
     city: string | null;
   }>(
     `
-      SELECT id, full_name, bio, quora_profile_url, claimed_professions, skills, proposed_skills, country, state, city
+      SELECT id, full_name, bio, quora_profile_url, skills, proposed_skills, country, state, city
       FROM skills_hunt_submissions
       WHERE id = $1::uuid
         AND status = 'accepted'
@@ -1299,11 +1297,11 @@ async function maybeAutoGenerateDirectoryProfile(
     }
   }
 
-  const professions = asStringArray(submission.claimed_professions);
   // No generic "SkillsHunt contributor" headline — a nominated profile is shown as a
   // community-generated profile (with who nominated it), driven by the columns below, not a
-  // placeholder headline. Only a real claimed profession becomes the headline.
-  const headline = professions[0] ?? null;
+  // placeholder headline. This used to take the nominee's first claimed profession, a field the
+  // nomination form no longer collects, so it has been null for every generated profile since.
+  const headline = null;
   // Reserved unclaimed handle so the generated profile has a stable @handle until a verified
   // owner claims it (per the SkillsHunt inventory: community-<hex> namespace).
   const unclaimedHandle = `community-${randomUUID().replace(/-/g, '').slice(0, 6)}`;
@@ -1596,7 +1594,6 @@ export async function getSubmissionById(submissionId: string): Promise<SkillsHun
         quora_profile_url,
         skills,
         proposed_skills,
-        claimed_professions,
         status,
         points_awarded,
         participation_points,
@@ -1774,7 +1771,6 @@ export async function createSubmission(
 
     const skills = normalizeArray(input.skills);
     const proposedSkills = normalizeArray(input.proposedSkills ?? []);
-    const claimedProfessions = normalizeArray(input.claimedProfessions);
     const signatureHash = buildSignatureHash(normalizedUrl, skills, proposedSkills);
 
     const inserted = await client.query<SkillsHuntSubmissionRow>(
@@ -1790,7 +1786,6 @@ export async function createSubmission(
             quora_profile_url_normalized,
             skills,
             proposed_skills,
-            claimed_professions,
             signature_hash,
             country,
             state,
@@ -1813,7 +1808,6 @@ export async function createSubmission(
           quora_profile_url,
           skills,
           proposed_skills,
-          claimed_professions,
           status,
           points_awarded,
           participation_points,
@@ -1840,7 +1834,6 @@ export async function createSubmission(
         normalizedUrl,
         normalizedUrl,
         JSON.stringify(skills),
-        JSON.stringify(claimedProfessions),
         signatureHash,
         liveness.result,
         liveness.checkedAtIso,
@@ -1926,7 +1919,6 @@ export async function listSubmissions(
       quora_profile_url,
       skills,
       proposed_skills,
-      claimed_professions,
       status,
       points_awarded,
       participation_points,
@@ -2102,7 +2094,6 @@ export async function reviewSubmission(
           bio,
           quora_profile_url,
           skills,
-          claimed_professions,
           status,
           points_awarded,
           score_breakdown,
@@ -2155,7 +2146,6 @@ export async function reviewSubmission(
           quora_profile_url,
           skills,
           proposed_skills,
-          claimed_professions,
           status,
           points_awarded,
           participation_points,

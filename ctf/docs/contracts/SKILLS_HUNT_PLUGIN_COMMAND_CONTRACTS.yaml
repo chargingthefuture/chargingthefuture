@@ -118,7 +118,7 @@ contracts:
     command: skills-hunt.submission.create
     version: 1.1.0
     description: >-
-      Create a contributor submission with validated profile URL, skill set, profession claims, and
+      Create a contributor submission with validated profile URL, skill set, and
       the nominee's location. `country` is required; `state`/`city` are optional. On accept the
       location carries into the generated directory profile (the shared member profile). Admins are
       exempt from the scout rate limits (the rolling weekly submission cap and the reputation-driven
@@ -140,9 +140,6 @@ contracts:
       skills:
         type: array
         required: true
-      claimedProfessions:
-        type: array
-        required: false
       country:
         type: string
         required: true
@@ -684,3 +681,5 @@ changelog:
     change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.
   - date: 2026-08-27
     change: Removed the count_distinct_sectors mission goal type from skills-hunt.mission.create — it counted claimed professions, which the nomination form no longer collects, so the goal could never be completed. The stack bonus was deleted from submission scoring for the same reason; it was a computed figure with no contract surface.
+  - date: 2026-08-27
+    change: Removed the claimedProfessions input from skills-hunt.submission.create — the nomination form stopped collecting professions when the taxonomy skills picker replaced that field, every reader has been removed, and the underlying column is dropped.

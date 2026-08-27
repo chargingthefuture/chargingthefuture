@@ -180,11 +180,10 @@ export async function recomputeMissionProgressForUser(
   // type derives its count from this set.
   const submissionsResult = await client.query<{
     skills: unknown;
-    claimed_professions: unknown;
     score_breakdown: Record<string, unknown>;
   }>(
     `
-      SELECT skills, claimed_professions, score_breakdown
+      SELECT skills, score_breakdown
       FROM skills_hunt_submissions
       WHERE round_id = $1::uuid
         AND submitter_user_id = $2
@@ -196,9 +195,8 @@ export async function recomputeMissionProgressForUser(
 
   const acceptedSubmissions = submissionsResult.rows.map(mapAcceptedSubmission);
 
-  // Sector-goal matching: resolve each submission's skills to taxonomy sectors once, so
-  // count_skills_in_sector counts real taxonomy membership instead of relying only on the
-  // claimed-professions text proxy. One query for the whole accepted set.
+  // Sector-goal matching: resolve each submission's skills to taxonomy sectors once.
+  // One query for the whole accepted set.
   if (missions.some((mission) => mission.goalType === 'count_skills_in_sector')) {
     const sectorsBySkill = await mapSkillsToSectors(
       client,
@@ -223,7 +221,6 @@ export async function recomputeMissionProgressForUser(
 
 type AcceptedSubmissionRow = {
   skills: unknown;
-  claimed_professions: unknown;
   score_breakdown: Record<string, unknown>;
 };
 
@@ -234,9 +231,6 @@ function mapAcceptedSubmission(row: AcceptedSubmissionRow): AcceptedSubmissionFo
   return {
     matchedSectors: new Set<string>(),
     skills: Array.isArray(row.skills) ? (row.skills as string[]) : [],
-    claimedProfessions: Array.isArray(row.claimed_professions)
-      ? (row.claimed_professions as string[])
-      : [],
     rareSkillBonus:
       typeof row.score_breakdown === 'object'
       && row.score_breakdown !== null
@@ -295,7 +289,6 @@ async function processMissionProgress(
 
 type AcceptedSubmissionForMission = {
   skills: string[];
-  claimedProfessions: string[];
   rareSkillBonus: number;
   // Lowercased taxonomy sector names this submission's skills belong to; filled by the
   // recompute when any sector-goal mission exists in the round.
@@ -365,13 +358,8 @@ function computeProgressForMission(
       if (!sectorName) {
         return 0;
       }
-      // A submission counts when any of its skills belongs to the sector in the taxonomy, or —
-      // kept for back-compat with progress earned before the taxonomy join — when a claimed
-      // profession matches the sector name.
-      return acceptedSubmissions.filter((s) =>
-        s.matchedSectors.has(sectorName)
-        || s.claimedProfessions.some((p) => p.toLowerCase() === sectorName),
-      ).length;
+      // A submission counts when any of its skills belongs to the sector in the taxonomy.
+      return acceptedSubmissions.filter((s) => s.matchedSectors.has(sectorName)).length;
     }
     default:
       return 0;

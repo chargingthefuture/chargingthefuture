@@ -92,7 +92,6 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
           quoraProfileUrl: quora.trim(),
           skills,
           proposedSkills,
-          claimedProfessions: [],
           country: country.trim(),
           state: stateRegion.trim() ? stateRegion.trim() : null,
           city: city.trim() ? city.trim() : null,

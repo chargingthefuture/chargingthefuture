@@ -571,7 +571,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   city TEXT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
-  claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'flagged')),
   review_action TEXT NULL CHECK (review_action IN ('accept', 'reject', 'edit', 'flag')),
@@ -760,6 +759,14 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_r
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;
+-- claimed_professions is dropped (owner directive 2026-08-27: no unused code). The nomination form
+-- stopped collecting professions when the taxonomy skills picker replaced that field, and every
+-- reader has now been removed: the team leaderboard, the stack bonus and the count_distinct_sectors
+-- goal type were deleted, the diversity-champion badge counts taxonomy sectors from the submitted
+-- skills instead (which is what its description always promised), and the generated Directory
+-- profile's headline had been null for as long as the column had been empty. Nothing reads it, so
+-- it goes rather than sitting as a column no code touches.
+ALTER TABLE IF EXISTS skills_hunt_submissions DROP COLUMN IF EXISTS claimed_professions;
 -- Team leaderboard removed (owner directive 2026-08-27). Teams was meant to be members teaming up
 -- on submissions; it was never that — it regrouped the same accepted nominations by the nominee's
 -- claimed profession, and since the nomination form stopped collecting professions every row landed
@@ -4834,7 +4841,6 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS bio TEXT 
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url_normalized TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS country TEXT NULL;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS state TEXT NULL;
