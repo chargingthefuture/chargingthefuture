@@ -643,6 +643,8 @@ Result: web ☐
 
 **Expected:** The archived mission no longer appears to members. It may still be visible in the admin view with `status=archived` — it is not hard-deleted.
 
+**Then bring it back:** on that archived row the button now reads **Activate**. Press it (no confirmation — activating is the harmless direction) and re-check the member Missions tab: the mission appears again, with any progress members had already earned intact. Archiving stays confirm-gated because it takes a mission away from members.
+
 Result: web ☐
 
 ---

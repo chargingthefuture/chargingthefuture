@@ -38,9 +38,37 @@ function missionGoalMetadata(isSector: boolean, sectorName: string, sectorId: st
   return base;
 }
 
-function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArchive: (id: string) => void }) {
+// Shared error-shaping for the mission calls, kept out of the handlers so each stays within the
+// complexity limit (rule 116).
+async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+  const body = (await res.json().catch(() => null)) as { message?: string } | null;
+  return body?.message ?? fallback;
+}
+
+function errorText(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+// No request body on the soft-archive DELETE, so no Content-Type — only the CSRF confirmation header.
+function archiveRequest(): RequestInit {
+  return { method: "DELETE", headers: { "x-ctf-csrf": "1" } };
+}
+
+function activateRequest(status: "active" | "archived"): RequestInit {
+  return {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+    body: JSON.stringify({ status }),
+  };
+}
+
+function MissionRow({ mission, onSetStatus }: {
+  mission: SkillsHuntMission;
+  onSetStatus: (id: string, status: "active" | "archived") => void;
+}) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
+  const isArchived = mission.status === "archived";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: `1px solid ${t.BORDER}` }}>
       {mission.colorHex && <span style={{ width: 12, height: 12, borderRadius: 3, background: mission.colorHex, flexShrink: 0 }} aria-hidden />}
@@ -59,12 +87,10 @@ function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArch
           {mission.autoCreated && mission.sourceSector && ` · from ${mission.sourceSector} gap`}
         </div>
       </div>
-      {mission.status !== "archived" && (
-        <button type="button" onClick={() => onArchive(mission.id)}
-          style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-          Archive
-        </button>
-      )}
+      <button type="button" onClick={() => onSetStatus(mission.id, isArchived ? "active" : "archived")}
+        style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: isArchived ? t.ACCENT : t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+        {isArchived ? "Activate" : "Archive"}
+      </button>
     </div>
   );
 }
@@ -174,22 +200,26 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  async function archive(missionId: string) {
+  // Archiving and bringing a mission back are the same operation in opposite directions, so both
+  // run through here. Archiving takes a mission away from members and is confirm-gated; activating
+  // is the harmless direction and is not. Archive keeps using DELETE (the soft-archive route);
+  // activating uses PUT, which has always existed but had no caller until now.
+  async function setStatus(missionId: string, status: "active" | "archived") {
     if (!roundId) return;
-    if (!window.confirm("Archive this mission? It will no longer be active for players.")) return;
+    const archiving = status === "archived";
+    if (archiving && !window.confirm("Archive this mission? It will no longer be active for players.")) return;
+    const failure = archiving ? "Unable to archive mission." : "Unable to activate mission.";
     try {
-      const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions/${missionId}`, {
-        method: "DELETE",
-        // No request body on this DELETE, so no Content-Type — only the CSRF confirmation header.
-        headers: { "x-ctf-csrf": "1" },
-      });
+      const res = await fetch(
+        `/api/skills-hunt/admin/rounds/${roundId}/missions/${missionId}`,
+        archiving ? archiveRequest() : activateRequest(status),
+      );
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message ?? "Unable to archive mission.");
+        throw new Error(await readErrorMessage(res, failure));
       }
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to archive mission.");
+      setError(errorText(e, failure));
     }
   }
 
@@ -217,7 +247,7 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
         <div style={{ color: t.MUTED, fontSize: 13 }}>No missions for this round yet.</div>
       ) : (
         <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}`, overflow: "hidden" }}>
-          {missions.map((m) => <MissionRow key={m.id} mission={m} onArchive={archive} />)}
+          {missions.map((m) => <MissionRow key={m.id} mission={m} onSetStatus={setStatus} />)}
         </div>
       )}
     </div>
