@@ -92,8 +92,8 @@ async function main() {
             'accept',
             'seed-moderator',
             'seed accepted',
-            '{"matchBase":10,"firstMatchBonus":5,"stackBonus":3,"rareSkillBonus":0,"qualityBonus":2}'::jsonb,
-            20,
+            '{"matchBase":10,"firstMatchBonus":5,"rareSkillBonus":0,"qualityBonus":2}'::jsonb,
+            17,
             0,
             TRUE,
             'valid',
@@ -170,9 +170,9 @@ async function main() {
         INSERT INTO skills_hunt_leaderboard
           (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
            first_match_count, pending_points, last_submission_at,
-           user_id, username_snapshot, team_key, metadata)
+           user_id, username_snapshot, metadata)
         VALUES
-          ($1::uuid, 'individual', 1, 20, 1, 0, 1, 0, NOW(), 'seed-user-01', 'seed-user-01', NULL, '{}'::jsonb)
+          ($1::uuid, 'individual', 1, 17, 1, 0, 1, 0, NOW(), 'seed-user-01', 'seed-user-01', '{}'::jsonb)
         ON CONFLICT (round_id, mode, rank)
         DO UPDATE SET
           score = EXCLUDED.score,
