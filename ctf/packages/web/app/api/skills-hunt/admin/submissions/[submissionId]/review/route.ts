@@ -12,6 +12,7 @@ import {
   validateReviewInput,
 } from 'lib/skills-hunt/repository';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import { settleMissionBonusesBestEffort } from 'lib/skills-hunt/mission-bonus';
 import type { SkillsHuntSubmission, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
@@ -108,6 +109,21 @@ async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, rev
   }
 }
 
+// Same posture as the accept reward for any mission this accept just completed: the recompute
+// inside the review transaction records the completion, and the bonus is settled here, after the
+// commit, so a ledger problem can never undo the review. Missions only complete on an accept, so
+// any other review action has nothing to settle (see lib/skills-hunt/mission-bonus.ts).
+async function settleMissionBonusesForReview(submission: SkillsHuntSubmission, reviewerUserId: string): Promise<void> {
+  if (submission.status !== 'accepted') {
+    return;
+  }
+  await settleMissionBonusesBestEffort({
+    roundId: submission.roundId,
+    userId: submission.submitterUserId,
+    reviewerUserId,
+  });
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const gate = await requireSkillsHuntModeratorAccess();
   if (!gate.allowed) {
@@ -168,6 +184,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     // The review decision is already committed and audited above; paying the
     // accept reward is a best-effort follow-up (see grantAcceptRewardBestEffort).
     await grantAcceptRewardBestEffort(submission, gate.auth.userId);
+
+    await settleMissionBonusesForReview(submission, gate.auth.userId);
 
     // Re-read from the database so the response reflects the committed reward
     // state (credit_granted / credit_amount) rather than the in-memory mutation,

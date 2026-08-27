@@ -557,6 +557,33 @@ policies:
       - csrf_denied
 
   - pluginId: skills-hunt
+    command: skills-hunt.mission.bonus_grant
+    version: 1.0.0
+    requiredRoles:
+      - system
+    attributePolicies:
+      tenancy: same_workspace
+      missionCompleted: required
+      onePayoutPerMissionAndMember: enforced
+      zeroBonusSettledWithoutMint: enforced
+      mintBudget: enforced
+    consentRequirements:
+      scopes:
+        - service_credits_governance_mint
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - mission_not_completed
+      - already_settled
+      - mint_budget_exceeded
+
+  - pluginId: skills-hunt
     command: skills-hunt.mission.auto_config_update
     version: 1.0.0
     requiredRoles:
@@ -587,3 +614,5 @@ changelog:
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) access-policy contracts.
   - date: 2026-08-27
     change: Added access policies for the mission commands (list/create/update/archive) and the auto-mission commands (auto_generate with cron-secret system calls, auto_config_update).
+  - date: 2026-08-27
+    change: Added the access policy for skills-hunt.mission.bonus_grant — a system-actor mint on mission completion, one payout per mission and member, zero-bonus completions settled without a mint, bounded by the treasury mint budget.

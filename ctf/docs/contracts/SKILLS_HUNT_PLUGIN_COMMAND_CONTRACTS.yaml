@@ -645,6 +645,30 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
+    command: skills-hunt.mission.bonus_grant
+    version: 1.0.0
+    description: Settles a completed mission's bonus for one member by minting the mission's bonus_points as ServiceCredits, then stamping the completion settled. Runs as a best-effort follow-up after a review commits; a completion on a zero-bonus mission is settled without a mint so a later bonus increase never pays retroactively. Idempotent per (mission, member) via the bonus_credited_at claim and the ledger idempotency key, and bounded by the treasury per-period mint budget.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+      userId:
+        type: string
+        required: true
+    outputSchema:
+      settled:
+        type: number
+        description: Count of completions settled in this pass.
+    dataAccess:
+      - skills_hunt_mission_progress
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+      - service_credits_governance_events
+    purpose: incentive_issuance
+    retentionClass: ledger_permanent
+    idempotency: true
+
+  - pluginId: skills-hunt
     command: skills-hunt.mission.auto_config_update
     version: 1.0.0
     description: Admin updates the auto-mission knobs (kill switch, minimum sector gap, per-round cap, default goal target and bonus points).
@@ -683,3 +707,5 @@ changelog:
     change: Bumped skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review to v1.1.0 — round create/update gain the rewardCreditsPerAccept and rewardPerUserRoundCap inputs, and submission.review mints the configured ServiceCredits reward to the scout on accept (idempotent, cap- and budget-bounded).
   - date: 2026-08-27
     change: Added the previously undocumented mission commands (mission.list, mission.create, mission.update, mission.archive) and the new auto-mission commands (mission.auto_generate, mission.auto_config_update) for missions auto-opened from Workforce sector gaps.
+  - date: 2026-08-27
+    change: Added skills-hunt.mission.bonus_grant — completing a mission now mints its bonus_points as ServiceCredits (the ledger entry continuity §2.9 always specified), idempotent per mission and member and bounded by the treasury mint budget.

@@ -16,7 +16,10 @@
 // Entry points: createRound calls generateAutoMissionsForRound inline so a new round starts with
 // its gap missions; the weekly GitHub Actions workflow (skills-hunt-auto-missions.yml) and the
 // admin "Run now" button call runAutoMissions to top up rounds that were already active when the
-// gaps or the config changed. It never writes into Workforce, Directory, or Skills Taxonomy.
+// gaps or the config changed. Every run also rewrites the goal target and bonus points on the auto
+// missions already live from the saved config, so a settings change reaches the missions already
+// open instead of only the next ones (see refreshLiveAutoMissions). It never writes into Workforce,
+// Directory, or Skills Taxonomy.
 
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
@@ -40,6 +43,9 @@ export type AutoMissionRoundResult = {
   roundId: string;
   roundName: string;
   opened: Array<{ sector: string; gap: number; missionId: string }>;
+  // Live auto missions in this round whose goal target / bonus points were brought back in line
+  // with the saved config by this run (see refreshLiveAutoMissions).
+  updated: number;
 };
 
 export type AutoMissionRunSummary = {
@@ -168,6 +174,32 @@ async function listExistingAutoMissionSectors(client: PoolClient, roundId: strin
   );
 }
 
+// The config knobs are the source of truth for auto missions, not just their starting values: an
+// admin who raises the bonus or the goal target expects the missions already open to follow. Each
+// run therefore rewrites goal_target / bonus_points on this round's live auto missions from the
+// saved config (a no-op when they already match, so the row is not touched needlessly).
+//
+// Two deliberate limits. A per-mission edit an admin makes to an auto mission's target or bonus is
+// reverted by the next run — auto missions are config-driven by definition; edit a manual mission,
+// or change the config, to make a change stick. And the gap figure (source_gap_at_creation, quoted
+// in the description) is a snapshot from when the mission opened and is left alone.
+async function refreshLiveAutoMissions(
+  client: PoolClient,
+  roundId: string,
+  config: AutoMissionConfig,
+): Promise<number> {
+  const result = await client.query(
+    `UPDATE skills_hunt_missions
+     SET goal_target = $2, bonus_points = $3, updated_by_user_id = $4, updated_at = NOW()
+     WHERE round_id = $1::uuid
+       AND auto_created = TRUE
+       AND status <> 'archived'
+       AND (goal_target <> $2 OR bonus_points <> $3)`,
+    [roundId, config.defaultGoalTarget, config.defaultBonusPoints, SKILLS_HUNT_AUTO_MISSION_ACTOR_ID],
+  );
+  return result.rowCount ?? 0;
+}
+
 async function insertAutoMission(
   client: PoolClient,
   roundId: string,
@@ -208,19 +240,25 @@ async function insertAutoMission(
 }
 
 /**
- * Open gap missions for one round, respecting the per-round cap and skipping sectors that
- * already have a live auto mission in it. `sectorGaps` is the precomputed largest-first list
- * from computeSectorGaps(), already filtered to real sectors.
+ * Bring one round's auto missions in line with the saved config: first rewrite the goal target and
+ * bonus points on the missions already live in it, then open missions for the largest-gap sectors
+ * it does not cover yet (respecting the per-round cap). `sectorGaps` is the precomputed
+ * largest-first list from computeSectorGaps(), already filtered to real sectors.
+ *
+ * The refresh runs before the cap check on purpose: a round already at its cap opens nothing, and
+ * skipping it there would leave exactly those rounds stuck on the settings they were created with.
  */
 export async function generateAutoMissionsForRound(
   client: PoolClient,
   roundId: string,
   input: { config: AutoMissionConfig; sectorGaps: SectorGap[] },
-): Promise<Array<{ sector: string; gap: number; missionId: string }>> {
+): Promise<{ opened: Array<{ sector: string; gap: number; missionId: string }>; updated: number }> {
+  const updated = await refreshLiveAutoMissions(client, roundId, input.config);
+
   const existingSectors = await listExistingAutoMissionSectors(client, roundId);
   const openSlots = Math.max(0, input.config.maxPerRound - existingSectors.size);
   if (openSlots === 0) {
-    return [];
+    return { opened: [], updated };
   }
 
   const candidates = input.sectorGaps
@@ -235,7 +273,7 @@ export async function generateAutoMissionsForRound(
       opened.push({ sector: candidate.sector, gap: candidate.gap, missionId });
     }
   }
-  return opened;
+  return { opened, updated };
 }
 
 /**
@@ -252,8 +290,8 @@ export async function generateAutoMissionsForNewRound(
     return { opened: 0 };
   }
   const sectorGaps = await computeSectorGaps();
-  const opened = await generateAutoMissionsForRound(client, roundId, { config, sectorGaps });
-  return { opened: opened.length };
+  const result = await generateAutoMissionsForRound(client, roundId, { config, sectorGaps });
+  return { opened: result.opened.length };
 }
 
 function auditRun(reason: string, metadata: Record<string, unknown>): void {
@@ -304,16 +342,16 @@ export async function runAutoMissions(input: { source: string }): Promise<AutoMi
   const sectorGaps = await computeSectorGaps();
   const rounds: AutoMissionRoundResult[] = [];
   for (const round of activeRounds.rows) {
-    const opened = await withDbTransaction((client) =>
+    const result = await withDbTransaction((client) =>
       generateAutoMissionsForRound(client, round.id, { config, sectorGaps }),
     );
-    rounds.push({ roundId: round.id, roundName: round.name, opened });
+    rounds.push({ roundId: round.id, roundName: round.name, opened: result.opened, updated: result.updated });
   }
 
   auditRun('ok', {
     source: input.source,
     consideredSectors: sectorGaps.length,
-    rounds: rounds.map((round) => ({ roundId: round.roundId, opened: round.opened.length })),
+    rounds: rounds.map((round) => ({ roundId: round.roundId, opened: round.opened.length, updated: round.updated })),
   });
 
   return { ranAtIso, enabled: true, consideredSectors: sectorGaps.length, rounds };
