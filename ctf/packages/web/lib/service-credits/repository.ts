@@ -1984,10 +1984,19 @@ export async function getCirculationMetrics(options?: { includeAdmin?: boolean }
 }
 
 export async function updateTreasuryConfig(input: { actorId: string; policy: Record<string, unknown> }) {
+  // Upsert, not a bare UPDATE. Nothing in the schema, a migration, or a seed ever inserts this
+  // singleton row, so on a database where an admin has not already written a policy by hand there is
+  // no row to update: a plain `UPDATE ... WHERE id = TRUE` matched zero rows, changed nothing, and
+  // still returned success. Every "Treasury policy saved." an admin ever saw on such a database was a
+  // no-op, which is why the panel kept reloading empty — and why mutualCredit could not be switched
+  // on from the admin surface at all. Creating the row on first save is the fix.
   await queryDb(
-    `UPDATE service_credits_treasury_config
-     SET policy = $1::jsonb, updated_by_user_id = $2, updated_at = NOW()
-     WHERE id = TRUE`,
+    `INSERT INTO service_credits_treasury_config (id, policy, updated_by_user_id, updated_at)
+     VALUES (TRUE, $1::jsonb, $2, NOW())
+     ON CONFLICT (id) DO UPDATE
+       SET policy = EXCLUDED.policy,
+           updated_by_user_id = EXCLUDED.updated_by_user_id,
+           updated_at = NOW()`,
     [JSON.stringify(input.policy), input.actorId],
   );
 }
