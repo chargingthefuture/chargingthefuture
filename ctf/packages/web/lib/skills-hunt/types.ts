@@ -273,6 +273,12 @@ export type SkillsHuntMission = {
   colorHex: string | null;
   status: SkillsHuntMissionStatus;
   displayOrder: number;
+  // Auto-opened missions (Workforce sector gaps): TRUE when the generator opened this mission.
+  // sourceSector / sourceGapAtCreation record which sector gap opened it and how large the gap
+  // was at that moment; both are null on admin-authored missions.
+  autoCreated: boolean;
+  sourceSector: string | null;
+  sourceGapAtCreation: number | null;
   createdByUserId: string;
   updatedByUserId: string;
   createdAtIso: string;

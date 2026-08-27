@@ -42,6 +42,9 @@ type SkillsHuntMissionRow = {
   color_hex: string | null;
   status: SkillsHuntMissionStatus;
   display_order: number;
+  auto_created: boolean;
+  source_sector: string | null;
+  source_gap_at_creation: string | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -83,6 +86,9 @@ function mapMission(row: SkillsHuntMissionRow): SkillsHuntMission {
     colorHex: row.color_hex,
     status: row.status,
     displayOrder: row.display_order,
+    autoCreated: row.auto_created,
+    sourceSector: row.source_sector,
+    sourceGapAtCreation: row.source_gap_at_creation == null ? null : Number(row.source_gap_at_creation),
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -111,6 +117,7 @@ export async function listMissionsForRound(
     `
       SELECT id, round_id, title, description, goal_type, goal_target,
              goal_metadata, bonus_points, color_hex, status, display_order,
+             auto_created, source_sector, source_gap_at_creation::text AS source_gap_at_creation,
              created_by_user_id, updated_by_user_id, created_at, updated_at
       FROM skills_hunt_missions
       WHERE round_id = $1::uuid
@@ -189,6 +196,19 @@ export async function recomputeMissionProgressForUser(
 
   const acceptedSubmissions = submissionsResult.rows.map(mapAcceptedSubmission);
 
+  // Sector-goal matching: resolve each submission's skills to taxonomy sectors once, so
+  // count_skills_in_sector counts real taxonomy membership instead of relying only on the
+  // claimed-professions text proxy. One query for the whole accepted set.
+  if (missions.some((mission) => mission.goalType === 'count_skills_in_sector')) {
+    const sectorsBySkill = await mapSkillsToSectors(
+      client,
+      acceptedSubmissions.flatMap((submission) => submission.skills),
+    );
+    for (const submission of acceptedSubmissions) {
+      submission.matchedSectors = collectSectorsForSkills(submission.skills, sectorsBySkill);
+    }
+  }
+
   const newlyCompleted: SkillsHuntMissionWithProgress[] = [];
 
   for (const mission of missions) {
@@ -212,6 +232,7 @@ type AcceptedSubmissionRow = {
 // free-form JSON that may not carry the field.
 function mapAcceptedSubmission(row: AcceptedSubmissionRow): AcceptedSubmissionForMission {
   return {
+    matchedSectors: new Set<string>(),
     skills: Array.isArray(row.skills) ? (row.skills as string[]) : [],
     claimedProfessions: Array.isArray(row.claimed_professions)
       ? (row.claimed_professions as string[])
@@ -276,7 +297,57 @@ type AcceptedSubmissionForMission = {
   skills: string[];
   claimedProfessions: string[];
   rareSkillBonus: number;
+  // Lowercased taxonomy sector names this submission's skills belong to; filled by the
+  // recompute when any sector-goal mission exists in the round.
+  matchedSectors: Set<string>;
 };
+
+// Resolves a set of submission skill names to the lowercased taxonomy sector names they belong
+// to (skill → job title → sector). Inactive taxonomy rows are excluded so an archived sector
+// stops counting without touching stored progress.
+async function mapSkillsToSectors(
+  client: PoolClient,
+  skills: string[],
+): Promise<Map<string, Set<string>>> {
+  const normalized = [...new Set(skills.map((skill) => skill.trim().toLowerCase()).filter(Boolean))];
+  const bySkill = new Map<string, Set<string>>();
+  if (normalized.length === 0) {
+    return bySkill;
+  }
+  const result = await client.query<{ skill_name: string; sector_name: string }>(
+    `
+      SELECT DISTINCT LOWER(s.name) AS skill_name, LOWER(sec.name) AS sector_name
+      FROM skills_taxonomy_skills s
+      JOIN skills_taxonomy_job_titles jt ON jt.id = s.job_title_id
+      JOIN skills_taxonomy_sectors sec ON sec.id = jt.sector_id
+      WHERE s.is_active = TRUE AND jt.is_active = TRUE AND sec.is_active = TRUE
+        AND LOWER(s.name) = ANY($1::text[])
+    `,
+    [normalized],
+  );
+  for (const row of result.rows) {
+    const sectors = bySkill.get(row.skill_name) ?? new Set<string>();
+    sectors.add(row.sector_name);
+    bySkill.set(row.skill_name, sectors);
+  }
+  return bySkill;
+}
+
+function collectSectorsForSkills(
+  skills: string[],
+  sectorsBySkill: Map<string, Set<string>>,
+): Set<string> {
+  const matched = new Set<string>();
+  for (const skill of skills) {
+    const sectors = sectorsBySkill.get(skill.trim().toLowerCase());
+    if (sectors) {
+      for (const sector of sectors) {
+        matched.add(sector);
+      }
+    }
+  }
+  return matched;
+}
 
 function computeProgressForMission(
   mission: SkillsHuntMission,
@@ -306,8 +377,12 @@ function computeProgressForMission(
       if (!sectorName) {
         return 0;
       }
+      // A submission counts when any of its skills belongs to the sector in the taxonomy, or —
+      // kept for back-compat with progress earned before the taxonomy join — when a claimed
+      // profession matches the sector name.
       return acceptedSubmissions.filter((s) =>
-        s.claimedProfessions.some((p) => p.toLowerCase() === sectorName),
+        s.matchedSectors.has(sectorName)
+        || s.claimedProfessions.some((p) => p.toLowerCase() === sectorName),
       ).length;
     }
     default:
@@ -335,6 +410,7 @@ export type MissionUpdateInput = Partial<Omit<MissionCreateInput, 'roundId'>>;
 const MISSION_RETURN_COLS = `
   id, round_id, title, description, goal_type, goal_target,
   goal_metadata, bonus_points, color_hex, status, display_order,
+  auto_created, source_sector, source_gap_at_creation::text AS source_gap_at_creation,
   created_by_user_id, updated_by_user_id, created_at, updated_at
 `;
 

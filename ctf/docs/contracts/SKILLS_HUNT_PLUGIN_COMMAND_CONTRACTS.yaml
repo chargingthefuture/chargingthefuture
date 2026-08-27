@@ -513,6 +513,167 @@ contracts:
     retentionClass: gdpr_soft_delete
     idempotency: true
 
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.list
+    version: 1.0.0
+    description: List a round's missions. The admin surface sees every status; the member surface sees active/locked missions with the caller's own progress attached.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+    outputSchema:
+      items:
+        type: array
+        description: Mission rows; the member view includes per-caller progress.
+    dataAccess:
+      - skills_hunt_missions
+      - skills_hunt_mission_progress
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.create
+    version: 1.0.0
+    description: Admin creates a mission (themed sub-goal) inside a round.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+      goalType:
+        type: string
+        required: true
+        description: One of count_total_accepted, count_skills_in_sector, count_rare_skill_finds, count_distinct_sectors.
+      goalTarget:
+        type: integer
+        required: true
+      goalMetadata:
+        type: object
+        required: false
+        description: sectorName (and optional sectorId) for count_skills_in_sector; empty otherwise.
+      bonusPoints:
+        type: integer
+        required: false
+      colorHex:
+        type: string
+        required: false
+      status:
+        type: string
+        required: false
+      displayOrder:
+        type: integer
+        required: false
+    outputSchema:
+      mission:
+        type: object
+    dataAccess:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.update
+    version: 1.0.0
+    description: Admin updates a mission's fields; partial update, scoped to the mission's round.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+      missionId:
+        type: string
+        required: true
+    outputSchema:
+      mission:
+        type: object
+    dataAccess:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.archive
+    version: 1.0.0
+    description: Admin soft-archives a mission (status 'archived'). Hard delete is intentionally not exposed so progress history survives.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+      missionId:
+        type: string
+        required: true
+    outputSchema:
+      mission:
+        type: object
+    dataAccess:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.auto_generate
+    version: 1.0.0
+    description: Scheduled/admin run that opens 'count_skills_in_sector' missions in every active round for the sectors with the largest Workforce talent gaps. Reads the gap signal through the platform Workforce interface; never writes into Workforce, Directory, or Skills Taxonomy. Idempotent — at most one live auto mission per (round, sector).
+    inputSchema:
+      source:
+        type: string
+        required: false
+        description: Run provenance ('cron' or 'admin').
+    outputSchema:
+      rounds:
+        type: array
+        description: Per-round list of missions opened this run.
+    dataAccess:
+      - skills_hunt_missions
+      - skills_hunt_rounds
+      - skills_hunt_auto_mission_config
+      - skills_taxonomy_sectors
+      - skills_hunt_audit_log
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.auto_config_update
+    version: 1.0.0
+    description: Admin updates the auto-mission knobs (kill switch, minimum sector gap, per-round cap, default goal target and bonus points).
+    inputSchema:
+      enabled:
+        type: boolean
+        required: true
+      minGapThreshold:
+        type: number
+        required: true
+      maxPerRound:
+        type: integer
+        required: true
+      defaultGoalTarget:
+        type: integer
+        required: true
+      defaultBonusPoints:
+        type: integer
+        required: true
+    outputSchema:
+      config:
+        type: object
+    dataAccess:
+      - skills_hunt_auto_mission_config
+      - skills_hunt_audit_log
+    purpose: campaign_governance
+    retentionClass: transactional_long_lived
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
@@ -520,3 +681,5 @@ changelog:
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) commands.
   - date: 2026-06-20
     change: Bumped skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review to v1.1.0 — round create/update gain the rewardCreditsPerAccept and rewardPerUserRoundCap inputs, and submission.review mints the configured ServiceCredits reward to the scout on accept (idempotent, cap- and budget-bounded).
+  - date: 2026-08-27
+    change: Added the previously undocumented mission commands (mission.list, mission.create, mission.update, mission.archive) and the new auto-mission commands (mission.auto_generate, mission.auto_config_update) for missions auto-opened from Workforce sector gaps.

@@ -430,8 +430,160 @@ policies:
       - unauthenticated_caller
       - csrf_denied
 
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.list
+    version: 1.0.0
+    requiredRoles:
+      - authenticated
+    attributePolicies:
+      tenancy: same_workspace
+      roundScoped: required
+      adminSeesAllStatuses: true
+    consentRequirements:
+      scopes:
+        - skills_hunt_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthenticated_caller
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.create
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      roundExists: required
+      goalTypeAllowlist: enforced
+      sectorMetadataForSectorGoal: required
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_payload
+      - csrf_denied
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.update
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      missionScopedToRound: required
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - mission_not_found
+      - csrf_denied
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.archive
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      missionScopedToRound: required
+      softArchiveOnly: true
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - mission_not_found
+      - csrf_denied
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.auto_generate
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - system
+    attributePolicies:
+      tenancy: same_workspace
+      cronSecretForSystemCalls: required
+      killSwitchRespected: enforced
+      perRoundCap: enforced
+      oneLiveAutoMissionPerRoundAndSector: enforced
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_cron_secret
+      - csrf_denied
+
+  - pluginId: skills-hunt
+    command: skills-hunt.mission.auto_config_update
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      numericBounds: enforced
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_payload
+      - csrf_denied
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt access policy contracts added with role, validation, anti-abuse, and Directory-boundary controls for all v1 commands.
   - date: 2026-05-12
     change: Added skills-hunt.submission.report (community moderation) and skills-hunt.profile.delete (GDPR erasure) access-policy contracts.
+  - date: 2026-08-27
+    change: Added access policies for the mission commands (list/create/update/archive) and the auto-mission commands (auto_generate with cron-secret system calls, auto_config_update).

@@ -749,6 +749,30 @@ Result: web ☐
 
 ---
 
+### SH-A17 — Auto missions: Workforce gap missions open per round, capped and idempotent
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Skills Taxonomy has active sectors with a positive `workforce_share` (otherwise the generator refuses to run — expected, not a bug).
+
+**Steps:**
+1. Open the admin Missions tab. Above the mission list, find the "Auto missions from Workforce gaps" panel; confirm it loads the current settings (enabled, minimum sector gap, max per round, goal target, bonus points).
+2. Create a new active round (SH-A9 flow). Return to the Missions tab and select it.
+3. Observe up to "max per round" missions titled `Scout the [sector] sector`, each carrying the `auto` pill and a "from [sector] gap" line, matching the sectors with the largest Workforce gaps (compare against the Workforce dashboard's Top Training Gaps).
+4. Press "Run now". Expect "every active round already has its gap missions" (or 0 opened) — nothing duplicates.
+5. Archive one auto mission, press "Run now" again.
+6. In the panel, turn the kill switch off, save, create another round.
+
+**Expected:**
+- Step 3: missions open at round creation without any admin action; members see them in the Missions tab like any other mission.
+- Step 4: re-runs open nothing new for a round already at its cap (one live auto mission per round + sector, database-enforced).
+- Step 5: the freed slot is refilled with the next largest-gap sector (which may be the same sector again).
+- Step 6: the new round gets no auto missions while disabled; manual mission creation still works throughout.
+
+Result: web ☐
+
+---
+
 ### Account deletion pseudonymizes filed reports
 
 **Expected:** After a member deletes their account, reports they filed about submissions remain as

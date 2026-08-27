@@ -8,6 +8,7 @@ import type {
 } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
 
 const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
   width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
@@ -48,9 +49,17 @@ function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArch
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderTop: `1px solid ${t.BORDER}` }}>
       {mission.colorHex && <span style={{ width: 12, height: 12, borderRadius: 3, background: mission.colorHex, flexShrink: 0 }} aria-hidden />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, color: t.TITLE }}>{mission.title}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontWeight: 600, color: t.TITLE }}>{mission.title}</span>
+          {mission.autoCreated && (
+            <span style={{ padding: "1px 7px", borderRadius: 999, background: `${t.ACCENT}18`, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 10, fontWeight: 700 }}>
+              auto
+            </span>
+          )}
+        </div>
         <div style={{ fontSize: 11, color: t.MUTED }}>
           {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts · {mission.status}
+          {mission.autoCreated && mission.sourceSector && ` · from ${mission.sourceSector} gap`}
         </div>
       </div>
       {mission.status !== "archived" && (
@@ -195,6 +204,7 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
 
   return (
     <div style={{ maxWidth: 720 }}>
+      <SkillsHuntAutoMissionPanel onRunFinished={() => void refresh()} />
       {open
         ? <MissionForm roundId={roundId} onCreated={() => { setOpen(false); void refresh(); }} onCancel={() => setOpen(false)} />
         : (

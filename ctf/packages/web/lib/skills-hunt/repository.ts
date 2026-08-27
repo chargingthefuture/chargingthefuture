@@ -54,6 +54,7 @@ import {
   readCurrentTopTen,
 } from './notifications';
 import { snapshotRareSkillsForRound } from './rare-skill-snapshot';
+import { generateAutoMissionsForNewRound } from './auto-missions';
 
 type CountRow = { total: string };
 
@@ -1461,7 +1462,7 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
 }
 
 export async function createRound(actorId: string, input: SkillsHuntRoundInput): Promise<SkillsHuntRound> {
-  return withDbTransaction(async (client) => {
+  const round = await withDbTransaction(async (client) => {
     const row = await client.query<SkillsHuntRoundRow>(
       `
         INSERT INTO skills_hunt_rounds
@@ -1502,6 +1503,16 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
 
     return mapRound(row.rows[0]);
   });
+
+  // Open the round's Workforce gap missions in a follow-up transaction: a failed gap read or
+  // insert is reported but never undoes the round itself.
+  try {
+    await withDbTransaction((client) => generateAutoMissionsForNewRound(client, round.id));
+  } catch (autoMissionError) {
+    reportError(autoMissionError, { area: 'skills-hunt', op: 'auto_missions_on_round_create', extra: { roundId: round.id } });
+  }
+
+  return round;
 }
 
 export async function updateRound(actorId: string, roundId: string, input: SkillsHuntRoundInput): Promise<SkillsHuntRound | null> {
