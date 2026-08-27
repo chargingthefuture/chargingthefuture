@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { AdminNumberField } from "./sha-number-field";
 
 type AutoMissionConfig = {
   enabled: boolean;
@@ -18,11 +19,6 @@ type AutoMissionConfig = {
   updatedAtIso: string | null;
 };
 
-const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
-  width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
-  border: "1px solid rgba(255,255,255,0.12)", color: t.TEXT, fontSize: 13, outline: "none", boxSizing: "border-box",
-});
-const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
 const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 };
 
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
@@ -41,17 +37,6 @@ function runNoticeText(data: RunResponse): string {
     return "Run finished — every active round already has its gap missions.";
   }
   return `Run finished — opened ${opened} mission${opened === 1 ? "" : "s"}.`;
-}
-
-function NumberField({ id, label, min, value, onChange, t }: {
-  id: string; label: string; min: number; value: number; onChange: (value: number) => void; t: SkillsHuntAdminTokens;
-}) {
-  return (
-    <div>
-      <label style={labelStyle(t)} htmlFor={id}>{label}</label>
-      <input id={id} type="number" min={min} style={fieldStyle(t)} value={value} onChange={(e) => onChange(Number(e.target.value))} />
-    </div>
-  );
 }
 
 function ActionButton({ label, busyLabel, busy, disabled, primary, onPress, t }: {
@@ -88,10 +73,10 @@ function PanelBody({ config, setConfig, onSave, onRunNow, saving, running, error
         Auto-open missions (turn off to stop all generation)
       </label>
       <div style={row}>
-        <NumberField id="sham-gap" label="Minimum sector gap" min={0} value={config.minGapThreshold} onChange={(v) => setConfig({ ...config, minGapThreshold: v })} t={t} />
-        <NumberField id="sham-cap" label="Max auto missions per round" min={0} value={config.maxPerRound} onChange={(v) => setConfig({ ...config, maxPerRound: v })} t={t} />
-        <NumberField id="sham-target" label="Goal target" min={1} value={config.defaultGoalTarget} onChange={(v) => setConfig({ ...config, defaultGoalTarget: v })} t={t} />
-        <NumberField id="sham-bonus" label="Bonus points" min={0} value={config.defaultBonusPoints} onChange={(v) => setConfig({ ...config, defaultBonusPoints: v })} t={t} />
+        <AdminNumberField id="sham-gap" label="Minimum sector gap" min={0} value={config.minGapThreshold} onChange={(v) => setConfig({ ...config, minGapThreshold: v })} />
+        <AdminNumberField id="sham-cap" label="Max auto missions per round" min={0} value={config.maxPerRound} onChange={(v) => setConfig({ ...config, maxPerRound: v })} />
+        <AdminNumberField id="sham-target" label="Goal target" min={1} value={config.defaultGoalTarget} onChange={(v) => setConfig({ ...config, defaultGoalTarget: v })} />
+        <AdminNumberField id="sham-bonus" label="Bonus points" min={0} value={config.defaultBonusPoints} onChange={(v) => setConfig({ ...config, defaultBonusPoints: v })} />
       </div>
       {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
       {notice && <div style={{ color: t.SUBTLE, fontSize: 13 }}>{notice}</div>}

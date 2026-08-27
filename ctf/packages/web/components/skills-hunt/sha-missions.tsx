@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SkillsHuntMission, SkillsHuntMissionGoalType } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { AdminNumberField } from "./sha-number-field";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
 
 const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
@@ -117,8 +118,8 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
         <Labeled id="shm-title" text="Title"><input id="shm-title" style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Find 5 rare skills" /></Labeled>
         <div style={row}>
           <Labeled id="shm-goal" text="Goal type"><select id="shm-goal" style={field} value={goalType} onChange={(e) => setGoalType(e.target.value as SkillsHuntMissionGoalType)}>{GOAL_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}</select></Labeled>
-          <Labeled id="shm-target" text="Goal target"><input id="shm-target" type="number" min={1} style={field} value={goalTarget} onChange={(e) => setGoalTarget(Number(e.target.value))} /></Labeled>
-          <Labeled id="shm-bonus" text="Bonus points"><input id="shm-bonus" type="number" min={0} style={field} value={bonusPoints} onChange={(e) => setBonusPoints(Number(e.target.value))} /></Labeled>
+          <AdminNumberField id="shm-target" label="Goal target" min={1} value={goalTarget} onChange={setGoalTarget} />
+          <AdminNumberField id="shm-bonus" label="Bonus points" min={0} value={bonusPoints} onChange={setBonusPoints} />
           <Labeled id="shm-color" text="Color (optional)"><input id="shm-color" style={field} value={colorHex} onChange={(e) => setColorHex(e.target.value)} placeholder="#FBBF24" /></Labeled>
         </div>
         {goalType === "count_skills_in_sector" && (

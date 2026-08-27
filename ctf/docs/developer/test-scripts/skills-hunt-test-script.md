@@ -618,6 +618,7 @@ Result:
 2. Select the active round.
 3. Create a new mission: enter a title, a goal count, and optionally a `colorHex` value.
 4. Confirm the form asks for nothing else — there is **no Status field**. A mission is always created active.
+4a. In Goal target and Bonus points, select the existing digit and delete it. The box must go empty and accept a fresh number typed straight in — no typing the new number in front of the old one. Leaving a box empty and clicking away puts the field's minimum back (1 for Goal target, 0 for Bonus points). Repeat in the four auto-mission settings fields above.
 5. Save.
 6. Observe the mission appears in the admin list.
 
