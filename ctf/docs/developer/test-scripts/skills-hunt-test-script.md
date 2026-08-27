@@ -626,6 +626,29 @@ Result: web ☐
 
 ---
 
+### SH-A10b — Completing a mission moves the scout up the leaderboard
+
+**Role:** admin + member · **Surfaces:** web
+
+**Precondition:** An active round with a mission carrying a bonus above 0, and a scout close to finishing it.
+
+**Steps:**
+1. Note the scout's current score and rank on the round leaderboard, and on the all-time view.
+2. Accept enough nominations to complete the mission for that scout.
+3. Re-read both leaderboards.
+4. Archive the completed mission, then rebuild the leaderboard for that round.
+5. Re-read the leaderboard again.
+
+**Expected:**
+- Step 3: the score has risen by exactly the mission's bonus points, in the round leaderboard **and** the all-time view, and the rank reflects it — a scout on fewer submission points can now sit above one with more. The rise shows on the same review that completed the mission, not the next one.
+- Step 5: the archived mission's bonus is gone from the score. Archiving is how an admin voids a mission, the same way removing a submission takes its points back.
+- The Teams view is unchanged throughout: it counts submission points only, because a scout's mission bonus cannot be split across their nominees' professions.
+- **No ServiceCredits move at any point.** Points are a ranking figure and have no connection to credits.
+
+Result: web ☐
+
+---
+
 ### SH-A11 — Missions: archive (soft-delete) removes mission from member view
 
 **Role:** admin · **Surfaces:** web
