@@ -26,7 +26,7 @@ import {
   SKILLS_HUNT_SCORE_WEIGHTS_SPEC,
 } from './constants';
 
-export type RareSkillSnapshotRow = {
+type RareSkillSnapshotRow = {
   skillName: string;
   bonusPoints: number;
   target: number;
@@ -36,7 +36,7 @@ export type RareSkillSnapshotRow = {
 
 const RARE_SKILL_RECRUITED_THRESHOLD = 0.5;
 
-export async function computeWorkforceRareSkills(): Promise<RareSkillSnapshotRow[]> {
+async function computeWorkforceRareSkills(): Promise<RareSkillSnapshotRow[]> {
   const gaps = await fetchOccupationGapReport();
   const rare = gaps
     .filter((item) => item.target > 0 && item.recruited / item.target < RARE_SKILL_RECRUITED_THRESHOLD)

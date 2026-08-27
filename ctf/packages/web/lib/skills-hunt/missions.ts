@@ -57,7 +57,6 @@ type SkillsHuntMissionProgressRow = {
   user_id: string;
   progress_count: number;
   completed_at: Date | null;
-  bonus_credited_at: Date | null;
   metadata: Record<string, unknown>;
   updated_at: Date;
 };
@@ -103,13 +102,12 @@ function mapMissionProgress(row: SkillsHuntMissionProgressRow): SkillsHuntMissio
     userId: row.user_id,
     progressCount: row.progress_count,
     completedAtIso: row.completed_at ? toIso(row.completed_at) : null,
-    bonusCreditedAtIso: row.bonus_credited_at ? toIso(row.bonus_credited_at) : null,
     metadata: normalizeJsonObject(row.metadata),
     updatedAtIso: toIso(row.updated_at),
   };
 }
 
-export async function listMissionsForRound(
+async function listMissionsForRound(
   client: PoolClient,
   roundId: string,
 ): Promise<SkillsHuntMission[]> {
@@ -141,7 +139,7 @@ export async function listMissionsForRoundWithProgress(
   const progressResult = await client.query<SkillsHuntMissionProgressRow>(
     `
       SELECT id, mission_id, user_id, progress_count, completed_at,
-             bonus_credited_at, metadata, updated_at
+             metadata, updated_at
       FROM skills_hunt_mission_progress
       WHERE user_id = $1
         AND mission_id = ANY($2::uuid[])
@@ -253,7 +251,7 @@ async function processMissionProgress(
   const previousResult = await client.query<SkillsHuntMissionProgressRow>(
     `
       SELECT id, mission_id, user_id, progress_count, completed_at,
-             bonus_credited_at, metadata, updated_at
+             metadata, updated_at
       FROM skills_hunt_mission_progress
       WHERE mission_id = $1::uuid AND user_id = $2
       LIMIT 1
@@ -276,7 +274,7 @@ async function processMissionProgress(
             completed_at = ${completedAtClause === 'NOW()' ? 'NOW()' : 'skills_hunt_mission_progress.completed_at'},
             updated_at = NOW()
       RETURNING id, mission_id, user_id, progress_count, completed_at,
-                bonus_credited_at, metadata, updated_at
+                metadata, updated_at
     `,
     [mission.id, userId, progressCount],
   );

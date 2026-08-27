@@ -8,7 +8,7 @@
 
 import type { PoolClient } from 'pg';
 
-export const SKILLS_HUNT_NOTIFICATION_KIND = {
+const SKILLS_HUNT_NOTIFICATION_KIND = {
   submissionAccepted: 'submission-accepted',
   submissionRejected: 'submission-rejected',
   achievementUnlocked: 'achievement-unlocked',
@@ -17,7 +17,7 @@ export const SKILLS_HUNT_NOTIFICATION_KIND = {
   roundEndingSoon: 'round-ending-soon',
 } as const;
 
-export type SkillsHuntNotificationKind =
+type SkillsHuntNotificationKind =
   (typeof SKILLS_HUNT_NOTIFICATION_KIND)[keyof typeof SKILLS_HUNT_NOTIFICATION_KIND];
 
 async function insertNotificationRow(

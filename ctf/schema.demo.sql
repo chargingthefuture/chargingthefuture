@@ -607,7 +607,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
   rare_skill_bonus INTEGER NOT NULL DEFAULT 0,
   user_id TEXT NULL,
   username_snapshot TEXT NULL,
-  team_key TEXT NULL,
   last_submission_at TIMESTAMPTZ NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -723,7 +722,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
   user_id TEXT NOT NULL,
   progress_count INTEGER NOT NULL DEFAULT 0 CHECK (progress_count >= 0),
   completed_at TIMESTAMPTZ NULL,
-  bonus_credited_at TIMESTAMPTZ NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (mission_id, user_id)
@@ -771,13 +769,19 @@ ALTER TABLE IF EXISTS skills_hunt_submissions DROP COLUMN IF EXISTS claimed_prof
 -- on submissions; it was never that — it regrouped the same accepted nominations by the nominee's
 -- claimed profession, and since the nomination form stopped collecting professions every row landed
 -- in a single "Unspecified" bucket. The mode toggle, the team rows and the team queries are gone.
--- Existing team rows are deleted here rather than left to age out on the next rebuild. The `mode`
--- and `team_key` columns are deliberately kept: `mode` carries the UNIQUE (round_id, mode, rank)
--- key and is now always 'individual', and dropping either would be a destructive change for no
--- gain. The CHECK is narrowed so a team row cannot come back.
+-- Existing team rows are deleted here rather than left to age out on the next rebuild. `mode` is
+-- kept because it carries the UNIQUE (round_id, mode, rank) key and is now always 'individual';
+-- the CHECK is narrowed so a team row cannot come back. `team_key` is dropped below with the rest
+-- of the unused code — nothing reads or writes it.
 DELETE FROM skills_hunt_leaderboard WHERE mode <> 'individual';
 ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP CONSTRAINT IF EXISTS skills_hunt_leaderboard_mode_check;
 ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderboard_mode_check CHECK (mode IN ('individual'));
+-- Unused-code sweep (owner directive 2026-08-27). Two columns nothing reads or writes:
+-- `skills_hunt_leaderboard.team_key` (only ever set by the team aggregation removed above) and
+-- `skills_hunt_mission_progress.bonus_credited_at` (the marker for a ServiceCredits payout that is
+-- not being built — mission points are a leaderboard ranking figure, not credits).
+ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP COLUMN IF EXISTS team_key;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress DROP COLUMN IF EXISTS bonus_credited_at;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_tiebreak ON skills_hunt_leaderboard (round_id, mode, score DESC, first_match_count DESC, last_submission_at ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achievements (user_id, archived_at, awarded_at DESC);
@@ -4960,7 +4964,6 @@ $skills_hunt_achievements_round_fk$;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- trust_transport_admin_audit_trail (1 — defensive)

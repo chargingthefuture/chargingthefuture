@@ -780,10 +780,6 @@ async function ensureSubmissionRateLimits(client: PoolClient, userId: string): P
   return profile;
 }
 
-export async function getReputationProfile(userId: string): Promise<SkillsHuntReputationProfile> {
-  return withDbTransaction((client) => computeReputationProfile(client, userId));
-}
-
 async function insertNotification(
   client: PoolClient,
   userId: string,
@@ -2524,29 +2520,6 @@ export async function generateDirectoryProfileFromAcceptedSubmission(
       createdAtIso: toIso(projection.created_at),
     };
   });
-}
-
-export async function getSkillsHuntDashboard(): Promise<{
-  roundsTotal: number;
-  submissionsTotal: number;
-  acceptedTotal: number;
-  generatedProfilesTotal: number;
-  generatedAtIso: string;
-}> {
-  const [rounds, submissions, accepted, generated] = await Promise.all([
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM skills_hunt_rounds'),
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM skills_hunt_submissions'),
-    queryDb<CountRow>("SELECT COUNT(*)::text AS total FROM skills_hunt_submissions WHERE status = 'accepted'"),
-    queryDb<CountRow>('SELECT COUNT(*)::text AS total FROM skills_hunt_directory_profiles'),
-  ]);
-
-  return {
-    roundsTotal: Number.parseInt(rounds.rows[0]?.total ?? '0', 10),
-    submissionsTotal: Number.parseInt(submissions.rows[0]?.total ?? '0', 10),
-    acceptedTotal: Number.parseInt(accepted.rows[0]?.total ?? '0', 10),
-    generatedProfilesTotal: Number.parseInt(generated.rows[0]?.total ?? '0', 10),
-    generatedAtIso: new Date().toISOString(),
-  };
 }
 
 export async function insertSkillsHuntAudit(input: {

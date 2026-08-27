@@ -22,7 +22,7 @@ export const STATUS_OPTIONS: Array<{ key: SkillsHuntSubmissionStatus; label: str
   { key: "flagged",  label: "Flagged",  color: COLOR },
 ];
 
-export const REJECT_REASONS = [
+const REJECT_REASONS = [
   "Insufficient social proof / Quora unverifiable",
   "Full name violates spec (2–100 alphanumeric+spaces)",
   "Skills don't match taxonomy and no valid proposed skill",
