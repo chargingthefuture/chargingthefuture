@@ -26,17 +26,26 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
   return body?.message ?? fallback;
 }
 
-type RunResponse = { skipped?: string; rounds?: Array<{ opened: unknown[] }> };
+type RunResponse = { skipped?: string; rounds?: Array<{ opened: unknown[]; updated?: number }> };
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
 
 function runNoticeText(data: RunResponse): string {
   if (data.skipped) {
     return `Run skipped: ${data.skipped.split("_").join(" ")}.`;
   }
-  const opened = (data.rounds ?? []).reduce((sum, round) => sum + round.opened.length, 0);
-  if (opened === 0) {
-    return "Run finished — every active round already has its gap missions.";
+  const rounds = data.rounds ?? [];
+  const opened = rounds.reduce((sum, round) => sum + round.opened.length, 0);
+  const updated = rounds.reduce((sum, round) => sum + (round.updated ?? 0), 0);
+  const parts: string[] = [];
+  if (opened > 0) parts.push(`opened ${plural(opened, "mission")}`);
+  if (updated > 0) parts.push(`updated ${plural(updated, "mission")} to these settings`);
+  if (parts.length === 0) {
+    return "Run finished — every active round already matches these settings.";
   }
-  return `Run finished — opened ${opened} mission${opened === 1 ? "" : "s"}.`;
+  return `Run finished — ${parts.join(" and ")}.`;
 }
 
 function ActionButton({ label, busyLabel, busy, disabled, primary, onPress, t }: {
@@ -135,7 +144,7 @@ export function SkillsHuntAutoMissionPanel({ onRunFinished }: { onRunFinished: (
       }
       const data = (await res.json()) as { config: AutoMissionConfig };
       setConfig(data.config);
-      setNotice("Settings saved.");
+      setNotice("Settings saved. Press Run now to apply them to missions that are already open.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to save auto-mission settings.");
     } finally {

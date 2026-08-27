@@ -630,6 +630,22 @@ Result: web ☐
 
 ---
 
+### SH-A9b — Round form fits the phone-width column
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** On `/admin/skills-hunt` → Rounds, editing an existing round.
+
+**Steps:**
+1. On a phone (or a narrow window), scroll the round edit form top to bottom.
+2. Look at Status, Starts and Ends, and at the two ServiceCredits fields below them.
+
+**Expected:** Every field sits fully inside the column — nothing is cut off at the right edge and the page never scrolls sideways. The date fields each take a full row rather than sharing one. (Starts used to run off-screen: `datetime-local` reports a wide intrinsic size on iOS Safari and grew its grid track.)
+
+Result: web ☐
+
+---
+
 ### SH-A11 — Missions: archive (soft-delete) removes mission from member view
 
 **Role:** admin · **Surfaces:** web
@@ -774,6 +790,30 @@ Result: web ☐
 - Step 4: re-runs open nothing new for a round already at its cap (one live auto mission per round + sector, database-enforced).
 - Step 5: the freed slot is refilled with the next largest-gap sector (which may be the same sector again).
 - Step 6: the new round gets no auto missions while disabled; manual mission creation still works throughout.
+
+Result: web ☐
+
+---
+
+### SH-A18 — Auto-mission settings reach missions that are already open
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** An active round with at least one auto mission (SH-A17), ideally one already at the per-round cap.
+
+**Steps:**
+1. On the admin Missions tab, set Bonus points to 3 and press **Save settings**. Read the confirmation.
+2. Press **Run now** and read the result line.
+3. Look at the auto missions in the list below.
+4. Press **Run now** a second time without changing anything.
+
+**Expected:**
+- Step 1: the confirmation says the settings apply on the next run and points at Run now — saving alone does not rewrite missions already open.
+- Step 2: the result names how many missions were updated (e.g. "updated 3 missions to these settings"), not just how many were opened.
+- Step 3: every live auto mission now reads `+3 pts`. This is the reported bug: before this change a round already at its cap kept the settings it was created with, so the new number appeared nowhere.
+- Step 4: the run reports nothing updated and nothing opened — a run that changes nothing says so.
+
+**Points are not credits.** A mission's bonus points are a leaderboard ranking figure; completing a mission sends no ServiceCredits, and no balance should move. (Today they do not reach the leaderboard either — see the inventory Gaps.)
 
 Result: web ☐
 
