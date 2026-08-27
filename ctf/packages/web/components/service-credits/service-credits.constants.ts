@@ -32,8 +32,11 @@ export const PLATFORM_EARN_METHODS: {
   },
   {
     title: 'Take part in SkillsHunt',
-    detail: 'Earn credits by competing in SkillsHunt rounds.',
-    credits: 'Per round',
+    // Credits are granted per accepted nomination, not per round: the round configures
+    // reward_credits_per_accept and an optional per-scout round cap, and the mint runs on accept.
+    // "Per round" read as one payout at the end of a round, which is not what happens.
+    detail: 'Nominate a survivor. Credits are granted when the nomination is accepted.',
+    credits: 'Per acceptance',
     note: 'ongoing',
     color: '#FBBF24',
     href: '/apps/skills-hunt',
