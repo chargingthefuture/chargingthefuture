@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, Shield } from "lucide-react";
-import { ACCEPTED_APPS, type WalletData, idempotencyKey } from "./sc-shared";
+import { ACCEPTED_APPS, describeMutualCreditFloor, type WalletData, idempotencyKey } from "./sc-shared";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
@@ -15,12 +15,16 @@ const inputLabel: React.CSSProperties = { fontSize: 12, color: "#9CA3AF", margin
 
 type Rail = "balance" | "mutual_credit";
 
-function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) => void }) {
+// The mutual-credit option is offered only when the member can actually use it — the rail is on and
+// they have a line above zero. Offering it otherwise sends them into a server refusal with no way to
+// have known, so the option is disabled and the reason is written under the picker instead.
+function RailSelector({ rail, onChange, wallet }: { rail: Rail; onChange: (next: Rail) => void; wallet: WalletData | null }) {
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
-  const options: { value: Rail; label: string }[] = [
-    { value: "balance", label: "ServiceCredits" },
-    { value: "mutual_credit", label: "ServiceCredits — Mutual Credit" },
+  const mutualCreditAvailable = wallet?.mutualCreditEnabled === true && (wallet?.creditLimit ?? 0) > 0;
+  const options: { value: Rail; label: string; disabled: boolean }[] = [
+    { value: "balance", label: "ServiceCredits", disabled: false },
+    { value: "mutual_credit", label: "ServiceCredits — Mutual Credit", disabled: !mutualCreditAvailable },
   ];
   return (
     <div style={{ marginBottom: 12 }}>
@@ -33,12 +37,12 @@ function RailSelector({ rail, onChange }: { rail: Rail; onChange: (next: Rail) =
         style={{ ...inputField, marginBottom: 0, appearance: "auto" }}
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} style={{ color: t.BG }}>{o.label}</option>
+          <option key={o.value} value={o.value} disabled={o.disabled} style={{ color: t.BG }}>{o.label}</option>
         ))}
       </select>
-      {rail === "mutual_credit" && (
+      {(rail === "mutual_credit" || !mutualCreditAvailable) && (
         <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>
-          Send now on community credit, repay as you earn.
+          {describeMutualCreditFloor(wallet)}
         </div>
       )}
     </div>
@@ -140,7 +144,7 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
     <div style={{ padding: "16px", borderRadius: 14, marginBottom: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
       <label htmlFor="sc-recipient" style={inputLabel}>Recipient</label>
       <input id="sc-recipient" value={recipient} onChange={(e) => setRecipient(e.target.value)} aria-label="Recipient username or ID" placeholder="Survivor username or ID…" style={inputField} />
-      <RailSelector rail={rail} onChange={setRail} />
+      <RailSelector rail={rail} onChange={setRail} wallet={wallet} />
       <label htmlFor="sc-amount" style={inputLabel}>Amount</label>
       <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}

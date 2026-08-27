@@ -31,10 +31,10 @@ function TabButton({ label, active, onSelect, t }: { label: string; active: bool
 }
 
 // The active tab's body: wallet, earn, or economy.
-function ShellTabContent({ tab, balance, escrow }: { tab: Tab; balance: number; escrow: number }) {
+function ShellTabContent({ tab, balance, escrow, wallet }: { tab: Tab; balance: number; escrow: number; wallet: WalletData | null }) {
   return (
     <>
-      {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} />}
+      {tab === "wallet" && <ServiceCreditsWalletTab balance={balance} escrow={escrow} wallet={wallet} />}
       {tab === "earn" && <ServiceCreditsEarnTab />}
       {tab === "economy" && <ServiceCreditsCirculationTab />}
     </>
@@ -52,9 +52,18 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   async function refreshWallet() {
     const res = await fetch("/api/service-credits/wallet");
     if (!res.ok) throw new Error(`Failed to load wallet (${res.status}).`);
-    const data = (await res.json()) as { wallet?: WalletData };
-    if (data.wallet && typeof data.wallet.availableBalance === "number" && typeof data.wallet.escrowBalance === "number") {
-      setWallet(data.wallet);
+    const data = (await res.json()) as { wallet?: Partial<WalletData> };
+    const raw = data.wallet;
+    if (raw && typeof raw.availableBalance === "number" && typeof raw.escrowBalance === "number") {
+      // The mutual-credit fields are read-only extras: fall back to "rail off, no line" rather than
+      // failing the whole balance read if they are ever missing, so the wallet still renders.
+      setWallet({
+        availableBalance: raw.availableBalance,
+        escrowBalance: raw.escrowBalance,
+        mutualCreditEnabled: raw.mutualCreditEnabled === true,
+        creditLimit: typeof raw.creditLimit === "number" && Number.isFinite(raw.creditLimit) ? raw.creditLimit : 0,
+        creditFloor: typeof raw.creditFloor === "number" && Number.isFinite(raw.creditFloor) ? raw.creditFloor : 0,
+      });
     } else {
       throw new Error("Invalid wallet data structure");
     }
@@ -80,7 +89,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const balance = wallet?.availableBalance ?? 0;
   const escrow = wallet?.escrowBalance ?? 0;
 
-  const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} />;
+  const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} wallet={wallet} />;
 
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },

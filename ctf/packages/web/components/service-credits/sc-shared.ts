@@ -20,7 +20,29 @@ export function getServiceCreditsTokens(theme: ThemeName): ServiceCreditsTokens 
   return getPluginShellTokens(accent, theme);
 }
 
-export type WalletData = { availableBalance: number; escrowBalance: number };
+export type WalletData = {
+  availableBalance: number;
+  escrowBalance: number;
+  // The member's own mutual-credit line, as returned by GET /api/service-credits/wallet. Read-only:
+  // the server still decides every send. `creditFloor` is the lowest balance a send may leave them
+  // at — 0 whenever the rail is off or the limit is 0.
+  mutualCreditEnabled: boolean;
+  creditLimit: number;
+  creditFloor: number;
+};
+
+// One plain sentence naming how far below zero this member may send, shown on the wallet and beside
+// the mutual-credit option in the send form so both say the same thing. Bare credit quantities: a
+// credit is not money and is never shown at a fiat equivalent.
+export function describeMutualCreditFloor(wallet: WalletData | null): string {
+  if (!wallet || !wallet.mutualCreditEnabled) {
+    return "Community credit is switched off right now, so a send cannot take you below zero.";
+  }
+  if (wallet.creditLimit <= 0) {
+    return "Community credit: your limit is 0 credits, so a send cannot take you below zero.";
+  }
+  return `Community credit: you can send down to −${fmtCredits(wallet.creditLimit)} credits, then repay as you earn.`;
+}
 export type Tab = "wallet" | "earn" | "economy";
 
 // One row of the member's own wallet history, as returned by GET /api/service-credits/transactions
