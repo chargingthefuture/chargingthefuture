@@ -406,6 +406,121 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.mission.create
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      missionId: mission_identifier
+      roundId: round_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.mission.update
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      missionId: mission_identifier
+      roundId: round_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.mission.archive
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      missionId: mission_identifier
+      roundId: round_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: skills-hunt-auto-mission-scheduler_or_admin
+    pluginId: skills-hunt
+    command: skills-hunt.mission.auto_generate
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: ok_or_disabled_or_no_workforce_share_or_no_active_rounds
+    dataClassesAccessed:
+      - skills_hunt_missions
+      - skills_hunt_rounds
+      - skills_hunt_auto_mission_config
+      - skills_taxonomy_sectors
+    targetContext:
+      workspaceId: workspace_identifier
+      runSource: cron_or_admin
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.mission.auto_config_update
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_auto_mission_config
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      configKey: singleton
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
@@ -413,3 +528,5 @@ changelog:
     change: Added audit event templates for skills-hunt.submission.report and skills-hunt.profile.delete.
   - date: 2026-06-20
     change: Bumped commandVersion to 1.1.0 for skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review (ServiceCredits reward additions), and added the service-credits.governance.mint.grant.skills-hunt audit event for accept-reward minting.
+  - date: 2026-08-27
+    change: Added audit event templates for the mission commands (create/update/archive) and the auto-mission commands (auto_generate, auto_config_update).

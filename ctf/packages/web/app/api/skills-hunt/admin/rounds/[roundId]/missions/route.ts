@@ -8,6 +8,7 @@ import {
   type MissionCreateInput,
 } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -142,6 +143,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
 
   try {
     const mission = await withDbTransaction((client) => createMission(client, gate.auth.userId, input));
+    logSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.create',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'mission',
+      targetId: mission.id,
+      result: 'success',
+      errorCategory: null,
+      metadata: { roundId, goalType: mission.goalType },
+    });
     return NextResponse.json({ ok: true, mission }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions' });

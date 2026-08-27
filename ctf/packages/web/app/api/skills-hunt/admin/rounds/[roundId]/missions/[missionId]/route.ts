@@ -3,6 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../..
 import { withDbTransaction } from 'lib/db/postgres';
 import { archiveMission, getMissionById, updateMission, type MissionUpdateInput } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -82,6 +83,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
         { status: 404 },
       );
     }
+    logSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.update',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'mission',
+      targetId: mission.id,
+      result: 'success',
+      errorCategory: null,
+      metadata: { roundId, fields: Object.keys(body) },
+    });
     return NextResponse.json({ ok: true, mission }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_missionid' });
@@ -121,6 +133,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ r
         { status: 404 },
       );
     }
+    logSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.archive',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'mission',
+      targetId: mission.id,
+      result: 'success',
+      errorCategory: null,
+      metadata: { roundId },
+    });
     return NextResponse.json({ ok: true, mission }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_missionid' });
