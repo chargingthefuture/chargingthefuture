@@ -118,9 +118,12 @@ is no "set active week" action and no per-week status.
    2026-08-27). Everyone reaches the app through Clerk, so which plugin a member used is not part of
    this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
    is correct rather than a bug — those count what members did, these count who signed in. If a week
-   reads zero or looks too low, run `node ctf/scripts/audit-active-members.mjs --week=<that week>`
-   (through Infisical, read-only): it prints the same count plus the record's earliest and latest
-   row, which says whether the week was quiet or the record does not reach that far back. Both are
+   reads zero or looks too low, two things say why. Check the server log for
+   `[weekly-performance.live-metrics] could not read …` — a card whose read failed or whose table is
+   missing renders as 0, and that line is what tells you the 0 is not a real count. Then run
+   `node ctf/scripts/audit-active-members.mjs --week=<that week>` (through Infisical, read-only): it
+   prints the same count plus the sign-in record's earliest and latest row, which says whether the
+   week was quiet or the record does not reach that far back. Both are
    aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.

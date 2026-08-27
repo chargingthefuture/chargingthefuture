@@ -182,9 +182,12 @@ write, not the definition. `ctf/scripts/audit-active-members.mjs` is the tool fo
 record for a week and, separately and only as a cross-check, what the per-plugin tables saw, so a member
 visible there but not here identifies a sign-in write that did not land.
 
-If a week reads zero, `ctf/scripts/audit-active-members.mjs` says whether that is a quiet week or missing
-history: it prints the record's earliest and latest row alongside the week's count, so a zero before the
-earliest row is visibly the record not reaching that far rather than nobody turning up.
+If a week reads zero, two things say why rather than leaving it to guesswork. The server log now names any
+metric whose read failed or whose table is missing, because such a card renders as 0 and a wrong zero looks
+exactly like a real one (`[weekly-performance.live-metrics] could not read …`). And
+`ctf/scripts/audit-active-members.mjs` prints the sign-in record's earliest and latest row alongside the
+week's count, so a zero before the earliest row is visibly the record not reaching that far rather than
+nobody turning up.
 
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
@@ -202,6 +205,19 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-08-27: **A card that could not be read was rendering as 0 in silence.** Every metric on this
+  dashboard went through `guardedScalar`/`safeCount` in `lib/weekly-performance/live-metrics.ts`,
+  which caught every error and returned 0 without a word — so a failed read, a missing table, and a
+  week in which nothing happened all looked the same on screen, and the wrong zero is the harder one
+  to notice because it looks like an answer. The 0 stays (one unreadable table must not take the
+  whole dashboard down), but it is no longer silent: reads now propagate to a single per-metric
+  reporter in `computeLiveWeekMetrics` that logs which metric was flattened, for which week, and why
+  (rule 137); a missing table is reported once per table per process. Two failure paths that were
+  wrong in their own right are also fixed: a goal row whose weekly snapshot WRITE failed used to
+  discard the value it had just read correctly, and now returns that value and reports the failed
+  write; and the GDP goal's live read no longer swallows its own error before the reporter can see
+  it. No schema, route, or contract change.
 
 - 2026-08-27: **Active Members and Daily Active Members are the sign-in record again — owner
   decision.** The owner's report: "Seems like at some point an agent changed the definition of an
