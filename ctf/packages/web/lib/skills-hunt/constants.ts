@@ -53,7 +53,6 @@ export const SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS = 5_000;
 export const SKILLS_HUNT_SCORE_WEIGHTS = {
   matchBase: 3,
   firstMatchBonus: 4,
-  stackBonusPerProfession: 2,
   rareSkillBonusDefault: 3,
   qualityBonus: 2,
 } as const;
@@ -64,8 +63,6 @@ export const SKILLS_HUNT_SCORE_WEIGHTS = {
 export const SKILLS_HUNT_SCORE_WEIGHTS_SPEC = {
   matchBase: 10,
   firstMatchBonus: 5,
-  stackBonus: 3,
-  stackBonusProfessionThreshold: 2,
   rareSkillBonus: 7,
   qualityBonus: 2,
   participationOnReject: 1,

@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireSkillsHuntReadAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { listAllTimeLeaderboard, listLeaderboard } from 'lib/skills-hunt/repository';
-import type { SkillsHuntLeaderboardMode } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
-
-function parseMode(value: string | null): SkillsHuntLeaderboardMode {
-  return value === 'team' ? 'team' : 'individual';
-}
 
 export async function GET(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntReadAccess();
@@ -17,17 +12,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
 
   const { roundId } = await params;
   const url = new URL(request.url);
-  const mode = parseMode(url.searchParams.get('mode'));
   const range = url.searchParams.get('range');
 
   try {
     const result = range === 'all-time'
-      ? await listAllTimeLeaderboard(mode, gate.auth.userId)
-      : await listLeaderboard(roundId, mode, gate.auth.userId);
+      ? await listAllTimeLeaderboard(gate.auth.userId)
+      : await listLeaderboard(roundId, gate.auth.userId);
 
     return NextResponse.json(
       {
-        mode,
+        mode: 'individual',
         range: range === 'all-time' ? 'all-time' : 'round',
         roundId: range === 'all-time' ? null : roundId,
         items: result.items,

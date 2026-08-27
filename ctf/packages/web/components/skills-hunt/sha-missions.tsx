@@ -15,7 +15,7 @@ const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display
 const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 };
 
 const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
-  "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds", "count_distinct_sectors",
+  "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds",
 ];
 
 function Labeled({ id, text, children }: { id: string; text: string; children: React.ReactNode }) {

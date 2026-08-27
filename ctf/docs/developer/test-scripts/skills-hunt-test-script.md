@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-04 (hand-updated: Scouts/Teams leaderboard toggle — SH-8) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8) |
 
 ---
 
@@ -228,23 +228,22 @@ Result: web ☐
 
 ---
 
-### SH-8 — Leaderboard: individual and team modes
+### SH-8 — Leaderboard ranks scouts by accepted points
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member · **Surfaces:** web
 
 **Precondition:** Seeded data includes accepted submissions with points.
 
 **Steps:**
 1. Navigate to the Leaderboard tab on an active or closed round.
-2. Confirm the default "Scouts" view shows ranked entries with: rank, handle/name, score.
-3. Switch to the "Teams" pill above the list (added 2026-08-04).
-4. Confirm the team view aggregates by profession/group.
+2. Confirm the list shows ranked entries with: rank, handle/name, score.
+3. Confirm there is **no Scouts/Teams toggle** — there is one board.
 
 **Expected:**
-- Individual (Scouts) mode: entries ordered by score descending, first_match_count as tie-break, no fabricated numbers.
-- Teams mode: the title changes to "Team Leaderboard", rows are named by claimed profession (title-cased, e.g. "Electrician"), aggregated accepted points per profession; no "(You)" highlight in this mode.
-- Switching back to Scouts re-fetches and restores the individual list.
-- If the signed-in member is in the top-100 their row is highlighted (Scouts mode); if outside top-100, their rank still appears.
+- Entries are ordered by score descending, with first_match_count as the tie-break; no fabricated numbers.
+- The title reads "Scout Leaderboard".
+- If the signed-in member is in the top-100 their row is highlighted; if outside the top-100, their rank still appears.
+- The team view was removed 2026-08-27: it regrouped the same nominations by the nominee's claimed profession, not by any team of members, and every row had fallen into a single "Unspecified" bucket once the form stopped collecting professions.
 
 Result: web ☐
 
@@ -449,7 +448,7 @@ Result: web ☐
 1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
 2. Open that round's Leaderboard tab and check the standings.
 
-**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions (individual and team) — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
+**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
 
 Result: web ☐
 
@@ -656,8 +655,7 @@ Result: web ☐
 
 **Expected:**
 - Step 3: the score has risen by exactly the mission's bonus points, in the round leaderboard **and** the all-time view, and the rank reflects it — a scout on fewer submission points can now sit above one with more. The rise shows on the same review that completed the mission, not the next one.
-- Step 5: the archived mission's bonus is gone from the score. Archiving is how an admin voids a mission, the same way removing a submission takes its points back.
-- The Teams view is unchanged throughout: it counts submission points only, because a scout's mission bonus cannot be split across their nominees' professions.
+- Step 5: the score does **not** change. Earned is earned — the leaderboard reports a round, so archiving closes a mission to new completions but never takes back points already earned. (A member starts a fresh points count in a new round.)
 - **No ServiceCredits move at any point.** Points are a ranking figure and have no connection to credits.
 
 Result: web ☐
@@ -855,7 +853,7 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 | SH-2b | Country required, state/city optional; US shows a state list, other countries a free-text region |
 | SH-4 | Full name and bio validation errors fire on the same conditions |
 | SH-7 | Proposed-skill chips appear and are submitted correctly |
-| SH-8 | Leaderboard individual rankings match (same data, same order) |
+| SH-8 | Leaderboard rankings match (same data, same order) |
 | SH-9 | Missions list shows same missions with same progress |
 | SH-10 | My Finds shows same submissions and achievement codes |
 | SH-11 | Status panel shows same notifications; mark-read works |
@@ -875,4 +873,4 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 
 1. **Admin pre-approval pathway for restricted submitters is disabled.** A user whose rejection rate exceeds the threshold gets a 403 (`SKILLS_HUNT_PRE_APPROVAL_REQUIRED`) but there is no UI for an admin to manually pre-approve them. This is intentional in the current scope.
 2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
-3. **Team leaderboard grouping is by free-text profession, not the taxonomy.** The Teams view (shipped 2026-08-04) groups by each nominee's claimed profession lowercased and trimmed — so "Electrician" and "electrical work" are different teams. If Skills Taxonomy later formalizes grouping semantics the aggregation will change; the raw grouping today is expected behavior, not a bug.
+3. **The team leaderboard no longer exists.** It was removed 2026-08-27: it grouped by each nominee's free-text claimed profession rather than by any team of members, and every row had collapsed into one "Unspecified" bucket once the nomination form stopped collecting professions. Do not file its absence as a bug.

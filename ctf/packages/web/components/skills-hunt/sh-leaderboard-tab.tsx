@@ -1,14 +1,10 @@
 "use client";
 
-import { initials, rankColor, rankDisplay, type SkillsHuntLeaderboardItem, type SkillsHuntLeaderboardMode } from "./sh-shared";
+import { initials, rankColor, rankDisplay, type SkillsHuntLeaderboardItem } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 
-// Team rows aggregate by claimed profession, so the display name is the team key, not a username.
 function entryDisplayName(entry: SkillsHuntLeaderboardItem): string {
-  if (entry.teamKey) {
-    return entry.teamKey.charAt(0).toUpperCase() + entry.teamKey.slice(1);
-  }
   return entry.usernameSnapshot ?? "Anonymous";
 }
 
@@ -39,65 +35,24 @@ function LeaderboardRow({ entry, isMe }: { entry: SkillsHuntLeaderboardItem; isM
   );
 }
 
-function ModeToggle({ mode, onModeChange }: { mode: SkillsHuntLeaderboardMode; onModeChange: (mode: SkillsHuntLeaderboardMode) => void }) {
-  const { theme } = useTheme();
-  const t = getSkillsHuntTokens(theme);
-  const options: Array<{ value: SkillsHuntLeaderboardMode; label: string }> = [
-    { value: "individual", label: "Scouts" },
-    { value: "team", label: "Teams" },
-  ];
-  return (
-    <div role="tablist" aria-label="Leaderboard view" style={{ display: "inline-flex", gap: 6, marginBottom: 16 }}>
-      {options.map((option) => {
-        const active = option.value === mode;
-        return (
-          <button
-            key={option.value}
-            role="tab"
-            aria-selected={active}
-            onClick={() => onModeChange(option.value)}
-            style={{
-              padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer",
-              background: active ? `${t.ACCENT}20` : "transparent",
-              border: `1px solid ${active ? t.ACCENT + "60" : t.BORDER}`,
-              color: active ? t.ACCENT : t.MUTED,
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function SkillsHuntLeaderboardTab({
   loading,
   leaderboard,
-  mode,
-  onModeChange,
   userId,
 }: {
   loading: boolean;
   leaderboard: SkillsHuntLeaderboardItem[];
-  mode: SkillsHuntLeaderboardMode;
-  onModeChange: (mode: SkillsHuntLeaderboardMode) => void;
   userId?: string;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const isTeam = mode === "team";
   return (
     <>
-      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>{isTeam ? "Team Leaderboard" : "Scout Leaderboard"}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Scout Leaderboard</div>
       <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 4 }}>
-        {isTeam
-          ? "Scores grouped by claimed profession · ranked by accepted points"
-          : "Ranked by accepted points · tie-break: first-match count, then earliest submission"}
+        Ranked by accepted points · tie-break: first-match count, then earliest submission
       </div>
       <div style={{ fontSize: 12, color: t.FAINT, marginBottom: 12 }}>Pending points (⏳) convert to accepted points after admin review.</div>
-
-      <ModeToggle mode={mode} onModeChange={onModeChange} />
 
       {loading ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>Loading leaderboard…</div>
@@ -105,7 +60,7 @@ export function SkillsHuntLeaderboardTab({
         <div style={{ fontSize: 14, color: t.MUTED }}>No entries yet — be the first scout!</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {leaderboard.map((p) => <LeaderboardRow key={p.rank} entry={p} isMe={!isTeam && p.userId === userId} />)}
+          {leaderboard.map((p) => <LeaderboardRow key={p.rank} entry={p} isMe={p.userId === userId} />)}
         </div>
       )}
     </>
