@@ -90,6 +90,11 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const escrow = wallet?.escrowBalance ?? 0;
 
   const content = <ShellTabContent tab={tab} balance={balance} escrow={escrow} wallet={wallet} />;
+  const sendPanel = <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />;
+  // On the Economy tab the send form comes first: those figures are the whole community's, while
+  // sending is the member's own wallet, and the member's own thing belongs above the community's.
+  // Wallet and Earn already lead with the member's own balance, so the form stays under them.
+  const sendFirst = tab === "economy";
 
     const tabs: { key: Tab; label: string }[] = [
       { key: "wallet", label: "Wallet" },
@@ -119,8 +124,9 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
             ))}
           </div>
         </div>
+        {sendFirst ? sendPanel : null}
         {content}
-        <ServiceCreditsSendPanel wallet={wallet} onSent={refreshWallet} />
+        {sendFirst ? null : sendPanel}
       </div>
     );
 }

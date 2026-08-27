@@ -48,7 +48,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Current available, held, and total balance retrieval.
 2. Clear transaction classification (transfer, escrow, treasury fee, adjustment).
 3. Plain-language labels for non-fiat credit semantics.
-4. **The member can see their own community-credit floor (2026-08-27).** The wallet states, in one
+4. **Recent Transactions is paged, 10 rows to a page.** The wallet shows ten entries at a time with
+   `Previous · Page N of M · Next` controls under the list and the member's total entry count beside
+   them, so the screen keeps the same height whether the member has ten entries or five hundred.
+5. **The member can see their own community-credit floor (2026-08-27).** The wallet states, in one
    sentence, how far below zero a send may take them — "Community credit: you can send down to
    −25 credits, then repay as you earn." When the rail is switched off, or their limit is 0, the
    wallet says so plainly instead of hiding the row, and the send form's mutual-credit option is
@@ -65,6 +68,10 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    goes through, an "Is this ongoing?" prompt appears under the success line: pick how often, and it
    records a standing arrangement with the member you just sent to, who confirms it in the Recurring
    Activity app. The prompt does not appear when an arrangement with that member is already recorded.
+5. **On the Economy tab the send form sits above the figures (2026-08-27).** The economy numbers are
+   the whole community's; sending is the member's own wallet, so the member's own thing comes first.
+   On the Wallet and Earn tabs the form stays below, because those already open with the member's own
+   balance.
 
 ### 1.4 Trust and Safety Adjustments
 
@@ -148,6 +155,7 @@ User routes:
 - `GET /api/service-credits/wallets/:walletId/balance`
 - `GET /api/service-credits/wallet` → `{ ok, wallet }` — the signed-in member's own wallet: `availableBalance`, `escrowBalance`, and (since 2026-08-27) their mutual-credit line — `mutualCreditEnabled` (is the rail on at all), `creditLimit` (their per-account override if an admin granted one, else the flat policy `defaultLimit`), and `creditFloor` (`-(creditLimit)` while the rail is on, 0 otherwise). The line is read-only here: `getMemberCreditStanding` reuses the same policy and limit reads the transfer path uses, and the transfer path still resolves the floor itself, so nothing on this route widens or narrows what a send may do. Bare credit quantities only; never a fiat figure.
 - `GET /api/service-credits/transactions` → `{ ok, entries }` — the caller's own recent wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200). Backs the wallet "Recent Transactions" list. Bare credit quantities only; never a fiat figure.
+- `GET /api/service-credits/transactions` → `{ ok, entries, total, limit, offset }` — one page of the caller's own wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200) and `?offset=` (default 0; negative or non-numeric treated as 0). `total` is the member's full entry count across all pages, so the caller can show "Page N of M". Backs the wallet "Recent Transactions" list, which is paged 10 rows at a time. Bare credit quantities only; never a fiat figure.
 - `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit)
 - `GET /api/service-credits/circulation` → `{ ok, metrics }` — public, aggregate, non-identifying circulation numbers (in circulation, total issued/burned, treasury balance, velocity, outstanding mutual-credit debt). No fiat figure.
 - `POST /api/service-credits/escrows` — create an escrow hold. Restricted to the `service`/`system`/`dispute_moderator` roles (or admin) via `requireServiceCreditsServiceAccess`, per the access-policy contract — not a self-service member action. `amount` must be a finite number greater than 0 (else 400).
@@ -308,6 +316,30 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
   figures are bare credit quantities. `wallet.balance.get` command contract goes to 1.1.0 for the three
   output fields and adds `service_credits_treasury_config` + `service_credits_credit_limits` to its
   `dataAccess`; the access policy is unchanged (same member, same own-wallet read).
+- 2026-08-27: **Send form moved above the figures on the Economy tab.** The send panel renders after
+  the tab body on every tab, which put "Send credits" below a full screen of community-wide
+  circulation numbers — a member had to scroll past everyone else's totals to reach their own
+  wallet's one action. `service-credits-shell.tsx` now places the panel before the tab body when the
+  Economy tab is active and leaves it after the body on Wallet and Earn, which already open with the
+  member's own balance. Ordering only: no copy, styling, route, contract, or schema change, and the
+  send panel itself is untouched.
+
+- 2026-08-27: **Wallet "Recent Transactions" now pages instead of running on down the screen.** The
+  list rendered every ledger row the route returned, so a member with a long history got a wallet
+  screen that grew without a bottom. The read route
+  (`app/api/service-credits/transactions/route.ts`) now takes an `?offset=` alongside the existing
+  `?limit=` and returns `total` — the member's full entry count — beside the page, with
+  `listWalletLedgerEntries` (`lib/service-credits/repository.ts`) taking an offset, ordering by
+  `created_at DESC, id DESC` so a page boundary is stable when two rows share a timestamp, and
+  carrying the count on the page via `COUNT(*) OVER ()` (a past-the-end page falls back to a plain
+  count so the total is still right). On the web side the panel moved out of `sc-wallet-tab.tsx`
+  into its own `sc-transactions-panel.tsx` and fetches 10 rows a page, with a new `sc-pager.tsx`
+  matching the `Previous · Page N of M · Next` controls used by the What Works lists. A balance
+  change still re-reads and returns to the first page, where the new row is. Read-only: no schema,
+  transfer, or ledger-write change; `wallet.transactions.list` command contract goes to 1.1.0 for
+  the added `offset` input and `total` output (access policy unchanged — same member, same own-wallet
+  read). The mobile wallet list is untouched and unaffected: the added response fields are additive
+  and it ignores them.
 
 
 - 2026-08-05: **Deletion-reclaim messaging shipped (§1.5, promised since 2026-02-25 and never

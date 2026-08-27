@@ -81,8 +81,8 @@ contracts:
 
   - pluginId: service-credits
     command: wallet.transactions.list
-    version: 1.0.0
-    description: List the calling member's own recent wallet ledger entries (mints, transfers in/out, escrow holds/releases, treasury fees, allocations), newest first. Read-only and scoped to the caller's wallet.
+    version: 1.1.0
+    description: List one page of the calling member's own wallet ledger entries (mints, transfers in/out, escrow holds/releases, treasury fees, allocations), newest first, with the member's total entry count so the caller can page through the history. Read-only and scoped to the caller's wallet.
     inputSchema:
       walletId:
         type: string
@@ -91,9 +91,20 @@ contracts:
         type: number
         required: false
         description: Page size. Defaults to 50; clamped to the range 1–200 (caller values above 200 are capped).
+      offset:
+        type: number
+        required: false
+        description: How many entries to skip before the page starts. Defaults to 0; negative or non-numeric values are treated as 0.
     outputSchema:
       entries:
         type: array
+      total:
+        type: number
+        description: Total ledger entries the member has, across all pages.
+      limit:
+        type: number
+      offset:
+        type: number
     dataAccess:
       - service_credits_ledger_entries
     purpose: balance_visibility

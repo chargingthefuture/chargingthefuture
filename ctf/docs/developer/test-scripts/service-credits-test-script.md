@@ -97,8 +97,14 @@ Result: web ☐
 4. Confirm no fiat figure appears on any row.
 5. Check the newest entry appears at the top.
 6. If the seed includes an escrow **refund**, confirm it reads as **"Escrow refunded"** (money back in), distinct from **"Escrow released"** — the two are recorded as different ledger entry types, not the same label.
+7. Count the rows on screen: the list shows at most **10** at a time, not the whole history (2026-08-27 — the list is paged, it does not run on down the screen).
+8. With an account that has more than 10 entries, check the controls under the list: the entry count on the left ("42 transactions"), then `Previous`, `Page 1 of N`, `Next`. `Previous` is grayed out on the first page.
+9. Press `Next`. The next 10 entries load, the label reads `Page 2 of N`, and no row from page 1 repeats. Press `Previous` and the same page 1 rows come back.
+10. Go to the last page and check `Next` is grayed out.
+11. With an account that has 10 or fewer entries, check that no page controls appear at all.
+12. Send a credit to another member (or have one sent to you) and come back to the wallet: the list re-reads and lands on page 1, with the new row at the top.
 
-**Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. A refund and a release are labeled distinctly. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
+**Expected:** At least one transaction row is visible. Each row has a label, date, and signed amount in credits only, newest first. A refund and a release are labeled distinctly. The list shows 10 rows a page with working `Previous` / `Page N of M` / `Next` controls, and no controls at all when everything fits on one page. If there are truly no transactions the screen shows "No transactions yet" rather than an error.
 
 Result: web ☐
 
@@ -216,8 +222,10 @@ Result: web ☐
 2. Read the displayed figures: credits in circulation, total issued, total burned, treasury balance, and "Sent in last 30 days" (transferVolume30d).
 3. Confirm no figure is presented as a fiat amount.
 4. Confirm numbers are not hardcoded zeroes (seed data should produce non-zero values for at least some fields).
+5. Check the order on the page (web, 2026-08-27): the "Send credits" form appears **above** "The economy" heading and its figures, so a member reaching this tab sees their own wallet's action before the community-wide numbers.
+6. Switch to the Wallet tab and then the Earn tab and confirm the send form is still **below** the tab body there — those two open with the member's own balance already.
 
-**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present.
+**Expected:** Real aggregate numbers appear. No fiat label or currency symbol is visible. The "Sent in last 30 days" tile is present. On web the send form is above the figures on the Economy tab and below the body on the Wallet and Earn tabs.
 
 Result: web ☐
 
@@ -602,7 +610,7 @@ These cases must produce identical outcomes on both surfaces. Run them back-to-b
 | Case | What must match |
 |---|---|
 | SC-1 | Balance figures (available, held, total) are the same values on both surfaces for the same account |
-| SC-2 | Recent transactions list shows the same entries, labels, and signed amounts |
+| SC-2 | Recent transactions list shows the same entries, labels, and signed amounts. Paging is web-only: the Android list is unchanged and does not have page controls |
 | SC-3 | Transfer completes on both surfaces; sender and recipient balances update identically |
 | SC-4 | Insufficient-balance error is surfaced on both (message wording may differ, but send is blocked on both) |
 | SC-5 | Mutual-credit rail is available and functions on both surfaces |

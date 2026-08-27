@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Coins } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fmtCredits, describeLedgerEntry, describeMutualCreditFloor, type LedgerEntry, type WalletData } from "./sc-shared";
+import { fmtCredits, describeMutualCreditFloor, type WalletData } from "./sc-shared";
+import { RecentTransactions } from "./sc-transactions-panel";
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
 
@@ -53,127 +52,6 @@ function CreditLineRow({ wallet }: { wallet: WalletData | null }) {
     <div style={{ marginBottom: 24, padding: "14px 16px", borderRadius: 12, background: `${color}08`, border: `1px solid ${color}18` }}>
       <div style={{ fontSize: 13, color: available ? t.TITLE : t.MUTED, lineHeight: 1.6 }}>{describeMutualCreditFloor(wallet)}</div>
     </div>
-  );
-}
-
-function SectionHeading() {
-  const { theme } = useTheme();
-  const t = getServiceCreditsTokens(theme);
-  return <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 16 }}>Recent Transactions</div>;
-}
-
-function TransactionsShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-      <SectionHeading />
-      {children}
-    </div>
-  );
-}
-
-function CenteredState({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
-  const { theme } = useTheme();
-  const t = getServiceCreditsTokens(theme);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px 0" }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", border: "2px dashed rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-        <Coins size={20} style={{ color: "rgba(245,158,11,0.4)" }} />
-      </div>
-      <div style={{ fontSize: 13, color: muted ? t.MUTED : t.SUBTLE, textAlign: "center" }}>{children}</div>
-    </div>
-  );
-}
-
-function amountStyle(direction: "in" | "out" | "neutral"): { sign: string; color: string } {
-  if (direction === "in") return { sign: "+", color: "#22C55E" };
-  if (direction === "out") return { sign: "−", color: "#EF4444" };
-  return { sign: "", color: "#9CA3AF" };
-}
-
-function TransactionRow({ entry }: { entry: LedgerEntry }) {
-  const { theme } = useTheme();
-  const t = getServiceCreditsTokens(theme);
-  const { label, direction } = describeLedgerEntry(entry.entryType, entry.referenceType);
-  const { sign, color } = amountStyle(direction);
-  const when = new Date(entry.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>{label}</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>{when}</div>
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 800, color, whiteSpace: "nowrap" }}>
-        {sign}{fmtCredits(entry.amount)} <span style={{ fontSize: 11, color: t.MUTED, fontWeight: 600 }}>credits</span>
-      </div>
-    </div>
-  );
-}
-
-function TransactionsList({ entries }: { entries: LedgerEntry[] }) {
-  return (
-    <div>
-      {entries.map((entry) => (
-        <TransactionRow key={entry.id} entry={entry} />
-      ))}
-    </div>
-  );
-}
-
-// Recent wallet history, read from the authoritative ledger via GET /api/service-credits/transactions.
-// Fetches on mount (and whenever the balance changes, so a fresh transfer/grant shows up without a
-// manual reload). Renders loading / error / empty / populated states so the panel always reflects
-// real data rather than a static placeholder.
-function RecentTransactions({ refreshToken }: { refreshToken: number }) {
-  const [entries, setEntries] = useState<LedgerEntry[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    setError(null);
-    fetch("/api/service-credits/transactions")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`Failed to load transactions (${res.status}).`);
-        return (await res.json()) as { entries?: LedgerEntry[] };
-      })
-      .then((data) => {
-        if (active) setEntries(Array.isArray(data.entries) ? data.entries : []);
-      })
-      .catch((e: unknown) => {
-        if (active) setError(e instanceof Error ? e.message : "Failed to load transactions.");
-      });
-    return () => {
-      active = false;
-    };
-  }, [refreshToken]);
-
-  if (error) {
-    return (
-      <TransactionsShell>
-        <CenteredState>{error}</CenteredState>
-      </TransactionsShell>
-    );
-  }
-
-  if (entries === null) {
-    return (
-      <TransactionsShell>
-        <CenteredState muted>Loading transactions…</CenteredState>
-      </TransactionsShell>
-    );
-  }
-
-  if (entries.length === 0) {
-    return (
-      <TransactionsShell>
-        <CenteredState>Your transaction history will appear here as you earn and spend credits.</CenteredState>
-      </TransactionsShell>
-    );
-  }
-
-  return (
-    <TransactionsShell>
-      <TransactionsList entries={entries} />
-    </TransactionsShell>
   );
 }
 
