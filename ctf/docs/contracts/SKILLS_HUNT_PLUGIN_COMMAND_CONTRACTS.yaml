@@ -279,12 +279,9 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.leaderboard.list
     version: 1.0.0
-    description: Retrieve round leaderboard entries in individual or team mode.
+    description: Retrieve round leaderboard entries, ranked by accepted points. Scout ranking only — the team board was removed 2026-08-27.
     inputSchema:
       roundId:
-        type: string
-        required: true
-      mode:
         type: string
         required: true
       limit:
@@ -304,7 +301,7 @@ contracts:
   - pluginId: skills-hunt
     command: skills-hunt.leaderboard.rebuild
     version: 1.0.0
-    description: Admin-only manual rebuild of a round's cached leaderboard (individual and team) from its current accepted submissions.
+    description: Admin-only manual rebuild of a round's cached scout leaderboard from its current accepted submissions.
     inputSchema:
       roundId:
         type: string
@@ -683,3 +680,5 @@ changelog:
     change: Bumped skills-hunt.round.create, skills-hunt.round.update, and skills-hunt.submission.review to v1.1.0 — round create/update gain the rewardCreditsPerAccept and rewardPerUserRoundCap inputs, and submission.review mints the configured ServiceCredits reward to the scout on accept (idempotent, cap- and budget-bounded).
   - date: 2026-08-27
     change: Added the previously undocumented mission commands (mission.list, mission.create, mission.update, mission.archive) and the new auto-mission commands (mission.auto_generate, mission.auto_config_update) for missions auto-opened from Workforce sector gaps.
+  - date: 2026-08-27
+    change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.

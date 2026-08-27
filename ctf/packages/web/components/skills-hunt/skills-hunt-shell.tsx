@@ -10,7 +10,7 @@ import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
-  type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntLeaderboardMode, type SkillsHuntAchievement,
+  type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
   type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithProgress,
 } from "./sh-shared";
 import { SkillsHuntNotifications } from "./sh-notifications";
@@ -40,8 +40,6 @@ interface ShellData {
   resetForm: () => void;
   loadingLeaderboard: boolean;
   leaderboard: SkillsHuntLeaderboardItem[];
-  leaderboardMode: SkillsHuntLeaderboardMode;
-  setLeaderboardMode: (mode: SkillsHuntLeaderboardMode) => void;
   userId?: string;
   loadingMissions: boolean;
   missions: SkillsHuntMissionWithProgress[];
@@ -70,7 +68,7 @@ function ShellContent(d: ShellData) {
     return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} rounds={d.rounds} onSelectRound={d.onSelectRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
   }
   if (d.tab === "leaderboard") {
-    return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} mode={d.leaderboardMode} onModeChange={d.setLeaderboardMode} userId={d.userId} />;
+    return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} userId={d.userId} />;
   }
   if (d.tab === "missions") {
     return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} />;
@@ -91,7 +89,6 @@ export function SkillsHuntShell({
   const [rounds, setRounds] = useState<SkillsHuntRound[]>([]);
   const [activeRound, setActiveRound] = useState<SkillsHuntRound | null>(null);
   const [leaderboard, setLeaderboard] = useState<SkillsHuntLeaderboardItem[]>([]);
-  const [leaderboardMode, setLeaderboardMode] = useState<SkillsHuntLeaderboardMode>("individual");
   const [serverCurrentUserEntry, setServerCurrentUserEntry] = useState<SkillsHuntLeaderboardItem | null>(null);
   const [missions, setMissions] = useState<SkillsHuntMissionWithProgress[]>([]);
   const [loadingMissions, setLoadingMissions] = useState(false);
@@ -157,7 +154,7 @@ export function SkillsHuntShell({
     async function load() {
       setLoadingLeaderboard(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard?mode=${leaderboardMode}`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
         setLeaderboard(data.items);
@@ -168,7 +165,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [activeRound, refreshKey, leaderboardMode]);
+  }, [activeRound, refreshKey]);
 
   useEffect(() => {
     if (tab !== "my-finds" || !activeRound) return;
@@ -240,7 +237,7 @@ export function SkillsHuntShell({
       tab={tab} setTab={setTab} noActiveRound={noActiveRound} submitted={submitted} form={form} resetForm={resetForm}
       activeRound={activeRound} rounds={rounds}
       onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
-      loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} leaderboardMode={leaderboardMode} setLeaderboardMode={setLeaderboardMode} userId={userId}
+      loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
       loadingMissions={loadingMissions} missions={missions}
       loadingFinds={loadingFinds} myFinds={myFinds}
     />

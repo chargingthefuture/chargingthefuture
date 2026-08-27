@@ -1,7 +1,6 @@
 export type SkillsHuntRoundStatus = 'draft' | 'active' | 'closed' | 'archived';
 export type SkillsHuntSubmissionStatus = 'pending' | 'accepted' | 'rejected' | 'flagged';
 export type SkillsHuntReviewAction = 'accept' | 'reject' | 'edit' | 'flag';
-export type SkillsHuntLeaderboardMode = 'individual' | 'team';
 
 export type SkillsHuntPagination = {
   page: number;
@@ -107,13 +106,12 @@ export type SkillsHuntLeaderboardItem = {
   rareSkillBonus: number;
   userId: string | null;
   usernameSnapshot: string | null;
-  teamKey: string | null;
   lastSubmissionAtIso: string | null;
   metadata: Record<string, unknown>;
 };
 
 export type SkillsHuntLeaderboardResponse = {
-  mode: SkillsHuntLeaderboardMode;
+  mode: 'individual';
   roundId: string;
   items: SkillsHuntLeaderboardItem[];
   totalCount: number;

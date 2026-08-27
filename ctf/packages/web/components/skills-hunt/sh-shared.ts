@@ -6,7 +6,6 @@ import { getPluginShellTokens, type PluginShellTokens } from "@/components/share
 import type {
   SkillsHuntRound,
   SkillsHuntLeaderboardItem,
-  SkillsHuntLeaderboardMode,
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,
@@ -16,7 +15,6 @@ import type {
 export type {
   SkillsHuntRound,
   SkillsHuntLeaderboardItem,
-  SkillsHuntLeaderboardMode,
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,

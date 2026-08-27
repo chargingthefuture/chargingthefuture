@@ -9,8 +9,8 @@ import { failureReason } from 'lib/errors/failure';
 // Admin-only manual leaderboard rebuild. The leaderboard is a cached table that
 // the app only recomputes as a side effect of reviewing a submission, so there
 // is otherwise no way to refresh it after an out-of-band change (e.g. a data fix
-// that rejected an already-accepted submission). This recomputes both the
-// individual and team boards for the round from the current accepted rows.
+// that rejected an already-accepted submission). This recomputes the scout
+// board for the round from the current accepted rows.
 export async function POST(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
   if (!gate.allowed) {

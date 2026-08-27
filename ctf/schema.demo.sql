@@ -599,7 +599,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
 CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
-  mode TEXT NOT NULL CHECK (mode IN ('individual', 'team')),
+  mode TEXT NOT NULL CHECK (mode IN ('individual')),
   rank INTEGER NOT NULL,
   score INTEGER NOT NULL,
   accepted_count INTEGER NOT NULL DEFAULT 0,
@@ -760,6 +760,17 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_r
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;
+-- Team leaderboard removed (owner directive 2026-08-27). Teams was meant to be members teaming up
+-- on submissions; it was never that — it regrouped the same accepted nominations by the nominee's
+-- claimed profession, and since the nomination form stopped collecting professions every row landed
+-- in a single "Unspecified" bucket. The mode toggle, the team rows and the team queries are gone.
+-- Existing team rows are deleted here rather than left to age out on the next rebuild. The `mode`
+-- and `team_key` columns are deliberately kept: `mode` carries the UNIQUE (round_id, mode, rank)
+-- key and is now always 'individual', and dropping either would be a destructive change for no
+-- gain. The CHECK is narrowed so a team row cannot come back.
+DELETE FROM skills_hunt_leaderboard WHERE mode <> 'individual';
+ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP CONSTRAINT IF EXISTS skills_hunt_leaderboard_mode_check;
+ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderboard_mode_check CHECK (mode IN ('individual'));
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_tiebreak ON skills_hunt_leaderboard (round_id, mode, score DESC, first_match_count DESC, last_submission_at ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achievements (user_id, archived_at, awarded_at DESC);
