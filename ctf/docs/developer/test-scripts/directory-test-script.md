@@ -301,6 +301,27 @@ edit screen now uses the same picker (skills editable, no free-text box), also s
 an allow/deny audit line.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A1b · Admin list paging, and search across the whole collection
+**Role:** admin · **Surfaces:** web (`/admin/directory`)
+**Steps:**
+1. With more than 20 profiles seeded, open the admin page. Confirm the first screen shows 20 profiles
+   and appears without a long wait, and that "Page 1 of N" plus Previous / Next sit under the list.
+2. Press Next and Previous. Confirm the rows change, the label tracks the page, Previous is disabled on
+   page 1, and Next is disabled on the last page.
+3. Page forward past page 1, then type a name that belongs to a profile you know is **not** on page 1 —
+   for example one that only appears on the last page. Confirm it is found: search covers every profile
+   in the collection, not the page on screen, and the view returns to page 1 of the results.
+4. Search for a job title and for an unclaimed profile's handle. Confirm both match. Search with
+   punctuation ("o'brien") and confirm it matches the same person as "o brien".
+5. Switch to Claimed, then Unclaimed. Confirm each tab pages through only that kind, the page resets to
+   1, and the header's "N unclaimed" keeps counting the whole collection rather than the visible page.
+6. Delete an unclaimed profile from a page that has a following page. Confirm the page refills from the
+   next one and the header counts drop by one.
+**Expected:** The list loads one page at a time (20 per page) instead of the whole collection, so first
+paint does not wait on every profile. Search and the claim tabs are applied by the server across all
+profiles. The header's profile and unclaimed counts describe the whole collection.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### DIR-A2 · Attach an unclaimed profile (two places)
 **Role:** admin · **Surfaces:** web
 **Steps:**
