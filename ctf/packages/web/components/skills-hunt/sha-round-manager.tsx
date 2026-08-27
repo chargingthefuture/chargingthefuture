@@ -15,8 +15,11 @@ function toLocalInputValue(source: string | Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// maxWidth + minWidth 0 keep a field inside the phone-width column even when the control has a wide
+// intrinsic size — a `datetime-local` input reports one wider than the column on iOS Safari. Same
+// reasoning as the Mutual Time admin form, which hit this first.
 const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
-  width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
+  width: "100%", maxWidth: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
   border: "1px solid rgba(255,255,255,0.12)", color: t.TEXT, fontSize: 13, outline: "none", boxSizing: "border-box", minWidth: 0,
 });
 const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
@@ -112,7 +115,11 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
         <label style={label} htmlFor="shr-desc">Description (optional)</label>
         <textarea id="shr-desc" style={{ ...field, minHeight: 60, resize: "vertical" }} value={v.description} onChange={(e) => set({ description: e.target.value })} placeholder="What this round is about" />
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+      {/* One column, and `minmax(0, 1fr)` rather than a length floor: a grid track otherwise takes the
+          item's min-content width as its floor, so the two datetime pickers' wide intrinsic size grew
+          their tracks and pushed the Starts field past the right edge of the phone-width column.
+          `minWidth: 0` on each wrapper is the other half of that. Mobile-first = one column. */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <label style={label} htmlFor="shr-status">Status</label>
           <select id="shr-status" style={field} value={v.status} onChange={(e) => set({ status: e.target.value as SkillsHuntRoundStatus })}>
@@ -131,7 +138,7 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
           <input id="shr-end" type="datetime-local" style={field} value={v.endsAt} onChange={(e) => set({ endsAt: e.target.value })} />
         </div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, padding: "12px 14px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}25` }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 12, padding: "12px 14px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}25` }}>
         <div>
           <label style={label} htmlFor="shr-reward">ServiceCredits per accepted nomination</label>
           <input id="shr-reward" type="number" min={0} step={1} style={field} value={v.rewardPerAccept} onChange={(e) => set({ rewardPerAccept: e.target.value })} />
