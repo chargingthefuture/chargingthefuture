@@ -287,8 +287,12 @@ of these, it is already tracked, not a new bug:
   the dashboard uses the "all" variant; both match the bucket case-insensitively.
 - Some retained tables (`workforce_occupations`, `workforce_export_jobs`, and the vestigial
   `workforce_profiles` / `workforce_recruited_events` / `workforce_recruited_sync_cursor`) are unused
-  dead weight in the schema, kept only because the SkillsHunt rare-skill snapshot and the demo seed
-  still reference `workforce_occupations`.
+  dead weight in the schema. The SkillsHunt rare-skill snapshot stopped reading
+  `workforce_profiles`/`workforce_occupations` on 2026-08-27 (it reads the live gap model through
+  `lib/shared/workforce-interface.ts` now — the same feed SkillsHunt's auto-opened gap missions use);
+  the remaining references are the demo seed (`workforce_occupations`) and the account deletion
+  registry (`workforce_profiles`). No Workforce behavior changed, so no test steps change — SkillsHunt's
+  own script covers the consumers (SH-A17 and the rare-skill scoring cases).
 - The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
   inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
   The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
