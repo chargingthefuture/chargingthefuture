@@ -48,6 +48,9 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. Current available, held, and total balance retrieval.
 2. Clear transaction classification (transfer, escrow, treasury fee, adjustment).
 3. Plain-language labels for non-fiat credit semantics.
+4. **Recent Transactions is paged, 10 rows to a page.** The wallet shows ten entries at a time with
+   `Previous · Page N of M · Next` controls under the list and the member's total entry count beside
+   them, so the screen keeps the same height whether the member has ten entries or five hundred.
 
 ### 1.3 Transfer and Escrow Flows
 
@@ -139,7 +142,7 @@ User routes:
 
 - `POST /api/service-credits/wallets`
 - `GET /api/service-credits/wallets/:walletId/balance`
-- `GET /api/service-credits/transactions` → `{ ok, entries }` — the caller's own recent wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200). Backs the wallet "Recent Transactions" list. Bare credit quantities only; never a fiat figure.
+- `GET /api/service-credits/transactions` → `{ ok, entries, total, limit, offset }` — one page of the caller's own wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200) and `?offset=` (default 0; negative or non-numeric treated as 0). `total` is the member's full entry count across all pages, so the caller can show "Page N of M". Backs the wallet "Recent Transactions" list, which is paged 10 rows at a time. Bare credit quantities only; never a fiat figure.
 - `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit)
 - `GET /api/service-credits/circulation` → `{ ok, metrics }` — public, aggregate, non-identifying circulation numbers (in circulation, total issued/burned, treasury balance, velocity, outstanding mutual-credit debt). No fiat figure.
 - `POST /api/service-credits/escrows` — create an escrow hold. Restricted to the `service`/`system`/`dispute_moderator` roles (or admin) via `requireServiceCreditsServiceAccess`, per the access-policy contract — not a self-service member action. `amount` must be a finite number greater than 0 (else 400).
@@ -283,6 +286,23 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 ---
 
 ## 10) Change Log
+
+- 2026-08-27: **Wallet "Recent Transactions" now pages instead of running on down the screen.** The
+  list rendered every ledger row the route returned, so a member with a long history got a wallet
+  screen that grew without a bottom. The read route
+  (`app/api/service-credits/transactions/route.ts`) now takes an `?offset=` alongside the existing
+  `?limit=` and returns `total` — the member's full entry count — beside the page, with
+  `listWalletLedgerEntries` (`lib/service-credits/repository.ts`) taking an offset, ordering by
+  `created_at DESC, id DESC` so a page boundary is stable when two rows share a timestamp, and
+  carrying the count on the page via `COUNT(*) OVER ()` (a past-the-end page falls back to a plain
+  count so the total is still right). On the web side the panel moved out of `sc-wallet-tab.tsx`
+  into its own `sc-transactions-panel.tsx` and fetches 10 rows a page, with a new `sc-pager.tsx`
+  matching the `Previous · Page N of M · Next` controls used by the What Works lists. A balance
+  change still re-reads and returns to the first page, where the new row is. Read-only: no schema,
+  transfer, or ledger-write change; `wallet.transactions.list` command contract goes to 1.1.0 for
+  the added `offset` input and `total` output (access policy unchanged — same member, same own-wallet
+  read). The mobile wallet list is untouched and unaffected: the added response fields are additive
+  and it ignores them.
 
 
 - 2026-08-05: **Deletion-reclaim messaging shipped (§1.5, promised since 2026-02-25 and never

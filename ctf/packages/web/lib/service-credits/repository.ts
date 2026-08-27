@@ -227,15 +227,29 @@ export type WalletLedgerEntry = {
   createdAt: string;
 };
 
+export type WalletLedgerPage = {
+  entries: WalletLedgerEntry[];
+  // Total rows the member has in the ledger, so the caller can show "Page N of M" rather than
+  // guessing whether another page exists.
+  total: number;
+};
+
 // A member's own wallet history, read straight from the authoritative double-entry record
 // (service_credits_ledger_entries). Every mint/transfer/escrow/fee/dispute path writes a row here in
 // the same transaction as the balance change, so these entries reconcile to the wallet's available +
 // escrow balance. Read-only; scoped to the caller's user_id. This is the FULL ledger — mints,
 // transfers in/out, escrow holds/releases, treasury fees, seed allocations — not just governance
 // mints (service_credits_governance_events holds only the mint/burn subset, which is why a balance can
-// exceed the sum of mint events when transfers or allocations are involved).
-export async function listWalletLedgerEntries(userId: string, limit = 50): Promise<WalletLedgerEntry[]> {
+// exceed the sum of mint events when transfers or allocations are involved). Returns one page of rows
+// plus the member's total row count, so a caller can page through the history a screen at a time.
+
+export async function listWalletLedgerEntries(
+  userId: string,
+  limit = 50,
+  offset = 0,
+): Promise<WalletLedgerPage> {
   const safeLimit = Math.min(Math.max(limit, 1), 200);
+  const safeOffset = Number.isFinite(offset) ? Math.max(Math.trunc(offset), 0) : 0;
   const result = await queryDb<{
     id: string;
     entry_type: string;
@@ -243,23 +257,42 @@ export async function listWalletLedgerEntries(userId: string, limit = 50): Promi
     reference_type: string;
     reference_id: string;
     created_at: Date;
+    total_count: string;
   }>(
-    `SELECT id::text, entry_type, amount::text, reference_type, reference_id, created_at
+    `SELECT id::text, entry_type, amount::text, reference_type, reference_id, created_at,
+            COUNT(*) OVER () AS total_count
        FROM service_credits_ledger_entries
       WHERE user_id = $1
-      ORDER BY created_at DESC
-      LIMIT $2`,
-    [userId, safeLimit],
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2 OFFSET $3`,
+    [userId, safeLimit, safeOffset],
   );
 
-  return result.rows.map((row) => ({
-    id: row.id,
-    entryType: row.entry_type,
-    amount: Number(row.amount),
-    referenceType: row.reference_type,
-    referenceId: row.reference_id,
-    createdAt: row.created_at.toISOString(),
-  }));
+  // COUNT(*) OVER () rides along with the page, so the total costs no extra round trip. An empty
+  // page carries no window row: either the member has no entries at all, or the caller asked for a
+  // page past the end. Fall back to a plain count so a past-the-end request still reports the real
+  // total instead of zero.
+  const windowTotal = result.rows[0]?.total_count;
+  let total = windowTotal === undefined ? 0 : Number(windowTotal);
+  if (windowTotal === undefined && safeOffset > 0) {
+    const counted = await queryDb<{ total_count: string }>(
+      `SELECT COUNT(*)::text AS total_count FROM service_credits_ledger_entries WHERE user_id = $1`,
+      [userId],
+    );
+    total = Number(counted.rows[0]?.total_count ?? 0);
+  }
+
+  return {
+    total,
+    entries: result.rows.map((row) => ({
+      id: row.id,
+      entryType: row.entry_type,
+      amount: Number(row.amount),
+      referenceType: row.reference_type,
+      referenceId: row.reference_id,
+      createdAt: row.created_at.toISOString(),
+    })),
+  };
 }
 
 // A platform restriction at 'all' or 'trading' scope blocks spending on either rail (trust & safety).
