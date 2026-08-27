@@ -19,7 +19,7 @@
 //     part of the admin update contract (DirectoryProfileInput), so it is shown
 //     read-only rather than edited.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { BackChevronButton } from "@/lib/nav/back-history";
@@ -243,26 +243,46 @@ async function fetchDirectoryTaxonomy(): Promise<{
   return { sectors, jobTitles, skills };
 }
 
-function matchesFilter(p: AdminDirectoryProfile, filter: FilterKey): boolean {
-  if (filter === "Unclaimed") return p.claimedByUserId == null;
-  if (filter === "Claimed") return p.claimedByUserId != null;
-  return true;
+// How many profiles one page shows. Small enough that the first screen paints quickly; the pager
+// below the list reaches the rest.
+const PAGE_SIZE = 20;
+
+// The tab label as the list endpoint spells it.
+function claimParam(filter: FilterKey): string {
+  if (filter === "Unclaimed") return "unclaimed";
+  if (filter === "Claimed") return "claimed";
+  return "all";
 }
 
-function matchesQuery(p: AdminDirectoryProfile, q: string): boolean {
-  if (q.length === 0) return true;
-  const hay = `${fullName(p)} ${p.headline ?? ""} ${p.jobTitleName ?? ""} ${p.unclaimedHandle ?? ""}`.toLowerCase();
-  return hay.includes(q);
-}
-
-function filterProfiles(profiles: AdminDirectoryProfile[], filter: FilterKey, query: string): AdminDirectoryProfile[] {
-  const q = query.trim().toLowerCase();
-  return profiles.filter((p) => matchesFilter(p, filter) && matchesQuery(p, q));
+// The list request for one page. Search and the claim tab are sent to the server, which applies them
+// across every profile in the collection — so a search finds a member on any page, not only the one
+// on screen.
+function buildListUrl(page: number, filter: FilterKey, query: string): string {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(PAGE_SIZE),
+    includeInactive: "true",
+    claimed: claimParam(filter),
+  });
+  const q = query.trim();
+  if (q.length > 0) {
+    params.set("q", q);
+  }
+  return `/api/directory/admin/profiles?${params.toString()}`;
 }
 
 // ── Data loading ────────────────────────────────────────────────────────────
-function useDirectoryProfiles() {
+// Shape of the list endpoint's response.
+interface AdminProfilesResponse {
+  items?: AdminDirectoryProfile[];
+  pagination?: { page?: number; pageSize?: number; total?: number };
+  unclaimedTotal?: number;
+}
+
+function useDirectoryProfiles(page: number, filter: FilterKey, query: string) {
   const [profiles, setProfiles] = useState<AdminDirectoryProfile[]>([]);
+  const [total, setTotal] = useState(0);
+  const [unclaimedTotal, setUnclaimedTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Full taxonomy option lists backing the skills picker in the edit drawer (same lists the member
@@ -276,19 +296,21 @@ function useDirectoryProfiles() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/directory/admin/profiles?pageSize=100&includeInactive=true");
+      const res = await fetch(buildListUrl(page, filter, query));
       if (!res.ok) {
         setError(await responseFailureText(res, "Could not load profiles."));
         return;
       }
-      const data = (await res.json()) as { items?: AdminDirectoryProfile[] };
+      const data = (await res.json()) as AdminProfilesResponse;
       setProfiles(data.items ?? []);
+      setTotal(data.pagination?.total ?? 0);
+      setUnclaimedTotal(data.unclaimedTotal ?? 0);
     } catch (caught) {
       setError(failureText(caught, { area: 'directory', op: 'load', fallback: "Could not load profiles." }));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, filter, query]);
 
   useEffect(() => {
     void load();
@@ -316,13 +338,17 @@ function useDirectoryProfiles() {
     };
   }, []);
 
-  return { profiles, setProfiles, loading, error, sectors, jobTitles, skills, taxonomyLoading };
+  return { profiles, setProfiles, total, unclaimedTotal, loading, error, reload: load, sectors, jobTitles, skills, taxonomyLoading };
 }
 
 // ── Edit drawer state + mutations ─────────────────────────────────────────────
 function useProfileEditor(
   profiles: AdminDirectoryProfile[],
   setProfiles: Dispatch<SetStateAction<AdminDirectoryProfile[]>>,
+  // Called after a profile leaves the collection. Re-fetches the current page so it refills from the
+  // next one and the header totals stay right — the page no longer holds every profile, so dropping
+  // the row locally is not enough.
+  reload: () => void,
 ) {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [], proposedSkills: [], city: "", state: "", country: "" });
@@ -445,7 +471,7 @@ function useProfileEditor(
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
       });
       if (res.ok) {
-        setProfiles((prev) => prev.filter((x) => x.id !== p.id));
+        reload();
         if (editId === p.id) closeDrawer();
         return;
       }
@@ -480,7 +506,7 @@ function useProfileEditor(
         body: JSON.stringify({ reason: reason.trim() }),
       });
       if (res.ok) {
-        setProfiles((prev) => prev.filter((x) => x.id !== p.id));
+        reload();
         if (editId === p.id) closeDrawer();
         return;
       }
@@ -814,28 +840,58 @@ interface ProfileListViewProps {
   setFilter: (filter: FilterKey) => void;
   loading: boolean;
   error: string | null;
-  filtered: AdminDirectoryProfile[];
+  profiles: AdminDirectoryProfile[];
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
   saving: boolean;
   onEdit: (p: AdminDirectoryProfile) => void;
   onTakedown: (p: AdminDirectoryProfile) => void;
   onDelete: (p: AdminDirectoryProfile) => void;
 }
 
+// Page back / forward under the list. Replaces loading the whole collection into one endless list:
+// each press fetches one page, so the first screen paints without waiting on the rest. Hidden while
+// a single page holds everything.
+function Pager({ page, pageCount, loading, onPageChange }: { page: number; pageCount: number; loading: boolean; onPageChange: (page: number) => void }) {
+  if (pageCount <= 1) return null;
+  const buttonStyle = (disabled: boolean): CSSProperties => ({
+    padding: "8px 14px",
+    borderRadius: 8,
+    background: "rgba(255,255,255,0.04)",
+    border: `1px solid ${BORDER}`,
+    color: disabled ? SUBTLE : COLOR,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+  });
+  const atStart = page <= 1 || loading;
+  const atEnd = page >= pageCount || loading;
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12 }}>
+      <button type="button" onClick={() => onPageChange(page - 1)} disabled={atStart} style={buttonStyle(atStart)}>Previous</button>
+      <span style={{ fontSize: 12, color: SUBTLE }}>Page {page} of {pageCount}</span>
+      <button type="button" onClick={() => onPageChange(page + 1)} disabled={atEnd} style={buttonStyle(atEnd)}>Next</button>
+    </div>
+  );
+}
+
 function ProfileListContent({
   loading,
   error,
-  filtered,
+  profiles,
   saving,
   onEdit,
   onTakedown,
   onDelete,
-}: Pick<ProfileListViewProps, "loading" | "error" | "filtered" | "saving" | "onEdit" | "onTakedown" | "onDelete">) {
+}: Pick<ProfileListViewProps, "loading" | "error" | "profiles" | "saving" | "onEdit" | "onTakedown" | "onDelete">) {
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: SUBTLE, fontSize: 13 }}>Loading profiles…</div>;
   if (error) return <div style={{ padding: 40, textAlign: "center", color: "#EF4444", fontSize: 13 }}>{error}</div>;
-  if (filtered.length === 0) return <div style={{ padding: 40, textAlign: "center", color: SUBTLE, fontSize: 13 }}>No profiles match this view.</div>;
+  if (profiles.length === 0) return <div style={{ padding: 40, textAlign: "center", color: SUBTLE, fontSize: 13 }}>No profiles match this view.</div>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {filtered.map((p) => (
+      {profiles.map((p) => (
         <ProfileCard
           key={p.id}
           p={p}
@@ -850,7 +906,7 @@ function ProfileListContent({
 }
 
 function ProfileListView(props: ProfileListViewProps) {
-  const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, filtered, saving, onEdit, onTakedown, onDelete } = props;
+  const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, profiles, page, pageCount, onPageChange, saving, onEdit, onTakedown, onDelete } = props;
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px 10px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14" }}>
@@ -885,12 +941,13 @@ function ProfileListView(props: ProfileListViewProps) {
         <ProfileListContent
           loading={loading}
           error={error}
-          filtered={filtered}
+          profiles={profiles}
           saving={saving}
           onEdit={onEdit}
           onTakedown={onTakedown}
           onDelete={onDelete}
         />
+        <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} />
         <SuppressionPanel />
       </div>
     </div>
@@ -902,11 +959,26 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
   const pickerTokens = getDirectoryTokens(theme);
   const [filter, setFilter] = useState<FilterKey>("All");
   const [query, setQuery] = useState("");
-  const data = useDirectoryProfiles();
-  const editor = useProfileEditor(data.profiles, data.setProfiles);
+  // The typed text drives the box; the settled text drives the request, so a search is one fetch
+  // after typing stops rather than one per keystroke.
+  const [settledQuery, setSettledQuery] = useState("");
+  const [page, setPage] = useState(1);
 
-  const filtered = useMemo(() => filterProfiles(data.profiles, filter, query), [data.profiles, filter, query]);
-  const unclaimedCount = useMemo(() => data.profiles.filter((p) => p.claimedByUserId == null).length, [data.profiles]);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // A new search or tab starts at the first page — page 3 of the old result set means nothing in the
+  // new one.
+  useEffect(() => {
+    setPage(1);
+  }, [settledQuery, filter]);
+
+  const data = useDirectoryProfiles(page, filter, settledQuery);
+  const editor = useProfileEditor(data.profiles, data.setProfiles, data.reload);
+
+  const pageCount = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   const editing = editor.editing;
 
@@ -943,15 +1015,18 @@ export function DirectoryAdminShell({ currentUserId }: { currentUserId: string }
 
   return (
     <ProfileListView
-      profilesCount={data.profiles.length}
-      unclaimedCount={unclaimedCount}
+      profilesCount={data.total}
+      unclaimedCount={data.unclaimedTotal}
       query={query}
       setQuery={setQuery}
       filter={filter}
       setFilter={setFilter}
       loading={data.loading}
       error={data.error}
-      filtered={filtered}
+      profiles={data.profiles}
+      page={page}
+      pageCount={pageCount}
+      onPageChange={setPage}
       saving={editor.saving}
       onEdit={editor.startEdit}
       onTakedown={(p) => void editor.handleTakedown(p)}

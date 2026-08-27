@@ -214,11 +214,15 @@ function buildPendingSkills(
   return pendingSkills;
 }
 
-async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
-  const skills = await loadProfileSkills(client, row.id);
-  const nominatedPending = await loadProfilePendingSkills(client, row.id);
-  const selfProposed = await loadProfileProposedSkills(client, row.id);
-
+// The pure part of the row mapping: turn one database row plus its already-loaded skill lists into
+// the API shape. Split out of mapProfileRow so both the single-row path and the batched page path
+// (mapProfileRows) build the exact same object.
+function buildProfile(
+  row: DirectoryProfileRow,
+  skills: DirectoryProfile['skills'],
+  nominatedPending: string[],
+  selfProposed: string[],
+): DirectoryProfile {
   // pendingSkills is the de-duplicated display set (see buildPendingSkills). proposedSkills keeps
   // only the self-added labels for the edit form.
   const pendingSkills = buildPendingSkills(skills, nominatedPending, selfProposed);
@@ -253,6 +257,108 @@ async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Prom
     state: nullable(row.state),
     country: nullable(row.country),
   };
+}
+
+async function mapProfileRow(client: PoolClient, row: DirectoryProfileRow): Promise<DirectoryProfile> {
+  const skills = await loadProfileSkills(client, row.id);
+  const nominatedPending = await loadProfilePendingSkills(client, row.id);
+  const selfProposed = await loadProfileProposedSkills(client, row.id);
+
+  return buildProfile(row, skills, nominatedPending, selfProposed);
+}
+
+// Group rows returned by a batched skill query into a map keyed by profile id, so each profile can
+// pick up its own list in one lookup instead of a per-profile query.
+function groupByProfileId<TRow extends { profile_id: string }, TValue>(
+  rows: TRow[],
+  toValue: (row: TRow) => TValue,
+): Map<string, TValue[]> {
+  const byId = new Map<string, TValue[]>();
+  for (const row of rows) {
+    const existing = byId.get(row.profile_id);
+    if (existing) {
+      existing.push(toValue(row));
+    } else {
+      byId.set(row.profile_id, [toValue(row)]);
+    }
+  }
+  return byId;
+}
+
+// Batched form of loadProfileSkills: the taxonomy skills for a whole page of profiles in one query.
+async function loadSkillsForProfiles(
+  client: PoolClient,
+  profileIds: string[],
+): Promise<Map<string, DirectoryProfile['skills']>> {
+  const result = await client.query<DirectorySkillRow & { profile_id: string }>(
+    `
+      SELECT dps.profile_id::text AS profile_id, sk.id, sk.name, dps.display_order
+      FROM directory_profile_skills dps
+      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
+      -- profile_id compared as text for the same v2 varchar / uuid reason as loadProfileSkills.
+      WHERE dps.profile_id::text = ANY($1::text[])
+      ORDER BY dps.display_order ASC, sk.name ASC
+    `,
+    [profileIds],
+  );
+
+  return groupByProfileId(result.rows, (row) => ({ id: row.id, name: row.name, displayOrder: row.display_order }));
+}
+
+// Batched form of loadProfilePendingSkills (SkillsHunt nominations not yet in the taxonomy).
+async function loadPendingSkillsForProfiles(client: PoolClient, profileIds: string[]): Promise<Map<string, string[]>> {
+  const result = await client.query<{ profile_id: string; skill_label: string }>(
+    `
+      SELECT DISTINCT shdp.directory_profile_id::text AS profile_id, prom.skill_label
+      FROM skills_hunt_directory_profiles shdp
+      JOIN skills_hunt_proposed_skill_promotions prom
+        ON prom.source_submission_id = shdp.submission_id
+      WHERE shdp.directory_profile_id::text = ANY($1::text[])
+        AND prom.status <> 'promoted'
+        AND btrim(prom.skill_label) <> ''
+      ORDER BY prom.skill_label ASC
+    `,
+    [profileIds],
+  );
+
+  return groupByProfileId(result.rows, (row) => row.skill_label);
+}
+
+// Batched form of loadProfileProposedSkills (the member's own free-text "skill not listed" labels).
+async function loadProposedSkillsForProfiles(client: PoolClient, profileIds: string[]): Promise<Map<string, string[]>> {
+  const result = await client.query<{ profile_id: string; skill_label: string }>(
+    `
+      SELECT profile_id::text AS profile_id, skill_label
+      FROM directory_profile_proposed_skills
+      -- profile_id compared as text for the same v2 varchar / uuid reason as loadProfileSkills.
+      WHERE profile_id::text = ANY($1::text[])
+        AND status = 'pending'
+        AND btrim(skill_label) <> ''
+      ORDER BY skill_label ASC
+    `,
+    [profileIds],
+  );
+
+  return groupByProfileId(result.rows, (row) => row.skill_label);
+}
+
+// Map a whole page of rows in three queries total. mapProfileRow costs three queries PER row, and a
+// pooled client runs them one after another, so a 100-row page meant ~300 sequential round trips
+// before the list could paint — the reason the admin list was slow on first load. Use this for any
+// list; keep mapProfileRow for single-row reads.
+async function mapProfileRows(client: PoolClient, rows: DirectoryProfileRow[]): Promise<DirectoryProfile[]> {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const profileIds = rows.map((row) => row.id);
+  const skillsById = await loadSkillsForProfiles(client, profileIds);
+  const nominatedById = await loadPendingSkillsForProfiles(client, profileIds);
+  const proposedById = await loadProposedSkillsForProfiles(client, profileIds);
+
+  return rows.map((row) =>
+    buildProfile(row, skillsById.get(row.id) ?? [], nominatedById.get(row.id) ?? [], proposedById.get(row.id) ?? []),
+  );
 }
 
 // The canonical count of community members is the number of active Directory profiles (claimed or
@@ -1197,7 +1303,7 @@ export async function listDirectoryForMember(
       ],
     );
 
-    const items = await Promise.all(rows.rows.map(async (row) => mapProfileRow(client, row)));
+    const items = await mapProfileRows(client, rows.rows);
 
     return {
       items,
@@ -1347,18 +1453,77 @@ export async function listTaxonomySkills(jobTitleId: string | null = null): Prom
   return result.rows.map((row) => ({ id: row.id, name: row.name, jobTitleId: row.job_title_id }));
 }
 
+// Which claim states the admin list should return. The admin surface's All / Claimed / Unclaimed
+// tabs map straight onto this, and it is applied in SQL so a tab covers the whole collection rather
+// than only the rows already on screen.
+export type AdminProfileClaimFilter = 'all' | 'claimed' | 'unclaimed';
+
+export interface AdminProfileFilters {
+  q?: string | null;
+  claimed?: AdminProfileClaimFilter;
+}
+
+// Shared predicate for the admin list's count and page queries, so the total always describes the
+// same set the page is drawn from. Parameters: $1 includeInactive, $2 claim filter, $3 search term
+// (already collapsed by buildSearchTerm, or null for "no search").
+const ADMIN_PROFILE_WHERE = `
+  WHERE ($1::boolean OR p.is_active = true)
+    AND (
+      $2::text = 'all'
+      OR ($2::text = 'claimed' AND p.claimed_by_user_id IS NOT NULL)
+      OR ($2::text = 'unclaimed' AND p.claimed_by_user_id IS NULL)
+    )
+    AND (
+      $3::text IS NULL
+      -- Search runs here, in SQL, against every profile in the collection — not against the page
+      -- currently on screen. Punctuation-insensitive in the same way the member browse search is:
+      -- each side has runs of non-alphanumeric characters collapsed to a single space, so "o brien"
+      -- matches "O'Brien". Fields match what the admin card shows: name, headline, profession, and
+      -- the system-assigned handle of an unclaimed profile.
+      OR regexp_replace(lower(COALESCE(p.first_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(p.headline, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(jt.name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(p.unclaimed_handle, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+    )
+`;
+
+// One page of admin profiles, plus the totals the header shows. Filtering and search are applied in
+// SQL so both the tabs and the search box cover every profile, while only one page of rows is
+// mapped and sent — the list no longer loads the whole collection to paint its first screen.
+// `unclaimedTotal` is counted across the whole collection because the header states it there, and a
+// page of rows cannot answer it.
 export async function listAdminProfiles(
   pagination: { page: number; pageSize: number },
   includeInactive = false,
-): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination }> {
+  filters: AdminProfileFilters = {},
+): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination; unclaimedTotal: number }> {
+  const claimed: AdminProfileClaimFilter = filters.claimed ?? 'all';
+  const searchTerm = buildSearchTerm(filters.q);
+
   return withDbTransaction(async (client) => {
     const offset = (pagination.page - 1) * pagination.pageSize;
+    const predicateParams = [includeInactive, claimed, searchTerm];
 
     const countResult = await client.query<CountRow>(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
+        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+        ${ADMIN_PROFILE_WHERE}
+      `,
+      predicateParams,
+    );
+
+    // The header's "N unclaimed" describes the whole collection, so it ignores the claim tab and the
+    // search box and only applies the active/inactive scope.
+    const unclaimedResult = await client.query<CountRow>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM directory_profiles p
         WHERE ($1::boolean OR p.is_active = true)
+          AND p.claimed_by_user_id IS NULL
       `,
       [includeInactive],
     );
@@ -1373,7 +1538,9 @@ export async function listAdminProfiles(
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -1391,17 +1558,14 @@ export async function listAdminProfiles(
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE ($1::boolean OR p.is_active = true)
+        ${ADMIN_PROFILE_WHERE}
         ORDER BY p.updated_at DESC
-        OFFSET $2 LIMIT $3
+        OFFSET $4 LIMIT $5
       `,
-      [includeInactive, offset, pagination.pageSize],
+      [...predicateParams, offset, pagination.pageSize],
     );
 
-    const items: DirectoryProfile[] = [];
-    for (const row of rows.rows) {
-      items.push(await mapProfileRow(client, row));
-    }
+    const items = await mapProfileRows(client, rows.rows);
 
     return {
       items,
@@ -1410,6 +1574,7 @@ export async function listAdminProfiles(
         pageSize: pagination.pageSize,
         total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
       },
+      unclaimedTotal: Number.parseInt(unclaimedResult.rows[0]?.total ?? '0', 10),
     };
   });
 }

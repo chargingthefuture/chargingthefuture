@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateProfileInput } from 'lib/directory/repository';
+import type { AdminProfileClaimFilter } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
@@ -54,6 +55,15 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   };
 }
 
+// Only the three claim states the admin tabs offer are accepted; anything else falls back to 'all'
+// so an unexpected query string cannot narrow the list without the admin asking for it.
+function parseClaimFilter(value: string | null): AdminProfileClaimFilter {
+  if (value === 'claimed' || value === 'unclaimed') {
+    return value;
+  }
+  return 'all';
+}
+
 export async function GET(request: Request) {
   const gate = await requireDirectoryAdminAccess();
   if (!gate.allowed) {
@@ -61,10 +71,14 @@ export async function GET(request: Request) {
   }
 
   const pagination = parsePaginationParams(request.url);
-  const includeInactive = new URL(request.url).searchParams.get('includeInactive') === 'true';
+  const params = new URL(request.url).searchParams;
+  const includeInactive = params.get('includeInactive') === 'true';
+  // Search and the claim filter are applied in the database so both cover every profile in the
+  // collection, not only the page currently on screen.
+  const filters = { q: params.get('q'), claimed: parseClaimFilter(params.get('claimed')) };
 
   try {
-    const payload = await listAdminProfiles(pagination, includeInactive);
+    const payload = await listAdminProfiles(pagination, includeInactive, filters);
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });
