@@ -73,5 +73,26 @@ ORDER BY 1;
 --    are looking at came from the seeded copy.
 SELECT to_regclass('demo.login_events') AS demo_sign_in_record;
 
--- Follow-up for query 4, only if it returned a name rather than NULL:
---   SELECT COUNT(*) AS demo_rows, MIN(created_at) AS demo_first_row FROM demo.login_events;
+-- 5. Follow-up for query 4, only when it returned a name rather than NULL. The demo schema existing
+--    is normal — it is provisioned for recording sessions and does not mean anything is reading it.
+--    This is what tells the two apart: compare `demo_members_this_week` with the Active Members card
+--    on screen for the current week. If the card matches the demo numbers rather than query 2's, the
+--    dashboard is being served from the demo schema, which happens when the signed-in operator is a
+--    demo-mode participant. Every /admin screen shows a demo banner in that case.
+WITH demo_days AS (
+  SELECT DISTINCT user_id, (created_at AT TIME ZONE 'UTC')::date AS activity_day
+  FROM demo.login_events
+  WHERE user_id IS NOT NULL AND btrim(user_id) <> ''
+)
+SELECT (SELECT COUNT(*)        FROM demo.login_events) AS demo_rows,
+       (SELECT MIN(created_at) FROM demo.login_events) AS demo_first_row,
+       (SELECT MAX(created_at) FROM demo.login_events) AS demo_last_row,
+       COUNT(DISTINCT user_id) FILTER (
+         WHERE activity_day >= DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC')::date
+           AND activity_day <  DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC')::date + 7
+       ) AS demo_members_this_week,
+       COUNT(*) FILTER (
+         WHERE activity_day >= DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC')::date
+           AND activity_day <  DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC')::date + 7
+       ) AS demo_member_days_this_week
+FROM demo_days;
