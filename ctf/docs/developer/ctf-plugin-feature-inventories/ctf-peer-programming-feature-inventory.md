@@ -218,6 +218,13 @@ member per UTC day. Before this writer existed the table was always empty, so th
 assignment run found zero active members and could never form a cohort; an admin can still
 form a cohort immediately with the manual user-id override.
 
+The sign-in record is the whole definition of "active" here, as it is on the Weekly
+Performance dashboard (**owner decision, 2026-08-27**). Do not widen the selection to
+members who merely have rows of their own from the last 7 days — that is a different
+measurement, and this plugin and the dashboard must not disagree about who turned up. If
+somebody is using the app but not being selected, the sign-in write is what to fix; run
+`ctf/scripts/audit-active-members.mjs`, which reports exactly that case.
+
 ### Tables Owned by This Plugin
 
 1. `peer_programming_weekly_topics` — Weekly topic guidance (id, week_start_date, title, guidance, revision_note, status, created_by_user_id, published_by_user_id, published_at).
@@ -293,6 +300,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-08-27: Cohort selection is back to the sign-in record alone (owner decision — see the Weekly
+  Performance inventory's entry for the same date). A 2026-08-26 pass had widened the shared active
+  set in `lib/engagement/member-activity.ts` to any member with their own dated rows in the window,
+  which silently widened who this plugin forms cohorts around; it now selects members with a
+  `login_events` row in the last 7 days, as the section above and the `cohort.weekly.select` contract
+  describe. No change to this plugin's own code, routes, schema, or contracts.
 
 - 2026-08-18: **Corrected: PeerProgramming has no Android surface.** Agents kept reading this file and concluding the feature ships in the Android app. It does not — `packages/mobile/src/features/peer-programming` was deleted on 2026-07-20 (rule 105, PR #1742) and the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. The Delivery Status section already said so, but five other sections still described the Android screens in the present tense and contradicted it: Scope and Boundary listed the deleted mobile directory as an owned surface; the numbered intent statement said the video call runs "on web and Android" (that section feeds the public user guide, so it was teaching the wrong thing downstream); the Live Video Session feature list gave an Expo Go build constraint for a build that no longer exists; two Delivery Status paragraphs described the Android composer and admin screen as current; and the Gaps list carried Android live video as delivered. Each is now stated as web-only, with the removed Android work kept as dated history rather than deleted. Scope and Boundary also gained an explicit "No Android surface" line so the next agent hits the answer before it can guess. Documentation only — no code, route, schema, or contract change; the parity contract entry (`peer-programming`: `requiresMobileSurface: false`, `mobileFeatureDirs: []`) already matched the code and is untouched.
 - 2026-08-18: **Cohort-chosen topics tabled; admin control is the decision, not a shortfall (owner).**

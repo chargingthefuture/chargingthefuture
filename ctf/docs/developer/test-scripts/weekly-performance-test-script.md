@@ -110,14 +110,17 @@ is no "set active week" action and no per-week status.
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
    posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
    Members, Directory findable members, Mood check-ins + average, ClickLog incidents + distinct
-   loggers. The Active Members card reads "N members": how many different members did something in
-   the app during the selected week. The Daily Active Members card reads "N per day": the average
+   loggers. The Active Members card reads "N members": how many different members signed in
+   during the selected week. The Daily Active Members card reads "N per day": the average
    number of members active on a day of that week; on the current week it divides by the days of the
-   week so far, on a past week by the full 7. Both count a member as active on a day when any of
-   their own rows carries that day — a sign-in, a ClickLog incident, a Mood check-in, a Commons post,
-   reply or reaction, a PeerProgramming message — so a member who used the app is counted even if no
-   sign-in row was written for them. Check this against the ClickLog cards on the same screen: Active
-   Members can never read lower than ClickLog's distinct loggers for the same week. Both are
+   week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in
+   record holds a row for them that day, and nothing else (owner decision, 2026-08-27) —
+   so these two cards can read lower than the ClickLog or Mood cards on the same screen, and that is
+   correct rather than a bug: those count what members did, these count who signed in. If a number
+   here looks too low, run `node ctf/scripts/audit-active-members.mjs` (through Infisical,
+   read-only): it counts the same record and separately reports how many members used the app with no
+   sign-in row, which is the sign-in write failing and the thing to fix. Note that the oldest week in
+   the picker (Jun 8–14, 2026) reads zero because the sign-in record got its writer on 2026-06-16. Both are
    aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.

@@ -164,15 +164,27 @@ Adoption (honest non-value rows):
   the member-days are bucketed on.
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
-is a (member, UTC day) pair on which that member did something the app recorded, drawn from the union of every
-member-attributed activity source — `login_events`, `click_log_incidents`, `mood_submissions`,
-`feed_community_posts`, `feed_community_replies`, `feed_community_post_reactions`,
-`peer_programming_messages` — each windowed on its own date column, `UNION`ed so a member seen in several
-sources on one day is still one member-day. Rows whose timestamp is written by a counterparty or an admin
-rather than by the member (a trip completion, a nomination review, a disbursement) are deliberately not
-sources: those say something happened to the member, not that the member turned up. Both rows are aggregate
-only — never a per-member figure — and both are adoption, not value: turning up is not a plugin's defining
-action and carries no positive weight in value scoring.
+is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
+`login_events` — written once per member per UTC day from the shared plugin access gate — and it is the whole
+definition (**owner decision, 2026-08-27**). No other table feeds these two rows.
+
+**Do not widen this.** It has drifted twice, each time on the same argument: the app holds a member's own dated
+rows (a ClickLog incident, a Commons post, a command-trail entry), so a member with Tuesday rows plainly used
+the app on Tuesday. That is true and it is still not this number. Turning up is one thing and is what these two
+rows measure; what a member did once they were here is a different thing, already measured per plugin by that
+plugin's own rows in the cards above. Folding the second into the first makes a headcount that moves when a
+plugin changes what it writes, cannot be compared across weeks, and quietly counts whatever the platform itself
+writes carrying a member id. A low reading here is a fact about the sign-in record: if it is wrong, fix the
+write, not the definition. `ctf/scripts/audit-active-members.mjs` is the tool for that — it counts the sign-in
+record for a week and, separately and only as a cross-check, what the per-plugin tables saw, so a member
+visible there but not here identifies a sign-in write that did not land.
+
+One consequence to know rather than work around: `login_events` got its writer on 2026-06-16 and the platform
+launched on 2026-06-12, so the oldest week the picker offers (Jun 8–14) and the first days of the next have no
+sign-in rows and read zero. That is the record being empty for those days, not a fault in the reading.
+
+Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
+a plugin's defining action and carries no positive weight in value scoring.
 - `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
 - `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
 - `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
@@ -187,6 +199,25 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-08-27: **Active Members and Daily Active Members are the sign-in record again — owner
+  decision.** The owner's report: "Seems like at some point an agent changed the definition of an
+  active user. There is activity tracking per plugin. But when it comes to active users and daily
+  active users that is defined by the preexisting table of login events." The 2026-08-26 pass had
+  widened the member-day set to the union of seven member-attributed tables, on the argument that a
+  member with their own rows from a day used the app that day. That is a different measurement from
+  turnout, and the per-plugin cards already carry it. `lib/engagement/member-activity.ts` now reads
+  `login_events` and nothing else, for the two dashboard rows, for `/current-week`'s rolling
+  `activeUsersLast7Days`, and for PeerProgramming's cohort-forming active set. Section 6 records the
+  decision and why not to widen it again; a unit test
+  (`ctf/packages/web/lib/engagement/member-activity.test.ts`) fails if any other table reaches the
+  SQL. `ctf/scripts/audit-active-members.mjs` keeps the per-plugin tables, but as a labeled
+  cross-check that is never added to the reading: it reports how many members used the app with no
+  sign-in row for them, which is the sign-in write failing and the thing to fix. Removed
+  `feed_community_posts` from the `dataAccess` lists of `weekly-performance.metrics.get` and
+  `.comparison.get` (it was there only for the widened set, and no other metric reads it), and added
+  `login_events` to `weekly-performance.week.get`, which returns `activeUsersLast7Days` and had never
+  listed it. No schema, route, or access-policy change.
 
 - 2026-08-26: **Turnout was undercounting whole members (owner report: "there are two daily active
   users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`

@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 
-// Active-member audit — read-only. Answers "why does the Weekly Performance dashboard say this many
-// people turned up?" by showing, source by source, where a week's member-days actually came from.
+// Active-member audit — read-only. Answers "is the Weekly Performance dashboard's turnout number
+// right?" and, when it looks low, "is the sign-in write failing?"
 //
-// A member-day is a (member, UTC day) pair: one day on which one member did something in the app.
-// The dashboard's "Active Members" and "Daily Active Members" rows are both built from the union of
-// the sources below, so this script prints exactly that union plus each source's own contribution.
-// When a number on the dashboard looks too low, this is what tells you whether a source has gone
-// quiet: `login_events` reading 1 member while `click_log_incidents` reads 2 means the sign-in
-// record is missing a member the app can otherwise see, and the sign-in write is what to look at.
+// A member is active on a day when the sign-in record holds a row for them on that day. That record
+// is `login_events`, and it is the whole definition of the dashboard's "Active Members" and "Daily
+// Active Members" rows (owner decision, 2026-08-27). This script counts exactly that.
+//
+// It then counts the per-plugin tables for the same week — separately, and only as a cross-check.
+// Those numbers are NOT part of the definition and are not added to it. They answer one question:
+// is the sign-in record missing somebody the app can otherwise see? `login_events` reading 1 member
+// while `click_log_incidents` reads 2 means a member used the app without a sign-in row landing for
+// them, and the write in packages/web/lib/engagement/login-activity.ts is what to look at.
 //
 // Aggregate counts only. No member is ever named, printed, or written anywhere by this script, and
 // it only ever runs SELECTs.
@@ -21,11 +24,14 @@
 //   --week=YYYY-MM-DD   audit that week (any date inside it); defaults to the current week
 //   --weeks=N           audit the last N weeks, newest first (default 1)
 
-// Keep this list identical to MEMBER_ACTIVITY_SOURCES in
+// The sign-in record. Keep this identical to MEMBER_ACTIVITY_TABLE in
 // ctf/packages/web/lib/engagement/member-activity.ts — the app and this audit must agree on what
 // "active" means, or the audit explains a number the dashboard is not showing.
-const SOURCES = [
-  { table: 'login_events', userColumn: 'user_id', dateColumn: 'created_at' },
+const SIGN_IN_SOURCE = { table: 'login_events', userColumn: 'user_id', dateColumn: 'created_at' };
+
+// Cross-check only: first-party tables a member writes by using the app. Never added to the
+// reading above — they exist here to show whether a member used the app without a sign-in row.
+const CROSS_CHECK_SOURCES = [
   { table: 'click_log_incidents', userColumn: 'user_id', dateColumn: 'created_at' },
   { table: 'mood_submissions', userColumn: 'user_id', dateColumn: 'submitted_at' },
   { table: 'feed_community_posts', userColumn: 'author_user_id', dateColumn: 'created_at' },
@@ -33,6 +39,10 @@ const SOURCES = [
   { table: 'feed_community_post_reactions', userColumn: 'user_id', dateColumn: 'created_at' },
   { table: 'peer_programming_messages', userColumn: 'author_user_id', dateColumn: 'created_at' },
 ];
+
+// The Commons standing notice is authored by the platform, not by a member, so it would otherwise
+// show up in the feed cross-check as a person who used the app that day.
+const NON_MEMBER_ACTOR_IDS = ['system:commons-guidance'];
 
 function readArg(name) {
   const match = process.argv.find((value) => value.startsWith(`--${name}=`));
@@ -73,71 +83,92 @@ function sourceDaysSql(source) {
           WHERE ${source.dateColumn} >= $1::date
             AND ${source.dateColumn} < $1::date + INTERVAL '7 days'
             AND ${source.userColumn} IS NOT NULL
-            AND btrim(${source.userColumn}) <> ''`;
+            AND btrim(${source.userColumn}) <> ''
+            AND btrim(${source.userColumn}) <> ALL ($2::text[])`;
+}
+
+async function countSource(pool, source, weekStartDate) {
+  if (!(await tableExists(pool, source.table))) {
+    return { table: source.table, present: false, memberDays: 0, members: 0 };
+  }
+  const counts = await pool.query(
+    `SELECT COUNT(*)::int AS member_days, COUNT(DISTINCT user_id)::int AS members
+     FROM (${sourceDaysSql(source)}) source_days`,
+    [weekStartDate, NON_MEMBER_ACTOR_IDS],
+  );
+  return {
+    table: source.table,
+    present: true,
+    memberDays: counts.rows[0].member_days,
+    members: counts.rows[0].members,
+  };
 }
 
 async function auditWeek(pool, weekStartDate, now) {
-  const present = [];
-  const perSource = [];
+  const signIn = await countSource(pool, SIGN_IN_SOURCE, weekStartDate);
 
-  for (const source of SOURCES) {
-    if (!(await tableExists(pool, source.table))) {
-      perSource.push({ table: source.table, present: false, memberDays: 0, members: 0 });
-      continue;
-    }
-    present.push(source);
-    const counts = await pool.query(
-      `SELECT COUNT(*)::int AS member_days, COUNT(DISTINCT user_id)::int AS members
-       FROM (${sourceDaysSql(source)}) source_days`,
-      [weekStartDate],
-    );
-    perSource.push({
-      table: source.table,
-      present: true,
-      memberDays: counts.rows[0].member_days,
-      members: counts.rows[0].members,
-    });
+  const crossCheck = [];
+  for (const source of CROSS_CHECK_SOURCES) {
+    crossCheck.push(await countSource(pool, source, weekStartDate));
   }
 
-  let memberDays = 0;
-  let members = 0;
-  if (present.length > 0) {
-    const union = present.map(sourceDaysSql).join('\n          UNION\n');
-    const combined = await pool.query(
-      `SELECT COUNT(*)::int AS member_days, COUNT(DISTINCT user_id)::int AS members
-       FROM (${union}) member_days`,
-      [weekStartDate],
+  // How many members the plugins saw that the sign-in record did not. Counted as one set, not as a
+  // sum of the rows above, so a member active in three plugins is one member here.
+  let unseenByRecord = 0;
+  const presentCrossCheck = crossCheck.filter((row) => row.present);
+  if (signIn.present && presentCrossCheck.length > 0) {
+    const union = presentCrossCheck
+      .map((row) => sourceDaysSql(CROSS_CHECK_SOURCES.find((source) => source.table === row.table)))
+      .join('\n          UNION\n');
+    const missing = await pool.query(
+      `SELECT COUNT(*)::int AS members FROM (
+         SELECT DISTINCT user_id FROM (${union}) plugin_days
+         EXCEPT
+         SELECT DISTINCT user_id FROM (${sourceDaysSql(SIGN_IN_SOURCE)}) sign_in_days
+       ) unseen`,
+      [weekStartDate, NON_MEMBER_ACTOR_IDS],
     );
-    memberDays = combined.rows[0].member_days;
-    members = combined.rows[0].members;
+    unseenByRecord = missing.rows[0].members;
   }
 
   const days = elapsedDaysInWeek(weekStartDate, now);
-  return { weekStartDate, perSource, memberDays, members, days, dailyAverage: memberDays / days };
+  return {
+    weekStartDate,
+    signIn,
+    crossCheck,
+    unseenByRecord,
+    days,
+    dailyAverage: signIn.memberDays / days,
+  };
 }
 
 function printWeek(report) {
-  console.info(`\nWeek starting ${report.weekStartDate} (UTC), ${report.days} day(s) counted`);
   const NAME_WIDTH = 36;
-  console.info(`  ${'Source'.padEnd(NAME_WIDTH)}${'member-days'.padStart(11)}${'members'.padStart(10)}`);
-  for (const row of report.perSource) {
-    const counts = row.present
+  const counts = (row) =>
+    row.present
       ? String(row.memberDays).padStart(11) + String(row.members).padStart(10)
       : '  (table not in this database)';
-    console.info(`  ${row.table.padEnd(NAME_WIDTH)}${counts}`);
-  }
-  console.info(
-    `  ${'COMBINED (what the dashboard reads)'.padEnd(NAME_WIDTH)}${String(report.memberDays).padStart(11)}${String(report.members).padStart(10)}`,
-  );
-  console.info(`  Active Members: ${report.members}`);
-  console.info(`  Daily Active Members: ${(Math.round(report.dailyAverage * 100) / 100).toFixed(2)} per day (${report.memberDays} member-days / ${report.days} day(s))`);
 
-  const login = report.perSource.find((row) => row.table === 'login_events');
-  if (login && login.present && login.members < report.members) {
+  console.info(`\nWeek starting ${report.weekStartDate} (UTC), ${report.days} day(s) counted`);
+  console.info(`  ${'Source'.padEnd(NAME_WIDTH)}${'member-days'.padStart(11)}${'members'.padStart(10)}`);
+  console.info(`  ${`${report.signIn.table} (THE definition)`.padEnd(NAME_WIDTH)}${counts(report.signIn)}`);
+  console.info(`  Active Members: ${report.signIn.members}`);
+  console.info(
+    `  Daily Active Members: ${(Math.round(report.dailyAverage * 100) / 100).toFixed(2)} per day ` +
+      `(${report.signIn.memberDays} member-days / ${report.days} day(s))`,
+  );
+
+  console.info('\n  Cross-check only — what the plugins saw. Not part of the numbers above.');
+  for (const row of report.crossCheck) {
+    console.info(`  ${row.table.padEnd(NAME_WIDTH)}${counts(row)}`);
+  }
+
+  if (report.unseenByRecord > 0) {
     console.info(
-      `  NOTE: ${report.members - login.members} member(s) are visible in the product's own rows but have no sign-in record this week.\n` +
-        '        The sign-in write in packages/web/lib/engagement/login-activity.ts is failing or not reached for them;\n' +
-        '        check the server log for "[engagement.login-activity] could not record a member-day".',
+      `\n  NOTE: ${report.unseenByRecord} member(s) used the app this week with no sign-in record for them.\n` +
+        '        The sign-in write in packages/web/lib/engagement/login-activity.ts is failing or not reached;\n' +
+        '        check the server log for "[engagement.login-activity] could not record a member-day".\n' +
+        '        Fix the write — the dashboard number is the sign-in record by design and must not be widened.',
     );
   }
 }
@@ -169,7 +200,7 @@ async function main() {
   const pool = new Pool({ connectionString: databaseUrl, ssl: { rejectUnauthorized: false } });
 
   try {
-    console.info('Active-member audit — member-days per source, aggregate counts only.');
+    console.info('Active-member audit — the sign-in record, plus a plugin cross-check. Aggregate counts only.');
     for (let index = 0; index < weeksBack; index += 1) {
       printWeek(await auditWeek(pool, shiftWeeks(latestWeekStart, index), now));
     }

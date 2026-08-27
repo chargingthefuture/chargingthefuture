@@ -29,8 +29,8 @@ import {
 // all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
 // dashboard has to answer "how many people showed up this week", so the turnout rows are carried as
 // adoption (owner report, 2026-08-15). Both read the shared member-day set in
-// lib/engagement/member-activity.ts, which counts a member as active on a day when they did
-// anything the app recorded that day, not only when a sign-in row was written for them.
+// lib/engagement/member-activity.ts, which counts a member as active on a day when the sign-in
+// record holds a row for them that day (owner decision, 2026-08-27).
 //
 // The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
 // participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as
@@ -210,11 +210,14 @@ const beaconBroadcastEngagement = (weekStart: string) =>
 // ── Adoption rows (honest non-value metrics) ──────────────────────────────────
 
 // Two adoption readings about turnout, both built from the shared member-day set in
-// lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member did something,
-// drawn from the sign-in record AND from the member's own dated rows across the product. Reading
-// `login_events` alone made both numbers hostage to one fire-and-forget insert: when that write
-// failed the member simply vanished from the dashboard, even with their incidents and posts sitting
-// in the database with that day's timestamp on them. Aggregate only — never a per-member figure.
+// lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member signed in,
+// taken from the sign-in record `login_events` and nothing else (owner decision, 2026-08-27). What a
+// member did once they were here is a different question and is already answered by the per-plugin
+// cards above, from each plugin's own rows; folding those into the headcount makes a number that
+// moves when a plugin changes what it writes and cannot be compared across weeks. If a reading here
+// looks low, the sign-in write is what to check, not this definition — run
+// ctf/scripts/audit-active-members.mjs, which cross-checks the record against what the plugins saw.
+// Aggregate only — never a per-member figure.
 
 // Active members: how many different people turned up at all this week. This is the plain headcount
 // the average below is easy to misread as.
