@@ -550,6 +550,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('skills_hunt_missions', 'Shared missions; authorship columns are the admin audit.'),
       retain('skills_hunt_directory_profiles', 'Admin-generated unclaimed directory projections; created_by is the admin audit.'),
       retain('skills_hunt_feature_reward_card', 'Global reward-card setting and the admin audit of who changed it.'),
+      retain('skills_hunt_auto_mission_config', 'Global auto-mission settings and the admin audit of who changed them.'),
     ],
   },
   {

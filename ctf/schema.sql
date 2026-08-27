@@ -774,6 +774,40 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skill
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
+-- Auto-opened missions from Workforce sector gaps (owner decision 2026-08-27). Round creation and a
+-- weekly scheduled run read the live Workforce occupation gap report (through
+-- lib/shared/workforce-interface.ts), sum the gaps per sector, and open a capped number of
+-- 'count_skills_in_sector' missions per active round for the sectors with the largest shortfall.
+-- Unlike LevelUp's proposal queue, these missions open directly without an approval step: a mission
+-- commits no credits, no seats and no schedule, an admin can archive one at any time, and the
+-- config kill switch below turns the mechanism off. auto_created marks generated missions;
+-- source_sector / source_gap_at_creation record which gap opened the mission and how large it was.
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS auto_created BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS source_sector TEXT;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
+-- Database-level idempotency guard: at most one non-archived auto mission per (round, sector).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_auto_mission_active
+  ON skills_hunt_missions (round_id, source_sector)
+  WHERE auto_created = TRUE AND status <> 'archived';
+-- Auto-mission configuration. Singleton row of admin-editable knobs the generator reads;
+-- coded defaults apply until the row is written (see lib/skills-hunt/auto-missions.ts).
+CREATE TABLE IF NOT EXISTS skills_hunt_auto_mission_config (
+  singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  min_gap_threshold NUMERIC NOT NULL DEFAULT 25,
+  max_per_round INTEGER NOT NULL DEFAULT 3,
+  default_goal_target INTEGER NOT NULL DEFAULT 3,
+  default_bonus_points INTEGER NOT NULL DEFAULT 0,
+  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS min_gap_threshold NUMERIC NOT NULL DEFAULT 25;
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS max_per_round INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS default_goal_target INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS default_bonus_points INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
+ALTER TABLE IF EXISTS skills_hunt_auto_mission_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 COMMIT;
 
 -- === account deletion events (cross-plugin orchestration log) ===
@@ -1902,9 +1936,9 @@ CREATE TABLE IF NOT EXISTS workforce_profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- workforce_occupations is no longer read or written by the Workforce plugin: occupations are read
--- live from Skills Taxonomy (job titles), and Workforce never creates them. The table is retained
--- (unused by Workforce) because the SkillsHunt rare-skill snapshot still references it; do not drop it
--- without updating that consumer.
+-- live from Skills Taxonomy (job titles), and Workforce never creates them. The SkillsHunt rare-skill
+-- snapshot stopped reading it on 2026-08-27 (it uses the live gap model now); the remaining reference
+-- is the demo seed (ctf/scripts/seedDemo.mjs) — do not drop it without updating that consumer.
 CREATE TABLE IF NOT EXISTS workforce_occupations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,

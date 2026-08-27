@@ -71,6 +71,24 @@ export const SKILLS_HUNT_SCORE_WEIGHTS_SPEC = {
   participationOnReject: 1,
 } as const;
 
+// Auto-opened missions from Workforce sector gaps (owner decision 2026-08-27). The generator in
+// lib/skills-hunt/auto-missions.ts stamps this sentinel as the creating actor so generated
+// missions are distinguishable from admin-authored ones. Defaults apply until an admin writes the
+// skills_hunt_auto_mission_config singleton row.
+export const SKILLS_HUNT_AUTO_MISSION_ACTOR_ID = 'skills-hunt-auto-mission-scheduler';
+export const SKILLS_HUNT_AUTO_MISSION_DEFAULTS = {
+  enabled: true,
+  minGapThreshold: 25,
+  maxPerRound: 3,
+  defaultGoalTarget: 3,
+  defaultBonusPoints: 0,
+} as const;
+
+// Rare-skill snapshot cap. The live Workforce model marks nearly every occupation under-recruited
+// while the member base is small (demand comes from the population model), so the round-create
+// snapshot keeps only the occupations with the largest gaps to preserve "rare" meaning something.
+export const SKILLS_HUNT_RARE_SKILL_SNAPSHOT_LIMIT = 25;
+
 export const SKILLS_HUNT_ERROR_CODE = {
   invalidPayload: 'SKILLS_HUNT_INVALID_PAYLOAD',
   persistenceUnavailable: 'SKILLS_HUNT_PERSISTENCE_UNAVAILABLE',

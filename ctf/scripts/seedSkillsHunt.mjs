@@ -18,6 +18,8 @@ const pool = new Pool({
 
 const roundId = '33333333-3333-4333-8333-333333333333';
 const submissionId = '44444444-4444-4444-8444-444444444444';
+const manualMissionId = '55555555-5555-4555-8555-555555555551';
+const autoMissionId = '55555555-5555-4555-8555-555555555552';
 
 async function main() {
   const client = await pool.connect();
@@ -116,6 +118,51 @@ async function main() {
           updated_at = NOW()
       `,
       [submissionId, roundId],
+    );
+
+    // One manual mission and one auto-opened (Workforce sector gap) mission, so the member
+    // Missions tab and the admin list (with its "auto" marking) both render against seed data.
+    // If a real generator run already opened a Healthcare auto mission for this round, remove it
+    // first — the one-live-auto-mission-per-(round, sector) unique guard would otherwise reject
+    // the deterministic seed row.
+    await client.query(
+      `
+        DELETE FROM skills_hunt_missions
+        WHERE round_id = $1::uuid AND auto_created = TRUE AND source_sector = 'Healthcare'
+          AND status <> 'archived' AND id <> $2::uuid
+      `,
+      [roundId, autoMissionId],
+    );
+    await client.query(
+      `
+        INSERT INTO skills_hunt_missions
+          (id, round_id, title, description, goal_type, goal_target, goal_metadata, bonus_points,
+           status, display_order, auto_created, source_sector, source_gap_at_creation,
+           created_by_user_id, updated_by_user_id)
+        VALUES
+          ($1::uuid, $2::uuid, 'Seed Scout Sprint', 'Get 2 nominations accepted this round.',
+           'count_total_accepted', 2, '{}'::jsonb, 0, 'active', 0, FALSE, NULL, NULL,
+           'seed-admin', 'seed-admin'),
+          ($3::uuid, $2::uuid, 'Scout the Healthcare sector',
+           'Workforce shows the community is short of people in Healthcare. Nominate people with Healthcare skills.',
+           'count_skills_in_sector', 3, '{"sectorName":"Healthcare"}'::jsonb, 0, 'active', 0, TRUE,
+           'Healthcare', 1200, 'skills-hunt-auto-mission-scheduler', 'skills-hunt-auto-mission-scheduler')
+        ON CONFLICT (id)
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          goal_type = EXCLUDED.goal_type,
+          goal_target = EXCLUDED.goal_target,
+          goal_metadata = EXCLUDED.goal_metadata,
+          bonus_points = EXCLUDED.bonus_points,
+          status = EXCLUDED.status,
+          auto_created = EXCLUDED.auto_created,
+          source_sector = EXCLUDED.source_sector,
+          source_gap_at_creation = EXCLUDED.source_gap_at_creation,
+          updated_by_user_id = EXCLUDED.updated_by_user_id,
+          updated_at = NOW()
+      `,
+      [manualMissionId, roundId, autoMissionId],
     );
 
     await client.query(
