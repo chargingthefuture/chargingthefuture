@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type {
-  SkillsHuntMission,
-  SkillsHuntMissionGoalType,
-  SkillsHuntMissionStatus,
-} from "lib/skills-hunt/types";
+import type { SkillsHuntMission, SkillsHuntMissionGoalType } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
@@ -20,7 +16,6 @@ const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat
 const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
   "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds", "count_distinct_sectors",
 ];
-const STATUSES: SkillsHuntMissionStatus[] = ["draft", "active", "locked", "archived"];
 
 function Labeled({ id, text, children }: { id: string; text: string; children: React.ReactNode }) {
   const { theme } = useTheme();
@@ -58,7 +53,8 @@ function MissionRow({ mission, onArchive }: { mission: SkillsHuntMission; onArch
           )}
         </div>
         <div style={{ fontSize: 11, color: t.MUTED }}>
-          {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts · {mission.status}
+          {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts
+          {mission.status !== "active" && ` · ${mission.status}`}
           {mission.autoCreated && mission.sourceSector && ` · from ${mission.sourceSector} gap`}
         </div>
       </div>
@@ -82,7 +78,6 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
   const [bonusPoints, setBonusPoints] = useState(0);
   const [description, setDescription] = useState("");
   const [colorHex, setColorHex] = useState("");
-  const [status, setStatus] = useState<SkillsHuntMissionStatus>("active");
   const [sectorName, setSectorName] = useState("");
   const [sectorId, setSectorId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -101,7 +96,7 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
           title: title.trim(), goalType, goalTarget, bonusPoints,
-          description: description.trim() || null, colorHex: colorHex.trim() || null, status, goalMetadata,
+          description: description.trim() || null, colorHex: colorHex.trim() || null, goalMetadata,
         }),
       });
       if (!res.ok) {
@@ -124,7 +119,6 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
           <Labeled id="shm-goal" text="Goal type"><select id="shm-goal" style={field} value={goalType} onChange={(e) => setGoalType(e.target.value as SkillsHuntMissionGoalType)}>{GOAL_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}</select></Labeled>
           <Labeled id="shm-target" text="Goal target"><input id="shm-target" type="number" min={1} style={field} value={goalTarget} onChange={(e) => setGoalTarget(Number(e.target.value))} /></Labeled>
           <Labeled id="shm-bonus" text="Bonus points"><input id="shm-bonus" type="number" min={0} style={field} value={bonusPoints} onChange={(e) => setBonusPoints(Number(e.target.value))} /></Labeled>
-          <Labeled id="shm-status" text="Status"><select id="shm-status" style={field} value={status} onChange={(e) => setStatus(e.target.value as SkillsHuntMissionStatus)}>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></Labeled>
           <Labeled id="shm-color" text="Color (optional)"><input id="shm-color" style={field} value={colorHex} onChange={(e) => setColorHex(e.target.value)} placeholder="#FBBF24" /></Labeled>
         </div>
         {goalType === "count_skills_in_sector" && (

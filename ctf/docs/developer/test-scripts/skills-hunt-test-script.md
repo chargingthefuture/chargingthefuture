@@ -617,10 +617,13 @@ Result:
 1. Navigate to the Missions tab of the admin shell.
 2. Select the active round.
 3. Create a new mission: enter a title, a goal count, and optionally a `colorHex` value.
-4. Save.
-5. Observe the mission appears in the admin list.
+4. Confirm the form asks for nothing else — there is **no Status field**. A mission is always created active.
+5. Save.
+6. Observe the mission appears in the admin list.
 
-**Expected:** Mission is created and listed. Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears with a progress bar at 0% and the configured color.
+**Expected:** Mission is created and listed, and its row shows no status word (the label appears only when a mission is not active). Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears immediately, with a progress bar at 0% and the configured color.
+
+**Why there is no status picker:** missions have no draft state (owner directive 2026-08-27). The round already carries its own draft/active lifecycle, and since there is no mission edit control, a mission created as draft could only ever be archived — never shown to members.
 
 Result: web ☐
 

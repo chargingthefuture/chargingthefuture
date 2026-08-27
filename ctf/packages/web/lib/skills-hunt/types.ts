@@ -259,7 +259,11 @@ export type SkillsHuntMissionGoalType =
   | 'count_rare_skill_finds'
   | 'count_distinct_sectors';
 
-export type SkillsHuntMissionStatus = 'draft' | 'active' | 'locked' | 'archived';
+// No draft state (owner directive 2026-08-27): missions are created active and the only
+// lifecycle action on the admin surface is Archive. The round they belong to already carries
+// its own draft/active lifecycle. 'locked' is retained for existing rows — it renders a mission
+// grayed-out for members; there is still no locking-condition logic behind it.
+export type SkillsHuntMissionStatus = 'active' | 'locked' | 'archived';
 
 export type SkillsHuntMission = {
   id: string;

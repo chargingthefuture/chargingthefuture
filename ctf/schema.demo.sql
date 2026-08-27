@@ -711,7 +711,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_missions (
   goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
   color_hex TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'locked', 'archived')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'locked', 'archived')),
   display_order INTEGER NOT NULL DEFAULT 0,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
@@ -772,6 +772,15 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skill
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
+-- Missions have no draft state (owner directive 2026-08-27: "no drafts are needed"). A mission lives
+-- inside a round that already carries its own draft/active lifecycle, so a second gate inside it
+-- gated nothing — and because the admin surface has no mission edit control, a mission created as
+-- draft could only ever be archived, never shown to members. The status picker is gone from the
+-- create form (missions are created active; Archive remains the only lifecycle action), any mission
+-- left in draft is moved to active here, and the allowed set is tightened so it cannot come back.
+UPDATE skills_hunt_missions SET status = 'active', updated_at = NOW() WHERE status = 'draft';
+ALTER TABLE IF EXISTS skills_hunt_missions DROP CONSTRAINT IF EXISTS skills_hunt_missions_status_check;
+ALTER TABLE IF EXISTS skills_hunt_missions ADD CONSTRAINT skills_hunt_missions_status_check CHECK (status IN ('active', 'locked', 'archived'));
 -- Auto-opened missions from Workforce sector gaps (owner decision 2026-08-27). Round creation and a
 -- weekly scheduled run read the live Workforce occupation gap report (through
 -- lib/shared/workforce-interface.ts), sum the gaps per sector, and open a capped number of
