@@ -51,6 +51,13 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 4. **Recent Transactions is paged, 10 rows to a page.** The wallet shows ten entries at a time with
    `Previous · Page N of M · Next` controls under the list and the member's total entry count beside
    them, so the screen keeps the same height whether the member has ten entries or five hundred.
+5. **The member can see their own community-credit floor (2026-08-27).** The wallet states, in one
+   sentence, how far below zero a send may take them — "Community credit: you can send down to
+   −25 credits, then repay as you earn." When the rail is switched off, or their limit is 0, the
+   wallet says so plainly instead of hiding the row, and the send form's mutual-credit option is
+   disabled with the same sentence under it rather than letting the send fail at the server. The
+   number is the same flat line the transfer path enforces: an admin's per-account grant if there is
+   one, else the policy default. There is no behavioral or social score anywhere in this.
 
 ### 1.3 Transfer and Escrow Flows
 
@@ -146,6 +153,8 @@ User routes:
 
 - `POST /api/service-credits/wallets`
 - `GET /api/service-credits/wallets/:walletId/balance`
+- `GET /api/service-credits/wallet` → `{ ok, wallet }` — the signed-in member's own wallet: `availableBalance`, `escrowBalance`, and (since 2026-08-27) their mutual-credit line — `mutualCreditEnabled` (is the rail on at all), `creditLimit` (their per-account override if an admin granted one, else the flat policy `defaultLimit`), and `creditFloor` (`-(creditLimit)` while the rail is on, 0 otherwise). The line is read-only here: `getMemberCreditStanding` reuses the same policy and limit reads the transfer path uses, and the transfer path still resolves the floor itself, so nothing on this route widens or narrows what a send may do. Bare credit quantities only; never a fiat figure.
+- `GET /api/service-credits/transactions` → `{ ok, entries }` — the caller's own recent wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200). Backs the wallet "Recent Transactions" list. Bare credit quantities only; never a fiat figure.
 - `GET /api/service-credits/transactions` → `{ ok, entries, total, limit, offset }` — one page of the caller's own wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200) and `?offset=` (default 0; negative or non-numeric treated as 0). `total` is the member's full entry count across all pages, so the caller can show "Page N of M". Backs the wallet "Recent Transactions" list, which is paged 10 rows at a time. Bare credit quantities only; never a fiat figure.
 - `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit)
 - `GET /api/service-credits/circulation` → `{ ok, metrics }` — public, aggregate, non-identifying circulation numbers (in circulation, total issued/burned, treasury balance, velocity, outstanding mutual-credit debt). No fiat figure.
@@ -291,6 +300,22 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-08-27: **The mutual-credit floor is now visible to the member it applies to.** The number
+  existed only on the admin side (`getCreditLimitInfo`, the admin credit-limits route), so a member
+  learned how far they could go below zero by having a send bounce. `GET /api/service-credits/wallet`
+  now carries three read-only fields alongside the balance — `mutualCreditEnabled`, `creditLimit`,
+  `creditFloor` — from a new `getMemberCreditStanding` in `lib/service-credits/repository.ts`. It
+  reuses the existing `readMutualCreditPolicy` + `getTreasuryConfig` reads and a `readGrantedCreditLimit`
+  helper now shared with `getCreditLimitInfo`, so the policy-reading logic is not duplicated; the floor
+  it reports mirrors `resolveTransferCreditFloor` (`-(limit)` on the rail, 0 when the rail is off).
+  On the web side `sc-shared.ts` gains the three fields on `WalletData` and one shared sentence
+  (`describeMutualCreditFloor`) used in both places: the wallet tab shows it under the balance stats,
+  and the send form shows it under the rail picker and disables the mutual-credit option when the rail
+  is off or the limit is 0, instead of offering an option the server will refuse. Read-only visibility:
+  no change to transfer logic, floors, limits, or any admin surface, and no fiat framing anywhere — the
+  figures are bare credit quantities. `wallet.balance.get` command contract goes to 1.1.0 for the three
+  output fields and adds `service_credits_treasury_config` + `service_credits_credit_limits` to its
+  `dataAccess`; the access policy is unchanged (same member, same own-wallet read).
 - 2026-08-27: **Send form moved above the figures on the Economy tab.** The send panel renders after
   the tab body on every tab, which put "Send credits" below a full screen of community-wide
   circulation numbers — a member had to scroll past everyone else's totals to reach their own

@@ -160,14 +160,34 @@ Result: web ☐
 
 **Steps:**
 1. Sign in as the member with the granted credit limit.
-2. Open the Send tab / Send panel.
-3. Switch the "Pay with" selector to "ServiceCredits — Mutual Credit".
-4. Enter an amount within the credit limit (e.g. 10).
-5. Submit the transfer.
-6. Confirm the sender's available balance has gone negative (e.g. −10).
-7. Confirm the recipient's balance increased by 10.
+2. Open the Wallet tab and read the line under the balance figures (web, 2026-08-27): it must name the member's own floor — "Community credit: you can send down to −20 credits, then repay as you earn." — matching the limit the admin granted.
+3. Open the Send tab / Send panel.
+4. Switch the "Pay with" selector to "ServiceCredits — Mutual Credit". The same sentence appears under the picker.
+5. Enter an amount within the credit limit (e.g. 10).
+6. Submit the transfer.
+7. Confirm the sender's available balance has gone negative (e.g. −10).
+8. Confirm the recipient's balance increased by 10.
 
-**Expected:** Transfer completes. Sender's balance is now negative down to (but not past) their credit limit. Recipient receives the credits immediately.
+**Expected:** The member can read their floor on the wallet and beside the rail picker before sending, and it matches the granted limit. Transfer completes. Sender's balance is now negative down to (but not past) their credit limit. Recipient receives the credits immediately. No figure anywhere is shown as an amount of money.
+
+Result: web ☐
+
+---
+
+### SC-5b — Community-credit floor is stated when there is no line
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** A member with **no** granted credit limit (limit 0), and — for the second half — an admin who can switch `mutualCredit.enabled` off in treasury policy (SC-A2).
+
+**Steps:**
+1. Sign in as the member with no granted limit.
+2. Open the Wallet tab. The line under the balance figures must read that their limit is 0 credits and a send cannot take them below zero. It must not be hidden.
+3. Open the Send panel. The "ServiceCredits — Mutual Credit" option must be **disabled** (not selectable), with the same sentence under the picker.
+4. Have an admin switch the mutual-credit rail off in treasury policy, then reload the member's wallet.
+5. Read the wallet line again: it must say community credit is switched off right now, and the rail option must still be disabled.
+
+**Expected:** A member with no line, and a member on a platform with the rail switched off, both read plainly why — on the wallet and in the send form — instead of finding out from a refused send. The mutual-credit option is never offered when it cannot be used.
 
 Result: web ☐
 

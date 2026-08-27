@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fmtCredits } from "./sc-shared";
+import { fmtCredits, describeMutualCreditFloor, type WalletData } from "./sc-shared";
 import { RecentTransactions } from "./sc-transactions-panel";
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
@@ -40,12 +40,28 @@ function StatsRow({ balance, escrow }: { balance: number; escrow: number }) {
   );
 }
 
-export function ServiceCreditsWalletTab({ balance, escrow }: { balance: number; escrow: number }) {
+// How far below zero this member may send. The number decides whether a send goes through, so the
+// member should not have to bounce a send to find it — and it reads the same here as it does beside
+// the mutual-credit option in the send form.
+function CreditLineRow({ wallet }: { wallet: WalletData | null }) {
+  const { theme } = useTheme();
+  const t = getServiceCreditsTokens(theme);
+  const available = wallet?.mutualCreditEnabled === true && (wallet?.creditLimit ?? 0) > 0;
+  const color = available ? t.ACCENT : t.MUTED;
+  return (
+    <div style={{ marginBottom: 24, padding: "14px 16px", borderRadius: 12, background: `${color}08`, border: `1px solid ${color}18` }}>
+      <div style={{ fontSize: 13, color: available ? t.TITLE : t.MUTED, lineHeight: 1.6 }}>{describeMutualCreditFloor(wallet)}</div>
+    </div>
+  );
+}
+
+export function ServiceCreditsWalletTab({ balance, escrow, wallet }: { balance: number; escrow: number; wallet: WalletData | null }) {
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "24px" }}>
         <BalanceCard balance={balance} />
         <StatsRow balance={balance} escrow={escrow} />
+        <CreditLineRow wallet={wallet} />
         <RecentTransactions refreshToken={balance + escrow} />
       </div>
     </ScrollArea>

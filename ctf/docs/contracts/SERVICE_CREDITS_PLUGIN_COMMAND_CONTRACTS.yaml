@@ -40,8 +40,8 @@ contracts:
 
   - pluginId: service-credits
     command: wallet.balance.get
-    version: 1.0.0
-    description: Retrieve current available, held, and total ServiceCredits wallet balance.
+    version: 1.1.0
+    description: Retrieve current available, held, and total ServiceCredits wallet balance, plus the caller's own mutual-credit line (whether the rail is enabled, the limit that applies to them, and the resulting floor) so the member can see how far below zero a send may take them. The line is read-only here — the transfer path resolves the floor itself.
     inputSchema:
       walletId:
         type: string
@@ -60,10 +60,21 @@ contracts:
         type: number
       asOf:
         type: string
+      mutualCreditEnabled:
+        type: boolean
+        description: Whether the mutual-credit rail is switched on in treasury policy. When false the floor is 0 for everyone.
+      creditLimit:
+        type: number
+        description: The limit that applies to this member — their per-account override when an admin has granted one, else the flat policy defaultLimit. Never a behavioral or social score; no such score exists.
+      creditFloor:
+        type: number
+        description: The lowest balance a send may leave the member at, i.e. -(creditLimit) while the rail is enabled and 0 otherwise.
     dataAccess:
       - service_credits_wallets
       - service_credits_transfers
       - service_credits_escrow_holds
+      - service_credits_treasury_config
+      - service_credits_credit_limits
     purpose: balance_visibility
     retentionClass: derived_medium_lived
     idempotency: true

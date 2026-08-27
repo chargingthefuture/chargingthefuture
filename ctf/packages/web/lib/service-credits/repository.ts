@@ -2019,21 +2019,51 @@ export async function setCreditLimit(input: { actorId: string; targetUserId: str
   return { targetUserId: input.targetUserId, creditLimit: input.creditLimit };
 }
 
+// A member's per-account mutual-credit override, or null when they have none, so a caller can tell an
+// explicit grant apart from the flat policy default. Pool-level twin of readCreditLimit, which the
+// transfer path calls on its own client inside the transfer transaction.
+async function readGrantedCreditLimit(userId: string): Promise<number | null> {
+  const result = await queryDb<{ credit_limit: string }>(
+    `SELECT credit_limit::text FROM service_credits_credit_limits WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return result.rows[0] ? Number(result.rows[0].credit_limit) : null;
+}
+
+export type MemberCreditStanding = {
+  mutualCreditEnabled: boolean;
+  creditLimit: number;
+  creditFloor: number;
+};
+
+// What the member is allowed to know about their own mutual-credit line: whether the rail is on at
+// all, the limit that applies to them (their override if an admin set one, else the flat policy
+// default), and the floor that limit produces. Read-only — it changes nothing and decides nothing;
+// the transfer path still resolves the floor itself. Same flat, equal line as everywhere else: no
+// behavioral or social score exists on this platform, so nothing here is personalized beyond an
+// admin's explicit grant.
+export async function getMemberCreditStanding(userId: string): Promise<MemberCreditStanding> {
+  const policy = readMutualCreditPolicy(await getTreasuryConfig());
+  const creditLimit = (await readGrantedCreditLimit(userId)) ?? policy.defaultLimit;
+  // Mirrors resolveTransferCreditFloor: -(limit) on the mutual-credit rail, and 0 whenever that rail
+  // is off, because a send then cannot pass the member's own balance. The `|| 0` keeps a limit of 0
+  // from reporting as -0.
+  const creditFloor = policy.enabled ? -creditLimit || 0 : 0;
+  return { mutualCreditEnabled: policy.enabled, creditLimit, creditFloor };
+}
+
 // Admin-only: read a member's mutual-credit limit (the flat policy default, or a per-account override)
 // and freeze state. No behavioral score is computed or returned — there is no credit/social score.
 export async function getCreditLimitInfo(userId: string) {
   const policy = readMutualCreditPolicy(await getTreasuryConfig());
 
-  const granted = await queryDb<{ credit_limit: string }>(
-    `SELECT credit_limit::text FROM service_credits_credit_limits WHERE user_id = $1 LIMIT 1`,
-    [userId],
-  );
+  const granted = await readGrantedCreditLimit(userId);
   const restriction = await getAccountRestrictionStatus(userId, 'trading');
 
   return {
     targetUserId: userId,
-    creditLimit: granted.rows[0] ? Number(granted.rows[0].credit_limit) : policy.defaultLimit,
-    isDefault: !granted.rows[0],
+    creditLimit: granted ?? policy.defaultLimit,
+    isDefault: granted === null,
     frozen: restriction.isRestricted,
   };
 }
