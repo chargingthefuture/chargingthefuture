@@ -43,7 +43,7 @@ export function describeMutualCreditFloor(wallet: WalletData | null): string {
   }
   return `Community credit: you can send down to −${fmtCredits(wallet.creditLimit)} credits, then repay as you earn.`;
 }
-export type Tab = "wallet" | "earn" | "economy";
+export type Tab = "wallet" | "earn" | "economy" | "send";
 
 // One row of the member's own wallet history, as returned by GET /api/service-credits/transactions
 // (a projection of service_credits_ledger_entries). Bare credit quantities only — never a fiat figure.
