@@ -1,75 +1,25 @@
 {
-  "_comment": "Burn-down list for check-admin-audit-coverage.mjs. Owner directive 2026-08-28: every admin action is recorded, on every surface, from the day the surface ships. Every entry here is a surface where that is not yet true \u2014 recorded on 2026-08-28 when the gate was introduced, so no NEW surface can ship without an audit row while these are fixed. This list only ever shrinks. Never add an entry to silence the gate; add one only when a durable row is genuinely written somewhere the gate cannot see, and name the file that writes it.",
+  "_comment": "Burn-down list for check-admin-audit-coverage.mjs. Owner directive 2026-08-28: every admin action is recorded, on every surface, from the day the surface ships. Every entry here is a surface where that is not yet true — recorded on 2026-08-28 when the gate was introduced, so no NEW surface can ship without an audit row while these are fixed. This list only ever shrinks. Never add an entry to silence the gate; add one only when a durable row is genuinely written somewhere the gate cannot see, and name the file that writes it.",
   "routes": [
     {
       "route": "/api/announcements/admin/targeting/validate",
       "kind": "not-a-mutation",
-      "reason": "Validates an announcement targeting expression and returns the normalized form. It reads no table and writes none \u2014 a POST only because it takes a body \u2014 so there is no admin action here to record. Verified 2026-08-28 against the handler: it calls validateAnnouncementTargeting, a pure function, and returns."
+      "reason": "Validates an announcement targeting expression and returns the normalized form. It reads no table and writes none — a POST only because it takes a body — so there is no admin action here to record. Verified 2026-08-28 against the handler: it calls validateAnnouncementTargeting, a pure function, and returns."
     },
     {
       "route": "/api/bug-reports/admin/[id]/resolve",
       "kind": "burn-down",
-      "reason": "Bug reports has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row when a report is resolved."
-    },
-    {
-      "route": "/api/comic/admin/contributions/[id]/review",
-      "kind": "burn-down",
-      "reason": "Comic has lib/comic/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/comic/admin/knowledge/[entryId]",
-      "kind": "burn-down",
-      "reason": "Comic has lib/comic/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/comic/review/[turnId]/regenerate",
-      "kind": "burn-down",
-      "reason": "Comic has lib/comic/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/comic/review/[turnId]/resolve",
-      "kind": "burn-down",
-      "reason": "Comic has lib/comic/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
+      "reason": "Bug reports has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row when a report is resolved."
     },
     {
       "route": "/api/mutual-time/events/[eventId]/close",
       "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
+      "reason": "Mutual Time has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
     },
     {
       "route": "/api/mutual-time/events",
       "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/job-titles/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/job-titles",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/sectors/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/sectors",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/skills/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/skills",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
+      "reason": "Mutual Time has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
     }
   ]
 }

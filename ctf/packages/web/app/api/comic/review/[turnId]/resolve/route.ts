@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { logComicAudit } from 'lib/comic/audit';
+import { recordComicAdminAudit } from 'lib/comic/audit';
 import { resolveComicReview } from 'lib/comic/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
@@ -114,7 +114,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   try {
     const result = await resolveComicReview(gate.auth.userId, reviewId, input);
 
-    logComicAudit({
+    await recordComicAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'comic',
       command: 'comic.review.resolve',
