@@ -10,4 +10,4 @@ export const TRUST_ERROR_CODE = {
 
 // The derivation model identifier persisted on every snapshot row. Bump the suffix when the set of
 // real signals or how they are aggregated changes, so older snapshots stay self-describing.
-export const TRUST_SNAPSHOT_MODEL = 'cross_plugin_engagement_v5';
+export const TRUST_SNAPSHOT_MODEL = 'cross_plugin_engagement_v6';
