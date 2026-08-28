@@ -3,7 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAnnouncement, listDirectoryAnnouncements, validateAnnouncementInput } from 'lib/directory/repository';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
   const input = parseBody(body);
   if (!validateAnnouncementInput(input)) {
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'deny',
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
   try {
     const announcement = await createAnnouncement(gate.auth.userId, input);
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'allow',
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'allow',

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deleteAdminProfile, updateAdminProfile, validateProfileInput } from 'lib/directory/repository';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -131,7 +131,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const result = await deleteAdminProfile(gate.auth.userId, id);
     if (result === 'not_found') {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.profile.delete',
         status: 'deny',
@@ -149,7 +149,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     }
 
     if (result === 'claimed_guard') {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.profile.delete',
         status: 'deny',
@@ -170,7 +170,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       );
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.delete',
       status: 'allow',
@@ -184,7 +184,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.delete',
       status: 'allow',

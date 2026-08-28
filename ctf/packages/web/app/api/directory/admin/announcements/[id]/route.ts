@@ -3,7 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { deactivateAnnouncement, updateAnnouncement, validateAnnouncementInput } from 'lib/directory/repository';
 import type { DirectoryAnnouncementInput } from 'lib/directory/types';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -46,7 +46,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   const input = parseBody(body);
   if (!validateAnnouncementInput(input)) {
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'deny',
@@ -66,7 +66,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const announcement = await updateAnnouncement(gate.auth.userId, id, input);
     if (!announcement) {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.announcement.upsert',
         status: 'deny',
@@ -83,7 +83,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'allow',
@@ -97,7 +97,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true, announcement }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements_id' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.announcement.upsert',
       status: 'allow',
@@ -131,9 +131,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const ok = await deactivateAnnouncement(gate.auth.userId, id);
     if (!ok) {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
-        command: 'directory.admin.announcement.upsert',
+        command: 'directory.admin.announcement.deactivate',
         status: 'deny',
         reason: 'not_found',
         targetType: 'announcement',
@@ -148,9 +148,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       );
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
-      command: 'directory.admin.announcement.upsert',
+      command: 'directory.admin.announcement.deactivate',
       status: 'allow',
       reason: 'admin_announcement_deactivate',
       targetType: 'announcement',
@@ -162,9 +162,9 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_announcements_id' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
-      command: 'directory.admin.announcement.upsert',
+      command: 'directory.admin.announcement.deactivate',
       status: 'allow',
       reason: 'admin_announcement_deactivate',
       targetType: 'announcement',
