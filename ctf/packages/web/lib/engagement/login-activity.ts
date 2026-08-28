@@ -75,12 +75,12 @@ export function recordLoginEvent(userId: string): void {
   });
 }
 
-// Both readers below answer "who has been active lately", and both read the shared member-day set in
-// lib/engagement/member-activity.ts rather than `login_events` alone. A member whose sign-in row is
-// missing but who logged an incident, posted, or checked in yesterday was active yesterday, and both
-// the Weekly Performance reading and PeerProgramming cohort formation should see them. Keeping the
-// two on one definition also stops the dashboard and the cohort run from disagreeing about who
-// turned up.
+// Both readers below answer "who has been active lately", and both go through the shared member-day
+// set in lib/engagement/member-activity.ts, which counts the sign-in record above and nothing else
+// (owner decision, 2026-08-27). Keeping the two on one definition stops the dashboard and the cohort
+// run from disagreeing about who turned up. It also means the write above is load-bearing: a member
+// whose row never lands is missing from both, which is why its failure is logged rather than
+// swallowed.
 
 export async function getActiveUserIdsLastDays(days: number): Promise<string[]> {
   return listActiveMemberIdsLastDays(days);

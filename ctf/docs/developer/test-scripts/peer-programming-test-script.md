@@ -370,7 +370,7 @@ Result: web ☐
 
 **Role:** admin · **Surfaces:** web
 
-**Precondition:** Signed in as an admin. There is at least one active (logged-in within 7 days, unlock-approved) member in the seed data.
+**Precondition:** Signed in as an admin. There is at least one active (logged-in within 7 days, unlock-approved) member in the seed data. "Active" is a sign-in in the last 7 days and nothing else — a member who has rows of their own from this week but has not signed in is correctly not selected. A sign-in counts however the member spent the session: the day is recorded when Clerk identity is resolved, not when a plugin is opened, so signing in and going no further still makes them selectable.
 
 **Steps:**
 1. Find the "Run assignment" control in `/admin/peer-programming`.

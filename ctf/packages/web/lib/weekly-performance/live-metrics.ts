@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { failureReason } from 'lib/errors/failure';
 import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
 import {
   countActiveMembersInWeek,
@@ -29,8 +30,8 @@ import {
 // all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
 // dashboard has to answer "how many people showed up this week", so the turnout rows are carried as
 // adoption (owner report, 2026-08-15). Both read the shared member-day set in
-// lib/engagement/member-activity.ts, which counts a member as active on a day when they did
-// anything the app recorded that day, not only when a sign-in row was written for them.
+// lib/engagement/member-activity.ts, which counts a member as active on a day when the sign-in
+// record holds a row for them that day (owner decision, 2026-08-27).
 //
 // The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
 // participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as
@@ -54,30 +55,41 @@ async function tableExists(table: string): Promise<boolean> {
   return !!reg.rows[0]?.reg;
 }
 
-// Run a single scalar query (a COUNT / SUM / AVG aliased as `v`) guarded on the existence of every
-// table it touches. Returns 0 on a missing table, a NULL result, or any read error.
-async function guardedScalar(tables: string | string[], sql: string, weekStart: string): Promise<number> {
-  try {
-    const needed = Array.isArray(tables) ? tables : [tables];
-    for (const table of needed) {
-      if (!(await tableExists(table))) return 0;
-    }
-    const result = await queryDb<{ v: string | null }>(sql, [weekStart]);
-    const value = result.rows[0]?.v;
-    return value == null ? 0 : Number(value);
-  } catch {
-    return 0;
+// A card the dashboard could not read renders as 0, which on screen is indistinguishable from a week
+// in which nothing happened — and the wrong zero is the harder one to notice, because it looks like
+// an answer. One failed read must still not take the whole dashboard down, so the zero stays; what
+// changes is that it is never silent. Every failure that gets flattened to 0 says what broke and
+// which metric it flattened (rule 137), so "this week reads zero and I know that is wrong" is one
+// look at the server log instead of a guess.
+//
+// A missing table is a deploy-time condition that would otherwise log on every card of every read,
+// so it is reported once per table per process. A read that throws is rare, and always reported.
+const reportedMissingTables = new Set<string>();
+
+function reportMissingTable(table: string): void {
+  if (reportedMissingTables.has(table)) {
+    return;
   }
+  reportedMissingTables.add(table);
+  console.error(
+    `[weekly-performance.live-metrics] this database has no ${table} table; every metric reading it reports 0 for every week until it exists`,
+  );
 }
 
-// Same contract as guardedScalar for a value that comes from a helper module rather than a literal
-// query here: a read that fails contributes 0 instead of failing the whole dashboard.
-async function safeCount(read: () => Promise<number>): Promise<number> {
-  try {
-    return await read();
-  } catch {
-    return 0;
+// Run a single scalar query (a COUNT / SUM / AVG aliased as `v`) guarded on the existence of every
+// table it touches. Returns 0 on a missing table or a NULL result. A read that fails is NOT caught
+// here — it propagates to computeLiveWeekMetrics, which reports it against the metric it belongs to.
+async function guardedScalar(tables: string | string[], sql: string, weekStart: string): Promise<number> {
+  const needed = Array.isArray(tables) ? tables : [tables];
+  for (const table of needed) {
+    if (!(await tableExists(table))) {
+      reportMissingTable(table);
+      return 0;
+    }
   }
+  const result = await queryDb<{ v: string | null }>(sql, [weekStart]);
+  const value = result.rows[0]?.v;
+  return value == null ? 0 : Number(value);
 }
 
 // The week window is [weekStart, weekStart + 7 days). Counting on each row's own event timestamp
@@ -210,22 +222,25 @@ const beaconBroadcastEngagement = (weekStart: string) =>
 // ── Adoption rows (honest non-value metrics) ──────────────────────────────────
 
 // Two adoption readings about turnout, both built from the shared member-day set in
-// lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member did something,
-// drawn from the sign-in record AND from the member's own dated rows across the product. Reading
-// `login_events` alone made both numbers hostage to one fire-and-forget insert: when that write
-// failed the member simply vanished from the dashboard, even with their incidents and posts sitting
-// in the database with that day's timestamp on them. Aggregate only — never a per-member figure.
+// lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member signed in,
+// taken from the sign-in record `login_events` and nothing else (owner decision, 2026-08-27). What a
+// member did once they were here is a different question and is already answered by the per-plugin
+// cards above, from each plugin's own rows; folding those into the headcount makes a number that
+// moves when a plugin changes what it writes and cannot be compared across weeks. If a reading here
+// looks low, the sign-in record is what to check, not this definition — see
+// ctf/scripts/sql/active-members-audit.sql, which prints the record's span next to the week's count.
+// Aggregate only — never a per-member figure.
 
 // Active members: how many different people turned up at all this week. This is the plain headcount
 // the average below is easy to misread as.
-const activeMembers = (weekStart: string) => safeCount(() => countActiveMembersInWeek(weekStart));
+const activeMembers = (weekStart: string) => countActiveMembersInWeek(weekStart);
 
 // Daily active members: the average number of members active on a day of this week. The divisor is
 // the number of days of the window that have already started (1–7), so the live current week reports
 // the average of the days it has actually had instead of a figure watered down by days that have not
 // happened yet; every past week divides by the full 7.
 const dailyActiveMembers = async (weekStart: string) => {
-  const memberDays = await safeCount(() => countMemberDaysInWeek(weekStart));
+  const memberDays = await countMemberDaysInWeek(weekStart);
   return Math.round((memberDays / elapsedDaysInWeek(weekStart)) * 100) / 100;
 };
 
@@ -268,13 +283,9 @@ const clickLogActiveLoggers = (weekStart: string) =>
 // same builder the GDP plugin serves. Workforce: recruited = the count of all active Directory
 // profiles — the registry definition of workforce_recruited_current_count.
 async function liveGdpValueIndex(): Promise<number> {
-  try {
-    const report = await buildLiveGdpReport();
-    const row = report.metrics.find((m) => m.metricKey === 'gdp_value_index');
-    return row ? row.metricValue : 0;
-  } catch {
-    return 0;
-  }
+  const report = await buildLiveGdpReport();
+  const row = report.metrics.find((m) => m.metricKey === 'gdp_value_index');
+  return row ? row.metricValue : 0;
 }
 
 function liveWorkforceRecruited(weekStart: string): Promise<number> {
@@ -304,21 +315,12 @@ export function currentWeekStart(): string {
 // snapshot; a week that was never read while current reports 0 and renders as "not captured".
 async function goalMetricForWeek(metricKey: string, weekStartDate: string, live: () => Promise<number>): Promise<number> {
   const isCurrentWeek = weekStartDate === currentWeekStart();
-  try {
-    if (!(await tableExists('weekly_performance_goal_snapshots'))) {
-      return isCurrentWeek ? await live() : 0;
-    }
-    if (isCurrentWeek) {
-      const value = await live();
-      await queryDb(
-        `INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
-         VALUES ($1, $2::date, $3, NOW())
-         ON CONFLICT (metric_key, week_start_date)
-         DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW()`,
-        [metricKey, weekStartDate, value],
-      );
-      return value;
-    }
+  if (!(await tableExists('weekly_performance_goal_snapshots'))) {
+    reportMissingTable('weekly_performance_goal_snapshots');
+    return isCurrentWeek ? await live() : 0;
+  }
+
+  if (!isCurrentWeek) {
     const stored = await queryDb<{ v: string | null }>(
       `SELECT metric_value::text AS v FROM weekly_performance_goal_snapshots
        WHERE metric_key = $1 AND week_start_date = $2::date`,
@@ -326,9 +328,26 @@ async function goalMetricForWeek(metricKey: string, weekStartDate: string, live:
     );
     const value = stored.rows[0]?.v;
     return value == null ? 0 : Number(value);
-  } catch {
-    return 0;
   }
+
+  const value = await live();
+  // The snapshot write is this week's memory for next week's comparison, not this reading. If it
+  // fails, report it and still return the value we actually read — throwing here used to turn a
+  // good reading into a 0 on screen because a write to a different table did not land.
+  try {
+    await queryDb(
+      `INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
+       VALUES ($1, $2::date, $3, NOW())
+       ON CONFLICT (metric_key, week_start_date)
+       DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW()`,
+      [metricKey, weekStartDate, value],
+    );
+  } catch (error) {
+    console.error(
+      `[weekly-performance.live-metrics] could not record this week's ${metricKey} snapshot, so next week's comparison will have no prior value to read: ${failureReason(error)}`,
+    );
+  }
+  return value;
 }
 
 type MetricSpec = {
@@ -377,11 +396,25 @@ const METRIC_SPECS: MetricSpec[] = [
   { metricKey: 'adoption.click_log_active_loggers', metricUnit: 'members', sourcePlugin: 'click-log', compute: clickLogActiveLoggers },
 ];
 
+// Compute one metric, reporting rather than hiding a read that failed. The 0 keeps the dashboard
+// rendering when a single upstream table is unreadable; the log is what stops that 0 from passing
+// as a real count.
+async function computeMetric(spec: MetricSpec, weekStartDate: string): Promise<number> {
+  try {
+    return await spec.compute(weekStartDate);
+  } catch (error) {
+    console.error(
+      `[weekly-performance.live-metrics] could not read ${spec.metricKey} for the week starting ${weekStartDate}; the card shows 0, which is not a real count: ${failureReason(error)}`,
+    );
+    return 0;
+  }
+}
+
 // Compute the live numbers for a week window from upstream plugin tables. Always returns the full
 // metric set (a value of 0 is a real, reportable number), so the dashboard renders cards rather than
 // a "nothing here yet" placeholder.
 export async function computeLiveWeekMetrics(weekStartDate: string): Promise<LiveMetric[]> {
-  const values = await Promise.all(METRIC_SPECS.map((spec) => spec.compute(weekStartDate)));
+  const values = await Promise.all(METRIC_SPECS.map((spec) => computeMetric(spec, weekStartDate)));
   return METRIC_SPECS.map((spec, index) => ({
     metricKey: spec.metricKey,
     metricValue: values[index],

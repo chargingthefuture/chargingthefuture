@@ -1,4 +1,5 @@
 import { cookies, headers } from 'next/headers';
+import { recordLoginEvent } from 'lib/engagement/login-activity';
 import { verifyBearerIdentity } from './verify-bearer';
 
 type MaybeValue = string | null | undefined;
@@ -52,6 +53,22 @@ function readIdentityValue(
   );
 }
 
+// Record that this member turned up today. Signing in is a Clerk event and has nothing to do with
+// which plugin gets opened next, so the recording belongs here — the one place every authenticated
+// request resolves its Clerk identity, whether it arrived as a verified web session or a verified
+// bearer token. It used to hang off `evaluatePluginAccess` instead, so a member's day went
+// unrecorded unless a plugin access check happened to run on that request: a sign-in that reached
+// only an SSR page or a route using the identity layer directly counted as nobody turning up
+// (owner decision, 2026-08-27).
+//
+// Fire-and-forget and deduplicated to one row per member per UTC day, so putting it on this path
+// costs a set lookup per request rather than a write; see lib/engagement/login-activity.ts.
+function recordSignIn(userId: string | null): void {
+  if (userId) {
+    recordLoginEvent(userId);
+  }
+}
+
 export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const headerStore = await headers();
   const cookieStore = await cookies();
@@ -75,6 +92,8 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
       readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
     );
 
+    recordSignIn(userId);
+
     return {
       isAuthenticated: true,
       authProvider: 'clerk',
@@ -95,6 +114,8 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const verified = await verifyBearerIdentity(headerStore.get('authorization'));
   if (verified) {
     const role = verified.role ? verified.role.toLowerCase() : null;
+    recordSignIn(verified.userId);
+
     return {
       isAuthenticated: true,
       authProvider: 'clerk',

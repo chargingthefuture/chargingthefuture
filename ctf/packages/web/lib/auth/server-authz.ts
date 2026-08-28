@@ -2,7 +2,6 @@ import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
 import { getUnlockAccessTier } from 'lib/unlock/access';
 import { getAccountRestrictionStatus } from './account-restrictions';
-import { recordLoginEvent } from 'lib/engagement/login-activity';
 
 export type AllowDecision = {
   allowed: true;
@@ -139,13 +138,6 @@ export async function evaluatePluginAccess(
   if (!identity.isAuthenticated || !identity.userId) {
     return pluginAuthDeny.unauthorized();
   }
-
-  // A signed-in member reached an authorized surface — record them as active today (deduplicated to one
-  // row per member per day). This populates the `login_events` table the active-member window reads,
-  // which PeerProgramming cohort assignment and the Weekly Performance review both depend on. Recorded
-  // before the gates so any signed-in member counts as active, and fire-and-forget so it never blocks
-  // or breaks the access decision.
-  recordLoginEvent(identity.userId);
 
   const roleDeny = resolveRoleAndUsernameDeny(identity, normalizedRole, requiredRoles, requireUsername);
   if (roleDeny) {

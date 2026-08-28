@@ -164,15 +164,38 @@ Adoption (honest non-value rows):
   the member-days are bucketed on.
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
-is a (member, UTC day) pair on which that member did something the app recorded, drawn from the union of every
-member-attributed activity source — `login_events`, `click_log_incidents`, `mood_submissions`,
-`feed_community_posts`, `feed_community_replies`, `feed_community_post_reactions`,
-`peer_programming_messages` — each windowed on its own date column, `UNION`ed so a member seen in several
-sources on one day is still one member-day. Rows whose timestamp is written by a counterparty or an admin
-rather than by the member (a trip completion, a nomination review, a disbursement) are deliberately not
-sources: those say something happened to the member, not that the member turned up. Both rows are aggregate
-only — never a per-member figure — and both are adoption, not value: turning up is not a plugin's defining
-action and carries no positive weight in value scoring.
+is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
+`login_events`, and it is the whole definition (**owner decision, 2026-08-27**). No other table feeds these two
+rows. Every member reaches the app through Clerk, so a sign-in is a sign-in whatever plugin they then open —
+which plugin they used is not part of this and never has been, in v2 or v3. `login_events` is a preexisting
+table carried from v2 (it is in the April 2026 production schema snapshot with its own history); v3 added
+`recordLoginEvent` on 2026-06-16 to keep writing it, once per member per UTC day. That writer runs in the
+Clerk identity layer (`resolveRequestIdentity`, `lib/auth/request-identity.ts`) — the one place every
+authenticated request resolves its identity, on the verified web-session path and the verified bearer-token
+path alike — so the day is recorded whatever the member opens next.
+
+**Do not widen this.** It has drifted twice, each time on the same argument: the app holds a member's own dated
+rows (a ClickLog incident, a Commons post, a command-trail entry), so a member with Tuesday rows plainly used
+the app on Tuesday. That is true and it is still not this number. Turning up is one thing and is what these two
+rows measure; what a member did once they were here is a different thing, already measured per plugin by that
+plugin's own rows in the cards above. Folding the second into the first makes a headcount that moves when a
+plugin changes what it writes, cannot be compared across weeks, and quietly counts whatever the platform itself
+writes carrying a member id. A low reading here is a fact about the sign-in record: if it is wrong, fix the
+write, not the definition. `ctf/scripts/sql/active-members-audit.sql` is the tool for that — pasted into the
+Neon dashboard it counts the sign-in
+record for a week and, separately and only as a cross-check, what the per-plugin tables saw, so a member
+visible there but not here identifies a sign-in write that did not land.
+
+If a week reads zero, two things say why rather than leaving it to guesswork. The server log now names any
+metric whose read failed or whose table is missing, because such a card renders as 0 and a wrong zero looks
+exactly like a real one (`[weekly-performance.live-metrics] could not read …`). And
+`ctf/scripts/sql/active-members-audit.sql` prints the sign-in record's earliest and latest row alongside the
+week's count, so a zero before the earliest row is visibly the record not reaching that far rather than
+nobody turning up. It is SQL to paste into the Neon dashboard rather than a script, because there is no
+terminal to run a script from.
+
+Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
+a plugin's defining action and carries no positive weight in value scoring.
 - `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
 - `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
 - `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
@@ -188,11 +211,94 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-27: **Removed the terminal-only audit script (owner directive: there is no terminal).**
+  `ctf/scripts/audit-active-members.mjs` could only be run from a shell, so the person who needed it
+  could never run it — dead weight in an open-source tree, and a second copy of the source list to
+  keep in step. Deleted. `ctf/scripts/sql/active-members-audit.sql` answers the same questions as
+  plain SELECTs pasted into the Neon dashboard, and is now the only audit tool for this. The unit
+  test that existed to keep the two lists matching went with it; the part that pins the definition
+  stays.
+  The launch-gap repair needs no command either: `post/0008` is applied by the "Neon — Update DB"
+  workflow, which runs every `post/` migration on a push to `main` that touches that folder, so
+  merging is what runs it. Added its row to `ctf/db/migrations/README.md`.
+
+- 2026-08-27: **The launch-week hole in the sign-in record is repaired (owner approved).** The record
+  carries real v2 history from 2025-12-15, but v2 wrote its last row on 2026-05-26 and v3's writer
+  did not exist until 2026-06-19 — 23 days in which nothing wrote anything down, with the 2026-06-12
+  launch inside them. That is why the oldest week the picker offers reported nobody while the app was
+  in daily use. `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilds the
+  missing days from first-party evidence that an authenticated session existed: a command trail row
+  naming the member as actor, or a row the member wrote themselves. It does not change or widen the
+  definition — only the record for those days. Scoped to `[2026-05-27, 2026-06-19)`, guarded on every
+  source table existing, idempotent (`WHERE NOT EXISTS` on the member/UTC-day pair plus
+  `ON CONFLICT DO NOTHING`), and where the table has v2's `source` column the rebuilt rows are marked
+  `backfill_launch_gap` so a reconstructed day is never mistaken for one recorded live. Non-person
+  actor ids are excluded by name. It reports as it runs — evidence found, a line per day, rows
+  written — so running it is its own preview; there is no second copy of the source list to drift.
+  The `source` column itself came from v2 and production has carried it all along, but `ctf/schema.sql`
+  never declared it — so a database built from the canonical schema lacked a column production has
+  always had. It is declared now, `VARCHAR(50) NOT NULL DEFAULT 'webapp'`, matching production; the
+  guarded `ADD COLUMN IF NOT EXISTS` is a no-op there and fills the gap everywhere else.
+  Verified on a scratch Postgres 16 across four database shapes (production's `id`/`source` columns
+  with the unique index, the `schema.sql` shape with neither, a database with no unique index where
+  only the `WHERE NOT EXISTS` guard prevents duplicates, and one with no `login_events` at all) and
+  the cases that matter: earliest-action-of-day wins, days either side of the gap untouched, the
+  UTC-midnight boundary splitting into two days, an existing real row never duplicated, and a second
+  run writing nothing.
+
+- 2026-08-27: **A sign-in is now recorded where Clerk identity is resolved, not where a plugin access
+  check runs (owner decision).** `recordLoginEvent` fired from `evaluatePluginAccess`, so a member's
+  day only reached `login_events` if a plugin access check happened on that request — a session that
+  reached an SSR page, or a route using the identity layer directly, counted as nobody turning up.
+  Signing in is a Clerk event and has nothing to do with which plugin gets opened next, which is the
+  same principle the read side was corrected to earlier today, applied to the write side. The call
+  moved to `resolveRequestIdentity` (`lib/auth/request-identity.ts`), covering both authenticated
+  paths: the verified web session and the verified bearer token the mobile app arrives with. It stays
+  fire-and-forget and deduplicated to one row per member per UTC day, so the busier path costs a set
+  lookup per request rather than a write. A new test
+  (`ctf/packages/web/lib/auth/request-identity.test.ts`) drives both paths, checks that an
+  unauthenticated request and unvouched-for identity headers record nobody, and fails if the access
+  gate ever carries its own copy of the recording again. No schema, route, or contract change.
+
+- 2026-08-27: **A card that could not be read was rendering as 0 in silence.** Every metric on this
+  dashboard went through `guardedScalar`/`safeCount` in `lib/weekly-performance/live-metrics.ts`,
+  which caught every error and returned 0 without a word — so a failed read, a missing table, and a
+  week in which nothing happened all looked the same on screen, and the wrong zero is the harder one
+  to notice because it looks like an answer. The 0 stays (one unreadable table must not take the
+  whole dashboard down), but it is no longer silent: reads now propagate to a single per-metric
+  reporter in `computeLiveWeekMetrics` that logs which metric was flattened, for which week, and why
+  (rule 137); a missing table is reported once per table per process. Two failure paths that were
+  wrong in their own right are also fixed: a goal row whose weekly snapshot WRITE failed used to
+  discard the value it had just read correctly, and now returns that value and reports the failed
+  write; and the GDP goal's live read no longer swallows its own error before the reporter can see
+  it. No schema, route, or contract change.
+
+- 2026-08-27: **Active Members and Daily Active Members are the sign-in record again — owner
+  decision.** The owner's report: "Seems like at some point an agent changed the definition of an
+  active user. There is activity tracking per plugin. But when it comes to active users and daily
+  active users that is defined by the preexisting table of login events." The 2026-08-26 pass had
+  widened the member-day set to the union of seven member-attributed tables, on the argument that a
+  member with their own rows from a day used the app that day. That is a different measurement from
+  turnout, and the per-plugin cards already carry it. `lib/engagement/member-activity.ts` now reads
+  `login_events` and nothing else, for the two dashboard rows, for `/current-week`'s rolling
+  `activeUsersLast7Days`, and for PeerProgramming's cohort-forming active set. Section 6 records the
+  decision and why not to widen it again; a unit test
+  (`ctf/packages/web/lib/engagement/member-activity.test.ts`) fails if any other table reaches the
+  SQL. `ctf/scripts/sql/active-members-audit.sql` reads only the sign-in record too, and prints the
+  record's earliest and latest row next to each week's count so a zero week is answerable from data:
+  a zero before the earliest row is missing history, not a week nobody turned up. The same questions
+  are in `ctf/scripts/sql/active-members-audit.sql` as paste-able SELECTs for the Neon dashboard,
+  since the owner works from mobile with no terminal to run the script from. Removed
+  `feed_community_posts` from the `dataAccess` lists of `weekly-performance.metrics.get` and
+  `.comparison.get` (it was there only for the widened set, and no other metric reads it), and added
+  `login_events` to `weekly-performance.week.get`, which returns `activeUsersLast7Days` and had never
+  listed it. No schema, route, or access-policy change.
+
 - 2026-08-26: **Turnout was undercounting whole members (owner report: "there are two daily active
   users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`
   row and the `/current-week` rolling `activeUsersLast7Days` — read `login_events` and nothing else.
   That table has exactly one writer: a fire-and-forget insert in
-  `lib/engagement/login-activity.ts`, called from the shared access gate, whose failures were caught
+  `lib/engagement/login-activity.ts`, called at the time from the shared access gate, whose failures were caught
   and dropped without a word. So any member whose sign-in row never landed was invisible to the
   dashboard even while the database held that member's own rows, timestamped, from the same day — a
   member logging ClickLog incidents every day could read as nobody. Three changes:
@@ -212,7 +318,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   turned up in the week, next to the average that reads as "Daily Active Members". The average's
   divisor also moved from `CURRENT_DATE` (database session timezone) to UTC, matching the day
   boundary the member-days use.
-  `ctf/scripts/audit-active-members.mjs` prints a week's member-days per source so an operator can
+  a new audit tool prints a week's member-days per source so an operator can
   see which source a low number came from; it only runs `SELECT`s and never names a member.
   Registered `wp_adoption_active_members` and rewrote `wp_adoption_daily_active_members` in
   `ctf/config/canonical_metrics.yaml`; added `feed_community_posts` to the `dataAccess` lists of

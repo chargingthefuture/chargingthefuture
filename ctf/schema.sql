@@ -4352,11 +4352,20 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS current_
 ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === LOGIN EVENTS (engagement) ===
+-- The sign-in record, and the whole definition of an active member (owner decision, 2026-08-27): a
+-- member is active on a day this table holds a row for them, whatever they opened next. `source`
+-- says how the row got here. It came from v2 — production has carried it since before v3, defaulting
+-- to 'webapp' — but this canonical schema never declared it, so a database built from schema.sql
+-- alone lacked a column production has always had. Declared here so the two agree, and so the value
+-- is writable everywhere: post/0008 marks the days it rebuilt as 'backfill_launch_gap', which is
+-- what tells a reconstructed sign-in day from one that was recorded live.
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
+  source VARCHAR(50) NOT NULL DEFAULT 'webapp',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS source VARCHAR(50) NOT NULL DEFAULT 'webapp';
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
