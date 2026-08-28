@@ -8,6 +8,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { Announcement, FeedConfig } from 'lib/feed/types';
 import { getFeedAnnouncementsTokens, type FeedAnnouncementsTokens } from './feed-announcements-shared';
+import { FeedAuditPanel } from './feed-audit-panel';
 
 type PluginOption = { slug: string; name: string };
 
@@ -404,6 +405,8 @@ export function FeedAnnouncementsAdminShell({
             />
           ))
         )}
+
+        <FeedAuditPanel tokens={t} />
       </div>
     </div>
   );

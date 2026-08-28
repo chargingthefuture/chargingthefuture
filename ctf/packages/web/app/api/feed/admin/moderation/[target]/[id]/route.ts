@@ -9,7 +9,7 @@ import {
   type FeedModerationStatus,
 } from 'lib/feed/constants';
 import { isFeedModerationTarget, setCommunityModerationStatus } from 'lib/feed/moderation';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
 
@@ -126,7 +126,7 @@ export async function POST(
       );
     }
 
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: hidden ? 'feed.community.moderation.hide' : 'feed.community.moderation.restore',

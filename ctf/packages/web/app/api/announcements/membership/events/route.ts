@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { emitMembershipEvent } from 'lib/feed/repository';
 import type { MembershipEventType } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       traceId: input.traceId,
     });
 
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.membership.event.emit',
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, streamEmitted: result.streamEmitted }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'membership_events' });
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.membership.event.emit',
