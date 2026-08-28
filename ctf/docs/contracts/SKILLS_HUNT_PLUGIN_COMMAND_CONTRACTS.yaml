@@ -284,6 +284,35 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
+    command: skills-hunt.submission.restore
+    version: 1.0.0
+    description: >-
+      Admin-only restore of a submission (sets deleted_at). Voids a duplicate,
+      test, or mistaken row WITHOUT it counting as a scout rejection — a restored
+      row is excluded from reputation/rate-limit, leaderboard, mission progress, My
+      Finds, and directory eligibility. Rebuilds the round leaderboard and recomputes
+      the scout's mission progress. Does not touch the ServiceCredits ledger.
+    inputSchema:
+      submissionId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      alreadyRemoved:
+        type: boolean
+      roundId:
+        type: string
+    dataAccess:
+      - skills_hunt_submissions
+      - skills_hunt_leaderboard
+      - skills_hunt_mission_progress
+      - skills_hunt_audit_log
+    purpose: moderation_and_scoring
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
     command: skills-hunt.leaderboard.list
     version: 1.0.0
     description: Retrieve round leaderboard entries, ranked by accepted points. Scout ranking only — the team board was removed 2026-08-27.
@@ -660,3 +689,11 @@ changelog:
       submission to pending without a verdict. Until now flag was a one-way door — the only ways
       out were accept, reject or remove — so a moderator who parked a nomination to come back to
       it could not simply put it back in the queue. The review_action CHECK is widened to allow it.
+  - date: 2026-08-28
+    change: >-
+      Added skills-hunt.submission.restore, the inverse of skills-hunt.submission.remove. Without
+      it a removed submission was a dead end — the row stayed in the admin list marked Removed with
+      no action available on it. Restore clears the soft-delete and leaves the status untouched, so
+      a row that was flagged comes back flagged and can then be un-flagged. It is refused when the
+      person has been nominated again in the meantime, since two live nominations for one person is
+      what the live-signature index exists to prevent.

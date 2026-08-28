@@ -15,6 +15,7 @@ interface RowProps {
   onFlag: (id: string) => void;
   onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
+  onRestore: (id: string) => void;
 }
 
 function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
@@ -46,89 +47,54 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 
 // Action buttons sit on their own full-width rows with generous tap targets so a moderator can't
 // accidentally accept/reject on a paid surface (the old inline table crammed four tiny buttons into
-// a scrolling cell). Accept and Reject are the two halves of the primary row; Flag/Remove are a
-// quieter secondary row.
+// a scrolling cell).
 //
-// Flag is a holding state, not a verdict — it parks a submission for a second look. So a flagged row
-// keeps Accept and Reject, which is how it comes back out. Until 2026-08-27 every non-pending status
-// took the same terminal branch, which left a flagged submission with no way forward: it was gone
-// from the Pending list, the round's duplicate guard would not let the same person be nominated
-// again, and Remove (which does not free that guard either) was the only button on offer. Accepted
-// and rejected stay terminal — reversing those moves points and can pay a reward, so they are not
-// one tap away.
-function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
+// This is the admin page, so every row offers every action, whatever state it is in (owner
+// directive 2026-08-28). There is no terminal state and nothing is withheld: an accepted row can be
+// rejected, a rejected row accepted, a flagged row un-flagged, a removed row restored. Reviewing a
+// removed row also makes it live again, so a verdict is never blocked behind a restore. Earlier
+// versions of this component branched on status and showed a status label with one button, which is
+// how a flagged row and then a removed row each became a dead end.
+function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove, onRestore }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
     flex: "1 1 0", padding: "10px 12px", borderRadius: 8, background: bg, border, color, fontSize: 13, fontWeight: 700,
     cursor: acting ? "default" : "pointer", opacity: acting ? 0.5 : 1,
   });
-  // Remove (soft-delete) is available for any status — it voids a submission
-  // (duplicate/spam/mistake) without it counting as a scout rejection.
-  const removeBtn = (
-    <button type="button" disabled={acting} onClick={() => onRemove(submission.id)}
-      style={{ ...btn("transparent", `1px solid ${t.MUTED}`, t.MUTED), fontWeight: 600 }}>
-      Remove
-    </button>
-  );
-  // A removed row is soft-deleted, not gone. It stays in the admin list rather than vanishing from
-  // every filter, so its state is visible and it can be explained — it holds no Quora URL against a
-  // re-nomination any more, but it is still the record of what happened.
-  if (submission.deletedAtIso) {
-    return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: t.MUTED }}>
-          Removed {new Date(submission.deletedAtIso).toLocaleDateString()} · was {submission.status}
-        </span>
-      </div>
-    );
-  }
-
-  const verdictRow = (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
-      <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
-    </div>
-  );
-
-  if (submission.status === "flagged") {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look. Unflag puts it back in Pending unchanged; Accept or Reject decides it now.</span>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button type="button" disabled={acting} onClick={() => onUnflag(submission.id)}
-            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Unflag</button>
-          {removeBtn}
-        </div>
-        {verdictRow}
-      </div>
-    );
-  }
-
-  if (submission.status !== "pending") {
-    return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: t.MUTED }}>{submission.reviewAction ?? submission.status}</span>
-        <div style={{ display: "flex", maxWidth: 160 }}>{removeBtn}</div>
-      </div>
-    );
-  }
+  const removed = submission.deletedAtIso !== null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {verdictRow}
+      <span style={{ fontSize: 12, color: removed ? t.MUTED : t.SUBTLE }}>
+        {removed
+          ? `Removed ${new Date(submission.deletedAtIso as string).toLocaleDateString()} · was ${submission.status} · accepting or rejecting it also restores it`
+          : `Currently ${submission.reviewAction ?? submission.status}`}
+      </span>
+
       <div style={{ display: "flex", gap: 8 }}>
-        <button type="button" disabled={acting} onClick={() => onFlag(submission.id)} style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Flag</button>
-        {removeBtn}
+        <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
+        <button type="button" disabled={acting} onClick={() => onReject(submission.id)} style={btn("#EF4444", "none", "#fff")}>Reject</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        {submission.status === "flagged" ? (
+          <button type="button" disabled={acting} onClick={() => onUnflag(submission.id)}
+            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Unflag</button>
+        ) : (
+          <button type="button" disabled={acting} onClick={() => onFlag(submission.id)}
+            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Flag</button>
+        )}
+        {removed ? (
+          <button type="button" disabled={acting} onClick={() => onRestore(submission.id)}
+            style={{ ...btn("transparent", `1px solid ${t.MUTED}`, t.MUTED), fontWeight: 600 }}>Restore</button>
+        ) : (
+          <button type="button" disabled={acting} onClick={() => onRemove(submission.id)}
+            style={{ ...btn("transparent", `1px solid ${t.MUTED}`, t.MUTED), fontWeight: 600 }}>Remove</button>
+        )}
       </div>
     </div>
   );
-}
-
-// Bulk accept/reject applies to a live pending row only. A removed row can still carry status
-// 'pending', so removal has to be checked as well as status.
-function isBulkSelectable(submission: SkillsHuntSubmission): boolean {
-  return submission.status === "pending" && submission.deletedAtIso === null;
 }
 
 // Marks a soft-deleted row in the list. The row is shown rather than hidden, so it needs to say
@@ -155,7 +121,7 @@ function SubmissionCard(props: RowProps) {
   return (
     <div style={{ border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 12, background: t.HEADER }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={!isBulkSelectable(s)} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
+        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span>{s.fullName}</span>
@@ -192,7 +158,7 @@ export function SkillsHuntAdminTable({
   submissions,
   selected,
   acting,
-  allPendingSelected,
+  allSelected,
   onToggleAll,
   onToggle,
   onAccept,
@@ -200,11 +166,12 @@ export function SkillsHuntAdminTable({
   onFlag,
   onUnflag,
   onRemove,
+  onRestore,
 }: {
   submissions: SkillsHuntSubmission[];
   selected: Set<string>;
   acting: string | null;
-  allPendingSelected: boolean;
+  allSelected: boolean;
   onToggleAll: () => void;
   onToggle: (id: string) => void;
   onAccept: (id: string) => void;
@@ -212,14 +179,15 @@ export function SkillsHuntAdminTable({
   onFlag: (id: string) => void;
   onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
+  onRestore: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: t.MUTED, cursor: "pointer" }}>
-        <input type="checkbox" checked={allPendingSelected} onChange={onToggleAll} aria-label="Select all pending" style={{ width: 18, height: 18 }} />
-        Select all pending
+        <input type="checkbox" checked={allSelected} onChange={onToggleAll} aria-label="Select all" style={{ width: 18, height: 18 }} />
+        Select all
       </label>
       {submissions.map((s) => (
         <SubmissionCard
@@ -233,6 +201,7 @@ export function SkillsHuntAdminTable({
           onFlag={onFlag}
           onUnflag={onUnflag}
           onRemove={onRemove}
+          onRestore={onRestore}
         />
       ))}
     </div>

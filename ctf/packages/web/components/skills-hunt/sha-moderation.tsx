@@ -9,15 +9,17 @@ import { SkillsHuntAdminTable } from "./sha-table";
 
 type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number };
 
-// Confirm the mass action with the real count of affected pending submissions before firing —
-// a bulk accept pays each scout and a bulk reject can trip the rejection-rate guard, so neither
-// should run on a stray click.
+// Confirm the mass action with the real count before firing — a bulk accept pays each scout and a
+// bulk reject can trip the rejection-rate guard, so neither should run on a stray click. The
+// confirm says what will happen; it never withholds the action. Any selected row is included,
+// whatever state it is in, and a removed one is made live again by the review (owner directive
+// 2026-08-28: this is the admin page).
 function bulkConfirmMessage(action: "accept" | "reject", count: number): string {
   const verb = action === "accept" ? "Accept" : "Reject";
   const consequence = action === "accept"
     ? "Each accepted nomination pays the configured reward once."
-    : "This cannot be undone.";
-  return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence}`;
+    : "Each rejected nomination counts toward that scout's rejection rate.";
+  return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence} Any removed submission in the selection is restored by this.`;
 }
 
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
@@ -129,10 +131,32 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     await refresh();
   }
 
+  // Restore = undo a removal. The row comes back with the status it had when it was removed, so a
+  // submission that was flagged returns flagged and can then be un-flagged. Without this, Remove is
+  // a one-way door: the row sits in the list marked Removed with nothing an admin can do to it.
+  async function onRestore(id: string) {
+    setActing(id);
+    try {
+      const res = await fetch(`/api/skills-hunt/admin/submissions/${id}/restore`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(body?.message ?? "Unable to restore submission.");
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Unable to restore submission.");
+    } finally {
+      setActing(null);
+    }
+    await refresh();
+  }
+
   async function bulkReview(action: "accept" | "reject") {
     if (selected.size === 0) return;
-    const pendingIds = new Set(submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).map((s) => s.id));
-    const ids = Array.from(selected).filter((id) => pendingIds.has(id));
+    const allIds = new Set(submissions.map((s) => s.id));
+    const ids = Array.from(selected).filter((id) => allIds.has(id));
     if (ids.length === 0) return;
     if (!window.confirm(bulkConfirmMessage(action, ids.length))) return;
     const notes = action === "reject" ? promptRejectReason() : null;
@@ -153,13 +177,13 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   }
 
   function toggleAllVisible() {
-    const pendingIds = submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).map((s) => s.id);
-    if (selected.size === pendingIds.length) setSelected(new Set());
-    else setSelected(new Set(pendingIds));
+    const allIds = submissions.map((s) => s.id);
+    if (selected.size === allIds.length) setSelected(new Set());
+    else setSelected(new Set(allIds));
   }
 
-  const pendingCount = submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).length;
-  const allPendingSelected = pendingCount > 0 && selected.size === pendingCount;
+  const shownCount = submissions.length;
+  const allSelected = shownCount > 0 && selected.size === shownCount;
 
   if (rounds.length === 0) {
     return <div style={{ color: t.MUTED, fontSize: 13 }}>No rounds yet. Create one in the Rounds tab before moderating.</div>;
@@ -181,7 +205,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           submissions={submissions}
           selected={selected}
           acting={acting}
-          allPendingSelected={allPendingSelected}
+          allSelected={allSelected}
           onToggleAll={toggleAllVisible}
           onToggle={toggleOne}
           onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
@@ -189,6 +213,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
           onUnflag={(id) => void reviewAndRefresh(id, "unflag", null)}
           onRemove={(id) => void onRemove(id)}
+          onRestore={(id) => void onRestore(id)}
         />
       )}
     </>
