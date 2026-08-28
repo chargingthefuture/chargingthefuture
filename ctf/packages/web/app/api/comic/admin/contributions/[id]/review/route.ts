@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { logComicAudit } from 'lib/comic/audit';
+import { recordComicAdminAudit } from 'lib/comic/audit';
 import { acceptContribution, declineContribution } from 'lib/comic/contribution-repository';
 import { grantContributionRecognition } from 'lib/comic/contribution-grant';
 import { reportError } from 'lib/observability/report';
@@ -50,7 +50,7 @@ async function handleDecline(id: string, reviewerId: string, rawReason: unknown)
     );
   }
 
-  logComicAudit({
+  await recordComicAdminAudit({
     actorId: reviewerId,
     pluginId: 'comic',
     command: 'comic.contribution.review',
@@ -98,7 +98,7 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
     });
   }
 
-  logComicAudit({
+  await recordComicAdminAudit({
     actorId: reviewerId,
     pluginId: 'comic',
     command: 'comic.contribution.review',

@@ -1,3 +1,9 @@
+# Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
+# events were written by logComicAudit, which builds the whole shape below and ends in console.info —
+# a line in the server's log, which nothing can query, no screen can show, and which ages out of the
+# host's retention window. Every admin decision event here is now also a durable row in
+# comic_admin_audit_trail, written by recordComicAdminAudit on every outcome including a refusal. The
+# member-facing events keep the log line alone: a row per message would be volume, not accountability.
 auditEvents:
   # ─── @comic message routing ────────────────────────────────────────────
   - eventId: uuid
@@ -296,6 +302,52 @@ auditEvents:
       grant: grant_outcome
     requestId: request_identifier
     traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # An admin reading the trail from the Audit log panel on /admin/comic/knowledge.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.admin.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - comic_admin_audit_trail
+    targetContext:
+      targetType: audit_trail
+      targetId: row_count_requested
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # Admin regenerates a draft answer. Added 2026-08-28 — the route had shipped with no audit event
+  # template behind it.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.review.regenerate
+    commandVersion: 1.0.0
+    purpose: assistant_supervision
+    policyDecision:
+      status: allow_or_deny
+      reason: draft_attached_or_engine_unavailable
+    dataClassesAccessed:
+      - comic_review_queue
+      - comic_turns
+      - comic_admin_audit_trail
+    targetContext:
+      targetType: comic_review_queue
+      targetId: review_identifier
+    metadata:
+      attached: boolean_did_a_draft_come_back
+      failureReason: none_or_engine_reason
     result:
       status: success_or_failure
       errorCategory: none_or_error_class

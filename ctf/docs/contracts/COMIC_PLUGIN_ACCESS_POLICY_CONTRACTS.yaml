@@ -350,3 +350,51 @@ policies:
       - actor_not_admin
       - contribution_not_pending
       - decline_reason_missing
+
+  - pluginId: comic
+    command: comic.admin.audit.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+      readOnly: enforced
+    consentRequirements:
+      scopes:
+        - comic_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_admin
+
+  # Added 2026-08-28: comic.review.regenerate had shipped with no access policy.
+  - pluginId: comic
+    command: comic.review.regenerate
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      adminRouteGuard: required
+    consentRequirements:
+      scopes:
+        - comic_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_admin
+      - csrf_denied
+      - not_found
