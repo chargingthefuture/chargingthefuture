@@ -167,6 +167,7 @@ commands:
           $ref: '#/definitions/AdminProblem'
     dataAccess:
       - what_works_problems (insert)
+      - what_works_admin_audit_trail
     purpose: Create an admin-curated problem category
     retentionClass: community_content
   - pluginId: what-works
@@ -196,6 +197,7 @@ commands:
     dataAccess:
       - what_works_problems (select)
       - what_works_problems (update)
+      - what_works_admin_audit_trail
     purpose: Edit, reorder, or deactivate a problem
     retentionClass: community_content
   - pluginId: what-works
@@ -217,6 +219,7 @@ commands:
       - what_works_problems (delete)
       - what_works_products (delete)
       - what_works_endorsements (delete)
+      - what_works_admin_audit_trail
     purpose: Delete a problem and (by cascade) its tools and endorsements
     retentionClass: community_content
   - pluginId: what-works
@@ -265,6 +268,7 @@ commands:
     dataAccess:
       - what_works_products (select)
       - what_works_products (update)
+      - what_works_admin_audit_trail
     purpose: Approve or reject a suggested tool
     retentionClass: community_content
   - pluginId: what-works
@@ -296,6 +300,7 @@ commands:
     dataAccess:
       - what_works_products (select)
       - what_works_products (update)
+      - what_works_admin_audit_trail
     purpose: Correct a suggested tool's own details (name, link, note, emoji, kind) without changing its status, endorsements, or submitter identity
     retentionClass: community_content
   - pluginId: what-works
@@ -316,8 +321,30 @@ commands:
       - what_works_products (select)
       - what_works_products (delete)
       - what_works_endorsements (delete)
+      - what_works_admin_audit_trail
     purpose: Delete a tool and (by cascade) its endorsements
     retentionClass: community_content
+
+  - pluginId: what-works
+    command: what-works.admin.audit.list
+    version: 1.0.0
+    description: >-
+      Admin reads the What Works admin audit trail, newest first. Read-only. The trail is append-only
+      and names the product or problem acted on and the acting admin — never suggested_by — so it
+      holds no survivor identity and is not removed on a member's account deletion.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - what_works_admin_audit_trail
+    purpose: governance_transparency
+    retentionClass: audit_long_lived
+    idempotency: true
 
 definitions:
   ReaderProduct:

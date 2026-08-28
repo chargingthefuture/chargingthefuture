@@ -13,6 +13,7 @@ import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-sh
 import { getWhatWorksTokens } from './ww-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
+import { WhatWorksAuditPanel } from './ww-audit-panel';
 import { responseFailureText } from 'lib/errors/client-failure';
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
@@ -247,6 +248,8 @@ export function WhatWorksAdminShell() {
             />
           </>
         )}
+
+        <WhatWorksAuditPanel tokens={t} />
       </div>
     </div>
   );

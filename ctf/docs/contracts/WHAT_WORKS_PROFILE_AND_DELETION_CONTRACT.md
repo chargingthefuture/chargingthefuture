@@ -32,6 +32,12 @@ identity store. It persists only the canonical `user_id` as a foreign reference 
 
 ## 4) Domain Data Owned by Plugin
 
+- Table/entity: `what_works_admin_audit_trail`
+  - Contains personal data? minimal (the acting admin's id, and the id of the problem or product acted on) — **never `suggested_by`**, so it holds no survivor identity
+  - Retention period: compliance retention window
+  - Legal/compliance note: the durable record of every admin decision on What Works, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion — the record of a moderation decision has to outlive the thing it was made about. Deliberately omits the suggester so recording moderation does not reintroduce the identity every projection leaves out.
+
+
 - Table/entity: `what_works_problems`
   - Contains personal data? minimal — `created_by` (admin user id) only
   - Retention: long-lived community content
