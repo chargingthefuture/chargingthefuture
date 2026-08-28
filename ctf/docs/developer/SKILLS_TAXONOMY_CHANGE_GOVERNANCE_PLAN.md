@@ -91,7 +91,15 @@ rule: a missing sector is a mis-named entry, not a creation request).
    command/access-policy/audit contract entries; keep every read route. The admin page's only wired
    control today is Add Skill — replace it with a link to file a `taxonomy-change` issue. Update the
    ST inventory (routes, controls, change log) in the same PR. Blocked by tasks 4 and 5 (the change-list path
-   must have applied a real change end-to-end first).
+   must have applied a real change end-to-end first). **Done 2026-08-28.** The six route files each
+   keep their `GET` and carry a comment saying why the writes are gone; the nine command,
+   access-policy and audit contract entries are removed, as are the 17 repository functions that had
+   no other caller. The dead "Add Skill" control had already been removed in 2026-07-14 (PR #1528),
+   so there was no button left to replace — the plugin has been read-only in the app since then. The
+   stated blocker was spent: the change list has grown from 25 entries to 57 and carries the
+   `reparentSkill` task 5 named. Found while sweeping for admin actions that write no audit row —
+   auditing an ungoverned bypass would have made it more comfortable to use, so this was done
+   instead.
 8. **Inventory + rules sync** — record the governance model in the ST feature inventory and add a
    short taxonomy-change section to the relevant rule module so agents route all taxonomy changes
    through change-list PRs. Blocked by task 7.

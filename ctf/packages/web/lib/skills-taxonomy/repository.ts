@@ -1,10 +1,9 @@
 import type { PoolClient } from 'pg';
-import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
-  SKILLS_TAXONOMY_ALIASES_MAX_LENGTH,
-  SKILLS_TAXONOMY_DELETE_REASON_MAX_LENGTH,
-  SKILLS_TAXONOMY_NAME_MAX_LENGTH,
-} from './constants';
+  queryDb,
+  withDbTransaction,
+} from 'lib/db/postgres';
+
 import type {
   TaxonomyDependencyImpact,
   TaxonomyDependencyTargetType,
@@ -112,23 +111,6 @@ export type SkillUpdateInput = {
   isActive?: boolean;
 };
 
-function normalizeName(value: string): string {
-  return value.trim().replace(/\s+/g, ' ');
-}
-
-function normalizeAliases(aliases: string[] | undefined): string[] {
-  if (!aliases || aliases.length === 0) {
-    return [];
-  }
-
-  const normalized = aliases
-    .map((alias) => normalizeName(alias))
-    .filter((alias) => alias.length > 0)
-    .slice(0, SKILLS_TAXONOMY_ALIASES_MAX_LENGTH);
-
-  return Array.from(new Set(normalized));
-}
-
 function toNumberOrNull(value: string | null): number | null {
   if (value === null) {
     return null;
@@ -183,78 +165,12 @@ function mapSkill(row: SkillRow): TaxonomySkill {
   };
 }
 
-function validateName(name: string): boolean {
-  const normalized = normalizeName(name);
-  return normalized.length > 0 && normalized.length <= SKILLS_TAXONOMY_NAME_MAX_LENGTH;
-}
-
-function validateDeleteReason(reason: string): boolean {
-  const normalized = normalizeName(reason);
-  return normalized.length > 0 && normalized.length <= SKILLS_TAXONOMY_DELETE_REASON_MAX_LENGTH;
-}
-
-export function validateSectorCreateInput(input: SectorCreateInput): boolean {
-  return validateName(input.name);
-}
-
-export function validateSectorUpdateInput(input: SectorUpdateInput): boolean {
-  if (!input.id || input.id.trim().length === 0) {
-    return false;
-  }
-
-  if (typeof input.name === 'string' && !validateName(input.name)) {
-    return false;
-  }
-
-  return true;
-}
-
-export function validateJobTitleCreateInput(input: JobTitleCreateInput): boolean {
-  return input.sectorId.trim().length > 0 && validateName(input.name);
-}
-
-export function validateJobTitleUpdateInput(input: JobTitleUpdateInput): boolean {
-  if (!input.id || input.id.trim().length === 0) {
-    return false;
-  }
-
-  if (typeof input.name === 'string' && !validateName(input.name)) {
-    return false;
-  }
-
-  return true;
-}
-
-export function validateSkillCreateInput(input: SkillCreateInput): boolean {
-  return input.jobTitleId.trim().length > 0 && validateName(input.name);
-}
-
-export function validateSkillUpdateInput(input: SkillUpdateInput): boolean {
-  if (!input.id || input.id.trim().length === 0) {
-    return false;
-  }
-
-  if (typeof input.name === 'string' && !validateName(input.name)) {
-    return false;
-  }
-
-  return true;
-}
-
 export function validateDependencyPreviewInput(targetType: string, targetId: string): targetType is TaxonomyDependencyTargetType {
   if (!targetId || targetId.trim().length === 0) {
     return false;
   }
 
   return targetType === 'sector' || targetType === 'job-title' || targetType === 'skill';
-}
-
-export function validateDeleteInput(targetType: string, targetId: string, reason: string): targetType is TaxonomyDependencyTargetType {
-  if (!validateDependencyPreviewInput(targetType, targetId)) {
-    return false;
-  }
-
-  return validateDeleteReason(reason);
 }
 
 async function previewDependencyImpactWithClient(
@@ -452,45 +368,6 @@ export async function getSectorById(id: string): Promise<TaxonomySector | null> 
   return result.rows[0] ? mapSector(result.rows[0]) : null;
 }
 
-export async function createSector(input: SectorCreateInput): Promise<TaxonomySector> {
-  const result = await queryDb<SectorRow>(
-    `
-      INSERT INTO skills_taxonomy_sectors (name, display_order, workforce_share, is_active)
-      VALUES ($1, COALESCE($2, 0), $3, true)
-      RETURNING id, name, display_order, workforce_share::text, is_active, created_at, updated_at
-    `,
-    [normalizeName(input.name), input.displayOrder ?? 0, input.workforceShare ?? null],
-  );
-
-  return mapSector(result.rows[0]);
-}
-
-export async function updateSector(input: SectorUpdateInput): Promise<TaxonomySector | null> {
-  const result = await queryDb<SectorRow>(
-    `
-      UPDATE skills_taxonomy_sectors
-      SET
-        name = COALESCE($2, name),
-        display_order = COALESCE($3, display_order),
-        workforce_share = CASE WHEN $4::boolean THEN NULL ELSE COALESCE($5, workforce_share) END,
-        is_active = COALESCE($6, is_active),
-        updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, name, display_order, workforce_share::text, is_active, created_at, updated_at
-    `,
-    [
-      input.id,
-      typeof input.name === 'string' ? normalizeName(input.name) : null,
-      input.displayOrder ?? null,
-      input.workforceShare === null,
-      input.workforceShare ?? null,
-      input.isActive ?? null,
-    ],
-  );
-
-  return result.rows[0] ? mapSector(result.rows[0]) : null;
-}
-
 export async function listJobTitles(includeInactive = true): Promise<TaxonomyJobTitle[]> {
   const result = await queryDb<JobTitleRow>(
     `
@@ -518,54 +395,6 @@ export async function getJobTitleById(id: string): Promise<TaxonomyJobTitle | nu
   return result.rows[0] ? mapJobTitle(result.rows[0]) : null;
 }
 
-export async function createJobTitle(input: JobTitleCreateInput): Promise<TaxonomyJobTitle> {
-  return withDbTransaction(async (client) => {
-    await ensureSectorExists(client, input.sectorId);
-
-    const result = await client.query<JobTitleRow>(
-      `
-        INSERT INTO skills_taxonomy_job_titles (sector_id, name, display_order, is_active)
-        VALUES ($1, $2, COALESCE($3, 0), true)
-        RETURNING id, sector_id, name, display_order, is_active, created_at, updated_at
-      `,
-      [input.sectorId, normalizeName(input.name), input.displayOrder ?? 0],
-    );
-
-    return mapJobTitle(result.rows[0]);
-  });
-}
-
-export async function updateJobTitle(input: JobTitleUpdateInput): Promise<TaxonomyJobTitle | null> {
-  return withDbTransaction(async (client) => {
-    if (input.sectorId) {
-      await ensureSectorExists(client, input.sectorId);
-    }
-
-    const result = await client.query<JobTitleRow>(
-      `
-        UPDATE skills_taxonomy_job_titles
-        SET
-          sector_id = COALESCE($2, sector_id),
-          name = COALESCE($3, name),
-          display_order = COALESCE($4, display_order),
-          is_active = COALESCE($5, is_active),
-          updated_at = NOW()
-        WHERE id = $1
-        RETURNING id, sector_id, name, display_order, is_active, created_at, updated_at
-      `,
-      [
-        input.id,
-        input.sectorId ?? null,
-        typeof input.name === 'string' ? normalizeName(input.name) : null,
-        input.displayOrder ?? null,
-        input.isActive ?? null,
-      ],
-    );
-
-    return result.rows[0] ? mapJobTitle(result.rows[0]) : null;
-  });
-}
-
 export async function listSkills(includeInactive = true): Promise<TaxonomySkill[]> {
   const result = await queryDb<SkillRow>(
     `
@@ -591,60 +420,6 @@ export async function getSkillById(id: string): Promise<TaxonomySkill | null> {
   );
 
   return result.rows[0] ? mapSkill(result.rows[0]) : null;
-}
-
-export async function createSkill(input: SkillCreateInput): Promise<TaxonomySkill> {
-  return withDbTransaction(async (client) => {
-    await ensureJobTitleExists(client, input.jobTitleId);
-
-    const aliases = normalizeAliases(input.aliases);
-
-    const result = await client.query<SkillRow>(
-      `
-        INSERT INTO skills_taxonomy_skills (job_title_id, name, display_order, aliases, is_active)
-        VALUES ($1, $2, COALESCE($3, 0), $4::jsonb, true)
-        RETURNING id, job_title_id, name, display_order, aliases, is_active, created_at, updated_at
-      `,
-      [input.jobTitleId, normalizeName(input.name), input.displayOrder ?? 0, JSON.stringify(aliases)],
-    );
-
-    return mapSkill(result.rows[0]);
-  });
-}
-
-export async function updateSkill(input: SkillUpdateInput): Promise<TaxonomySkill | null> {
-  return withDbTransaction(async (client) => {
-    if (input.jobTitleId) {
-      await ensureJobTitleExists(client, input.jobTitleId);
-    }
-
-    const aliases = input.aliases ? normalizeAliases(input.aliases) : null;
-
-    const result = await client.query<SkillRow>(
-      `
-        UPDATE skills_taxonomy_skills
-        SET
-          job_title_id = COALESCE($2, job_title_id),
-          name = COALESCE($3, name),
-          display_order = COALESCE($4, display_order),
-          aliases = COALESCE($5::jsonb, aliases),
-          is_active = COALESCE($6, is_active),
-          updated_at = NOW()
-        WHERE id = $1
-        RETURNING id, job_title_id, name, display_order, aliases, is_active, created_at, updated_at
-      `,
-      [
-        input.id,
-        input.jobTitleId ?? null,
-        typeof input.name === 'string' ? normalizeName(input.name) : null,
-        input.displayOrder ?? null,
-        aliases ? JSON.stringify(aliases) : null,
-        input.isActive ?? null,
-      ],
-    );
-
-    return result.rows[0] ? mapSkill(result.rows[0]) : null;
-  });
 }
 
 function mapHierarchySkill(row: SkillRow): TaxonomyHierarchySkill {
@@ -776,53 +551,4 @@ export async function previewDependencyImpact(
   targetId: string,
 ): Promise<TaxonomyDependencyImpact> {
   return withDbTransaction((client) => previewDependencyImpactWithClient(client, targetType, targetId));
-}
-
-export async function deleteTaxonomyTarget(
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-  actorId: string,
-  reason: string,
-): Promise<{ deletedAtIso: string }> {
-  const normalizedReason = normalizeName(reason);
-
-  if (!validateDeleteReason(normalizedReason)) {
-    throw new Error('missing_purpose_code');
-  }
-
-  return withDbTransaction(async (client) => {
-    const impact = await previewDependencyImpactWithClient(client, targetType, targetId);
-    if (!impact.canDelete) {
-      throw new Error(impact.denyReasons[0] ?? 'destructive_threshold_exceeded');
-    }
-
-    if (targetType === 'sector') {
-      await client.query('DELETE FROM skills_taxonomy_sectors WHERE id = $1', [targetId]);
-    } else if (targetType === 'job-title') {
-      await client.query('DELETE FROM skills_taxonomy_job_titles WHERE id = $1', [targetId]);
-    } else {
-      await client.query('DELETE FROM skills_taxonomy_skills WHERE id = $1', [targetId]);
-    }
-
-    const eventResult = await client.query<{ created_at: Date }>(
-      `
-        INSERT INTO skills_taxonomy_change_events (
-          actor_id,
-          target_type,
-          target_id,
-          action,
-          reason,
-          metadata,
-          created_at
-        )
-        VALUES ($1, $2, $3, 'delete', $4, '{"source":"api"}'::jsonb, NOW())
-        RETURNING created_at
-      `,
-      [actorId, targetType, targetId, normalizedReason],
-    );
-
-    return {
-      deletedAtIso: eventResult.rows[0].created_at.toISOString(),
-    };
-  });
 }
