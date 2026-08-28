@@ -60,15 +60,15 @@ Trust still writes `trust_admin_audit_trail` rows for panel reads and snapshot r
   2026-08-13 change-log entry). One recompute per throttle window per member covers all of them.
 - `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension so the member's own read never errors. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
 - `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel at one of two disclosure levels, reported on the response as `trustDisclosure`, and the level is decided here in code rather than by any member setting: the owner (self) and admins receive `full`; **every other member receives `summary`** — headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). No read is refused; there is no `403` visibility path, because hiding a member's participation from other members would defeat the point of the panel.
-- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v5`) from real cross-plugin engagement — sign-in history from `login_events` (all-time days plus the member's current unbroken run of days); SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
+- `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v6`) from real cross-plugin engagement — sign-in history from `login_events` (all-time days plus the member's current unbroken run of days); SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, LevelUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
 
 ## Data Model and Storage Contracts
 
 - `trust_user_extension` — Per-user extension: `user_id`, `trust_evidence` (JSONB array, default `[]`), `updated_at`. Two columns were dropped on 2026-08-10, each with the feature that wrote it: `trust_visibility` (the per-member visibility choice) and `trust_status` (the admin verification decision) — both `ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS …` in `schema.sql` and `schema.demo.sql`. No numeric trust-score column exists, and no status column: the qualitative signal is derived from cross-plugin engagement and nothing about a member is certified. `trust_evidence` is rewritten wholesale by the snapshot route; nothing appends to it.
 - `trust_admin_audit_trail` — Audit log: `id` (UUID), `actor_user_id`, `command`, `policy_status`, `reason`, `target_user_id`, `request_id`, `metadata` (JSONB), `created_at`. Written by the snapshot route and by the trust panel reads (`trust.summary.read` on `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`).
-- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login* including the v5 `loginStreakDays`, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, written as `cross_plugin_engagement_v5`; the column default in `schema.sql` is still the original `cross_plugin_engagement_v1` and is never used, because every insert passes the current model explicitly), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
+- `trust_signal_snapshot` — Append-only derived-metrics record: `id` (UUID), `user_id`, `snapshot` (JSONB metric bundle — login* including the v5 `loginStreakDays`, socketRelay*, serviceCredits*, and the v4 per-plugin participation counts including `recurringActivityCounterparties`), `snapshot_type` (model version, written as `cross_plugin_engagement_v6`; the column default in `schema.sql` is still the original `cross_plugin_engagement_v1` and is never used, because every insert passes the current model explicitly), `created_at`. Indexed on `user_id` and `created_at`. Stores raw counts only — never a numeric trust score. User-scoped; deleted on service/account deletion.
 
-## Trust Signal Model (`cross_plugin_engagement_v5`)
+## Trust Signal Model (`cross_plugin_engagement_v6`)
 
 Trust derives a **qualitative, non-numeric** signal by counting **real rows** in already-seeded
 upstream plugins — it fabricates nothing. The snapshot route (`POST /api/trust/signal/snapshot`)
@@ -209,6 +209,19 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    the plugin's design, not a defect to fix here: catching fraud is each plugin's own admin job.
 
 ## Change Log
+
+- 2026-08-27: **Trust counts a sign-in day the same way the rest of the app does — owner decision:
+  "active just means logged in via clerk", one definition everywhere.** `loginDays` counted distinct
+  days with `date_trunc('day', created_at)`, which truncates in the database session's timezone,
+  while the streak query on the same table in the same read used `(created_at AT TIME ZONE 'UTC')::date`.
+  On a non-UTC session the two disagreed about where a day ends, so a member's all-time day count and
+  their run of days were measured on different boundaries. `loginDays` now uses the UTC boundary,
+  matching the streak, the Weekly Performance dashboard, and PeerProgramming cohort selection.
+  Model bumped to `cross_plugin_engagement_v6` because how a signal is aggregated changed, so older
+  snapshots stay self-describing. Signing in is the whole of the signal: reading the app without
+  opening a plugin is still a member turning up, and which plugin they open is not part of it — the
+  same sign-in record that, as of today, is written when Clerk identity resolves rather than when a
+  plugin access check runs. No schema, route, or access-policy change.
 
 - 2026-08-13: **The trust card on server-rendered pages was frozen — it now recomputes like the API
   does.** Found on the owner's own account hub: every evidence row was dated 2026-08-06 and the

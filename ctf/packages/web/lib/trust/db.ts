@@ -67,9 +67,13 @@ export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | n
 // nothing is fabricated, and a member with no upstream rows simply yields zeroes (and therefore no
 // evidence — see buildTrustEvidence).
 //
-// Signals used in the `cross_plugin_engagement_v5` model:
+// Signals used in the `cross_plugin_engagement_v6` model:
 //   - login_events             → how many days the member has signed in on, all-time, plus their
-//                                current unbroken run of days (the universal "seen" signal)
+//                                current unbroken run of days (the universal "seen" signal). Signing
+//                                in is the whole of it — reading the app without opening a plugin is
+//                                still a member turning up, and which plugin they open is not part of
+//                                this. Same definition the Weekly Performance dashboard and
+//                                PeerProgramming cohort selection read.
 //   - socket_relay_*            → completed SocketRelay trades + requests opened
 //   - service_credits_*        → completed transfers received + distinct payers; disputes withhold clean-record
 //   - lighthouse_matches       → accepted/completed LightHouse matches
@@ -137,9 +141,15 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     foundation,
     recurringActivity,
   ] = await Promise.all([
+    // Signing in is what "seen" means here, exactly as it does on the Weekly Performance dashboard
+    // and in PeerProgramming's cohort selection: one definition across the app, and it is a
+    // `login_events` row (owner decision, 2026-08-27). The day is bucketed in UTC, matching the
+    // streak query below and every other day boundary in the product — this used to be
+    // `date_trunc('day', created_at)`, which truncates in the database session's timezone, so on a
+    // non-UTC session a member's day count and their streak disagreed about where a day ends.
     queryDb<{ login_days: string; login_events: string; last_login_at: Date | null }>(
       `SELECT
-         COUNT(DISTINCT date_trunc('day', created_at)) AS login_days,
+         COUNT(DISTINCT (created_at AT TIME ZONE 'UTC')::date) AS login_days,
          COUNT(*) AS login_events,
          MAX(created_at) AS last_login_at
        FROM login_events

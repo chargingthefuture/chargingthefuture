@@ -357,7 +357,7 @@ The following cases must produce consistent data across surfaces since both read
 
 ---
 
-## Sign-in run of days (2026-08-12; model `cross_plugin_engagement_v5`)
+## Sign-in run of days (2026-08-12; model `cross_plugin_engagement_v6`)
 
 Trust reports sign-in activity as two lines that answer different questions. To test:
 
@@ -373,6 +373,12 @@ Trust reports sign-in activity as two lines that answer different questions. To 
    N days" count. An "in a row" line reading 0, or an all-time count that dropped, is a bug.
 5. A member whose most recent sign-in was **yesterday** still has a run: yesterday counts, so a member
    who has not signed in yet today does not read as gone.
+6. Both lines count days in UTC, so they agree with each other and with the Active Members figure on
+   the Weekly Performance dashboard. A sign-in just after midnight UTC belongs to the new day in both
+   lines; if the all-time count and the run disagree about which day a sign-in fell on, that is a bug.
+7. Signing in is the whole signal. A member who signs in and only reads — opening no plugin at all —
+   still gains a day on both lines. If reading the app leaves the count unchanged, the sign-in is not
+   being recorded and the fault is in `recordLoginEvent`, not here.
 6. Days are counted in UTC, so a sign-in at 23:00 and one at 01:00 the next morning are two days.
 7. Nothing anywhere prompts, reminds, warns, or congratulates a member about the run, and no surface
    shows a target, goal, or "don't lose it" message. Any such copy is a bug — the run is a fact for

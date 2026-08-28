@@ -110,15 +110,25 @@ is no "set active week" action and no per-week status.
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
    posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
    Members, Directory findable members, Mood check-ins + average, ClickLog incidents + distinct
-   loggers. The Active Members card reads "N members": how many different members did something in
-   the app during the selected week. The Daily Active Members card reads "N per day": the average
+   loggers. The Active Members card reads "N members": how many different members signed in
+   during the selected week. The Daily Active Members card reads "N per day": the average
    number of members active on a day of that week; on the current week it divides by the days of the
-   week so far, on a past week by the full 7. Both count a member as active on a day when any of
-   their own rows carries that day — a sign-in, a ClickLog incident, a Mood check-in, a Commons post,
-   reply or reaction, a PeerProgramming message — so a member who used the app is counted even if no
-   sign-in row was written for them. Check this against the ClickLog cards on the same screen: Active
-   Members can never read lower than ClickLog's distinct loggers for the same week. Both are
-   aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
+   week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in
+   record (`login_events`) holds a row for them that day, and nothing else (owner decision,
+   2026-08-27). Everyone reaches the app through Clerk, and the sign-in is recorded when Clerk
+   identity is resolved, so it lands whether the member opens a plugin, an admin page, or nothing at
+   all beyond signing in. Which plugin a member used is not part of this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
+   is correct rather than a bug — those count what members did, these count who signed in. If a week
+   reads zero or looks too low, two things say why. Check the server log for
+   `[weekly-performance.live-metrics] could not read …` — a card whose read failed or whose table is
+   missing renders as 0, and that line is what tells you the 0 is not a real count. Then run
+   paste `ctf/scripts/sql/active-members-audit.sql` into the Neon dashboard (read-only): it prints
+   the same count plus the sign-in record's earliest and latest row, which says whether the week was
+   quiet or the record does not reach that far back. The launch week (Jun 8–14, 2026) fell in a gap where nothing was writing sign-ins;
+   `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilt those days from
+   first-party evidence, so that week should read at least one member. Rows it rebuilt carry
+   `source = 'backfill_launch_gap'`, which is how to tell a reconstructed day from one recorded live.
+   Both are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
