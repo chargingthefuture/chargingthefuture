@@ -1137,6 +1137,31 @@ Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an e
 
 ---
 
+### FD-A27 — Audit log records every admin action on both surfaces, refusals included (added 2026-08-28)
+**Role:** admin | **Surface:** web
+
+**Precondition:** Run FD-A4 (publish), FD-A15 (hide a reply) and a feed-settings change first, so there are real actions to find.
+
+**Steps:**
+1. Open `/admin/feed-announcements` and expand the **Audit log** panel at the bottom.
+2. Read the newest entries.
+3. Try to re-label the category of a question id that does not exist, then reopen the panel.
+4. Publish an announcement draft, then reopen the panel.
+5. Emit a membership event, then reopen the panel.
+
+**Expected:**
+- Step 2: entries newest first, at most 200, each naming the action in plain words ("Published an announcement", "Hid a Commons post", "Changed the feed settings"), with the admin's id, what it was done to, and the local date and time. Every row carries a chip reading `feed` or `announcements` saying which surface the action came from.
+- Step 3: the failure appears, marked **Refused** or **Failed**, with a reason line reading "Because the record was not there". An action that did not happen is recorded, not dropped.
+- Step 4: a "Published an announcement" row appears with the `feed` chip; publishing from the Announcements side shows the same action with the `announcements` chip.
+- Step 5: a "Recorded a membership change" row appears.
+- Nothing an admin did in this session is missing from the list.
+
+**Note:** `POST /api/announcements/admin/targeting/validate` deliberately writes no audit row — it validates a targeting expression and changes nothing, so there is no action to record. Its absence from this list is correct, not a gap.
+
+**Result:** web ☐
+
+---
+
 ### Account deletion clears replies and AI-log rows
 
 **Expected:** Deleting the account removes the member's replies to announcements and any AI-answer

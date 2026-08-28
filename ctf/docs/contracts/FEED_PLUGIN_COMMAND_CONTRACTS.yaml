@@ -111,6 +111,7 @@ contracts:
       - announcements
       - announcement_revisions
       - announcement_delivery_events
+      - feed_admin_audit_trail
     purpose: broadcast_authoring
     retentionClass: transactional_long_lived
     idempotency: true
@@ -147,6 +148,7 @@ contracts:
     dataAccess:
       - announcements
       - announcement_revisions
+      - feed_admin_audit_trail
     purpose: broadcast_authoring
     retentionClass: transactional_long_lived
     idempotency: true
@@ -172,6 +174,7 @@ contracts:
     dataAccess:
       - announcements
       - announcement_delivery_events
+      - feed_admin_audit_trail
     purpose: broadcast_delivery
     retentionClass: transactional_long_lived
     idempotency: true
@@ -194,6 +197,7 @@ contracts:
     dataAccess:
       - announcements
       - announcement_delivery_events
+      - feed_admin_audit_trail
     purpose: broadcast_delivery
     retentionClass: transactional_long_lived
     idempotency: true
@@ -630,6 +634,7 @@ contracts:
         type: string
     dataAccess:
       - feed_render_config
+      - feed_admin_audit_trail
     purpose: feed_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -661,6 +666,7 @@ contracts:
       - feed_membership_events
       - announcement_membership_events
       - announcement_delivery_events
+      - feed_admin_audit_trail
     purpose: visibility_recalculation
     retentionClass: transactional_long_lived
     idempotency: false
@@ -728,6 +734,7 @@ contracts:
       - announcement_replies
       - feed_questions
       - feed_answers
+      - feed_admin_audit_trail
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -761,6 +768,7 @@ contracts:
       - announcement_replies
       - feed_questions
       - feed_answers
+      - feed_admin_audit_trail
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -789,4 +797,50 @@ contracts:
       - feed_questions
     purpose: content_moderation
     retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: feed
+    command: feed.question.category.relabel
+    version: 1.0.0
+    description: >-
+      Admin re-labels a question's category. Added to the contract surface on 2026-08-28: the route
+      had shipped with no command, access-policy or audit-event contract behind it.
+    inputSchema:
+      questionId:
+        type: string
+        required: true
+      category:
+        type: string
+        required: true
+        description: One of the valid feed question categories; anything else is rejected with a 400.
+    outputSchema:
+      question:
+        type: object
+    dataAccess:
+      - feed_questions
+      - feed_admin_audit_trail
+    purpose: feed_governance
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: feed
+    command: feed.admin.audit.list
+    version: 1.0.0
+    description: >-
+      Admin reads the Feed and Announcements admin audit trail, newest first. One trail serves both
+      surfaces because they share lib/feed/audit.ts; each row carries the plugin id it came from.
+      Read-only; the trail is append-only and holds no member content, so it is not removed on a
+      member's account deletion.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - feed_admin_audit_trail
+    purpose: governance_transparency
+    retentionClass: audit_long_lived
     idempotency: true
