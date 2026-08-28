@@ -2,7 +2,13 @@ export type SkillsHuntRoundStatus = 'draft' | 'active' | 'closed' | 'archived';
 export type SkillsHuntSubmissionStatus = 'pending' | 'accepted' | 'rejected' | 'flagged';
 // 'flag' parks a submission for a second look; 'unflag' is how it comes back out unchanged, to
 // pending, without forcing a verdict. Accept and reject are the verdicts.
-export type SkillsHuntReviewAction = 'accept' | 'reject' | 'edit' | 'flag' | 'unflag';
+//
+// The runtime list is the single source and the type is derived from it, because the two used to be
+// written out separately and drifted: when 'unflag' was added, the type and the route's list gained
+// it and the repository validator's own hardcoded copy did not, so every Unflag press was refused
+// with "Invalid review payload." Adding an action here now adds it everywhere that checks one.
+export const SKILLS_HUNT_REVIEW_ACTIONS = ['accept', 'reject', 'edit', 'flag', 'unflag'] as const;
+export type SkillsHuntReviewAction = (typeof SKILLS_HUNT_REVIEW_ACTIONS)[number];
 
 export type SkillsHuntPagination = {
   page: number;
