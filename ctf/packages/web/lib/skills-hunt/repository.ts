@@ -26,6 +26,7 @@ import {
   SKILLS_HUNT_REPUTATION,
   SKILLS_HUNT_SCORE_WEIGHTS_SPEC,
 } from './constants';
+import { SKILLS_HUNT_REVIEW_ACTIONS } from './types';
 import type {
   SkillsHuntAchievement,
   SkillsHuntFeatureRewardCard,
@@ -553,7 +554,7 @@ export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boole
 
 export function validateReviewInput(input: SkillsHuntSubmissionReviewInput): boolean {
   const notes = normalizeNullableText(input.notes);
-  const validAction = ['accept', 'reject', 'edit', 'flag'].includes(input.action);
+  const validAction = (SKILLS_HUNT_REVIEW_ACTIONS as readonly string[]).includes(input.action);
 
   return validAction
     && (!notes || notes.length <= SKILLS_HUNT_MAX_REVIEW_NOTES_LENGTH)
