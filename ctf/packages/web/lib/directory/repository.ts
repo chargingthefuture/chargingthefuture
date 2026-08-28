@@ -2005,6 +2005,23 @@ async function assertQuoraUrlNotSuppressed(client: PoolClient, profileUrl: strin
   }
 }
 
+// Read-only sibling of the guard above, for callers outside Directory that must not offer or accept
+// something for a URL the person has asked to be taken down. SkillsHunt uses it to refuse a
+// nomination of a taken-down profile instead of accepting it, paying the scout, and then silently
+// generating nothing. Reached through lib/shared/directory-interface.ts — Directory owns the
+// takedown and this list; a plugin only asks whether a URL is on it.
+export async function isQuoraUrlSuppressed(client: PoolClient, profileUrl: string | null): Promise<boolean> {
+  const normalized = normalizeQuoraProfileUrl(profileUrl);
+  if (!normalized) {
+    return false;
+  }
+  const blocked = await client.query<{ id: string }>(
+    'SELECT id FROM directory_suppressed_quora_urls WHERE normalized_url = $1 AND is_overridden = false LIMIT 1',
+    [normalized],
+  );
+  return blocked.rows.length > 0;
+}
+
 // Take down a community-generated (unclaimed) profile at the person's request: delete the row and
 // add its Quora URL to the suppression list with a reason. Returns a status the route maps to HTTP.
 // Guards: the profile must exist, be unclaimed, and be community-generated (a takedown is only for a

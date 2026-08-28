@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; flag reversal + re-add after remove — SH-A6, SH-A6b) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c) |
 
 ---
 
@@ -551,6 +551,30 @@ Result: web ☐
 Notes:
 - Steps 3–5 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no Accept or Reject and no way back. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap.
 - Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+
+Result: web ☐
+
+---
+
+### SH-A6c — A taken-down person cannot be nominated, and cannot be paid for
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** A community-generated Directory profile exists (from an accepted nomination).
+
+**Steps:**
+1. In the **Directory** admin screen, use "Remove at the person's request" on that profile. Give a reason. Confirm their Quora URL appears in the "Taken-down Quora URLs" panel.
+2. As a member, open SkillsHunt Scout and nominate that same person again — same Quora profile URL.
+3. Back in the Directory admin screen, use "Allow again" to lift the block. Then repeat step 2.
+
+**Expected:**
+- Step 2: the nomination is **refused** with a message saying the person asked to be removed from the directory. Nothing is created, so no moderator sees it and no points or ServiceCredits are ever in play.
+- Step 3: after the block is lifted, the same nomination is accepted normally.
+
+Notes:
+- Until 2026-08-27 step 2 succeeded, a moderator could accept it, the scout was paid points and the round's ServiceCredits reward, and no directory profile was generated — the check only ran at the very end of the accept, where it skipped the profile and let everything else stand.
+- There is a second refusal at accept time, for the case where the takedown happens **after** a nomination is already sitting in the queue. To exercise it: nominate someone, then take their profile down in Directory, then try to accept the pending nomination. It is refused with a message telling the moderator to reject or remove it instead; no points and no reward are paid.
+- SkillsHunt has no takedown surface of its own and should not grow one. It only reads Directory's block list.
 
 Result: web ☐
 

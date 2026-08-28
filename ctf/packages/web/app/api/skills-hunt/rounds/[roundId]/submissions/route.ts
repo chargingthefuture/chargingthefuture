@@ -26,15 +26,53 @@ function formatRetryApprox(resetAtIso: string | null): string {
   return ` You can submit again in about ${days} day${days === 1 ? '' : 's'}.`;
 }
 
+// Each way createSubmission can refuse, and the answer the scout sees. A table rather than a chain
+// of ifs so adding a refusal does not grow one function's branching; the weekly-limit case is
+// separate because it carries a reset timestamp in the thrown message.
+const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
+  message: string;
+  status: number;
+  code: string;
+  responseMessage: string;
+}> = [
+  { message: 'skills_hunt_round_not_found', status: 404, code: SKILLS_HUNT_ERROR_CODE.roundNotFound, responseMessage: 'Round not found.' },
+  { message: 'skills_hunt_round_not_active', status: 409, code: SKILLS_HUNT_ERROR_CODE.roundNotActive, responseMessage: 'Round is not currently active.' },
+  {
+    message: 'skills_hunt_pre_approval_required',
+    status: 403,
+    code: SKILLS_HUNT_ERROR_CODE.preApprovalRequired,
+    responseMessage: 'Your recent submissions need admin pre-approval before you can submit again.',
+  },
+  {
+    message: 'skills_hunt_rejection_guard_violation',
+    status: 429,
+    code: SKILLS_HUNT_ERROR_CODE.rejectionGuardViolation,
+    responseMessage: 'Submission blocked by rejection-rate guardrail.',
+  },
+  {
+    message: 'skills_hunt_duplicate_submission',
+    status: 409,
+    code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
+    responseMessage: 'This person has already been nominated in this round. An admin can reject or remove the existing nomination if it should not stand.',
+  },
+  {
+    message: 'skills_hunt_quora_url_taken_down',
+    status: 409,
+    code: SKILLS_HUNT_ERROR_CODE.quoraUrlTakenDown,
+    responseMessage: 'This person asked to be removed from the directory, so they cannot be nominated. Contact an admin if you believe that is a mistake.',
+  },
+  { message: 'skills_hunt_invalid_quora_url', status: 400, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, responseMessage: 'Invalid Quora profile URL.' },
+  {
+    message: 'skills_hunt_url_dead',
+    status: 400,
+    code: SKILLS_HUNT_ERROR_CODE.urlValidationFailed,
+    responseMessage: 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.',
+  },
+];
+
 // Map a thrown createSubmission error message to the HTTP response shape.
 // Unknown messages fall through to a 503 persistence-unavailable response.
 function mapSubmissionCreateError(message: string): { status: number; code: string; responseMessage: string } {
-  if (message === 'skills_hunt_round_not_found') {
-    return { status: 404, code: SKILLS_HUNT_ERROR_CODE.roundNotFound, responseMessage: 'Round not found.' };
-  }
-  if (message === 'skills_hunt_round_not_active') {
-    return { status: 409, code: SKILLS_HUNT_ERROR_CODE.roundNotActive, responseMessage: 'Round is not currently active.' };
-  }
   if (message.startsWith('skills_hunt_submission_limit_exceeded')) {
     const sep = message.indexOf(':');
     const resetAtIso = sep >= 0 ? message.slice(sep + 1) : null;
@@ -44,37 +82,12 @@ function mapSubmissionCreateError(message: string): { status: number; code: stri
       responseMessage: `You've reached the weekly nomination limit.${formatRetryApprox(resetAtIso)}`,
     };
   }
-  if (message === 'skills_hunt_pre_approval_required') {
-    return {
-      status: 403,
-      code: SKILLS_HUNT_ERROR_CODE.preApprovalRequired,
-      responseMessage: 'Your recent submissions need admin pre-approval before you can submit again.',
-    };
+
+  const matched = SUBMISSION_CREATE_FAILURES.find((entry) => entry.message === message);
+  if (matched) {
+    return { status: matched.status, code: matched.code, responseMessage: matched.responseMessage };
   }
-  if (message === 'skills_hunt_rejection_guard_violation') {
-    return {
-      status: 429,
-      code: SKILLS_HUNT_ERROR_CODE.rejectionGuardViolation,
-      responseMessage: 'Submission blocked by rejection-rate guardrail.',
-    };
-  }
-  if (message === 'skills_hunt_duplicate_submission') {
-    return {
-      status: 409,
-      code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
-      responseMessage: 'This person has already been nominated in this round. An admin can reject or remove the existing nomination if it should not stand.',
-    };
-  }
-  if (message === 'skills_hunt_invalid_quora_url') {
-    return { status: 400, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, responseMessage: 'Invalid Quora profile URL.' };
-  }
-  if (message === 'skills_hunt_url_dead') {
-    return {
-      status: 400,
-      code: SKILLS_HUNT_ERROR_CODE.urlValidationFailed,
-      responseMessage: 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.',
-    };
-  }
+
   return {
     status: 503,
     code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,

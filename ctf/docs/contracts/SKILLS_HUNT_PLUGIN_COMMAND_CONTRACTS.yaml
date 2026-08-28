@@ -161,6 +161,9 @@ contracts:
         type: string
     dataAccess:
       - skills_hunt_submissions
+      # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
+      # person's Quora URL is on Directory's takedown list.
+      - directory_suppressed_quora_urls
       - skills_hunt_rare_skills_lookup
       - skills_hunt_audit_log
     purpose: community_contribution
@@ -243,6 +246,9 @@ contracts:
       - service_credits_command_idempotency
       - service_credits_adapter_outbox
       - service_credits_admin_audit_trail
+      # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
+      # person's Quora URL is on Directory's takedown list.
+      - directory_suppressed_quora_urls
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
     idempotency: true
@@ -684,3 +690,10 @@ changelog:
     change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.
   - date: 2026-08-27
     change: Removed the count_distinct_sectors mission goal type from skills-hunt.mission.create — it counted claimed professions, which the nomination form no longer collects, so the goal could never be completed. The stack bonus was deleted from submission scoring for the same reason; it was a computed figure with no contract surface.
+  - date: 2026-08-27
+    change: >-
+      skills-hunt.submission.create and skills-hunt.submission.review now read Directory's takedown
+      list (directory_suppressed_quora_urls, read-only through lib/shared/directory-interface.ts).
+      A nomination of someone who asked to be removed is refused at submit and again at accept.
+      Accepting used to stand — awarding points and minting the round's reward — while quietly
+      generating no directory profile, so the economy paid for a listing that could never appear.

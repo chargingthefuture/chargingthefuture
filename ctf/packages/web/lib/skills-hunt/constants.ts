@@ -99,6 +99,9 @@ export const SKILLS_HUNT_ERROR_CODE = {
   invalidReviewAction: 'SKILLS_HUNT_INVALID_REVIEW_ACTION',
   profileAlreadyGenerated: 'SKILLS_HUNT_PROFILE_ALREADY_GENERATED',
   urlValidationFailed: 'SKILLS_HUNT_URL_VALIDATION_FAILED',
+  // The person asked Directory to take their profile down; their Quora URL is blocked from being
+  // listed again, so a nomination for them is refused rather than accepted and paid for.
+  quoraUrlTakenDown: 'SKILLS_HUNT_QUORA_URL_TAKEN_DOWN',
   usernameRequired: 'SKILLS_HUNT_USERNAME_REQUIRED',
   reservedUsername: 'SKILLS_HUNT_RESERVED_USERNAME',
   preApprovalRequired: 'SKILLS_HUNT_PRE_APPROVAL_REQUIRED',
