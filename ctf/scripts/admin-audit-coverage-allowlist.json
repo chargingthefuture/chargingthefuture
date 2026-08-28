@@ -5,11 +5,6 @@
       "route": "/api/announcements/admin/targeting/validate",
       "kind": "not-a-mutation",
       "reason": "Validates an announcement targeting expression and returns the normalized form. It reads no table and writes none — a POST only because it takes a body — so there is no admin action here to record. Verified 2026-08-28 against the handler: it calls validateAnnouncementTargeting, a pure function, and returns."
-    },
-    {
-      "route": "/api/bug-reports/admin/[id]/resolve",
-      "kind": "burn-down",
-      "reason": "Bug reports has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row when a report is resolved."
     }
   ]
 }

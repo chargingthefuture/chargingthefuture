@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireBugReportAdminAccess, ensureMutationCsrf } from '../../../_lib';
 import { BUG_REPORT_ERROR_CODE } from 'lib/bug-reports/constants';
 import { releaseHeldReport, rejectReport } from 'lib/bug-reports/repository';
+import { recordBugReportAdminAudit } from 'lib/bug-reports/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -66,6 +67,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     if (!changed) {
       // No row moved: the report was already resolved (published/rejected) or does not exist.
+      // Recorded too — an admin reaching for a report that is already gone is worth seeing, and the
+      // point of the trail is that what did not happen is as legible as what did.
+      await recordBugReportAdminAudit({
+        actorId: gate.auth.userId,
+        command: 'bug-reports.admin.resolve',
+        status: 'deny',
+        reason: 'not_resolvable',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'conflict',
+        metadata: { action },
+      });
       return NextResponse.json(
         { ok: false, code: BUG_REPORT_ERROR_CODE.forbidden, message: 'Report is not in a state that can be resolved.' },
         { status: 409 },
@@ -73,9 +86,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const newStatus = action === 'release' ? 'new' : 'rejected';
+    await recordBugReportAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'bug-reports.admin.resolve',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+      metadata: { action, toStatus: newStatus },
+    });
     return NextResponse.json({ ok: true, id, status: newStatus }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'bug-reports', op: 'admin-resolve' });
+    await recordBugReportAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'bug-reports.admin.resolve',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+      metadata: { action },
+    });
     return NextResponse.json(
       {
         ok: false,

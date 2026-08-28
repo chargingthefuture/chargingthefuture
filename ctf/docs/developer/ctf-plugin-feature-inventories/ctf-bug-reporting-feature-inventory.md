@@ -43,6 +43,12 @@ and does no external calls.
   **redacted** text is ever shown — the raw user text never leaves the database (rule 129), so the
   original plan to read raw text in-app was deliberately not built; raw triage stays in the private
   triage repo.
+- **Audit log panel** at the bottom of `/admin/bug-reports` (added 2026-08-28). Lists every resolve
+  decision on a held report newest first — "Sent it on to triage" or "Dropped it" — **including the
+  ones that were refused, and why**. Reads `GET /api/bug-reports/admin/audit-events?limit=200`;
+  loads lazily on first expand. It names the report and the admin who decided, **never what the
+  report said**: the body is the sensitive part and is redacted before it leaves this app, so the
+  trail must not become the place it is kept in the clear.
 
 ## API Surface and Route Map
 
@@ -52,9 +58,19 @@ and does no external calls.
 | GET | `/api/bug-reports/admin` | admin only (`requireBugReportAdminAccess`) | List bug reports for the `/admin/bug-reports` review page, held reports first (`listReportsForAdmin`). Returns `{ ok, items }` with **redacted** message/context only (raw text never leaves the DB, rule 129), plus status, reporter identity (`reporterUsername`, nullable, and `reporterHandle`, always set — admin surface only, never on the triage issue), risk flags/level, page URL, plugin slug, app version, and any triage-repo issue link. |
 | POST | `/api/bug-reports/admin/:id/resolve` | admin only, CSRF (`x-ctf-csrf: 1`) | Resolve a held (or new) report. Body `{ action: 'release' \| 'reject' }`: `release` sends it back to `new` so the create-issues job publishes the redacted copy to the triage repo (`releaseHeldReport`); `reject` drops it so it never publishes (`rejectReport`). 409 when the report is not in a resolvable state, 400 on a non-UUID id or an unknown action. Returns `{ ok, id, status }`. |
 
+| GET | `/api/bug-reports/admin/audit-events` | admin only (`requireBugReportAdminAccess`) | Read of `bug_report_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Names which report was decided and by whom, never the report content. Backs the Audit log panel. |
+
 The admin routes above back the in-app `/admin/bug-reports` review page. No route ever exposes raw (un-redacted) report text — deeper raw triage happens only in the private triage repo (rule 129).
 
 ## Data Model and Storage Contracts
+
+Table `bug_report_admin_audit_trail` (in `ctf/schema.sql`, added 2026-08-28) — the durable record of
+every admin resolve decision. Columns `id`, `actor_id`, `command`, `policy_status` (`allow`/`deny`),
+`reason`, `target_type` (always `bug_report`), `target_id`, `result` (`success`/`failure`),
+`error_category`, `metadata` (jsonb, carrying the action and the resulting status), `created_at`,
+indexed `(created_at DESC, actor_id, command)`. **Deliberately holds no report content and no
+reporter id** — see the control below. Retained on account deletion: it records what an admin did,
+not who reported.
 
 Table `bug_reports` (in `ctf/schema.sql`):
 
@@ -84,6 +100,17 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
   private repo.
 - **Fail closed.** Anything the gate flags becomes `held_for_review` and is never
   auto-published; it waits for the owner.
+- **Every resolve decision writes a durable row to `bug_report_admin_audit_trail`** (added
+  2026-08-28). Before that this plugin had **no audit machinery at all** — no table, no helper, not
+  even a log line — so resolving a held report left nothing behind. The decision matters: `release`
+  sends the member's redacted report on to the triage repo, `reject` drops it so it never goes
+  anywhere, and **the member is never told which happened**. Every outcome is recorded, refusals
+  included.
+- **The audit trail records the decision, not the report.** The row names which report was decided
+  and by whom; it carries no message, no context and no reporter id. The body is the sensitive part
+  and is redacted before it ever leaves this app, so the trail must not become the one place it sits
+  in the clear. `lib/bug-reports/audit.ts` says so at the type, and there is no content or reporter
+  column to fill.
 - **Private triage repo.** Issues are created in `chargingthefuture/bug-reports`, not the
   public app repo. (Owner-approved exception to the no-new-repos rule; see rule 129.)
 - **Access.** Submission requires any authenticated user (`any_authenticated` unlock tier).
@@ -140,6 +167,7 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-08-28: **Resolving a held report is recorded, and the record is readable.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. This plugin was the one surface with **no audit machinery at all** — no table, no helper, not even a `console.info` line — so `POST /api/bug-reports/admin/:id/resolve` decided a member's report and left nothing behind. That decision is not a small one: `release` sends the redacted report on to the private triage repo, `reject` drops it so it never goes anywhere, and the member who filed it is never told which happened. New table `bug_report_admin_audit_trail` and a new `lib/bug-reports/audit.ts` written durable-first — there was no console-only predecessor to stay compatible with, so the row is the record and the log line rides along for debugging. Every outcome is recorded: the resolve with its action and resulting status, the 409 when the report was already resolved or absent, and a persistence failure. It never throws, so a failed audit write cannot turn a completed resolve into a 503 and have an admin repeat a reject they had already made. **The trail records the decision, not the report**: no message, no context, no reporter id — the body is redacted before it leaves this app and the trail must not be the one place it sits in the clear. Stated at the type in `audit.ts`, in the schema comment, in the security controls above, and in BUG-A5, because a later reader will find "which member reported this" tempting to add. New `GET /api/bug-reports/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/bug-reports`, reading the most recent 200 in plain words ("Sent it on to triage", "Dropped it", "Refused · Because it had already been resolved, or was not there"). Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip a release, a reject, and a resolve refused as a conflict — with no column able to hold report text. This was the last surface on the admin-audit-coverage burn-down list that needed machinery built.
 - 2026-08-18: **Reports now announce themselves, and reach triage within half an hour (owner
   report).** Five reports had been sitting on `/admin/bug-reports` for days, the oldest from a month
   earlier, and the owner saw all of them for the first time at once — nothing had ever told them a

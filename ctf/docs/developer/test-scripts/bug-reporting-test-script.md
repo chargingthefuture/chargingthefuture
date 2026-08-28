@@ -150,6 +150,26 @@ arrives.
 
 ---
 
+### BUG-A5 · The audit log records every resolve decision, and never the report text (added 2026-08-28)
+**Role:** admin · **Surfaces:** web (admin surface)
+
+**Precondition:** run BUG-A2 first — release one held report and reject another — so there are real decisions to find.
+
+**Steps:**
+1. On `/admin/bug-reports`, expand the **Audit log** panel at the bottom.
+2. Read the newest entries.
+3. `POST /api/bug-reports/admin/<the id you already rejected>/resolve` with `{ "action": "release" }`, then reopen the panel.
+4. Read one entry closely, and check the raw response of `GET /api/bug-reports/admin/audit-events`.
+
+**Expected:**
+- Step 2: entries newest first, at most 200, reading **"Sent it on to triage"** or **"Dropped it"**, each with the admin's id, the report id, and the local date and time.
+- Step 3: the 409 appears marked **Refused**, reading "Because it had already been resolved, or was not there". A decision that did not happen is recorded, not dropped.
+- Step 4: **no entry contains any report text** — no message, no context, no reporter id or handle. Every row names the report id and the acting admin only. This is the assertion that matters: the report body is redacted before it ever leaves the app, and the audit trail must not become the one place it sits in the clear. The raw JSON has no field that could hold it.
+
+**Why this exists:** until 2026-08-28 this plugin had no audit machinery at all — resolving a held report changed a status and left nothing behind. The member who filed the report is never told which way it went, so the trail is the only record that it happened.
+
+**Result:** web ☐
+
 ### Account deletion pseudonymizes the reporter
 
 **Expected:** After a member deletes their account, bug reports they filed remain available for

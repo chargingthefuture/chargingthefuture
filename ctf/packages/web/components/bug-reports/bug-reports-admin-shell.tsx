@@ -6,6 +6,7 @@ import { Bug, ExternalLink } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getBugReportsTokens, type BugReportsTokens } from './bug-reports-shared';
+import { BugReportsAuditPanel } from './bug-reports-audit-panel';
 import type { BugReportStatus, BugReportRiskLevel } from 'lib/bug-reports/constants';
 import type { BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 
@@ -325,6 +326,8 @@ export function BugReportsAdminShell() {
             onResolve={resolve}
           />
         ))}
+
+        <BugReportsAuditPanel t={t} />
       </div>
     </div>
   );
