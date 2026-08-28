@@ -1,3 +1,10 @@
+# Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
+# events were written by logWhatWorksAudit, which builds the whole shape below and ends in
+# console.info — a line in the server's log, which nothing can query, no screen can show, and which
+# ages out of the host's retention window. Every admin decision event here is now also a durable row
+# in what_works_admin_audit_trail, written by recordWhatWorksAdminAudit on every outcome including a
+# refusal. A row names the product or problem and the acting admin, never suggested_by, so the trail
+# keeps the plugin's anonymity guarantee. The member-facing events keep the log line alone.
 auditEvents:
   - eventId: what-works.list.read
     pluginId: what-works
@@ -99,3 +106,23 @@ auditEvents:
     # Cascades to what_works_endorsements (user-linked rows).
     dataClassesAccessed: [community_content, user_event]
     targetContext: admin
+
+  # An admin reading the trail from the Audit log panel on the What Works admin screen.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: what-works
+    command: what-works.admin.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - what_works_admin_audit_trail
+    targetContext:
+      targetType: audit_trail
+      targetId: row_count_requested
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

@@ -54,6 +54,10 @@ the problem categories and review every suggestion before it joins the shared li
   and submitter identity are left untouched.
 - Status filter across pending / approved / rejected / all. Changing the filter returns to the first
   page.
+- **Audit log panel** at the bottom of the admin screen. Lists every admin decision on What Works
+  newest first — adding, editing or removing a problem, editing, deciding on or removing a member's
+  suggested tool — **including the ones that were refused, and why**. Reads
+  `GET /api/what-works/admin/audit-events?limit=200`; loads lazily on first expand.
 - The suggestions queue and the problems list are paged, five rows per page, with the same
   Previous / Page N of M / Next controls as the member list.
 - Curate problems: create, rename, re-emoji, reorder, deactivate/reactivate, and delete (cascading
@@ -67,6 +71,7 @@ the problem categories and review every suggestion before it joins the shared li
 - `GET /api/what-works` — Authenticated read of the shared list (problems + approved tools + per-viewer endorsement state + stats + `viewer.isAdmin`).
 - `GET /api/what-works/public` — Public, identity-free teaser slice of the list + stats. The teaser skips problems that have no approved tool yet (a heading with nothing under it is not a preview of anything); signed-in members do see those problems. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
 - `GET /api/what-works/problems` — Active problems for the suggest form (authenticated).
+- `GET /api/what-works/admin/audit-events` — admin read of `what_works_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Backs the Audit log panel on the admin screen.
 - `POST /api/what-works/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier).
 - `POST /api/what-works/products/[id]/endorse` — Mark an approved tool helpful.
 - `DELETE /api/what-works/products/[id]/endorse` — Withdraw the viewer's endorsement.
@@ -82,6 +87,13 @@ All mutating routes require the `x-ctf-csrf: 1` confirmation header (same-origin
 
 ## 6. Data Model and Storage Contracts
 
+- Table: `what_works_admin_audit_trail` — the durable admin audit trail (added 2026-08-28). Columns
+  `id`, `actor_id`, `command`, `policy_status` (`allow`/`deny`), `reason`, `target_type`,
+  `target_id`, `result` (`success`/`failure`), `error_category`, `metadata` (jsonb), `created_at`,
+  with an index on `(created_at DESC, actor_id, command)`. One row per admin decision, written by
+  `recordWhatWorksAdminAudit` on every outcome including a refusal. **Holds no member identity** —
+  the acting admin's id and the id of the problem or product acted on, never `suggested_by` — so it
+  neither breaks the plugin's anonymity guarantee nor is removed on account deletion.
 - Table: `what_works_problems` — admin-curated categories.
   - `id UUID PRIMARY KEY`
   - `slug TEXT NOT NULL` (unique index `idx_what_works_problems_slug`)
@@ -120,6 +132,14 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 - Suggesting and endorsing require an authenticated survivor; curating problems and moderating
   suggestions require an admin (`isAdmin`). Admin page redirects non-admins to `/apps/what-works`.
 - CSRF: all mutations require `x-ctf-csrf: 1` and same-origin (`ensureMutationCsrf`).
+- **Every admin decision writes a durable row to `what_works_admin_audit_trail`** via
+  `recordWhatWorksAdminAudit`, which also emits the observability line — on success, on a refusal,
+  and on a persistence failure. Before 2026-08-28 `logWhatWorksAudit` wrote the event to the
+  server's log alone, so a member whose suggestion was removed left no record anyone could read
+  back. The row names the product or problem, never who suggested it, so the trail does not
+  reintroduce the identity the projections deliberately omit. The member-facing commands (reading,
+  suggesting, endorsing) still emit `logWhatWorksAudit` alone: a row per endorsement would be
+  volume, not accountability.
 - Anonymity: `suggested_by` is stored for moderation/abuse control only and is excluded from every
   reader and admin projection. No survivor identity is rendered anywhere in the plugin. The
   `getProductById` lookup selects an explicit column list that omits `suggested_by`/`reviewed_by`, so
@@ -171,6 +191,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-08-28: **Every What Works admin decision is recorded in a table an admin can read, including the ones that were refused.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. `lib/what-works/audit.ts` built the entire contract-shaped event and ended in `console.info` — a line in the server's log, which nothing can query, no screen can show, and which ages out of the host's retention window. These are decisions about what members see recommended, and about suggestions members made: a removed tool simply vanished from the list with nothing behind it. New table `what_works_admin_audit_trail` (actor, command, policy status, reason, target, result, error category, metadata, timestamp; indexed newest-first by actor and command). New `recordWhatWorksAdminAudit` writes the row **and** the log line, and all three admin mutation routes use it on every outcome. It never throws: an audit write that failed would otherwise turn a completed edit into a 503 and have an admin repeat a removal they had already made. **The trail keeps the plugin's anonymity guarantee**: a row names the product or problem acted on and the admin who acted, never `suggested_by`, so recording moderation does not reintroduce the survivor identity every projection deliberately omits. New `GET /api/what-works/admin/audit-events` and an **Audit log** panel at the bottom of the admin screen, reading the most recent 200 with plain-language labels ("Decided on a suggested product", "Removed a problem", "Refused · Because the record was not there"). The member-facing commands keep the log line alone. Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip a problem added, a product approved, and a delete refused as not-found. What Works' three routes leave the admin-audit-coverage burn-down list.
 - 2026-08-24: **Lists are paged; no endless scrolling** (owner directive, recorded in rule 100).
   The member problem list, the admin suggestions queue, and the admin problems list each show five
   rows per page behind shared Previous / Page N of M / Next controls (`ww-pager.tsx`); page controls
