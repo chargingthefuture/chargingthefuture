@@ -82,6 +82,14 @@ The registry is data; two small modules turn it into action:
   `account_deletion_events` row, and log an `[account.audit]` line. Identifiers come only from the
   registry; the user id is always the bound parameter `$1`, never inlined.
 
+That event row's `summary` holds the per-table row counts plus `initiatedBy` — `member` when the
+person themselves asked (the account screen, a per-plugin delete, or their own removal of the
+sign-in identity, which reaches us as the provider webhook) or `operator` when the manual removal
+workflow ran it. Both write the identical account-scope row otherwise, so without the marker a
+duplicate-account cleanup is indistinguishable afterwards from a member who chose to leave — and the
+Weekly Performance deleted-accounts row reports only the member's own choice. Rows written before
+the field existed carry no marker and are read as `member`, which is what nearly all of them are.
+
 Money is out of scope for the engine. ServiceCredits wallets/ledgers are `retain` in the registry
 and are settled by the existing reclaim flow (`markFullAccountDeletionRequested` →
 `enqueueServiceCreditsDeletionReclaim` → the service-credits adapter outbox). The full-account route

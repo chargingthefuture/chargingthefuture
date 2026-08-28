@@ -22,6 +22,7 @@ contracts:
       - directory_profile_skills
       - directory_profile_proposed_skills
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: profile_management
     retentionClass: transactional_long_lived
     idempotency: true
@@ -101,6 +102,7 @@ contracts:
     dataAccess:
       - directory_announcements
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: admin_communications
     retentionClass: audit_long_lived
     idempotency: true
@@ -159,6 +161,7 @@ contracts:
       - directory_profiles
       - directory_user_extension
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: admin_profile_assignment
     retentionClass: audit_long_lived
     idempotency: true
@@ -179,6 +182,7 @@ contracts:
     dataAccess:
       - directory_profiles
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: admin_profile_moderation
     retentionClass: audit_long_lived
     idempotency: true
@@ -209,6 +213,7 @@ contracts:
       - directory_profile_proposed_skills
       - directory_suppressed_quora_urls
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: admin_profile_moderation
     retentionClass: audit_long_lived
     idempotency: true
@@ -233,6 +238,7 @@ contracts:
     dataAccess:
       - directory_suppressed_quora_urls
       - directory_profile_change_events
+      - directory_admin_audit_trail
     purpose: admin_profile_moderation
     retentionClass: audit_long_lived
     idempotency: false
@@ -255,5 +261,47 @@ contracts:
       - directory_user_extension
       - directory_deletion_events
     purpose: deletion_request
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.admin.announcement.deactivate
+    version: 1.0.0
+    description: >-
+      Take an announcement down so members no longer see it. Split out from
+      directory.admin.announcement.upsert on 2026-08-28: the DELETE handler recorded its events under
+      the upsert command, so a takedown was written into the audit trail as a save.
+    inputSchema:
+      announcementId:
+        type: string
+        required: true
+    outputSchema:
+      status:
+        type: string
+    dataAccess:
+      - directory_announcements
+      - directory_admin_audit_trail
+    purpose: admin_communications
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.admin.audit.list
+    version: 1.0.0
+    description: >-
+      Admin reads the Directory admin audit trail, newest first. Read-only; the trail is append-only
+      and is not removed on a member's service-scoped deletion, so the record of what an admin did
+      survives the deletion of what they did it to.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - directory_admin_audit_trail
+    purpose: governance_transparency
     retentionClass: audit_long_lived
     idempotency: true

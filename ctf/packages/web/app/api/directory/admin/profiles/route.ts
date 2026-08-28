@@ -3,7 +3,7 @@ import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateProfileInput } from 'lib/directory/repository';
 import type { AdminProfileClaimFilter } from 'lib/directory/repository';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
   try {
     const profile = await createAdminProfile(gate.auth.userId, input);
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.create',
       status: 'allow',
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });
     const { response, isValidation } = mapSelectorError(error);
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.create',
       status: 'allow',

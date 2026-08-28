@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
+import { DirectoryAuditPanel } from './directory-audit-panel';
 import { BackChevronButton } from "@/lib/nav/back-history";
 import {
   Search,
@@ -949,6 +950,7 @@ function ProfileListView(props: ProfileListViewProps) {
         />
         <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} />
         <SuppressionPanel />
+        <DirectoryAuditPanel />
       </div>
     </div>
   );

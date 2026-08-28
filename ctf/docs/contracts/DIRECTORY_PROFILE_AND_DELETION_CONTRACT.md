@@ -68,6 +68,10 @@ Rule 114 baseline: Directory extends the canonical profile by `user_id` and avoi
   - Contains personal data? minimal actor linkage
   - Retention period: compliance retention window
   - Legal/compliance note: change accountability
+- Table/entity: `directory_admin_audit_trail`
+  - Contains personal data? minimal (the acting admin's id, and the id of what was acted on)
+  - Retention period: compliance retention window
+  - Legal/compliance note: the durable record of every admin action, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion — the record of what an admin did has to outlive the record they did it to, or a takedown erases its own evidence. Holds no member-authored content.
 - Table/entity: `directory_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps)
   - Retention period: compliance retention window
