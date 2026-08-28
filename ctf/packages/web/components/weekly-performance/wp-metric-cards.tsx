@@ -12,6 +12,7 @@ import {
   formatMetricValue,
   getWeeklyPerformanceTokens,
   humanizeMetricKey,
+  isRiseGoodFor,
   metricGroup,
 } from "./wp-shared";
 
@@ -33,6 +34,15 @@ function compactNumber(value: number): string {
   return Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
+// How to draw a week-over-week delta. The arrow follows the direction the number moved; the color
+// follows whether that direction is good for this metric — almost everything here is better when it
+// rises, but more deleted accounts is a rise and is not good news.
+function deltaTone(delta: number, metricKey: string): { rising: boolean; color: string } {
+  const rising = delta >= 0;
+  const good = isRiseGoodFor(metricKey) ? rising : !rising;
+  return { rising, color: good ? "#22C55E" : "#F87171" };
+}
+
 function MetricCard({
   metric,
   color,
@@ -45,7 +55,7 @@ function MetricCard({
   const { theme } = useTheme();
   const t = getTokens(theme);
   const delta = deltaFor(comparison, metric.metricKey);
-  const positive = (delta ?? 0) >= 0;
+  const tone = deltaTone(delta ?? 0, metric.metricKey);
   const goalTarget = GOAL_TARGETS[metric.metricKey];
   // Goal rows show progress toward the owner-set target. Progress can be tiny early on; show two
   // decimals so movement is visible instead of rounding to 0%.
@@ -70,8 +80,8 @@ function MetricCard({
         </div>
       ) : null}
       {delta !== null ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: positive ? "#22C55E" : "#F87171" }}>
-          {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {formatDelta(delta, metric.metricUnit)}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: tone.color }}>
+          {tone.rising ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {formatDelta(delta, metric.metricUnit)}
         </div>
       ) : (
         <div style={{ fontSize: 11, color: t.MUTED }}>No prior-week comparison</div>

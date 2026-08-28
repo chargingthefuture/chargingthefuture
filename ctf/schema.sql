@@ -863,7 +863,11 @@ COMMIT;
 -- One row per user-initiated deletion the orchestrator runs: a per-plugin "delete my data"
 -- (scope = 'service') or a whole-account deletion (scope = 'account'). This is the canonical,
 -- retained accountability record of what the orchestrator did — it is never itself deleted by a
--- deletion. `summary` holds the per-table row counts the engine reported, for audit.
+-- deletion. `summary` holds the per-table row counts the engine reported, for audit, plus
+-- `initiatedBy` ('member' | 'operator'): who asked for the deletion. A whole-account row looks the
+-- same whether the member chose to go or an operator cleared a duplicate/test account through the
+-- manual removal workflow, and the Weekly Performance deleted-accounts row counts only the member's
+-- own choice. Rows written before that field existed carry no marker and are read as 'member'.
 CREATE TABLE IF NOT EXISTS account_deletion_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,

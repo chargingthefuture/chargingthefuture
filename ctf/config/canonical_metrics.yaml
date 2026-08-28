@@ -2117,6 +2117,40 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
+  - id: wp_adoption_accounts_deleted
+    name: Weekly Deleted Accounts
+    description: How many members ended their whole account during the week window — the counterpart to the two turnout rows. Counts only a member's own choice to go, per member rather than per row. Two things are excluded because both would read as people leaving when they did not: a per-plugin "delete my data" (a deletion event with scope 'service' — that member still has an account and cleared one plugin), and an operator-run removal (the manual Delete Account workflow that clears a duplicate or a demo test account, marked summary.initiatedBy = 'operator'). A row written before that marker existed carries none and counts as the member's own, which is what nearly all of them are. Windowed on completed_at, the moment the deletion ran. Aggregate only — never a per-member figure. Adoption, not value; it carries no weight in value scoring, and it is the one dashboard row that is worse when it rises.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: accounts
+    calculation: |
+      SELECT COUNT(DISTINCT user_id) AS v
+      FROM account_deletion_events
+      WHERE scope = 'account'
+        AND status = 'completed'
+        AND COALESCE(summary->>'initiatedBy', 'member') <> 'operator'
+        AND completed_at >= :week_start
+        AND completed_at < :week_end;
+    inputs:
+      - name: account_deletion_events.user_id
+        type: string
+      - name: account_deletion_events.scope
+        type: string
+      - name: account_deletion_events.status
+        type: string
+      - name: account_deletion_events.summary
+        type: object
+      - name: account_deletion_events.completed_at
+        type: datetime
+    example_values:
+      - 0
+      - 3
+    last_updated: "2026-08-28T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
   - id: wp_adoption_directory_findable_members
     name: Weekly Directory Findable Members
     description: Cumulative state count — claimed, active, non-deleted Directory profiles holding at least one skill, created by the end of the week window. Claim time is not stored, so the count reflects each profile's CURRENT claimed/active/skilled state, not its state at the time.

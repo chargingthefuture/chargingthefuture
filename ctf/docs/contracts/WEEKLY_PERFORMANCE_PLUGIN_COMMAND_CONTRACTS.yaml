@@ -89,6 +89,9 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
+      # Whole-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
+      # count only — no member is ever named.
+      - account_deletion_events
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -139,6 +142,9 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
+      # Whole-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
+      # count only — no member is ever named.
+      - account_deletion_events
     purpose: operational_metrics_comparison
     retentionClass: derived_short_lived
     idempotency: true
