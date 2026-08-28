@@ -26,11 +26,16 @@
 - Run **Core smoke** at the start of every test session before anything else.
 - "Web" means the Next.js app in a desktop browser. "Android" means the React Native app on a real Android device or emulator.
 - Run `pnpm --dir ctf seed:demo` once before the session and do not re-seed mid-session unless a case says to.
-- **"Ways to earn" is accurate (2026-08-27):** on web (signed-out landing + member shell) and the
+- **"Ways to earn" is accurate (2026-08-28):** on web (signed-out landing + member shell) and the
   Android Earn tab, the list is: Verify your account (+100), Help another member — they send you
   credits (Per exchange), Take part in SkillsHunt (Per acceptance), Contribute during a fundraiser
   (Varies). SkillsHunt reads "Per acceptance", not "Per round" — credits are granted on each
-  accepted nomination, so a tester seeing "Per round" is looking at deprecated copy. No GentlePulse/LevelUp/referral platform payouts appear anywhere, and peer-to-peer
+  accepted nomination, so a tester seeing "Per round" is looking at deprecated copy. The fundraiser
+  row names no month: it reads "Pitch in when the community runs a fundraiser." and stops there. A
+  tester seeing any month in that row — "The next one starts in July" was the old wording — is
+  looking at deprecated copy, and a month reappearing there is a bug however current it happens to
+  be, because a hard-coded date goes wrong the moment it passes and nothing here prompts anyone to
+  correct it. No GentlePulse/LevelUp/referral platform payouts appear anywhere, and peer-to-peer
   rows say "send credits", never "pay".
 - **Credits are not money** (`ctf/docs/DISCLAIMER.md`, mirrored in the inventory's Intent section):
   while walking any case below, no surface may describe credits as money/cash/currency/a payment,
