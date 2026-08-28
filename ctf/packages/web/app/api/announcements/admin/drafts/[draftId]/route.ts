@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -56,7 +56,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   try {
     const announcement = await updateAnnouncementDraft(gate.auth.userId, draftId, input);
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.announcement.draft.update',
@@ -78,7 +78,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const status = message === 'announcement_not_found' ? 404 : 503;
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.announcement.draft.update',
