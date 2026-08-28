@@ -159,54 +159,47 @@ directly).
 
 ## Admin walkthrough
 
-> **The in-app admin write surface is retired (owner decision 2026-07-03, reconfirmed 2026-08-04).**
-> There is no taxonomy editor UI and none will be built — admins browse with the same read-only view
-> as members, and every taxonomy change goes through the append-only change list
-> (`ctf/scripts/lib/taxonomyChange.mjs`) via a PR. The cases below exercise the still-existing write
-> **API routes** directly (API calls, no UI); they remain valid only until governance-plan task 7
-> removes those routes, at which point delete TAX-A1–TAX-A4 from this script.
+> **The taxonomy has no write surface at all (governance-plan task 7, done 2026-08-28).**
+> There is no editor UI and none will be built, and as of 2026-08-28 there are no write API routes
+> either — `POST/PUT/DELETE` on sectors, job titles and skills were removed along with their command,
+> access-policy and audit contract entries. Every taxonomy change goes through the append-only change
+> list (`ctf/scripts/lib/taxonomyChange.mjs`) via a PR, validated by the `taxonomy-change-gate` and
+> applied to production by the owner-run workflow. TAX-A1–TAX-A4 exercised those routes and were
+> deleted with them, as this script said to do. Admins browse with the same read-only view as members.
 
-### TAX-A1 · Create sector, job title, skill
+### TAX-A5 · The write routes are gone and the reads still work (added 2026-08-28)
 **Role:** admin · **Surfaces:** web (API only — no UI)
 **Steps:**
-1. Create a sector with a name (and optional display order / workforce share).
-2. Create a job title under that sector.
-3. Create a skill under that job title (optional aliases).
-**Expected:** Each create succeeds, requires a name, and respects the parent-child constraint (a job
-title needs a parent sector; a skill needs a parent job title). Each write records an admin audit
-line.
+1. Signed in as an admin, `POST /api/skills-taxonomy/admin/sectors` with a valid body.
+2. Repeat for `PUT` and `DELETE` on `/api/skills-taxonomy/admin/sectors/:id`, and for the same three
+   verbs on `/api/skills-taxonomy/admin/job-titles[/:id]` and `/api/skills-taxonomy/admin/skills[/:id]`.
+3. `GET` each of those same paths.
+4. `GET /api/skills-taxonomy/admin/hierarchy` and `/api/skills-taxonomy/admin/flattened`.
+5. Open the taxonomy browser as an admin.
+
+**Expected:**
+- Steps 1–2: every one returns **405 Method Not Allowed**. The handler does not exist; nothing is
+  written. This is the point of the case — an admin with a valid session and a valid body still
+  cannot change the taxonomy over HTTP.
+- Step 3: each `GET` returns its data as before. Removing the writes did not disturb the reads.
+- Step 4: both return the full hierarchy, inactive rows included by default (`includeInactive`
+  opt-out).
+- Step 5: the browser renders read-only, with no create, edit or delete control for anyone.
+
 **Result:** web ☐ mobile ☐ — notes:
 
-### TAX-A2 · Update keeps the hierarchy valid
-**Role:** admin · **Surfaces:** web (admin surface)
+### TAX-A6 · Dependency-impact preview still answers (added 2026-08-28)
+**Role:** admin · **Surfaces:** web (API only — no UI)
 **Steps:**
-1. Rename a sector, a job title, and a skill.
-2. Try a reparent (move a job title to another sector) if the form allows it.
-**Expected:** Updates persist, ordering still uses display order then name, and parent-child
-integrity is enforced server-side (you cannot orphan a child). Each update records an audit line.
-**Result:** web ☐ mobile ☐ — notes:
+1. `GET /api/skills-taxonomy/admin/dependency-impact` with `targetType`, `targetId` and `operation`
+   (one of `delete`/`deactivate`).
+2. Omit one of the three.
 
-### TAX-A3 · Dependency-impact preview before delete
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. Begin deleting a sector / job title / skill that downstream plugins reference.
-2. Read the preview.
-**Expected:** The preview is mandatory before any sector/job-title/skill delete. It calls
-`skills-taxonomy.dependency-impact.preview` with `targetType`, `targetId`, and `operation` (one of
-`delete`/`deactivate`) — all three required and validated — and returns the impacted consumers and a
-risk level. A missing target produces a deny / invalid-target audit decision.
-**Result:** web ☐ mobile ☐ — notes:
+**Expected:** Step 1 returns the impacted consumers and a risk level. Step 2 is rejected — all three
+are required and validated. This route is a read and survived task 7; it now informs a change-list
+entry (what a `deactivateSkill` would affect) rather than gating an in-app delete that no longer
+exists.
 
-### TAX-A4 · Destructive delete is gated and audited
-**Role:** admin · **Surfaces:** web (admin surface)
-**Steps:**
-1. Try to hard-delete a node that still has active downstream references.
-2. Provide the required reason; try a high-impact delete.
-3. Try a safe alternative (deactivate / rename / reparent) where offered.
-**Expected:** Hard-delete is denied when active references exist beyond the threshold (a non-zero
-`reference_count` blocks it). A delete requires a reason; a high-impact path requires the elevated
-admin role and an explicit purpose code. Every allow or deny writes one durable row to
-`skills_taxonomy_change_events`. A CSRF-missing write is rejected.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
@@ -215,8 +208,9 @@ admin role and an explicit purpose code. Every allow or deny writes one durable 
 
 Android consumes the same read models (hierarchy and flattened) as web. For TAX-1, TAX-2, and TAX-3,
 the android app and the mobile-responsive web layout must show the same tree, the same search result,
-and the same splash counts. Admin CRUD (TAX-A1 to TAX-A4) is web-only here; full android admin CRUD
-parity is a known gap, not drift.
+and the same splash counts. There is no admin write parity to check any more: the write routes were
+removed 2026-08-28 and the taxonomy changes only through the repo change list, which is not a surface
+either app has.
 
 **Result:** matches ☐ — drift notes:
 
@@ -227,8 +221,10 @@ parity is a known gap, not drift.
 Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one
 of these, it is already tracked, not a new bug:
 
-- The downstream reference threshold that blocks a hard-delete is a conservative default; an explicit
-  product-side policy has not been signed off.
+- The downstream reference threshold that blocked a hard-delete is a conservative default and an
+  explicit product-side policy was never signed off. Moot for the in-app surface since 2026-08-28 —
+  there is no delete route to gate — but the same judgment is still made by hand when a
+  `deactivateSkill` change is appended to the change list, where the acknowledged-impact note records it.
 - Destructive actions are gated by the single admin role only; there is no finer split (for example a
   "taxonomy editor" versus a "destructive operator").
 - Read-model changes have no formal version process; downstream consumers track shape changes through

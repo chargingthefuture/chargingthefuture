@@ -42,36 +42,6 @@
       "reason": "Mutual Time has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
     },
     {
-      "route": "/api/skills-taxonomy/admin/job-titles/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/job-titles",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/sectors/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/sectors",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/skills/[id]",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/skills-taxonomy/admin/skills",
-      "kind": "burn-down",
-      "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
       "route": "/api/what-works/admin/problems/[id]",
       "kind": "burn-down",
       "reason": "What Works has lib/what-works/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
