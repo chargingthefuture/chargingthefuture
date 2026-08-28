@@ -114,6 +114,43 @@ admin saw "No submissions matching this filter" and had no way to reach the row 
 them. Audited across all 133 admin routes at the time the rule was written; SkillsHunt's submission
 list was the only list at fault.
 
+## Every admin action is recorded (critical — owner directive, 2026-08-28)
+
+Every admin action writes a durable audit row, on every surface, from the day the surface ships.
+This is the counterpart to the rule above: an admin screen can offer every action on every row —
+withholding nothing to prevent misuse — precisely because the record says who did what. Take the
+record away and the only remaining defense is fewer powers, which is the wrong trade in a product
+with one admin, where the person who takes an action is also the only person who could undo it.
+
+**A console line is not a record.** Five surfaces shipped a `lib/<plugin>/audit.ts` that builds the
+whole contract-shaped event and ends in `console.info`. Nothing can query it, no screen can show it,
+the owner never sees it, and it ages out of the host's log retention window. It reads like an audit
+trail in review and is not one. `logXAudit` next to `insertXAudit` is the shape to watch for: the
+first is observability, the second is the record.
+
+Three things are required, and the third is the one most often skipped:
+
+1. **Write the row.** After the mutation succeeds, call the plugin's `insert*Audit` helper — actor,
+   command, policy status, reason, target type, target id, metadata. If the plugin has no audit
+   table, it needs one before the surface ships.
+2. **Say what changed, not which button was pressed.** `{ action: 'accept' }` is the same metadata
+   whether a pending row was accepted or a removed, flagged row was accepted and thereby brought
+   back to life. Record the before state and the after state.
+3. **Give it a screen.** A trail nobody can read is not a check on anything. The surface's admin
+   shell gets an **Audit log** tab reading the plugin's audit-events route. This is the step that
+   was missing almost everywhere: of 21 audit tables in the schema, two were readable in the app.
+
+Enforced by `ctf/scripts/check-admin-audit-coverage.mjs` (CI job `admin-audit-coverage-gate`), which
+fails when an admin-gated route with a POST/PUT/PATCH/DELETE handler reaches no durable audit write.
+Known gaps at the time the gate was written are in
+`ctf/scripts/admin-audit-coverage-allowlist.json`, a burn-down list that only ever shrinks. Never add
+an entry there to silence the gate — add one only when a durable row is genuinely written somewhere
+the gate cannot see, and name the file that writes it.
+
+`lib/skills-hunt/repository.ts` `insertSkillsHuntAudit` and
+`ctf/packages/web/components/skills-hunt/sha-audit.tsx` are the reference shapes for the row and the
+screen.
+
 ## Admin design tokens
 
 Dark admin palette: bg `#0F1117`, panel `#0D0F14`, far rail `#090B0F`, surface `#161B27`, border
