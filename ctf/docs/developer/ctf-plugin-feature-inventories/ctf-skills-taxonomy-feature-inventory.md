@@ -43,10 +43,15 @@ page were removed 2026-07-14, PR #1528). What remains in scope for admins:
 1. Hierarchy browser for Sector → Job Title → Skill with expand/collapse controls (the same
    read-only browse view members use).
 2. Ordered hierarchy display using `display_order` then `name` within each level.
-3. The admin write API routes (`POST/PUT/DELETE /api/skills-taxonomy/admin/{sectors,job-titles,skills}[/:id]`)
-   still exist with no callers, parked on the orphan-route allowlist. Their removal is governance-plan
-   task 7, blocked on task 5 (the first governed change applying end-to-end) — retire them then, per
-   the plan; do not wire an editor to them.
+3. **The admin write API routes are gone (2026-08-28, governance-plan task 7).** `POST/PUT/DELETE
+   /api/skills-taxonomy/admin/{sectors,job-titles,skills}[/:id]` are removed, along with their nine
+   command / access-policy / audit contract entries and the 17 repository functions only they called
+   (`createSector`, `updateSector`, `createJobTitle`, `updateJobTitle`, `createSkill`, `updateSkill`,
+   `deleteTaxonomyTarget`, their seven input validators, and three helpers left with no caller). They
+   were a second write path into a governed taxonomy: an HTTP call wrote the live rows with no
+   change-list entry, no `taxonomy-change-gate` validation, and no acknowledged-impact note on a
+   deactivation. No screen ever called them. **Do not re-add a write route here** — append to the
+   change list instead.
 
 ## 2) API and Command Surface
 
@@ -58,16 +63,7 @@ Command groups:
 
 1. `skills-taxonomy.hierarchy.get`
 2. `skills-taxonomy.flattened.get`
-3. `skills-taxonomy.sector.create`
-4. `skills-taxonomy.sector.update`
-5. `skills-taxonomy.sector.delete`
-6. `skills-taxonomy.job-title.create`
-7. `skills-taxonomy.job-title.update`
-8. `skills-taxonomy.job-title.delete`
-9. `skills-taxonomy.skill.create`
-10. `skills-taxonomy.skill.update`
-11. `skills-taxonomy.skill.delete`
-12. `skills-taxonomy.dependency-impact.preview`
+3. `skills-taxonomy.dependency-impact.preview`
 
 ### 2.2 HTTP Projection Routes
 
@@ -81,15 +77,8 @@ Admin routes:
 - `GET /api/skills-taxonomy/admin/job-titles/:id`
 - `GET /api/skills-taxonomy/admin/skills`
 - `GET /api/skills-taxonomy/admin/skills/:id`
-- `POST /api/skills-taxonomy/admin/sectors`
-- `PUT /api/skills-taxonomy/admin/sectors/:id`
-- `DELETE /api/skills-taxonomy/admin/sectors/:id`
-- `POST /api/skills-taxonomy/admin/job-titles`
-- `PUT /api/skills-taxonomy/admin/job-titles/:id`
-- `DELETE /api/skills-taxonomy/admin/job-titles/:id`
-- `POST /api/skills-taxonomy/admin/skills`
-- `PUT /api/skills-taxonomy/admin/skills/:id`
-- `DELETE /api/skills-taxonomy/admin/skills/:id`
+**Every admin route is a read.** The write routes were removed 2026-08-28 (governance-plan task 7); the taxonomy is changed only through the append-only change list.
+
 - `GET /api/skills-taxonomy/admin/dependency-impact` — query params `targetType`, `targetId`, and `operation` (one of `delete`/`deactivate`); all three are required and validated.
 
 Consumer routes:
@@ -163,6 +152,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 
 ## 10) Change Log
 
+- 2026-08-28: **The admin write routes are removed — the change list is the only way to change the taxonomy.** Governance-plan task 7, done. Nine routes (`POST/PUT/DELETE` on sectors, job titles and skills) were a second write path into a governed taxonomy: an HTTP call wrote the live rows with no change-list entry, no `taxonomy-change-gate` validation, and no acknowledged-impact note on a deactivation — the exact safeguards the governance model exists to enforce. Nothing in the app called them; all nine taxonomy admin routes had sat on the orphan-route allowlist since 2026-07-30 marked "wire it up or delete it". The plan listed their removal as blocked on task 5, the first governed change applying end to end; the change list has since grown from 25 entries to 57 and carries the `reparentSkill` that task 5 named, so that blocker is spent. Removed: the six route handlers (each file keeps its `GET`), the nine command / access-policy / audit contract entries, and 17 repository functions with no remaining caller — `createSector`, `updateSector`, `createJobTitle`, `updateJobTitle`, `createSkill`, `updateSkill`, `deleteTaxonomyTarget`, the seven input validators, and `normalizeName` / `normalizeAliases` / `validateName` / `validateDeleteReason` / three now-unused length constants. 1,230 lines deleted against 58 added. Each surviving route file carries a comment saying why the writes are gone and where a change goes instead, so the next reader does not restore them. Found while adding a durable audit trail to these routes for the "every admin action is recorded" sweep — auditing them would have made an ungoverned bypass more comfortable to use, so the audit work was reversed in favor of the deletion the plan already called for. Their six entries leave the admin-audit-coverage burn-down list (37 → 31); the orphan-route entries stay, reworded from "not yet verified" to the real reason: these are read-only routes with no admin screen, and the burn-down is to build a read-only browse screen or delete the reads too — never to re-add a write path.
 - 2026-08-04: **Recorded the admin-editor retirement so it stops reading as a gap.** An inventory
   audit had flagged "17 admin CRUD routes with no admin editor page" as unimplemented scope. History
   check: no admin editor page ever existed in v3; §1.2 as previously written described an editor that

@@ -1,24 +1,22 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireTaxonomyAdminAccess } from '../../_lib';
+import { requireTaxonomyAdminAccess } from '../../_lib';
 import { SKILLS_TAXONOMY_ERROR_CODE } from 'lib/skills-taxonomy/constants';
-import { createSector, listSectors, validateSectorCreateInput } from 'lib/skills-taxonomy/repository';
+import { listSectors } from 'lib/skills-taxonomy/repository';
 import { logSkillsTaxonomyAudit } from 'lib/skills-taxonomy/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-type SectorCreateBody = {
-  name?: unknown;
-  displayOrder?: unknown;
-  workforceShare?: unknown;
-};
-
-// Admin list reads use the opt-OUT default (inactive records included unless
-// `includeInactive=false`), matching admin/hierarchy and the inverse of the
-// public read endpoint. See app/api/skills-taxonomy/hierarchy/route.ts.
 function parseIncludeInactive(url: string): boolean {
   return new URL(url).searchParams.get('includeInactive') !== 'false';
 }
 
+// Governance plan task 7 (2026-08-28): the write handlers are gone from this route. The Skills
+// Taxonomy is governed by the append-only change list in ctf/scripts/lib/taxonomyChange.mjs — a
+// change is appended in a PR, validated by the taxonomy-change-gate, and applied to production by
+// the owner-run workflow. These POST/PUT/DELETE handlers were a second write path that bypassed all
+// of it: no change-list entry, no CI validation, no acknowledged-impact note on a deactivation. No
+// screen ever called them. The read handler below stays.
+// See ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md.
 export async function GET(request: Request) {
   const gate = await requireTaxonomyAdminAccess();
   if (!gate.allowed) {
@@ -55,75 +53,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to list sectors: ${failureReason(error)}` },
-      { status: 503 },
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  const gate = await requireTaxonomyAdminAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
-  }
-
-  let body: SectorCreateBody;
-  try {
-    body = (await request.json()) as SectorCreateBody;
-  } catch (error) {
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
-      { status: 400 },
-    );
-  }
-
-  const input = {
-    name: typeof body.name === 'string' ? body.name : '',
-    displayOrder: typeof body.displayOrder === 'number' ? body.displayOrder : undefined,
-    workforceShare: typeof body.workforceShare === 'number' ? body.workforceShare : undefined,
-  };
-
-  if (!validateSectorCreateInput(input)) {
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.invalidPayload, message: 'Invalid sector payload.' },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const sector = await createSector(input);
-
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.sector.create',
-      actorId: gate.auth.userId,
-      status: 'allow',
-      reason: 'admin_or_taxonomy_admin',
-      target: { sectorId: sector.id },
-      result: 'success',
-      errorCategory: null,
-    });
-
-    return NextResponse.json({ ok: true, sector }, { status: 201 });
-  } catch (error) {
-    reportError(error, { area: 'skills-taxonomy', op: 'admin_sectors' });
-    logSkillsTaxonomyAudit({
-      pluginId: 'skills-taxonomy',
-      command: 'skills-taxonomy.sector.create',
-      actorId: gate.auth.userId,
-      status: 'allow',
-      reason: 'admin_or_taxonomy_admin',
-      target: {},
-      result: 'failure',
-      errorCategory: 'persistence_error',
-    });
-
-    return NextResponse.json(
-      { ok: false, code: SKILLS_TAXONOMY_ERROR_CODE.persistenceUnavailable, message: `Unable to create sector: ${failureReason(error)}` },
       { status: 503 },
     );
   }
