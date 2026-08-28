@@ -33,7 +33,10 @@ export function SkillsHuntAdminFilters({
         })}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+      {/* Wraps: four status chips overflow a phone-width column, and the one that fell off the
+          right edge was Flagged — the filter a moderator needs precisely when a submission has
+          vanished from Pending. */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {STATUS_OPTIONS.map((s) => {
           const active = statusFilter === s.key;
           return (

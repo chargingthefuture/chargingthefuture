@@ -108,6 +108,28 @@ async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, rev
   }
 }
 
+// The three ways a review can fail for the caller: the submission is gone, the nominee has been
+// taken down from the directory since it was filed (accepting would pay for a listing that can
+// never appear), or the write itself failed.
+function resolveReviewFailure(
+  isNotFound: boolean,
+  isTakenDown: boolean,
+  // Built by the caller with withReason so the reason reaches the answer (rule 137).
+  fallbackMessage: string,
+): { code: string; message: string; status: number } {
+  if (isNotFound) {
+    return { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 };
+  }
+  if (isTakenDown) {
+    return {
+      code: SKILLS_HUNT_ERROR_CODE.quoraUrlTakenDown,
+      message: 'This person asked to be removed from the directory, so this nomination cannot be accepted. Reject or remove it instead.',
+      status: 409,
+    };
+  }
+  return { code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: fallbackMessage, status: 503 };
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ submissionId: string }> }) {
   const gate = await requireSkillsHuntModeratorAccess();
   if (!gate.allowed) {
@@ -179,6 +201,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_review' });
     const message = error instanceof Error ? error.message : 'unknown';
     const isNotFound = message === 'skills_hunt_submission_not_found';
+    // The nominee asked Directory to take their profile down after this nomination was filed. The
+    // accept is refused rather than paid: it would award points and mint the round's reward while
+    // generating no directory profile at all.
+    const isTakenDown = message === 'skills_hunt_quora_url_taken_down';
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
@@ -189,13 +215,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       targetType: 'submission',
       targetId: submissionId,
       result: 'failure',
-      errorCategory: isNotFound ? 'submission_not_found' : 'persistence_error',
+      errorCategory: isNotFound ? 'submission_not_found' : isTakenDown ? 'quora_url_taken_down' : 'persistence_error',
       metadata: { action: input.action },
     });
 
-    const failure = isNotFound
-      ? { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 }
-      : { code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: withReason('Unable to review submission', error), status: 503 };
+    const failure = resolveReviewFailure(isNotFound, isTakenDown, withReason('Unable to review submission', error));
     return NextResponse.json({ ok: false, code: failure.code, message: failure.message }, { status: failure.status });
   }
 }

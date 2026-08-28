@@ -158,6 +158,9 @@ contracts:
         type: string
     dataAccess:
       - skills_hunt_submissions
+      # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
+      # person's Quora URL is on Directory's takedown list.
+      - directory_suppressed_quora_urls
       - skills_hunt_rare_skills_lookup
       - skills_hunt_audit_log
     purpose: community_contribution
@@ -240,6 +243,9 @@ contracts:
       - service_credits_command_idempotency
       - service_credits_adapter_outbox
       - service_credits_admin_audit_trail
+      # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
+      # person's Quora URL is on Directory's takedown list.
+      - directory_suppressed_quora_urls
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
     idempotency: true
@@ -637,3 +643,10 @@ changelog:
       scope for SkillsHunt. Nothing in the app called it, and Directory owns the profile lifecycle
       end to end, including creating or repairing one from its own admin screen. SkillsHunt still
       creates the profile automatically on accept; that path is unchanged.
+  - date: 2026-08-27
+    change: >-
+      skills-hunt.submission.create and skills-hunt.submission.review now read Directory's takedown
+      list (directory_suppressed_quora_urls, read-only through lib/shared/directory-interface.ts).
+      A nomination of someone who asked to be removed is refused at submit and again at accept.
+      Accepting used to stand — awarding points and minting the round's reward — while quietly
+      generating no directory profile, so the economy paid for a listing that could never appear.
