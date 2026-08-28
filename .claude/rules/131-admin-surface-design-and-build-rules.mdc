@@ -73,6 +73,47 @@ Therefore, when building an admin page from a mockup:
    The verification/decision call should not be failed by a best-effort follow-up (e.g. an incentive
    mint or a feature-flag grant) — wrap those so a provider outage cannot break the core admin action.
 
+## An admin list hides nothing (critical — owner directive, 2026-08-28)
+
+An admin page exists so a person can see the true state of the data. A row that a member is not
+shown — soft-deleted, inactive, archived, withdrawn — is still a row, and the admin must see it,
+marked for what it is. Hiding it defeats the purpose of the page.
+
+The rule is: **filter for members, never for admins.** Apply `deleted_at IS NULL`, `is_active =
+true` and the like on the ownership/member branch of a query, not unconditionally.
+
+```ts
+// Wrong — the filter is unconditional, so an admin cannot see a removed row either.
+let where = ' AND deleted_at IS NULL';
+
+// Right — members never see it; an admin sees everything, and the UI marks it.
+if (!access.isModeratorOrAdmin) {
+  where += ' AND deleted_at IS NULL';
+}
+```
+
+Three consequences, all of them required:
+
+1. **Default to everything.** A status filter defaults to showing all rows, not one status. If the
+   surface offers filter chips, "All" is the first chip and the initial state.
+2. **Mark it, do not drop it.** A hidden-from-members row renders with a badge saying what it is
+   ("Removed", "Inactive"), and its actions reflect that state rather than pretending it is live.
+3. **Keep it out of bulk actions.** A soft-deleted row can still carry a live-looking status, so a
+   bulk accept/reject must check the marker as well as the status.
+
+**What this rule does NOT cover**, so it is not applied where it does not belong:
+
+- **Pickers.** A list of choices offered to an admin (assign a skill, pick a sector) should offer
+  only active options — you should not be able to tag a record with a retired one.
+- **Computations.** Scoring, leaderboards and progress recomputes must keep excluding removed rows;
+  a removed submission must not earn points. Those are not lists a person reads.
+
+This came from a real failure: a SkillsHunt nomination was flagged and then removed, so it appeared
+under none of the admin's filters while still holding its Quora URL against a re-nomination. The
+admin saw "No submissions matching this filter" and had no way to reach the row that was blocking
+them. Audited across all 133 admin routes at the time the rule was written; SkillsHunt's submission
+list was the only list at fault.
+
 ## Admin design tokens
 
 Dark admin palette: bg `#0F1117`, panel `#0D0F14`, far rail `#090B0F`, surface `#161B27`, border

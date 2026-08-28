@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d) |
 
 ---
 
@@ -525,14 +525,45 @@ Result: web ☐
 1. In the admin submissions view, locate a pending submission.
 2. Use the Flag action.
 3. Switch the status filter to **Flagged**. Confirm all four status chips are visible and reachable at phone width — none is cut off at the right edge.
-4. Confirm the submission appears there, with **Accept** and **Reject** buttons and a line saying the flag clears by accepting or rejecting.
-5. Use Accept (or Reject). Confirm the row leaves the Flagged filter and appears under the status you chose.
+4. Confirm the submission appears there with three ways out — **Unflag**, **Accept** and **Reject** — and a line saying Unflag puts it back in Pending unchanged while Accept or Reject decides it now.
+5. Use **Unflag**. Confirm the row leaves the Flagged filter and is back under **Pending**, with its full Accept / Reject / Flag / Remove actions, as though it had never been flagged.
+6. Flag it again, then use Accept (or Reject). Confirm the row leaves Flagged and appears under the status you chose.
 
-**Expected:** Flagging moves the submission out of Pending and into Flagged. From Flagged it can go either way — flag is a holding state for a second look, not a dead end. The action requires a confirm gesture on Android.
+**Expected:** Flagging moves the submission out of Pending and into Flagged. From Flagged it can go back to Pending untouched, or on to a verdict — flag is a holding state for a second look, not a dead end and not a forced decision. The action requires a confirm gesture on Android.
 
 Notes:
-- Steps 3–5 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no Accept or Reject and no way back. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap.
+- Steps 3–6 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no way back at all. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap. Unflag arrived a day later — the first fix offered only Accept and Reject, which clears a flag by deciding the submission, and flag exists so a moderator does not have to decide yet.
 - Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+
+Result: web ☐
+
+---
+
+### SH-A6d — The admin list hides nothing, and the refusal says what is blocking
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** A pending nomination exists in the active round.
+
+**Steps:**
+1. Confirm the filter chips read **All · Pending · Accepted · Rejected · Flagged · Removed**, that all six are reachable at phone width, and that **All** is selected when the tab opens.
+2. Flag the nomination, then use **Remove** on it.
+3. On **All**, confirm the row is still listed, carries a **Removed** badge beside the name, and its action area reads "Removed <date> · was flagged" with no buttons.
+4. On **Flagged**, confirm the row still appears — removal does not hide it from its own status filter.
+5. On **Removed**, confirm it appears alongside any other removed rows.
+6. Confirm the row's select box is disabled, so bulk accept and bulk reject cannot pick it up.
+7. Sign in as the member who submitted it and open My Finds. Confirm the removed nomination is **not** shown.
+8. As a member, nominate someone who already has a live nomination (pending, accepted or flagged) in any round. Read the refusal message.
+
+**Expected:**
+- Steps 3–5: an admin list hides nothing. A removed nomination stays visible and marked, under All, under its own status filter, and under Removed.
+- Step 7: a member never sees a removed nomination. The filter is applied to members, not to admins.
+- Step 8: the message names the round the blocking nomination is in and what state it is in — for example, *"This person is already nominated in the round "2026 SkillsHunt", where that nomination is waiting for review."* — so the admin knows where to go.
+
+Notes:
+- This is the fix for a reported bug: the Flagged filter read "No submissions matching this filter" while the flagged nominee still could not be re-submitted, because the row had been removed and every admin query carried an unconditional `deleted_at IS NULL`.
+- The rule is written down in `.claude/rules/131-admin-surface-design-and-build-rules.mdc`: filter for members, never for admins. Pickers and scoring are excluded — an admin should not be able to tag a record with a retired skill, and a removed submission must not earn points.
+- The duplicate guard is deliberately **cross-round** — one person, one Quora URL, across every round — so the blocking nomination can be in a round you are not looking at. The message used to say "in this round", which was wrong in exactly that case.
 
 Result: web ☐
 

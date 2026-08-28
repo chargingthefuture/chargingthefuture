@@ -13,6 +13,7 @@ interface RowProps {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -55,7 +56,7 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 // again, and Remove (which does not free that guard either) was the only button on offer. Accepted
 // and rejected stay terminal — reversing those moves points and can pay a reward, so they are not
 // one tap away.
-function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
+function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
@@ -70,6 +71,19 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
       Remove
     </button>
   );
+  // A removed row is soft-deleted, not gone. It stays in the admin list rather than vanishing from
+  // every filter, so its state is visible and it can be explained — it holds no Quora URL against a
+  // re-nomination any more, but it is still the record of what happened.
+  if (submission.deletedAtIso) {
+    return (
+      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12, color: t.MUTED }}>
+          Removed {new Date(submission.deletedAtIso).toLocaleDateString()} · was {submission.status}
+        </span>
+      </div>
+    );
+  }
+
   const verdictRow = (
     <div style={{ display: "flex", gap: 8 }}>
       <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
@@ -80,9 +94,13 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
   if (submission.status === "flagged") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look — accept or reject it to clear the flag.</span>
+        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look. Unflag puts it back in Pending unchanged; Accept or Reject decides it now.</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" disabled={acting} onClick={() => onUnflag(submission.id)}
+            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Unflag</button>
+          {removeBtn}
+        </div>
         {verdictRow}
-        <div style={{ display: "flex", gap: 8 }}>{removeBtn}</div>
       </div>
     );
   }
@@ -107,6 +125,25 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
   );
 }
 
+// Bulk accept/reject applies to a live pending row only. A removed row can still carry status
+// 'pending', so removal has to be checked as well as status.
+function isBulkSelectable(submission: SkillsHuntSubmission): boolean {
+  return submission.status === "pending" && submission.deletedAtIso === null;
+}
+
+// Marks a soft-deleted row in the list. The row is shown rather than hidden, so it needs to say
+// what it is at a glance.
+function RemovedBadge({ submission }: { submission: SkillsHuntSubmission }) {
+  if (!submission.deletedAtIso) {
+    return null;
+  }
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 10, background: "rgba(100,116,139,0.18)", border: "1px solid rgba(100,116,139,0.45)", color: "#94A3B8" }}>
+      Removed
+    </span>
+  );
+}
+
 // One submission as a self-contained card: a header (select + submitter + name), the skills as
 // wrapping chips, a labeled meta strip, then the action rows. No horizontal scroll, no tiny
 // adjacent buttons — the whole thing stacks inside the app's single mobile-first column.
@@ -118,9 +155,12 @@ function SubmissionCard(props: RowProps) {
   return (
     <div style={{ border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 12, background: t.HEADER }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
+        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={!isBulkSelectable(s)} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{s.fullName}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>{s.fullName}</span>
+            <RemovedBadge submission={s} />
+          </div>
           <div style={{ fontSize: 12, color: t.SUBTLE }}>{feedAuthorHandle(s.submitterUsername, s.submitterUserId)}</div>
           <div style={{ fontSize: 11, color: t.FAINT }}>{new Date(s.createdAtIso).toLocaleString()}</div>
         </div>
@@ -158,6 +198,7 @@ export function SkillsHuntAdminTable({
   onAccept,
   onReject,
   onFlag,
+  onUnflag,
   onRemove,
 }: {
   submissions: SkillsHuntSubmission[];
@@ -169,6 +210,7 @@ export function SkillsHuntAdminTable({
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
 }) {
   const { theme } = useTheme();
@@ -189,6 +231,7 @@ export function SkillsHuntAdminTable({
           onAccept={onAccept}
           onReject={onReject}
           onFlag={onFlag}
+          onUnflag={onUnflag}
           onRemove={onRemove}
         />
       ))}

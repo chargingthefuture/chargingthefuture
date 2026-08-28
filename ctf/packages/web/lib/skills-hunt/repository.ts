@@ -1729,9 +1729,12 @@ const SUBMISSION_INSERT_ERRORS: ReadonlyArray<{ match: string; reason: string }>
 function rethrowSubmissionInsertError(error: unknown): never {
   const message = error instanceof Error ? error.message : 'unknown';
 
-  // Passed through whole rather than mapped: the message may carry a `:<reset ISO>` suffix the
-  // route reads to tell the scout when they can submit again.
-  if (message.includes('skills_hunt_submission_limit_exceeded')) {
+  // Passed through whole rather than mapped: these carry a suffix the route reads — the reset
+  // time for the weekly cap, and which round and status hold the blocking nomination.
+  if (
+    message.includes('skills_hunt_submission_limit_exceeded')
+    || message.startsWith('skills_hunt_duplicate_submission:')
+  ) {
     throw new Error(message);
   }
 
@@ -1788,17 +1791,25 @@ export async function createSubmission(
     // URL (the earlier url+skills signature key missed this: same URL, different
     // skills, hashed differently, so both slipped through and were accepted).
     await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`skills_hunt_submission_url:${normalizedUrl}`]);
-    const existingActive = await client.query<{ id: string }>(
-      `SELECT id
-         FROM skills_hunt_submissions
-        WHERE quora_profile_url_normalized = $1
-          AND status <> 'rejected'
-          AND deleted_at IS NULL
+    // Read back WHICH row blocks, not just that one does. The blocker can sit in a round the
+    // admin is not looking at, or in a status their current filter hides, so a bare "already
+    // nominated" leaves them hunting for something they cannot see (owner bug report 2026-08-28).
+    const existingActive = await client.query<{ status: string; round_name: string }>(
+      `SELECT s.status, r.name AS round_name
+         FROM skills_hunt_submissions s
+         JOIN skills_hunt_rounds r ON r.id = s.round_id
+        WHERE s.quora_profile_url_normalized = $1
+          AND s.status <> 'rejected'
+          AND s.deleted_at IS NULL
+        ORDER BY s.created_at DESC
         LIMIT 1`,
       [normalizedUrl],
     );
-    if (existingActive.rowCount && existingActive.rowCount > 0) {
-      throw new Error('skills_hunt_duplicate_submission');
+    const blocker = existingActive.rows[0];
+    if (blocker) {
+      throw new Error(
+        `skills_hunt_duplicate_submission:${JSON.stringify({ status: blocker.status, round: blocker.round_name })}`,
+      );
     }
 
     await assertQuoraUrlNotTakenDown(client, normalizedUrl);
@@ -1898,16 +1909,25 @@ export async function listSubmissions(
   access: { userId: string; isModeratorOrAdmin: boolean },
 ): Promise<{ items: SkillsHuntSubmission[]; pagination: SkillsHuntPagination; total: number }> {
   const params: unknown[] = [roundId];
+  // Nothing is hidden from an admin (owner directive 2026-08-28). A removed row is soft-deleted,
+  // not gone, so it stays in every admin list and is marked as removed on the card — hiding it is
+  // what let a nomination block a re-nomination while appearing under no filter at all. Members
+  // still never see a removed row; that filter is applied with the ownership scope below.
+  // 'removed' is not a status column value, it is the soft-delete marker, offered as a way to
+  // narrow to exactly those rows.
   let filterSql = '';
 
-  if (status) {
+  if (status === 'removed') {
+    filterSql += ' AND deleted_at IS NOT NULL';
+  } else if (status) {
     params.push(status);
     filterSql += ` AND status = $${params.length}`;
   }
 
+  // A member sees only their own submissions, and never a removed one.
   if (!access.isModeratorOrAdmin) {
     params.push(access.userId);
-    filterSql += ` AND submitter_user_id = $${params.length}`;
+    filterSql += ` AND submitter_user_id = $${params.length} AND deleted_at IS NULL`;
   }
 
   params.push(pagination.pageSize);
@@ -1945,7 +1965,6 @@ export async function listSubmissions(
       updated_at
     FROM skills_hunt_submissions
     WHERE round_id = $1::uuid
-      AND deleted_at IS NULL
       ${filterSql}
     ORDER BY created_at DESC
     LIMIT $${params.length - 1}
@@ -1957,7 +1976,6 @@ export async function listSubmissions(
     SELECT COUNT(*)::text AS total
     FROM skills_hunt_submissions
     WHERE round_id = $1::uuid
-      AND deleted_at IS NULL
       ${filterSql}
   `;
 
@@ -2025,6 +2043,15 @@ async function resolveReviewOutcome(
     status = 'flagged';
     pointsAwarded = 0;
     scoreBreakdown = { flagged: true };
+  }
+
+  // Undo a flag: back to pending, exactly as it arrived, with no verdict recorded against the
+  // scout. Flagging already zeroed the points, so there is nothing to give back; a later accept
+  // scores it fresh. The caller rebuilds the leaderboard either way.
+  if (input.action === 'unflag') {
+    status = 'pending';
+    pointsAwarded = 0;
+    scoreBreakdown = {};
   }
 
   return { status, pointsAwarded, scoreBreakdown, participationPoints };

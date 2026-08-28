@@ -540,6 +540,36 @@ merges first. To avoid this:
 
 ## CTF Contract
 
+## Never Quote the Owner in Repo Artifacts (Critical — all agents)
+
+**Owner directive, 2026-08-28. Do not quote the owner's messages to you — anywhere the repo can
+see.** Not in a PR title or description, not in a commit message, not in an inventory change-log
+entry, a test script, a rule module, or a code comment. This is an open source repository, and a
+pasted message is the owner's prompt published to git history, which is not allowed. It also reads
+wrong: a PR body is a note to the people working on this repo, not a report written for a third
+party about a conversation they were not in.
+
+Write what the code does and why, in your own words:
+
+- ✅ `Owner report: a flagged submission could not be un-flagged.`
+- ✅ `Owner directive: an admin list hides nothing.`
+- ✅ `The Flagged filter returned nothing while the row still blocked a re-nomination.`
+- ❌ A block quote of the message, however short.
+- ❌ `Owner report — "three columns looks odd here"`.
+
+`(owner report)` or `Owner directive:` followed by **your own** description is the house style and
+is correct — that is what the existing change logs use. The line is verbatim reproduction, not
+attribution.
+
+**What is still fine to quote:** the app's own strings. An empty-state message, an error the route
+returns, a button label, a constraint name — those are the artifact under discussion, not
+somebody's words. `the Flagged filter read "No submissions matching this filter"` is quoting the
+product, and that is what makes a change log legible.
+
+A commit message that already carries a quote cannot be fixed without rewriting shared history, so
+do not try; correct it going forward and, where the same text sits in a PR description or a
+markdown file, edit it there.
+
 ## Security and Secrets Policy (Critical)
 
 **This is an open source repository.** Everything committed to this codebase is publicly visible. Never expose secrets, credentials, API keys, encryption keys, tokens, or any sensitive information through:

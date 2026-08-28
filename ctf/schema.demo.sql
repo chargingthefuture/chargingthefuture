@@ -573,7 +573,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'flagged')),
-  review_action TEXT NULL CHECK (review_action IN ('accept', 'reject', 'edit', 'flag')),
+  review_action TEXT NULL CHECK (review_action IN ('accept', 'reject', 'edit', 'flag', 'unflag')),
   reviewed_by_user_id TEXT NULL,
   review_notes TEXT NULL,
   score_breakdown JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -750,6 +750,13 @@ ALTER TABLE IF EXISTS skills_hunt_submissions DROP CONSTRAINT IF EXISTS skills_h
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skills_hunt_submissions_round_signature_live
   ON skills_hunt_submissions (round_id, signature_hash)
   WHERE deleted_at IS NULL AND status <> 'rejected';
+-- Un-flagging a submission (owner bug report 2026-08-28). Flag parks a nomination for a second
+-- look; until now the only ways out were a verdict (accept/reject) or Remove, so a moderator who
+-- flagged something to come back to it could not simply put it back in the queue. 'unflag' returns
+-- the row to pending and is recorded as the last review action, so the CHECK has to allow it.
+ALTER TABLE IF EXISTS skills_hunt_submissions DROP CONSTRAINT IF EXISTS skills_hunt_submissions_review_action_check;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD CONSTRAINT skills_hunt_submissions_review_action_check
+  CHECK (review_action IS NULL OR review_action IN ('accept', 'reject', 'edit', 'flag', 'unflag'));
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;

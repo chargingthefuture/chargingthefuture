@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { SkillsHuntRound, SkillsHuntSubmission, SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
+import type { SkillsHuntRound, SkillsHuntSubmission } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
-import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction } from "./sha-shared";
+import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction, type SkillsHuntAdminStatusFilter } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
 import { SkillsHuntAdminTable } from "./sha-table";
 
@@ -46,7 +46,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
-  const [statusFilter, setStatusFilter] = useState<SkillsHuntSubmissionStatus>("pending");
+  const [statusFilter, setStatusFilter] = useState<SkillsHuntAdminStatusFilter>("all");
   const [submissions, setSubmissions] = useState<SkillsHuntSubmission[]>([]);
   const [round, setRound] = useState<SkillsHuntRound | null>(null);
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
@@ -60,7 +60,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/skills-hunt/admin/rounds/${activeRoundId}/submissions?status=${statusFilter}&pageSize=100`);
+      const res = await fetch(`/api/skills-hunt/admin/rounds/${activeRoundId}/submissions?pageSize=100${statusFilter === "all" ? "" : `&status=${statusFilter}`}`);
       if (!res.ok) throw new Error("Failed to load submissions");
       const data = (await res.json()) as { items: SkillsHuntSubmission[]; round?: SkillsHuntRound | null; rewardSummary?: RewardSummary | null };
       setSubmissions(data.items);
@@ -131,7 +131,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 
   async function bulkReview(action: "accept" | "reject") {
     if (selected.size === 0) return;
-    const pendingIds = new Set(submissions.filter((s) => s.status === "pending").map((s) => s.id));
+    const pendingIds = new Set(submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).map((s) => s.id));
     const ids = Array.from(selected).filter((id) => pendingIds.has(id));
     if (ids.length === 0) return;
     if (!window.confirm(bulkConfirmMessage(action, ids.length))) return;
@@ -153,12 +153,12 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   }
 
   function toggleAllVisible() {
-    const pendingIds = submissions.filter((s) => s.status === "pending").map((s) => s.id);
+    const pendingIds = submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).map((s) => s.id);
     if (selected.size === pendingIds.length) setSelected(new Set());
     else setSelected(new Set(pendingIds));
   }
 
-  const pendingCount = submissions.filter((s) => s.status === "pending").length;
+  const pendingCount = submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).length;
   const allPendingSelected = pendingCount > 0 && selected.size === pendingCount;
 
   if (rounds.length === 0) {
@@ -187,6 +187,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
           onReject={onReject}
           onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
+          onUnflag={(id) => void reviewAndRefresh(id, "unflag", null)}
           onRemove={(id) => void onRemove(id)}
         />
       )}

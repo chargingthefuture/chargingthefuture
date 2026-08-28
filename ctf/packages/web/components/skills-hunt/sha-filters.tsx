@@ -1,8 +1,8 @@
 "use client";
 
-import type { SkillsHuntRound, SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
+import type { SkillsHuntRound } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
-import { STATUS_OPTIONS, getSkillsHuntAdminTokens } from "./sha-shared";
+import { STATUS_OPTIONS, getSkillsHuntAdminTokens, type SkillsHuntAdminStatusFilter } from "./sha-shared";
 
 export function SkillsHuntAdminFilters({
   rounds,
@@ -14,8 +14,8 @@ export function SkillsHuntAdminFilters({
   rounds: SkillsHuntRound[];
   activeRoundId: string | null;
   onRound: (id: string) => void;
-  statusFilter: SkillsHuntSubmissionStatus;
-  onStatus: (s: SkillsHuntSubmissionStatus) => void;
+  statusFilter: SkillsHuntAdminStatusFilter;
+  onStatus: (s: SkillsHuntAdminStatusFilter) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
