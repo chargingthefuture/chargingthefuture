@@ -1909,20 +1909,25 @@ export async function listSubmissions(
   access: { userId: string; isModeratorOrAdmin: boolean },
 ): Promise<{ items: SkillsHuntSubmission[]; pagination: SkillsHuntPagination; total: number }> {
   const params: unknown[] = [roundId];
-  // 'removed' is not a status column value — it is the soft-delete marker. Asked for it, show the
-  // removed rows and nothing else; otherwise every list hides them, as before. Without this a
-  // removed nomination sits in no filter at all, which is how one can block a re-nomination while
-  // being impossible to find (owner bug report 2026-08-28).
-  let filterSql = status === 'removed' ? ' AND deleted_at IS NOT NULL' : ' AND deleted_at IS NULL';
+  // Nothing is hidden from an admin (owner directive 2026-08-28). A removed row is soft-deleted,
+  // not gone, so it stays in every admin list and is marked as removed on the card — hiding it is
+  // what let a nomination block a re-nomination while appearing under no filter at all. Members
+  // still never see a removed row; that filter is applied with the ownership scope below.
+  // 'removed' is not a status column value, it is the soft-delete marker, offered as a way to
+  // narrow to exactly those rows.
+  let filterSql = '';
 
-  if (status && status !== 'removed') {
+  if (status === 'removed') {
+    filterSql += ' AND deleted_at IS NOT NULL';
+  } else if (status) {
     params.push(status);
     filterSql += ` AND status = $${params.length}`;
   }
 
+  // A member sees only their own submissions, and never a removed one.
   if (!access.isModeratorOrAdmin) {
     params.push(access.userId);
-    filterSql += ` AND submitter_user_id = $${params.length}`;
+    filterSql += ` AND submitter_user_id = $${params.length} AND deleted_at IS NULL`;
   }
 
   params.push(pagination.pageSize);

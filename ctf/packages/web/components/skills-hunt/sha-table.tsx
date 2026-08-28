@@ -71,6 +71,19 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, 
       Remove
     </button>
   );
+  // A removed row is soft-deleted, not gone. It stays in the admin list rather than vanishing from
+  // every filter, so its state is visible and it can be explained — it holds no Quora URL against a
+  // re-nomination any more, but it is still the record of what happened.
+  if (submission.deletedAtIso) {
+    return (
+      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12, color: t.MUTED }}>
+          Removed {new Date(submission.deletedAtIso).toLocaleDateString()} · was {submission.status}
+        </span>
+      </div>
+    );
+  }
+
   const verdictRow = (
     <div style={{ display: "flex", gap: 8 }}>
       <button type="button" disabled={acting} onClick={() => onAccept(submission.id)} style={btn("#22C55E", "none", "#fff")}>Accept</button>
@@ -112,6 +125,25 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, 
   );
 }
 
+// Bulk accept/reject applies to a live pending row only. A removed row can still carry status
+// 'pending', so removal has to be checked as well as status.
+function isBulkSelectable(submission: SkillsHuntSubmission): boolean {
+  return submission.status === "pending" && submission.deletedAtIso === null;
+}
+
+// Marks a soft-deleted row in the list. The row is shown rather than hidden, so it needs to say
+// what it is at a glance.
+function RemovedBadge({ submission }: { submission: SkillsHuntSubmission }) {
+  if (!submission.deletedAtIso) {
+    return null;
+  }
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 10, background: "rgba(100,116,139,0.18)", border: "1px solid rgba(100,116,139,0.45)", color: "#94A3B8" }}>
+      Removed
+    </span>
+  );
+}
+
 // One submission as a self-contained card: a header (select + submitter + name), the skills as
 // wrapping chips, a labeled meta strip, then the action rows. No horizontal scroll, no tiny
 // adjacent buttons — the whole thing stacks inside the app's single mobile-first column.
@@ -123,9 +155,12 @@ function SubmissionCard(props: RowProps) {
   return (
     <div style={{ border: `1px solid ${t.BORDER}`, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 12, background: t.HEADER }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={s.status !== "pending"} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
+        <input type="checkbox" checked={selected} onChange={() => onToggle(s.id)} disabled={!isBulkSelectable(s)} aria-label={`Select ${s.fullName}`} style={{ marginTop: 3, width: 18, height: 18, flexShrink: 0 }} />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{s.fullName}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>{s.fullName}</span>
+            <RemovedBadge submission={s} />
+          </div>
           <div style={{ fontSize: 12, color: t.SUBTLE }}>{feedAuthorHandle(s.submitterUsername, s.submitterUserId)}</div>
           <div style={{ fontSize: 11, color: t.FAINT }}>{new Date(s.createdAtIso).toLocaleString()}</div>
         </div>

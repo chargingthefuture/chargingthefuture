@@ -18,14 +18,18 @@ export function getSkillsHuntAdminTokens(theme: ThemeName): SkillsHuntAdminToken
 // 'removed' is not a submission status — it is the soft-delete marker, offered here as a filter so
 // a removed nomination is findable. Before this it appeared under no filter at all, while still
 // being able to hold a Quora URL against a re-nomination.
-export type SkillsHuntAdminStatusFilter = SkillsHuntSubmissionStatus | "removed";
+export type SkillsHuntAdminStatusFilter = SkillsHuntSubmissionStatus | "removed" | "all";
 
+// 'all' sends no status and returns every submission in the round, removed ones included — an admin
+// list hides nothing (owner directive 2026-08-28). 'removed' is not a status column value; it is
+// the soft-delete marker, offered as a way to narrow to exactly those rows.
 export const STATUS_OPTIONS: Array<{ key: SkillsHuntAdminStatusFilter; label: string; color: string }> = [
+  { key: "all",      label: "All",      color: "#94A3B8" },
   { key: "pending",  label: "Pending",  color: "#F59E0B" },
   { key: "accepted", label: "Accepted", color: "#22C55E" },
   { key: "rejected", label: "Rejected", color: "#EF4444" },
   { key: "flagged",  label: "Flagged",  color: COLOR },
-  { key: "removed",  label: "Removed",  color: "#94A3B8" },
+  { key: "removed",  label: "Removed",  color: "#64748B" },
 ];
 
 const REJECT_REASONS = [
