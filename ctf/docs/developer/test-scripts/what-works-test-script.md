@@ -224,6 +224,29 @@ rows.
 
 ---
 
+### WW-A6 · The audit log records every admin decision, refusals included (added 2026-08-28)
+**Role:** admin · **Surfaces:** web (admin surface)
+
+**Precondition:** run WW-A1 (approve and reject), WW-A2 (add a problem) and WW-A3 (delete) first, so there are real decisions to find.
+
+**Steps:**
+1. On the What Works admin screen, expand the **Audit log** panel at the bottom.
+2. Read the newest entries.
+3. `DELETE /api/what-works/admin/products/<a uuid that does not exist>`, then reopen the panel.
+4. Edit an approved tool's link, then reopen the panel.
+
+**Expected:**
+- Step 2: entries newest first, at most 200, each naming the decision in plain words — "Added a problem", "Decided on a suggested product", "Removed a product" — with the admin's id, what it was done to, and the local date and time. A review shows its action (approve or reject) from the metadata.
+- Step 3: the 404 appears marked **Refused**, reading "Because the record was not there". An action that did not happen is recorded, not dropped.
+- Step 4: an "Edited a suggested product" row appears.
+- **No row names who suggested anything.** Every entry identifies the product or problem and the acting admin only. This is the check that matters here: the plugin's anonymity guarantee says `suggested_by` never reaches a projection, and the audit trail must not be the exception that reintroduces it.
+
+**Note:** the member-facing actions — reading, suggesting, endorsing — deliberately write no audit row. A row per endorsement would be volume, not accountability. Their absence here is correct, not a gap.
+
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For WW-1, WW-2, and WW-3, the android app and the mobile-responsive web layout must behave the same:

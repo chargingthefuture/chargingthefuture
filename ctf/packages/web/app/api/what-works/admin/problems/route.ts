@@ -8,7 +8,7 @@ import {
   requireWhatWorksAdminAccess,
   whatWorksError,
 } from '../../_lib';
-import { logWhatWorksAudit } from 'lib/what-works/audit';
+import { logWhatWorksAudit, recordWhatWorksAdminAudit } from 'lib/what-works/audit';
 
 // The problem fields once required-field and length checks have passed.
 type ValidatedProblem = {
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     sortOrder,
     createdBy: gate.auth.userId,
   });
-  logWhatWorksAudit({
+  await recordWhatWorksAdminAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.problem.create',
     status: 'allow',

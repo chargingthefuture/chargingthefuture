@@ -4810,6 +4810,41 @@ ALTER TABLE IF EXISTS comic_admin_audit_trail ADD COLUMN IF NOT EXISTS created_a
 CREATE INDEX IF NOT EXISTS idx_comic_admin_audit_trail_lookup
   ON comic_admin_audit_trail (created_at DESC, actor_id, command);
 
+
+-- What Works admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
+-- on every surface. lib/what-works/audit.ts builds the whole contract-shaped event and ends in
+-- console.info — a line in the server's log, which nothing can query, no screen can show, and which
+-- ages out of the host's retention window. These are decisions about what members see recommended
+-- and about suggestions members made: editing or removing a product, adding or retiring a problem.
+CREATE TABLE IF NOT EXISTS what_works_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The Audit log panel reads newest-first; actor and command support narrowing to one admin or one
+-- kind of decision without a sequential scan.
+CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
+  ON what_works_admin_audit_trail (created_at DESC, actor_id, command);
+
 -- Bug report admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
 -- on every surface. Bug reports had no audit machinery at all — no table, no helper, not even a log
 -- line — so resolving a held report left nothing behind. That decision matters: 'release' sends the
