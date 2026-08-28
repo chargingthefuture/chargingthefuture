@@ -43,7 +43,10 @@ export const PLATFORM_EARN_METHODS: {
   },
   {
     title: 'Contribute during a fundraiser',
-    detail: 'Pitch in when the community runs a fundraiser. The next one starts in July.',
+    // No month here. A hard-coded date is wrong the moment it passes and nothing prompts
+    // anyone to update it — this one still read "July" at the end of August. The card says
+    // what the reward is; when a drive is actually running, Contributions is where it shows.
+    detail: 'Pitch in when the community runs a fundraiser.',
     credits: 'Varies',
     note: 'seasonal',
     color: '#A855F7',
