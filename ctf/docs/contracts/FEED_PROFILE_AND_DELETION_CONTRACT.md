@@ -45,6 +45,10 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
 
 ## 4) Domain Data Owned by Plugin
 
+- Table/entity: `feed_admin_audit_trail`
+  - Contains personal data? minimal (the acting admin's id, and the id of what was acted on)
+  - Retention period: compliance retention window
+  - Legal/compliance note: the durable record of every admin action on the Feed and on Announcements, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion — the record of what an admin did has to outlive the record they did it to. Holds no member-authored content.
 - Table/entity: `feed_community_posts`
   - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy

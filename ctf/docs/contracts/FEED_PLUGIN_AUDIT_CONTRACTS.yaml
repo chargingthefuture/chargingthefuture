@@ -1,3 +1,11 @@
+# Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
+# events were written by logFeedAudit, which builds the whole shape below and ends in console.info —
+# a line in the server's log, which nothing can query, no screen can show, and which ages out of the
+# host's retention window. Every admin mutation event here is now also a durable row in
+# feed_admin_audit_trail, written by recordFeedAdminAudit on every outcome including a refusal. One
+# table serves Feed and Announcements because they share the helper; plugin_id says which surface an
+# action came from. The member-facing events keep the log line alone: a row per read, reaction or
+# dismissal would be volume, not accountability.
 auditEvents:
   # ─── Timeline ──────────────────────────────────────────────────────────
   - eventId: uuid
@@ -574,6 +582,48 @@ auditEvents:
       newStatus: moderation_status
     requestId: request_identifier
     traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # Admin re-labels a question's category. Added 2026-08-28 — the route had shipped with no audit
+  # event template behind it.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.question.category.relabel
+    commandVersion: 1.0.0
+    purpose: feed_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - feed_questions
+      - feed_admin_audit_trail
+    targetContext:
+      targetType: question
+      targetId: question_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # An admin reading the trail from the Audit log panel on /admin/feed-announcements.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.admin.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - feed_admin_audit_trail
+    targetContext:
+      targetType: audit_trail
+      targetId: row_count_requested
     result:
       status: success_or_failure
       errorCategory: none_or_error_class

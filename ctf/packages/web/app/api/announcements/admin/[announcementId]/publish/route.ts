@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { publishAnnouncement } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const announcement = await publishAnnouncement(gate.auth.userId, announcementId);
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.announcement.publish',
@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // `status: 'allow'` is the policy-gate decision (the actor was an authorized admin), not the
     // operation outcome — that is carried by `result: 'failure'` below.
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.announcement.publish',
