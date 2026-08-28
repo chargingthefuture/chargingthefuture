@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { MUTUAL_TIME_ERROR_CODE } from 'lib/mutual-time/constants';
 import { createEvent, listEventsForAdmin } from 'lib/mutual-time/repository';
-import { logMutualTimeAudit } from 'lib/mutual-time/audit';
+import { recordMutualTimeAdminAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse } from '../_lib';
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       opensAt: body.opensAt,
       closesAt: body.closesAt,
     });
-    logMutualTimeAudit({
+    await recordMutualTimeAdminAudit({
       pluginId: 'mutual-time',
       command: 'mutual-time.event.create',
       actorId: gate.auth.userId,

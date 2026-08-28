@@ -11,7 +11,7 @@ policies:
     version: 1.0.0
     requiredRoles: [admin]
     attributePolicies:
-      - Owner/admin only. Enforced by evaluatePluginAccess({ requiredRoles: ['admin'] }).
+      - "Owner/admin only. Enforced by evaluatePluginAccess({ requiredRoles: ['admin'] })."
     consentRequirements: []
     regionRestrictions: []
     highRiskFlags: []
@@ -38,7 +38,7 @@ policies:
     version: 1.0.0
     requiredRoles: [member, admin]
     attributePolicies:
-      - Signed in AND Unlock tier approved_full (or admin). Enforced by evaluatePluginAccess({ minUnlockTier: 'approved_full' }).
+      - "Signed in AND Unlock tier approved_full (or admin). Enforced by evaluatePluginAccess({ minUnlockTier: 'approved_full' })."
       - At most 3 picks; each pick must be a valid candidate slot; the event must be currently open.
     consentRequirements: []
     regionRestrictions: []
@@ -62,3 +62,15 @@ policies:
     denyConditions:
       - Over the public read rate limit (429).
       - Unknown slug (404).
+
+  - pluginId: mutual-time
+    command: mutual-time.admin.audit.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies:
+      - "Admin only, read-only. Enforced by requireMutualTimeAdmin."
+    consentRequirements: []
+    regionRestrictions: []
+    highRiskFlags: []
+    denyConditions:
+      - actor_not_admin

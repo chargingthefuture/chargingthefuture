@@ -10,16 +10,6 @@
       "route": "/api/bug-reports/admin/[id]/resolve",
       "kind": "burn-down",
       "reason": "Bug reports has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row when a report is resolved."
-    },
-    {
-      "route": "/api/mutual-time/events/[eventId]/close",
-      "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
-    },
-    {
-      "route": "/api/mutual-time/events",
-      "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all — no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
     }
   ]
 }

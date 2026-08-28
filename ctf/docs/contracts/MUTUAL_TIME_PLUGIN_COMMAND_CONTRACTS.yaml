@@ -34,6 +34,7 @@ contracts:
         type: object
     dataAccess:
       - mutual_time_events
+      - mutual_time_admin_audit_trail
     purpose: scheduling_event_create
     retentionClass: operational_medium_lived
     idempotency: false
@@ -75,6 +76,7 @@ contracts:
     dataAccess:
       - mutual_time_events
       - mutual_time_votes
+      - mutual_time_admin_audit_trail
     purpose: scheduling_event_close
     retentionClass: operational_medium_lived
     idempotency: true
@@ -96,4 +98,25 @@ contracts:
       - mutual_time_votes
     purpose: scheduling_event_read
     retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: mutual-time
+    command: mutual-time.admin.audit.list
+    version: 1.0.0
+    description: >-
+      Admin reads the Mutual Time admin audit trail, newest first. Read-only. The trail names the
+      event acted on and the acting admin — never a voter — so it holds no member identity and is not
+      removed on a member's account deletion.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - mutual_time_admin_audit_trail
+    purpose: governance_transparency
+    retentionClass: audit_long_lived
     idempotency: true

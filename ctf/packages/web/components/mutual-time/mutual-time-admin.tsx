@@ -15,6 +15,7 @@ import {
   detectTimeZone,
   formatResultDateTime,
 } from './mutual-time-shared';
+import { MutualTimeAuditPanel } from './mutual-time-audit-panel';
 
 type Tokens = ReturnType<typeof getMutualTimeTokens>;
 
@@ -268,6 +269,8 @@ export function MutualTimeAdmin() {
             </div>
           )}
         </section>
+
+        <MutualTimeAuditPanel t={t} />
       </div>
     </div>
   );

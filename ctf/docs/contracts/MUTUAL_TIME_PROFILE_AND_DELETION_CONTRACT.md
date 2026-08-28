@@ -21,6 +21,12 @@ None. There is no `mutual_time_user_extension` table.
 
 ## Domain Data Owned by Plugin
 
+- Table/entity: `mutual_time_admin_audit_trail`
+  - Contains personal data? minimal (the acting admin's id, and the event acted on) — **never a voter**
+  - Retention period: compliance retention window
+  - Legal/compliance note: the durable record of every admin action on Mutual Time, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion. Saving picks is a member's action, not an admin's, and writes no row, so the trail cannot become a back door to who voted for what.
+
+
 | Table | User-scoping column | Deletion action on account/service deletion |
 |---|---|---|
 | `mutual_time_votes` | `voter_user_id` | **delete** — the member's votes are removed. |

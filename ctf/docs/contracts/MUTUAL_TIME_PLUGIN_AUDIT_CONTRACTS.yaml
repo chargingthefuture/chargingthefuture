@@ -1,3 +1,10 @@
+# Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
+# events were written by logMutualTimeAudit, which builds the whole shape below and ends in
+# console.info — a line in the server's log, which nothing can query, no screen can show, and which
+# ages out of the host's retention window. Every admin event here is now also a durable row in
+# mutual_time_admin_audit_trail, written by recordMutualTimeAdminAudit on every outcome including a
+# refusal. mutual-time.vote.save keeps the log line alone: it is a member's action, not an admin's,
+# and a row per member's picks would put voter identity into a trail that deliberately has none.
 pluginId: mutual-time
 commandVersion: 1.0.0
 description: >
@@ -64,3 +71,23 @@ auditEvents:
     requestId: <request id>
     traceId: <trace id>
     result: success
+
+  # An admin reading the trail from the Audit log panel on the Mutual Time dashboard.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: mutual-time
+    command: mutual-time.admin.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - mutual_time_admin_audit_trail
+    targetContext:
+      targetType: audit_trail
+      targetId: row_count_requested
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

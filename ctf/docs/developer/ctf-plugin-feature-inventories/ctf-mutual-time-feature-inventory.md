@@ -61,6 +61,10 @@ to the meeting surface; members who did not vote can still come listen in.
 2. **Manage events:** the dashboard lists the admin's events with voter counts, a status pill
    (scheduled / open / closed), Copy-link, View, "Close and choose the time", and — once closed — the
    chosen time and how many can make it.
+3. **Audit log panel** at the bottom of the admin dashboard. Lists every admin action on Mutual Time
+   newest first — opening an event, closing one — **including the ones that were refused, and why**
+   ("Refused · Because the event was already closed"). Reads
+   `GET /api/mutual-time/admin/audit-events?limit=200`; loads lazily on first expand.
 3. **Close and choose:** closing runs the most-overlap algorithm and stamps the winning window. A survey
    with a set close time auto-closes when that time passes. Only windows still ahead of the moment of
    closing can win, so closing a long-open survey can never stamp a time that has already been and
@@ -82,6 +86,7 @@ All routes under `ctf/packages/web/app/api/mutual-time/`:
 - `POST /api/mutual-time/events` — create an event (returns the event + slug). Admin-only. CSRF-guarded.
 - `POST /api/mutual-time/events/[eventId]/close` — close a survey now and compute the winner. Admin-only
   (and the creator). CSRF-guarded.
+- `GET /api/mutual-time/admin/audit-events` — admin read of `mutual_time_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Backs the Audit log panel on the dashboard.
 - `GET /api/mutual-time/event/[slug]` — **public** read of one event (title, description, status,
   candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`,
   their own upcoming picks, and `viewer.expiredPicks` (how many of their picks were for times that have
@@ -96,6 +101,12 @@ All routes under `ctf/packages/web/app/api/mutual-time/`:
 Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS ADD COLUMN IF NOT EXISTS
 + indexes):
 
+0. `mutual_time_admin_audit_trail` — the durable admin audit trail (added 2026-08-28). Columns `id`,
+   `actor_id`, `command`, `policy_status` (`allow`/`deny`), `reason`, `target_type`, `target_id`,
+   `result` (`success`/`failure`), `error_category`, `metadata` (jsonb), `created_at`, indexed
+   `(created_at DESC, actor_id, command)`. One row per admin action, written by
+   `recordMutualTimeAdminAudit` on every outcome including a refusal. **Holds no voter identity** —
+   the acting admin's id and the event acted on — so it is retained on account deletion.
 1. `mutual_time_events`
    - One row per event, keyed by `id`, with a unique shareable `slug`. Columns: `created_by_user_id`
      (the admin creator), `title` (nullable), `description` (nullable), `meeting_plugin`
@@ -124,18 +135,25 @@ Defined in `ctf/schema.sql` (CREATE TABLE IF NOT EXISTS + ALTER TABLE IF EXISTS 
 1. **Three access tiers.** Create/close: admin-only (`evaluatePluginAccess({ requiredRoles: ['admin'] })`;
    close also checks the actor is the event's creator). Vote: signed-in AND Unlock-approved
    (`minUnlockTier: 'approved_full'`). Read: public/anonymous, rate-limited per IP.
-2. **CSRF / same-origin.** Every mutation requires the `x-ctf-csrf: '1'` header and a same-origin check
+2. **Every admin action writes a durable row to `mutual_time_admin_audit_trail`** via
+   `recordMutualTimeAdminAudit`, which also emits the observability line — on success, on a refusal,
+   and on a persistence failure. Before 2026-08-28 `logMutualTimeAudit` wrote the event to the
+   server's log alone, so closing an event people had put their time into left no record anyone
+   could read back. The row names the event and the acting admin, never a voter. Voting keeps the
+   log line alone: a row per member's picks would be volume, not accountability, and it is a
+   member's action rather than an admin's.
+3. **CSRF / same-origin.** Every mutation requires the `x-ctf-csrf: '1'` header and a same-origin check
    (`ensureMutationCsrf`). The admin event-list read (`GET /api/mutual-time/events`) additionally runs a
    same-origin `checkMutationOrigin` check (missing-Origin same-origin requests still pass) so a
    credentialed cross-origin page cannot read the admin's slugs/voter counts.
-3. **Privacy.** Individual votes are never exposed publicly. The public read returns only aggregate
+4. **Privacy.** Individual votes are never exposed publicly. The public read returns only aggregate
    fields (voter count; after close the winning slot + how many can make it) plus, for a signed-in
    approved member, that member's own picks for hydration.
-4. **No credits.** No command reads or moves ServiceCredits.
-5. **Deletion.** A member's votes, and any events they created (cascade), are removed on service/account
+5. **No credits.** No command reads or moves ServiceCredits.
+6. **Deletion.** A member's votes, and any events they created (cascade), are removed on service/account
    deletion — declared in `lib/account/deletion-registry.ts` (`mutual-time`) and validated by
    `check-deletion-registry.mjs`. See `MUTUAL_TIME_PROFILE_AND_DELETION_CONTRACT.md`.
-6. **Timezone safety.** Overlap is computed in UTC; each viewer's UI renders the same UTC candidate
+7. **Timezone safety.** Overlap is computed in UTC; each viewer's UI renders the same UTC candidate
    instants in their own timezone, so votes compare correctly across timezones (including half-hour zones).
 
 ### Trust Signal Coverage
@@ -190,6 +208,7 @@ keeps that half reproducible; its stamped result stands.
 
 ## Change Log
 
+- 2026-08-28: **Every Mutual Time admin action is recorded in a table an admin can read, including the ones that were refused.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. `lib/mutual-time/audit.ts` built the entire contract-shaped event and ended in `console.info` — a line in the server's log, which nothing can query, no screen can show, and which ages out of the host's retention window. Opening an event and closing one decide what members can put their time into, and closing one people had already voted in left nothing behind. New table `mutual_time_admin_audit_trail` (actor, command, policy status, reason, target, result, error category, metadata, timestamp; indexed newest-first by actor and command). New `recordMutualTimeAdminAudit` writes the row **and** the log line, and both admin mutation routes use it on every outcome. It never throws: an audit write that failed would otherwise turn a completed close into a 503 and have an admin repeat a close they had already made. New `GET /api/mutual-time/admin/audit-events` and an **Audit log** panel at the bottom of the admin dashboard, reading the most recent 200 with plain-language labels ("Opened an event", "Closed an event", "Refused · Because the event was already closed"). **Voting keeps the log line alone** — a row per member's picks would be volume, not accountability, and it is a member's action rather than an admin's, so the trail holds no voter identity. Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip an event opened, one closed, and a close refused because the event was already closed. Mutual Time's two routes leave the admin-audit-coverage burn-down list.
 - 2026-07-20: **Initial build (spec #1780).** New plugin: `mutual_time_events` + `mutual_time_votes`
   tables; API routes under `/api/mutual-time/`; admin dashboard `/apps/mutual-time`; public one-link
   surface `/mutual-time/[slug]` (vote / result / sign-in-listen-in gate); timezone-aware voting (up to 3
