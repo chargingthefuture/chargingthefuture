@@ -13,6 +13,7 @@ interface RowProps {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
 }
 
@@ -55,7 +56,7 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 // again, and Remove (which does not free that guard either) was the only button on offer. Accepted
 // and rejected stay terminal — reversing those moves points and can pay a reward, so they are not
 // one tap away.
-function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
+function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
@@ -80,9 +81,13 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onRemove }
   if (submission.status === "flagged") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look — accept or reject it to clear the flag.</span>
+        <span style={{ fontSize: 12, color: t.ACCENT }}>Flagged for a second look. Unflag puts it back in Pending unchanged; Accept or Reject decides it now.</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" disabled={acting} onClick={() => onUnflag(submission.id)}
+            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Unflag</button>
+          {removeBtn}
+        </div>
         {verdictRow}
-        <div style={{ display: "flex", gap: 8 }}>{removeBtn}</div>
       </div>
     );
   }
@@ -158,6 +163,7 @@ export function SkillsHuntAdminTable({
   onAccept,
   onReject,
   onFlag,
+  onUnflag,
   onRemove,
 }: {
   submissions: SkillsHuntSubmission[];
@@ -169,6 +175,7 @@ export function SkillsHuntAdminTable({
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
   onFlag: (id: string) => void;
+  onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
 }) {
   const { theme } = useTheme();
@@ -189,6 +196,7 @@ export function SkillsHuntAdminTable({
           onAccept={onAccept}
           onReject={onReject}
           onFlag={onFlag}
+          onUnflag={onUnflag}
           onRemove={onRemove}
         />
       ))}

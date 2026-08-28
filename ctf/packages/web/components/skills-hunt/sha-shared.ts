@@ -31,7 +31,7 @@ const REJECT_REASONS = [
   "Other (see notes)",
 ];
 
-export type ReviewAction = "accept" | "reject" | "flag";
+export type ReviewAction = "accept" | "reject" | "flag" | "unflag";
 
 // Prompts for a reject reason (numbered pick or free text). Returns null if the
 // moderator cancels.

@@ -2027,6 +2027,15 @@ async function resolveReviewOutcome(
     scoreBreakdown = { flagged: true };
   }
 
+  // Undo a flag: back to pending, exactly as it arrived, with no verdict recorded against the
+  // scout. Flagging already zeroed the points, so there is nothing to give back; a later accept
+  // scores it fresh. The caller rebuilds the leaderboard either way.
+  if (input.action === 'unflag') {
+    status = 'pending';
+    pointsAwarded = 0;
+    scoreBreakdown = {};
+  }
+
   return { status, pointsAwarded, scoreBreakdown, participationPoints };
 }
 

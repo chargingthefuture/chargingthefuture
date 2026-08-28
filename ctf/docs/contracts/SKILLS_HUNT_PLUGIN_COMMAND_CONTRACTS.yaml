@@ -202,7 +202,7 @@ contracts:
     command: skills-hunt.submission.review
     version: 1.1.0
     description: >-
-      Apply moderator/admin review decision including accept/reject/edit/flag and scoring updates.
+      Apply moderator/admin review decision including accept/reject/edit/flag/unflag and scoring updates.
       On accept, when the round has a ServiceCredits reward configured, mint that reward to the
       scout via the ServiceCredits treasury (best-effort, idempotent per submission, bounded by the
       per-scout round cap and the per-period mint budget). The mint never fails the review decision.
@@ -213,6 +213,10 @@ contracts:
       action:
         type: string
         required: true
+        description: >-
+          One of accept | reject | edit | flag | unflag. 'flag' parks a submission for a second look;
+          'unflag' returns it to pending unchanged, so a moderator is not forced into a verdict to
+          clear a flag.
       notes:
         type: string
         required: false
@@ -650,3 +654,9 @@ changelog:
       A nomination of someone who asked to be removed is refused at submit and again at accept.
       Accepting used to stand — awarding points and minting the round's reward — while quietly
       generating no directory profile, so the economy paid for a listing that could never appear.
+  - date: 2026-08-28
+    change: >-
+      skills-hunt.submission.review accepts a fifth action, 'unflag', which returns a flagged
+      submission to pending without a verdict. Until now flag was a one-way door — the only ways
+      out were accept, reject or remove — so a moderator who parked a nomination to come back to
+      it could not simply put it back in the queue. The review_action CHECK is widened to allow it.

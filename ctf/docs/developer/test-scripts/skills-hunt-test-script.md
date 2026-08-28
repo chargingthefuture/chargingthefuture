@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6) |
 
 ---
 
@@ -525,13 +525,14 @@ Result: web ☐
 1. In the admin submissions view, locate a pending submission.
 2. Use the Flag action.
 3. Switch the status filter to **Flagged**. Confirm all four status chips are visible and reachable at phone width — none is cut off at the right edge.
-4. Confirm the submission appears there, with **Accept** and **Reject** buttons and a line saying the flag clears by accepting or rejecting.
-5. Use Accept (or Reject). Confirm the row leaves the Flagged filter and appears under the status you chose.
+4. Confirm the submission appears there with three ways out — **Unflag**, **Accept** and **Reject** — and a line saying Unflag puts it back in Pending unchanged while Accept or Reject decides it now.
+5. Use **Unflag**. Confirm the row leaves the Flagged filter and is back under **Pending**, with its full Accept / Reject / Flag / Remove actions, as though it had never been flagged.
+6. Flag it again, then use Accept (or Reject). Confirm the row leaves Flagged and appears under the status you chose.
 
-**Expected:** Flagging moves the submission out of Pending and into Flagged. From Flagged it can go either way — flag is a holding state for a second look, not a dead end. The action requires a confirm gesture on Android.
+**Expected:** Flagging moves the submission out of Pending and into Flagged. From Flagged it can go back to Pending untouched, or on to a verdict — flag is a holding state for a second look, not a dead end and not a forced decision. The action requires a confirm gesture on Android.
 
 Notes:
-- Steps 3–5 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no Accept or Reject and no way back. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap.
+- Steps 3–6 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no way back at all. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap. Unflag arrived a day later — the first fix offered only Accept and Reject, which clears a flag by deciding the submission, and flag exists so a moderator does not have to decide yet.
 - Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
 
 Result: web ☐

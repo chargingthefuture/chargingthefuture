@@ -1,6 +1,8 @@
 export type SkillsHuntRoundStatus = 'draft' | 'active' | 'closed' | 'archived';
 export type SkillsHuntSubmissionStatus = 'pending' | 'accepted' | 'rejected' | 'flagged';
-export type SkillsHuntReviewAction = 'accept' | 'reject' | 'edit' | 'flag';
+// 'flag' parks a submission for a second look; 'unflag' is how it comes back out unchanged, to
+// pending, without forcing a verdict. Accept and reject are the verdicts.
+export type SkillsHuntReviewAction = 'accept' | 'reject' | 'edit' | 'flag' | 'unflag';
 
 export type SkillsHuntPagination = {
   page: number;

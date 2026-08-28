@@ -187,6 +187,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
           onReject={onReject}
           onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
+          onUnflag={(id) => void reviewAndRefresh(id, "unflag", null)}
           onRemove={(id) => void onRemove(id)}
         />
       )}
