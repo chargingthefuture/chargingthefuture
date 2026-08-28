@@ -6,6 +6,7 @@ import {
   type AutoMissionConfigUpdate,
 } from 'lib/skills-hunt/auto-missions';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -112,6 +113,17 @@ export async function PUT(request: Request) {
       targetId: 'singleton',
       result: 'success',
       errorCategory: null,
+      metadata: { ...parsed.input },
+    });
+    // A durable row as well as the log line: these settings decide which missions open by
+    // themselves, so a later reader needs to see when they were last changed and to what.
+    await insertSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.auto_config_update',
+      policyStatus: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'auto_mission_config',
+      targetId: 'singleton',
       metadata: { ...parsed.input },
     });
     return NextResponse.json({ ok: true, config }, { status: 200 });

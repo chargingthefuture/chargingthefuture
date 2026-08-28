@@ -646,6 +646,42 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: true
 
+  - pluginId: skills-hunt
+    command: skills-hunt.audit.list
+    version: 1.0.0
+    description: Admin reads the SkillsHunt audit trail, newest first. Read-only; the log itself is append-only and is never soft-deleted, so a member's data deletion does not erase the record of what an admin did.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - skills_hunt_audit_log
+    purpose: governance_transparency
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.notification.round_ending_soon
+    version: 1.0.0
+    description: Sends the round-ending-soon notification to members with submissions in a round that closes within 24 hours. Called by the scheduled run and by an admin on demand; each member is notified at most once per round.
+    inputSchema: {}
+    outputSchema:
+      emitted:
+        type: integer
+        description: How many notifications were sent by this run.
+    dataAccess:
+      - skills_hunt_rounds
+      - skills_hunt_submissions
+      - skills_hunt_notifications
+      - skills_hunt_audit_log
+    purpose: user_notification_delivery
+    retentionClass: transactional_long_lived
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
@@ -697,3 +733,15 @@ changelog:
       a row that was flagged comes back flagged and can then be un-flagged. It is refused when the
       person has been nominated again in the meantime, since two live nominations for one person is
       what the live-signature index exists to prevent.
+  - date: 2026-08-28
+    change: >-
+      Added skills-hunt.audit.list and skills-hunt.notification.round_ending_soon, two routes that
+      had shipped with no contract behind them. The audit read now has a screen — the admin Audit
+      log tab — where before it had none, and the notification send now writes a durable audit row
+      like every other admin action, so both belong on the contract surface.
+  - date: 2026-08-28
+    change: >-
+      skills-hunt.submission.review records what changed rather than only which action was taken:
+      the status the submission moved from, the status it moved to, and whether the review also
+      brought a removed row back to life. An accept on a pending row and an accept on a removed,
+      flagged row were previously written identically.

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
 import { notifyRoundsEndingSoon } from 'lib/skills-hunt/notifications';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -23,6 +24,18 @@ export async function POST(request: Request) {
 
   try {
     const result = await withDbTransaction((client) => notifyRoundsEndingSoon(client));
+
+    // Sending notifications reaches members' inboxes, so it is recorded like any other admin action.
+    await insertSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.notification.round_ending_soon',
+      policyStatus: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'notification_run',
+      targetId: new Date().toISOString(),
+      metadata: { emitted: result.emitted },
+    });
+
     return NextResponse.json({ ok: true, emitted: result.emitted }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_notifications_round_ending_soon' });
