@@ -66,11 +66,6 @@
       "severity": "high",
       "title": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames"
     },
-    "1120821": {
-      "module": "@opentelemetry/core",
-      "severity": "moderate",
-      "title": "OpenTelemetry Core: Unbounded memory allocation in W3C Baggage propagation"
-    },
     "1123259": {
       "module": "ws",
       "severity": "high",
