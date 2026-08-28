@@ -1,3 +1,10 @@
+# Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
+# events were written by logDirectoryAudit, which builds the whole shape below and ends in
+# console.info — a line in the server's log, which nothing can query, no screen can show, and which
+# ages out of the host's retention window. Every admin mutation event here is now also a durable row
+# in directory_admin_audit_trail, written by recordDirectoryAdminAudit on every outcome including a
+# refusal. The read and member self-service events keep the log line alone: a row per page load
+# would be volume, not accountability.
 auditEvents:
   - eventId: uuid
     timestamp: rfc3339
@@ -198,6 +205,58 @@ auditEvents:
     targetContext:
       workspaceId: workspace_identifier
       announcementId: announcement_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # Taking an announcement down. Split out on 2026-08-28: the DELETE handler recorded its events
+  # under directory.admin.announcement.upsert, so a takedown was written into the trail as a save.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: directory
+    command: directory.admin.announcement.deactivate
+    commandVersion: 1.0.0
+    purpose: admin_communications
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_announcement_metadata
+      - admin_mutation_audit_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      announcementId: announcement_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # An admin reading the trail from the Audit log panel on /admin/directory. A read, so it records
+  # who looked and when; the trail it reads is append-only.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: directory
+    command: directory.admin.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - admin_mutation_audit_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      limit: row_count_requested
     requestId: request_identifier
     traceId: trace_identifier
     result:

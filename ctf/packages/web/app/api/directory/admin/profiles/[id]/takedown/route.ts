@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { takedownAdminProfile } from 'lib/directory/repository';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
 
@@ -105,7 +105,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await takedownAdminProfile(gate.auth.userId, id, reason);
 
     if (result === 'taken_down') {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.profile.takedown',
         status: 'allow',
@@ -118,7 +118,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.takedown',
       status: 'deny',
@@ -132,7 +132,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return denyResponseFor(result);
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profile_takedown' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.takedown',
       status: 'allow',
