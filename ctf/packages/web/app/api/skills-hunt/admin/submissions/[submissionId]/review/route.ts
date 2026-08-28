@@ -180,7 +180,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
   }
 
   try {
-    const submission = await reviewSubmission(gate.auth.userId, gate.auth.username, submissionId, input);
+    const reviewed = await reviewSubmission(gate.auth.userId, gate.auth.username, submissionId, input);
+    const submission = reviewed.submission;
+    // Say what changed, not only which button was pressed: the status it came from, the status it
+    // went to, and whether the action also brought a removed row back. An accept on a pending row
+    // and an accept on a removed, flagged row are the same action and very different events.
+    const auditDetail = {
+      action: input.action,
+      fromStatus: reviewed.previousStatus,
+      toStatus: submission.status,
+      restoredFromRemoved: reviewed.restoredFromRemoved,
+    };
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
@@ -192,7 +202,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       targetId: submission.id,
       result: 'success',
       errorCategory: null,
-      metadata: { action: input.action },
+      metadata: auditDetail,
     });
 
     await insertSkillsHuntAudit({
@@ -202,7 +212,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',
       targetId: submission.id,
-      metadata: { action: input.action },
+      metadata: auditDetail,
     });
 
     // The review decision is already committed and audited above; paying the

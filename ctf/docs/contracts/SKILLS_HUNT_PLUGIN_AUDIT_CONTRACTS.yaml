@@ -194,6 +194,14 @@ auditEvents:
       roundId: round_identifier
       submissionId: submission_identifier
       reviewAction: review_action
+    # Recorded on the durable row so the trail says what changed, not only which action was taken.
+    # An accept on a pending row and an accept on a removed, flagged row are the same action and
+    # very different events.
+    metadata:
+      action: review_action
+      fromStatus: submission_status_before
+      toStatus: submission_status_after
+      restoredFromRemoved: boolean_did_this_also_clear_the_soft_delete
     requestId: request_identifier
     traceId: trace_identifier
     result:
@@ -498,6 +506,55 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Admin reads the audit trail from the Audit log tab on /admin/skills-hunt. A read, so it records
+  # who looked and when; the log it reads is append-only and never soft-deleted.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.audit.list
+    commandVersion: 1.0.0
+    purpose: governance_transparency
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_audit_log
+    targetContext:
+      workspaceId: workspace_identifier
+      limit: row_count_requested
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # Round-ending-soon notifications, sent by the scheduled run or by an admin on demand.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.notification.round_ending_soon
+    commandVersion: 1.0.0
+    purpose: user_notification_delivery
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_rounds
+      - skills_hunt_submissions
+      - skills_hunt_notifications
+      - skills_hunt_audit_log
+    targetType: notification_run
+    targetId: run_timestamp
+    metadata:
+      emitted: notification_count_sent
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
@@ -530,3 +587,12 @@ changelog:
       a row that was flagged comes back flagged and can then be un-flagged. It is refused when the
       person has been nominated again in the meantime, since two live nominations for one person is
       what the live-signature index exists to prevent.
+  - date: 2026-08-28
+    change: >-
+      Added audit event templates for skills-hunt.audit.list and
+      skills-hunt.notification.round_ending_soon, and recorded the review event's metadata shape.
+      A review row now carries the status the submission moved from, the status it moved to, and
+      whether the action also brought a removed row back, instead of only the action name. The
+      auto-mission run, the auto-mission settings change and the mission create/update/archive
+      events now write a durable row in skills_hunt_audit_log as well as an observability log line,
+      so the readable trail is the whole set of admin mutations rather than a subset.

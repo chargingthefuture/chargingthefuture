@@ -551,6 +551,56 @@ policies:
       - invalid_payload
       - csrf_denied
 
+  - pluginId: skills-hunt
+    command: skills-hunt.audit.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - moderator
+    attributePolicies:
+      tenancy: same_workspace
+      readOnly: enforced
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: skills-hunt
+    command: skills-hunt.notification.round_ending_soon
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - moderator
+      - system
+    attributePolicies:
+      tenancy: same_workspace
+      systemCaller: cron_secret_required
+      oncePerMemberPerRound: enforced
+    consentRequirements:
+      scopes:
+        - skills_hunt_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - invalid_cron_secret
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt access policy contracts added with role, validation, anti-abuse, and Directory-boundary controls for all v1 commands.
@@ -581,3 +631,8 @@ changelog:
       a row that was flagged comes back flagged and can then be un-flagged. It is refused when the
       person has been nominated again in the meantime, since two live nominations for one person is
       what the live-signature index exists to prevent.
+  - date: 2026-08-28
+    change: >-
+      Added access policies for skills-hunt.audit.list (admin or moderator, read-only) and
+      skills-hunt.notification.round_ending_soon (admin, moderator, or the scheduled run holding the
+      cron secret). Both routes had shipped without one.

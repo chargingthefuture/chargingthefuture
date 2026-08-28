@@ -791,17 +791,24 @@ Result: web ☐
 
 ---
 
-### SH-A14 — Audit trail is readable by admins
+### SH-A14 — Audit log tab shows every admin action, and says what changed
 
 **Role:** admin · **Surfaces:** web
 
-**Precondition:** Several moderation actions have been performed in the session.
+**Precondition:** Several moderation actions have been performed in the session — at minimum an accept, a flag, a remove and a restore (SH-A3, SH-A6, SH-A4b, SH-A6b).
 
 **Steps:**
-1. Make a GET request to `/api/skills-hunt/admin/audit-events` (or use a browser/API tool while authenticated as admin).
-2. Optionally add `?limit=10`.
+1. Open `/admin/skills-hunt` and select the **Audit log** tab.
+2. Read the newest rows.
+3. Find the row for a submission you accepted while it was flagged and removed (flag it, remove it, then accept it from the admin list if you have not already).
+4. Open the Missions tab, press **Run now** on the auto-mission panel, then return to the Audit log tab and press **Refresh**.
+5. Create a round (SH-A1) and rebuild a leaderboard (SH-A2b), then refresh the Audit log again.
 
-**Expected:** Response contains `{ events: [...] }` with entries for actions performed this session (accepts, rejects, profile delete if SH-15 was run). Each event includes a command name, actor, timestamp, and policy decision.
+**Expected:**
+- Step 2: rows are newest first, at most 200, each naming the action in plain words ("Reviewed a nomination", "Removed a nomination", "Restored a nomination"), the actor, what it was done to, and the local date and time. A denied action carries a red chip with its policy status.
+- Step 3: the review row reads `accepted · flagged → accepted · also restored it from removed` — it says the status the row came from, the status it went to, and that the accept brought the removed row back. A plain accept on a pending row shows only `accepted · pending → accepted`.
+- Step 4: a new "Auto-mission run" row appears with the number opened and updated.
+- Step 5: "Created a round" and "Rebuilt the leaderboard" rows appear. Nothing an admin did in this session is missing from the list.
 
 Result: web ☐
 
@@ -823,6 +830,7 @@ Result: web ☐
 - Step 2: 401 or 403.
 - Step 3: 200 success.
 - Step 4: A `round-ending-soon` notification appears for relevant members (up to 30s poll delay). Each member receives this notification at most once per round (idempotent).
+- After step 3, the admin **Audit log** tab shows a "Sent round-ending notifications" row with how many were sent.
 
 Result: web ☐
 

@@ -9,6 +9,7 @@ import {
 } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -153,6 +154,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
       result: 'success',
       errorCategory: null,
       metadata: { roundId, goalType: mission.goalType },
+    });
+    await insertSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.create',
+      policyStatus: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'mission',
+      targetId: mission.id,
+      metadata: { roundId, goalType: mission.goalType, title: mission.title },
     });
     return NextResponse.json({ ok: true, mission }, { status: 201 });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
 import { runAutoMissions } from 'lib/skills-hunt/auto-missions';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -20,6 +21,21 @@ export async function POST(request: Request) {
 
   try {
     const result = await runAutoMissions({ source: 'admin' });
+
+    // A durable row, not only a log line. An admin opening missions on demand changes what members
+    // see and what they can earn, so it belongs in the trail an admin can read.
+    const opened = result.rounds.reduce((sum, round) => sum + round.opened.length, 0);
+    const updated = result.rounds.reduce((sum, round) => sum + round.updated, 0);
+    await insertSkillsHuntAudit({
+      actorId: gate.auth.userId,
+      command: 'skills-hunt.mission.auto_generate',
+      policyStatus: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'auto_mission_run',
+      targetId: result.ranAtIso,
+      metadata: { source: 'admin', skipped: result.skipped ?? null, rounds: result.rounds.length, opened, updated },
+    });
+
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_auto_missions_run' });

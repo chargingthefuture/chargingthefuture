@@ -2113,12 +2113,21 @@ async function handleAcceptedReview(
   }
 }
 
+// What a review did, not only what it produced. The route records the previous status and whether
+// the action also brought a removed row back, so the audit trail says what changed rather than which
+// button was pressed.
+export type SkillsHuntReviewResult = {
+  submission: SkillsHuntSubmission;
+  previousStatus: SkillsHuntSubmission['status'];
+  restoredFromRemoved: boolean;
+};
+
 export async function reviewSubmission(
   actorId: string,
   actorUsername: string | null,
   submissionId: string,
   input: SkillsHuntSubmissionReviewInput,
-): Promise<SkillsHuntSubmission> {
+): Promise<SkillsHuntReviewResult> {
   return withDbTransaction(async (client) => {
     const submissionResult = await client.query<SkillsHuntSubmissionRow>(
       `
@@ -2138,6 +2147,7 @@ export async function reviewSubmission(
           review_notes,
           reviewed_by_user_id,
           reviewed_at,
+          deleted_at,
           directory_profile_generated_at,
           created_at,
           updated_at
@@ -2152,6 +2162,12 @@ export async function reviewSubmission(
     if (!existing) {
       throw new Error('skills_hunt_submission_not_found');
     }
+
+    // Captured before the write so the audit trail can record what actually changed, not only which
+    // button was pressed: an accept on a pending row and an accept on a removed, flagged row are the
+    // same action and very different events.
+    const previousStatus = existing.status;
+    const wasRemoved = existing.deleted_at !== null;
 
     const outcome = await resolveReviewOutcome(client, existing, submissionId, input);
     const status = outcome.status;
@@ -2268,7 +2284,11 @@ export async function reviewSubmission(
       await recomputeMissionProgressForUser(client, existing.round_id, existing.submitter_user_id);
     }
 
-    return mapSubmission(updated.rows[0]);
+    return {
+      submission: mapSubmission(updated.rows[0]),
+      previousStatus,
+      restoredFromRemoved: wasRemoved,
+    };
   });
 }
 

@@ -11,14 +11,16 @@ import { SkillsHuntModeration } from "./sha-moderation";
 import { SkillsHuntRoundManager } from "./sha-round-manager";
 import { SkillsHuntAdminMissions } from "./sha-missions";
 import { SkillsHuntAdminRewardCard } from "./sha-reward-card";
+import { SkillsHuntAdminAudit } from "./sha-audit";
 
-type Tab = "moderation" | "rounds" | "missions" | "reward-card";
+type Tab = "moderation" | "rounds" | "missions" | "reward-card" | "audit";
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "moderation", label: "Moderation" },
   { key: "rounds", label: "Rounds" },
   { key: "missions", label: "Missions" },
   { key: "reward-card", label: "Reward card" },
+  { key: "audit", label: "Audit log" },
 ];
 
 type Props = { rounds: SkillsHuntRound[] };
@@ -53,6 +55,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
       {tab === "rounds" && <SkillsHuntRoundManager rounds={rounds} />}
       {tab === "missions" && <SkillsHuntAdminMissions roundId={activeRoundId} />}
       {tab === "reward-card" && <SkillsHuntAdminRewardCard />}
+      {tab === "audit" && <SkillsHuntAdminAudit />}
     </div>
   );
 }
