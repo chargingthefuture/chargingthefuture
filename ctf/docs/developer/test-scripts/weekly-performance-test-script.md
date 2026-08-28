@@ -109,7 +109,8 @@ is no "set active week" action and no per-week status.
    USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, LevelUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
    posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
-   Members, Directory findable members, Mood check-ins + average, ClickLog incidents + distinct
+   Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
+   incidents + distinct
    loggers. The Active Members card reads "N members": how many different members signed in
    during the selected week. The Daily Active Members card reads "N per day": the average
    number of members active on a day of that week; on the current week it divides by the days of the
@@ -131,7 +132,15 @@ is no "set active week" action and no per-week status.
    A member whose account has since been deleted is not rebuilt — a sign-in row needs a member the
    `users` table still holds — so the rebuilt count can be lower than the evidence the migration
    found, and the Update Neon DB workflow log says how many days were skipped for that reason.
-   Both are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
+   The Accounts Deleted card reads "N accounts": members who ended their whole account in that week.
+   Check what it does NOT count. Delete one plugin's data from the account screen and leave the
+   account open: the card must not move — that member is still here. Delete a whole account through
+   the account screen: the card goes up by one on the week that deletion ran. Clear a duplicate or a
+   test account through the manual `Delete Account (manual)` workflow: the card must not move, because
+   nobody chose to leave; the event row that run writes carries `summary.initiatedBy = 'operator'` and
+   is skipped. Deleting the same account twice can never add two. If the week-over-week line under the
+   card shows a rise, it is red with an up arrow — up is bad on this one card only.
+   All three are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison

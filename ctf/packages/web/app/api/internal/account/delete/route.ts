@@ -118,7 +118,10 @@ export async function POST(request: Request) {
     const deletion = await runWithForcedPool(target, async () => {
       const reclaim = await markFullAccountDeletionRequested(userId);
       step = 'data_deletion';
-      return deleteAllAccountData(userId, reclaim.requestedAtIso);
+      // Marked 'operator': this route clears a duplicate or a demo test account, so the deletion
+      // event it writes must not be read later as a member choosing to leave (the Weekly Performance
+      // deleted-accounts row counts only the member's own choice).
+      return deleteAllAccountData(userId, reclaim.requestedAtIso, 'operator');
     });
 
     const { clerkDeleted, clerkError } = await deleteClerkAccountIfRequested(userId, deleteClerk);

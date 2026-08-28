@@ -20,7 +20,9 @@ import {
 //      plugin was used as intended (a completed trip, a hosted stay, a confirmed contribution…).
 //      These are windowed on the event's own timestamp, so any week reports its real count.
 //   3. Honest ADOPTION rows: how many members are actually turning up — active members (the plain
-//      headcount for the week) and daily active members (the average across the week's days) — plus
+//      headcount for the week) and daily active members (the average across the week's days) — and
+//      the other side of that, deleted accounts: members who ended their whole account this week,
+//      never someone who stayed and cleared one plugin's data — plus
 //      the no-value-to-others plugins the owner wants visible: Directory (findable members), Mood
 //      (check-ins + average, aggregate only), ClickLog (aggregate incidents + distinct loggers —
 //      never per-member detail).
@@ -244,6 +246,31 @@ const dailyActiveMembers = async (weekStart: string) => {
   return Math.round((memberDays / elapsedDaysInWeek(weekStart)) * 100) / 100;
 };
 
+// Deleted accounts: how many members ended their whole account during the week — the turnout rows'
+// counterpart, and the only row here that is bad when it rises.
+//
+// Two things are deliberately left out, because both would make this read as people leaving when
+// they did not:
+//   - A per-plugin "delete my data" (`scope = 'service'`). That member still has an account and is
+//     still here; they cleared one plugin. Only whole-account deletions (`scope = 'account'`) count.
+//   - An operator-run removal. The manual `Delete Account (manual)` workflow clears duplicate and
+//     demo test accounts, and writes the same account-scope row as a member's own deletion, so the
+//     orchestrator marks who asked (`summary.initiatedBy`) and only the member's own choice counts.
+//     Rows written before that marker existed carry none and count as the member's own, which is
+//     what nearly all of them are.
+//
+// Counted on `completed_at`, the moment the deletion actually ran, and counted per member rather
+// than per row so a repeated event for one account can never read as two people leaving.
+const accountsDeleted = (weekStart: string) =>
+  guardedScalar(
+    'account_deletion_events',
+    `SELECT COUNT(DISTINCT user_id)::text AS v FROM account_deletion_events
+     WHERE scope = 'account' AND status = 'completed'
+       AND COALESCE(summary->>'initiatedBy', 'member') <> 'operator'
+       AND completed_at >= $1::date AND completed_at < $1::date + INTERVAL '7 days'`,
+    weekStart,
+  );
+
 // Directory: findable members — claimed, active, non-deleted profiles holding at least one skill.
 // Claim time is not stored, so this is the cumulative count of such profiles created by week end
 // (their CURRENT claimed/active state) — the same cumulative pattern the old members.total used.
@@ -389,6 +416,7 @@ const METRIC_SPECS: MetricSpec[] = [
   { metricKey: 'value.beacon_broadcast_engagement', metricUnit: 'engagements', sourcePlugin: 'beacon', compute: beaconBroadcastEngagement },
   { metricKey: 'adoption.active_members', metricUnit: 'members', sourcePlugin: 'platform', compute: activeMembers },
   { metricKey: 'adoption.daily_active_members', metricUnit: 'per day', sourcePlugin: 'platform', compute: dailyActiveMembers },
+  { metricKey: 'adoption.accounts_deleted', metricUnit: 'accounts', sourcePlugin: 'platform', compute: accountsDeleted },
   { metricKey: 'adoption.directory_findable_members', metricUnit: 'members', sourcePlugin: 'directory', compute: directoryFindableMembers },
   { metricKey: 'adoption.mood_checkins', metricUnit: 'check-ins', sourcePlugin: 'mood', compute: moodCheckins },
   { metricKey: 'adoption.mood_average', metricUnit: '', sourcePlugin: 'mood', compute: moodAverage },
