@@ -15,6 +15,7 @@ interface RowProps {
   onFlag: (id: string) => void;
   onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
+  onRestore: (id: string) => void;
 }
 
 function SkillsCell({ submission }: { submission: SkillsHuntSubmission }) {
@@ -56,7 +57,7 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 // again, and Remove (which does not free that guard either) was the only button on offer. Accepted
 // and rejected stay terminal — reversing those moves points and can pay a reward, so they are not
 // one tap away.
-function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove }: Omit<RowProps, "selected" | "onToggle">) {
+function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, onRemove, onRestore }: Omit<RowProps, "selected" | "onToggle">) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const btn = (bg: string, border: string, color: string): React.CSSProperties => ({
@@ -76,10 +77,14 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, 
   // re-nomination any more, but it is still the record of what happened.
   if (submission.deletedAtIso) {
     return (
-      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ fontSize: 12, color: t.MUTED }}>
           Removed {new Date(submission.deletedAtIso).toLocaleDateString()} · was {submission.status}
         </span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" disabled={acting} onClick={() => onRestore(submission.id)}
+            style={btn(`${t.ACCENT}30`, `1px solid ${t.ACCENT}60`, t.ACCENT)}>Restore</button>
+        </div>
       </div>
     );
   }
@@ -200,6 +205,7 @@ export function SkillsHuntAdminTable({
   onFlag,
   onUnflag,
   onRemove,
+  onRestore,
 }: {
   submissions: SkillsHuntSubmission[];
   selected: Set<string>;
@@ -212,6 +218,7 @@ export function SkillsHuntAdminTable({
   onFlag: (id: string) => void;
   onUnflag: (id: string) => void;
   onRemove: (id: string) => void;
+  onRestore: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -233,6 +240,7 @@ export function SkillsHuntAdminTable({
           onFlag={onFlag}
           onUnflag={onUnflag}
           onRemove={onRemove}
+          onRestore={onRestore}
         />
       ))}
     </div>

@@ -129,6 +129,28 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     await refresh();
   }
 
+  // Restore = undo a removal. The row comes back with the status it had when it was removed, so a
+  // submission that was flagged returns flagged and can then be un-flagged. Without this, Remove is
+  // a one-way door: the row sits in the list marked Removed with nothing an admin can do to it.
+  async function onRestore(id: string) {
+    setActing(id);
+    try {
+      const res = await fetch(`/api/skills-hunt/admin/submissions/${id}/restore`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        throw new Error(body?.message ?? "Unable to restore submission.");
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Unable to restore submission.");
+    } finally {
+      setActing(null);
+    }
+    await refresh();
+  }
+
   async function bulkReview(action: "accept" | "reject") {
     if (selected.size === 0) return;
     const pendingIds = new Set(submissions.filter((s) => s.status === "pending" && s.deletedAtIso === null).map((s) => s.id));
@@ -189,6 +211,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
           onUnflag={(id) => void reviewAndRefresh(id, "unflag", null)}
           onRemove={(id) => void onRemove(id)}
+          onRestore={(id) => void onRestore(id)}
         />
       )}
     </>

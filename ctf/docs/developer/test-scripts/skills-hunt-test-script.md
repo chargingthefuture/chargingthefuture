@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) |
 
 ---
 
@@ -534,6 +534,32 @@ Result: web ☐
 Notes:
 - Steps 3–6 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no way back at all. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap. Unflag arrived a day later — the first fix offered only Accept and Reject, which clears a flag by deciding the submission, and flag exists so a moderator does not have to decide yet.
 - Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+
+Result: web ☐
+
+---
+
+### SH-A6e — A removed submission can be restored
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** A submission exists in the active round.
+
+**Steps:**
+1. Flag it, then use **Remove** on it.
+2. On the **All** or **Removed** filter, find the row. Confirm it reads "Removed *date* · was flagged" and now offers a **Restore** button.
+3. Use **Restore**. Confirm the row loses its Removed badge and comes back as **flagged** — not pending, not accepted.
+4. Use **Unflag**. Confirm it lands in **Pending** with its full actions.
+5. Repeat steps 1–2 with a different nomination, but before restoring it, nominate that same person again as a member. Then use **Restore** on the removed row.
+
+**Expected:**
+- Steps 3–4: restore undoes the removal and nothing else. The status it had when it was removed is the status it comes back with, so an admin is never forced into a verdict to undo a removal.
+- Step 5: the restore is **refused**, with a message saying the person was nominated again and to reject or remove the newer one first. Rejecting the newer nomination and retrying the restore then succeeds.
+
+Notes:
+- This is the fix for a reported bug: with removed rows visible at last, the row was on screen and marked Removed with no action available on it. Remove was a one-way door, the same dead end flag had.
+- The refusal in step 5 is not a bug: removing a submission frees its Quora URL for a fresh nomination, so a restore can collide with one. Two live nominations for one person is what `uq_skills_hunt_submissions_round_signature_live` prevents.
+- Restoring an **accepted** submission returns its points to the leaderboard and its mission progress with them. It does **not** re-mint a ServiceCredits reward, because removing it did not reverse one.
 
 Result: web ☐
 

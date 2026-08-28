@@ -70,6 +70,29 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
+    command: skills-hunt.submission.restore
+    commandVersion: 1.0.0
+    purpose: moderation_and_scoring
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+      - skills_hunt_leaderboard
+      - skills_hunt_mission_progress
+    targetContext:
+      workspaceId: workspace_identifier
+      submissionId: submission_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
     command: skills-hunt.leaderboard.rebuild
     commandVersion: 1.0.0
     purpose: campaign_governance
@@ -499,3 +522,11 @@ changelog:
       scope for SkillsHunt. Nothing in the app called it, and Directory owns the profile lifecycle
       end to end, including creating or repairing one from its own admin screen. SkillsHunt still
       creates the profile automatically on accept; that path is unchanged.
+  - date: 2026-08-28
+    change: >-
+      Added skills-hunt.submission.restore, the inverse of skills-hunt.submission.remove. Without
+      it a removed submission was a dead end — the row stayed in the admin list marked Removed with
+      no action available on it. Restore clears the soft-delete and leaves the status untouched, so
+      a row that was flagged comes back flagged and can then be un-flagged. It is refused when the
+      person has been nominated again in the meantime, since two live nominations for one person is
+      what the live-signature index exists to prevent.
