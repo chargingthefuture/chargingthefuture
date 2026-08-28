@@ -48,6 +48,22 @@ async function runExternalCleanups(userId: string, slugs: readonly string[]): Pr
 
 export type DeletionScope = 'service' | 'account';
 
+/**
+ * Who asked for this deletion.
+ *
+ * `member` — the person themselves: the account screen's Delete Account, a per-plugin "delete my
+ * data", or their own deletion of the sign-in identity (which reaches us as the provider webhook).
+ * `operator` — the manual `Delete Account (manual)` Actions workflow, which clears a duplicate
+ * account or a demo test account. Nobody chose to leave; the account was tidied away.
+ *
+ * The distinction is recorded on the deletion event (`summary.initiatedBy`) because the two are
+ * indistinguishable afterwards — every whole-account deletion writes the same row — and the Weekly
+ * Performance dashboard reports members who chose to go. Counting a duplicate-account cleanup there
+ * would read as a member leaving. Rows written before this field existed carry no marker and are
+ * counted as `member`, which is what nearly all of them are.
+ */
+export type DeletionInitiator = 'member' | 'operator';
+
 export type AccountDeletionResult = {
   readonly ok: true;
   readonly scope: DeletionScope;
@@ -85,6 +101,9 @@ export class UnknownServiceError extends Error {
  * caller passes the timestamp from `markFullAccountDeletionRequested`; for a standalone service
  * delete there is no earlier request step, so it defaults to now. `completed_at` is always stamped
  * `NOW()`. Returns both timestamps so the API can report them with correct semantics.
+ *
+ * `initiatedBy` records whether the person themselves asked or an operator ran the manual removal;
+ * see `DeletionInitiator`.
  */
 async function recordEvent(
   client: PoolClient,
@@ -92,10 +111,12 @@ async function recordEvent(
   scope: DeletionScope,
   serviceName: string,
   tables: readonly DeletionTableResult[],
+  initiatedBy: DeletionInitiator,
   requestedAtIso?: string,
 ): Promise<{ requestedAtIso: string; completedAtIso: string }> {
   const summary = {
     tables: tables.map((t) => ({ table: t.table, action: t.action, rowCount: t.rowCount })),
+    initiatedBy,
   };
   const inserted = await client.query<{ requested_at: Date; completed_at: Date }>(
     `INSERT INTO account_deletion_events
@@ -152,7 +173,7 @@ export async function deleteServiceScopeData(
   try {
     const { result, tables } = await withDbTransaction(async (client) => {
       const tableResults = await executeEntry(client, entry, userId);
-      const recorded = await recordEvent(client, userId, 'service', entry.slug, tableResults);
+      const recorded = await recordEvent(client, userId, 'service', entry.slug, tableResults, 'member');
       return { result: recorded, tables: tableResults };
     });
 
@@ -202,10 +223,15 @@ export async function deleteServiceScopeData(
  * more here than transaction length (each user's per-plugin footprint is small). Money settlement
  * (ServiceCredits reclaim) is handled separately by the caller; `requestedAtIso` is the caller's
  * original request time, stamped onto the event alongside the completion time.
+ *
+ * `initiatedBy` defaults to `member` — the person asked to be forgotten. The operator-only manual
+ * removal route passes `operator` so a duplicate or test account it clears is not later reported as
+ * a member who left.
  */
 export async function deleteAllAccountData(
   userId: string,
   requestedAtIso?: string,
+  initiatedBy: DeletionInitiator = 'member',
 ): Promise<AccountDeletionResult> {
   try {
     const { result, tables } = await withDbTransaction(async (client) => {
@@ -214,7 +240,15 @@ export async function deleteAllAccountData(
         const entryResults = await executeEntry(client, entry, userId);
         allResults.push(...entryResults);
       }
-      const recorded = await recordEvent(client, userId, 'account', 'all-services', allResults, requestedAtIso);
+      const recorded = await recordEvent(
+        client,
+        userId,
+        'account',
+        'all-services',
+        allResults,
+        initiatedBy,
+        requestedAtIso,
+      );
       return { result: recorded, tables: allResults };
     });
 

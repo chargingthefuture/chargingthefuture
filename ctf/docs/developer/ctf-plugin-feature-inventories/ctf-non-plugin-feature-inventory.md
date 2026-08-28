@@ -68,6 +68,12 @@
     rather than failing a deletion that did happen; the account can then be cleared through the operator
     route. The provider's own `user.deleted` webhook fires on success and skips, because the
     `account_deletion_events` row written by this request already exists.
+    Every deletion event records who asked, in its `summary.initiatedBy`: `member` for these two
+    routes and for the provider webhook (the member deleted their own sign-in), `operator` for the
+    manual removal route below. An account-scope row is otherwise identical either way, and the
+    Weekly Performance deleted-accounts row counts only the member's own choice — without the marker
+    a duplicate-account cleanup would be reported as a member leaving. Rows written before the field
+    existed carry no marker and are read as `member`.
   - `GET /api/account/services/:slug/export` and `GET /api/account/full-account/export` (issue
     #1264) — download the member's own data as JSON, per service or whole account. Both gated by
     `requireAccountAccess`, read-only (no CSRF needed on GET), returned with
@@ -207,7 +213,7 @@ The admin side of the member-blocking safety escalation (§1.6). When a member b
 
 Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and called by a GitHub Actions workflow rather than a signed-in member.
 
-1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): records the request + queues the ServiceCredits reclaim, then deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`); optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row. Called only by the manual `Delete Account (manual)` Actions workflow.
+1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): records the request + queues the ServiceCredits reclaim, then deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`); optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row. Called only by the manual `Delete Account (manual)` Actions workflow. Passes `initiatedBy: 'operator'` to the orchestrator, so the deletion event it writes is marked as a duplicate/test-account cleanup rather than a member choosing to leave (the Weekly Performance deleted-accounts row skips it).
 2. `POST /api/internal/product-update` — `Authorization: Bearer ${INTERNAL_SERVICE_SECRET}`. Creates and immediately publishes a feed announcement from `{ title, body }` under the synthetic actor `ci-product-update`, writing a feed audit row. Returns 503 when the secret is unset, 401 on a wrong secret, 400 on missing fields. Lets a release pipeline post a product-update announcement to the feed.
 
 ### 1.10 Operational Probes
@@ -300,6 +306,16 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-28: **A deletion event now records who asked for it.** `account_deletion_events.summary`
+  gains `initiatedBy` (`member` | `operator`), written by `lib/account/deletion-orchestrator.ts`.
+  Until now every whole-account deletion wrote the same row whether the member chose to go or an
+  operator cleared a duplicate or demo test account through the manual `Delete Account (manual)`
+  workflow, so the two were indistinguishable afterwards. The self-service routes and the provider
+  `user.deleted` webhook record `member`; `POST /api/internal/account/delete` passes `operator`. Rows
+  written before the field existed carry no marker and are read as `member`. No schema change
+  (`summary` is already JSONB) and no behavior change to what a deletion deletes. Added for the new
+  Weekly Performance deleted-accounts row, which reports members who chose to leave and would
+  otherwise count a duplicate-account cleanup as one.
 - 2026-08-24: **"Your account" and the admin landing page scroll as pages; the last leftovers of the
   removed desktop viewport lock are gone (owner report: Safari's "Full Page" screenshot only captured
   one screenful).** Both screens were pinned to exactly one viewport with an inner `overflow` box —
