@@ -97,16 +97,6 @@
       "reason": "Feed has lib/feed/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give Feed an audit table and route logFeedAudit to it."
     },
     {
-      "route": "/api/mutual-time/events/[eventId]/close",
-      "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
-    },
-    {
-      "route": "/api/mutual-time/events",
-      "kind": "burn-down",
-      "reason": "Mutual Time has no audit machinery at all \u2014 no table, no helper, not even a log line. Burn down: add an audit table and write a row on every admin mutation."
-    },
-    {
       "route": "/api/skills-taxonomy/admin/job-titles/[id]",
       "kind": "burn-down",
       "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."

@@ -601,6 +601,28 @@ Result: web ☐
 
 ---
 
+### MT-A13 — The audit log records every admin action, refusals included (added 2026-08-28)
+
+**Role:** admin · **Surfaces:** web (admin surface)
+
+**Precondition:** run MT-A1 (create an event) and close one, so there are real actions to find.
+
+**Steps:**
+1. On the Mutual Time admin dashboard, expand the **Audit log** panel at the bottom.
+2. Read the newest entries.
+3. Close an event that is already closed (repeat the close on the same event), then reopen the panel.
+4. Open a new event, then reopen the panel.
+
+**Expected:**
+- Step 2: entries newest first, at most 200, each naming the action in plain words — "Opened an event", "Closed an event" — with the admin's id, the event acted on, and the local date and time.
+- Step 3: the refusal appears marked **Refused**, reading "Because the event was already closed". An action that did not happen is recorded, not dropped.
+- Step 4: an "Opened an event" row appears.
+- **No row names a voter.** Saving picks is a member's action, not an admin's, and writes no audit row — its absence here is correct, not a gap. Together with MT-A11 (individual votes never exposed in the public read), this is the check that the trail did not become a back door to who voted for what.
+
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Parity check (web ↔ mobile)
 
 The following cases must behave identically in a desktop browser and a phone-width browser. Layout may reflow (single column, scrollable date chips) but all controls and data must be present and functional.

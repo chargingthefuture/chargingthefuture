@@ -861,7 +861,11 @@ COMMIT;
 -- One row per user-initiated deletion the orchestrator runs: a per-plugin "delete my data"
 -- (scope = 'service') or a whole-account deletion (scope = 'account'). This is the canonical,
 -- retained accountability record of what the orchestrator did — it is never itself deleted by a
--- deletion. `summary` holds the per-table row counts the engine reported, for audit.
+-- deletion. `summary` holds the per-table row counts the engine reported, for audit, plus
+-- `initiatedBy` ('member' | 'operator'): who asked for the deletion. A whole-account row looks the
+-- same whether the member chose to go or an operator cleared a duplicate/test account through the
+-- manual removal workflow, and the Weekly Performance deleted-accounts row counts only the member's
+-- own choice. Rows written before that field existed carry no marker and are read as 'member'.
 CREATE TABLE IF NOT EXISTS account_deletion_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -4733,6 +4737,40 @@ ALTER TABLE IF EXISTS directory_admin_audit_trail ADD COLUMN IF NOT EXISTS creat
 -- or one kind of action without a sequential scan once the table has years in it.
 CREATE INDEX IF NOT EXISTS idx_directory_admin_audit_trail_lookup
   ON directory_admin_audit_trail (created_at DESC, actor_id, command);
+
+-- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
+-- on every surface. lib/mutual-time/audit.ts builds the whole contract-shaped event and ends in
+-- console.info — a line in the server's log, which nothing can query, no screen can show, and which
+-- ages out of the host's retention window. Opening an event and closing one decide what members can
+-- put their time into, so both belong in a record an admin can read back.
+CREATE TABLE IF NOT EXISTS mutual_time_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS mutual_time_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The Audit log panel reads newest-first; actor and command support narrowing to one admin or one
+-- kind of action without a sequential scan.
+CREATE INDEX IF NOT EXISTS idx_mutual_time_admin_audit_trail_lookup
+  ON mutual_time_admin_audit_trail (created_at DESC, actor_id, command);
 
 CREATE TABLE IF NOT EXISTS workforce_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
