@@ -43,6 +43,10 @@ fields.
 
 ## 4) Domain Data Owned by Plugin
 
+- Table/entity: `comic_admin_audit_trail`
+  - Contains personal data? minimal (the acting admin's id, and the id of what was acted on)
+  - Retention period: compliance retention window
+  - Legal/compliance note: the durable record of every admin decision on the AI Assistant, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion — the record of a decision about someone's contribution has to outlive the contribution, or a decline erases its own evidence. Holds no member-authored content.
 - Table/entity: `comic_conversations`
   - Contains personal data? yes (`user_id` ownership, and `asker_username` — the asker's @username
     snapshotted at ask time for display in the review dashboard)

@@ -141,6 +141,7 @@ contracts:
       - comic_turns.linked_plugin_slugs
       - comic_training_examples
       - ctf_plugin_registry
+      - comic_admin_audit_trail
     purpose: assistant_human_review
     retentionClass: transactional_long_lived
     idempotency: false
@@ -319,6 +320,7 @@ contracts:
       - comic_contribution_entries
       - comic_knowledge_entries
       - service_credits_governance_events
+      - comic_admin_audit_trail
     purpose: assistant_knowledge_contribution
     retentionClass: transactional_long_lived
     idempotency: false
@@ -455,6 +457,55 @@ contracts:
         type: object
     dataAccess:
       - comic_knowledge_entries
+      - comic_admin_audit_trail
     purpose: assistant_knowledge_curation
     retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.review.regenerate
+    version: 1.0.0
+    description: >-
+      Admin asks the engine for a fresh draft answer on a queued review item, replacing the one that
+      is there. Added to the contract surface on 2026-08-28: the route had shipped with no command,
+      access-policy or audit-event contract behind it. Succeeds whether or not a draft comes back —
+      the response says which, and the audit row records it.
+    inputSchema:
+      reviewId:
+        type: string
+        required: true
+        description: The comic_review_queue row id (the route names the segment turnId for shape parity with resolve).
+    outputSchema:
+      attached:
+        type: boolean
+        description: Whether a fresh draft was attached, or the engine was unreachable.
+      reason:
+        type: string
+    dataAccess:
+      - comic_review_queue
+      - comic_turns
+      - comic_admin_audit_trail
+    purpose: assistant_supervision
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: comic
+    command: comic.admin.audit.list
+    version: 1.0.0
+    description: >-
+      Admin reads the AI Assistant admin audit trail, newest first. Read-only; the trail is
+      append-only and holds no member content, so it is not removed on a member's account deletion —
+      the record of a decision about someone's contribution outlives the contribution.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        description: How many rows to return. Defaults to 100, capped at 200.
+    outputSchema:
+      events:
+        type: array
+    dataAccess:
+      - comic_admin_audit_trail
+    purpose: governance_transparency
+    retentionClass: audit_long_lived
     idempotency: true

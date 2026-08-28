@@ -5,6 +5,7 @@ import { BookOpen } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
+import { ComicAuditPanel } from './comic-audit-panel';
 import { failureText } from 'lib/errors/client-failure';
 
 // Admin curation of the assistant's grounding library (comic_knowledge_entries). Until 2026-08-05
@@ -206,6 +207,8 @@ export function ComicKnowledgeAdmin() {
             Load more
           </button>
         ) : null}
+
+        <ComicAuditPanel tokens={t} />
       </div>
     </div>
   );
