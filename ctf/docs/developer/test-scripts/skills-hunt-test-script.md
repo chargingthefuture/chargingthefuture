@@ -533,7 +533,8 @@ Result: web ☐
 
 Notes:
 - Steps 3–6 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no way back at all. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap. Unflag arrived a day later — the first fix offered only Accept and Reject, which clears a flag by deciding the submission, and flag exists so a moderator does not have to decide yet.
-- Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+- **Step 5 is a regression check, not a formality.** Unflag shipped as a visible button that always returned 400 "Invalid review payload.": the review action list was written out in three places and the repository validator's copy never gained `unflag`. If this step ever fails that way again, the cause is the list having been duplicated — it now lives once, in `SKILLS_HUNT_REVIEW_ACTIONS` in `lib/skills-hunt/types.ts`, with `SkillsHuntReviewAction` derived from it.
+- No row is terminal. Since 2026-08-28 every row offers Accept, Reject, Flag-or-Unflag and Remove-or-Restore whatever state it is in, so an accepted row can be rejected and a removed one acted on directly.
 
 Result: web ☐
 

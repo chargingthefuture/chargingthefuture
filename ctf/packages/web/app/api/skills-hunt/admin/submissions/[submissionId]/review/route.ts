@@ -12,6 +12,7 @@ import {
   validateReviewInput,
 } from 'lib/skills-hunt/repository';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
+import { SKILLS_HUNT_REVIEW_ACTIONS } from 'lib/skills-hunt/types';
 import type { SkillsHuntReviewAction, SkillsHuntSubmission, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
@@ -21,13 +22,11 @@ import { failureReason, withReason } from 'lib/errors/failure';
 // separately in the admin audit trail.
 const SKILLS_HUNT_INCENTIVE_ACTOR_ID = 'skills-hunt-incentive-system';
 
-const REVIEW_ACTIONS: readonly SkillsHuntReviewAction[] = ['accept', 'reject', 'edit', 'flag', 'unflag'];
-
 type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
 function toReviewInput(body: ReviewBody): SkillsHuntSubmissionReviewInput {
   return {
-    action: REVIEW_ACTIONS.includes(body.action as SkillsHuntReviewAction)
+    action: SKILLS_HUNT_REVIEW_ACTIONS.includes(body.action as SkillsHuntReviewAction)
       ? (body.action as SkillsHuntReviewAction)
       : 'flag',
     notes: typeof body.notes === 'string' ? body.notes : null,
