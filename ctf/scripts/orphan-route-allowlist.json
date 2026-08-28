@@ -345,33 +345,33 @@
     },
     {
       "route": "/api/skills-taxonomy/admin/job-titles/[id]",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/skills-taxonomy/admin/job-titles",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/skills-taxonomy/admin/sectors/[id]",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/skills-taxonomy/admin/sectors",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/skills-taxonomy/admin/skills/[id]",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/skills-taxonomy/admin/skills",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+      "kind": "read-only-no-screen",
+      "reason": "Read-only since 2026-08-28 (governance plan task 7 removed the write handlers). Skills Taxonomy has no admin screen \u2014 the taxonomy is changed through the append-only change list in ctf/scripts/lib/taxonomyChange.mjs, applied by the owner-run workflow. Burn down by building a read-only admin browse screen or by deleting these reads too; do not re-add a write path here."
     },
     {
       "route": "/api/socket-relay/admin/fulfillments",

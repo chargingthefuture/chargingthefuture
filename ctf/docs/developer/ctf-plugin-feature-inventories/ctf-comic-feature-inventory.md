@@ -222,6 +222,14 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 
 ## Target Admin / Owner Features
 
+### Audit log (shipped 2026-08-28)
+
+A collapsible **Audit log** panel at the bottom of `/admin/comic/knowledge` lists every admin
+decision on the AI Assistant, newest first — accepting or declining a member's contribution,
+regenerating or resolving a draft answer, switching a knowledge entry on or off — **including the
+ones that were refused, and why**. Most recent 200, loaded lazily on first expand. Reads
+`GET /api/comic/admin/audit-events?limit=200`.
+
 ### Contributed-writing review (`/admin/comic/contributions`, shipped 2026-07-29)
 
 1. Queue of contributions waiting to be read, each showing the **actual writing** — the decision
@@ -340,6 +348,9 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
 - `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — admin,
   CSRF-guarded. Switch one grounding entry on/off for retrieval. Off never deletes: the row stays
   and retrieval simply skips inactive rows; the entry can be switched back on.
+- `GET /api/comic/admin/audit-events` (`comic.admin.audit.list`) — admin. Read of
+  `comic_admin_audit_trail`, newest first; optional `?limit=` (default 100, capped at 200). Returns
+  `{ events }`. Backs the **Audit log** panel at the bottom of `/admin/comic/knowledge`.
 - `GET /api/comic/conversation` (`comic.conversation.read`) — member/approved-or-admin. The
   asker-facing read powering the unified stream: returns the **requesting user's own** @comic Q&A
   items as answered cards (approved/corrected reviews only) or pending "Reviewing for safety" cards.
@@ -498,6 +509,16 @@ its own `comic_turns` and emits a structured `[comic.inference]` console audit f
 if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
 for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
 
+**Admin audit trail (added 2026-08-28).**
+
+- `comic_admin_audit_trail` — one row per admin decision: `id`, `actor_id`, `command`,
+  `policy_status` (`allow`/`deny`), `reason`, `target_type`, `target_id`, `result`
+  (`success`/`failure`), `error_category`, `metadata` (jsonb), `created_at`, indexed
+  `(created_at DESC, actor_id, command)`. Written by `recordComicAdminAudit` on every outcome
+  including a refusal. **Holds no member content** — the acting admin's id and the id of what was
+  acted on — so it is retained on account deletion: the record of a decision about someone's
+  contribution has to outlive the contribution.
+
 ### Training dataset & how to begin fine-tuning
 
 This subsection is the single place a future engineer (or the owner) needs to read to pick up the
@@ -568,6 +589,12 @@ this counter and export exist so the data is ready the moment the owner chooses 
 3. **Consent:** LLM-processing consent verified before any generation (carry forward the
    current `llm_consent_granted` gate).
 4. Server-side authz + CSRF on all state-changing routes; admin gating on review/training.
+5. **Every admin decision writes a durable row to `comic_admin_audit_trail`** via
+   `recordComicAdminAudit`, which also emits the observability line — on success, on a refusal, and
+   on a persistence failure. Before 2026-08-28 `logComicAudit` wrote the event to the server's log
+   alone, so a member whose contribution was declined left no record anyone could read back. The
+   member-facing commands (asking, rating, contributing, withdrawing) still emit `logComicAudit`
+   alone: a row per message would be volume, not accountability.
    **Implemented:** `_lib.requireComicReadAccess` / `requireComicAdminAccess` /
    `ensureMutationCsrf` (mirrors feed `_lib`).
 5. Audit: allow/deny logged via `lib/comic/audit.ts` (`logComicAudit`, pluginId `comic`);
@@ -743,6 +770,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-08-28: **Every AI Assistant admin decision is recorded in a table an admin can read, including the ones that were refused.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. `lib/comic/audit.ts` built the entire contract-shaped event and ended in `console.info` — a line in the server's log, which nothing can query, no screen can show, and which ages out of the host's retention window. These are decisions about other people's writing: accepting a contribution, declining one with a reason, regenerating or resolving a draft answer, switching a knowledge entry off. New table `comic_admin_audit_trail` (actor, command, policy status, reason, target, result, error category, metadata, timestamp; indexed newest-first by actor and command). New `recordComicAdminAudit` writes the row **and** the log line, and all four admin mutation routes use it on every outcome. It never throws: an audit write that failed would otherwise turn a completed decision into a 503 and have a reviewer repeat an accept or decline they had already made. **`PUT /api/comic/admin/knowledge/:entryId` had no audit call at all** — not even a log line — so switching a grounding entry on or off was invisible; it now records the success, the not-found refusal, and the persistence failure, each carrying whether the entry was switched on or off. New `GET /api/comic/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/comic/knowledge`, reading the most recent 200 with plain-language labels ("Decided on a contribution", "Switched a knowledge entry on or off", "Refused · Because the record was not there") and the decision or decline reason from the metadata. The member-facing commands keep the log line alone. Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip an accepted contribution, a declined one with its reason, a knowledge entry switched off, and a set-active refused as not-found. Comic's four routes leave the admin-audit-coverage burn-down list.
 - 2026-08-24: **The owner review dashboard scrolls as a page.** Its wrapper was pinned to exactly one
   viewport (`.mobileFrame { height: 100dvh }`), so a queue or an answer longer than the screen
   scrolled inside a box while the document stayed put — which also stopped Safari's "Full Page"

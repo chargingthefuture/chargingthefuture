@@ -338,6 +338,28 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 
 ---
 
+## CMC-A8 · The audit log records every admin decision, refusals included (added 2026-08-28)
+**Role:** admin
+**Precondition:** run CMC-A6 (switch a knowledge entry off and on) and decide on at least one contribution — accept one and decline another with a reason — so there are real decisions to find.
+
+**Steps:**
+1. Open `/admin/comic/knowledge` and expand the **Audit log** panel at the bottom.
+2. Read the newest entries.
+3. `PUT /api/comic/admin/knowledge/<a uuid that does not exist>` with `{ "active": true }`, then reopen the panel.
+4. Regenerate a draft answer on `/admin/comic`, then reopen the panel.
+
+**Expected:**
+- Step 2: entries newest first, at most 200, each naming the decision in plain words — "Decided on a contribution", "Switched a knowledge entry on or off", "Regenerated a draft answer" — with the admin's id, what it was done to, and the local date and time. A decline shows its reason from the metadata; a knowledge toggle says "switched on" or "switched off".
+- Step 3: the 404 appears in the list marked **Refused**, reading "Because the record was not there". An action that did not happen is recorded, not dropped. This is the case worth checking: before 2026-08-28 the knowledge route wrote nothing at all, not even a log line, so switching an entry off left no trace whatever.
+- Step 4: a "Regenerated a draft answer" row appears.
+- Nothing an admin did in this session is missing from the list.
+
+**Note:** the member-facing actions — asking, rating, contributing, withdrawing — deliberately write no audit row. A row per message would be volume, not accountability. Their absence here is correct, not a gap.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)
 **Steps:**

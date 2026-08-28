@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { logComicAudit } from 'lib/comic/audit';
+import { recordComicAdminAudit } from 'lib/comic/audit';
 import { regenerateComicDraft } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -25,7 +25,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   try {
     const result = await regenerateComicDraft(gate.auth.userId, reviewId);
 
-    logComicAudit({
+    await recordComicAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'comic',
       command: 'comic.review.regenerate',
