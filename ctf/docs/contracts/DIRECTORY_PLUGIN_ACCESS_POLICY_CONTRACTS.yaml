@@ -192,3 +192,104 @@ policies:
     denyConditions:
       - actor_not_authorized_for_profile
       - cross_workspace_access
+
+  # Added 2026-08-28. The takedown and override commands had shipped with a command contract and an
+  # audit event but no access policy; the two audit commands are new with the durable trail.
+  - pluginId: directory
+    command: directory.admin.profile.takedown
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      communityGeneratedProfileOnly: required
+      unclaimedProfileOnly: required
+      reasonRequired: enforced
+    consentRequirements:
+      scopes:
+        - directory_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - profile_already_claimed
+      - profile_not_community_generated
+      - profile_has_no_quora_url
+      - not_found
+
+  - pluginId: directory
+    command: directory.admin.announcement.deactivate
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - directory_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - not_found
+
+  - pluginId: directory
+    command: directory.admin.takedown.override
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      reasonRequired: enforced
+    consentRequirements:
+      scopes:
+        - directory_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - suppression_already_lifted
+      - not_found
+
+  - pluginId: directory
+    command: directory.admin.audit.list
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      readOnly: enforced
+    consentRequirements:
+      scopes:
+        - directory_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role

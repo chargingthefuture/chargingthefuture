@@ -384,6 +384,26 @@ CSRF-guarded, and records an allow/deny audit line.
 summary with the count of each. It is read-only and never mutates the taxonomy.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A6 · Audit log records every admin action, refusals included
+**Role:** admin · **Surfaces:** web (admin surface)
+**Precondition:** Run DIR-A1, DIR-A3, DIR-A3b and DIR-A4 first, so there are real actions to find.
+**Steps:**
+1. On `/admin/directory`, expand the **Audit log** panel below the takedown list.
+2. Read the newest entries.
+3. Try a takedown on a **claimed** profile (it should be refused), then refresh the panel.
+4. Lift a Quora URL block from the takedown list, then refresh the panel.
+5. Deactivate an announcement, then refresh the panel.
+**Expected:**
+- Step 2: entries newest first, at most 200, each naming the action in plain words ("Created a
+  profile", "Removed a profile at the person's request", "Lifted a Quora URL block"), with the
+  admin's id, what it was done to, and the local date and time.
+- Step 3: the refusal appears too, marked **Refused**, with a reason line reading "Because someone
+  has claimed it". An action that did not happen is recorded, not dropped.
+- Step 4: a "Lifted a Quora URL block" entry appears.
+- Step 5: it reads "Took down an announcement", **not** "Saved an announcement".
+- Nothing an admin did in this session is missing from the list.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
