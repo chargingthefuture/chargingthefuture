@@ -27,12 +27,11 @@ export const SKILLS_HUNT_MAX_SKILL_LABEL_LENGTH = 40;
 // against this larger bound so a legitimate long skill name does not fail the submission.
 export const SKILLS_HUNT_MAX_TAXONOMY_SKILL_LABEL_LENGTH = 120;
 
-export const SKILLS_HUNT_SUBMISSION_LIMIT_7D = 10;
 export const SKILLS_HUNT_REJECTION_GUARD_SAMPLE_SIZE = 10;
 export const SKILLS_HUNT_REJECTION_GUARD_THRESHOLD = 0.8;
 
-// Reputation tiers (Wave 2 implementation; constants land now so contracts
-// and inventory can reference them consistently). See session-continuity §6.
+// Reputation tiers. Read by resolveReputationTier() in repository.ts to set a
+// scout's rolling 7-day submission limit and whether they need pre-approval.
 export const SKILLS_HUNT_REPUTATION = {
   newUserSubmissionLimit7d: 3,
   trustedUserSubmissionLimit7d: 10,
@@ -45,21 +44,8 @@ export const SKILLS_HUNT_REPUTATION = {
 // URL liveness check (HEAD only; no body fetched — Quora ToS compliance).
 export const SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS = 5_000;
 
-// Scoring weights — legacy Wave 1 baseline. **No longer consumed by the
-// engine** as of the 2026-05-12 scoring rewrite — scoreSubmission() now
-// reads SKILLS_HUNT_SCORE_WEIGHTS_SPEC below merged with per-round
-// scoring_config overrides. Kept here only because seed scripts/tests
-// may still reference it. Safe to delete once those callers move over.
-export const SKILLS_HUNT_SCORE_WEIGHTS = {
-  matchBase: 3,
-  firstMatchBonus: 4,
-  rareSkillBonusDefault: 3,
-  qualityBonus: 2,
-} as const;
-
-// Scoring weights aligned with locked owner spec (2026-05-11). Wave 2 will
-// rewrite computeScoreBreakdown to consume these and per-round
-// scoring_config overrides. See session-continuity §6 Wave 2.
+// Scoring weights aligned with locked owner spec (2026-05-11). Read by
+// scoreSubmission() merged with per-round scoring_config overrides.
 export const SKILLS_HUNT_SCORE_WEIGHTS_SPEC = {
   matchBase: 10,
   firstMatchBonus: 5,
@@ -99,7 +85,6 @@ export const SKILLS_HUNT_ERROR_CODE = {
   invalidReviewAction: 'SKILLS_HUNT_INVALID_REVIEW_ACTION',
   profileAlreadyGenerated: 'SKILLS_HUNT_PROFILE_ALREADY_GENERATED',
   urlValidationFailed: 'SKILLS_HUNT_URL_VALIDATION_FAILED',
-  usernameRequired: 'SKILLS_HUNT_USERNAME_REQUIRED',
   reservedUsername: 'SKILLS_HUNT_RESERVED_USERNAME',
   preApprovalRequired: 'SKILLS_HUNT_PRE_APPROVAL_REQUIRED',
 } as const;

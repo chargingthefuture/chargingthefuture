@@ -93,7 +93,7 @@ export function groupTaxonomyBySector(rows: TaxonomyFlattenedRow[]): Record<stri
   return result;
 }
 
-export const BADGE_META: Record<string, { emoji: string; desc: string }> = {
+const BADGE_META: Record<string, { emoji: string; desc: string }> = {
   "first-finder":         { emoji: "🔍", desc: "First accepted submission for a URL" },
   "diversity-champion":   { emoji: "🌍", desc: "Skills spanning 3+ sectors" },
   "rare-talent-scout":    { emoji: "💎", desc: "Found a rare skill (<50% recruited)" },

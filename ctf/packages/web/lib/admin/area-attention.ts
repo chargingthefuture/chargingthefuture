@@ -55,8 +55,6 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   'skills-hunt': [
     `SELECT COUNT(*)::int AS n FROM skills_hunt_submissions
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
-    `SELECT COUNT(*)::int AS n FROM skills_hunt_submission_reports
-       WHERE status = 'open' AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
   'trust-transport': [
     `SELECT COUNT(*)::int AS n FROM trust_transport_disputes

@@ -1,7 +1,7 @@
 import { SKILLS_HUNT_URL_VALIDATION_TIMEOUT_MS } from './constants';
 import type { SkillsHuntUrlValidationResult } from './types';
 
-export type UrlLivenessOutcome = {
+type UrlLivenessOutcome = {
   result: SkillsHuntUrlValidationResult;
   status: number | null;
   checkedAtIso: string;

@@ -571,7 +571,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   city TEXT NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
-  claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'flagged')),
   review_action TEXT NULL CHECK (review_action IN ('accept', 'reject', 'edit', 'flag')),
@@ -608,7 +607,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
   rare_skill_bonus INTEGER NOT NULL DEFAULT 0,
   user_id TEXT NULL,
   username_snapshot TEXT NULL,
-  team_key TEXT NULL,
   last_submission_at TIMESTAMPTZ NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -681,21 +679,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_audit_log (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS skills_hunt_submission_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  submission_id UUID NULL REFERENCES skills_hunt_submissions(id) ON DELETE SET NULL,
-  directory_profile_id TEXT NULL,
-  reporter_user_id TEXT NOT NULL,
-  reporter_username TEXT NULL,
-  reason TEXT NOT NULL CHECK (reason IN ('no_permission', 'inaccurate', 'duplicate', 'spam', 'other')),
-  details TEXT NULL,
-  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'dismissed', 'archived', 'removed')),
-  resolution_notes TEXT NULL,
-  resolved_by_user_id TEXT NULL,
-  resolved_at TIMESTAMPTZ NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CHECK (submission_id IS NOT NULL OR directory_profile_id IS NOT NULL)
-);
 -- Missions: themed sub-goals within a round (post-design lock 2026-05-11,
 -- continuity 2.9). One mission belongs to one round; per-user progress is
 -- tracked in skills_hunt_mission_progress and recomputed on accept by the
@@ -724,7 +707,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_mission_progress (
   user_id TEXT NOT NULL,
   progress_count INTEGER NOT NULL DEFAULT 0 CHECK (progress_count >= 0),
   completed_at TIMESTAMPTZ NULL,
-  bonus_credited_at TIMESTAMPTZ NULL,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (mission_id, user_id)
@@ -760,26 +742,46 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_rounds_status_window ON skills_hunt_r
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_round_status_created ON skills_hunt_submissions (round_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_submitter_created ON skills_hunt_submissions (submitter_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_submissions (deleted_at) WHERE deleted_at IS NULL;
+-- claimed_professions is dropped (owner directive 2026-08-27: no unused code). The nomination form
+-- stopped collecting professions when the taxonomy skills picker replaced that field, and every
+-- reader has now been removed: the team leaderboard, the stack bonus and the count_distinct_sectors
+-- goal type were deleted, the diversity-champion badge counts taxonomy sectors from the submitted
+-- skills instead (which is what its description always promised), and the generated Directory
+-- profile's headline had been null for as long as the column had been empty. Nothing reads it, so
+-- it goes rather than sitting as a column no code touches.
+ALTER TABLE IF EXISTS skills_hunt_submissions DROP COLUMN IF EXISTS claimed_professions;
 -- Team leaderboard removed (owner directive 2026-08-27). Teams was meant to be members teaming up
 -- on submissions; it was never that — it regrouped the same accepted nominations by the nominee's
 -- claimed profession, and since the nomination form stopped collecting professions every row landed
 -- in a single "Unspecified" bucket. The mode toggle, the team rows and the team queries are gone.
--- Existing team rows are deleted here rather than left to age out on the next rebuild. The `mode`
--- and `team_key` columns are deliberately kept: `mode` carries the UNIQUE (round_id, mode, rank)
--- key and is now always 'individual', and dropping either would be a destructive change for no
--- gain. The CHECK is narrowed so a team row cannot come back.
+-- Existing team rows are deleted here rather than left to age out on the next rebuild. `mode` is
+-- kept because it carries the UNIQUE (round_id, mode, rank) key and is now always 'individual';
+-- the CHECK is narrowed so a team row cannot come back. `team_key` is dropped below with the rest
+-- of the unused code — nothing reads or writes it.
 DELETE FROM skills_hunt_leaderboard WHERE mode <> 'individual';
 ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP CONSTRAINT IF EXISTS skills_hunt_leaderboard_mode_check;
 ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderboard_mode_check CHECK (mode IN ('individual'));
+-- Unused-code sweep (owner directive 2026-08-27). Two columns nothing reads or writes:
+-- `skills_hunt_leaderboard.team_key` (only ever set by the team aggregation removed above) and
+-- `skills_hunt_mission_progress.bonus_credited_at` (the marker for a ServiceCredits payout that is
+-- not being built — mission points are a leaderboard ranking figure, not credits).
+-- Community moderation reports removed (owner directive 2026-08-27). A member could never file one:
+-- the route had no button anywhere in the app, so the admin queue could only ever be empty. And
+-- resolving a report as 'removed' only flipped this table's status column — it never deleted the
+-- profile or blocked anything, so an admin marking one resolved would believe a profile had come
+-- down when nothing had. Its first reason, 'no_permission', described every community-generated
+-- profile by definition rather than singling one out. Directory owns this properly: an admin takes
+-- down a community-generated profile from the Directory admin screen, which deletes it and blocks
+-- its Quora URL from being listed again until the block is lifted.
+DROP TABLE IF EXISTS skills_hunt_submission_reports;
+ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP COLUMN IF EXISTS team_key;
+ALTER TABLE IF EXISTS skills_hunt_mission_progress DROP COLUMN IF EXISTS bonus_credited_at;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_tiebreak ON skills_hunt_leaderboard (round_id, mode, score DESC, first_match_count DESC, last_submission_at ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achievements (user_id, archived_at, awarded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_round ON skills_hunt_achievements (round_id) WHERE round_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_notifications_user_unread ON skills_hunt_notifications (user_id, read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_audit_log_lookup ON skills_hunt_audit_log (created_at DESC, actor_id, command);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_status ON skills_hunt_submission_reports (status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_submission ON skills_hunt_submission_reports (submission_id) WHERE submission_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_submission_reports_directory ON skills_hunt_submission_reports (directory_profile_id) WHERE directory_profile_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_missions_round_status ON skills_hunt_missions (round_id, status, display_order ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_user ON skills_hunt_mission_progress (user_id, completed_at, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hunt_mission_progress (mission_id, completed_at);
@@ -4834,7 +4836,6 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS bio TEXT 
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS quora_profile_url_normalized TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS claimed_professions JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS signature_hash TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS country TEXT NULL;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS state TEXT NULL;
@@ -4954,7 +4955,6 @@ $skills_hunt_achievements_round_fk$;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS color_hex TEXT;
 ALTER TABLE IF EXISTS skills_hunt_missions ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS bonus_credited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- trust_transport_admin_audit_trail (1 — defensive)

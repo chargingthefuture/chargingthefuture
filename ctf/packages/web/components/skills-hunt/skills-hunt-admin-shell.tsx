@@ -10,16 +10,14 @@ import { getSkillsHuntAdminTokens } from "./sha-shared";
 import { SkillsHuntModeration } from "./sha-moderation";
 import { SkillsHuntRoundManager } from "./sha-round-manager";
 import { SkillsHuntAdminMissions } from "./sha-missions";
-import { SkillsHuntAdminReports } from "./sha-reports";
 import { SkillsHuntAdminRewardCard } from "./sha-reward-card";
 
-type Tab = "moderation" | "rounds" | "missions" | "reports" | "reward-card";
+type Tab = "moderation" | "rounds" | "missions" | "reward-card";
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "moderation", label: "Moderation" },
   { key: "rounds", label: "Rounds" },
   { key: "missions", label: "Missions" },
-  { key: "reports", label: "Reports" },
   { key: "reward-card", label: "Reward card" },
 ];
 
@@ -54,7 +52,6 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
       {tab === "moderation" && <SkillsHuntModeration rounds={rounds} activeRoundId={activeRoundId} onRoundChange={setActiveRoundId} />}
       {tab === "rounds" && <SkillsHuntRoundManager rounds={rounds} />}
       {tab === "missions" && <SkillsHuntAdminMissions roundId={activeRoundId} />}
-      {tab === "reports" && <SkillsHuntAdminReports />}
       {tab === "reward-card" && <SkillsHuntAdminRewardCard />}
     </div>
   );

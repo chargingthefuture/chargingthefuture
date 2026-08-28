@@ -60,7 +60,6 @@ async function main() {
             quora_profile_url_normalized,
             skills,
             proposed_skills,
-            claimed_professions,
             signature_hash,
             status,
             review_action,
@@ -86,7 +85,6 @@ async function main() {
             'https://www.quora.com/profile/Seed-Contributor',
             '["TypeScript","Policy Design"]'::jsonb,
             '["Kintsugi"]'::jsonb,
-            '["mentor","instructor"]'::jsonb,
             'seed-signature-001',
             'accepted',
             'accept',
@@ -113,7 +111,6 @@ async function main() {
           url_validation_result = EXCLUDED.url_validation_result,
           url_validation_checked_at = EXCLUDED.url_validation_checked_at,
           proposed_skills = EXCLUDED.proposed_skills,
-          claimed_professions = EXCLUDED.claimed_professions,
           reviewed_at = EXCLUDED.reviewed_at,
           updated_at = NOW()
       `,
