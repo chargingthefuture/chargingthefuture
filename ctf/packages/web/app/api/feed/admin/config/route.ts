@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../_lib';
 import { FEED_ALLOWED_CHANNELS, FEED_ERROR_CODE } from 'lib/feed/constants';
 import { getFeedConfig, updateFeedConfig, validateFeedConfigInput } from 'lib/feed/repository';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import type { FeedConfigInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -70,7 +70,7 @@ export async function PUT(request: Request) {
 
   try {
     const config = await updateFeedConfig(gate.auth.userId, input);
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.admin.config.update',

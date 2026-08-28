@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
-import { logFeedAudit } from 'lib/feed/audit';
+import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import type { AnnouncementDraftInput } from 'lib/feed/types';
 import { reportError } from 'lib/observability/report';
@@ -59,7 +59,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   try {
     const announcement = await updateAnnouncementDraft(gate.auth.userId, announcementId, input);
-    logFeedAudit({
+    await recordFeedAdminAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',
       command: 'feed.announcement.draft.update',

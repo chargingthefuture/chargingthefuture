@@ -105,6 +105,7 @@ Architecture decisions in effect:
    so every surface calls it after the Commons.
 2. Role-gated create/edit/publish/archive actions.
 3. Moderation and publish-state controls with auditability.
+4. **Audit log panel** at the bottom of `/admin/feed-announcements`. Lists every admin action on the Feed and on Announcements newest first — writing, editing, publishing and archiving an announcement, changing the feed settings, hiding or restoring a Commons post, re-labeling a question's category, and membership events — **including the ones that were refused, and why**. Each row carries a chip saying which of the two surfaces the action was taken on. Reads `GET /api/feed/admin/audit-events?limit=200`; loads lazily on first expand.
 
 ### 2.2 Feed Rendering Controls
 
@@ -170,6 +171,7 @@ Public (unauthenticated) routes:
 Admin routes:
 
 - `GET /api/feed/admin/config`
+- `GET /api/feed/admin/audit-events` — admin read of `feed_admin_audit_trail` (both surfaces), newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Read by the Audit log panel at the bottom of `/admin/feed-announcements`.
 - `PUT /api/feed/admin/config`
 - `POST /api/feed/admin/announcements`
 - `PUT /api/feed/admin/announcements/:announcementId`
@@ -272,6 +274,7 @@ Domain tables:
 18. `feed_community_replies`
 19. `feed_commons_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
 20. `feed_community_post_reactions` — emoji reactions on Commons community posts, stored in our own database (not Stream). Columns `id UUID PK DEFAULT gen_random_uuid()`, `post_id UUID NOT NULL REFERENCES feed_community_posts(id) ON DELETE CASCADE`, `user_id TEXT NOT NULL`, `emoji TEXT NOT NULL`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`. `idx_feed_community_post_reactions_unique (post_id, user_id, emoji)` makes a reaction a toggle (one of each emoji per member per post); `idx_feed_community_post_reactions_post (post_id)` serves the batched aggregate read. The emoji is constrained to the fixed quick set (`FEED_REACTION_EMOJIS`) at the application layer.
+22. `feed_admin_audit_trail` — the durable admin audit trail for **both** the Feed and Announcements (added 2026-08-28; the two surfaces share `lib/feed/audit.ts`, so they share one table and `plugin_id` says which one an action came from). Columns: `id`, `actor_id`, `plugin_id`, `command`, `policy_status` (`allow`/`deny`), `reason`, `target_type`, `target_id`, `result` (`success`/`failure`), `error_category`, `metadata` (jsonb), `created_at`, with an index on `(created_at DESC, plugin_id, actor_id, command)`. One row per admin mutation, written by `recordFeedAdminAudit` on every outcome including a refusal. **Holds no member content** — the acting admin's id and the id of what was acted on — so it is retained on account deletion: the record of what an admin did has to outlive the record they did it to.
 21. `feed_commons_guidance_milestones` — one row per Commons post-count milestone at which the
     automatic guidance notice was published. Columns `id UUID PK DEFAULT gen_random_uuid()`,
     `milestone_count INTEGER NOT NULL UNIQUE`, `announcement_id UUID NULL`,
@@ -306,7 +309,7 @@ Domain tables:
 1. Server-side authorization on all user/admin commands.
 2. Role and consent checks enforced by command access policy contracts.
 3. CSRF protection for all state-changing web routes.
-4. Audit logging for allow/deny and publish/archive transitions.
+4. Audit logging for allow/deny and publish/archive transitions. **Every admin mutation writes a durable row to `feed_admin_audit_trail`** via `recordFeedAdminAudit`, which also emits the observability line — on success, on a refusal, and on a persistence failure. Before 2026-08-28 `logFeedAudit` wrote the event to the server's log alone, so nothing an admin did could be read back. The member-facing commands (reads, reactions, replies, ratings, dismissals) still emit `logFeedAudit` alone: a row per interaction would be volume, not accountability.
 5. Sensitive payload redaction in logs and diagnostics.
 6. LLM inference inputs are sanitized; outputs are logged with model ID and confidence for audit.
 7. Content moderation on question/community post submission (rate limiting + policy violation checks).
@@ -362,6 +365,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-08-28: **Every Feed and Announcements admin action is recorded in a table an admin can read, including the ones that were refused.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. Neither surface was doing it. `lib/feed/audit.ts` — shared by both, which is why one fix covers both — built the entire contract-shaped event and ended in `console.info`. Nothing could query it, no screen could show it, and it ages out of the host's log retention window; in review it read exactly like an audit trail. New table `feed_admin_audit_trail` (actor, plugin id, command, policy status, reason, target, result, error category, metadata, timestamp; indexed newest-first by surface, actor and command). New `recordFeedAdminAudit` writes the row **and** the log line, and all 26 audit call sites across the 13 admin mutation routes on the two surfaces now use it — every outcome, not only the successes, because why an action did not happen is half of what the trail is for. It never throws: an audit write that failed would otherwise turn a completed publish into a 503 and have an admin repeat an action they had already taken, so a failed write is reported through observability instead. New `GET /api/feed/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/feed-announcements`, reading the most recent 200 with plain-language labels ("Published an announcement", "Hid a Commons post", "Refused · Because the record was not there") and a chip per row saying which surface it came from. `POST /api/announcements/admin/targeting/validate` is deliberately **not** audited and is recorded as such: it validates a targeting expression with a pure function, reads no table and writes none, so there is no admin action there to record. The member-facing commands keep the log line alone — a row per read, reaction or dismissal would be volume, not accountability. Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip a publish, a hide, a refused question edit, and an Announcements-surface draft, with both plugin ids intact.
 - 2026-08-10: **The admin surface is named after the Commons too (owner request, follow-on from the
   Account & Data rename in #2189).** The `/admin` landing tile read "Feed Announcements" and the
   screen header read "Feed & Announcements Admin" — neither named the surface those announcements

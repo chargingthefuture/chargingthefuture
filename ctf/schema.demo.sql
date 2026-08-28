@@ -1983,10 +1983,9 @@ CREATE TABLE IF NOT EXISTS workforce_profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- workforce_occupations is no longer read or written by the Workforce plugin: occupations are read
--- live from Skills Taxonomy (job titles), and Workforce never creates them. The table is retained
--- (unused by Workforce). The SkillsHunt rare-skill snapshot stopped reading it on 2026-08-27 (it uses
--- the live gap model now); the remaining reference is the demo seed — do not drop it without updating
--- that consumer.
+-- live from Skills Taxonomy (job titles), and Workforce never creates them. The SkillsHunt rare-skill
+-- snapshot stopped reading it on 2026-08-27 (it uses the live gap model now); the remaining reference
+-- is the demo seed (ctf/scripts/seedDemo.mjs) — do not drop it without updating that consumer.
 CREATE TABLE IF NOT EXISTS workforce_occupations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -4360,14 +4359,32 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS current_
 ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === LOGIN EVENTS (engagement) ===
+-- The sign-in record, and the whole definition of an active member (owner decision, 2026-08-27): a
+-- member is active on a day this table holds a row for them, whatever they opened next. `source`
+-- says how the row got here. It came from v2 — production has carried it since before v3, defaulting
+-- to 'webapp' — but this canonical schema never declared it, so a database built from schema.sql
+-- alone lacked a column production has always had. Declared here so the two agree, and so the value
+-- is writable everywhere: post/0008 marks the days it rebuilt as 'backfill_launch_gap', which is
+-- what tells a reconstructed sign-in day from one that was recorded live.
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
+  source VARCHAR(50) NOT NULL DEFAULT 'webapp',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS source VARCHAR(50) NOT NULL DEFAULT 'webapp';
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
+-- A constraint this file cannot express, recorded because writing to this table without knowing it
+-- is how post/0008 failed on its first production run. Production carries a v2 foreign key,
+-- `login_events_user_id_fkey`, from `user_id` to `users(id)` (see ctf/schema-prod4.6.2026.sql). It is
+-- NOT created here: `users` is the Clerk mirror carried over from v2 and is not part of this
+-- canonical schema, so a database built from this file alone has neither the table nor the key.
+-- What it means for anything writing here: on production a sign-in row can only exist for an account
+-- the identity mirror still holds, and the per-plugin command trails outlive that mirror, so evidence
+-- of a session can name a member who is gone. Filter to members present in `users` when that table
+-- exists, or one orphan aborts the whole insert.
 -- Legacy guard: on databases cloned before `created_at` was a `timestamptz`, this column can be a
 -- plain `timestamp without time zone`. The guarded `ADD COLUMN IF NOT EXISTS` above does NOT retype
 -- an existing column, so it stays the legacy type. That breaks the UTC-day index below: with a
@@ -4683,6 +4700,42 @@ CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Feed and Announcements admin audit trail (added 2026-08-28). Owner directive: every admin action is
+-- recorded, on every surface. Both surfaces share lib/feed/audit.ts, which builds the whole
+-- contract-shaped event and ends in console.info — a line in the server's log, which nothing can
+-- query, no screen can show, and which ages out of the host's retention window. One table serves
+-- both because the helper already did: plugin_id says which surface the action was taken on.
+CREATE TABLE IF NOT EXISTS feed_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  plugin_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS plugin_id TEXT NOT NULL DEFAULT 'feed';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS feed_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The Audit log panel reads newest-first and can narrow to one surface; actor and command support
+-- narrowing to one admin or one kind of action without a sequential scan.
+CREATE INDEX IF NOT EXISTS idx_feed_admin_audit_trail_lookup
+  ON feed_admin_audit_trail (created_at DESC, plugin_id, actor_id, command);
+
 CREATE TABLE IF NOT EXISTS workforce_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -7243,4 +7296,221 @@ END $$;
 -- it no-ops on a fresh database that never had the table, and idempotent
 -- (re-running changes nothing once the table is gone).
 DROP TABLE IF EXISTS workforce_announcements;
+
+
+-- ── post migration: 0008_login_events_backfill_launch_gap.sql ──
+-- post/0008: Rebuild the sign-in days that nothing recorded between v2 stopping and v3 starting.
+--
+-- `login_events` is the whole definition of an active member (owner decision, 2026-08-27): a member
+-- is active on a day the sign-in record holds a row for them, whatever they opened next. The record
+-- carries real history from v2 — its first row is 2025-12-15 — but it has a hole. v2 wrote its last
+-- row on 2026-05-26 and v3's writer did not exist until 2026-06-19, so for 23 days nothing wrote
+-- anything down. The platform launched on 2026-06-12, inside that hole, which is why the oldest week
+-- the Weekly Performance picker offers reported nobody at all while people were plainly using it.
+--
+-- This does not change what "active" means and does not widen it. It repairs the record for those
+-- days only, from first-party evidence that an authenticated session existed: a row in a plugin's
+-- command trail naming the member as the actor, or a row the member wrote themselves, is proof that
+-- member was signed in on that day. Every source is member-attributed and dated by the member's own
+-- action; rows whose timestamp belongs to a counterparty or an admin acting ON a member are not
+-- evidence that the member turned up and are not used.
+--
+-- Properties:
+--   * scoped     — only days in [2026-05-27, 2026-06-19). Outside the hole the record was being
+--                  written, so an absent day there is a real absence and is left alone.
+--   * guarded    — every source is checked for existence before it is read, so a database missing
+--                  any of these tables simply contributes nothing instead of failing.
+--   * idempotent — WHERE NOT EXISTS on the (member, UTC day) pair plus ON CONFLICT DO NOTHING. Safe
+--                  to re-run, and safe to run after the same repair was applied by hand.
+--   * honest     — where the table has v2's `source` column, backfilled rows are marked
+--                  'backfill_launch_gap' so a reconstructed day is never mistaken for one that was
+--                  recorded live. The timestamp is the member's earliest proven action that day.
+--   * people only — actor ids the platform writes for itself (scheduled runs, the platform-authored
+--                  Commons notice, the `anonymous`/`system` fallbacks) are excluded by name, and so
+--                  is any member the `users` identity mirror no longer holds. Production's
+--                  login_events has a v2 foreign key to users(id) (see
+--                  ctf/schema-prod4.6.2026.sql), and the command trails outlive that mirror: a
+--                  deleted account leaves audit rows behind. One such orphan is what made the first
+--                  production run of this migration abort without writing anything.
+--
+-- Applied by the "Neon — Update DB" GitHub Action, which runs every post/ migration on a push to
+-- main that touches this folder — so merging is what runs it, with no command to type. It reports as
+-- it goes in the workflow log: the evidence it found, a line per day naming how many members that day
+-- has evidence for, and how many rows it wrote. Being idempotent, it is re-applied on every later run
+-- of that workflow and on every fresh database clone, writing nothing the second time.
+
+DO $$
+DECLARE
+  gap_start CONSTANT timestamptz := TIMESTAMPTZ '2026-05-27 00:00:00+00';
+  gap_end   CONSTANT timestamptz := TIMESTAMPTZ '2026-06-19 00:00:00+00';
+  -- Actor ids the platform writes for itself. None of these is a person turning up.
+  non_member_actors CONSTANT text[] := ARRAY[
+    'anonymous',
+    'system',
+    'system:commons-guidance',
+    'skills-hunt-auto-mission-scheduler',
+    'level-up-auto-cohort-scheduler',
+    'unlock-incentive-system',
+    'internal_service_credits_reclaimer'
+  ];
+  src record;
+  has_source boolean;
+  evidence_days bigint;
+  evidence_members bigint;
+  skipped bigint;
+  written bigint;
+BEGIN
+  IF to_regclass('public.login_events') IS NULL THEN
+    RAISE NOTICE 'login_events does not exist in this database; nothing to repair.';
+    RETURN;
+  END IF;
+
+  CREATE TEMP TABLE _login_gap_evidence (
+    user_id text NOT NULL,
+    activity_day date NOT NULL,
+    first_seen timestamptz NOT NULL
+  );
+
+  -- Every source is (table, member column). The date column is `created_at` throughout except where
+  -- named otherwise below, and each is read only for the gap window.
+  FOR src IN
+    SELECT * FROM (VALUES
+      -- Rows the member wrote themselves.
+      ('click_log_incidents', 'user_id', 'created_at'),
+      ('mood_submissions', 'user_id', 'submitted_at'),
+      ('feed_community_posts', 'author_user_id', 'created_at'),
+      ('feed_community_replies', 'author_user_id', 'created_at'),
+      ('feed_community_post_reactions', 'user_id', 'created_at'),
+      ('peer_programming_messages', 'author_user_id', 'created_at'),
+      ('level_up_dispute_comments', 'actor_user_id', 'created_at'),
+      -- Command trails: one row per command the member ran, actor and time from their own request.
+      ('account_restrictions_audit', 'actor_id', 'created_at'),
+      ('announcement_membership_events', 'actor_id', 'created_at'),
+      ('beacon_events_admin_audit_trail', 'actor_id', 'created_at'),
+      ('contributions_audit_log', 'actor_user_id', 'created_at'),
+      ('contributor_access_audit_trail', 'actor_id', 'created_at'),
+      ('directory_profile_change_events', 'actor_id', 'created_at'),
+      ('feed_membership_events', 'actor_id', 'created_at'),
+      ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
+      ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
+      ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
+      ('level_up_audit_events', 'actor_id', 'created_at'),
+      ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
+      ('llm_inference_log', 'actor_user_id', 'created_at'),
+      ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),
+      ('quora_deletion_survey_audit_log', 'actor_user_id', 'created_at'),
+      ('quora_live_census_audit_log', 'actor_user_id', 'created_at'),
+      ('recurring_activity_audit_trail', 'actor_user_id', 'created_at'),
+      ('safety_admin_audit_trail', 'actor_id', 'created_at'),
+      ('service_credits_admin_audit_trail', 'actor_id', 'created_at'),
+      ('skills_hunt_audit_log', 'actor_id', 'created_at'),
+      ('skills_taxonomy_change_events', 'actor_id', 'created_at'),
+      ('socket_relay_admin_audit_trail', 'actor_id', 'created_at'),
+      ('socket_relay_request_events', 'actor_user_id', 'created_at'),
+      ('trust_admin_audit_trail', 'actor_user_id', 'created_at'),
+      ('trust_transport_admin_audit_trail', 'actor_id', 'created_at'),
+      ('trust_transport_status_events', 'actor_user_id', 'created_at'),
+      ('unlock_audit_log', 'actor_user_id', 'created_at'),
+      ('weekly_performance_audit_trail', 'actor_id', 'created_at'),
+      ('workforce_admin_audit_trail', 'actor_id', 'created_at')
+    ) AS t(table_name, user_column, date_column)
+  LOOP
+    CONTINUE WHEN to_regclass('public.' || src.table_name) IS NULL;
+    CONTINUE WHEN NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.user_column
+    );
+    CONTINUE WHEN NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.date_column
+    );
+
+    EXECUTE format(
+      'INSERT INTO _login_gap_evidence (user_id, activity_day, first_seen)
+       SELECT btrim(%1$I),
+              (%2$I AT TIME ZONE ''UTC'')::date,
+              MIN(%2$I)
+       FROM public.%3$I
+       WHERE %2$I >= $1 AND %2$I < $2
+         AND %1$I IS NOT NULL
+         AND btrim(%1$I) <> ''''
+         AND btrim(%1$I) <> ALL ($3)
+       GROUP BY 1, 2',
+      src.user_column, src.date_column, src.table_name
+    ) USING gap_start, gap_end, non_member_actors;
+  END LOOP;
+
+  -- Production's login_events carries a v2 foreign key to users(id), so a sign-in row can only exist
+  -- for an account the identity mirror still holds. The command trails outlive that mirror: an
+  -- account deleted since the gap leaves its audit rows behind, and those rows are evidence of a
+  -- session that did happen but whose member is gone. Inserting for them is both impossible and
+  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the whole
+  -- statement and wrote nothing at all. Reported, not silent: a skipped day is a real day that
+  -- cannot be recovered, and the operator should see the count.
+  IF to_regclass('public.users') IS NOT NULL THEN
+    DELETE FROM _login_gap_evidence e
+    WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = e.user_id);
+    GET DIAGNOSTICS skipped = ROW_COUNT;
+    IF skipped > 0 THEN
+      RAISE NOTICE
+        'Skipped % row(s) of evidence whose member is no longer in the users table; their days cannot be rebuilt.',
+        skipped;
+    END IF;
+  END IF;
+
+  SELECT COUNT(*), COUNT(DISTINCT user_id)
+    INTO evidence_days, evidence_members
+  FROM (SELECT DISTINCT user_id, activity_day FROM _login_gap_evidence) d;
+
+  RAISE NOTICE 'Evidence in the gap: % member-day(s) across % member(s).', evidence_days, evidence_members;
+
+  -- A line per day, so the repair is legible rather than a single number to take on trust. The gap
+  -- is 23 days, so this is bounded and short.
+  FOR src IN
+    SELECT activity_day, COUNT(DISTINCT user_id) AS members
+    FROM _login_gap_evidence
+    GROUP BY activity_day
+    ORDER BY activity_day
+  LOOP
+    RAISE NOTICE '  % — % member(s) with evidence', src.activity_day, src.members;
+  END LOOP;
+
+  has_source := EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'demo' AND table_name = 'login_events' AND column_name = 'source'
+  );
+
+  -- The WHERE NOT EXISTS guard is the one that always applies; it holds even on a database where the
+  -- (user_id, UTC-day) unique index was never built. The bare ON CONFLICT DO NOTHING closes the race
+  -- wherever that index does exist.
+  IF has_source THEN
+    INSERT INTO login_events (user_id, created_at, source)
+    SELECT e.user_id, MIN(e.first_seen), 'backfill_launch_gap'
+    FROM _login_gap_evidence e
+    WHERE NOT EXISTS (
+      SELECT 1 FROM login_events le
+      WHERE le.user_id = e.user_id
+        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
+    )
+    GROUP BY e.user_id, e.activity_day
+    ON CONFLICT DO NOTHING;
+  ELSE
+    INSERT INTO login_events (user_id, created_at)
+    SELECT e.user_id, MIN(e.first_seen)
+    FROM _login_gap_evidence e
+    WHERE NOT EXISTS (
+      SELECT 1 FROM login_events le
+      WHERE le.user_id = e.user_id
+        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
+    )
+    GROUP BY e.user_id, e.activity_day
+    ON CONFLICT DO NOTHING;
+  END IF;
+
+  GET DIAGNOSTICS written = ROW_COUNT;
+  RAISE NOTICE 'Sign-in days written: %. Re-running this migration writes 0.', written;
+
+  DROP TABLE _login_gap_evidence;
+END
+$$;
 
