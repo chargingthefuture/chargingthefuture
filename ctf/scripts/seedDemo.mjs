@@ -397,7 +397,7 @@ async function seedSkillsHunt(c) {
   await c.query(
     `INSERT INTO skills_hunt_submissions
      (id, round_id, submitter_user_id, full_name, bio, quora_profile_url,
-      quora_profile_url_normalized, skills, proposed_skills, claimed_professions,
+      quora_profile_url_normalized, skills, proposed_skills,
       signature_hash, status, reviewed_by_user_id, points_awarded, participation_points,
       credit_granted, url_validation_result, reviewed_at)
      VALUES
