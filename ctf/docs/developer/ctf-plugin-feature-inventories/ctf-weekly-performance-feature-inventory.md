@@ -128,7 +128,7 @@ Weekly performance metrics are derived from upstream plugin tables (feed, login 
 Live numbers: weekly numbers are **always** computed live, matching the V2 dashboard, which aggregated on read for any selected week. There is no "close the week" step and no stored snapshot to wait for. `getWeekMetrics` returns `computeLiveWeekMetrics` (`lib/weekly-performance/live-metrics.ts`) for every week, counting the week window directly from upstream tables. The current week is labeled "Live" and keeps moving (silent 60s polling + focus refetch on web); every earlier week is a settled historical window with no "closed" state. The `weekly_performance_metrics` table and the `weekly-performance.metrics.get` route are unchanged; the read is simply always live (the table is no longer consulted for the dashboard).
 
 The shipped metric set is the one locked on 2026-07-18 in `ctf/docs/developer/PLUGIN_VALUE_METRICS.md`, plus the
-daily-active-members adoption row added 2026-08-15. Nothing revenue/financial is included (revenue, MRR, ARR, CLV)
+daily-active-members adoption row added 2026-08-15 and the deleted-accounts adoption row added 2026-08-28. Nothing revenue/financial is included (revenue, MRR, ARR, CLV)
 — V3 is free to end users, so those have no meaning. Every metric is scoped to
 `[week_start, week_start + 7 days)` unless noted, and each query is table-existence-guarded so a missing table
 contributes 0 rather than failing the read. Card order on the dashboard is the order below.
@@ -162,6 +162,18 @@ Adoption (honest non-value rows):
   by the days of the window that have already started (1–7), so the live current week averages over the days it
   has actually had and every past week divides by 7. The divisor is computed in UTC, matching the day boundary
   the member-days are bucketed on.
+- `adoption.accounts_deleted` — how many members ended their whole account during the week: the counterpart to
+  the two turnout rows above, and the one card on the dashboard that is worse when it rises (its week-over-week
+  figure is drawn red on a rise and green on a fall; the arrow still points the way the number moved). Counted
+  from `account_deletion_events` on `completed_at`, per member rather than per row, so a repeated event for one
+  account can never read as two people leaving. Two things are deliberately excluded, because either would read
+  as people leaving when they did not: a per-plugin "delete my data" (`scope = 'service'` — that member still
+  has an account and cleared one plugin's data), and an operator-run removal (the manual
+  `Delete Account (manual)` workflow clearing a duplicate or a demo test account). The second is only separable
+  because the deletion orchestrator now records who asked, in the event's `summary.initiatedBy`
+  (`member` | `operator`); an account-scope row otherwise looks identical either way. Rows written before that
+  field existed carry no marker and count as the member's own, which is what nearly all of them are. Aggregate
+  only — never a per-member figure, and no member is ever named.
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
 is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
@@ -211,6 +223,25 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-28: **Third adoption row: deleted accounts (owner request).** The dashboard showed who
+  turned up — active members and daily active members — and nothing about who left, so the
+  Adoption group now carries `adoption.accounts_deleted`: members who ended their whole account
+  during the week, counted from `account_deletion_events` on `completed_at` and counted per member
+  rather than per row. Only a member's own choice counts. A per-plugin "delete my data"
+  (`scope = 'service'`) is not a member leaving — they still have an account — so account scope is
+  the filter. The second exclusion needed a code change: an operator running the manual
+  `Delete Account (manual)` workflow to clear a duplicate or a demo test account wrote an
+  account-scope row indistinguishable from a member's own deletion, so `deletion-orchestrator.ts`
+  now records who asked in the event's `summary.initiatedBy` (`member` | `operator`,
+  `ctf/packages/web/lib/account/deletion-orchestrator.ts`), the operator route
+  (`app/api/internal/account/delete/route.ts`) passes `operator`, and the metric skips those. Rows
+  written before the field existed carry no marker and count as the member's own. No schema change
+  (`summary` is already JSONB); `account_deletion_events` added to the `metrics.get` and
+  `comparison.get` contract `dataAccess`, and registered as `wp_adoption_accounts_deleted` in
+  `ctf/config/canonical_metrics.yaml`. One UI change alongside it: a card whose rise is bad now
+  draws its week-over-week figure red on a rise and green on a fall (`isRiseGoodFor` in
+  `components/weekly-performance/wp-shared.ts`) — a green "+3 vs last week" on deleted accounts read
+  as good news. The arrow still follows the direction the number actually moved.
 - 2026-08-28: **The launch-gap repair aborted on its first production run; fixed.** `post/0008` found
   the evidence it expected — 7 member-days across 2 members, including 2026-06-12, the launch day —
   and then the insert failed outright: production's `login_events` carries a v2 foreign key to
