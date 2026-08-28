@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { overrideSuppressedQuoraUrl } from 'lib/directory/repository';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await overrideSuppressedQuoraUrl(gate.auth.userId, id, reason);
 
     if (result === 'overridden') {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.takedown.override',
         status: 'allow',
@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.takedown.override',
       status: 'deny',

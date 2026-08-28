@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../../_lib';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { assignAdminProfile } from 'lib/directory/repository';
-import { logDirectoryAudit } from 'lib/directory/audit';
+import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -46,7 +46,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const profile = await assignAdminProfile(gate.auth.userId, id, userId);
     if (profile === 'already_claimed') {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.profile.assign',
         status: 'deny',
@@ -69,7 +69,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     }
 
     if (!profile) {
-      logDirectoryAudit({
+      await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,
         command: 'directory.admin.profile.assign',
         status: 'deny',
@@ -87,7 +87,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.assign',
       status: 'allow',
@@ -102,7 +102,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id_assign' });
-    logDirectoryAudit({
+    await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.assign',
       status: 'allow',
