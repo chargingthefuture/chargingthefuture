@@ -113,14 +113,30 @@ async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, rev
 // The three ways a review can fail for the caller: the submission is gone, the nominee has been
 // taken down from the directory since it was filed (accepting would pay for a listing that can
 // never appear), or the write itself failed.
+type ReviewFailureKind = { isNotFound: boolean; isTakenDown: boolean; isLiveCollision: boolean };
+
+function resolveReviewErrorCategory(isNotFound: boolean, isTakenDown: boolean, isLiveCollision: boolean): string {
+  if (isNotFound) return 'submission_not_found';
+  if (isTakenDown) return 'quora_url_taken_down';
+  if (isLiveCollision) return 'duplicate_live_nomination';
+  return 'persistence_error';
+}
+
 function resolveReviewFailure(
-  isNotFound: boolean,
-  isTakenDown: boolean,
+  kind: ReviewFailureKind,
   // Built by the caller with withReason so the reason reaches the answer (rule 137).
   fallbackMessage: string,
 ): { code: string; message: string; status: number } {
+  const { isNotFound, isTakenDown, isLiveCollision } = kind;
   if (isNotFound) {
     return { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 };
+  }
+  if (isLiveCollision) {
+    return {
+      code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
+      message: 'This person was nominated again while this submission was removed, and reviewing it would bring it back alongside the newer one. Reject or remove the newer nomination first.',
+      status: 409,
+    };
   }
   if (isTakenDown) {
     return {
@@ -207,6 +223,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     // accept is refused rather than paid: it would award points and mint the round's reward while
     // generating no directory profile at all.
     const isTakenDown = message === 'skills_hunt_quora_url_taken_down';
+    // Reviewing a removed submission makes it live again, which can collide with a nomination made
+    // for the same person while it was removed. Say so rather than leaking a constraint error.
+    const isLiveCollision = message.includes('uq_skills_hunt_submissions_round_signature_live');
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
@@ -217,11 +236,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       targetType: 'submission',
       targetId: submissionId,
       result: 'failure',
-      errorCategory: isNotFound ? 'submission_not_found' : isTakenDown ? 'quora_url_taken_down' : 'persistence_error',
+      errorCategory: resolveReviewErrorCategory(isNotFound, isTakenDown, isLiveCollision),
       metadata: { action: input.action },
     });
 
-    const failure = resolveReviewFailure(isNotFound, isTakenDown, withReason('Unable to review submission', error));
+    const failure = resolveReviewFailure({ isNotFound, isTakenDown, isLiveCollision }, withReason('Unable to review submission', error));
     return NextResponse.json({ ok: false, code: failure.code, message: failure.message }, { status: failure.status });
   }
 }

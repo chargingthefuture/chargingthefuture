@@ -2171,6 +2171,11 @@ export async function reviewSubmission(
           points_awarded = $6,
           score_breakdown = $7::jsonb,
           participation_points = $8,
+          -- Reviewing a submission makes it live again. An admin acting on a removed row means
+          -- they want the decision to stand, so the removal is undone as part of it rather than
+          -- the action being withheld until they restore it first (owner directive 2026-08-28:
+          -- this is the admin page; nothing is blocked).
+          deleted_at = NULL,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING

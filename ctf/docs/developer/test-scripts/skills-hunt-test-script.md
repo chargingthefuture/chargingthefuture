@@ -547,18 +547,20 @@ Result: web ☐
 
 **Steps:**
 1. Flag it, then use **Remove** on it.
-2. On the **All** or **Removed** filter, find the row. Confirm it reads "Removed *date* · was flagged" and now offers a **Restore** button.
+2. On the **All** or **Removed** filter, find the row. Confirm it reads "Removed *date* · was flagged · accepting or rejecting it also restores it", that its select box is **enabled**, and that it offers the full set — Accept, Reject, Flag/Unflag, and **Restore**.
 3. Use **Restore**. Confirm the row loses its Removed badge and comes back as **flagged** — not pending, not accepted.
 4. Use **Unflag**. Confirm it lands in **Pending** with its full actions.
-5. Repeat steps 1–2 with a different nomination, but before restoring it, nominate that same person again as a member. Then use **Restore** on the removed row.
+5. Remove it again, then use **Accept** directly on the removed row. Confirm it becomes accepted, live (no Removed badge), and carries its points — a verdict is never blocked behind a restore.
+6. Repeat steps 1–2 with a different nomination, but before restoring it, nominate that same person again as a member. Then use **Restore** on the removed row.
 
 **Expected:**
 - Steps 3–4: restore undoes the removal and nothing else. The status it had when it was removed is the status it comes back with, so an admin is never forced into a verdict to undo a removal.
-- Step 5: the restore is **refused**, with a message saying the person was nominated again and to reject or remove the newer one first. Rejecting the newer nomination and retrying the restore then succeeds.
+- Step 5: accepting a removed row restores it as part of the decision.
+- Step 6: the restore is **refused**, with a message saying the person was nominated again and to reject or remove the newer one first. Rejecting the newer nomination and retrying then succeeds. Accepting the removed row instead of restoring it is refused the same way, for the same reason.
 
 Notes:
-- This is the fix for a reported bug: with removed rows visible at last, the row was on screen and marked Removed with no action available on it. Remove was a one-way door, the same dead end flag had.
-- The refusal in step 5 is not a bug: removing a submission frees its Quora URL for a fresh nomination, so a restore can collide with one. Two live nominations for one person is what `uq_skills_hunt_submissions_round_signature_live` prevents.
+- This is the fix for a reported bug: with removed rows visible at last, the row was on screen and marked Removed with no action available on it and a disabled select box. Remove was a one-way door, the same dead end flag had. On the admin page every row now offers every action and every select box works — there is no terminal state.
+- The refusal in step 6 is not a bug: removing a submission frees its Quora URL for a fresh nomination, so a restore can collide with one. Two live nominations for one person is what `uq_skills_hunt_submissions_round_signature_live` prevents.
 - Restoring an **accepted** submission returns its points to the leaderboard and its mission progress with them. It does **not** re-mint a ServiceCredits reward, because removing it did not reverse one.
 
 Result: web ☐
