@@ -4740,6 +4740,44 @@ ALTER TABLE IF EXISTS directory_admin_audit_trail ADD COLUMN IF NOT EXISTS creat
 CREATE INDEX IF NOT EXISTS idx_directory_admin_audit_trail_lookup
   ON directory_admin_audit_trail (created_at DESC, actor_id, command);
 
+-- Bug report admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
+-- on every surface. Bug reports had no audit machinery at all — no table, no helper, not even a log
+-- line — so resolving a held report left nothing behind. That decision matters: 'release' sends the
+-- member's redacted report on to the triage repo, 'reject' drops it so it never goes anywhere, and
+-- the member is never told which happened.
+--
+-- Deliberately holds no report content and no reporter id: the report body is the sensitive part and
+-- is redacted before it ever leaves this app, so the trail records which report was decided and by
+-- whom, never what it said.
+CREATE TABLE IF NOT EXISTS bug_report_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS bug_report_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The Audit log panel reads newest-first; actor and command support narrowing to one admin or one
+-- kind of decision without a sequential scan.
+CREATE INDEX IF NOT EXISTS idx_bug_report_admin_audit_trail_lookup
+  ON bug_report_admin_audit_trail (created_at DESC, actor_id, command);
+
 CREATE TABLE IF NOT EXISTS workforce_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
