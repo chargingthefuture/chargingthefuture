@@ -135,21 +135,6 @@
       "route": "/api/skills-taxonomy/admin/skills",
       "kind": "burn-down",
       "reason": "Skills Taxonomy has lib/skills-taxonomy/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/what-works/admin/problems/[id]",
-      "kind": "burn-down",
-      "reason": "What Works has lib/what-works/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/what-works/admin/problems",
-      "kind": "burn-down",
-      "reason": "What Works has lib/what-works/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
-    },
-    {
-      "route": "/api/what-works/admin/products/[id]",
-      "kind": "burn-down",
-      "reason": "What Works has lib/what-works/audit.ts, which builds the full contract-shaped event and ends in console.info \u2014 a server log line, not a record. Burn down: give it an audit table and route the helper to it."
     }
   ]
 }

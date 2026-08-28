@@ -15,7 +15,7 @@ import {
   requireWhatWorksAdminAccess,
   whatWorksError,
 } from '../../../_lib';
-import { logWhatWorksAudit } from 'lib/what-works/audit';
+import { recordWhatWorksAdminAudit } from 'lib/what-works/audit';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -84,7 +84,7 @@ async function handleProductEdit(
   const { name, purchaseUrl, emoji, kind, note } = validated.data;
 
   const product = await updateProduct(id, { emoji, name, kind, note, purchaseUrl });
-  logWhatWorksAudit({
+  await recordWhatWorksAdminAudit({
     actorId,
     command: 'what-works.admin.product.update',
     status: 'allow',
@@ -117,7 +117,7 @@ async function handleProductModeration(
     reviewerId: actorId,
     rejectionReason,
   });
-  logWhatWorksAudit({
+  await recordWhatWorksAdminAudit({
     actorId,
     command: 'what-works.admin.product.review',
     status: 'allow',
@@ -176,7 +176,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
   }
   await deleteProduct(id);
-  logWhatWorksAudit({
+  await recordWhatWorksAdminAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.product.delete',
     status: 'allow',
