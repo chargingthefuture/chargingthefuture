@@ -211,6 +211,24 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-08-28: **The launch-gap repair aborted on its first production run; fixed.** `post/0008` found
+  the evidence it expected — 7 member-days across 2 members, including 2026-06-12, the launch day —
+  and then the insert failed outright: production's `login_events` carries a v2 foreign key to
+  `users(id)`, and one of those two members is no longer in the identity mirror. The command trails
+  outlive that mirror, so a deleted account leaves its audit rows behind; those rows are evidence of a
+  session that really happened but whose member is gone. A single orphan aborted the whole statement,
+  so nothing at all was written. The migration now drops evidence for any member the `users` table no
+  longer holds, before the insert rather than at it, and reports the count — a skipped day is a real
+  day nobody can recover, and that should be visible rather than silent. The filter applies only when
+  a `users` table exists, so a `schema.sql`-only database is unaffected. Re-tested on a scratch
+  Postgres 16 with the foreign key present and an orphaned actor alongside a live one: the orphan is
+  skipped and reported, the live member's days are written with the earliest action of each day, and a
+  second run writes nothing.
+  Why this was missed: the constraint is in `ctf/schema-prod4.6.2026.sql` (line 2384), already in the
+  repo, but the fixtures were built from `ctf/schema.sql` and the table's `CREATE TABLE` alone, so
+  none of the four shapes tested carried it. Production's constraints live in that snapshot; a
+  migration that writes to a v2-era table should be tested against it.
+
 - 2026-08-27: **Removed the terminal-only audit script (owner directive: there is no terminal).**
   `ctf/scripts/audit-active-members.mjs` could only be run from a shell, so the person who needed it
   could never run it — dead weight in an open-source tree, and a second copy of the source list to

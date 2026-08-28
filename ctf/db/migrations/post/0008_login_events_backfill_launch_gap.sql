@@ -25,7 +25,12 @@
 --                  'backfill_launch_gap' so a reconstructed day is never mistaken for one that was
 --                  recorded live. The timestamp is the member's earliest proven action that day.
 --   * people only — actor ids the platform writes for itself (scheduled runs, the platform-authored
---                  Commons notice, the `anonymous`/`system` fallbacks) are excluded by name.
+--                  Commons notice, the `anonymous`/`system` fallbacks) are excluded by name, and so
+--                  is any member the `users` identity mirror no longer holds. Production's
+--                  login_events has a v2 foreign key to users(id) (see
+--                  ctf/schema-prod4.6.2026.sql), and the command trails outlive that mirror: a
+--                  deleted account leaves audit rows behind. One such orphan is what made the first
+--                  production run of this migration abort without writing anything.
 --
 -- Applied by the "Neon — Update DB" GitHub Action, which runs every post/ migration on a push to
 -- main that touches this folder — so merging is what runs it, with no command to type. It reports as
@@ -51,6 +56,7 @@ DECLARE
   has_source boolean;
   evidence_days bigint;
   evidence_members bigint;
+  skipped bigint;
   written bigint;
 BEGIN
   IF to_regclass('public.login_events') IS NULL THEN
@@ -132,6 +138,24 @@ BEGIN
       src.user_column, src.date_column, src.table_name
     ) USING gap_start, gap_end, non_member_actors;
   END LOOP;
+
+  -- Production's login_events carries a v2 foreign key to users(id), so a sign-in row can only exist
+  -- for an account the identity mirror still holds. The command trails outlive that mirror: an
+  -- account deleted since the gap leaves its audit rows behind, and those rows are evidence of a
+  -- session that did happen but whose member is gone. Inserting for them is both impossible and
+  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the whole
+  -- statement and wrote nothing at all. Reported, not silent: a skipped day is a real day that
+  -- cannot be recovered, and the operator should see the count.
+  IF to_regclass('public.users') IS NOT NULL THEN
+    DELETE FROM _login_gap_evidence e
+    WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = e.user_id);
+    GET DIAGNOSTICS skipped = ROW_COUNT;
+    IF skipped > 0 THEN
+      RAISE NOTICE
+        'Skipped % row(s) of evidence whose member is no longer in the users table; their days cannot be rebuilt.',
+        skipped;
+    END IF;
+  END IF;
 
   SELECT COUNT(*), COUNT(DISTINCT user_id)
     INTO evidence_days, evidence_members
