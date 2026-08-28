@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { SkillsHuntRound, SkillsHuntSubmission, SkillsHuntSubmissionStatus } from "lib/skills-hunt/types";
+import type { SkillsHuntRound, SkillsHuntSubmission } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
-import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction } from "./sha-shared";
+import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction, type SkillsHuntAdminStatusFilter } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
 import { SkillsHuntAdminTable } from "./sha-table";
 
@@ -46,7 +46,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
-  const [statusFilter, setStatusFilter] = useState<SkillsHuntSubmissionStatus>("pending");
+  const [statusFilter, setStatusFilter] = useState<SkillsHuntAdminStatusFilter>("pending");
   const [submissions, setSubmissions] = useState<SkillsHuntSubmission[]>([]);
   const [round, setRound] = useState<SkillsHuntRound | null>(null);
   const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);

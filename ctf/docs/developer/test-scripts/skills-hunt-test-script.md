@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; removed filter + blocking-nomination message — SH-A6d) |
 
 ---
 
@@ -534,6 +534,30 @@ Result: web ☐
 Notes:
 - Steps 3–6 are the fix for a reported bug: every non-pending status used to render the same terminal row (status label plus Remove), so a flagged submission had no way back at all. The Flagged chip could also sit off the right edge of a phone-width column, because the status row did not wrap. Unflag arrived a day later — the first fix offered only Accept and Reject, which clears a flag by deciding the submission, and flag exists so a moderator does not have to decide yet.
 - Accepted and rejected rows stay terminal — they still show only their status and Remove. Reversing those moves points and can pay a reward, so it is deliberately not a single tap.
+
+Result: web ☐
+
+---
+
+### SH-A6d — A removed nomination is findable, and the refusal says what is blocking
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** A pending nomination exists in the active round.
+
+**Steps:**
+1. Flag it, then use **Remove** on it.
+2. Check the **Pending**, **Accepted**, **Rejected** and **Flagged** filters. Confirm it is in none of them.
+3. Switch to the **Removed** filter. Confirm it appears there.
+4. As a member, nominate someone who already has a live nomination (pending, accepted or flagged) in any round. Read the refusal message.
+
+**Expected:**
+- Steps 2–3: a removed nomination shows only under Removed. Every other filter hides it, as before.
+- Step 4: the message names the round the blocking nomination is in and what state it is in — for example, *"This person is already nominated in the round "2026 SkillsHunt", where that nomination is waiting for review."* — so the admin knows where to go.
+
+Notes:
+- This is the fix for a reported bug: the Flagged filter read "No submissions matching this filter" while the flagged nominee still could not be re-submitted, because the row had been removed and every filter hid soft-deleted rows.
+- The duplicate guard is deliberately **cross-round** — one person, one Quora URL, across every round — so the blocking nomination can be in a round you are not looking at. The message used to say "in this round", which was wrong in exactly that case.
 
 Result: web ☐
 

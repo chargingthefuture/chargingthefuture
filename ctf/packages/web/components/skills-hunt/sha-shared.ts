@@ -15,11 +15,17 @@ export function getSkillsHuntAdminTokens(theme: ThemeName): SkillsHuntAdminToken
   return getPluginShellTokens(accent, theme);
 }
 
-export const STATUS_OPTIONS: Array<{ key: SkillsHuntSubmissionStatus; label: string; color: string }> = [
+// 'removed' is not a submission status — it is the soft-delete marker, offered here as a filter so
+// a removed nomination is findable. Before this it appeared under no filter at all, while still
+// being able to hold a Quora URL against a re-nomination.
+export type SkillsHuntAdminStatusFilter = SkillsHuntSubmissionStatus | "removed";
+
+export const STATUS_OPTIONS: Array<{ key: SkillsHuntAdminStatusFilter; label: string; color: string }> = [
   { key: "pending",  label: "Pending",  color: "#F59E0B" },
   { key: "accepted", label: "Accepted", color: "#22C55E" },
   { key: "rejected", label: "Rejected", color: "#EF4444" },
   { key: "flagged",  label: "Flagged",  color: COLOR },
+  { key: "removed",  label: "Removed",  color: "#94A3B8" },
 ];
 
 const REJECT_REASONS = [

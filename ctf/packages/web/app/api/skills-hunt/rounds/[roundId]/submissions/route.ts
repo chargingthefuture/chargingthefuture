@@ -50,12 +50,6 @@ const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
     responseMessage: 'Submission blocked by rejection-rate guardrail.',
   },
   {
-    message: 'skills_hunt_duplicate_submission',
-    status: 409,
-    code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
-    responseMessage: 'This person has already been nominated in this round. An admin can reject or remove the existing nomination if it should not stand.',
-  },
-  {
     message: 'skills_hunt_quora_url_taken_down',
     status: 409,
     code: SKILLS_HUNT_ERROR_CODE.quoraUrlTakenDown,
@@ -72,7 +66,42 @@ const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
 
 // Map a thrown createSubmission error message to the HTTP response shape.
 // Unknown messages fall through to a 503 persistence-unavailable response.
+// Plain words for the status of the nomination that is in the way.
+function describeBlockingStatus(status: string): string {
+  if (status === 'pending') return 'is waiting for review';
+  if (status === 'accepted') return 'has already been accepted';
+  if (status === 'flagged') return 'is flagged for a second look';
+  return `is ${status}`;
+}
+
+// The duplicate guard reports which nomination blocks this one, because the blocker can sit in a
+// round the admin is not looking at or a status their filter hides. Say where it is and what to do
+// with it; fall back to the plain sentence if the detail cannot be read.
+function describeDuplicate(message: string): string {
+  const raw = message.slice('skills_hunt_duplicate_submission:'.length);
+  try {
+    const detail = JSON.parse(raw) as { status?: unknown; round?: unknown };
+    const status = typeof detail.status === 'string' ? detail.status : null;
+    const round = typeof detail.round === 'string' ? detail.round : null;
+    if (status && round) {
+      return `This person is already nominated in the round "${round}", where that nomination ${describeBlockingStatus(status)}. An admin can reject or remove it there if it should not stand.`;
+    }
+  } catch {
+    // Fall through to the plain sentence below.
+  }
+  return 'This person is already nominated. An admin can reject or remove the existing nomination if it should not stand.';
+}
+
 function mapSubmissionCreateError(message: string): { status: number; code: string; responseMessage: string } {
+  if (message.startsWith('skills_hunt_duplicate_submission')) {
+    return {
+      status: 409,
+      code: SKILLS_HUNT_ERROR_CODE.duplicateSubmission,
+      responseMessage: message.startsWith('skills_hunt_duplicate_submission:')
+        ? describeDuplicate(message)
+        : 'This person is already nominated. An admin can reject or remove the existing nomination if it should not stand.',
+    };
+  }
   if (message.startsWith('skills_hunt_submission_limit_exceeded')) {
     const sep = message.indexOf(':');
     const resetAtIso = sep >= 0 ? message.slice(sep + 1) : null;
