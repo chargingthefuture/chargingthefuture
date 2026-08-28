@@ -302,6 +302,14 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-08-28: **The Earn tab's fundraiser card no longer names a month.** It read "The next one
+  starts in July", which was still on the screen at the end of August. A hard-coded date in static
+  copy goes wrong the moment it passes and nothing prompts anyone to correct it, so the sentence was
+  cut rather than moved forward — the card states what the reward is, and Contributions is where a
+  drive shows when one is actually running. Copy only: one string in
+  `service-credits.constants.ts`, no schema, route, contract, transfer, or ledger change. The
+  2026-06-19 entry below still quotes the old wording and is left as written, being a dated record.
+
 - 2026-08-27: **Saving the treasury policy did nothing on a database with no policy row yet.**
   `updateTreasuryConfig` ran a bare `UPDATE service_credits_treasury_config ... WHERE id = TRUE`, and
   nothing in `schema.sql`, a migration, or any seed ever inserts that singleton row. So on a database
