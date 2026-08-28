@@ -118,7 +118,7 @@ contracts:
     command: skills-hunt.submission.create
     version: 1.1.0
     description: >-
-      Create a contributor submission with validated profile URL, skill set, profession claims, and
+      Create a contributor submission with validated profile URL, skill set, and
       the nominee's location. `country` is required; `state`/`city` are optional. On accept the
       location carries into the generated directory profile (the shared member profile). Admins are
       exempt from the scout rate limits (the rolling weekly submission cap and the reputation-driven
@@ -140,9 +140,6 @@ contracts:
       skills:
         type: array
         required: true
-      claimedProfessions:
-        type: array
-        required: false
       country:
         type: string
         required: true
@@ -440,67 +437,6 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
-    command: skills-hunt.directory-profile.generate
-    version: 1.0.0
-    description: Generate an unclaimed Directory profile projection from an accepted submission.
-    inputSchema:
-      submissionId:
-        type: string
-        required: true
-      invitedByUsername:
-        type: string
-        required: true
-        description: Canonical auth-provider handle of the inviter; must not be a plugin-local username or display-name surrogate.
-    outputSchema:
-      generatedProfileId:
-        type: string
-      profileStatus:
-        type: string
-      createdAt:
-        type: string
-    dataAccess:
-      - skills_hunt_submissions
-      - skills_hunt_directory_profiles
-      - skills_hunt_audit_log
-      # Reads the Directory takedown suppression list to skip generating a profile for a Quora URL that
-      # was removed at the person's request; logs the skip to the Directory change/audit log.
-      - directory_suppressed_quora_urls
-      - directory_profile_change_events
-    purpose: directory_projection_generation
-    retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: skills-hunt
-    command: skills-hunt.submission.report
-    version: 1.0.0
-    description: File a community moderation report against a submission or a community-generated Directory profile.
-    inputSchema:
-      submissionId:
-        type: string
-        required: false
-      directoryProfileId:
-        type: string
-        required: false
-      reason:
-        type: string
-        required: true
-        description: One of no_permission | inaccurate | duplicate | spam | other.
-      details:
-        type: string
-        required: false
-        description: Optional free-text context (max 1000 chars).
-    outputSchema:
-      report:
-        type: object
-        description: The created report row including status ('open').
-    dataAccess:
-      - skills_hunt_submission_reports
-      - skills_hunt_audit_log
-    purpose: community_moderation
-    retentionClass: transactional_long_lived
-    idempotency: false
-
-  - pluginId: skills-hunt
     command: skills-hunt.profile.delete
     version: 1.0.0
     description: GDPR-style soft-delete of every submission authored by the caller. Audit log retained.
@@ -690,6 +626,23 @@ changelog:
     change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.
   - date: 2026-08-27
     change: Removed the count_distinct_sectors mission goal type from skills-hunt.mission.create — it counted claimed professions, which the nomination form no longer collects, so the goal could never be completed. The stack bonus was deleted from submission scoring for the same reason; it was a computed figure with no contract surface.
+  - date: 2026-08-27
+    change: Removed the claimedProfessions input from skills-hunt.submission.create — the nomination form stopped collecting professions when the taxonomy skills picker replaced that field, every reader has been removed, and the underlying column is dropped.
+  - date: 2026-08-27
+    change: >-
+      Removed skills-hunt.submission.report — community moderation reports are gone. A member
+      could never file one (the route had no button anywhere in the app), resolving a report as
+      'removed' only flipped a status column without deleting or blocking anything, and its first
+      reason 'no_permission' described every community-generated profile by definition rather than
+      singling one out. Directory owns this instead — an admin takes a community-generated profile
+      down from the Directory admin screen, which deletes it and blocks its Quora URL from being
+      listed again until the block is lifted.
+  - date: 2026-08-27
+    change: >-
+      Removed skills-hunt.directory-profile.generate — regenerating a Directory profile is out of
+      scope for SkillsHunt. Nothing in the app called it, and Directory owns the profile lifecycle
+      end to end, including creating or repairing one from its own admin screen. SkillsHunt still
+      creates the profile automatically on accept; that path is unchanged.
   - date: 2026-08-27
     change: >-
       skills-hunt.submission.create and skills-hunt.submission.review now read Directory's takedown

@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c) |
 
 ---
 
@@ -277,7 +277,7 @@ Result: web ☐
 2. Observe the submissions list: each entry shows full name, status (pending/accepted/rejected), and relative date.
 3. Observe the achievements/badges row — seeded badges (e.g. First Finder) appear if awarded.
 
-**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion.
+**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion. **Diversity Champion** is awarded for accepted nominations spanning 3+ distinct taxonomy sectors, resolved from the submitted skills — it counted claimed professions until 2026-08-27, a field the nomination form no longer collects, which made it unearnable. The nomination form asks for skills, never professions.
 
 Result: web ☐
 
@@ -316,24 +316,6 @@ Result: web ☐
 3. Click the CTA button on the card.
 
 **Expected:** The card shows a title, description, and a CTA button. Clicking the CTA navigates to `/apps/skills-hunt?tab=scout` (the Scout/nomination form).
-
-Result: web ☐
-
----
-
-### SH-13 — Submission report: member can report a community-generated Directory profile
-
-**Role:** member · **Surfaces:** web
-
-**Precondition:** A community-generated Directory profile exists (seeded with `@community-seed01` handle). Member is signed in.
-
-**Steps:**
-1. Navigate to the seeded community-generated profile in the Directory (`/apps/directory/@community-seed01`).
-2. Locate and trigger the "Report" action.
-3. Select a reason (e.g. "inaccurate") and optionally add details.
-4. Submit the report.
-
-**Expected:** Report is accepted (200 response or success confirmation). A second identical report from the same user can be submitted (this command is not idempotent by contract).
 
 Result: web ☐
 
@@ -750,24 +732,6 @@ Result: web ☐
 
 ---
 
-### SH-A13 — Reports queue: admin can view and resolve reports
-
-**Role:** admin · **Surfaces:** web
-
-**Precondition:** SH-13 has been run — a report exists with status `open`.
-
-**Steps:**
-1. Navigate to the Reports tab of the admin shell.
-2. Confirm the report from SH-13 appears in the open queue.
-3. Resolve it with action `dismissed` and add a short note.
-4. Confirm the queue no longer shows that report under the default (open) filter.
-
-**Expected:** The report's status changes to `dismissed`. It is still accessible by filtering by that status. The resolution notes are stored.
-
-Result: web ☐
-
----
-
 ### SH-A14 — Audit trail is readable by admins
 
 **Role:** admin · **Surfaces:** web
@@ -778,7 +742,7 @@ Result: web ☐
 1. Make a GET request to `/api/skills-hunt/admin/audit-events` (or use a browser/API tool while authenticated as admin).
 2. Optionally add `?limit=10`.
 
-**Expected:** Response contains `{ events: [...] }` with entries for actions performed this session (accepts, rejects, report creation, profile delete if SH-15 was run). Each event includes a command name, actor, timestamp, and policy decision.
+**Expected:** Response contains `{ events: [...] }` with entries for actions performed this session (accepts, rejects, profile delete if SH-15 was run). Each event includes a command name, actor, timestamp, and policy decision.
 
 Result: web ☐
 
@@ -887,13 +851,6 @@ Result: web ☐
 
 ---
 
-### Account deletion pseudonymizes filed reports
-
-**Expected:** After a member deletes their account, reports they filed about submissions remain as
-moderation records, but the reporter reads as a deleted member; the resolving admin stays recorded.
-
----
-
 ## Parity check (web ↔ android)
 
 The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.
@@ -916,7 +873,7 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 
 **Android-only behavior that intentionally differs from web:**
 - Round creation and editing is web-only (SH-A9).
-- Missions admin CRUD, Reports tab, and Reward Card editor are web-only (issue #660).
+- Missions admin CRUD and the Reward Card editor are web-only (issue #660).
 - Each accept/reject/flag on Android requires an explicit confirm gesture before firing.
 
 ---
@@ -926,3 +883,4 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 1. **Admin pre-approval pathway for restricted submitters is disabled.** A user whose rejection rate exceeds the threshold gets a 403 (`SKILLS_HUNT_PRE_APPROVAL_REQUIRED`) but there is no UI for an admin to manually pre-approve them. This is intentional in the current scope.
 2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
 3. **The team leaderboard no longer exists.** It was removed 2026-08-27: it grouped by each nominee's free-text claimed profession rather than by any team of members, and every row had collapsed into one "Unspecified" bucket once the nomination form stopped collecting professions. Do not file its absence as a bug.
+4. **There is no Reports queue, and no way to report a profile.** Both were removed 2026-08-27, along with test cases SH-13 and SH-A13 (their numbers are left unused rather than renumbering every case after them). Nothing could ever file a report — the member route had no button anywhere in the app — and resolving one only flipped a status column without deleting a profile or blocking anything. Taking down a community-generated profile is Directory's job and always was: in the Directory admin screen, an unclaimed community-generated profile carries an amber "Remove at the person's request" control that asks for a reason, deletes the profile, and blocks its Quora URL from being listed again until an admin lifts the block from the "Taken-down Quora URLs" panel on the same screen.

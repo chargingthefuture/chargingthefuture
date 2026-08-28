@@ -39,7 +39,7 @@ export type AutoMissionConfig = {
   updatedAtIso: string | null;
 };
 
-export type AutoMissionRoundResult = {
+type AutoMissionRoundResult = {
   roundId: string;
   roundName: string;
   opened: Array<{ sector: string; gap: number; missionId: string }>;
@@ -48,7 +48,7 @@ export type AutoMissionRoundResult = {
   updated: number;
 };
 
-export type AutoMissionRunSummary = {
+type AutoMissionRunSummary = {
   ranAtIso: string;
   enabled: boolean;
   skipped?: 'disabled' | 'no_workforce_share' | 'no_active_rounds';
@@ -139,11 +139,11 @@ async function hasPositiveWorkforceShare(): Promise<boolean> {
   return Number(result.rows[0]?.total ?? '0') > 0;
 }
 
-export type SectorGap = { sector: string; gap: number };
+type SectorGap = { sector: string; gap: number };
 
 // Sum the per-occupation gaps into one shortfall figure per sector, largest first. Occupations
 // with no real sector ('Unassigned' fallback) are dropped — a mission cannot point at them.
-export async function computeSectorGaps(): Promise<SectorGap[]> {
+async function computeSectorGaps(): Promise<SectorGap[]> {
   const gaps = await fetchOccupationGapReport();
   const bySector = new Map<string, number>();
   for (const item of gaps) {
@@ -248,7 +248,7 @@ async function insertAutoMission(
  * The refresh runs before the cap check on purpose: a round already at its cap opens nothing, and
  * skipping it there would leave exactly those rounds stuck on the settings they were created with.
  */
-export async function generateAutoMissionsForRound(
+async function generateAutoMissionsForRound(
   client: PoolClient,
   roundId: string,
   input: { config: AutoMissionConfig; sectorGaps: SectorGap[] },

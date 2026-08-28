@@ -537,15 +537,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skills_hunt_leaderboard', 'user_id', 'Your leaderboard entries.'),
       soft('skills_hunt_submissions', 'submitter_user_id', 'deleted_at', 'Your submissions (soft-deleted; audit log retained).'),
       retain('skills_hunt_audit_log', 'Compliance audit log; retained.'),
-      // A report you filed about someone's submission is moderation evidence tied to that
-      // submission, not your record — it stays with your id overwritten (resolved_by is the admin
-      // audit and is untouched).
-      pseudo(
-        'skills_hunt_submission_reports',
-        'reporter_user_id',
-        [],
-        'Reports you filed about submissions — the moderation record stays, your identity does not.',
-      ),
       retain('skills_hunt_rounds', 'Shared rounds; authorship columns are the admin audit.'),
       retain('skills_hunt_missions', 'Shared missions; authorship columns are the admin audit.'),
       retain('skills_hunt_directory_profiles', 'Admin-generated unclaimed directory projections; created_by is the admin audit.'),
