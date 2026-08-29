@@ -152,7 +152,7 @@ error text below.
 nothing partial lands. The error names the change id, the occupation it tried to create, the live
 occupation(s) it collides with, and what to do instead: use `addSkill` with `occupationExisting: true`
 against the live name, or rename one of the two so the difference is legible. A live row that is
-deactivated still blocks, and is labelled `(deactivated)` in the message. Changes below id 80 are not
+deactivated still blocks, and is labeled `(deactivated)` in the message. Changes below id 80 are not
 guarded and replay exactly as before — change 1 is itself the historical `Marketing Specialist` twin, and
 guarding it would stop the list replaying into a fresh database.
 **Result:** web ☐ mobile ☐ — notes:
