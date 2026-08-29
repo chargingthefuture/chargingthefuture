@@ -105,6 +105,6 @@ second test member in the same room.
 ## What is intentionally NOT in the Android app
 
 Directory, LightHouse, TrustTransport, SocketRelay, Foundation, SkillsHunt, Workforce, GDP,
-ServiceCredits, Weekly Performance, Feed/Announcements, Mood, GentlePulse, LevelUp, PeerProgramming,
+ServiceCredits, Weekly Performance, Feed/Announcements, Mood, GentlePulse, SkillUp, PeerProgramming,
 and the rest are **web-only** now (installable PWA). If any of these appears in the native app, that
 is a regression against the Chyme-only scope (rule 105).

@@ -5,7 +5,7 @@ import { fetchOccupationGapReport } from 'lib/workforce/repository';
 import { reportError } from 'lib/observability/report';
 
 // Per-occupation training gaps (demand vs recruited per Skills Taxonomy job title), largest gap
-// first. Read-only; this is the breakdown that surfaces which occupations LevelUp should recruit and
+// first. Read-only; this is the breakdown that surfaces which occupations SkillUp should recruit and
 // train for. Supports `?limit=` to cap the list (e.g. the dashboard's Top Training Gaps).
 export async function GET(request: Request) {
   const gate = await requireWorkforceReadAccess();

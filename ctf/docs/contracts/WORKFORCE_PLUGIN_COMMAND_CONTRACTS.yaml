@@ -175,7 +175,7 @@ contracts:
     version: 1.0.0
     description: >-
       Fetch per-occupation training gaps (demand vs recruited per Skills Taxonomy job title), largest
-      gap first. This is the signal that later tells LevelUp which training cohorts to stand up.
+      gap first. This is the signal that later tells SkillUp which training cohorts to stand up.
     inputSchema:
       limit:
         type: number

@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-28 (commit 5564bff3) |
+| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
 
 ---
 

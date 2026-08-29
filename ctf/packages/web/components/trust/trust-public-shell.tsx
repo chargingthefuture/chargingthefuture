@@ -18,7 +18,7 @@ const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 //   ServiceCredits activity   → distinct members who completed a ServiceCredits transfer with you,
 //                               plus the undisputed completed-transfer line
 //   Community connections     → Foundation connections-as-provider + ongoing recurring activities
-//   Cohort completion record  → completed LevelUp / joined PeerProgramming cohorts
+//   Cohort completion record  → completed SkillUp / joined PeerProgramming cohorts
 //
 // "Quora social proof" was listed here until 2026-08-10 and was never real: no Quora signal exists in
 // lib/trust, and the onboarding Quora check belongs to Unlock, not Trust. Advertising a signal the

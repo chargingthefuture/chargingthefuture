@@ -216,7 +216,7 @@ async function seedServiceCredits(c) {
 
   if (OWNER2) {
     // The second real user needs a wallet to move credits and to deposit into a
-    // Level-Up cohort. Plus a real member↔member transfer both can see.
+    // Skill-Up cohort. Plus a real member↔member transfer both can see.
     await c.query(
       `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
        VALUES ($1, 500, 0, NOW())
@@ -235,7 +235,7 @@ async function seedServiceCredits(c) {
   }
 
   // Tester accounts (issue #2037): a wallet each, so credit-bearing script steps (send, escrow,
-  // Level-Up deposit) work for them without an admin grant first.
+  // Skill-Up deposit) work for them without an admin grant first.
   for (const tester of [TESTER_ADMIN, TESTER_MEMBER].filter(Boolean)) {
     await c.query(
       `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
@@ -298,7 +298,7 @@ async function seedWeeklyPerformance(c) {
   console.log('  ✓ weekly-performance');
 }
 
-async function seedLevelUp(c) {
+async function seedSkillUp(c) {
   // Wallet pre-seeded in service-credits above; also ensure trainer wallet exists
   await c.query(
     `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
@@ -308,7 +308,7 @@ async function seedLevelUp(c) {
   );
 
   await c.query(
-    `INSERT INTO level_up_cohorts
+    `INSERT INTO skill_up_cohorts
      (id, title, description, track, seats, start_date, end_date, required_credits,
       materials_cost, device_support, status, allow_no_deposit, trainer_split_percent,
       completion_bonus_credits, stipend_mode, stipend_amount_per_payout,
@@ -331,7 +331,7 @@ async function seedLevelUp(c) {
   );
 
   await c.query(
-    `INSERT INTO level_up_curriculum_items
+    `INSERT INTO skill_up_curriculum_items
      (id, cohort_id, title, description, sequence_no, required)
      VALUES ($1::uuid, $2::uuid, 'API Design & Delivery', 'Ship one milestone-gated service endpoint.', 1, true)
      ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title`,
@@ -339,7 +339,7 @@ async function seedLevelUp(c) {
   );
 
   await c.query(
-    `INSERT INTO level_up_milestones
+    `INSERT INTO skill_up_milestones
      (id, cohort_id, name, percent_release, required_task, sequence_no)
      VALUES
        ($1::uuid, $3::uuid, 'Foundation Review', 30, 'Submit and pass the foundation task review.', 1),
@@ -350,7 +350,7 @@ async function seedLevelUp(c) {
 
   // Enroll owner as active participant
   await c.query(
-    `INSERT INTO level_up_enrollments
+    `INSERT INTO skill_up_enrollments
      (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
      VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
      ON CONFLICT (id) DO UPDATE SET
@@ -366,7 +366,7 @@ async function seedLevelUp(c) {
     // so it sees the public-schema index and skips creating the demo one). The
     // deterministic id keeps this idempotent and needs no extra constraint.
     await c.query(
-      `INSERT INTO level_up_enrollments
+      `INSERT INTO skill_up_enrollments
        (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
        ON CONFLICT (id) DO UPDATE SET
@@ -375,7 +375,7 @@ async function seedLevelUp(c) {
     );
   }
 
-  console.log('  ✓ level-up');
+  console.log('  ✓ skill-up');
 }
 
 async function seedSkillsHunt(c) {
@@ -1309,7 +1309,7 @@ async function main() {
     await seedServiceCredits(client);
     await seedGdp(client);
     await seedWeeklyPerformance(client);
-    await seedLevelUp(client);
+    await seedSkillUp(client);
     await seedSkillsHunt(client);
     await seedDirectory(client);
     await seedWorkforce(client);

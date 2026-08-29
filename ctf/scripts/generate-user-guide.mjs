@@ -102,7 +102,7 @@ const ORDER = [
         'This section is ONLY about the Knowledge Library at /knowledge — lending your own public Quora writing to the assistant, and taking it back. The source documents also describe the AI assistant itself (asking it questions, rating its answers); ignore all of that and write nothing about it.',
     },
   ],
-  ['level-up', 'LevelUp'],
+  ['skill-up', 'SkillUp'],
   ['trust', 'Trust'],
   ['trust-transport', 'TrustTransport'],
   ['lighthouse', 'LightHouse'],

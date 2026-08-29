@@ -214,32 +214,32 @@
       "reason": "Called by the host platform uptime check, not by app code."
     },
     {
-      "route": "/api/level-up/cohorts/[cohortId]/claim-trainer",
+      "route": "/api/skill-up/cohorts/[cohortId]/claim-trainer",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/level-up/disputes/[disputeId]/resolve",
+      "route": "/api/skill-up/disputes/[disputeId]/resolve",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/level-up/disputes",
+      "route": "/api/skill-up/disputes",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/level-up/milestones/[milestoneId]/release",
+      "route": "/api/skill-up/milestones/[milestoneId]/release",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/level-up/milestones/[milestoneId]/validate",
+      "route": "/api/skill-up/milestones/[milestoneId]/validate",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/level-up/transfers",
+      "route": "/api/skill-up/transfers",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },

@@ -25,7 +25,7 @@ export const PLUGIN_EMOJI: Record<string, string> = {
   'skills-taxonomy': '🧩',
   'weekly-performance': '📊',
   'click-log': '📍',
-  'level-up': '🎯',
+  'skill-up': '🎯',
   'what-works': '🧰',
   beacon: '📡',
   contributions: '🎁',

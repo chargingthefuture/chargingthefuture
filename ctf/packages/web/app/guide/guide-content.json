@@ -279,17 +279,17 @@
    ]
   },
   {
-   "id": "level-up",
-   "title": "LevelUp",
+   "id": "skill-up",
+   "title": "SkillUp",
    "updated": "2026-08-05",
-   "summary": "LevelUp is where you can enroll in skills training cohorts and track your progress and credits.",
+   "summary": "SkillUp is where you can enroll in skills training cohorts and track your progress and credits.",
    "body": [
     "Browse available cohorts by track, status, or start date. Each cohort shows its curriculum and milestones. When you find one that fits, you can join it. Some cohorts ask for a deposit in credits, which is held against the cohort's milestones and released as each one is validated.",
-    "Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through LevelUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.",
+    "Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through SkillUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.",
     "If a problem comes up with an enrollment, you can open a dispute and add comments or attachments to explain what happened. You can also browse trainer profiles to see who runs each cohort."
    ],
    "howTo": [
-    "Sign in and open the LevelUp app. You'll see cohort cards to browse.",
+    "Sign in and open the SkillUp app. You'll see cohort cards to browse.",
     "Go to the Wallet tab to see your ServiceCredits balance and escrow totals.",
     "Pick a cohort and follow the enrollment flow to sign up. If a deposit is required, you'll set that up as part of enrollment."
    ]

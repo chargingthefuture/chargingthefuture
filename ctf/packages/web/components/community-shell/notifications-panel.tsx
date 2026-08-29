@@ -30,7 +30,7 @@ function formatTime(iso: string): string {
 // The three plain opt-in buckets. Order and labels are member-facing.
 const PUSH_TOGGLES: Array<{ key: keyof Pick<NotificationPreferences, 'pushSafety' | 'pushActivity' | 'pushCommunity'>; label: string; detail: string }> = [
   { key: 'pushSafety', label: 'Safety, rides, and calls', detail: 'LightHouse, SocketRelay, TrustTransport, Foundation' },
-  { key: 'pushActivity', label: 'Your activity and credits', detail: 'ServiceCredits, LevelUp, Recurring Activity' },
+  { key: 'pushActivity', label: 'Your activity and credits', detail: 'ServiceCredits, SkillUp, Recurring Activity' },
   { key: 'pushCommunity', label: 'Community', detail: 'Commons, PeerProgramming' },
 ];
 

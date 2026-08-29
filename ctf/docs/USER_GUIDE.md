@@ -309,21 +309,21 @@ Before you can type anything you tick six separate lines of consent — one box 
 3. Leave 'Pick a few posts' selected, paste one post's Quora link and its full text, and use 'Add another post' for each one after that. Send, then read the receipt saying how many pieces were kept.
 4. Come back to the same page whenever you want to see what you have sent, or to withdraw it.
 
-## LevelUp
+## SkillUp
 
 _Last updated: 2026-08-05_
 
-LevelUp is where you can enroll in skills training cohorts and track your progress and credits.
+SkillUp is where you can enroll in skills training cohorts and track your progress and credits.
 
 Browse available cohorts by track, status, or start date. Each cohort shows its curriculum and milestones. When you find one that fits, you can join it. Some cohorts ask for a deposit in credits, which is held against the cohort's milestones and released as each one is validated.
 
-Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through LevelUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.
+Your dashboard shows your current ServiceCredits balance, how much is being held for cohorts you are in, and your recent credit movements. You can view the badges you have earned and your total credits earned through SkillUp. Credits are an internal unit — there is no way to spend, transfer, or cash them out here.
 
 If a problem comes up with an enrollment, you can open a dispute and add comments or attachments to explain what happened. You can also browse trainer profiles to see who runs each cohort.
 
 **How to use it**
 
-1. Sign in and open the LevelUp app. You'll see cohort cards to browse.
+1. Sign in and open the SkillUp app. You'll see cohort cards to browse.
 2. Go to the Wallet tab to see your ServiceCredits balance and escrow totals.
 3. Pick a cohort and follow the enrollment flow to sign up. If a deposit is required, you'll set that up as part of enrollment.
 

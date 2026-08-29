@@ -1739,7 +1739,7 @@ canonical_metrics:
 
   - id: wp_value_service_credits_peer_sends
     name: Weekly ServiceCredits Peer Sends
-    description: Count of completed direct peer-to-peer ServiceCredits sends within the week window. Scoping on origin_plugin keeps plugin-mediated transfers (Chyme tips, LevelUp flows) counted once, in their originating plugin.
+    description: Count of completed direct peer-to-peer ServiceCredits sends within the week window. Scoping on origin_plugin keeps plugin-mediated transfers (Chyme tips, SkillUp flows) counted once, in their originating plugin.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: sends
@@ -1877,22 +1877,22 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
-  - id: wp_value_level_up_completions
-    name: Weekly LevelUp Completions
-    description: Count of LevelUp enrollments that reached completed status within the week window (delivered value is completion, not the enrollment start). No completed_at column exists; the status flip writes updated_at.
+  - id: wp_value_skill_up_completions
+    name: Weekly SkillUp Completions
+    description: Count of SkillUp enrollments that reached completed status within the week window (delivered value is completion, not the enrollment start). No completed_at column exists; the status flip writes updated_at.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: completions
     calculation: |
       SELECT COUNT(*) AS v
-      FROM level_up_enrollments
+      FROM skill_up_enrollments
       WHERE updated_at >= :week_start
         AND updated_at < :week_end
         AND status = 'completed';
     inputs:
-      - name: level_up_enrollments.updated_at
+      - name: skill_up_enrollments.updated_at
         type: datetime
-      - name: level_up_enrollments.status
+      - name: skill_up_enrollments.status
         type: string
     example_values:
       - 5
@@ -1903,22 +1903,22 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
-  - id: wp_value_level_up_trainer_payouts
-    name: Weekly LevelUp Trainer Payouts
-    description: Count of LevelUp trainer payout disbursements created within the week window.
+  - id: wp_value_skill_up_trainer_payouts
+    name: Weekly SkillUp Trainer Payouts
+    description: Count of SkillUp trainer payout disbursements created within the week window.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: payouts
     calculation: |
       SELECT COUNT(*) AS v
-      FROM level_up_disbursements
+      FROM skill_up_disbursements
       WHERE created_at >= :week_start
         AND created_at < :week_end
         AND disbursement_type = 'trainer_payout';
     inputs:
-      - name: level_up_disbursements.created_at
+      - name: skill_up_disbursements.created_at
         type: datetime
-      - name: level_up_disbursements.disbursement_type
+      - name: skill_up_disbursements.disbursement_type
         type: string
     example_values:
       - 3

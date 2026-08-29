@@ -35,7 +35,7 @@ Conservative-by-default, because deletion is irreversible:
 
 - **Money / ledger** tables are retained. ServiceCredits is reclaimed and tombstoned only through the
   existing account-deletion reclaim flow (`service_credits_account_deletion_reclaims` +
-  `service_credits_wallet_tombstones`), never hard-deleted here. TrustTransport and LevelUp money
+  `service_credits_wallet_tombstones`), never hard-deleted here. TrustTransport and SkillUp money
   tables are likewise retained.
 - **Deletion-event / audit-trail** tables are retained — they exist to be the record of the deletion.
 - **Shared platform content** authored by a user but consumed by others (admin announcements,

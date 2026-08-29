@@ -136,7 +136,7 @@ member-facing name.
 - Foundation
 - GDP
 - Knowledge Library
-- LevelUp
+- SkillUp
 - LightHouse
 - Mood
 - PeerProgramming

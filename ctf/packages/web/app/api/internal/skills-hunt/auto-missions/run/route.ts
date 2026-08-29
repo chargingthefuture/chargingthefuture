@@ -5,7 +5,7 @@ import { failureReason } from 'lib/errors/failure';
 
 // Cron-only: tops up every active SkillsHunt round with missions for the sectors Workforce shows
 // the largest talent gaps in (weekly schedule, .github/workflows/skills-hunt-auto-missions.yml).
-// Guarded by CRON_SECRET (Bearer), matching the LevelUp auto-cohort / Unlock reward-reconciliation
+// Guarded by CRON_SECRET (Bearer), matching the SkillUp auto-cohort / Unlock reward-reconciliation
 // convention. Safe to run more than once: at most one non-archived auto mission per (round,
 // sector), enforced in the database. The admin "Run now" action on the SkillsHunt admin missions
 // tab forces the same run on demand.

@@ -354,16 +354,16 @@
       ]
     },
     {
-      "name": "level-up",
+      "name": "skill-up",
       "type": "plugin",
       "lastReviewedAt": "2026-07-20T09:40:20.540Z",
       "lastRunIssues": 8,
       "cursor": 0,
       "partial": false,
       "paths": [
-        "ctf/packages/web/app/api/level-up",
-        "ctf/packages/web/components/level-up",
-        "ctf/packages/web/lib/level-up"
+        "ctf/packages/web/app/api/skill-up",
+        "ctf/packages/web/components/skill-up",
+        "ctf/packages/web/lib/skill-up"
       ]
     },
     {

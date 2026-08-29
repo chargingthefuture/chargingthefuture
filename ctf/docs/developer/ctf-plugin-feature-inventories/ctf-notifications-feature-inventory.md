@@ -13,7 +13,7 @@
 
 ## Intent and Outcome
 
-Nine plugins have everyday and emergency use (Foundation, LevelUp, LightHouse, Commons,
+Nine plugins have everyday and emergency use (Foundation, SkillUp, LightHouse, Commons,
 PeerProgramming, Recurring Activity, ServiceCredits, SocketRelay, TrustTransport). A hard "no
 notifications" line meant a member could miss a reply, an accepted ride, an incoming call, or credits
 received. The trauma-informed answer (owner decision, 2026-07-20):
@@ -122,7 +122,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
    member a new community post addresses; resolved at post time — see Gaps for how a handle maps to a
    user id).
 3. **Everyday producers (done):** ServiceCredits (credits received on a completed direct transfer),
-   LevelUp (milestone credits released to the learner), Recurring Activity (invited / confirmed /
+   SkillUp (milestone credits released to the learner), Recurring Activity (invited / confirmed /
    declined). Emitted from each plugin's route via `notifySafe`, after the underlying write.
 4. **Safety producers (done):** LightHouse (host gets a new stay request), SocketRelay (requester's
    request was claimed), TrustTransport (provider's offer was accepted), Foundation (someone started a
@@ -184,8 +184,8 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 - 2026-07-20: Everyday producers. ServiceCredits notifies the recipient of a completed direct
   member-to-member transfer (`service-credits.received`, emitted from `/api/service-credits/transfers`,
   not from the ledger function — plugin-origin transfers like rides/calls will notify via their own
-  domain producers). LevelUp notifies the learner when a milestone's credits are released
-  (`level-up.milestone.released`; `releaseMilestoneCredits` now returns `recipientUserId` so the route
+  domain producers). SkillUp notifies the learner when a milestone's credits are released
+  (`skill-up.milestone.released`; `releaseMilestoneCredits` now returns `recipientUserId` so the route
   can address it). Recurring Activity notifies the counterparty on a new activity
   (`recurring-activity.invited`) and the owner on confirm/decline
   (`recurring-activity.confirmed` / `.declined`). All best-effort via `notifySafe`, deduped on the

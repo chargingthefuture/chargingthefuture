@@ -19,7 +19,7 @@
 - **Plugins with no value-to-others action are NOT forced into a value metric.** They get an honest
   coverage/adoption/engagement metric instead — or none.
 - **Weekly Performance today mis-measures or omits nearly everything** (only logins, feed counts,
-  mood, and LevelUp *enrollments started* — the wrong end). The rebuild replaces that set with the
+  mood, and SkillUp *enrollments started* — the wrong end). The rebuild replaces that set with the
   table below.
 
 ## Value-delivered metrics (drive the dashboard AND gating)
@@ -35,7 +35,7 @@
 | Contributions | A **confirmed contribution** (real dollars). Counts as "supported the platform" — a different flavor than member-to-member aid; its gating weight is a later owner call. | `contributions_submissions` `status='confirmed'`, `confirmed_amount_usd` | **Locked** |
 | SkillsHunt | A nomination a moderator **accepted** (produces a real Directory profile + reward) | `skills_hunt_submissions.status='accepted'` | **Locked** |
 | WhatWorks | An **approved tool contributed** (primary — lasting resource) and an **endorsement given** (secondary) | `what_works_products.status='approved'` by `suggested_by`; `what_works_endorsements` | **Locked** |
-| LevelUp | A **completed enrollment** + released trainer payout. (Fixes Weekly Performance, which currently counts enrollments *started* — intent, not delivered value.) | `level_up_enrollments.status='completed'`; `level_up_disbursements` trainer payouts | **Locked** |
+| SkillUp | A **completed enrollment** + released trainer payout. (Fixes Weekly Performance, which currently counts enrollments *started* — intent, not delivered value.) | `skill_up_enrollments.status='completed'`; `skill_up_disbursements` trainer payouts | **Locked** |
 | Recurring Activity | A tie the counterparty **confirmed active**, measured as **distinct counterparties** (anti-collusion) | `recurring_activities.status='active'`, distinct counterparty count | **Locked** |
 | PeerProgramming | **Distinct members who posted in their cohort.** Participation is the plugin's purpose — but it weighs **low** for gating (contribution to a group, not aid to a person). | `peer_programming_messages` distinct authors | **Locked** |
 | Beacon | **Broadcast completion does NOT count — only the owner can start a session** (an admin action measures the admin, not members; no session has even run yet). Member value = **engagement per unique broadcast**: upvotes/reactions/comments, counted **at most once per member per broadcast** (so 100 comments on one broadcast count once). | Grounded via the broadcast's Commons replay post: `beacon_events.commons_recording_post_id` → `feed_community_post_reactions` / `feed_community_replies`. Live in-event chat/reactions are Stream-ephemeral and are NOT countable today — if in-event engagement should count, it needs persisting first. | **Locked** |
@@ -60,7 +60,7 @@ Weekly Performance** with the metrics below.
 
 1. Register the locked metrics in the canonical metric registry (`ctf/config/canonical_metrics.yaml`,
    rule 121) — most value events are not registered today.
-2. Rebuild Weekly Performance around this table: replace the current metric set; fix LevelUp to
+2. Rebuild Weekly Performance around this table: replace the current metric set; fix SkillUp to
    completion; add Directory/Mood/ClickLog rows; add the two goal rows (GDP Community Value Index
    week-over-week toward $300B, Workforce recruited week-over-week toward 2,000,000); drop
    GentlePulse and Skills Taxonomy entirely; respect the Foundation privacy constraint.

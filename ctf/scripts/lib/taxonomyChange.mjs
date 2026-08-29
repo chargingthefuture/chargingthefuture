@@ -2,7 +2,7 @@
 //
 // GOVERNANCE (owner decision 2026-07-03 — see ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md):
 // the taxonomy (sector -> occupation/job title -> skill) is baseline data for Directory, Workforce,
-// SkillsHunt, Foundation, LevelUp, and GDP. It is never edited one-off. Every change is an entry
+// SkillsHunt, Foundation, SkillUp, and GDP. It is never edited one-off. Every change is an entry
 // appended to TAXONOMY_CHANGES below, reviewed in a PR, validated by CI
 // (ctf/scripts/check-taxonomy-change.mjs), and applied to the live database by the owner-run
 // workflow (started by hand) (.github/workflows/seed-skills-taxonomy.yml -> seedSkillsTaxonomy.mjs ->

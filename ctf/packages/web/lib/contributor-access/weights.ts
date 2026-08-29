@@ -22,8 +22,8 @@ export type ContributorValueEventKey =
   | 'value.skills_hunt_nominations_accepted'
   | 'value.what_works_tools_approved'
   | 'value.what_works_endorsements_given'
-  | 'value.level_up_completions'
-  | 'value.level_up_trainer_payouts'
+  | 'value.skill_up_completions'
+  | 'value.skill_up_trainer_payouts'
   | 'value.recurring_ties_confirmed'
   | 'value.peer_programming_active_posters'
   | 'value.beacon_broadcast_engagement';
@@ -40,8 +40,8 @@ export const EVENT_SOURCE_PLUGIN: Record<ContributorValueEventKey, string> = {
   'value.skills_hunt_nominations_accepted': 'skills-hunt',
   'value.what_works_tools_approved': 'what-works',
   'value.what_works_endorsements_given': 'what-works',
-  'value.level_up_completions': 'level-up',
-  'value.level_up_trainer_payouts': 'level-up',
+  'value.skill_up_completions': 'skill-up',
+  'value.skill_up_trainer_payouts': 'skill-up',
   'value.recurring_ties_confirmed': 'recurring-activity',
   'value.peer_programming_active_posters': 'peer-programming',
   'value.beacon_broadcast_engagement': 'beacon',
@@ -63,8 +63,8 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
   'value.skills_hunt_nominations_accepted': 'SkillsHunt nomination accepted',
   'value.what_works_tools_approved': 'WhatWorks tool approved',
   'value.what_works_endorsements_given': 'WhatWorks endorsement given',
-  'value.level_up_completions': 'LevelUp enrollment completed',
-  'value.level_up_trainer_payouts': 'LevelUp trainer payout',
+  'value.skill_up_completions': 'SkillUp enrollment completed',
+  'value.skill_up_trainer_payouts': 'SkillUp trainer payout',
   'value.recurring_ties_confirmed': 'Recurring Activity tie confirmed',
   'value.peer_programming_active_posters': 'PeerProgramming week posted in',
   'value.beacon_broadcast_engagement': 'Beacon broadcast engaged with',
@@ -74,8 +74,8 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
 // per 10 USD confirmed.
 export const DEFAULT_WEIGHTS: Record<ContributorValueEventKey, number> = {
   'value.lighthouse_stays_completed': 25,
-  'value.level_up_completions': 10,
-  'value.level_up_trainer_payouts': 10,
+  'value.skill_up_completions': 10,
+  'value.skill_up_trainer_payouts': 10,
   'value.foundation_calls_answered': 8,
   'value.socket_relay_requests_fulfilled': 8,
   'value.skills_hunt_nominations_accepted': 6,

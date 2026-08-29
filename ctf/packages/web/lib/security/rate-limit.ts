@@ -9,7 +9,7 @@
 //   public endpoints. It is NOT a distributed quota, not billing-grade metering, and not a
 //   substitute for a shared-store (e.g. Redis/Postgres) limiter if abuse becomes material.
 //
-// Existing per-feature limits (bug-reports, comic, level-up) count rows in Postgres per
+// Existing per-feature limits (bug-reports, comic, skill-up) count rows in Postgres per
 // user; they gate authenticated writes and are unrelated to this per-IP read brake.
 
 import { NextResponse } from 'next/server';

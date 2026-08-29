@@ -1,7 +1,7 @@
 # Skills Taxonomy Change Governance — Design and Build Plan
 
 Owner-approved direction (2026-07-03). The skills taxonomy (sector → occupation → skill) is baseline
-data for Directory, Workforce, SkillsHunt, Foundation, LevelUp, and GDP — accuracy matters the way the
+data for Directory, Workforce, SkillsHunt, Foundation, SkillUp, and GDP — accuracy matters the way the
 ServiceCredits ledger matters. It must not be edited one-off. Every change flows through one checked,
 reviewed, reproducible path.
 
@@ -112,7 +112,7 @@ low-risk lane for 1, 3, 6, and 8.
 - **Reseed safety:** because the change list is the single write path and replays idempotently, a
   reseed can never resurrect a deactivated skill — deactivation is itself an entry in the list, so
   every replay lands on the same end state.
-- **Workforce/LevelUp:** reparenting a skill instantly moves its holders' sector/occupation match in
+- **Workforce/SkillUp:** reparenting a skill instantly moves its holders' sector/occupation match in
   the Workforce live model (it reads `skills_taxonomy_skills.job_title_id` at request time). Gap
   numbers shift on the next read; no Workforce change needed.
 - **Demo data:** `schema.demo.sql` / demo seeds are unaffected (ops apply to the live DB; demo

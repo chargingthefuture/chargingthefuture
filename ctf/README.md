@@ -174,25 +174,25 @@ This folder contains the rewrite monorepo scaffold for:
 - Required env vars: `FORMANCE_API_URL` (Render internal URL of `ctf-formance-ledger`), `FORMANCE_LEDGER`, `FORMANCE_API_TOKEN`. Never route Formance ↔ CTF traffic through a public domain.
 - When Formance is not configured or unavailable, `POST /api/service-credits/transfers` returns a deterministic 503 deny code.
 
-## LevelUp Plugin (Phase 3)
+## SkillUp Plugin (Phase 3)
 
-- Plugin shell route: `/apps/level-up`
-- Admin route: `/admin/level-up`
-- Primary migration: `ctf/migrations/2026-03-24-level-up-core-phase3.sql`
-- Deterministic seed script: `pnpm run seed:level-up`
+- Plugin shell route: `/apps/skill-up`
+- Admin route: `/admin/skill-up`
+- Primary migration: `ctf/migrations/2026-03-24-skill-up-core-phase3.sql`
+- Deterministic seed script: `pnpm run seed:skill-up`
 
-### LevelUp environment variables
+### SkillUp environment variables
 
-- `LEVEL_UP_STARTER_CREDITS` default: `500`
-- `LEVEL_UP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVEL_UP_ENROLL_RATE_LIMIT_MAX` default: `6`
-- `LEVEL_UP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
-- `LEVEL_UP_MILESTONE_RATE_LIMIT_MAX` default: `20`
+- `SKILL_UP_STARTER_CREDITS` default: `500`
+- `SKILL_UP_ENROLL_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `SKILL_UP_ENROLL_RATE_LIMIT_MAX` default: `6`
+- `SKILL_UP_MILESTONE_RATE_LIMIT_WINDOW_MS` default: `60000`
+- `SKILL_UP_MILESTONE_RATE_LIMIT_MAX` default: `20`
 
 ### MVP testing posture
 
 - Automated test suites are deferred for MVP per Rule 118.
-- LevelUp release readiness currently relies on migration/application validation, seed validation, audit/contract checks, and parity tracking artifacts.
+- SkillUp release readiness currently relies on migration/application validation, seed validation, audit/contract checks, and parity tracking artifacts.
 
 ## Prompt Leak Protection
 

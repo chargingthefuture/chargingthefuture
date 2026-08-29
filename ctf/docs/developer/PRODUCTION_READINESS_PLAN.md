@@ -93,7 +93,7 @@ in the `design/` submodule** — build backend now, circle back for UI.
 15. **weekly-performance** backend — no dependency.
 16. **gdp** backend — best done after upstream metric/event semantics settle (#6–#14).
 17. **service-credits** backend — blocked by #16 (GDP accounting/reclaim coupling).
-18. **level-up**, **trust**, **click-log**, **unlock** backend — no dependency.
+18. **skill-up**, **trust**, **click-log**, **unlock** backend — no dependency.
 19. **UI circle-back** (per plugin) — blocked by that plugin's design landing in `design/`. Implement web pixel-perfect + android parity once the design agent finishes it.
 
 ## Progress checklist
@@ -127,7 +127,7 @@ Legend: ✅ done · 🟡 in progress · ⬜ not started · ⏳ design pending (p
 | weekly-performance | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | gdp | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | service-credits | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| level-up | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| skill-up | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | trust | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | click-log | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | unlock | 🎨 | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -183,7 +183,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
 - [x] **#102 demo seed**: `pnpm seed:demo` (`ctf/scripts/seedDemo.mjs`) — single idempotent
       orchestrator that populates all 19 plugins in the `demo` schema for a named participant
       (`DEMO_OWNER_ID`). Covers: service-credits (wallet + ledger + transfer), gdp, weekly-performance,
-      level-up (cohort + enrollment), skills-hunt (active round + accepted submission + leaderboard),
+      skill-up (cohort + enrollment), skills-hunt (active round + accepted submission + leaderboard),
       skills-taxonomy (sector + job-title + 2 skills), directory (3 profiles), workforce (profile +
       occupation), lighthouse (seeker + host + 2 properties + match), socket-relay (user-extension +
       request + fulfillment), feed + announcements, trust, mood, gentle-pulse (library + play + rating +
@@ -291,7 +291,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
 - 2026-05-21: Batch backend audit — discovered most plugins already have backend implementations. Verified
   7 additional backends complete (schema, contracts, routes, seed script all present and coherent):
   lighthouse (5 tables, 23 routes), socket-relay (7 tables, 20 routes), trusttransport (13 tables, 20 routes),
-  gentle-pulse (4 tables, 6 routes), level-up (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
+  gentle-pulse (4 tables, 6 routes), skill-up (13 tables, 8 routes), trust (15 tables, 5 routes), unlock (5 tables,
   4 routes). Marked all 7 backends ✅. Detailed audit of remaining 6 plugins: peer-programming (7 tables, 6 routes,
   NO seed script), mood (1 table, 2 routes, NO seed), gdp (3 tables, 2 routes, NO seed), service-credits (15 tables,
   11 routes, NO seed), weekly-performance (3 tables, 5 routes, NO seed), click-log (1 table, 2 routes, ✅ seed).
@@ -508,17 +508,17 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   instead of the prior shell's fabricated 7-day averages and distribution percentages (no aggregate-stats
   backend exists). Decomposed into modular sub-components within rule-116 limits; removed banned
   "Phase 2" text.
-- 2026-05-30: UI circle-back — level-up web pixel pass. Decomposed the 520-line monolith
-  `level-up-shell.tsx` into modular sub-components within the rule-116 limits: `lu-shared.ts`
-  (palette/types/helpers), `lu-loading.tsx` (full-screen design splash), `lu-sidebar.tsx`,
-  `lu-cohort-card.tsx`, `lu-browse.tsx`, `lu-progress.tsx`, `lu-right-panel.tsx`, and a thin shell
+- 2026-05-30: UI circle-back — skill-up web pixel pass. Decomposed the 520-line monolith
+  `skill-up-shell.tsx` into modular sub-components within the rule-116 limits: `su-shared.ts`
+  (palette/types/helpers), `su-loading.tsx` (full-screen design splash), `su-sidebar.tsx`,
+  `su-cohort-card.tsx`, `su-browse.tsx`, `su-progress.tsx`, `su-right-panel.tsx`, and a thin shell
   that composes them. Removed 6 dead unreferenced components (`AdminPanel`, `CohortDetail`,
   `CohortList`, `EnrollModal`, `TrainerDashboard`, `UserDashboard`). Shell binds real routes:
-  `GET /api/level-up/cohorts?track=`, `GET /api/service-credits/wallet`, `POST /api/level-up/enroll`
-  (`{ cohortId, idempotencyKey, depositCredits }`), `POST /api/level-up/milestones/[id]/validate`.
+  `GET /api/skill-up/cohorts?track=`, `GET /api/service-credits/wallet`, `POST /api/skill-up/enroll`
+  (`{ cohortId, idempotencyKey, depositCredits }`), `POST /api/skill-up/milestones/[id]/validate`.
   All counts derive from real data; unbacked mockup figures omitted. typecheck, lint, modularity,
-  build:ci, EOF, parity, and schema-drift gates green. Marked level-up Web px ✅; Android pixel parity
-  (`MobileLevelUp.tsx`) remains ⬜ for the dedicated Android sweep.
+  build:ci, EOF, parity, and schema-drift gates green. Marked skill-up Web px ✅; Android pixel parity
+  (`MobileSkillUp.tsx`) remains ⬜ for the dedicated Android sweep.
 - 2026-05-30: UI circle-back — peer-programming web pixel pass. Like trusttransport, the existing
   shell was already a real-data adaptation of `design/.../survivor-hub/PeerProgramming.tsx` (it drops
   the design's mock COHORTS list / AI chat / fabricated Global Stats and binds the real assigned

@@ -122,8 +122,8 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',
   },
   {
-    id: 'level-up',
-    name: 'LevelUp',
+    id: 'skill-up',
+    name: 'SkillUp',
     kind: 'plugin',
     summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
   },

@@ -1,0 +1,383 @@
+policies:
+  - pluginId: skill-up
+    command: cohort.create
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - trainer
+    attributePolicies:
+      tenancy: same_workspace
+      profileStatus: approved_user_or_admin
+    consentRequirements:
+      scopes:
+        - skill_up_manage_cohorts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - profile_not_approved
+
+  - pluginId: skill-up
+    command: cohort.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - trainer
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - skill_up_read
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - profile_not_approved
+
+  - pluginId: skill-up
+    command: enrollment.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      enrollmentRateLimit: enforced
+      cohortStatusAllowed:
+        - open
+        - active
+    consentRequirements:
+      scopes:
+        - skill_up_enroll
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_balance
+      - rate_limit_exceeded
+      - cohort_closed
+
+  - pluginId: skill-up
+    command: enrollment.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - trainer
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      # The read is filtered by the caller's own user id in the repository query; no id comes from
+      # the request, so an admin calling it still sees only their own enrollments.
+      scope: self_only
+    consentRequirements:
+      scopes:
+        - skill_up_read
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - profile_not_approved
+
+  - pluginId: skill-up
+    command: milestone.validate
+    version: 1.0.0
+    requiredRoles:
+      - trainer
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      trainerAssignmentOrAdmin: true
+      validationRateLimit: enforced
+    consentRequirements:
+      scopes:
+        - skill_up_validate_milestones
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - trainer_not_assigned
+      - rate_limit_exceeded
+
+  - pluginId: skill-up
+    command: milestone.release
+    version: 1.0.0
+    requiredRoles:
+      - trainer
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      trainerAssignmentOrAdmin: true
+      milestoneMustBeValidated: true
+    consentRequirements:
+      scopes:
+        - skill_up_release_credits
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - milestone_not_validated
+      - escrow_missing
+      - invalid_release_state
+
+  - pluginId: skill-up
+    command: dispute.open
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - trainer
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      disputeWindowOpen: true
+    consentRequirements:
+      scopes:
+        - skill_up_dispute
+      fallbackLawfulBasis: legal_obligation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - dispute_window_closed
+      - enrollment_not_visible
+
+  - pluginId: skill-up
+    command: dispute.resolve
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - trainer
+    attributePolicies:
+      tenancy: same_workspace
+      trainerAssignmentOrAdmin: true
+    consentRequirements:
+      scopes:
+        - skill_up_dispute_resolve
+      fallbackLawfulBasis: legal_obligation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - dispute_not_open
+
+  - pluginId: skill-up
+    command: admin.adjust_credits
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      governanceTicketRequired: true
+    consentRequirements:
+      scopes:
+        - skill_up_admin_credit_adjust
+      fallbackLawfulBasis: legal_obligation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - governance_ticket_missing
+
+  - pluginId: skill-up
+    command: trainer.list
+    version: 1.0.0
+    requiredRoles:
+      - approved_user
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - skill_up_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_authenticated
+
+  - pluginId: skill-up
+    command: achievement.list
+    version: 1.0.0
+    requiredRoles:
+      - approved_user
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      selfScopedRead: true
+    consentRequirements:
+      scopes:
+        - skill_up_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_authenticated
+
+  - pluginId: skill-up
+    command: wallet.view
+    version: 1.0.0
+    requiredRoles:
+      - approved_user
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      selfScopedRead: true
+    consentRequirements:
+      scopes:
+        - skill_up_read
+        - service_credits_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_authenticated
+
+  - pluginId: skill-up
+    command: cohort.auto_create
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - system
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - skill_up_manage_cohorts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - invalid_source_event
+
+  - pluginId: skill-up
+    command: cohort.claim_trainer
+    version: 1.0.0
+    requiredRoles:
+      - admin
+      - trainer
+    attributePolicies:
+      tenancy: same_workspace
+      profileStatus: approved_user_or_admin
+    consentRequirements:
+      scopes:
+        - skill_up_manage_cohorts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: skill-up
+    command: cohort.proposal_approve
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - skill_up_manage_cohorts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - proposal_not_pending
+
+  - pluginId: skill-up
+    command: cohort.proposal_dismiss
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - skill_up_manage_cohorts
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+      - proposal_not_pending

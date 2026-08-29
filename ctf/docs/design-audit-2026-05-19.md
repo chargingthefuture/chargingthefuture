@@ -1,7 +1,7 @@
 # Design Audit: Replit Mockup vs Shell Code
 
     _Generated: 2026-05-19 by design agent per `.claude/rules/126-design-mockup-implementation-rules.mdc`_
-    _Last updated: 2026-05-19 — LevelUp shell implemented_
+    _Last updated: 2026-05-19 — SkillUp shell implemented_
 
     ---
 
@@ -12,7 +12,7 @@
     | 🔴 STUB — awaiting user decision | Trust |
     | 🟢 MINOR DRIFT — remaining | GDP, LightHouse, Workforce |
     | 🟢 MINOR DRIFT — review needed | Foundation |
-    | ✅ IMPLEMENTED / NO MAJOR DRIFT | Directory ✅, ServiceCredits ✅, SkillsHunt ✅, Feed ✅, Chyme ✅, PeerProgramming, SocketRelay, TrustTransport, GentlePulse ✅, Community ✅, Mood ✅, LevelUp ✅ |
+    | ✅ IMPLEMENTED / NO MAJOR DRIFT | Directory ✅, ServiceCredits ✅, SkillsHunt ✅, Feed ✅, Chyme ✅, PeerProgramming, SocketRelay, TrustTransport, GentlePulse ✅, Community ✅, Mood ✅, SkillUp ✅ |
 
     ---
 
@@ -60,17 +60,17 @@
     - **API backing**: `/api/mood/eligibility` (GET), `/api/mood/submissions` (POST)
     - **Status**: ✅ committed
 
-    ### 7. LevelUp shell — full implementation replacing stub
+    ### 7. SkillUp shell — full implementation replacing stub
 
-    - **File**: `ctf/packages/web/components/level-up/level-up-shell.tsx`
-    - **Design ref**: `LevelUp.tsx` — green=#22C55E, dark surface theme
+    - **File**: `ctf/packages/web/components/skill-up/skill-up-shell.tsx`
+    - **Design ref**: `SkillUp.tsx` — green=#22C55E, dark surface theme
     - **Structure**: 220px sidebar (logo, nav, trainer tools section, wallet badge) + main area + 300px right panel.
     - **Nav views**: Browse Cohorts (stats bar + track filters + search + 3-col cohort grid), My Progress (enrollment tracking with milestone progress bars), stub views for Trainers/Achievements/Wallet.
     - **Cohort grid**: track color badge, status badge (open/active/full/completed), seat count, SC cost, Enroll button with optimistic enrolled state.
-    - **Enrollment flow**: POST `/api/level-up/enroll` with `{ cohortId, idempotencyKey, depositCredits }`. Enrolled state tracked client-side; enrolled cohorts appear in right panel and Progress view.
+    - **Enrollment flow**: POST `/api/skill-up/enroll` with `{ cohortId, idempotencyKey, depositCredits }`. Enrolled state tracked client-side; enrolled cohorts appear in right panel and Progress view.
     - **Wallet**: fetched from `/api/service-credits/wallet` — available balance + escrow shown in sidebar badge and stats bar.
-    - **Trainer panel**: `isAdmin=true` reveals Create Cohort button, Trainer Tools nav section, pending validations panel with Approve action (`POST /api/level-up/milestones/[id]/validate`).
-    - **Track filters**: All Tracks, Tech, Finance, Wellness, Life Skills — passed to `GET /api/level-up/cohorts?track=`.
+    - **Trainer panel**: `isAdmin=true` reveals Create Cohort button, Trainer Tools nav section, pending validations panel with Approve action (`POST /api/skill-up/milestones/[id]/validate`).
+    - **Track filters**: All Tracks, Tech, Finance, Wellness, Life Skills — passed to `GET /api/skill-up/cohorts?track=`.
     - **Status**: ✅ committed
 
     ---

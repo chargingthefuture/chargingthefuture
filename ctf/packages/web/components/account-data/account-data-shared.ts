@@ -82,7 +82,7 @@ const SERVICE_GLYPH: Record<string, string> = {
   'skills-hunt': '🎯',
   'skills-taxonomy': '🗂️',
   unlock: '🔓',
-  'level-up': '🚀',
+  'skill-up': '🚀',
   'click-log': '🚨',
   comic: '🤖',
   feedback: '💬',

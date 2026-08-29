@@ -7,7 +7,7 @@
 // actually missing. Admin-authored missions are untouched; generated missions are ordinary rows
 // in skills_hunt_missions marked auto_created, and an admin can archive one like any other.
 //
-// Unlike LevelUp's cohort proposal queue there is no approval step: a mission commits no credits
+// Unlike SkillUp's cohort proposal queue there is no approval step: a mission commits no credits
 // (bonus defaults to 0), no seats and no schedule, so the guardrails are a config kill switch
 // (skills_hunt_auto_mission_config.enabled), a per-round cap, and one-click archive. Runs are
 // idempotent: at most one non-archived auto mission per (round, sector), enforced by the partial
@@ -129,7 +129,7 @@ export async function updateAutoMissionConfig(
 
 // Workforce demand depends on skills_taxonomy_sectors.workforce_share. If no sector carries a
 // positive share, Workforce falls back to an even split and "largest gap" is meaningless — so we
-// refuse to open missions off that degenerate signal (same guard as LevelUp's auto cohorts).
+// refuse to open missions off that degenerate signal (same guard as SkillUp's auto cohorts).
 async function hasPositiveWorkforceShare(): Promise<boolean> {
   const result = await queryDb<{ total: string }>(
     `SELECT COUNT(*)::text AS total

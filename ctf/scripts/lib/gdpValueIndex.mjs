@@ -46,12 +46,12 @@ export const RECOGNITION_SOURCES = [
             GROUP BY COALESCE(price_currency, currency)`,
   },
   {
-    // LevelUp trainer payouts: ServiceCredits paid to a trainer for validated mentorship work, recorded
+    // SkillUp trainer payouts: ServiceCredits paid to a trainer for validated mentorship work, recorded
     // as governed mint grants (reason 'levelup_trainer_split'). Always ServiceCredits (code 'SC').
     // Eligible service delivery only — excludes learner escrow returns, completion bonuses, stipends,
     // and microgrants. Read from governance events, not the SC ledger (whose entries are tagged
     // accounting_scope 'service_credits_non_gdp' by design).
-    pluginSlug: 'level-up',
+    pluginSlug: 'skill-up',
     sql: `SELECT 'SC' AS currency_code, SUM(amount)::numeric AS total
             FROM service_credits_governance_events
             WHERE event_type = 'mint_grant' AND reason = 'levelup_trainer_split'`,

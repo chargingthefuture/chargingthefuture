@@ -24,7 +24,7 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   'skills-taxonomy': { emoji: '🧩', color: '#8B5CF6', bg: '#0F0A1B' },
   'weekly-performance': { emoji: '📊', color: '#6366F1', bg: '#01162e' },
   'click-log': { emoji: '📍', color: '#EC4899', bg: '#1A0811' },
-  'level-up': { emoji: '🎯', color: '#10B981', bg: '#02140E' },
+  'skill-up': { emoji: '🎯', color: '#10B981', bg: '#02140E' },
   'what-works': { emoji: '🧰', color: '#84CC16', bg: '#0F1602' },
   beacon: { emoji: '📡', color: '#B91C1C', bg: '#140303' },
   contributions: { emoji: '🎁', color: '#FB7185', bg: '#1C0C0F' },
