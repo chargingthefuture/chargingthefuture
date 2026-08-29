@@ -71,6 +71,7 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
 - No network error banners appear at any step.
+- On a cohort whose title and track are the same words (one opened from the proposal queue is titled with its occupation), the card shows that text once — the title, with no track chip above it repeating it — and the status chip stays on the right of that row. A cohort whose track differs from its title still shows its track chip.
 
 Result: web ☐
 
@@ -372,6 +373,7 @@ Result: web ☐
 - The three enrollment numbers agree with each other: "Members in a cohort now" is never larger than "Active enrollments", and "Active enrollments" is never larger than "Enrollments, all time".
 - Cross-check against the member side: enroll one member in two cohorts, then reload this page. "Active enrollments" goes up by two and "Members in a cohort now" goes up by one — a row count and a headcount, not the same number under two names.
 - Cohort overview table shows title, track, status, seats open, required deposit, trainer split, and completion bonus for the seed cohort.
+- A cohort whose track is the same words as its title (one opened from the proposal queue) shows no track pill — the row reads the title, then status, and any `auto` / `needs trainer` badge. A cohort whose track differs from its title still shows its track pill.
 - The page uses the shared dark admin design system (dark tokens, icon header with ADMIN badge).
 
 Result: web ☐

@@ -24,7 +24,7 @@ import {
   type AutoCohortRunResult,
   type ProposalTermMonths,
 } from './su-admin-shared';
-import { getSkillUpTokens, type SkillUpTokens } from './su-shared';
+import { getSkillUpTokens, trackRepeatsTitle, type SkillUpTokens } from './su-shared';
 import { ClaimTrainerControl, DisputeResolveControl, ValidationActions } from './su-review-actions';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -283,7 +283,8 @@ function CohortsSection({ cohorts, cohortsError, t, onClaimed }: { cohorts: Admi
           <div key={cohort.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>{cohort.title}</span>
-              <Pill>{cohort.track}</Pill>
+              {/* The track pill is dropped when it only repeats the title beside it. */}
+              {trackRepeatsTitle(cohort.title, cohort.track) ? null : <Pill>{cohort.track}</Pill>}
               <Pill>{cohort.status}</Pill>
               {cohort.autoCreated ? <Pill>auto</Pill> : null}
               {cohort.needsTrainer ? (

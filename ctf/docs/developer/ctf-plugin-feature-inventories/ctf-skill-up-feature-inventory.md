@@ -267,6 +267,19 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-29: **A cohort's track chip is hidden when it only repeats the title (owner report).** A
+  cohort opened from the proposal queue takes the occupation as both its title and its `track`, so a
+  card printed "Journalists / Reporters" and then a chip reading "Journalists / Reporters" directly
+  under it — the same words twice on a phone-width row. New helper `trackRepeatsTitle` in
+  `components/skill-up/su-shared.ts` compares the two normalized (case and whitespace ignored, and a
+  leading `LevelUp: ` / `SkillUp: ` on the title dropped first so a row written before
+  `post/0009_skill_up_cohort_title_drop_plugin_prefix.sql` is recognized as the same repeat). Both
+  places that render a cohort row use it: the member browse card (`su-cohort-card.tsx`) and the admin
+  cohort overview (`su-admin-shell.tsx`). A track that genuinely names something the title does not
+  still shows its chip. The card's chip row is `space-between`, so the status chip gained
+  `marginLeft: auto` to stay on the right when the track chip is not rendered. Display only — no
+  route, schema, contract, or stored value changes, and `track` is still returned by
+  `GET /api/skill-up/cohorts` and still drives the track filter.
 - 2026-08-29: **Cohort titles drop the plugin-name prefix (owner report).** A cohort opened from the
   proposal queue was titled `<plugin name>: <occupation>` — "LevelUp: Journalists / Reporters" on the
   rows written before the rename, "SkillUp: …" after it. Every one of those cards is already inside
