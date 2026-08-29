@@ -98,7 +98,7 @@ function PendingPane({ title }: { title: string }) {
 }
 
 /**
- * "Is this ongoing?" under a favor conversation. A favor is often not a one-off — the same neighbor
+ * "Is this ongoing?" under a request conversation. A request is often not a one-off — the same neighbor
  * collects the same prescription every month. Shown on the live conversation as well as on one closed
  * successfully, because that is where the relationship is and the member usually knows it is standing
  * while it is happening. Not on a canceled or unsuccessful close: that is not an arrangement. Its own
@@ -123,7 +123,7 @@ function FavorRecurringPrompt({
         counterpartyName={isRequester ? selected.fulfillerUsername : selected.requesterUsername}
         originPlugin="socket-relay"
         sector="favor"
-        sectorLabel="a favor like this one"
+        sectorLabel="a request like this one"
         accent={accent}
       />
     </div>

@@ -28,7 +28,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
             <Lock size={18} color={t.ACCENT} />
           </div>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE }}>Economy totals are coming soon</div>
-          <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>Live totals build up as members exchange value in the community — credits sent, calls paid, favors completed. Sign in to contribute.</div>
+          <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.5 }}>Live totals build up as members exchange value in the community — credits sent, calls paid, requests completed. Sign in to contribute.</div>
         </div>
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#000', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>

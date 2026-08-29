@@ -11,7 +11,7 @@ import {
 // Projected value — the "what is still on the board" figure for the GDP surface.
 //
 // The Community Value Index (lib/gdp/recognition.ts) only counts value that actually settled: a task
-// completed, a call charged, a favor closed successfully. That is the honest measure and it must stay
+// completed, a call charged, a request closed successfully. That is the honest measure and it must stay
 // exactly as it is. But a community that has just opened has plenty of real posts and almost nothing
 // closed yet, so the index sits near zero while the board is busy. This module measures that busy board:
 // every open, not-yet-closed post that carries a value, folded with the SAME contribution weights, into
@@ -90,7 +90,7 @@ export const foundationOpenQuoteSource: ProjectionSource = {
 /**
  * LightHouse homes still available: an active listing that nobody has been accepted into yet. The
  * listing IS the post here — a home offered, waiting for a seeker — so it is projected the same way an
- * open ride or an unclaimed favor is, at ONE month of the listed rent (the same unit the recognition
+ * open ride or an unclaimed request is, at ONE month of the listed rent (the same unit the recognition
  * source uses when a match is accepted, so the number simply moves from this figure into the real index
  * when a host says yes).
  *
@@ -122,16 +122,16 @@ export const lighthouseOpenListingSource: ProjectionSource = {
 };
 
 /**
- * SocketRelay favors waiting to be done: a favor posted (`open`) or picked up but not yet closed
+ * SocketRelay requests waiting to be done: a request posted (`open`) or picked up but not yet closed
  * (`claimed`), and not past its 28-day expiry. A post may name an offered value (issue #120): a priced
  * post is projected at its `price_amount` in `price_currency`, and a post with no named value (NULL) or
  * an amount-less type (Free, Barter) counts one point per post — the same unit the index uses for a
- * favor that closed successfully, so a favor moves between the two figures at the same size. Expired,
+ * request that closed successfully, so a request moves between the two figures at the same size. Expired,
  * closed, and canceled posts contribute nothing.
  */
 export const socketRelayOpenFavorSource: ProjectionSource = {
   pluginSlug: 'socket-relay',
-  label: 'SocketRelay favors waiting to be done',
+  label: 'SocketRelay requests waiting to be done',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string; total: string }>(
       `SELECT COALESCE(price_currency, $1) AS currency_code,

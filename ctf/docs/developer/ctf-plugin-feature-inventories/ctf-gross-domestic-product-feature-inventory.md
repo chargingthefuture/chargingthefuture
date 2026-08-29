@@ -88,7 +88,7 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    one of them closed successfully** — a separate number from the Community Value Index above it.
 2. A plain count beside it: how many posts are still open across the whole community.
 3. A per-app breakdown of where that open value sits — rides and deliveries still open in
-   TrustTransport, quotes waiting on an answer in Foundation, favors nobody has done yet in
+   TrustTransport, quotes waiting on an answer in Foundation, requests nobody has done yet in
    SocketRelay, and recurring activities waiting for the other member to confirm.
 4. A sentence, always shown with the number, saying that most posts never close, that this figure is
    interest rather than achievement, that it is not part of the Community Value Index, and that (like
@@ -358,6 +358,19 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 ---
 
 ## 10) Change Log
+
+- 2026-08-29: **The SocketRelay lines in both value figures now say "requests", not "favors"**
+  (owner report, dashboard screenshot: the "Value waiting to happen" card read "SocketRelay favors
+  waiting to be done"). SocketRelay calls a post a request everywhere else — the table is
+  `socket_relay_requests`, the board says "Browse requests", the Direct Line opens on a claimed
+  request — so the value panel was the only surface using a second word for the same thing. Renamed
+  the projection source label to "SocketRelay requests waiting to be done" and the recognition source
+  label to "SocketRelay completed requests", changed the panel's explanatory sentence to "requests
+  nobody has done yet", changed the signed-out headline sentence to "requests completed", and changed
+  the SocketRelay chat's ongoing-arrangement prompt to "a request like this one". Wording only: no
+  query, weight, table, route, or contract changed, and the numbers are identical before and after.
+  The `gdp_projected_value_index` registry description and this inventory carry the same wording. The
+  Recurring Activity sector value `favor` is a separate taxonomy and is untouched.
 
 - 2026-08-18: **Deleted two GDP shell components that nothing rendered.** `gdp-sidebar.tsx` (a fixed
   240px `<aside>` carrying the "Live Ticker" and the Global Overview filter list) and

@@ -118,7 +118,7 @@ export const COMMUNITY_VALUE_INDEX_SINCE_LABEL = "Cumulative since June 12, 2026
 export const PROJECTED_VALUE_METRIC_KEY = "gdp_projected_value_index";
 export const PROJECTED_VALUE_LABEL = "Value waiting to happen";
 export const PROJECTED_VALUE_DISCLAIMER =
-  "This is what the posts already on the board would add if every one of them closed successfully — rides and deliveries still open, quotes waiting on an answer, favors nobody has done yet, recurring activities waiting to be confirmed. Most posts never close, so treat it as interest, not achievement. It is not part of the Community Value Index, and like the index it isn't money, a price, or a redemption value.";
+  "This is what the posts already on the board would add if every one of them closed successfully — rides and deliveries still open, quotes waiting on an answer, requests nobody has done yet, recurring activities waiting to be confirmed. Most posts never close, so treat it as interest, not achievement. It is not part of the Community Value Index, and like the index it isn't money, a price, or a redemption value.";
 
 // Format a USD aggregate into the compact $B/$M/$K form the design uses. Returns a
 // dash when the figure is absent so the map never invents a number.

@@ -40,7 +40,7 @@ export interface CommunityValueResult {
  * always live and needs no owner action. (The owner-curated currency-rate admin that used to hold these
  * was retired; the index must never go dark waiting for someone to set a weight.) ServiceCredits is the
  * community's native unit and counts 1:1, so real ServiceCredits activity is visible immediately; each
- * completed non-money exchange (FREE favor, BARTER trade) counts one point; foreign-currency settled
+ * completed non-money exchange (FREE request, BARTER trade) counts one point; foreign-currency settled
  * value normalizes to a USD reference so it is counted, not dropped.
  *
  * IMPORTANT — these are notional index weights, never money. The index is shown with NO currency symbol
@@ -279,7 +279,7 @@ export const chymeTipSource: RecognitionSource = {
  *
  * A listing with no priced rent (`monthly_rent` of zero or NULL — the host form's "0 for
  * ServiceCredits / free") records no amount anywhere, so an accepted match on one counts as a single
- * FREE exchange, exactly like a completed SocketRelay favor. Housing given at no charge is real value;
+ * FREE exchange, exactly like a completed SocketRelay request. Housing given at no charge is real value;
  * an amount that was never recorded is never invented.
  */
 export const lighthouseHousingSource: RecognitionSource = {
@@ -302,20 +302,20 @@ export const lighthouseHousingSource: RecognitionSource = {
 };
 
 /**
- * SocketRelay favors: SocketRelay is mutual aid — most favors are given free, but a post may name an
+ * SocketRelay requests: SocketRelay is mutual aid — most requests are done free, but a post may name an
  * offered value (issue #120: optional `price_amount`/`price_currency` on the request). Each
- * successfully-completed favor (`socket_relay_fulfillments.close_reason = 'successful'`, joined to its
+ * successfully-completed request (`socket_relay_fulfillments.close_reason = 'successful'`, joined to its
  * request) is recognized at the value the post carried: a priced post at its `price_amount` in
  * `price_currency`, and a post with no named value (NULL) or an amount-less type (Free, Barter) as one
- * exchange by count, the way the index treats BARTER/FREE. Unsuccessful, reopened, or canceled favors do
+ * exchange by count, the way the index treats BARTER/FREE. Unsuccessful, reopened, or canceled requests do
  * not count. We deliberately do NOT also count SocketRelay's standalone ServiceCredits transfer route
- * here: it is rare, unlinked to a fulfillment, and counting both could double-count one favor; the
+ * here: it is rare, unlinked to a fulfillment, and counting both could double-count one request; the
  * request's posted value is the mutual-aid value SocketRelay actually settles. A value type with no
  * active contribution weight is surfaced and excluded, never zeroed.
  */
 export const socketRelayFavorSource: RecognitionSource = {
   pluginSlug: 'socket-relay',
-  label: 'SocketRelay completed favors',
+  label: 'SocketRelay completed requests',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string; total: string }>(
       `SELECT COALESCE(r.price_currency, $1) AS currency_code,
@@ -359,8 +359,8 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  * One exception keeps a declared value from counting twice. Members can now mark an activity as
  * recurring from inside the app they are already in, and that app is recorded on the row as
  * `origin_plugin`. Some of those apps settle EVERY exchange on-platform and are already recognized per
- * occurrence — a Foundation call per minute-block, a TrustTransport trip per trip, a SocketRelay favor
- * per favor. Counting a declared ServiceCredits value from one of those would count the same credits a
+ * occurrence — a Foundation call per minute-block, a TrustTransport trip per trip, a SocketRelay request
+ * per request. Counting a declared ServiceCredits value from one of those would count the same credits a
  * second time, so those lines are recognized as a RELATIONSHIP (one point, like a fiat line) rather than
  * as value. LightHouse is deliberately not in that set: it records the arrangement once and never sees
  * the months that follow, so the declared value there is the only record of them. A line declared in the
