@@ -57,7 +57,8 @@ a member reads who runs a cohort and cannot edit it.
 3. Admin panel with operational KPIs plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/skill-up/cohorts`.
 4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
 5. Review queues on the admin panel — **actionable since 2026-08-05** (`su-review-actions.tsx`): **Open disputes** (`skill_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/skill-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`skill_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/skill-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
-6. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `skill_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
+6. **Who enrolled** roster on the admin panel (2026-08-29). Every enrollment, newest first (capped at 100), showing the member's Clerk handle (`@name`), the cohort they joined, their enrollment status, and the date. Handles are resolved in one batched Clerk lookup (`resolveUsernames`); an id Clerk cannot resolve falls back to `member <short id>` rather than an empty cell. Finished and left enrollments are included, so this list can be longer than the live "Members in a cohort now" KPI — the copy above the list says so. Server-rendered from `getAdminPanelData()`; no new route.
+7. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `skill_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
 
 ## Cohort Proposals from Workforce Gaps (issue #904)
 
@@ -280,6 +281,19 @@ that exist today.
   `marginLeft: auto` to stay on the right when the track chip is not rendered. Display only — no
   route, schema, contract, or stored value changes, and `track` is still returned by
   `GET /api/skill-up/cohorts` and still drives the track filter.
+- 2026-08-29: **The admin panel names who enrolled (owner report).** The KPI cards counted
+  enrollments and each cohort row showed how many seats were gone, but nothing named a single
+  person — an admin could see a seat had been taken and have no way to see who took it. New
+  repository read `listEnrollmentsForAdmin` (`lib/skill-up/repository.ts`) returns every enrollment
+  newest-first with the member's handle, the cohort title, the status and the enrolled date,
+  resolving handles through the existing batched `resolveUsernames` Clerk lookup exactly as
+  `listOpenDisputes` already does. `getAdminPanelData()` returns it as `enrollments`, and a new
+  **Who enrolled** section (`components/skill-up/su-enrollments-section.tsx`, kept out of
+  `su-admin-shell.tsx` for rule 116) renders it above the cohort overview. An id Clerk cannot resolve
+  reads `member <short id>` rather than blank. The list includes finished and left enrollments, so it
+  can exceed the live "Members in a cohort now" KPI; the section copy says so rather than leaving the
+  two numbers looking contradictory. Read-only and admin-gated by the existing route gate — no new
+  route, no schema change, no contract change, and no member-facing surface moves.
 - 2026-08-29: **Cohort titles drop the plugin-name prefix (owner report).** A cohort opened from the
   proposal queue was titled `<plugin name>: <occupation>` — "LevelUp: Journalists / Reporters" on the
   rows written before the rename, "SkillUp: …" after it. Every one of those cards is already inside

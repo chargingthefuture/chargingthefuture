@@ -19,6 +19,7 @@ export default async function SkillUpAdminPage() {
       kpis={panel.kpis}
       openDisputes={panel.openDisputes}
       pendingValidations={panel.pendingValidations}
+      enrollments={panel.enrollments}
       pendingProposals={pendingProposals}
     />
   );

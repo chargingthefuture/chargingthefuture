@@ -18,6 +18,7 @@ import {
   PROPOSAL_TERM_MONTHS,
   type AdminCohort,
   type AdminDispute,
+  type AdminEnrollment,
   type AdminKpis,
   type AdminProposal,
   type AdminValidation,
@@ -26,6 +27,7 @@ import {
 } from './su-admin-shared';
 import { getSkillUpTokens, trackRepeatsTitle, type SkillUpTokens } from './su-shared';
 import { ClaimTrainerControl, DisputeResolveControl, ValidationActions } from './su-review-actions';
+import { EnrollmentsSection } from './su-enrollments-section';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -749,11 +751,13 @@ export function SkillUpAdminShell({
   openDisputes,
   pendingValidations,
   pendingProposals,
+  enrollments,
 }: {
   kpis: AdminKpis;
   openDisputes: AdminDispute[];
   pendingValidations: AdminValidation[];
   pendingProposals: AdminProposal[];
+  enrollments: AdminEnrollment[];
 }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
@@ -846,6 +850,9 @@ export function SkillUpAdminShell({
           onDismiss={(proposal) => void dismissProposal(proposal)}
           t={t}
         />
+
+        {/* Who enrolled — the KPI cards count enrollments but name nobody. */}
+        <EnrollmentsSection enrollments={enrollments} t={t} />
 
         {/* Cohorts */}
         <CohortsSection cohorts={cohorts} cohortsError={cohortsError} t={t} onClaimed={() => void loadCohorts()} />
