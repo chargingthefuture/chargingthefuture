@@ -15,6 +15,7 @@ import {
   DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH,
   DIRECTORY_MAX_URL_LENGTH,
 } from './constants';
+import { recordTrainerSkillChanges, type TrainerSkillChange } from 'lib/shared/skill-up-interface';
 import { normalizeQuoraProfileUrl } from './quora-url';
 import type {
   DirectoryAnnouncement,
@@ -499,7 +500,87 @@ async function ensureTaxonomySelectors(
   }
 }
 
+// Record what changed about a claimed profile's skills, for SkillUp's trainer audit.
+//
+// A person qualifies to train a cohort by holding a skill under that cohort's occupation, with no
+// human approving them (owner decision 2026-08-29). The skill list is the credential, so the record
+// of how it changed is what stands in for the reviewer who is no longer there.
+//
+// Adding a skill shortly before claiming is EXPECTED, not suspicious: profiles here start out
+// community-generated and members are new, so filling in real skills is what a person does when they
+// first engage. The tell is a REMOVAL after a claim. Adds are recorded so a removal has an origin.
+//
+// Every claimed profile is logged, not only people who are already trainers — a first claim is
+// preceded by the add that enabled it, and a log scoped to trainers would hold the removal with
+// nothing before it. An unclaimed profile has nobody to attribute a change to, so it is skipped.
+//
+// Runs on the caller's transaction, so the audit row commits with the change it describes.
+async function recordProfileSkillAudit(
+  client: PoolClient,
+  profileId: string,
+  previousSkillIds: string[],
+  nextSkillIds: string[],
+  changeSource: TrainerSkillChange['changeSource'],
+  // Supplied when the caller already knows whose profile this is and the claim has just been
+  // cleared — a self-delete nulls claimed_by_user_id before the skills go, so looking it up here
+  // would find nobody and drop the very history somebody might be deleting to hide.
+  knownUserId?: string,
+): Promise<void> {
+  const previous = new Set(previousSkillIds);
+  const next = new Set(nextSkillIds);
+  const added = nextSkillIds.filter((id) => !previous.has(id));
+  const removed = previousSkillIds.filter((id) => !next.has(id));
+  if (added.length === 0 && removed.length === 0) {
+    return;
+  }
+
+  let userId = knownUserId ?? null;
+  if (!userId) {
+    const owner = await client.query<{ claimed_by_user_id: string | null }>(
+      'SELECT claimed_by_user_id FROM directory_profiles WHERE id = $1::uuid',
+      [profileId],
+    );
+    userId = owner.rows[0]?.claimed_by_user_id ?? null;
+  }
+  if (!userId) {
+    return;
+  }
+
+  // Names and occupations are copied onto the audit row so it still reads after a taxonomy skill is
+  // renamed or retired.
+  const meta = await client.query<{ id: string; name: string; job_title_id: string | null }>(
+    `SELECT id::text AS id, name, job_title_id::text AS job_title_id
+       FROM skills_taxonomy_skills WHERE id = ANY($1::uuid[])`,
+    [[...added, ...removed]],
+  );
+  const byId = new Map(meta.rows.map((row) => [row.id, row]));
+
+  const changes: TrainerSkillChange[] = [
+    ...added.map((id) => ({ id, action: 'added' as const })),
+    ...removed.map((id) => ({ id, action: 'removed' as const })),
+  ].map(({ id, action }) => ({
+    userId,
+    profileId,
+    skillId: id,
+    skillName: byId.get(id)?.name ?? '',
+    jobTitleId: byId.get(id)?.job_title_id ?? null,
+    action,
+    changeSource,
+  }));
+
+  await recordTrainerSkillChanges(changes, client);
+}
+
+async function readProfileSkillIds(client: PoolClient, profileId: string): Promise<string[]> {
+  const result = await client.query<{ skill_id: string }>(
+    'SELECT skill_id::text AS skill_id FROM directory_profile_skills WHERE profile_id = $1',
+    [profileId],
+  );
+  return result.rows.map((row) => row.skill_id);
+}
+
 async function replaceProfileSkills(client: PoolClient, profileId: string, skillIds: string[]): Promise<void> {
+  const previousSkillIds = await readProfileSkillIds(client, profileId);
   await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
 
   for (let index = 0; index < skillIds.length; index += 1) {
@@ -511,6 +592,8 @@ async function replaceProfileSkills(client: PoolClient, profileId: string, skill
       [profileId, skillIds[index], index + 1],
     );
   }
+
+  await recordProfileSkillAudit(client, profileId, previousSkillIds, skillIds, 'profile_edit');
 }
 
 function normalizeSkillIds(value: string[] | undefined): string[] {
@@ -1378,9 +1461,13 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
         [profileId],
       );
 
+      // Deleting your own profile takes your skills with it. Record them as removed before they go:
+      // otherwise a trainer could clear the credential they claimed a cohort on and leave no trace.
+      const previousSkillIds = await readProfileSkillIds(client, profileId);
       await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
       await client.query('DELETE FROM directory_profile_tags WHERE profile_id = $1', [profileId]);
       await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
+      await recordProfileSkillAudit(client, profileId, previousSkillIds, [], 'profile_deleted', userId);
     }
 
     // Tombstone the extension row: keep the user_id-keyed marker (service_deleted_at)

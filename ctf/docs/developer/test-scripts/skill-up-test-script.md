@@ -504,6 +504,51 @@ Result: web ☐
 
 ---
 
+### LU-13 — Claiming a cohort to train, gated by your Directory skills
+
+**Role:** member (no trainer role) · **Surfaces:** web
+**Precondition:** Signed in as a member whose Directory profile is **claimed**. Note a cohort with no trainer and check which occupation it trains (`job_title_id`).
+
+**Steps:**
+1. With **no** skill on your profile under that cohort's occupation, try to claim it.
+2. Add a skill belonging to that occupation to your Directory profile.
+3. Try to claim the same cohort again.
+4. Sign in as a different member whose profile is **not** claimed and try to claim any cohort.
+
+**Expected:**
+- Step 1 is refused, and the message names what to change: your profile carries no skill for this occupation. Not a generic "forbidden".
+- Step 3 succeeds. You become the cohort's trainer of record, the "needs trainer" state clears, and any enrollment made before the claim now has you as its assigned trainer.
+- Step 4 is refused with a message telling you to claim your Directory profile first.
+- At no point is a pre-assigned `trainer` role needed — a plain approved member with the right skill can claim.
+- A cohort whose occupation is unset cannot be claimed by anybody, and says so rather than letting the claim through.
+
+Result: web ☐
+
+---
+
+### LU-14 — Every skill change on a claimed profile is recorded
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member with a claimed Directory profile. Database access to read `skill_up_trainer_skill_audit`.
+
+**Steps:**
+1. Add two skills to your Directory profile. Save.
+2. Remove one of them. Save.
+3. Claim a cohort using the remaining skill, then remove that skill from your profile.
+4. Read `skill_up_trainer_skill_audit` for your user id, newest first.
+5. As a *different* member who has never claimed a cohort, add and remove a skill, then read the table again.
+
+**Expected:**
+- Step 1 writes two rows with `action = 'added'`; step 2 writes one with `action = 'removed'`. Each carries the skill name and the occupation, so the row still reads if the skill is later renamed.
+- Step 3's removal is recorded **after** the claim, so the add / claim / remove sequence reads in order. The removal is the part worth attention: adding a skill shortly before claiming is ordinary here, since profiles largely start out community-generated and members are new, so the add on its own is not a finding.
+- Step 5 is also recorded: the log covers every claimed profile, not only people who are already trainers. A log limited to trainers would have missed step 1 for anyone claiming for the first time, leaving their later removal with nothing before it.
+- Deleting your own Directory profile records its skills as removed rather than leaving a gap.
+- Deleting your account does **not** remove these rows.
+
+Result: web ☐
+
+---
+
 ### LU-A6 — Trainer claims a cohort opened from a proposal
 
 **Role:** trainer (or admin acting as trainer) · **Surfaces:** web

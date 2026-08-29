@@ -137,6 +137,7 @@ type CohortRow = {
   auto_created?: boolean;
   source_job_title_id?: string | null;
   source_sector?: string | null;
+  job_title_id?: string | null;
 };
 
 function mapCohort(row: CohortRow) {
@@ -158,6 +159,7 @@ function mapCohort(row: CohortRow) {
     completionBonusCredits: toNumber(row.completion_bonus_credits),
     createdByUserId: row.created_by_user_id,
     autoCreated,
+    jobTitleId: row.job_title_id ?? null,
     sourceJobTitleId: row.source_job_title_id ?? null,
     sourceSector: row.source_sector ?? null,
     // An auto-created cohort still owned by the scheduler has no human trainer yet.
@@ -194,6 +196,8 @@ type CreateCohortInput = {
   policyJson?: Record<string, unknown>;
   curriculumItems?: Array<CohortCurriculumItemInput>;
   milestones?: Array<CohortMilestoneInput>;
+  // The occupation this cohort trains. The trainer claim gate matches Directory skills against it.
+  jobTitleId?: string | null;
   autoCreated?: boolean;
   sourceJobTitleId?: string | null;
   sourceSector?: string | null;
@@ -209,11 +213,11 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
        trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
        microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
-       auto_created, source_job_title_id, source_sector, source_gap_at_creation)
+       auto_created, source_job_title_id, source_sector, source_gap_at_creation, job_title_id)
      VALUES
       ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
        $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
-       $24, $25, $26, $27)`,
+       $24, $25, $26, $27, $28::uuid)`,
     [
       cohortId,
       input.title,
@@ -242,6 +246,7 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       orDefault<string | null>(input.sourceJobTitleId, null),
       orDefault<string | null>(input.sourceSector, null),
       orDefault<number | null>(input.sourceGapAtCreation, null),
+      orDefault<string | null>(input.jobTitleId, null),
     ],
   );
 }
@@ -335,6 +340,7 @@ export async function listCohorts(filter: CohortFilter) {
       c.completion_bonus_credits::text,
       c.created_by_user_id,
       c.auto_created,
+      c.job_title_id::text AS job_title_id,
       c.source_job_title_id::text AS source_job_title_id,
       c.source_sector,
       COALESCE(e.active_enrollments, 0)::text AS active_enrollments

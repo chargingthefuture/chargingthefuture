@@ -50,6 +50,38 @@ a member reads who runs a cohort and cannot edit it.
    via the API (`POST /api/skill-up/milestones/[milestoneId]/validate` etc., server-scoped by
    `isTrainerForCohort`) — a trainer-facing member-shell surface remains open (see Gaps).
 
+## Becoming a Trainer (owner decision, 2026-08-29)
+
+Nobody approves trainers by hand. A person claims a cohort to train, and they may claim it when their
+**claimed Directory profile carries at least one skill belonging to the occupation that cohort
+trains**. Every Skills Taxonomy skill belongs to exactly one job title and each cohort stores its
+`job_title_id`, so the check is a join with no discretion in it — no bias, and no approval queue.
+
+- **The gate** is `checkTrainerClaimEligibility` in `lib/skill-up/trainer-claim.ts`:
+  `directory_profiles.claimed_by_user_id` → `directory_profile_skills` → `skills_taxonomy_skills.job_title_id`
+  = `skill_up_cohorts.job_title_id`. A cohort with no occupation is refused rather than waved
+  through, so an unclaimable cohort is the visible failure instead of an unguarded one.
+- **The pre-assigned `trainer` role is gone from this path.** It came from Clerk token claims, which
+  is the manual step this replaces. `POST /api/skill-up/cohorts/[cohortId]/claim-trainer` now needs
+  read access plus the skills match; a refusal names what the person would have to change.
+- **Any trainerless cohort can be claimed**, not only ones the retired auto-cohort run opened —
+  claiming is how a trainer attaches to a cohort at all.
+- **The audit that makes it safe.** Removing the human also removes what a human would have noticed,
+  so every add and remove on a *claimed* Directory profile is written to
+  `skill_up_trainer_skill_audit`.
+- **Read that log for removals, not adds (owner note, 2026-08-29).** Adding a skill shortly before
+  claiming a cohort is **ordinary** in this product: Directory profiles largely start out
+  community-generated, members are new, and filling in real skills is what a person does when they
+  first engage. Flagging that would flag honest onboarding. What is worth looking at is a skill taken
+  back off after it has done its work — above all while the cohort claimed on it is still held. The
+  adds are recorded so a removal has an origin and the sequence reads in order; they are context, not
+  an accusation. No alerting is built yet: the natural next surface is an admin read of removals by
+  people holding a claim, and it should be built against removals, not adds.
+- The log covers every claimed profile, not only people who are already trainers, because a first
+  claim is preceded by the add that enabled it and a narrower log would hold the removal with nothing
+  before it. Self-deleting a profile is logged as removals too, so deleting cannot erase the trail.
+  Rows are written on the caller's transaction, so the log cannot silently miss an edit.
+
 ## Implemented Admin Features
 
 1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants ServiceCredits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
@@ -160,6 +192,9 @@ Core tables:
 18. `skill_up_auto_cohort_config` — singleton config for the gap-driven proposal queue (issue #904). Columns: `singleton_key` (PK bool), `enabled` (gates proposal generation), `min_gap_threshold`, `max_concurrent` (default 3 — retained for the future full-auto model; **not** used by proposal generation), `per_sector_cap` (default 1 — diversity cap), `skill_level_filter` (default `Foundational`), `top_n` (default 10 — queue-size bound), `default_term_days` (default 90), `default_seats` (default 12), `default_required_credits` (default 0 = free to join), `default_trainer_split_percent` (default 25), `default_completion_bonus_credits` (default 0), `generation_interval_days` (default 90 — the cadence), `last_generated_at` (nullable — cadence guard), `updated_by_user_id`, `updated_at`. Admin-editable. The economic columns are one global policy applied to every approved cohort; per-occupation tuning is deferred (#1197).
 19. `skill_up_auto_cohort_term_overrides` — legacy per-occupation fixed-term overrides (issue #904). Columns: `job_title_id` (PK), `occupation`, `term_days`, `updated_by_user_id`, `updated_at`. No longer consulted in the proposal model (the admin picks 1/3/5 months at approval); kept for the future full-auto model.
 20. `skill_up_cohort_proposals` — the gap-driven cohort proposal queue (issue #904, proposal-queue model). Columns: `id` (PK), `source_job_title_id` (Skills Taxonomy job title — no hard FK, mirroring `skill_up_cohorts.source_job_title_id`), `occupation`, `sector`, `skill_level`, `gap_at_proposal`, `rank`, `status` (`pending`/`approved`/`dismissed`/`superseded`), `generated_source`, `generated_at`, `decided_by_user_id`, `decided_at`, `created_cohort_id` (set when approved), `created_at`, `updated_at`. Partial unique index `uq_skill_up_cohort_proposal_pending` on `source_job_title_id WHERE status='pending'` (at most one live proposal per occupation); `idx_skill_up_cohort_proposal_pending_rank` on `(status, rank)` for the ranked read.
+18. `skill_up_trainer_skill_audit` — the record behind every trainer cohort claim (owner decision 2026-08-29). Columns: `id` (PK), `user_id`, `profile_id`, `skill_id`, `skill_name` (denormalized so a row still reads after a taxonomy skill is renamed), `job_title_id`, `action` (`added` / `removed`), `change_source` (`profile_edit` / `profile_unclaimed` / `profile_deleted`), `changed_at`. Indexed on `(user_id, changed_at DESC)` for one person's history and `(job_title_id, changed_at DESC)` for everyone who touched one occupation's skills. Append-only; retained on account deletion, because erasing it would make deleting the account the cover-up. Written from Directory's profile-skill write path through `lib/shared/skill-up-interface.ts`.
+
+`skill_up_cohorts.job_title_id` (2026-08-29) is the Skills Taxonomy occupation the cohort trains — required on new cohorts, and what the trainer claim gate matches a person's Directory skills against. It is distinct from `source_job_title_id`, which is provenance (the Workforce gap that triggered an auto cohort); `job_title_id` is a first-class property of every cohort, hand-built ones included. Backfilled by `post/0010` from `source_job_title_id`, then from an unambiguous `track`-to-job-title-name match, and left NULL rather than guessed at. Indexed as `idx_skill_up_cohorts_job_title`.
 
 Auto-cohort columns on `skill_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_skill_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
 
@@ -283,6 +318,24 @@ that exist today.
   learner, not the trainer). A cohort with no deposit and no bonus moves nothing, so instead of a row
   of zeros the card says so in a sentence. Client rounding mirrors the server's `roundCurrency`, so no
   figure can be shown that the ledger would not produce.
+- 2026-08-29: **Trainers qualify themselves by their Directory skills; no approval queue (owner
+  decision).** New `lib/skill-up/trainer-claim.ts` holds the gate and the claim, replacing
+  `claimAutoCohortTrainer` in `lib/skill-up/auto-cohort.ts`. The claim route drops the pre-assigned
+  `trainer` role check — that role comes from Clerk token claims, which was the manual step being
+  removed — and any trainerless cohort is now claimable, not only ones the retired generator opened.
+  New `skill_up_cohorts.job_title_id` names the occupation a cohort trains and is required on create
+  (`POST /api/skill-up/cohorts`); `post/0010` backfills it, and `approveCohortProposal` sets it from
+  the proposal's occupation so a newly approved cohort does not open unclaimable. New table
+  `skill_up_trainer_skill_audit` records every skill added to or removed from a claimed Directory
+  profile, written from Directory through the new `lib/shared/skill-up-interface.ts` (the sanctioned
+  crossing point — Directory never imports `lib/skill-up`) on the caller's own transaction. The log
+  deliberately covers every claimed profile rather than only current trainers: the add that enables a
+  first claim precedes the claim, so a narrower log would show a removal with no origin. Retained on
+  account deletion, because erasing it would make deletion the cover-up. **The log is to be read for
+  removals, not adds** (owner note the same day): with profiles largely community-generated and
+  members new to the app, adding a skill just before claiming is ordinary onboarding, and the signal
+  is a skill withdrawn after it has done its work — especially while the cohort claimed on it is
+  still held.
 - 2026-08-29: **A cohort's track chip is hidden when it only repeats the title (owner report).** A
   cohort opened from the proposal queue takes the occupation as both its title and its `track`, so a
   card printed "Journalists / Reporters" and then a chip reading "Journalists / Reporters" directly
