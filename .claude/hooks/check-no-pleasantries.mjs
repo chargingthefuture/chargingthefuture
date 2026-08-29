@@ -39,6 +39,11 @@ const VOCABULARY = [
   // "console" reads as developer jargon for a screen; say "dashboard". The negative lookahead skips
   // the code identifiers console.log / console.error / console.info so quoting real code never trips.
   { re: /\bconsole\b(?!\.\w)/i, use: 'dashboard' },
+  // Owner directive, 2026-08-28. Both of these are the same tic: a sentence that arrives after the
+  // facts to announce which one of them was the important one. It reads as insistence, it is used
+  // far too often, and the reader can weigh the facts without being told. State the point and stop.
+  { re: /\bwhole point\b/i, use: 'say the point plainly, without announcing that it is the point' },
+  { re: /\bwhole argument\b/i, use: 'state the argument itself, without labeling it the argument' },
 ];
 
 function readStdin() {
