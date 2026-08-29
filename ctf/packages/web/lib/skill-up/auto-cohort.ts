@@ -454,7 +454,11 @@ export async function approveCohortProposal(input: {
     const created = await createCohort({
       actorId: SKILL_UP_AUTO_COHORT_ACTOR_ID,
       idempotencyKey: `proposal-approve:${input.proposalId}`,
-      title: `SkillUp: ${proposal.occupation}`,
+      // The cohort title is the occupation on its own. It used to be prefixed with the plugin name
+      // ("SkillUp: Journalists / Reporters", and "LevelUp: …" before the rename), which repeated the
+      // name of the plugin the member is already inside on every card — wasted width on a phone
+      // (owner report, 2026-08-29).
+      title: proposal.occupation,
       description: `Training cohort for ${proposal.occupation} (${proposal.sector}). Approved from the Workforce talent-gap proposal queue.`,
       track: proposal.occupation,
       seats: config.defaultSeats,

@@ -455,6 +455,7 @@ Result: web ☐
 - The refresh banner reports how many proposals were ranked / superseded / cohorts closed. If the pre-flight guard fires (no positive `workforce_share`), it shows `skipped: no_workforce_share` — not a blank screen or error.
 - The list is **sector-diverse**: the top rows span different sectors rather than all coming from one sector (no single sector dominates the top of the queue).
 - Approving opens a real cohort: a success banner names the occupation and end date, the proposal leaves the queue, and the cohort overview shows a new cohort with an `auto` badge (and `needs trainer` until a trainer claims it). Its end date is ~3 months out.
+- The new cohort's title is the occupation on its own — "Journalists / Reporters", not "SkillUp: Journalists / Reporters" and not "LevelUp: …". No cohort row anywhere in the plugin (browse, admin overview, progress) shows a plugin-name prefix on its title; the older cohorts had theirs stripped by `post/0009`.
 - Dismissing removes that proposal from the queue with no cohort created.
 
 Result: web ☐

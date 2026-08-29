@@ -3253,6 +3253,11 @@ ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS created
 -- === SKILLUP MODULE ===
 CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- title carries no plugin-name prefix. A cohort opened from the proposal queue used to be titled
+  -- "SkillUp: <occupation>" (and "LevelUp: <occupation>" before the 2026-08-29 rename), which
+  -- repeated the name of the plugin the row is already inside on every card. It is the occupation on
+  -- its own now; post/0009_skill_up_cohort_title_drop_plugin_prefix.sql strips the prefix from the
+  -- rows written under the old template. Do not reintroduce the prefix.
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   track TEXT NOT NULL,
