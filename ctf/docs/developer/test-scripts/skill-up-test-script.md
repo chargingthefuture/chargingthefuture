@@ -71,6 +71,9 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
 - No network error banners appear at any step.
+- The card shows a **Trainer earns** figure and a **You get back** figure. On a cohort with a deposit above zero, "Trainer earns" reads the deposit times the trainer split over one hundred minus the split (a 300 SC deposit at a 25% split reads 100 SC per learner), and "You get back" reads the deposit itself. Enroll one member and reload: a second line appears under the trainer figure reading the running total and the number enrolled, and it goes up as more people join.
+- On a cohort with no deposit and no completion bonus, the card says it is free to join and that no credits move, rather than showing a row of zeros.
+- No figure on the card contradicts the wallet: the deposit shown as "You get back" is the amount actually escrowed on enrollment.
 - On a cohort whose title and track are the same words (one opened from the proposal queue is titled with its occupation), the card shows that text once — the title, with no track chip above it repeating it — and the status chip stays on the right of that row. A cohort whose track differs from its title still shows its track chip.
 
 Result: web ☐

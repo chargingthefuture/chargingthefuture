@@ -303,6 +303,21 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-29: **The browse card says what the cohort moves, for both sides (owner directive).** With
+  the repeated track chip gone the tile had room, so it now advertises the economics instead of
+  leaving them to be discovered after enrolling. New pure helper `cohortEconomics` in
+  `components/skill-up/su-shared.ts` derives every figure from the cohort's own stored policy, which
+  `GET /api/skill-up/cohorts` already returned (`requiredCredits`, `trainerSplitPercent`,
+  `completionBonusCredits`, `seats`, `seatsAvailable`) — the client `Cohort` type simply had not
+  declared the middle two. No route, schema or contract change. The card shows **Trainer earns**
+  `deposit x split / (100 - split)` per learner who finishes — matching what `releaseMilestoneCredits`
+  grants, summed over the milestones — and, once anybody is enrolled, the running total across them
+  (`seats - seatsAvailable` is the live enrollment count, so the number rises as members join). It
+  shows **You get back** the learner's deposit, which is held in escrow and released back in full as
+  each milestone is validated, plus the completion bonus where one is set (the bonus grants to the
+  learner, not the trainer). A cohort with no deposit and no bonus moves nothing, so instead of a row
+  of zeros the card says so in a sentence. Client rounding mirrors the server's `roundCurrency`, so no
+  figure can be shown that the ledger would not produce.
 - 2026-08-29: **Trainers qualify themselves by their Directory skills; no approval queue (owner
   decision).** New `lib/skill-up/trainer-claim.ts` holds the gate and the claim, replacing
   `claimAutoCohortTrainer` in `lib/skill-up/auto-cohort.ts`. The claim route drops the pre-assigned

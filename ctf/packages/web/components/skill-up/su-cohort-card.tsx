@@ -2,7 +2,7 @@
 
 import { User } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { STATUS_COLOR, TRACK_COLORS, getSkillUpTokens, trackRepeatsTitle, type Cohort, type SkillUpTokens } from "./su-shared";
+import { STATUS_COLOR, TRACK_COLORS, cohortEconomics, getSkillUpTokens, trackRepeatsTitle, type Cohort, type CohortEconomics, type SkillUpTokens } from "./su-shared";
 
 function enrollButtonView(t: SkillUpTokens, isEnrolled: boolean, isEnrolling: boolean, isFull: boolean) {
   if (isEnrolled) return { bg: `${t.ACCENT}30`, color: t.ACCENT, label: "✓ Enrolled", locked: true };
@@ -29,6 +29,47 @@ function EnrollButton({
       style={{ background: view.bg, color: view.color, border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: view.locked ? "default" : "pointer", opacity: isEnrolling ? 0.6 : 1 }}>
       {view.label}
     </button>
+  );
+}
+
+// What this cohort moves, for both sides, on one row. The trainer figure is per learner who
+// finishes; when anyone is enrolled it also shows the running total across them, which is the number
+// that moves as members join.
+function EarningsRow({ economics, t }: { economics: CohortEconomics; t: SkillUpTokens }) {
+  if (!economics.carriesCredits) {
+    return (
+      <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, marginBottom: 12, lineHeight: 1.5 }}>
+        Free to join. No credits move on this cohort — the trainer earns nothing and there is no
+        completion bonus.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Trainer earns</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT_BODY }}>
+          {economics.trainerPerLearnerCredits} SC <span style={{ fontWeight: 400, color: t.TEXT_SUBTLE }}>per learner</span>
+        </div>
+        {economics.enrolledCount > 0 && (
+          <div style={{ fontSize: 11, color: t.ACCENT, marginTop: 2 }}>
+            {economics.trainerSoFarCredits} SC from {economics.enrolledCount} enrolled
+          </div>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>You get back</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT_BODY }}>
+          {economics.depositCredits} SC
+        </div>
+        <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, marginTop: 2 }}>
+          {economics.learnerBonusCredits > 0
+            ? `your deposit, plus ${economics.learnerBonusCredits} SC bonus`
+            : "your deposit, as you finish each milestone"}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -68,6 +109,7 @@ export function SkillUpCohortCard({
   const { trackColor, isFull, statusColor, statusLabel, seatsLabel, tags, costLabel } = cohortView(t, cohort);
   // The chip is dropped when it only repeats the title the card already prints below it.
   const trackHidden = trackRepeatsTitle(cohort.title, cohort.track);
+  const economics = cohortEconomics(cohort);
 
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: "16px", border: `1px solid ${t.BORDER_SOLID}`, opacity: isFull ? 0.7 : 1 }}>
@@ -92,6 +134,7 @@ export function SkillUpCohortCard({
           ))}
         </div>
       )}
+      <EarningsRow economics={economics} t={t} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
         <div>
           <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Seats</div>
