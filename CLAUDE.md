@@ -59,12 +59,15 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
 - whole point → say the point plainly, without announcing that it is the point
 - whole argument → state the argument itself, without labeling it the argument
+- point of the thing → end on the fact itself, with no sentence explaining that it mattered
 
-Those last two are one habit, banned 2026-08-28: the sentence that arrives after the facts to tell
-the reader which of them mattered. "That is the whole point." "Which is the whole argument." It
-reads as insistence, it was being written into nearly everything, and a reader can weigh facts
-without being told which one to weigh. Write the point as a plain statement and stop; if the
-sentence only labels what came before it, delete it.
+Those last three are one habit, banned 2026-08-28 and 2026-08-29: the sentence that arrives after
+the facts to tell the reader which of them mattered. "That is the whole point." "Which is the whole
+argument." "That was the point of the thing." It reads as insistence, it was being written into
+nearly everything, and a reader can weigh facts without being told which one to weigh. Write the
+point as a plain statement and stop; if the sentence only labels what came before it, delete it.
+Three spellings of it are now banned, which is the sign to stop reaching for the shape at all
+rather than to find a fourth wording for it.
 
 When the hook blocks a reply, restate **once and briefly** in plain, factual language — none of the
 terms above, no jargon, no first-person feeling words — then stop. Do not re-send the blocked

@@ -44,6 +44,9 @@ const VOCABULARY = [
   // far too often, and the reader can weigh the facts without being told. State the point and stop.
   { re: /\bwhole point\b/i, use: 'say the point plainly, without announcing that it is the point' },
   { re: /\bwhole argument\b/i, use: 'state the argument itself, without labeling it the argument' },
+  // Owner directive, 2026-08-29. Same habit as the two above, reaching for a different set of
+  // words: the closing sentence that announces which fact was the important one.
+  { re: /\bpoint of the thing\b/i, use: 'end on the fact itself, with no sentence explaining that it mattered' },
 ];
 
 function readStdin() {
