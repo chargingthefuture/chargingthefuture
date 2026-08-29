@@ -3325,6 +3325,14 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOO
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
+-- The occupation this cohort trains, as a Skills Taxonomy job title. Distinct from
+-- source_job_title_id, which is provenance (the Workforce gap that triggered an auto cohort);
+-- this one is a first-class property of every cohort, hand-built ones included, and it is what the
+-- trainer claim gate matches a person's Directory skills against. Required on new cohorts (owner
+-- decision 2026-08-29); post/0010 backfills it from source_job_title_id on the rows that predate
+-- it. No hard FK, mirroring source_job_title_id and directory_profiles.job_title_id.
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS job_title_id UUID;
+CREATE INDEX IF NOT EXISTS idx_skill_up_cohorts_job_title ON skill_up_cohorts (job_title_id);
 -- Database-level idempotency guard: at most one open/active auto-created cohort per source occupation.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_auto_cohort_active_source
   ON skill_up_cohorts (source_job_title_id)
@@ -3432,6 +3440,48 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_cohort_proposal_pending
 -- Ranked read of the live queue for the admin surface.
 CREATE INDEX IF NOT EXISTS idx_skill_up_cohort_proposal_pending_rank
   ON skill_up_cohort_proposals (status, rank);
+
+-- Trainer skill audit (owner decision 2026-08-29). A person claims a cohort to train by holding a
+-- matching skill on their claimed Directory profile — no admin approval, so nothing human stands
+-- between adding a skill and claiming it. That removes the bias and the queue, and it opens one
+-- fraud route: add a skill, claim the cohort, remove the skill. This table is what catches it.
+--
+-- Every add and every remove on a CLAIMED Directory profile is written here, not only the changes
+-- made by people who are already trainers: the add that enables a claim happens BEFORE the person
+-- has claimed anything, so a log scoped to existing trainers would miss the first half of the
+-- sequence and show a removal with no origin.
+--
+-- Written from Directory's profile-skill write path through lib/shared/skill-up-interface.ts, the
+-- sanctioned crossing point (Directory never imports lib/skill-up directly). Append-only: rows are
+-- never updated, and the deletion registry retains them as an integrity record.
+CREATE TABLE IF NOT EXISTS skill_up_trainer_skill_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  profile_id UUID NOT NULL,
+  skill_id UUID NOT NULL,
+  -- Denormalized so a row still reads after a taxonomy skill is renamed or retired.
+  skill_name TEXT NOT NULL DEFAULT '',
+  job_title_id UUID,
+  action TEXT NOT NULL CHECK (action IN ('added', 'removed')),
+  -- What caused the change: a member editing their own profile, or a profile-wide wipe on unclaim
+  -- or delete. A wipe erases skills too, so it is logged rather than leaving a silent gap.
+  change_source TEXT NOT NULL DEFAULT 'profile_edit',
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS profile_id UUID;
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS skill_id UUID;
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS skill_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS job_title_id UUID;
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS action TEXT NOT NULL DEFAULT 'added';
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS change_source TEXT NOT NULL DEFAULT 'profile_edit';
+ALTER TABLE IF EXISTS skill_up_trainer_skill_audit ADD COLUMN IF NOT EXISTS changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The fraud read: one person's skill history, newest first.
+CREATE INDEX IF NOT EXISTS idx_skill_up_trainer_skill_audit_user
+  ON skill_up_trainer_skill_audit (user_id, changed_at DESC);
+-- The other read: everyone who has touched the skills behind one occupation.
+CREATE INDEX IF NOT EXISTS idx_skill_up_trainer_skill_audit_job_title
+  ON skill_up_trainer_skill_audit (job_title_id, changed_at DESC);
 
 CREATE TABLE IF NOT EXISTS skill_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

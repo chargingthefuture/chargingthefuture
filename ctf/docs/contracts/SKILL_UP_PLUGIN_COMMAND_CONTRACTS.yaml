@@ -374,7 +374,7 @@ contracts:
   - pluginId: skill-up
     command: cohort.claim_trainer
     version: 1.0.0
-    description: A trainer (or admin) claims an auto-created cohort that has no human trainer yet, becoming its trainer of record.
+    description: A person claims a cohort that has no trainer yet, becoming its trainer of record. Eligibility is a skills match, not an assigned role - their claimed Directory profile must carry at least one Skills Taxonomy skill belonging to the occupation the cohort trains (skill_up_cohorts.job_title_id). Reads the Directory profile and the taxonomy; never writes them.
     inputSchema:
       cohortId:
         type: string
@@ -382,10 +382,15 @@ contracts:
     outputSchema:
       cohortId:
         type: string
+      reason:
+        type: string
     dataAccess:
       - skill_up_cohorts
       - skill_up_enrollments
       - skill_up_audit_events
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
     purpose: training_cohort_management
     retentionClass: transactional_long_lived
     idempotency: false
