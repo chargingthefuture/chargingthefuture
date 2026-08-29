@@ -381,3 +381,29 @@ policies:
     denyConditions:
       - insufficient_role
       - proposal_not_pending
+
+  - pluginId: skill-up
+    command: enrollment.leave
+    version: 1.0.0
+    requiredRoles:
+      - user
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      profileStatus: approved_user_or_admin
+      ownEnrollmentOnly: required
+    consentRequirements:
+      scopes:
+        - skill_up_manage_enrollment
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - not_authenticated
+      - enrollment_not_owned
+      - enrollment_not_active

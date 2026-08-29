@@ -3325,6 +3325,17 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOO
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
+-- What a trainer receives per milestone, per learner, on this cohort (owner decision 2026-08-29).
+-- Stamped at creation rather than derived at release, so the rate a trainer signed up for cannot
+-- drift under them and the browse card can advertise the exact figure.
+--
+-- It is deliberately NOT a function of the learner's deposit. The trainer's credits are minted, not
+-- taken from the learner, so tying the two only meant that paying trainers more required charging
+-- learners more — and the largest gaps are in the lowest-paid occupations, so that fell hardest on
+-- the people the gap exists to recruit. The deposit is now a flat commitment device and this is the
+-- trainer's rate, scaled by the Workforce gap so training a short occupation earns more. The demand
+-- signal recruits trainers instead of excluding learners.
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS trainer_credits_per_milestone NUMERIC NOT NULL DEFAULT 10;
 -- Database-level idempotency guard: at most one open/active auto-created cohort per source occupation.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_auto_cohort_active_source
   ON skill_up_cohorts (source_job_title_id)

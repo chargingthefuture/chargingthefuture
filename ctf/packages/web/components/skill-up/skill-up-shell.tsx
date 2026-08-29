@@ -308,7 +308,7 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             onEnroll={(cohort) => void handleEnroll(cohort)}
           />
         )}
-        progress={<SkillUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} />}
+        progress={<SkillUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} onLeft={() => void handleRefresh()} />}
         trainers={sectionLoaded.trainers ? <SkillUpTrainers trainers={trainers} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
         achievements={sectionLoaded.achievements ? <SkillUpAchievements achievements={achievements} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
         wallet={sectionLoaded.wallet ? <SkillUpWallet wallet={walletView} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
