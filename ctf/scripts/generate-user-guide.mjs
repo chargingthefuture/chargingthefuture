@@ -257,7 +257,7 @@ const VOICE = `VOICE:
 - Built and run by a single operator, not a company: never use "we", "our", or "us". Prefer person-free sentences ("Open X and pick…"); a singular "I" only if unavoidable.
 - No selling ("powerful", "seamless", "game-changer", "matters deeply"), no rhetorical questions, no closing flourish, no guessing at the reader's feelings.
 - Never use any of these words: thanks, sorry, glad, happy, excited, feel free, hope, phase, punch list.
-- Never write a sentence whose job is to tell the reader which fact mattered ("that is the whole point", "which is the whole argument"). State the thing and stop.`;
+- Never write a sentence whose job is to tell the reader which fact mattered ("that is the whole point", "which is the whole argument", "that was the point of the thing"). State the thing and stop.`;
 
 // Pull the JSON object out of the model's reply. Haiku often wraps it in a ```json fence or adds a
 // line of preamble, so a strict JSON.parse of the raw text rejects a perfectly good answer (that is
