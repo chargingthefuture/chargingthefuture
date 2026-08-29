@@ -282,6 +282,20 @@ export const TAXONOMY_CHANGES = [
   { id: 76, op: 'deactivateOccupation', sector: 'Creative & Media', occupation: 'Photographer', occupationExisting: true, acknowledgedImpact: 'Duplicate of the pre-existing "Photographers / Videographers" occupation; all 8 of its skills are consolidated there by ops 68-75, so no active skill row remains under it and member profile links are untouched (consolidateSkill moves the row, not the id). The apply engine refuses this op if any active skill remains, and the audit row records the live reference count at apply time. Reversible via reactivateOccupation.' },
   { id: 77, op: 'renameOccupation', sector: 'Creative & Media', from: 'Apparel / Fashion Designer', to: 'Apparel / Fashion Designers' },
   { id: 78, op: 'renameOccupation', sector: 'Manufacturing & Industry', from: 'Machinist', to: 'Machinists' },
+
+  // Change 79 (owner-approved 2026-08-29): thin the one real near-duplicate the 68-76 merge leaves
+  // behind. "Lighting techniques" (moved in by op 71) and "Shooting and lighting techniques" (the
+  // seeded row) are the same claim, and the merged occupation already carries "Camera operation and
+  // settings" and "Composition and framing" for the shooting half - so the compound label adds
+  // nothing the plainer one does not, and a member reading a list with both in it cannot tell which
+  // to pick. "Lighting techniques" survives. Same merge-then-thin order as ops 26-34 then 35-38.
+  //
+  // The OTHER pair the merge leaves - "Photo editing and post-processing" against "Post-production
+  // and color grading" - is deliberately NOT thinned, and is not a duplicate on a second look: this
+  // occupation is "Photographers / Videographers", and those two labels are the photo side and the
+  // video side of its post-production work. Deactivating either would leave half the occupation with
+  // no way to say what it does. They stay as two skills on purpose.
+  { id: 79, op: 'deactivateSkill', sector: 'Creative & Media', occupation: 'Photographers / Videographers', occupationExisting: true, skill: 'Shooting and lighting techniques', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Lighting techniques", which survives as the plainer label; the merged occupation already carries "Camera operation and settings" and "Composition and framing" for the shooting half, so no claim is lost. Members holding this row stop seeing the chip until they re-pick the surviving skill, and the audit metadata records how many were holding it at apply time. Reversible via reactivateSkill.' },
 ];
 
 // ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair) |
 
 ## How to run this
 
@@ -152,10 +152,11 @@ plural row now shows its three original skills (Asset management and metadata ta
 and color grading, Shooting and lighting techniques) plus the eight consolidated in (Photography, Camera
 operation and settings, Composition and framing, Lighting techniques, Photo editing and post-processing,
 Portrait photography, Event photography, Product photography). A member who held one of those eight
-still shows the same chip — the skill row moved, its id did not. Two near-duplicate pairs are expected to
-appear side by side and are **not** bugs to file: "Lighting techniques" with "Shooting and lighting
-techniques", and "Photo editing and post-processing" with "Post-production and color grading" — which of
-each pair survives is a separate owner decision, appended as its own change. Also expected: **Apparel /
+still shows the same chip — the skill row moved, its id did not. After change 79, "Shooting and lighting
+techniques" is gone and **Lighting techniques** is the surviving label of that pair — a member who held
+the deactivated one sees that chip disappear until they re-pick, which is expected. "Photo editing and
+post-processing" and "Post-production and color grading" both remain and are **not** a bug to file: they
+are the photo side and the video side of this occupation's post-production work. Also expected: **Apparel /
 Fashion Designers** and **Machinists** now read in the plural, keeping every skill they had, because a
 rename moves no rows.
 **Result:** web ☐ mobile ☐ — notes:
