@@ -23,39 +23,12 @@ export type AdminCohort = {
   completionBonusCredits: number;
   createdByUserId: string;
   seatsAvailable: number;
-  // Auto-cohort fields (issue #904). Present on cohorts the scheduled run created.
+  // Auto-cohort fields (issue #904). Present on the cohorts the retired scheduled run created;
+  // no new cohort is written with them.
   autoCreated?: boolean;
   needsTrainer?: boolean;
   sourceSector?: string | null;
 };
-
-// Summary returned by POST /api/skill-up/admin/auto-cohorts/run (the "Refresh proposals" action) and
-// the cron route. The run refreshes the proposal queue and closes expired auto cohorts — it does not
-// create cohorts (issue #904, proposal-queue model).
-export type AutoCohortRunResult = {
-  ok: boolean;
-  skipped?: 'disabled' | 'no_workforce_share' | 'cadence_not_due';
-  generated?: number;
-  superseded?: number;
-  closed?: Array<{ cohortId: string; occupation: string }>;
-  message?: string;
-};
-
-// One pending cohort proposal in the admin queue (mirrors PendingProposal from lib/skill-up/auto-cohort).
-export type AdminProposal = {
-  id: string;
-  sourceJobTitleId: string;
-  occupation: string;
-  sector: string;
-  skillLevel: string;
-  gap: number;
-  rank: number;
-  generatedAtIso: string;
-};
-
-// Term choices offered at approval (owner decision 2026-07-23), mirrors SKILL_UP_PROPOSAL_TERM_MONTHS.
-export const PROPOSAL_TERM_MONTHS = [1, 3, 5] as const;
-export type ProposalTermMonths = (typeof PROPOSAL_TERM_MONTHS)[number];
 
 // Headline numbers on the admin panel. `enrollments` counts every enrollment row ever written (a
 // member in three cohorts contributes three), `activeEnrollments` counts only the live ones, and

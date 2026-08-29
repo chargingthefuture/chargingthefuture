@@ -15,14 +15,10 @@ import { TrendingUp } from 'lucide-react';
 import {
   idempotencyKey,
   luAdminMutate,
-  PROPOSAL_TERM_MONTHS,
   type AdminCohort,
   type AdminDispute,
   type AdminKpis,
-  type AdminProposal,
   type AdminValidation,
-  type AutoCohortRunResult,
-  type ProposalTermMonths,
 } from './su-admin-shared';
 import { getSkillUpTokens, type SkillUpTokens } from './su-shared';
 import { ClaimTrainerControl, DisputeResolveControl, ValidationActions } from './su-review-actions';
@@ -125,142 +121,6 @@ function ValidationsSection({ pendingValidations, t, onChanged }: { pendingValid
             <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
             <ValidationActions validation={validation} t={t} onDone={onChanged} />
           </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-function ProposalCard({
-  proposal,
-  proposalTerms,
-  setProposalTerms,
-  busyProposalId,
-  onApprove,
-  onDismiss,
-  t,
-}: {
-  proposal: AdminProposal;
-  proposalTerms: Record<string, ProposalTermMonths>;
-  setProposalTerms: React.Dispatch<React.SetStateAction<Record<string, ProposalTermMonths>>>;
-  busyProposalId: string | null;
-  onApprove: (proposal: AdminProposal) => void;
-  onDismiss: (proposal: AdminProposal) => void;
-  t: SkillUpTokens;
-}) {
-  const term = proposalTerms[proposal.id] ?? 3;
-  const busy = busyProposalId === proposal.id;
-  return (
-    <div style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>#{proposal.rank} · {proposal.occupation}</span>
-        <Pill>{proposal.sector}</Pill>
-        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>gap {Math.round(proposal.gap)}</span>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 }}>
-        <label style={{ fontSize: 12, color: t.MUTED }}>
-          Term:{' '}
-          <select
-            value={term}
-            disabled={busy}
-            onChange={(event) => setProposalTerms((prev) => ({ ...prev, [proposal.id]: Number(event.target.value) as ProposalTermMonths }))}
-            style={{ borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, padding: '5px 8px', fontSize: 12 }}
-          >
-            {PROPOSAL_TERM_MONTHS.map((months) => (
-              <option key={months} value={months}>{months} month{months === 1 ? '' : 's'}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => onApprove(proposal)}
-          disabled={busy}
-          style={{ marginLeft: 'auto', padding: '7px 14px', borderRadius: 7, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 12, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-        >
-          {busy ? 'Working…' : 'Approve & open'}
-        </button>
-        <button
-          type="button"
-          onClick={() => onDismiss(proposal)}
-          disabled={busy}
-          style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ProposalsSection({
-  proposals,
-  proposalTerms,
-  setProposalTerms,
-  busyProposalId,
-  autoRunning,
-  autoError,
-  autoNotice,
-  proposalError,
-  proposalNotice,
-  onRefresh,
-  onApprove,
-  onDismiss,
-  t,
-}: {
-  proposals: AdminProposal[];
-  proposalTerms: Record<string, ProposalTermMonths>;
-  setProposalTerms: React.Dispatch<React.SetStateAction<Record<string, ProposalTermMonths>>>;
-  busyProposalId: string | null;
-  autoRunning: boolean;
-  autoError: string | null;
-  autoNotice: string | null;
-  proposalError: string | null;
-  proposalNotice: string | null;
-  onRefresh: () => void;
-  onApprove: (proposal: AdminProposal) => void;
-  onDismiss: (proposal: AdminProposal) => void;
-  t: SkillUpTokens;
-}) {
-  return (
-    <div style={{ marginBottom: 24, padding: '16px 18px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: 0 }}>
-          Cohort proposals from Workforce gaps {proposals.length > 0 ? `(${proposals.length})` : ''}
-        </h2>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={autoRunning}
-          style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, background: t.ACCENT, border: `1px solid ${t.ACCENT}`, color: '#0F1117', fontSize: 13, fontWeight: 700, cursor: autoRunning ? 'not-allowed' : 'pointer', opacity: autoRunning ? 0.6 : 1 }}
-        >
-          {autoRunning ? 'Refreshing…' : 'Refresh proposals'}
-        </button>
-      </div>
-      <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-        The gaps are re-read on a cadence into a ranked, sector-diverse queue. Approve a proposal to
-        open a cohort — you choose the term — or dismiss it. Approving never opens two cohorts for the
-        same occupation; refreshing supersedes proposals whose gap has closed.
-      </p>
-      {autoError ? <div role="alert" style={alertBoxStyle}>{autoError}</div> : null}
-      {autoNotice ? <div style={noticeBoxStyle}>{autoNotice}</div> : null}
-      {proposalError ? <div role="alert" style={alertBoxStyle}>{proposalError}</div> : null}
-      {proposalNotice ? <div style={noticeBoxStyle}>{proposalNotice}</div> : null}
-      {proposals.length === 0 ? (
-        <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 10, background: t.BG, border: `1px solid ${t.BORDER_SOLID}` }}>
-          No pending proposals. Use “Refresh proposals” to re-read the current Workforce gaps.
-        </div>
-      ) : (
-        proposals.map((proposal) => (
-          <ProposalCard
-            key={proposal.id}
-            proposal={proposal}
-            proposalTerms={proposalTerms}
-            setProposalTerms={setProposalTerms}
-            busyProposalId={busyProposalId}
-            onApprove={onApprove}
-            onDismiss={onDismiss}
-            t={t}
-          />
         ))
       )}
     </div>
@@ -527,16 +387,9 @@ function GrantForm({
 
 // All state, derived values, and mutation handlers for the admin shell. Kept as a hook so the
 // component itself stays a thin render of the extracted section components.
-function useSkillUpAdminController(pendingProposals: AdminProposal[]) {
+function useSkillUpAdminController() {
   const [cohorts, setCohorts] = useState<AdminCohort[] | null>(null);
   const [cohortsError, setCohortsError] = useState<string | null>(null);
-
-  // Cohort proposal queue (issue #904). Seeded from the server prop, re-fetched after any action.
-  const [proposals, setProposals] = useState<AdminProposal[]>(pendingProposals);
-  const [proposalTerms, setProposalTerms] = useState<Record<string, ProposalTermMonths>>({});
-  const [busyProposalId, setBusyProposalId] = useState<string | null>(null);
-  const [proposalNotice, setProposalNotice] = useState<string | null>(null);
-  const [proposalError, setProposalError] = useState<string | null>(null);
 
   // Credit-adjustment form state.
   const [targetUserId, setTargetUserId] = useState('');
@@ -547,11 +400,6 @@ function useSkillUpAdminController(pendingProposals: AdminProposal[]) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-
-  // Auto-cohort run (issue #904): manual fallback for the daily cron.
-  const [autoRunning, setAutoRunning] = useState(false);
-  const [autoNotice, setAutoNotice] = useState<string | null>(null);
-  const [autoError, setAutoError] = useState<string | null>(null);
 
   const loadCohorts = useCallback(async () => {
     setCohortsError(null);
@@ -625,98 +473,10 @@ function useSkillUpAdminController(pendingProposals: AdminProposal[]) {
     setGovernanceTicketId('');
   }, [targetUserId, parsedAmount, reason, governanceTicketId, magnitude]);
 
-  const loadProposals = useCallback(async () => {
-    try {
-      const res = await fetch('/api/skill-up/admin/cohort-proposals');
-      if (!res.ok) {
-        return;
-      }
-      const data = (await res.json()) as { ok: boolean; proposals?: AdminProposal[] };
-      setProposals(data.proposals ?? []);
-    } catch {
-      // Non-fatal: keep the current list on a transient fetch error.
-    }
-  }, []);
-
-  const refreshProposals = useCallback(async () => {
-    setAutoRunning(true);
-    setAutoNotice(null);
-    setAutoError(null);
-    const result = await luAdminMutate<AutoCohortRunResult>('/api/skill-up/admin/auto-cohorts/run', {});
-    setAutoRunning(false);
-    if (!result.ok) {
-      setAutoError(result.message);
-      return;
-    }
-    const data = result.data;
-    if (data.skipped === 'disabled') {
-      setAutoNotice('Proposal generation is turned off in config — the queue was not refreshed.');
-    } else if (data.skipped === 'no_workforce_share') {
-      setAutoNotice('Skipped: no sector carries a workforce share yet, so the gap ranking is not meaningful.');
-    } else {
-      const generated = data.generated ?? 0;
-      const superseded = data.superseded ?? 0;
-      const closedCount = data.closed?.length ?? 0;
-      setAutoNotice(`Queue refreshed: ${generated} proposal(s) ranked, ${superseded} superseded, ${closedCount} cohort(s) closed (term ended).`);
-    }
-    await Promise.all([loadProposals(), loadCohorts()]);
-  }, [loadCohorts, loadProposals]);
-
-  const approveProposal = useCallback(
-    async (proposal: AdminProposal) => {
-      setBusyProposalId(proposal.id);
-      setProposalNotice(null);
-      setProposalError(null);
-      const termMonths = proposalTerms[proposal.id] ?? 3;
-      const result = await luAdminMutate<{ status?: string; occupation?: string; endDate?: string }>(
-        `/api/skill-up/admin/cohort-proposals/${proposal.id}/approve`,
-        { termMonths },
-      );
-      setBusyProposalId(null);
-      if (!result.ok) {
-        setProposalError(result.message);
-        return;
-      }
-      if (result.data.status === 'already_covered') {
-        setProposalNotice(`${proposal.occupation} already has an open cohort — the proposal was removed.`);
-      } else {
-        setProposalNotice(`Opened a ${termMonths}-month cohort for ${proposal.occupation} (ends ${result.data.endDate ?? ''}).`);
-      }
-      await Promise.all([loadProposals(), loadCohorts()]);
-    },
-    [proposalTerms, loadProposals, loadCohorts],
-  );
-
-  const dismissProposal = useCallback(
-    async (proposal: AdminProposal) => {
-      setBusyProposalId(proposal.id);
-      setProposalNotice(null);
-      setProposalError(null);
-      const result = await luAdminMutate<{ status?: string }>(
-        `/api/skill-up/admin/cohort-proposals/${proposal.id}/dismiss`,
-        {},
-      );
-      setBusyProposalId(null);
-      if (!result.ok) {
-        setProposalError(result.message);
-        return;
-      }
-      setProposalNotice(`Dismissed the proposal for ${proposal.occupation}.`);
-      await loadProposals();
-    },
-    [loadProposals],
-  );
-
   return {
     cohorts,
     cohortsError,
     loadCohorts,
-    proposals,
-    proposalTerms,
-    setProposalTerms,
-    busyProposalId,
-    proposalNotice,
-    proposalError,
     targetUserId,
     setTargetUserId,
     amountText,
@@ -729,17 +489,11 @@ function useSkillUpAdminController(pendingProposals: AdminProposal[]) {
     submitting,
     formError,
     notice,
-    autoRunning,
-    autoNotice,
-    autoError,
     formReady,
     magnitude,
     beginConfirm,
     cancelConfirm,
     submitAdjustment,
-    refreshProposals,
-    approveProposal,
-    dismissProposal,
   };
 }
 
@@ -747,12 +501,10 @@ export function SkillUpAdminShell({
   kpis,
   openDisputes,
   pendingValidations,
-  pendingProposals,
 }: {
   kpis: AdminKpis;
   openDisputes: AdminDispute[];
   pendingValidations: AdminValidation[];
-  pendingProposals: AdminProposal[];
 }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
@@ -761,12 +513,6 @@ export function SkillUpAdminShell({
     cohorts,
     cohortsError,
     loadCohorts,
-    proposals,
-    proposalTerms,
-    setProposalTerms,
-    busyProposalId,
-    proposalNotice,
-    proposalError,
     targetUserId,
     setTargetUserId,
     amountText,
@@ -779,18 +525,12 @@ export function SkillUpAdminShell({
     submitting,
     formError,
     notice,
-    autoRunning,
-    autoNotice,
-    autoError,
     formReady,
     magnitude,
     beginConfirm,
     cancelConfirm,
     submitAdjustment,
-    refreshProposals,
-    approveProposal,
-    dismissProposal,
-  } = useSkillUpAdminController(pendingProposals);
+  } = useSkillUpAdminController();
 
   return (
     <div
@@ -828,23 +568,6 @@ export function SkillUpAdminShell({
 
         {/* Review queue: pending milestone validations — with validate/release actions inline. */}
         <ValidationsSection pendingValidations={pendingValidations} t={t} onChanged={() => router.refresh()} />
-
-        {/* Cohort proposals from Workforce gaps (issue #904) */}
-        <ProposalsSection
-          proposals={proposals}
-          proposalTerms={proposalTerms}
-          setProposalTerms={setProposalTerms}
-          busyProposalId={busyProposalId}
-          autoRunning={autoRunning}
-          autoError={autoError}
-          autoNotice={autoNotice}
-          proposalError={proposalError}
-          proposalNotice={proposalNotice}
-          onRefresh={refreshProposals}
-          onApprove={(proposal) => void approveProposal(proposal)}
-          onDismiss={(proposal) => void dismissProposal(proposal)}
-          t={t}
-        />
 
         {/* Cohorts */}
         <CohortsSection cohorts={cohorts} cohortsError={cohortsError} t={t} onClaimed={() => void loadCohorts()} />

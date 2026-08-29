@@ -437,49 +437,10 @@ Result: web ☐
 
 ---
 
-### LU-A4 — Cohort proposals: refresh, ranking, approve, dismiss
-
-**Role:** admin · **Surfaces:** web
-**Precondition:** Signed in as seed admin. Workforce gap data available (seeded or present in dev DB), with more than one sector carrying a positive `workforce_share`.
-
-**Steps:**
-1. Open `/admin/skill-up` and locate the "Cohort proposals from Workforce gaps" card.
-2. Click **Refresh proposals** (triggers `POST /api/skill-up/admin/auto-cohorts/run`).
-3. Read the ranked proposal list.
-4. On one proposal, choose a term of **3 months** and click **Approve & open**.
-5. On another proposal, click **Dismiss**.
-
-**Expected:**
-- The refresh banner reports how many proposals were ranked / superseded / cohorts closed. If the pre-flight guard fires (no positive `workforce_share`), it shows `skipped: no_workforce_share` — not a blank screen or error.
-- The list is **sector-diverse**: the top rows span different sectors rather than all coming from one sector (no single sector dominates the top of the queue).
-- Approving opens a real cohort: a success banner names the occupation and end date, the proposal leaves the queue, and the cohort overview shows a new cohort with an `auto` badge (and `needs trainer` until a trainer claims it). Its end date is ~3 months out.
-- Dismissing removes that proposal from the queue with no cohort created.
-
-Result: web ☐
-
----
-
-### LU-A5 — Proposal queue idempotency and supersede
-
-**Role:** admin · **Surfaces:** web
-**Precondition:** LU-A4 completed (at least one proposal approved into a cohort).
-
-**Steps:**
-1. Click **Refresh proposals** again.
-
-**Expected:**
-- The occupation you approved in LU-A4 does **not** reappear as a new proposal (it is now covered by an open cohort).
-- No occupation appears twice in the queue; each row is a distinct occupation.
-- If a previously pending proposal's gap has since closed below the threshold, it no longer appears (it was superseded).
-
-Result: web ☐
-
----
-
-### LU-A6 — Trainer claims a cohort opened from a proposal
+### LU-A6 — Trainer claims a cohort that has no trainer
 
 **Role:** trainer (or admin acting as trainer) · **Surfaces:** web
-**Precondition:** At least one cohort opened from an approved proposal has the `needsTrainer` flag set (from LU-A4). Signed in as seed trainer.
+**Precondition:** At least one cohort in the admin list carries the `auto` and `needs trainer` badges — one of the cohorts the retired auto-cohort run opened before 2026-08-29, still owned by the scheduler placeholder. Signed in as seed trainer. Skip this case on a database that has none.
 
 **Steps:**
 1. Find the auto-created cohort with the `needs trainer` badge in the admin cohort list.
@@ -599,7 +560,7 @@ of why cohort balances moved survives the account.
 ### Account deletion clears the trainer profile and achievements
 
 **Expected:** Deleting the account removes the member's trainer profile (name, headline, bio) and
-their achievements. Cohorts, proposals, milestone validations, disbursements, and disputes remain
+their achievements. Cohorts, milestone validations, disbursements, and disputes remain
 (shared/admin and ledger records).
 
 ---
@@ -619,7 +580,6 @@ The following cases must produce the same data and UX outcome on both surfaces. 
 | LU-11 | Public/signed-out copy accurately describes learner and trainer earning mechanics |
 | LU-12 | Refresh reloads data without full-screen flash |
 | LU-A2 | Grant-only form: confirm copy says "add N credits"; negative amount blocked |
-| LU-A4 | "Run now" button present; result banner shows created/closed/skipped summary; `auto`/`needs trainer` badges shown |
 
 ---
 

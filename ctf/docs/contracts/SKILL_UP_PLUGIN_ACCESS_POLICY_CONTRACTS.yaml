@@ -293,29 +293,6 @@ policies:
       - not_authenticated
 
   - pluginId: skill-up
-    command: cohort.auto_create
-    version: 1.0.0
-    requiredRoles:
-      - admin
-      - system
-    attributePolicies:
-      tenancy: same_workspace
-    consentRequirements:
-      scopes:
-        - skill_up_manage_cohorts
-      fallbackLawfulBasis: contract_performance
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - invalid_source_event
-
-  - pluginId: skill-up
     command: cohort.claim_trainer
     version: 1.0.0
     requiredRoles:
@@ -337,47 +314,3 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - insufficient_role
-
-  - pluginId: skill-up
-    command: cohort.proposal_approve
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      tenancy: same_workspace
-    consentRequirements:
-      scopes:
-        - skill_up_manage_cohorts
-      fallbackLawfulBasis: contract_performance
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - proposal_not_pending
-
-  - pluginId: skill-up
-    command: cohort.proposal_dismiss
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      tenancy: same_workspace
-    consentRequirements:
-      scopes:
-        - skill_up_manage_cohorts
-      fallbackLawfulBasis: contract_performance
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: false
-    denyConditions:
-      - insufficient_role
-      - proposal_not_pending

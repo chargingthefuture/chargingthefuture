@@ -3,7 +3,6 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 
 export const dynamic = 'force-dynamic';
 import { getAdminPanelData } from 'lib/skill-up/repository';
-import { listPendingProposals } from 'lib/skill-up/auto-cohort';
 import { SkillUpAdminShell } from '@/components/skill-up/su-admin-shell';
 
 export default async function SkillUpAdminPage() {
@@ -12,14 +11,13 @@ export default async function SkillUpAdminPage() {
     redirect('/apps/skill-up');
   }
 
-  const [panel, pendingProposals] = await Promise.all([getAdminPanelData(), listPendingProposals(100)]);
+  const panel = await getAdminPanelData();
 
   return (
     <SkillUpAdminShell
       kpis={panel.kpis}
       openDisputes={panel.openDisputes}
       pendingValidations={panel.pendingValidations}
-      pendingProposals={pendingProposals}
     />
   );
 }

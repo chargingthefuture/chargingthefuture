@@ -55,70 +55,47 @@ a member reads who runs a cohort and cannot edit it.
 1. Admin credit grant endpoint (`mint`/`adjustment` path), wired to a real admin UI on both web and Android. Owner decision (2026-06-06): the admin UI is grant-only — it only ever grants ServiceCredits to a member ("earn or earn nothing") and exposes no remove/negative path; the amount input accepts positive values only and submit is disabled client-side for non-positive amounts. (The backend endpoint still technically accepts a signed amount so a mistaken grant can be corrected later, but the UI never sends a negative.) Every grant requires a member user ID, an amount greater than zero, a reason, and a governance ticket ID, and goes behind an explicit in-screen confirm step that restates exactly what will change ("add N credits to member X") before submit. The mutation carries the `x-ctf-csrf: '1'` header and is written to the audit log.
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/skill-up/cohorts`.
-4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
-5. Review queues on the admin panel — **actionable since 2026-08-05** (`su-review-actions.tsx`): **Open disputes** (`skill_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/skill-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`skill_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/skill-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
-6. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `skill_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
+4. Review queues on the admin panel — **actionable since 2026-08-05** (`su-review-actions.tsx`): **Open disputes** (`skill_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/skill-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`skill_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/skill-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
+5. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `skill_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
 
-## Cohort Proposals from Workforce Gaps (issue #904)
+## Cohorts Opened by the Retired Auto-Cohort Run (issue #904, removed 2026-08-29)
 
-SkillUp turns the Workforce talent gaps into a **ranked, admin-approved proposal queue** — it does not
-create cohorts on its own. Owner decision (2026-07-23, small active user base): the admin opens and
-closes cohorts at their discretion by approving proposals; full auto-create and a demand-*prediction*
-algorithm (tracking Workforce trends over time to forecast demand, not just today's snapshot) are
-deferred. That future model is where `max_concurrent` becomes load-bearing again.
+SkillUp used to read the Workforce talent gaps on a cadence and write a ranked, sector-diverse queue
+of proposed cohorts for an admin to approve into a real cohort. **That generation half was removed on
+2026-08-29** (owner report: redundant — an admin opens a cohort directly in the SkillUp shell, which
+is the same decision with fewer screens). Removed with it: the daily cron
+(`.github/workflows/skill-up-auto-cohorts.yml`), the cron and admin run routes, the three
+proposal-queue routes, `lib/skill-up/auto-cohort.ts`, the admin proposal card and **Refresh
+proposals** button, and the three tables the run used
+(`skill_up_cohort_proposals`, `skill_up_auto_cohort_config`, `skill_up_auto_cohort_term_overrides`,
+dropped by `ctf/db/migrations/post/0009_drop_skill_up_auto_cohort_tables.sql`). SkillUp no longer
+reads Workforce at all.
 
-**SkillUp ↔ Workforce read interface (the contract the issue asked for before build):**
+The cohorts that run already opened are live and members are enrolled in them, so what describes
+them stays:
 
-- SkillUp reads the gap signal **server-side, in-process** via `fetchOccupationGapReport()` from
-  `lib/workforce/repository` — it does not call Workforce over HTTP. The return is the per-occupation
-  list `{ jobTitleId, occupation, sector, skillLevel, target, recruited, gap }`, sorted largest-gap-first.
-- The read is **one-way**: SkillUp never writes Workforce, Directory, or Skills Taxonomy. A proposal's
-  and the resulting cohort's `source_job_title_id` is the gap's `jobTitleId` (a Skills Taxonomy job title
-  id), so it ties to the exact occupation with no fuzzy title match.
-- **Cadence:** a daily GitHub Actions cron (`.github/workflows/skill-up-auto-cohorts.yml`) calls
-  `POST /api/internal/skill-up/auto-cohorts/run` (CRON_SECRET bearer). Each run closes expired auto
-  cohorts, and — at most every `generation_interval_days` (default 90) — re-reads the gaps into the
-  proposal queue. The admin **Refresh proposals** button forces a re-read on demand.
-- **Selection (admin-editable in `skill_up_auto_cohort_config`):** filter to the configured skill level
-  (default `Foundational`), require `gap ≥ min_gap_threshold`, exclude occupations already covered by an
-  open/active auto cohort or already holding a pending proposal, then rank **sector-diverse**:
-  round-robin across sectors (each sector's occupations largest-gap-first; sectors ordered by their top
-  gap) up to `per_sector_cap` per sector, bounded by `top_n` for a reviewable queue. There is **no**
-  max-concurrent cap on proposals — the admin opens on demand.
-- **Approval → term:** the admin approves a proposal and picks a **1/3/5-month** term; a real cohort
-  opens with `start = today`, `end = today + term`, `auto_created = true`, and the `source_*` fields. If
-  the occupation already has an open auto cohort (the `uq_skill_up_auto_cohort_active_source` guard
-  fires), the proposal is marked `superseded` and no second cohort opens.
-- **Economics (one global policy, admin-editable):** every approved cohort is stamped with the deposit
-  (`default_required_credits`, default 0 = free to join — sets `allow_no_deposit`), the trainer split
-  (`default_trainer_split_percent`, default 25%), the completion bonus (`default_completion_bonus_credits`,
-  default 0), and a standard 3-milestone skeleton (`SKILL_UP_AUTO_COHORT_DEFAULT_MILESTONES`: 40/30/30).
-  Per-occupation economic tuning is deferred (#1197).
-- **Lifecycle:** each approved cohort's end date is `start + term`. The daily run closes any auto cohort
-  whose term has elapsed (status → `completed`). Expiry is checked every run; proposal regeneration is
-  gated to the 90-day cadence.
-- **Queue upkeep / idempotency:** the partial unique index `uq_skill_up_cohort_proposal_pending`
-  (one pending proposal per occupation) plus the cadence guard make repeat runs idempotent. On each
-  regeneration, pending proposals no longer valid (occupation now covered, or gap fell below the
-  threshold) are marked `superseded`; still-valid ones keep their row with a refreshed gap/rank.
-- **Pre-flight guard:** if no sector carries a positive `skills_taxonomy_sectors.workforce_share`,
-  Workforce demand falls back to an even split and the "largest gap" order is meaningless, so the run
-  generates nothing and records `skipped: no_workforce_share`.
-- **Recruiting:** an approved cohort opens with the scheduler as a placeholder owner and `status='open'`
-  (so it shows in the existing cohort browse and trainees can enroll). A trainer claims it via
-  `POST /api/skill-up/cohorts/[cohortId]/claim-trainer`, which makes them the trainer of record; until
-  then the cohort carries a derived `needsTrainer` flag.
+- **The `source_*` columns on `skill_up_cohorts`** (`auto_created`, `source_job_title_id`,
+  `source_sector`, `source_gap_at_creation`) still carry the occupation each of those cohorts came
+  from. Nothing writes them now — a cohort created by hand takes the `FALSE`/`NULL` defaults — so a
+  row carrying `auto_created = TRUE` is one of the pre-2026-08-29 cohorts.
+- **The `auto` and `needs trainer` badges** on the admin cohort overview, which read those columns.
+- **Claiming.** One of those cohorts opened with the scheduler id
+  (`skill-up-auto-cohort-scheduler`) as a placeholder owner, so it may still have no human trainer. A
+  trainer claims it via `POST /api/skill-up/cohorts/[cohortId]/claim-trainer`
+  (`lib/skill-up/claim-trainer.ts`), which makes them the trainer of record and backfills
+  `assigned_trainer_id` onto enrollments that were written before the claim. Until then the cohort
+  carries a derived `needsTrainer` flag.
+- **The partial unique index** `uq_skill_up_auto_cohort_active_source` (one open/active auto cohort
+  per occupation), which is inert for cohorts created by hand.
+
+Nothing closes those cohorts on a schedule any more — the daily expiry pass went with the cron. An
+admin ends one the same way they end any other cohort.
 
 ## API Surface and Route Map
 
 - `GET /api/skill-up/cohorts`
 - `POST /api/skill-up/cohorts` — create a cohort; admin or trainer role (per `cohort.create` contract). The cohort list response now also carries `autoCreated`, `sourceJobTitleId`, `sourceSector`, and a derived `needsTrainer` flag.
-- `POST /api/skill-up/cohorts/[cohortId]/claim-trainer` — a trainer or admin claims an auto-created cohort that has no human trainer yet, becoming its trainer of record (per `cohort.claim_trainer` contract).
-- `POST /api/skill-up/admin/auto-cohorts/run` — admin-only "Refresh proposals" action; force-regenerates the cohort proposal queue from the current Workforce gaps and closes expired auto cohorts; CSRF-guarded (per `cohort.auto_create` contract).
-- `POST /api/internal/skill-up/auto-cohorts/run` — cron-only run, guarded by `Authorization: Bearer ${CRON_SECRET}` (no user session). Closes any auto cohort whose term has elapsed, and — at most every `generation_interval_days` (default 90) — re-reads the Workforce occupation gaps into the ranked, sector-diverse proposal queue. Does **not** create cohorts. Idempotent.
-- `GET /api/skill-up/admin/cohort-proposals` — admin-only; the ranked pending proposal queue (per `cohort.proposal_approve`/`_dismiss` read surface).
-- `POST /api/skill-up/admin/cohort-proposals/[proposalId]/approve` — admin-only; opens a cohort from a pending proposal with a chosen term of 1/3/5 months; CSRF-guarded (per `cohort.proposal_approve` contract).
-- `POST /api/skill-up/admin/cohort-proposals/[proposalId]/dismiss` — admin-only; removes a pending proposal from the queue; CSRF-guarded (per `cohort.proposal_dismiss` contract).
+- `POST /api/skill-up/cohorts/[cohortId]/claim-trainer` — a trainer or admin claims one of the pre-2026-08-29 auto-created cohorts that has no human trainer yet, becoming its trainer of record (per `cohort.claim_trainer` contract).
 - `POST /api/skill-up/enroll` — member or admin only; trainer-only accounts are blocked (per `enrollment.create` contract).
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
@@ -154,11 +131,17 @@ Core tables:
 15. `skill_up_trainers` — trainer directory profile. Columns: `id` (PK), `user_id` (unique), `display_name`, `headline`, `bio`, `tracks` (jsonb array), `status`, `created_at`, `updated_at`. Read-only browse surface.
 16. `skill_up_achievements` — grant-only badge definitions. Columns: `id` (PK), `slug` (unique), `name`, `description`, `track`, `icon`, `credit_reward` (display-only grant amount), `sequence_no`, `status`, `created_at`, `updated_at`.
 17. `skill_up_user_achievements` — per-user earned badge rows (grant-only: a row means earned). Columns: `id` (PK), `user_id`, `achievement_id`, `earned_at`, `granted_credits`, `source_reference`, `created_at`; unique on `(user_id, achievement_id)`.
-18. `skill_up_auto_cohort_config` — singleton config for the gap-driven proposal queue (issue #904). Columns: `singleton_key` (PK bool), `enabled` (gates proposal generation), `min_gap_threshold`, `max_concurrent` (default 3 — retained for the future full-auto model; **not** used by proposal generation), `per_sector_cap` (default 1 — diversity cap), `skill_level_filter` (default `Foundational`), `top_n` (default 10 — queue-size bound), `default_term_days` (default 90), `default_seats` (default 12), `default_required_credits` (default 0 = free to join), `default_trainer_split_percent` (default 25), `default_completion_bonus_credits` (default 0), `generation_interval_days` (default 90 — the cadence), `last_generated_at` (nullable — cadence guard), `updated_by_user_id`, `updated_at`. Admin-editable. The economic columns are one global policy applied to every approved cohort; per-occupation tuning is deferred (#1197).
-19. `skill_up_auto_cohort_term_overrides` — legacy per-occupation fixed-term overrides (issue #904). Columns: `job_title_id` (PK), `occupation`, `term_days`, `updated_by_user_id`, `updated_at`. No longer consulted in the proposal model (the admin picks 1/3/5 months at approval); kept for the future full-auto model.
-20. `skill_up_cohort_proposals` — the gap-driven cohort proposal queue (issue #904, proposal-queue model). Columns: `id` (PK), `source_job_title_id` (Skills Taxonomy job title — no hard FK, mirroring `skill_up_cohorts.source_job_title_id`), `occupation`, `sector`, `skill_level`, `gap_at_proposal`, `rank`, `status` (`pending`/`approved`/`dismissed`/`superseded`), `generated_source`, `generated_at`, `decided_by_user_id`, `decided_at`, `created_cohort_id` (set when approved), `created_at`, `updated_at`. Partial unique index `uq_skill_up_cohort_proposal_pending` on `source_job_title_id WHERE status='pending'` (at most one live proposal per occupation); `idx_skill_up_cohort_proposal_pending_rank` on `(status, rank)` for the ranked read.
 
-Auto-cohort columns on `skill_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_skill_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
+Auto-cohort columns on `skill_up_cohorts` (issue #904, generation removed 2026-08-29): `auto_created`
+(bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no
+hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text),
+`source_gap_at_creation` (numeric). Nothing writes them any more, so a new cohort takes the
+`FALSE`/`NULL` defaults and a row carrying `auto_created = TRUE` is one the retired run opened. The
+partial unique index `uq_skill_up_auto_cohort_active_source` on
+`source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` is kept from that run
+and is inert for cohorts created by hand. The run's own three tables
+(`skill_up_auto_cohort_config`, `skill_up_auto_cohort_term_overrides`, `skill_up_cohort_proposals`)
+were dropped with it — see `ctf/db/migrations/post/0009_drop_skill_up_auto_cohort_tables.sql`.
 
 Multi-currency (issue #120): `skill_up_cohorts` carries `stipend_currency` and `microgrant_currency`
 (FK → `currencies.code`), naming the currency of `stipend_amount_per_payout` and `microgrant_amount`.
@@ -252,7 +235,7 @@ that exist today.
 
 0. **The member has no in-app way to OPEN a dispute, and a non-admin trainer has no in-app
    validate/release/claim surface.** (History-checked 2026-08-05: never built on any platform.)
-   The admin side became actionable 2026-08-05 (see Admin Features #5). The blocker named here — a
+   The admin side became actionable 2026-08-05 (see Admin Features #4). The blocker named here — a
    missing own-enrollments read — was cleared on 2026-08-15 by `GET /api/skill-up/enrollments`, which
    gives the Progress tab a real `enrollmentId` per row to attach a dispute to. Remaining order of
    work: the dispute form on the Progress tab, then the trainer surface (which can reuse
@@ -261,10 +244,37 @@ that exist today.
 2. No admin KPI read endpoint exists; the web admin page renders KPIs from server-side `getAdminPanelData()` and the Android admin screen has no KPI cards (no GET route to call). Add a `GET /api/skill-up/admin/kpis` route to give the mobile screen the same KPI cards as web.
 3. No admin-gated GET route exists for the SkillUp admin screens, so the mobile admin screen cannot pre-gate by role before render; it relies on the server-side admin gate on `POST /adjust-credits` to deny non-admins. The cohort list (`GET /api/skill-up/cohorts`) is read-access for any approved user. A dedicated admin-gated read route would let the mobile screen show the admin-only notice without attempting a mutation.
 4. The design mockup `MobileSkillUpAdmin.tsx` (track/badge management) has no backing endpoints; tracks are a free-text field on cohorts and there is no badge model. Building that surface would require new schema, routes, and contracts.
-5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
+5. Nothing closes a cohort when its end date passes. The retired auto-cohort cron did that for the
+   cohorts it opened; with it gone, an admin ends every cohort by hand. If the cohort list starts
+   filling with cohorts that ran out months ago, a small scheduled status flip (or an admin action on
+   the cohort row) is the fix.
+6. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
 
 ## Change Log
 
+- 2026-08-29: **Removed the auto-cohort generation half of #904 (owner report: redundant).** SkillUp no
+  longer reads the Workforce talent gaps to propose cohorts; an admin opens a cohort directly in the
+  SkillUp shell, which was already the only way a proposal turned into one. Deleted: the daily cron
+  `.github/workflows/skill-up-auto-cohorts.yml` and its README row; `POST /api/internal/skill-up/auto-cohorts/run`;
+  `POST /api/skill-up/admin/auto-cohorts/run`; `GET /api/skill-up/admin/cohort-proposals` and its
+  `[proposalId]/approve` and `[proposalId]/dismiss` routes; `lib/skill-up/auto-cohort.ts`; the admin
+  screen's "Cohort proposals from Workforce gaps" card, its **Refresh proposals** button, and the
+  proposal state in `su-admin-shell.tsx`; the `AdminProposal` / `AutoCohortRunResult` /
+  `PROPOSAL_TERM_MONTHS` types in `su-admin-shared.ts`; the `SKILL_UP_AUTO_COHORT_DEFAULTS`,
+  `SKILL_UP_PROPOSAL_TERM_MONTHS`, and `SKILL_UP_AUTO_COHORT_DEFAULT_MILESTONES` constants; the
+  `autoCreated` / `sourceJobTitleId` / `sourceSector` / `sourceGapAtCreation` inputs on `createCohort`
+  (no caller set them once the approve path was gone, so the insert now takes the column defaults); the
+  `cohort.auto_create`, `cohort.proposal_approve`, and `cohort.proposal_dismiss` command,
+  access-policy, and audit contracts; and test cases LU-A4 and LU-A5. The three tables the run used
+  (`skill_up_cohort_proposals`, `skill_up_auto_cohort_config`, `skill_up_auto_cohort_term_overrides`)
+  are dropped by `ctf/db/migrations/post/0009_drop_skill_up_auto_cohort_tables.sql` and removed from
+  `schema.sql`, `schema.demo.sql`, and the account-deletion registry. **Kept, because the cohorts that
+  run already opened are live with members enrolled in them:** the `auto_created` / `source_*` columns
+  on `skill_up_cohorts` and their `auto` / `needs trainer` badges, the
+  `uq_skill_up_auto_cohort_active_source` index, `SKILL_UP_AUTO_COHORT_ACTOR_ID`, and
+  `POST /api/skill-up/cohorts/[cohortId]/claim-trainer`, whose `claimAutoCohortTrainer` moved from the
+  deleted module to `lib/skill-up/claim-trainer.ts`. Nothing closes those cohorts on a schedule now —
+  the daily expiry pass went with the cron, so an admin ends one like any other cohort.
 - 2026-08-29: **Renamed the plugin LevelUp → SkillUp (owner decision), as a hard cutover with no
   aliases.** Member-facing name, slug, folders, files, code identifiers, API routes, contracts and
   database tables all move together. `/apps/level-up` and every `/api/level-up/*` route are gone and

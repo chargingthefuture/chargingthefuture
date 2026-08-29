@@ -592,10 +592,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skill_up_trainers', 'user_id', 'Your trainer profile (name, headline, bio, tracks).'),
       del('skill_up_user_achievements', 'user_id', 'Your achievements.'),
       retain('skill_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
-      retain('skill_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
       retain('skill_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
-      retain('skill_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
-      retain('skill_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
     ],
   },
   {

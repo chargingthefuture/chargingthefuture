@@ -194,10 +194,6 @@ type CreateCohortInput = {
   policyJson?: Record<string, unknown>;
   curriculumItems?: Array<CohortCurriculumItemInput>;
   milestones?: Array<CohortMilestoneInput>;
-  autoCreated?: boolean;
-  sourceJobTitleId?: string | null;
-  sourceSector?: string | null;
-  sourceGapAtCreation?: number | null;
 };
 
 async function insertCohortRow(client: PoolClient, cohortId: string, input: CreateCohortInput) {
@@ -208,12 +204,10 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
     `INSERT INTO skill_up_cohorts
       (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
        trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
-       microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
-       auto_created, source_job_title_id, source_sector, source_gap_at_creation)
+       microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id)
      VALUES
       ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
-       $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
-       $24, $25, $26, $27)`,
+       $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23)`,
     [
       cohortId,
       input.title,
@@ -238,10 +232,6 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       JSON.stringify(orDefault(input.payoutPolicyJson, {})),
       JSON.stringify(orDefault(input.policyJson, {})),
       input.actorId,
-      orDefault(input.autoCreated, false),
-      orDefault<string | null>(input.sourceJobTitleId, null),
-      orDefault<string | null>(input.sourceSector, null),
-      orDefault<number | null>(input.sourceGapAtCreation, null),
     ],
   );
 }

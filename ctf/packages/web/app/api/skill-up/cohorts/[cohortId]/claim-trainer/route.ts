@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { claimAutoCohortTrainer } from 'lib/skill-up/auto-cohort';
+import { claimAutoCohortTrainer } from 'lib/skill-up/claim-trainer';
 import { ensureMutationCsrf, skillUpErrorResponse, requireSkillUpReadAccess } from 'lib/skill-up/_lib';
 import { reportError } from 'lib/observability/report';
 

@@ -1681,8 +1681,6 @@ ALTER TABLE IF EXISTS levelup_user_achievements RENAME TO level_up_user_achievem
 -- database generations land in the same place: a database older than 2026-06-26 goes
 -- `levelup_` -> `level_up_` -> `skill_up_`, a current database goes `level_up_` -> `skill_up_`,
 -- and a fresh database no-ops through both and is built by the CREATE statements below.
--- The three tables added after 2026-06-26 (auto_cohort_config, auto_cohort_term_overrides,
--- cohort_proposals) only ever carried the `level_up_` prefix, so they appear here only.
 ALTER TABLE IF EXISTS level_up_enrollments RENAME TO skill_up_enrollments;
 ALTER TABLE IF EXISTS level_up_cohorts RENAME TO skill_up_cohorts;
 ALTER TABLE IF EXISTS level_up_curriculum_items RENAME TO skill_up_curriculum_items;
@@ -1698,9 +1696,6 @@ ALTER TABLE IF EXISTS level_up_disbursements RENAME TO skill_up_disbursements;
 ALTER TABLE IF EXISTS level_up_trainers RENAME TO skill_up_trainers;
 ALTER TABLE IF EXISTS level_up_achievements RENAME TO skill_up_achievements;
 ALTER TABLE IF EXISTS level_up_user_achievements RENAME TO skill_up_user_achievements;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config RENAME TO skill_up_auto_cohort_config;
-ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides RENAME TO skill_up_auto_cohort_term_overrides;
-ALTER TABLE IF EXISTS level_up_cohort_proposals RENAME TO skill_up_cohort_proposals;
 
 -- === skill_up_enrollments table (guarded DDL, schema drift prevention) ===
 CREATE TABLE IF NOT EXISTS skill_up_enrollments (
@@ -3308,123 +3303,24 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMES
 -- both default to ServiceCredits (code 'SC').
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
--- Auto-cohort creation (issue #904): SkillUp stands up cohorts from Workforce occupation gaps.
--- auto_created marks a cohort the scheduled run created (vs a human-built one). source_job_title_id
--- ties it to the exact Skills Taxonomy occupation that triggered it (the Workforce gap's jobTitleId),
--- so a re-run never duplicates a cohort for the same occupation. source_sector / source_gap_at_creation
--- are kept for display and audit. source_job_title_id intentionally has no hard FK (it mirrors
--- directory_profiles.job_title_id, which is also a plain UUID reference to skills_taxonomy_job_titles).
+-- Auto-cohort creation (issue #904), removed 2026-08-29: SkillUp used to stand up cohorts from the
+-- Workforce occupation gaps. The generation half is gone (admins open cohorts directly), but the
+-- cohorts it already created are live and members are enrolled in them, so these columns stay to
+-- describe those rows. auto_created marks such a cohort (vs a human-built one); source_job_title_id
+-- ties it to the Skills Taxonomy occupation that triggered it; source_sector /
+-- source_gap_at_creation are kept for display and audit. Nothing writes these columns any more, so
+-- every new cohort takes the FALSE/NULL defaults. source_job_title_id intentionally has no hard FK
+-- (it mirrors directory_profiles.job_title_id, also a plain UUID reference to
+-- skills_taxonomy_job_titles).
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
--- Database-level idempotency guard: at most one open/active auto-created cohort per source occupation.
+-- Kept from the retired generation run: at most one open/active auto-created cohort per source
+-- occupation. Only ever applied to auto_created rows, so it is inert for cohorts created by hand.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_auto_cohort_active_source
   ON skill_up_cohorts (source_job_title_id)
   WHERE auto_created = TRUE AND status IN ('open', 'active');
-
--- Auto-cohort configuration (issue #904). Singleton row holding the knobs the scheduled run reads;
--- admin-editable. Defaults match the lean launch policy: top 10 Foundational gaps, 3 concurrent
--- cohorts, one per sector, above a minimum gap, fixed 90-day term.
-CREATE TABLE IF NOT EXISTS skill_up_auto_cohort_config (
-  singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  min_gap_threshold NUMERIC NOT NULL DEFAULT 25,
-  max_concurrent INTEGER NOT NULL DEFAULT 3,
-  per_sector_cap INTEGER NOT NULL DEFAULT 1,
-  skill_level_filter TEXT NOT NULL DEFAULT 'Foundational',
-  top_n INTEGER NOT NULL DEFAULT 10,
-  default_term_days INTEGER NOT NULL DEFAULT 90,
-  default_seats INTEGER NOT NULL DEFAULT 12,
-  -- Economic policy applied to every auto-created cohort (issue #904). One global policy for now;
-  -- per-occupation tuning is deferred (see #1197). default_required_credits 0 = free to join.
-  default_required_credits NUMERIC NOT NULL DEFAULT 0,
-  default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25,
-  default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0,
-  -- Proposal-queue cadence (issue #904, 2026-07-23): how often gaps are re-read into proposals,
-  -- and when they were last read.
-  generation_interval_days INTEGER NOT NULL DEFAULT 90,
-  last_generated_at TIMESTAMPTZ,
-  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS min_gap_threshold NUMERIC NOT NULL DEFAULT 25;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS max_concurrent INTEGER NOT NULL DEFAULT 3;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS per_sector_cap INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS skill_level_filter TEXT NOT NULL DEFAULT 'Foundational';
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS top_n INTEGER NOT NULL DEFAULT 10;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_term_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_seats INTEGER NOT NULL DEFAULT 12;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_required_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Proposal-queue model (issue #904, owner decision 2026-07-23): gaps are re-read on a cadence and
--- turned into an admin-approved proposal queue, not auto-created cohorts. generation_interval_days is
--- how often the gaps are re-read (default 90); last_generated_at gates the cadence.
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS generation_interval_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS last_generated_at TIMESTAMPTZ;
-
--- Per-occupation term overrides (issue #904): admins set how long a given occupation's auto cohort
--- runs ("Mechanics × term", "Elementary teachers × term"); falls back to default_term_days when absent.
-CREATE TABLE IF NOT EXISTS skill_up_auto_cohort_term_overrides (
-  job_title_id UUID PRIMARY KEY,
-  occupation TEXT NOT NULL DEFAULT '',
-  term_days INTEGER NOT NULL,
-  updated_by_user_id TEXT NOT NULL DEFAULT 'system',
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS term_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
-ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
--- Cohort proposal queue (issue #904, owner decision 2026-07-23). Instead of auto-creating cohorts,
--- the scheduled run reads the Workforce gaps and writes ranked, sector-diverse *proposals* here; an
--- admin approves one (choosing a 1/3/5-month term, which opens a real cohort) or dismisses it. Status:
--- pending (awaiting a decision), approved (a cohort was opened — see created_cohort_id), dismissed
--- (admin declined), superseded (a later generation invalidated it — occupation now covered or gap fell
--- below threshold).
-CREATE TABLE IF NOT EXISTS skill_up_cohort_proposals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_job_title_id UUID NOT NULL,
-  occupation TEXT NOT NULL,
-  sector TEXT NOT NULL DEFAULT 'Unassigned',
-  skill_level TEXT NOT NULL DEFAULT '',
-  gap_at_proposal NUMERIC NOT NULL DEFAULT 0,
-  rank INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'pending',
-  generated_source TEXT NOT NULL DEFAULT 'cron',
-  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  decided_by_user_id TEXT,
-  decided_at TIMESTAMPTZ,
-  created_cohort_id UUID,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'Unassigned';
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS skill_level TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS gap_at_proposal NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS rank INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_source TEXT NOT NULL DEFAULT 'cron';
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_cohort_id UUID;
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- At most one live (pending) proposal per occupation — mirrors uq_skill_up_auto_cohort_active_source.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_cohort_proposal_pending
-  ON skill_up_cohort_proposals (source_job_title_id)
-  WHERE status = 'pending';
--- Ranked read of the live queue for the admin surface.
-CREATE INDEX IF NOT EXISTS idx_skill_up_cohort_proposal_pending_rank
-  ON skill_up_cohort_proposals (status, rank);
 
 CREATE TABLE IF NOT EXISTS skill_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
