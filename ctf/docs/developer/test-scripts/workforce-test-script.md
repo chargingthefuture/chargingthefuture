@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services |
 
 ## How to run this
 
@@ -182,9 +182,12 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
 **Steps:**
 1. Open the **Community Planning** view (web desktop: sidebar "Community Planning"; web mobile /
    android: the "Community" tab).
-2. Read the ten teams (Legal & Governance, Finance, Land & Site, Build & Infrastructure, Food &
+2. Read the thirteen teams (Legal & Governance, Finance, Land & Site, Build & Infrastructure, Food &
    Agriculture, Health & Wellbeing, Safety & Security, Technology, Communications & Documentation,
-   Operations & Maintenance).
+   Operations & Maintenance, Water & Sanitation, Education & Childcare, Making & Repair). The last
+   three were added 2026-08-29 so the model plans for a community running without outside services;
+   a member whose only skills are in Water & Sanitation, Education, Manufacturing & Industry or
+   Mining / Extractive should now appear in a roster instead of in none.
 3. Expand at least one team to see its roster; note the matched-member count.
 4. (Web) Click a member's name in the expanded roster; confirm it opens that member's Directory
    profile.
@@ -197,7 +200,8 @@ demand-gap figure anywhere on this view — neither the team-level total nor the
 inside each member card (both removed 2026-07-17 — workforce-scale and irrelevant to planning one
 neighbourhood; the match reason and "via <skills>" attribution stay). A team whose mapped sector is not in the taxonomy shows that sector flagged "not
 mapped" rather than silently empty — after the 2026-07-17 name fix (`Housing & Construction`,
-`Energy & Utilities`) no team should show a "not mapped" chip; if one appears, a taxonomy sector was
+`Energy & Utilities`) and the 2026-08-29 widening, no team should show a "not mapped" chip, and every
+one of the 20 live sectors should be drawn from by at least one team; if a "not mapped" chip appears, a taxonomy sector was
 renamed and the team table needs the new name. The view is read-only and reflects current Directory data on
 reopen. On **web**, each member name is a link that opens that member's Directory profile
 (`/apps/directory/profile/:profileId`); on **android** the names are still plain text (parity ticket
