@@ -396,6 +396,28 @@ Result: web ☐
 
 ---
 
+### LU-A1c — Admin sees who enrolled, by handle
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Signed in as seed admin. At least one member has enrolled in a cohort (run LU-3 or LU-3b first, as that member).
+
+**Steps:**
+1. Open `/admin/skill-up`.
+2. Find the **Who enrolled** section above the cohort overview.
+3. Compare it against the seat counts on the cohort rows below it.
+
+**Expected:**
+- The member who enrolled in LU-3 / LU-3b is listed by their handle, shown as `@handle` — not a raw `user_...` id and not a blank cell. Their row also names the cohort they joined, their status, and the date.
+- Newest enrollment is at the top.
+- The count in the heading matches the number of rows listed.
+- The rows are consistent with the cohort seats: a cohort showing one seat taken has exactly one member listed against it here.
+- A member whose account was deleted (or an id Clerk cannot resolve) reads `member <short id>` — the row still appears rather than vanishing or rendering empty.
+- With no enrollments anywhere, the section reads "Nobody has enrolled in a cohort yet." — not an error and not a blank area.
+
+Result: web ☐
+
+---
+
 ### LU-A2 — Admin credit grant — confirm step and grant-only constraint
 
 **Role:** admin · **Surfaces:** web, android

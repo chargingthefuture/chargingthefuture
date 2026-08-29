@@ -1408,6 +1408,19 @@ export type SkillUpAdminDispute = {
   createdAtIso: string;
 };
 
+// One person who enrolled in a cohort, for the admin roster. `username` is the member's handle
+// resolved from Clerk (null when it cannot be resolved — the UI falls back to a short id), and
+// `cohortTitle` names what they joined so the row reads without a lookup.
+export type SkillUpAdminEnrollment = {
+  id: string;
+  userId: string;
+  username: string | null;
+  cohortId: string;
+  cohortTitle: string;
+  status: string;
+  enrolledAtIso: string;
+};
+
 // One pending milestone validation awaiting an admin/trainer decision.
 export type SkillUpAdminValidation = {
   id: string;
@@ -1426,6 +1439,15 @@ type AdminDisputeRow = {
   description: string;
   opened_by_user_id: string;
   created_at: Date;
+};
+
+type AdminEnrollmentRow = {
+  id: string;
+  user_id: string;
+  cohort_id: string;
+  cohort_title: string;
+  status: string;
+  enrolled_at: Date;
 };
 
 type AdminValidationRow = {
@@ -1493,6 +1515,33 @@ type AdminEnrollmentCountRow = {
   completed_total: string;
 };
 
+// Admin-only: who enrolled, newest first (capped). The KPI cards count enrollments but name nobody,
+// so an admin could see a seat had been taken without being able to see who took it (owner report,
+// 2026-08-29). Resolves the handles in one batched Clerk lookup, the same way listOpenDisputes does.
+export async function listEnrollmentsForAdmin(limit = 100): Promise<SkillUpAdminEnrollment[]> {
+  const pageSize = Math.min(Math.max(1, limit), 200);
+  const result = await queryDb<AdminEnrollmentRow>(
+    `SELECT e.id::text AS id, e.user_id, e.cohort_id::text AS cohort_id,
+            COALESCE(c.title, '') AS cohort_title, e.status, e.enrolled_at
+       FROM skill_up_enrollments e
+       LEFT JOIN skill_up_cohorts c ON c.id = e.cohort_id
+       ORDER BY e.enrolled_at DESC
+       LIMIT $1`,
+    [pageSize],
+  );
+
+  const names = await resolveUsernames(result.rows.map((row) => row.user_id));
+  return result.rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    username: names.get(row.user_id) ?? null,
+    cohortId: row.cohort_id,
+    cohortTitle: row.cohort_title,
+    status: row.status,
+    enrolledAtIso: row.enrolled_at.toISOString(),
+  }));
+}
+
 // Shapes the counted row into the panel's KPI numbers. Split out of getAdminPanelData so that
 // function stays inside the rule-116 complexity limit; every missing value reads as 0.
 function mapAdminEnrollmentKpis(row: AdminEnrollmentCountRow | undefined, avgLeadDays: string | undefined) {
@@ -1506,7 +1555,7 @@ function mapAdminEnrollmentKpis(row: AdminEnrollmentCountRow | undefined, avgLea
 }
 
 export async function getAdminPanelData() {
-  const [enrollmentCounts, avgLeadDays, openDisputes, pendingValidations] = await Promise.all([
+  const [enrollmentCounts, avgLeadDays, openDisputes, pendingValidations, enrollments] = await Promise.all([
     // One pass over the enrollment rows for every headline number, so the counts can never disagree
     // with each other. `enrollments` is every row ever written (a member who joins three cohorts
     // contributes three), `membersEnrolled` is how many distinct people are in a cohort right now —
@@ -1534,12 +1583,14 @@ export async function getAdminPanelData() {
     ),
     listOpenDisputes(100),
     listPendingMilestoneValidations(100),
+    listEnrollmentsForAdmin(100),
   ]);
 
   return {
     kpis: mapAdminEnrollmentKpis(enrollmentCounts.rows[0], avgLeadDays.rows[0]?.avg_days),
     openDisputes,
     pendingValidations,
+    enrollments,
   };
 }
 

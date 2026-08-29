@@ -81,6 +81,18 @@ export type AdminDispute = {
   createdAtIso: string;
 };
 
+// One person who enrolled, for the admin "Who enrolled" roster (mirrors SkillUpAdminEnrollment from
+// the repository). `username` is the Clerk handle, null when it could not be resolved.
+export type AdminEnrollment = {
+  id: string;
+  userId: string;
+  username: string | null;
+  cohortId: string;
+  cohortTitle: string;
+  status: string;
+  enrolledAtIso: string;
+};
+
 // One pending milestone validation in the admin review list (mirrors SkillUpAdminValidation).
 export type AdminValidation = {
   id: string;
