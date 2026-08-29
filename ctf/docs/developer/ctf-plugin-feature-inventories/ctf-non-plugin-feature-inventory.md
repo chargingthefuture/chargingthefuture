@@ -306,6 +306,29 @@ An owner-curated list of real community comments, shown two ways on the public (
 
 ## 5) Change Log
 
+- 2026-08-28: **Two unused plugin-slug aliases removed** (owner decision). `pluginAliasMap` in
+  `lib/plugins/repository.ts` kept `leveluptraining` and `servicecredits`. Neither string appeared
+  anywhere else in the repository, so neither resolved anything a caller was actually sending, and
+  there is no installed base to keep an old spelling working for. `leveluptraining` had outlived the
+  LevelUp → SkillUp rename, whose own entry calls it a hard cutover with no aliases; the rename
+  repointed the alias at `skill-up` rather than dropping it.
+
+  `/apps/leveluptraining` and `/apps/servicecredits` now 404 instead of resolving, which is the
+  intended behavior — neither is a published address.
+
+  The remaining entry, `gross-domestic-product` → `gdp`, stays and is not a legacy alias: four
+  surfaces key on the long spelling (the deletion registry's service slug, the theme tokens, the
+  shell plugin config, and the account-data icon map) while the plugin slug is `gdp`, so it maps
+  between two spellings that both exist today.
+
+  One consequence worth recording, since it is why fewer aliases is safer here:
+  `resolveTransferOriginPlugin` validates `originPlugin` through the alias-resolving
+  `isRegisteredPluginSlug` but then stores the raw string, so an alias spelling passes validation
+  and is written to the ledger un-canonicalized. A row stored as `servicecredits` would not match
+  the Community Value Index's `origin_plugin = 'service-credits'` filter and would drop out of the
+  index silently. Removing these two closes that path for them; the validate-canonical/store-raw
+  mismatch itself is untouched and still applies to `gross-domestic-product`.
+
 - 2026-08-28: **A deletion event now records who asked for it.** `account_deletion_events.summary`
   gains `initiatedBy` (`member` | `operator`), written by `lib/account/deletion-orchestrator.ts`.
   Until now every whole-account deletion wrote the same row whether the member chose to go or an
