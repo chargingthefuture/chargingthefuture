@@ -2,7 +2,7 @@
 
 import { User } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { STATUS_COLOR, TRACK_COLORS, getSkillUpTokens, type Cohort, type SkillUpTokens } from "./su-shared";
+import { STATUS_COLOR, TRACK_COLORS, getSkillUpTokens, trackRepeatsTitle, type Cohort, type SkillUpTokens } from "./su-shared";
 
 function enrollButtonView(t: SkillUpTokens, isEnrolled: boolean, isEnrolling: boolean, isFull: boolean) {
   if (isEnrolled) return { bg: `${t.ACCENT}30`, color: t.ACCENT, label: "✓ Enrolled", locked: true };
@@ -66,12 +66,16 @@ export function SkillUpCohortCard({
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
   const { trackColor, isFull, statusColor, statusLabel, seatsLabel, tags, costLabel } = cohortView(t, cohort);
+  // The chip is dropped when it only repeats the title the card already prints below it.
+  const trackHidden = trackRepeatsTitle(cohort.title, cohort.track);
 
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: "16px", border: `1px solid ${t.BORDER_SOLID}`, opacity: isFull ? 0.7 : 1 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        {cohort.track && <span style={{ fontSize: 10, fontWeight: 600, color: trackColor, background: `${trackColor}18`, padding: "3px 8px", borderRadius: 20 }}>{cohort.track}</span>}
-        <span style={{ fontSize: 10, fontWeight: 600, color: statusColor, background: `${statusColor}15`, padding: "3px 8px", borderRadius: 20 }}>
+        {cohort.track && !trackHidden && <span style={{ fontSize: 10, fontWeight: 600, color: trackColor, background: `${trackColor}18`, padding: "3px 8px", borderRadius: 20 }}>{cohort.track}</span>}
+        {/* marginLeft:auto keeps the status chip on the right whether or not the track chip
+            rendered — the row is space-between, which would otherwise pull a lone chip left. */}
+        <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, color: statusColor, background: `${statusColor}15`, padding: "3px 8px", borderRadius: 20 }}>
           {statusLabel}
         </span>
       </div>

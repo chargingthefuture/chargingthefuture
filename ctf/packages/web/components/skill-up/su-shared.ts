@@ -157,3 +157,23 @@ export function idempotencyKey(): string {
 export function enrollmentPct(enr: Enrollment): number {
   return enr.milestoneTotal > 0 ? Math.round((enr.milestoneCompleted / enr.milestoneTotal) * 100) : 0;
 }
+
+// A cohort's track chip is worth showing only when it says something the title does not. Cohorts
+// opened from the proposal queue take the occupation as BOTH their title and their track, so the
+// card printed "Journalists / Reporters" and then a chip reading "Journalists / Reporters" directly
+// under it — the same words twice on a phone-width row (owner report, 2026-08-29).
+//
+// Match on the normalized strings (case and surrounding whitespace ignored), and first drop a
+// leading plugin-name prefix from the title so a row written before
+// post/0009_skill_up_cohort_title_drop_plugin_prefix.sql runs ("LevelUp: Journalists / Reporters",
+// or "SkillUp: …" after the rename) is recognized as the same repeat. Anything else — a track that
+// genuinely categorizes a differently-named cohort — still shows its chip.
+export function trackRepeatsTitle(title: string | null | undefined, track: string | null | undefined): boolean {
+  const normalize = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+  const normalizedTrack = normalize(track ?? '');
+  if (normalizedTrack.length === 0) {
+    return false;
+  }
+  const normalizedTitle = normalize(title ?? '').replace(/^(?:level|skill)up:\s*/, '');
+  return normalizedTitle === normalizedTrack;
+}
