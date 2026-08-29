@@ -7,8 +7,10 @@ import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import { WorkforceMemberList } from './workforce-member-list';
 import type { WorkforceMatchedMember } from '../../lib/workforce/types';
 
-// The Community Planning tab. A read-only overlay that groups Directory members into the ten planning
-// teams from GitHub issue #1465 (the survivor-built gated community planning document). Each team is a
+// The Community Planning tab. A read-only overlay that groups Directory members into the planning
+// teams: the ten from GitHub issue #1465 (the survivor-built community planning document), plus the
+// teams added so the model covers a community that can run without outside services — see
+// lib/workforce/community-planning.ts for why. Each team is a
 // named union of Workforce sectors; its roster is the de-duplicated members that already match those
 // sectors, and its gap is the sectors' summed demand gap. Reads the live model, so it recomputes on
 // every load as the Directory changes — no scheduled job, and member names never leave the app.
@@ -178,10 +180,12 @@ export function WorkforceCommunityPlanning() {
             Community planning teams
           </div>
           <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, marginBottom: 4 }}>
-            Proposed rosters for the survivor-built gated community planning document. Each team draws
-            from the Workforce sectors it maps to; the roster is every member who already matches those
-            sectors. This recomputes live from the Directory — it updates itself as members and skills
-            change.
+            Proposed rosters for the survivor-built community planning document. The teams are scoped
+            to a community that has to run without outside services — its own water, power, schooling,
+            repairs — so a community that only needs a gate is already covered by the same plan. Each
+            team draws from the Workforce sectors it maps to; the roster is every member who already
+            matches those sectors. This recomputes live from the Directory — it updates itself as
+            members and skills change.
           </div>
           {report?.sourceIssue ? (
             <a

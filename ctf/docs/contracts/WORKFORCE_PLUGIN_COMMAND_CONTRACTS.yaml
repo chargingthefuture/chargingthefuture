@@ -198,8 +198,9 @@ contracts:
     command: workforce.report.communityPlanning.fetch
     version: 1.0.0
     description: >-
-      Fetch the community-planning team rosters for the survivor-built gated community planning
-      document (issue #1465). Returns the ten planning teams, each a named union of Workforce sectors,
+      Fetch the community-planning team rosters for the survivor-built community planning
+      document (issue #1465), scoped to a community that runs without outside services. Returns the
+      planning teams, each a named union of Workforce sectors,
       with the team's de-duplicated matched-member roster (same 3-way match as the sector drilldown),
       the summed demand target/recruited/gap of its sectors, and any team sector absent from the Skills
       Taxonomy. Read-only; recomputes live from the model on every call. Same read access as the other
