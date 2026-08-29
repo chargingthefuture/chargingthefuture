@@ -229,8 +229,8 @@ delivered the value — `foundation_call_sessions` (callee), `socket_relay_fulfi
 (fulfiller), `trust_transport_trips` (provider), `lighthouse_matches` (host),
 `service_credits_transfers` (sender; chyme tips and direct sends separately by `origin_plugin`),
 `contributions_submissions` (USD sum per contributor), `skills_hunt_submissions` (submitter),
-`what_works_products` (suggested_by) / `what_works_endorsements` (user), `level_up_enrollments`
-(learner) / `level_up_disbursements` (trainer), `recurring_activities` (both sides of an active
+`what_works_products` (suggested_by) / `what_works_endorsements` (user), `skill_up_enrollments`
+(learner) / `skill_up_disbursements` (trainer), `recurring_activities` (both sides of an active
 confirmed tie), `peer_programming_messages` (author, once per distinct week), `beacon_events` +
 `feed_community_post_reactions` + `feed_community_replies` (distinct broadcasts engaged), and
 `login_events` (first login = account-age anchor). Every query is table-existence-guarded and

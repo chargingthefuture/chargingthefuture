@@ -9,7 +9,7 @@ import { DirectoryShell } from '@/components/directory/directory-shell';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
-import { LevelUpShell } from '@/components/level-up/level-up-shell';
+import { SkillUpShell } from '@/components/skill-up/skill-up-shell';
 import MoodShell from '@/components/mood/mood-shell';
 import { PeerProgrammingShell } from '@/components/peer-programming/peer-programming-shell';
 import { ServiceCreditsShell } from '@/components/service-credits/service-credits-shell';
@@ -286,8 +286,8 @@ function renderPluginShellC(
     return <ServiceCreditsShell isAdmin={decision.isAdmin} />;
   }
 
-  if (selectedPlugin.slug === 'level-up') {
-    return <LevelUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={query} />;
+  if (selectedPlugin.slug === 'skill-up') {
+    return <SkillUpShell userId={decision.userId} isAdmin={decision.isAdmin} query={query} />;
   }
 
   return null;

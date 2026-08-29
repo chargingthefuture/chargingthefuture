@@ -588,7 +588,7 @@ function buildSkillLevelItems(
   }).filter((item) => item.target > 0 || item.members > 0);
 }
 
-// Per-occupation training gaps (sorted largest gap first) — the LevelUp recruiting/training signal.
+// Per-occupation training gaps (sorted largest gap first) — the SkillUp recruiting/training signal.
 function buildOccupationItems(
   jobTitles: JobTitleModelRow[],
   jobTitleDemand: Map<string, number>,

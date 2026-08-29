@@ -237,14 +237,14 @@ number:
   total issued/burned, treasury, velocity, mutual-credit debt — always in **credits**, never in dollars.
 
 They touch at exactly one point, and only as an input: ServiceCredits *transaction activity*. Even there
-the code keeps them apart — GDP recognizes only the LevelUp trainer-payout slice of validated work, read
+the code keeps them apart — GDP recognizes only the SkillUp trainer-payout slice of validated work, read
 from `service_credits_governance_events` where `reason = 'levelup_trainer_split'`; every other
 ServiceCredits ledger entry is written with `accounting_scope = 'service_credits_non_gdp'`, which is the
 exclusion marker the GDP recognition layer honors (it reads governance events, not the SC ledger, by
 design). The new code in this spec keeps that boundary: the mutual-credit transfer entry and the
 `mutual_credit_default` entry both use `service_credits_non_gdp`, and the circulation endpoints emit
 only credit quantities — no fiat figure. One cross-effect to keep in mind: the §3.3 mint budget governs
-*all* `mint_grant` issuance, including the GDP-recognized LevelUp trainer split, so a too-tight budget
+*all* `mint_grant` issuance, including the GDP-recognized SkillUp trainer split, so a too-tight budget
 could throttle those payouts — a non-issue while enforcement is off, but worth setting the budget above
 expected trainer-split volume when it is turned on.
 

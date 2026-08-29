@@ -58,7 +58,7 @@ Quick wins first (small, low-risk), then everything else. Commit + push per item
   compound convention (ServiceCredits/TrustTransport/SkillsHunt). Grep mobile for the `Lighthouse`
   display string (screen header/nav label) and align. Do NOT change the slug `lighthouse`.
 - [x] **QW3 — fill web `PLUGIN_VISUALS` emoji gaps** in `packages/web/components/community-shell/shell-plugin-config.ts`.
-  Add: `gdp` (alias of gross-domestic-product 🗺️), `level-up` 🎯, `what-works` 🧰, `beacon` 📡,
+  Add: `gdp` (alias of gross-domestic-product 🗺️), `skill-up` 🎯, `what-works` 🧰, `beacon` 📡,
   `contributions` 🎁, `recurring-activity` 🔁, `trust` 🛡️, `unlock` 🔓. Use each plugin's accent for
   `color` (from PLUGIN_ACCENTS) and its shipped card `bg`. (Chosen emojis are defaults — owner may retune.)
 - [x] **QW4 — add `controlRadius` to mobile tokens** `packages/mobile/src/theme/theme-tokens.ts`

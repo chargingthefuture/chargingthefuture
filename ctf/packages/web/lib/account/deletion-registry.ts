@@ -574,28 +574,28 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
-    slug: 'level-up',
-    name: 'LevelUp',
+    slug: 'skill-up',
+    name: 'SkillUp',
     dataSummary: 'Your cohort enrollments.',
     serviceScopeSupported: true,
     tables: [
-      del('level_up_enrollments', 'user_id', 'Your cohort enrollments.'),
-      del('level_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
-      retain('level_up_audit_events', 'Audit log; retained for compliance.'),
+      del('skill_up_enrollments', 'user_id', 'Your cohort enrollments.'),
+      del('skill_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
+      retain('skill_up_audit_events', 'Audit log; retained for compliance.'),
       // Burn-down batch 3 (ledger/disputes): credit disbursements and the disputes over them are the
       // record of why cohort escrow balances moved — retained for ledger integrity, like the
       // ServiceCredits ledger they feed.
-      retain('level_up_disbursements', 'Credit disbursements from cohort escrow; retained for ledger integrity.'),
-      retain('level_up_disputes', 'Disputes over cohort milestones/credits; retained for ledger integrity and accountability.'),
-      retain('level_up_dispute_comments', 'The dispute conversation record; retained with its dispute.'),
+      retain('skill_up_disbursements', 'Credit disbursements from cohort escrow; retained for ledger integrity.'),
+      retain('skill_up_disputes', 'Disputes over cohort milestones/credits; retained for ledger integrity and accountability.'),
+      retain('skill_up_dispute_comments', 'The dispute conversation record; retained with its dispute.'),
       // Burn-down batch 4: the member-owned leftovers and the shared/admin remainder.
-      del('level_up_trainers', 'user_id', 'Your trainer profile (name, headline, bio, tracks).'),
-      del('level_up_user_achievements', 'user_id', 'Your achievements.'),
-      retain('level_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
-      retain('level_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
-      retain('level_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
-      retain('level_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
-      retain('level_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
+      del('skill_up_trainers', 'user_id', 'Your trainer profile (name, headline, bio, tracks).'),
+      del('skill_up_user_achievements', 'user_id', 'Your achievements.'),
+      retain('skill_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
+      retain('skill_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
+      retain('skill_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
+      retain('skill_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
+      retain('skill_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
     ],
   },
   {

@@ -44,7 +44,7 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   { href: '/admin/foundation', name: 'Foundation' },
-  { href: '/admin/level-up', name: 'LevelUp' },
+  { href: '/admin/skill-up', name: 'SkillUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
   // Read-only review of who confirms whose recurring arrangements — the two-sided confirmation rule
   // stops one member inflating their own standing, not a small group confirming each other's.
@@ -123,7 +123,7 @@ export default async function AdminPage() {
 
   return (
     <div className={styles.page}>
-      {/* Consistent one-level-up back control: from the admin directory, back goes to the home hub.
+      {/* Consistent one-skill-up back control: from the admin directory, back goes to the home hub.
           The shared header resolves the destination from the path (see resolveBackTarget). */}
       <MobileScreenHeader
         title="Admin"

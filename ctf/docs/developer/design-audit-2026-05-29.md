@@ -255,11 +255,11 @@ All fixes below are applied by the Replit design agent in the `design/` repo. Th
 - `MobileTrust.tsx:5` (question, copy) — BRAND `#0284C7` vs `MobileTrustEmpty.tsx:5` `#0EA5E9` for same plugin — confirm canonical brand color.
 - `MobileTrustEmpty.tsx:101` (should-fix, copy) — empty `<span>` placeholder node; icon concatenated into label on 103 — render icon in span or remove the empty element.
 
-### Unlock / LevelUp
+### Unlock / SkillUp
 - `Unlock.tsx:184` (question, copy) — "GDP contribution" term — confirm non-fiat alignment or rename.
 - `Unlock.tsx:172` (should-fix, brandvoice) — "Traffickers are less likely to have Quora history" — verify supportable / non-fear-amplifying.
-- `LevelUp.tsx:141` (should-fix, currency) — "8,910 SC" with Coins icon is correct — pattern to follow elsewhere.
-- `MobileLevelUpPublic.tsx:45` (should-fix, copy) — "+N cr" vs "SC" elsewhere in LevelUp — standardize unit label.
+- `SkillUp.tsx:141` (should-fix, currency) — "8,910 SC" with Coins icon is correct — pattern to follow elsewhere.
+- `MobileSkillUpPublic.tsx:45` (should-fix, copy) — "+N cr" vs "SC" elsewhere in SkillUp — standardize unit label.
 
 ### Landing (web)
 - `LandingEmpty.tsx:1`, `LandingFeatures.tsx:1`, `LandingHero.tsx:1`, `LandingLoading.tsx:1` (question→must-fix, marker) — add `// design-sync` as the exact first line (see marker gaps section).
@@ -284,8 +284,8 @@ Loading screens are nearly uniform but not byte-identical. 40 survivor-hub loadi
 
 Intended message (per instructions): "EXIT THEIR ECONOMY / EXIT THE PSYOP" (slash variant).
 
-- Conforming (slash variant "EXIT THEIR ECONOMY / EXIT THE PSYOP"): GDPLoading, GentlePulseLoading, HubLoading, LevelUpLoading, MobileFeedLoading, MobileFoundationLoading, MobilePeerProgrammingLoading, MobileServiceCreditsLoading, MobileWeeklyPerformanceLoading, MobileWorkforceLoading, MoodLoading, PeerProgrammingLoading, SkillsTaxonomyLoading, SocketRelayLoading, TrustLoading, TrustTransportLoading, WorkforceLoading — 17 files.
-- Outliers — no-slash variant "EXIT THEIR ECONOMY EXIT THE PSYOP" (should be normalized to the slash form): ChymeLoading, ClickLogLoading, DirectoryLoading, FeedAnnouncementsLoading, FoundationLoading, LightHouseLoading, MobileChymeLoading, MobileClickLogLoading, MobileDirectoryLoading, MobileGDPLoading, MobileGentlePulseLoading, MobileHomeLoading, MobileLevelUpLoading, MobileLightHouseLoading, MobileMoodLoading, MobileSkillsHuntLoading, MobileSkillsTaxonomyLoading, MobileSocketRelayLoading, MobileTrustLoading, ServiceCreditsLoading, SkillsHuntLoading, UnlockLoading, WeeklyPerformanceLoading — 23 files.
+- Conforming (slash variant "EXIT THEIR ECONOMY / EXIT THE PSYOP"): GDPLoading, GentlePulseLoading, HubLoading, SkillUpLoading, MobileFeedLoading, MobileFoundationLoading, MobilePeerProgrammingLoading, MobileServiceCreditsLoading, MobileWeeklyPerformanceLoading, MobileWorkforceLoading, MoodLoading, PeerProgrammingLoading, SkillsTaxonomyLoading, SocketRelayLoading, TrustLoading, TrustTransportLoading, WorkforceLoading — 17 files.
+- Outliers — no-slash variant "EXIT THEIR ECONOMY EXIT THE PSYOP" (should be normalized to the slash form): ChymeLoading, ClickLogLoading, DirectoryLoading, FeedAnnouncementsLoading, FoundationLoading, LightHouseLoading, MobileChymeLoading, MobileClickLogLoading, MobileDirectoryLoading, MobileGDPLoading, MobileGentlePulseLoading, MobileHomeLoading, MobileSkillUpLoading, MobileLightHouseLoading, MobileMoodLoading, MobileSkillsHuntLoading, MobileSkillsTaxonomyLoading, MobileSocketRelayLoading, MobileTrustLoading, ServiceCreditsLoading, SkillsHuntLoading, UnlockLoading, WeeklyPerformanceLoading — 23 files.
 - Different message entirely: `landing/LandingLoading.tsx` → "Loading Survivor Hub / Preparing your community experience..." This is a calmer, more conventional loading message and does not use the activist slogan.
 
 Summary: Not yet one consistent message. The slogan is effectively universal across survivor-hub, but the slash vs no-slash split (17 vs 23) means a normalization pass is needed. Separately, the landing loading screen diverges by design intent or by oversight — owner should decide whether all loaders should match the activist slogan or whether the calmer landing-style message is preferred app-wide (see Open Questions).

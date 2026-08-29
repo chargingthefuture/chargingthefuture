@@ -13,7 +13,7 @@ problem routes to features that get the person something concrete or connect the
 - get it delivered or ask for it — `SocketRelay`
 - pay a vetted member to bring it / travel safely — `TrustTransport`
 - get it fixed, built, or done — `Foundation`, `Directory`
-- earn and transact outside their sabotage — `Workforce`, `ServiceCredits`, `LevelUp`, `SkillsHunt`
+- earn and transact outside their sabotage — `Workforce`, `ServiceCredits`, `SkillUp`, `SkillsHunt`
 - move somewhere vouched-for — `LightHouse`
 - find what actually works — `WhatWorks`
 - vet who is real — `Trust`
@@ -35,12 +35,12 @@ excluded here: self-soothing is not getting the external need met.)
    arrays. Order matches `LOOK_MA_ITEMS` so each row lines up 1:1; leave the `q` text unchanged.
 
 Feature tokens (landing-page casing): Hub, Chyme, LightHouse, TrustTransport, Directory, Foundation,
-PeerProgramming, GDP, ServiceCredits, Workforce, SkillsHunt, LevelUp, Trust, WhatWorks, SocketRelay.
+PeerProgramming, GDP, ServiceCredits, Workforce, SkillsHunt, SkillUp, Trust, WhatWorks, SocketRelay.
 
 | # | Problem (short) | Best apps | Why |
 |---|---|---|---|
 | 1 | People crowd you aiming/staring at phones | SocketRelay, Chyme | Get what you need in-network; stand with people who get it. |
-| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, LevelUp | Better paid work, and skills + stipends — on your terms. |
+| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, SkillUp | Better paid work, and skills + stipends — on your terms. |
 | 3 | Cars sit parked outside your home | LightHouse, Chyme | Move somewhere vouched-for; lean on the community. |
 | 4 | People block/cut/hold up lines in public | SocketRelay, TrustTransport | Ask for what you need, or pay a vetted member to bring it — skip the gauntlet. |
 | 5 | Neighbors swapped for "new neighbors" who don't live there | LightHouse, Chyme | Vouched housing; community solidarity. |

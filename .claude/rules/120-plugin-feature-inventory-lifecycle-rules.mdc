@@ -82,7 +82,7 @@ Known generators and their grounding sources (keep this list current as generato
   with only feature bullets and no sentence saying what the plugin IS, the model supplied a familiar
   frame of its own. So the first paragraph of Intent and Outcome now ships to a public page — write it
   as a plain, true statement of what the plugin is, not as planning notes. Every member-facing plugin
-  inventory carries the heading as of 2026-08-18 — Mood, LevelUp, and LightHouse were the last three
+  inventory carries the heading as of 2026-08-18 — Mood, SkillUp, and LightHouse were the last three
   without one, and their `/guide` sections were being written from feature bullets alone. A new
   member-facing plugin must add the section with the rest of its inventory; one that somehow lacks it
   falls back to the other two blocks, which is the setup that produced the wrong Workforce framing.

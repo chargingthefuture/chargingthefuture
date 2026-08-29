@@ -35,7 +35,7 @@ const PLUGIN_BY_EVIDENCE_TYPE: Record<string, string> = {
   'engagement-lighthouse-matches': 'lighthouse',
   'engagement-trust-transport-trips': 'trust-transport',
   'engagement-skillshunt-submissions': 'skills-hunt',
-  'engagement-level-up-cohorts': 'level-up',
+  'engagement-skill-up-cohorts': 'skill-up',
   'engagement-chyme-rooms': 'chyme',
   'engagement-directory-profile': 'directory',
   'engagement-what-works-endorsements': 'what-works',

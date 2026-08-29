@@ -132,17 +132,17 @@ export const trustTransportSource: RecognitionSource = {
 };
 
 /**
- * LevelUp: ServiceCredits paid to a trainer for validated mentorship work. Each trainer payout is a
+ * SkillUp: ServiceCredits paid to a trainer for validated mentorship work. Each trainer payout is a
  * governed mint grant (`mintGrant` with reason `levelup_trainer_split`) recorded in
  * `service_credits_governance_events`; the amount is always in ServiceCredits (code `SC`). This is the
- * one eligible-value slice of LevelUp — service delivered for validated work. Deliberately EXCLUDES
+ * one eligible-value slice of SkillUp — service delivered for validated work. Deliberately EXCLUDES
  * learner-side amounts (escrow returns, completion bonuses, stipends, microgrants), which are
  * incentives/returns, not spend. We read the governance-events record, not the SC ledger, because the
  * ledger marks these entries `accounting_scope = service_credits_non_gdp` by design.
  */
-export const levelUpTrainerPayoutSource: RecognitionSource = {
-  pluginSlug: 'level-up',
-  label: 'LevelUp trainer payouts for validated work',
+export const skillUpTrainerPayoutSource: RecognitionSource = {
+  pluginSlug: 'skill-up',
+  label: 'SkillUp trainer payouts for validated work',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(
       `SELECT SUM(amount)::text AS total
@@ -436,7 +436,7 @@ export const recurringActivitySource: RecognitionSource = {
  */
 export const RECOGNITION_SOURCES: RecognitionSource[] = [
   trustTransportSource,
-  levelUpTrainerPayoutSource,
+  skillUpTrainerPayoutSource,
   foundationCallSource,
   // Distinct from foundationCallSource above: reads foundation_quote_requests (one-off priced quotes),
   // not foundation_call_sessions (metered ServiceCredits calls) — no overlap, no double count.

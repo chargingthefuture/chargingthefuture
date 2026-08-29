@@ -6,7 +6,7 @@ import { ChevronLeft } from 'lucide-react';
 import { resolveBackTarget } from '@/lib/nav/back-target';
 
 // History-aware back navigation (owner decision, 2026-07-17): the in-app back control returns to
-// the PREVIOUS in-app page when there is one, and only falls back to the tailored one-level-up
+// the PREVIOUS in-app page when there is one, and only falls back to the tailored one-skill-up
 // destination (resolveBackTarget) when there is no in-app history — e.g. the installed web app
 // opened straight onto a deep link, where browser history has nowhere in-app to go.
 //
@@ -96,7 +96,7 @@ export function NavHistoryTracker() {
 }
 
 export type SmartBack = {
-  // Navigate: previous in-app page when one exists, else the one-level-up fallback.
+  // Navigate: previous in-app page when one exists, else the one-skill-up fallback.
   goBack: () => void;
   // 'Back' when history back will be used; the tailored fallback label otherwise.
   label: string;

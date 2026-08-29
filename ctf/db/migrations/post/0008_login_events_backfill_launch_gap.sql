@@ -48,6 +48,9 @@ DECLARE
     'system',
     'system:commons-guidance',
     'skills-hunt-auto-mission-scheduler',
+    'skill-up-auto-cohort-scheduler',
+    -- The value those rows carried before the 2026-08-29 SkillUp rename. Listed as well as the
+    -- new one so this stays correct whichever order the rename and this backfill run in.
     'level-up-auto-cohort-scheduler',
     'unlock-incentive-system',
     'internal_service_credits_reclaimer'
@@ -81,7 +84,7 @@ BEGIN
       ('feed_community_replies', 'author_user_id', 'created_at'),
       ('feed_community_post_reactions', 'user_id', 'created_at'),
       ('peer_programming_messages', 'author_user_id', 'created_at'),
-      ('level_up_dispute_comments', 'actor_user_id', 'created_at'),
+      ('skill_up_dispute_comments', 'actor_user_id', 'created_at'),
       -- Command trails: one row per command the member ran, actor and time from their own request.
       ('account_restrictions_audit', 'actor_id', 'created_at'),
       ('announcement_membership_events', 'actor_id', 'created_at'),
@@ -93,7 +96,7 @@ BEGIN
       ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
       ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
       ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
-      ('level_up_audit_events', 'actor_id', 'created_at'),
+      ('skill_up_audit_events', 'actor_id', 'created_at'),
       ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
       ('llm_inference_log', 'actor_user_id', 'created_at'),
       ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),

@@ -32,7 +32,7 @@ Examples:
 - [PeerProgramming](./ctf-peer-programming-feature-inventory.md)
 - [Gross Domestic Product](./ctf-gross-domestic-product-feature-inventory.md)
 - [ServiceCredits](./ctf-service-credits-feature-inventory.md)
-- [LevelUp](./ctf-level-up-feature-inventory.md)
+- [SkillUp](./ctf-skill-up-feature-inventory.md)
 - [SkillsHunt](./ctf-skills-hunt-feature-inventory.md)
 - [Workforce](./ctf-workforce-feature-inventory.md)
 - [Mood](./ctf-mood-feature-inventory.md)

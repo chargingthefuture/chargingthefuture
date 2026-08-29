@@ -72,10 +72,10 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
     `SELECT COUNT(*)::int AS n FROM peer_programming_feedback
        WHERE $1::timestamptz IS NULL OR created_at > $1`,
   ],
-  'level-up': [
-    `SELECT COUNT(*)::int AS n FROM level_up_disputes
+  'skill-up': [
+    `SELECT COUNT(*)::int AS n FROM skill_up_disputes
        WHERE status = 'open' AND ($1::timestamptz IS NULL OR created_at > $1)`,
-    `SELECT COUNT(*)::int AS n FROM level_up_milestone_validations
+    `SELECT COUNT(*)::int AS n FROM skill_up_milestone_validations
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
   // ServiceCredits disputes have no status column; "open" means no adjustment has been applied yet

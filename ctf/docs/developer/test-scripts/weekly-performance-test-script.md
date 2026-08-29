@@ -106,7 +106,7 @@ is no "set active week" action and no per-week status.
    (progress bar toward 2,000,000); **Value delivered** — one card per plugin's defining event
    (Foundation answered calls, SocketRelay successful closes, TrustTransport completed trips,
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
-   USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, LevelUp
+   USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, SkillUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
    posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
    Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
@@ -141,7 +141,7 @@ is no "set active week" action and no per-week status.
    is skipped. Deleting the same account twice can never add two. If the week-over-week line under the
    card shows a rise, it is red with an up arrow — up is bad on this one card only.
    All three are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
-   LevelUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
+   SkillUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).

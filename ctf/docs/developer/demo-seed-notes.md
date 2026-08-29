@@ -22,7 +22,7 @@ seed makes that user the real counterparty to `DEMO_OWNER_ID`:
 - both-sided data is wired so each real account can act as **both** sides: an open
   TrustTransport request and an open SocketRelay request owned by *each* user, a shared
   Foundation thread, a Lighthouse seeker(owner)↔host(second-owner) match with a property,
-  a Level-Up co-enrollment, cohort/room membership, and an owner→second credit transfer.
+  a Skill-Up co-enrollment, cohort/room membership, and an owner→second credit transfer.
 
 Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behavior.
 
@@ -31,7 +31,7 @@ Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behavior.
 Every member-visible plugin now has seeded demo content, keyed to the first owner and the
 synthetic peers:
 
-- Already covered: ServiceCredits, GDP, Weekly Performance, LevelUp, SkillsHunt, Directory,
+- Already covered: ServiceCredits, GDP, Weekly Performance, SkillUp, SkillsHunt, Directory,
   Workforce, LightHouse, Feed + Announcements, Trust, Mood, GentlePulse, Chyme,
   TrustTransport, PeerProgramming, Skills Taxonomy, SocketRelay, ClickLog, WhatWorks.
 - Foundation Browse: the two synthetic peers are opted-in providers (a
@@ -79,7 +79,7 @@ GentlePulse play event now use deterministic ids with `ON CONFLICT (id) DO NOTHI
 appends duplicate rows. Verified against a local Postgres: `chyme_messages` stays at 3 and
 `gentle_pulse_play_events` stays at 1 across repeated runs.
 
-The second-owner Level-Up enrollment conflicts on the primary key (a deterministic
+The second-owner Skill-Up enrollment conflicts on the primary key (a deterministic
 per-owner id), not on `(cohort_id, user_id)`. That composite unique used to be missing from
 the live `demo` schema — the root cause and its fix are described in the next section. The
 seed still conflicts on the primary key (it does not depend on any composite unique), so it
@@ -96,7 +96,7 @@ conname = '…'`. Those catalog views span every schema, and index/constraint na
 unique *within* a schema, so during demo provisioning the guard found the identically-named
 object already sitting in `public` and skipped creating it in `demo`. The demo tables were
 left without those indexes/constraints — which is why a demo `INSERT … ON CONFLICT (cohort_id,
-user_id)` on `level_up_enrollments` failed with "no unique or exclusion constraint matching
+user_id)` on `skill_up_enrollments` failed with "no unique or exclusion constraint matching
 the ON CONFLICT specification".
 
 Every such guard now also filters on the current schema so the check looks only at the schema
@@ -114,7 +114,7 @@ the demo run, where the demo object is now created instead of being masked by th
 
 Verified against a local Postgres: provisioning `public` then `demo` from the same file leaves
 the demo schema with every previously-missing index/constraint
-(`level_up_enrollments_cohort_id_user_id_key`, `level_up_user_achievements_user_id_achievement_id_key`,
+(`skill_up_enrollments_cohort_id_user_id_key`, `skill_up_user_achievements_user_id_achievement_id_key`,
 `directory_profiles_unclaimed_handle_key`, the CHECK/FK constraints), and both a repeated demo
 run and a repeated public run are idempotent (constraint counts unchanged, no errors). The four
 `information_schema.columns` guards that already carried `table_schema = 'public'` are left
@@ -157,7 +157,7 @@ The seed changes only insert into tables and columns that already exist in
 `ctf/schema.sql` (`unlock_verification_submissions`, `service_credits_wallets` /
 `service_credits_transfers`, `trust_transport_requests`, `socket_relay_requests` /
 `socket_relay_user_extension`, `foundation_connection_threads`, `lighthouse_profiles` /
-`lighthouse_properties` / `lighthouse_matches`, `level_up_enrollments`,
+`lighthouse_properties` / `lighthouse_matches`, `skill_up_enrollments`,
 `peer_programming_cohort_members`, `chyme_room_members`, `directory_profiles` /
 `directory_user_extension`, `workforce_profiles`, `trust_user_extension`,
 `what_works_problems` / `what_works_products` / `what_works_endorsements`,

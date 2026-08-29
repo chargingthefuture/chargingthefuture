@@ -72,7 +72,7 @@ calibrating "material value" honestly.
   work). Build the admission engine on top of that layer, not beside it.
 - **Note on plugin archetypes:** most plugins mirror a known app, so their value-action is borrowed
   from that archetype (Lighthouse ≈ a stay, TrustTransport ≈ a delivery/ride, Foundation ≈ a fulfilled
-  service). A few — PeerProgramming, Workforce, LevelUp — are bespoke, so their value-action has to be
+  service). A few — PeerProgramming, Workforce, SkillUp — are bespoke, so their value-action has to be
   defined from their own intended use rather than copied.
 - **The bar is intentionally high (owner directive).** Access is meant to be genuinely hard to earn —
   sustained, broad, real contribution — not an easy unlock. The exact threshold and weights are

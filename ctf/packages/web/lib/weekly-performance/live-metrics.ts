@@ -27,7 +27,7 @@ import {
 //      (check-ins + average, aggregate only), ClickLog (aggregate incidents + distinct loggers —
 //      never per-member detail).
 //
-// Dropped from the old set (owner decision): feed counts and LevelUp enrollments-started (intent,
+// Dropped from the old set (owner decision): feed counts and SkillUp enrollments-started (intent,
 // not delivered value — replaced by completions). Skills Taxonomy carries no dashboard stats at
 // all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
 // dashboard has to answer "how many people showed up this week", so the turnout rows are carried as
@@ -149,7 +149,7 @@ const chymeTips = windowCount(
 );
 
 // ServiceCredits: a completed DIRECT peer send. origin_plugin scoping keeps plugin-mediated
-// transfers (Chyme tips, LevelUp flows…) counted once, in their originating plugin.
+// transfers (Chyme tips, SkillUp flows…) counted once, in their originating plugin.
 const serviceCreditsPeerSends = windowCount(
   'service_credits_transfers',
   'completed_at',
@@ -177,11 +177,11 @@ const skillsHuntAccepted = windowCount(
 const whatWorksApproved = windowCount('what_works_products', 'reviewed_at', `status = 'approved'`);
 const whatWorksEndorsements = windowCount('what_works_endorsements', 'created_at');
 
-// LevelUp: delivered value is COMPLETION (the old dashboard counted enrollments started — intent).
+// SkillUp: delivered value is COMPLETION (the old dashboard counted enrollments started — intent).
 // No completed_at column; the status flip writes updated_at.
-const levelUpCompletions = windowCount('level_up_enrollments', 'updated_at', `status = 'completed'`);
-const levelUpTrainerPayouts = windowCount(
-  'level_up_disbursements',
+const skillUpCompletions = windowCount('skill_up_enrollments', 'updated_at', `status = 'completed'`);
+const skillUpTrainerPayouts = windowCount(
+  'skill_up_disbursements',
   'created_at',
   `disbursement_type = 'trainer_payout'`,
 );
@@ -409,8 +409,8 @@ const METRIC_SPECS: MetricSpec[] = [
   { metricKey: 'value.skills_hunt_nominations_accepted', metricUnit: 'nominations', sourcePlugin: 'skills-hunt', compute: skillsHuntAccepted },
   { metricKey: 'value.what_works_tools_approved', metricUnit: 'tools', sourcePlugin: 'what-works', compute: whatWorksApproved },
   { metricKey: 'value.what_works_endorsements_given', metricUnit: 'endorsements', sourcePlugin: 'what-works', compute: whatWorksEndorsements },
-  { metricKey: 'value.level_up_completions', metricUnit: 'completions', sourcePlugin: 'level-up', compute: levelUpCompletions },
-  { metricKey: 'value.level_up_trainer_payouts', metricUnit: 'payouts', sourcePlugin: 'level-up', compute: levelUpTrainerPayouts },
+  { metricKey: 'value.skill_up_completions', metricUnit: 'completions', sourcePlugin: 'skill-up', compute: skillUpCompletions },
+  { metricKey: 'value.skill_up_trainer_payouts', metricUnit: 'payouts', sourcePlugin: 'skill-up', compute: skillUpTrainerPayouts },
   { metricKey: 'value.recurring_ties_confirmed', metricUnit: 'ties', sourcePlugin: 'recurring-activity', compute: recurringTiesConfirmed },
   { metricKey: 'value.peer_programming_active_posters', metricUnit: 'members', sourcePlugin: 'peer-programming', compute: peerProgrammingActivePosters },
   { metricKey: 'value.beacon_broadcast_engagement', metricUnit: 'engagements', sourcePlugin: 'beacon', compute: beaconBroadcastEngagement },

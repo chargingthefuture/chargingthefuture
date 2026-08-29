@@ -25,7 +25,7 @@
     "seed:lighthouse": "node ./scripts/seedLighthouse.mjs",
     "seed:socket-relay": "node ./scripts/seedSocketRelay.mjs",
     "seed:trust-transport": "node ./scripts/seedTrustTransport.mjs",
-    "seed:level-up": "node ./scripts/seedLevelUp.mjs",
+    "seed:skill-up": "node ./scripts/seedSkillUp.mjs",
     "seed:what-works": "node ./scripts/seedWhatWorks.mjs",
     "seed:recurring-activity": "node ./scripts/seedRecurringActivityPhase0.mjs",
     "seed:mutual-time": "node ./scripts/seedMutualTime.mjs",

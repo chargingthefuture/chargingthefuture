@@ -126,17 +126,17 @@ const EVENT_QUERIES: EventQuery[] = [
   },
   {
     // Attributed to the learner who completed.
-    key: 'value.level_up_completions',
-    tables: 'level_up_enrollments',
-    sql: `SELECT user_id AS member_id, COUNT(*)::text AS v FROM level_up_enrollments
+    key: 'value.skill_up_completions',
+    tables: 'skill_up_enrollments',
+    sql: `SELECT user_id AS member_id, COUNT(*)::text AS v FROM skill_up_enrollments
           WHERE status = 'completed'
           GROUP BY user_id`,
   },
   {
     // Attributed to the trainer paid out.
-    key: 'value.level_up_trainer_payouts',
-    tables: 'level_up_disbursements',
-    sql: `SELECT recipient_user_id AS member_id, COUNT(*)::text AS v FROM level_up_disbursements
+    key: 'value.skill_up_trainer_payouts',
+    tables: 'skill_up_disbursements',
+    sql: `SELECT recipient_user_id AS member_id, COUNT(*)::text AS v FROM skill_up_disbursements
           WHERE disbursement_type = 'trainer_payout'
           GROUP BY recipient_user_id`,
   },

@@ -35,7 +35,7 @@
   tester seeing any month in that row — "The next one starts in July" was the old wording — is
   looking at deprecated copy, and a month reappearing there is a bug however current it happens to
   be, because a hard-coded date goes wrong the moment it passes and nothing here prompts anyone to
-  correct it. No GentlePulse/LevelUp/referral platform payouts appear anywhere, and peer-to-peer
+  correct it. No GentlePulse/SkillUp/referral platform payouts appear anywhere, and peer-to-peer
   rows say "send credits", never "pay".
 - **Credits are not money** (`ctf/docs/DISCLAIMER.md`, mirrored in the inventory's Intent section):
   while walking any case below, no surface may describe credits as money/cash/currency/a payment,

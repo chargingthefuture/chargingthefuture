@@ -1,6 +1,6 @@
 export type BackTarget = { href: string; label: string };
 
-// Central policy for the in-app "back" control — the tailored one-level-up navigation, distinct
+// Central policy for the in-app "back" control — the tailored one-skill-up navigation, distinct
 // from the browser/OS history back (which returns to whatever the visitor saw before). Keeping the
 // rule in one place means every screen, on web and on Android, sends "back" to the same predictable
 // place:

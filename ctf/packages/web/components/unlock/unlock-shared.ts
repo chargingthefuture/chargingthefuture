@@ -55,7 +55,7 @@ export function toDisplayStatus(reviewStatus: UnlockReviewStatus | null): Displa
 // list of plugin/feature names (which read as jargon and feel both overwhelming and incomplete).
 // These read like the home-page prompts: each line quietly stands in for one or more plugins
 // (housing → LightHouse, rides → TrustTransport, work/earn → Workforce + Directory + ServiceCredits,
-// skills → SkillsHunt + LevelUp, "ask for anything" → the Commons + AI assistant).
+// skills → SkillsHunt + SkillUp, "ask for anything" → the Commons + AI assistant).
 export const UNLOCK_BENEFITS = [
   "A real community of survivors — and growing",
   "Find safe housing",

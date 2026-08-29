@@ -229,7 +229,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_what_works_endorsements_unique ON what_wor
 -- === currencies (app-wide reference table; see issue #120) ===
 -- Curated catalog of currencies usable across value-bearing plugins. Defined early so any table
 -- that FK-references currencies(code) (LightHouse rent, Foundation provider rate, TrustTransport,
--- SocketRelay, LevelUp, Unlock) can be created/altered after it. ServiceCredits is the platform
+-- SocketRelay, SkillUp, Unlock) can be created/altered after it. ServiceCredits is the platform
 -- utility token: code 'SC' is internal-only — UI always renders the label 'ServiceCredits', and a
 -- ServiceCredits amount is NEVER shown at a fiat equivalent. GDP USD-normalization lives only in the
 -- aggregate GDP layer (issue #121), never per-wallet.
@@ -479,7 +479,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_bc_live_pair
 COMMIT;
 
 -- === peer-programming placeholder ===
--- === level_up_enrollments ===
+-- === skill_up_enrollments ===
 -- The canonical definition lives further below (the cohort-based table).
 -- An earlier level_id-based table used to be defined here; it was legacy
 -- cruft that left a level_id NOT NULL column with no default and blocked
@@ -825,7 +825,7 @@ ALTER TABLE IF EXISTS skills_hunt_missions ADD CONSTRAINT skills_hunt_missions_s
 -- weekly scheduled run read the live Workforce occupation gap report (through
 -- lib/shared/workforce-interface.ts), sum the gaps per sector, and open a capped number of
 -- 'count_skills_in_sector' missions per active round for the sectors with the largest shortfall.
--- Unlike LevelUp's proposal queue, these missions open directly without an approval step: a mission
+-- Unlike SkillUp's proposal queue, these missions open directly without an approval step: a mission
 -- commits no credits, no seats and no schedule, an admin can archive one at any time, and the
 -- config kill switch below turns the mechanism off. auto_created marks generated missions;
 -- source_sector / source_gap_at_creation record which gap opened the mission and how large it was.
@@ -1658,8 +1658,8 @@ ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS support_onl
 ALTER TABLE IF EXISTS unlock_runtime_config ADD COLUMN IF NOT EXISTS incentive_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 
 -- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `level-up`; tables move to
--- the matching snake_case prefix `level_up_`. Renames run first so an existing DB keeps its data;
--- on a fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
+-- the matching snake_case prefix `level_up_`. Kept verbatim: it is the path a database older than
+-- 2026-06-26 still takes before the SkillUp rename below picks it up.
 ALTER TABLE IF EXISTS levelup_enrollments RENAME TO level_up_enrollments;
 ALTER TABLE IF EXISTS levelup_cohorts RENAME TO level_up_cohorts;
 ALTER TABLE IF EXISTS levelup_curriculum_items RENAME TO level_up_curriculum_items;
@@ -1676,8 +1676,34 @@ ALTER TABLE IF EXISTS levelup_trainers RENAME TO level_up_trainers;
 ALTER TABLE IF EXISTS levelup_achievements RENAME TO level_up_achievements;
 ALTER TABLE IF EXISTS levelup_user_achievements RENAME TO level_up_user_achievements;
 
--- === level_up_enrollments table (guarded DDL, schema drift prevention) ===
-CREATE TABLE IF NOT EXISTS level_up_enrollments (
+-- Brand rename (2026-08-29): the plugin is now SkillUp, so every table moves from the
+-- `level_up_` prefix to `skill_up_`. This runs AFTER the 2026-06-26 block above so all three
+-- database generations land in the same place: a database older than 2026-06-26 goes
+-- `levelup_` -> `level_up_` -> `skill_up_`, a current database goes `level_up_` -> `skill_up_`,
+-- and a fresh database no-ops through both and is built by the CREATE statements below.
+-- The three tables added after 2026-06-26 (auto_cohort_config, auto_cohort_term_overrides,
+-- cohort_proposals) only ever carried the `level_up_` prefix, so they appear here only.
+ALTER TABLE IF EXISTS level_up_enrollments RENAME TO skill_up_enrollments;
+ALTER TABLE IF EXISTS level_up_cohorts RENAME TO skill_up_cohorts;
+ALTER TABLE IF EXISTS level_up_curriculum_items RENAME TO skill_up_curriculum_items;
+ALTER TABLE IF EXISTS level_up_milestones RENAME TO skill_up_milestones;
+ALTER TABLE IF EXISTS level_up_command_idempotency RENAME TO skill_up_command_idempotency;
+ALTER TABLE IF EXISTS level_up_audit_events RENAME TO skill_up_audit_events;
+ALTER TABLE IF EXISTS level_up_rate_limit_counters RENAME TO skill_up_rate_limit_counters;
+ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows RENAME TO skill_up_enrollment_milestone_escrows;
+ALTER TABLE IF EXISTS level_up_milestone_validations RENAME TO skill_up_milestone_validations;
+ALTER TABLE IF EXISTS level_up_disputes RENAME TO skill_up_disputes;
+ALTER TABLE IF EXISTS level_up_dispute_comments RENAME TO skill_up_dispute_comments;
+ALTER TABLE IF EXISTS level_up_disbursements RENAME TO skill_up_disbursements;
+ALTER TABLE IF EXISTS level_up_trainers RENAME TO skill_up_trainers;
+ALTER TABLE IF EXISTS level_up_achievements RENAME TO skill_up_achievements;
+ALTER TABLE IF EXISTS level_up_user_achievements RENAME TO skill_up_user_achievements;
+ALTER TABLE IF EXISTS level_up_auto_cohort_config RENAME TO skill_up_auto_cohort_config;
+ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides RENAME TO skill_up_auto_cohort_term_overrides;
+ALTER TABLE IF EXISTS level_up_cohort_proposals RENAME TO skill_up_cohort_proposals;
+
+-- === skill_up_enrollments table (guarded DDL, schema drift prevention) ===
+CREATE TABLE IF NOT EXISTS skill_up_enrollments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   user_id TEXT NOT NULL,
@@ -1694,33 +1720,33 @@ CREATE TABLE IF NOT EXISTS level_up_enrollments (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cohort_id, user_id)
 );
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS status TEXT;
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS credits_deposited INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS assigned_trainer_id TEXT;
 -- enrolled_at: when the member joined. It exists on the long-running database (it came over with the
 -- legacy `levelup_enrollments` table) but was never declared here, so a database built from this file
 -- lacked it while three live reads order or measure by it — the admin lead-time number, the trainer
 -- trainee list, and the member's own enrollment list.
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Add unique constraint if not exists (Postgres 15+)
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_enrollments' AND indexname = 'level_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
+    SELECT 1 FROM pg_indexes WHERE tablename = 'skill_up_enrollments' AND indexname = 'skill_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_enrollments_cohort_id_user_id_key ON level_up_enrollments(cohort_id, user_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id)';
   END IF;
 END $$;
 -- Shed the legacy level_id column if an older database still carries it.
 -- It was NOT NULL with no default, so cohort-based inserts (which never set
 -- it) failed. Dropping the column also removes its dependent
--- uq_level_up_enrollments_user_level index. Safe no-op on databases that
+-- uq_skill_up_enrollments_user_level index. Safe no-op on databases that
 -- never had the legacy column.
-ALTER TABLE IF EXISTS level_up_enrollments DROP COLUMN IF EXISTS level_id;
+ALTER TABLE IF EXISTS skill_up_enrollments DROP COLUMN IF EXISTS level_id;
 -- Hyphenation/cleanup rename (2026-06-26): slug/folder/route became `trust-transport`; tables move to
 -- the matching snake_case prefix `trust_transport_`. Renames run first so an existing DB keeps its data;
 -- on a fresh DB the IF EXISTS renames are no-ops and the CREATE statements below build the new names.
@@ -2640,10 +2666,11 @@ ALTER TABLE IF EXISTS ctf_plugin_registry ADD COLUMN IF NOT EXISTS updated_at TI
 
 -- Remove orphaned pre-rename plugin-registry rows. The hyphenation renames changed these slugs
 -- (whatworks->what-works, trusttransport->trust-transport, socketrelay->socket-relay, levelup->level-up,
+-- level-up->skill-up (the 2026-08-29 SkillUp brand rename, a hard cut with no alias),
 -- gentlepulse->gentle-pulse, clicklog->click-log) and the new-slug rows are seeded below; but the
 -- ON CONFLICT (plugin_slug) upsert cannot delete the old slug, so an existing DB kept BOTH rows and
 -- listed the plugin twice in the Apps list. Purge the old rows.
-DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse', 'clicklog');
+DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttransport', 'socketrelay', 'levelup', 'gentlepulse', 'clicklog', 'level-up');
 
 -- GentlePulse decommissioned 2026-07-27 (owner decision): remove its registry row from existing DBs.
 DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'gentle-pulse';
@@ -2671,7 +2698,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
-  ('level-up',           'LevelUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
+  ('skill-up',           'SkillUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
@@ -3223,8 +3250,8 @@ ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS process
 ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS directory_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === LEVELUP MODULE ===
-CREATE TABLE IF NOT EXISTS level_up_cohorts (
+-- === SKILLUP MODULE ===
+CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -3251,55 +3278,55 @@ CREATE TABLE IF NOT EXISTS level_up_cohorts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS seats INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS start_date DATE NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS end_date DATE NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS required_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS materials_cost NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS device_support BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_interval_days INTEGER;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Multi-currency (issue #120): LevelUp stipends and microgrants are internal ServiceCredits payouts.
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS seats INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS start_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS end_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS required_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS materials_cost NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS device_support BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_mode TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_interval_days INTEGER;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Multi-currency (issue #120): SkillUp stipends and microgrants are internal ServiceCredits payouts.
 -- stipend_currency / microgrant_currency name the currency of stipend_amount_per_payout / microgrant_amount;
 -- both default to ServiceCredits (code 'SC').
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
--- Auto-cohort creation (issue #904): LevelUp stands up cohorts from Workforce occupation gaps.
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+-- Auto-cohort creation (issue #904): SkillUp stands up cohorts from Workforce occupation gaps.
 -- auto_created marks a cohort the scheduled run created (vs a human-built one). source_job_title_id
 -- ties it to the exact Skills Taxonomy occupation that triggered it (the Workforce gap's jobTitleId),
 -- so a re-run never duplicates a cohort for the same occupation. source_sector / source_gap_at_creation
 -- are kept for display and audit. source_job_title_id intentionally has no hard FK (it mirrors
 -- directory_profiles.job_title_id, which is also a plain UUID reference to skills_taxonomy_job_titles).
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
-ALTER TABLE IF EXISTS level_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS auto_created BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_sector TEXT;
+ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS source_gap_at_creation NUMERIC;
 -- Database-level idempotency guard: at most one open/active auto-created cohort per source occupation.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_level_up_auto_cohort_active_source
-  ON level_up_cohorts (source_job_title_id)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_auto_cohort_active_source
+  ON skill_up_cohorts (source_job_title_id)
   WHERE auto_created = TRUE AND status IN ('open', 'active');
 
 -- Auto-cohort configuration (issue #904). Singleton row holding the knobs the scheduled run reads;
 -- admin-editable. Defaults match the lean launch policy: top 10 Foundational gaps, 3 concurrent
 -- cohorts, one per sector, above a minimum gap, fixed 90-day term.
-CREATE TABLE IF NOT EXISTS level_up_auto_cohort_config (
+CREATE TABLE IF NOT EXISTS skill_up_auto_cohort_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   min_gap_threshold NUMERIC NOT NULL DEFAULT 25,
@@ -3321,38 +3348,38 @@ CREATE TABLE IF NOT EXISTS level_up_auto_cohort_config (
   updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS min_gap_threshold NUMERIC NOT NULL DEFAULT 25;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS max_concurrent INTEGER NOT NULL DEFAULT 3;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS per_sector_cap INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS skill_level_filter TEXT NOT NULL DEFAULT 'Foundational';
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS top_n INTEGER NOT NULL DEFAULT 10;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_term_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_seats INTEGER NOT NULL DEFAULT 12;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_required_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS min_gap_threshold NUMERIC NOT NULL DEFAULT 25;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS max_concurrent INTEGER NOT NULL DEFAULT 3;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS per_sector_cap INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS skill_level_filter TEXT NOT NULL DEFAULT 'Foundational';
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS top_n INTEGER NOT NULL DEFAULT 10;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_term_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_seats INTEGER NOT NULL DEFAULT 12;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_required_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_trainer_split_percent NUMERIC NOT NULL DEFAULT 25;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS default_completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Proposal-queue model (issue #904, owner decision 2026-07-23): gaps are re-read on a cadence and
 -- turned into an admin-approved proposal queue, not auto-created cohorts. generation_interval_days is
 -- how often the gaps are re-read (default 90); last_generated_at gates the cadence.
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS generation_interval_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS level_up_auto_cohort_config ADD COLUMN IF NOT EXISTS last_generated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS generation_interval_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_config ADD COLUMN IF NOT EXISTS last_generated_at TIMESTAMPTZ;
 
 -- Per-occupation term overrides (issue #904): admins set how long a given occupation's auto cohort
 -- runs ("Mechanics × term", "Elementary teachers × term"); falls back to default_term_days when absent.
-CREATE TABLE IF NOT EXISTS level_up_auto_cohort_term_overrides (
+CREATE TABLE IF NOT EXISTS skill_up_auto_cohort_term_overrides (
   job_title_id UUID PRIMARY KEY,
   occupation TEXT NOT NULL DEFAULT '',
   term_days INTEGER NOT NULL,
   updated_by_user_id TEXT NOT NULL DEFAULT 'system',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS term_days INTEGER NOT NULL DEFAULT 90;
-ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
-ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS term_days INTEGER NOT NULL DEFAULT 90;
+ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
+ALTER TABLE IF EXISTS skill_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Cohort proposal queue (issue #904, owner decision 2026-07-23). Instead of auto-creating cohorts,
 -- the scheduled run reads the Workforce gaps and writes ranked, sector-diverse *proposals* here; an
@@ -3360,7 +3387,7 @@ ALTER TABLE IF EXISTS level_up_auto_cohort_term_overrides ADD COLUMN IF NOT EXIS
 -- pending (awaiting a decision), approved (a cohort was opened — see created_cohort_id), dismissed
 -- (admin declined), superseded (a later generation invalidated it — occupation now covered or gap fell
 -- below threshold).
-CREATE TABLE IF NOT EXISTS level_up_cohort_proposals (
+CREATE TABLE IF NOT EXISTS skill_up_cohort_proposals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   source_job_title_id UUID NOT NULL,
   occupation TEXT NOT NULL,
@@ -3377,29 +3404,29 @@ CREATE TABLE IF NOT EXISTS level_up_cohort_proposals (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'Unassigned';
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS skill_level TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS gap_at_proposal NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS rank INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_source TEXT NOT NULL DEFAULT 'cron';
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_cohort_id UUID;
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_cohort_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- At most one live (pending) proposal per occupation — mirrors uq_level_up_auto_cohort_active_source.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_level_up_cohort_proposal_pending
-  ON level_up_cohort_proposals (source_job_title_id)
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS source_job_title_id UUID;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS occupation TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS sector TEXT NOT NULL DEFAULT 'Unassigned';
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS skill_level TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS gap_at_proposal NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS rank INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_source TEXT NOT NULL DEFAULT 'cron';
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_by_user_id TEXT;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS decided_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_cohort_id UUID;
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_cohort_proposals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- At most one live (pending) proposal per occupation — mirrors uq_skill_up_auto_cohort_active_source.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_cohort_proposal_pending
+  ON skill_up_cohort_proposals (source_job_title_id)
   WHERE status = 'pending';
 -- Ranked read of the live queue for the admin surface.
-CREATE INDEX IF NOT EXISTS idx_level_up_cohort_proposal_pending_rank
-  ON level_up_cohort_proposals (status, rank);
+CREATE INDEX IF NOT EXISTS idx_skill_up_cohort_proposal_pending_rank
+  ON skill_up_cohort_proposals (status, rank);
 
-CREATE TABLE IF NOT EXISTS level_up_curriculum_items (
+CREATE TABLE IF NOT EXISTS skill_up_curriculum_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   title TEXT NOT NULL,
@@ -3409,16 +3436,16 @@ CREATE TABLE IF NOT EXISTS level_up_curriculum_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS required BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_curriculum_items ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_milestones (
+CREATE TABLE IF NOT EXISTS skill_up_milestones (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
   name TEXT NOT NULL,
@@ -3428,16 +3455,16 @@ CREATE TABLE IF NOT EXISTS level_up_milestones (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS percent_release NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS required_task TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS percent_release NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS required_task TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_milestones ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_command_idempotency (
+CREATE TABLE IF NOT EXISTS skill_up_command_idempotency (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command_name TEXT NOT NULL,
@@ -3446,14 +3473,14 @@ CREATE TABLE IF NOT EXISTS level_up_command_idempotency (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (actor_id, command_name, idempotency_key)
 );
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS response_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_command_idempotency ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS command_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS idempotency_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS response_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_command_idempotency ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_audit_events (
+CREATE TABLE IF NOT EXISTS skill_up_audit_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
   command TEXT NOT NULL,
@@ -3464,17 +3491,17 @@ CREATE TABLE IF NOT EXISTS level_up_audit_events (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_rate_limit_counters (
+CREATE TABLE IF NOT EXISTS skill_up_rate_limit_counters (
   user_id TEXT NOT NULL,
   command_name TEXT NOT NULL,
   window_started_at TIMESTAMPTZ NOT NULL,
@@ -3483,14 +3510,14 @@ CREATE TABLE IF NOT EXISTS level_up_rate_limit_counters (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, command_name, window_started_at, window_seconds)
 );
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS command_name TEXT;
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_started_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_seconds INTEGER;
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS request_count INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS level_up_rate_limit_counters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS command_name TEXT;
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_started_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS window_seconds INTEGER;
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS request_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS skill_up_rate_limit_counters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_enrollment_milestone_escrows (
+CREATE TABLE IF NOT EXISTS skill_up_enrollment_milestone_escrows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID NOT NULL,
@@ -3500,15 +3527,15 @@ CREATE TABLE IF NOT EXISTS level_up_enrollment_milestone_escrows (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (enrollment_id, milestone_id)
 );
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS escrow_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS held_amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS release_status TEXT NOT NULL DEFAULT 'held';
-ALTER TABLE IF EXISTS level_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS escrow_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS held_amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS release_status TEXT NOT NULL DEFAULT 'held';
+ALTER TABLE IF EXISTS skill_up_enrollment_milestone_escrows ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_milestone_validations (
+CREATE TABLE IF NOT EXISTS skill_up_milestone_validations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID NOT NULL,
@@ -3522,20 +3549,20 @@ CREATE TABLE IF NOT EXISTS level_up_milestone_validations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_by_user_id TEXT;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validation_note TEXT;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS release_transfer_id UUID;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS trainer_payout_governance_id UUID;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS milestone_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_by_user_id TEXT;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validation_note TEXT;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS release_transfer_id UUID;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS trainer_payout_governance_id UUID;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS released_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_disputes (
+CREATE TABLE IF NOT EXISTS skill_up_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   milestone_id UUID,
@@ -3549,20 +3576,20 @@ CREATE TABLE IF NOT EXISTS level_up_disputes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS milestone_id UUID;
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS opened_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolution_comment TEXT;
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_disputes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS milestone_id UUID;
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS opened_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS resolution_comment TEXT;
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS resolved_by_user_id TEXT;
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_disputes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_dispute_comments (
+CREATE TABLE IF NOT EXISTS skill_up_dispute_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   dispute_id UUID NOT NULL,
   actor_user_id TEXT NOT NULL,
@@ -3570,14 +3597,14 @@ CREATE TABLE IF NOT EXISTS level_up_dispute_comments (
   attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS dispute_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS level_up_dispute_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS dispute_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skill_up_dispute_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS level_up_disbursements (
+CREATE TABLE IF NOT EXISTS skill_up_disbursements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   enrollment_id UUID NOT NULL,
   recipient_user_id TEXT NOT NULL,
@@ -3586,18 +3613,18 @@ CREATE TABLE IF NOT EXISTS level_up_disbursements (
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS recipient_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS disbursement_type TEXT NOT NULL DEFAULT 'trainer_payout';
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS amount NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS level_up_disbursements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS enrollment_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS recipient_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS disbursement_type TEXT NOT NULL DEFAULT 'trainer_payout';
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS amount NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS skill_up_disbursements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === level_up_trainers ===
--- Survivor-advocate trainers shown in the LevelUp "Trainers" directory.
+-- === skill_up_trainers ===
+-- Survivor-advocate trainers shown in the SkillUp "Trainers" directory.
 -- Read-only browse surface; one row per trainer user.
-CREATE TABLE IF NOT EXISTS level_up_trainers (
+CREATE TABLE IF NOT EXISTS skill_up_trainers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
@@ -3608,20 +3635,20 @@ CREATE TABLE IF NOT EXISTS level_up_trainers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS headline TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS tracks JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_trainers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS headline TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS tracks JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_trainers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === level_up_achievements ===
+-- === skill_up_achievements ===
 -- Grant-only badge/milestone definitions. Never spend or deduct credits.
 -- credit_reward documents the grant amount tied to earning the badge (display only).
-CREATE TABLE IF NOT EXISTS level_up_achievements (
+CREATE TABLE IF NOT EXISTS skill_up_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
@@ -3634,21 +3661,21 @@ CREATE TABLE IF NOT EXISTS level_up_achievements (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'trophy';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS credit_reward NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_achievements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS track TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS icon TEXT NOT NULL DEFAULT 'trophy';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS credit_reward NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS sequence_no INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_achievements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- === level_up_user_achievements ===
+-- === skill_up_user_achievements ===
 -- Per-user earned badge rows. Grant-only: a row means the badge was earned.
-CREATE TABLE IF NOT EXISTS level_up_user_achievements (
+CREATE TABLE IF NOT EXISTS skill_up_user_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   achievement_id UUID NOT NULL,
@@ -3657,19 +3684,19 @@ CREATE TABLE IF NOT EXISTS level_up_user_achievements (
   source_reference TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS achievement_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS granted_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS source_reference TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS level_up_user_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS achievement_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS earned_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS granted_credits NUMERIC NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS source_reference TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS skill_up_user_achievements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'level_up_user_achievements' AND indexname = 'level_up_user_achievements_user_id_achievement_id_key' AND schemaname = current_schema()
+    SELECT 1 FROM pg_indexes WHERE tablename = 'skill_up_user_achievements' AND indexname = 'skill_up_user_achievements_user_id_achievement_id_key' AND schemaname = current_schema()
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS level_up_user_achievements_user_id_achievement_id_key ON level_up_user_achievements(user_id, achievement_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_user_achievements_user_id_achievement_id_key ON skill_up_user_achievements(user_id, achievement_id)';
   END IF;
 END $$;
 
@@ -4968,8 +4995,8 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS quoted_currency TEXT REFERENCES currencies(code);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS settled_at TIMESTAMPTZ;
 
--- level_up_enrollments (1 missing)
-ALTER TABLE IF EXISTS level_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;
+-- skill_up_enrollments (1 missing)
+ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS progress_percent NUMERIC NOT NULL DEFAULT 0;
 
 -- service_credits_adapter_outbox (1 missing)
 ALTER TABLE IF EXISTS service_credits_adapter_outbox ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT;
@@ -7147,7 +7174,7 @@ UPDATE trust_transport_status_events SET to_status = 'canceled' WHERE to_status 
 UPDATE lighthouse_matches SET status = 'canceled' WHERE status = 'cancelled';
 UPDATE socket_relay_requests SET status = 'canceled' WHERE status = 'cancelled';
 UPDATE socket_relay_fulfillments SET status = 'canceled' WHERE status = 'cancelled';
-UPDATE level_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
+UPDATE skill_up_cohorts SET status = 'canceled' WHERE status = 'cancelled';
 UPDATE service_credits_transfers SET status = 'canceled' WHERE status = 'cancelled';
 UPDATE foundation_call_sessions SET status = 'canceled' WHERE status = 'cancelled';
 
@@ -7158,6 +7185,46 @@ ALTER TABLE IF EXISTS lighthouse_matches DROP CONSTRAINT IF EXISTS lighthouse_ma
 ALTER TABLE IF EXISTS lighthouse_matches
   ADD CONSTRAINT lighthouse_matches_status_check
   CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed'));
+-- === SkillUp brand rename (2026-08-29): stored values that carry the old plugin name ===
+--
+-- Renaming the tables above moves the rows but not the strings written INSIDE other plugins' tables.
+-- Each statement below is a plain value swap, safe to re-run, and scoped to the exact old value.
+--
+-- Deliberately NOT renamed (unchanged since 2026-06-26, and still correct): the ServiceCredits
+-- ledger and governance values `levelup_trainer_split`, `levelup_completion_bonus`,
+-- `levelup_milestone_validated`, `levelup_enrollment_setup_failed`, `levelup_transfer`, and the
+-- `levelup:` governance ticket prefix. Those are matched against existing production rows and are
+-- read by the GDP recognizer; renaming them would orphan that history and drop SkillUp trainer
+-- payouts out of the Community Value Index.
+
+-- Weekly Performance keeps one row per metric per week, keyed by metric_key, so a renamed key would
+-- start a fresh series and leave last week's figure unreadable for the week-over-week comparison.
+UPDATE weekly_performance_metrics SET metric_key = 'value.skill_up_completions' WHERE metric_key = 'value.level_up_completions';
+UPDATE weekly_performance_metrics SET metric_key = 'value.skill_up_trainer_payouts' WHERE metric_key = 'value.level_up_trainer_payouts';
+UPDATE weekly_performance_metrics SET source_plugin = 'skill-up' WHERE source_plugin = 'level-up';
+UPDATE weekly_performance_goal_snapshots SET metric_key = REPLACE(metric_key, 'level_up_', 'skill_up_') WHERE metric_key LIKE '%level\_up\_%';
+
+-- Notifications already delivered point at /apps/level-up, which stops resolving after this rename.
+UPDATE notifications SET link_path = REPLACE(link_path, '/apps/level-up', '/apps/skill-up') WHERE link_path LIKE '/apps/level-up%';
+UPDATE notifications SET source_plugin = 'skill-up' WHERE source_plugin = 'level-up';
+UPDATE notifications SET notification_type = 'skill-up' || SUBSTRING(notification_type FROM 9) WHERE notification_type LIKE 'level-up.%';
+
+-- ServiceCredits transfers record the plugin that started them; isRegisteredPluginSlug() rejects a
+-- slug that is no longer in the registry, so a left-behind 'level-up' would read as an unknown origin.
+UPDATE service_credits_transfers SET origin_plugin = 'skill-up' WHERE origin_plugin = 'level-up';
+UPDATE recurring_activities SET origin_plugin = 'skill-up' WHERE origin_plugin = 'level-up';
+
+-- The scheduled auto-cohort run writes itself as the actor. post/0008 treats this id as "not a
+-- person", so both the audit rows and that exclusion list have to move together.
+UPDATE skill_up_audit_events SET actor_id = 'skill-up-auto-cohort-scheduler' WHERE actor_id = 'level-up-auto-cohort-scheduler';
+
+-- Command names are stored on every audit row, every idempotency record, and every rate-limit
+-- window. The idempotency rows matter most: replay lookups match on command_name, so a row left at
+-- the old name would let an already-applied command run a second time.
+UPDATE skill_up_audit_events SET command = 'skill-up' || SUBSTRING(command FROM 9) WHERE command LIKE 'level-up.%';
+UPDATE skill_up_command_idempotency SET command_name = 'skill-up' || SUBSTRING(command_name FROM 9) WHERE command_name LIKE 'level-up.%';
+UPDATE skill_up_rate_limit_counters SET command_name = 'skill-up' || SUBSTRING(command_name FROM 9) WHERE command_name LIKE 'level-up.%';
+
 -- spelling:enable
 COMMIT;
 
@@ -7528,6 +7595,9 @@ DECLARE
     'system',
     'system:commons-guidance',
     'skills-hunt-auto-mission-scheduler',
+    'skill-up-auto-cohort-scheduler',
+    -- The value those rows carried before the 2026-08-29 SkillUp rename. Listed as well as the
+    -- new one so this stays correct whichever order the rename and this backfill run in.
     'level-up-auto-cohort-scheduler',
     'unlock-incentive-system',
     'internal_service_credits_reclaimer'
@@ -7561,7 +7631,7 @@ BEGIN
       ('feed_community_replies', 'author_user_id', 'created_at'),
       ('feed_community_post_reactions', 'user_id', 'created_at'),
       ('peer_programming_messages', 'author_user_id', 'created_at'),
-      ('level_up_dispute_comments', 'actor_user_id', 'created_at'),
+      ('skill_up_dispute_comments', 'actor_user_id', 'created_at'),
       -- Command trails: one row per command the member ran, actor and time from their own request.
       ('account_restrictions_audit', 'actor_id', 'created_at'),
       ('announcement_membership_events', 'actor_id', 'created_at'),
@@ -7573,7 +7643,7 @@ BEGIN
       ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
       ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
       ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
-      ('level_up_audit_events', 'actor_id', 'created_at'),
+      ('skill_up_audit_events', 'actor_id', 'created_at'),
       ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
       ('llm_inference_log', 'actor_user_id', 'created_at'),
       ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),

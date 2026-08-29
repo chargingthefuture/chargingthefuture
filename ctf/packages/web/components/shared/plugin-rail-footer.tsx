@@ -30,7 +30,7 @@ const ICON_BTN: CSSProperties = {
 // pushes itself to the bottom, so the rail's top section does not need its own spacer.
 export function PluginRailFooter() {
   // History-aware back, same as the mobile/desktop header (owner decision, 2026-07-17): previous
-  // in-app page when one exists; else the one-level-up fallback (admin rail → /admin, member rail
+  // in-app page when one exists; else the one-skill-up fallback (admin rail → /admin, member rail
   // → all apps).
   const back = useSmartBack();
   return (

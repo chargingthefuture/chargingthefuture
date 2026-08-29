@@ -35,7 +35,7 @@ export interface TrustSignalMetrics {
   lighthouseMatchesAccepted: number;
   trustTransportTripsCompleted: number;
   skillsHuntSubmissionsAccepted: number;
-  levelUpCohortsCompleted: number;
+  skillUpCohortsCompleted: number;
   chymeRoomsJoined: number;
   directoryProfilesClaimed: number;
   whatWorksEndorsements: number;

@@ -31,7 +31,7 @@ this issue beyond ensuring nothing here implies SC↔fiat parity (see §7).
 | LightHouse | `lighthouse_properties.monthly_rent` (bare `NUMERIC`) | ❌ none | ❌ none |
 | Foundation | quotes are free-text (`foundation_quote_requests.request_text`); no price model | ❌ none | ❌ none |
 | SocketRelay | none (mutual aid; reward shown only in mockup) | ❌ none | ❌ none |
-| LevelUp | `level_up_cohorts.stipend_amount_per_payout`, `microgrant_amount` (bare `NUMERIC`) | ❌ implicit SC | ❌ none |
+| SkillUp | `skill_up_cohorts.stipend_amount_per_payout`, `microgrant_amount` (bare `NUMERIC`) | ❌ implicit SC | ❌ none |
 | Unlock | `unlock_runtime_config.incentive_amount` (`TEXT`) | ❌ implicit SC | ❌ none |
 
 Only TrustTransport pairs amount with a currency, and even that is a free `TEXT` column, not a
@@ -50,7 +50,7 @@ referenced, admin-curated option set.
 3. Scope of this issue = field model + display rules only. GDP multi-currency *recognition /
    normalization* is a separate tracked follow-up (it needs its own valuation policy because SC
    cannot be valued at fiat parity).
-4. Plugins in scope: LightHouse, Foundation, TrustTransport (align), SocketRelay, LevelUp,
+4. Plugins in scope: LightHouse, Foundation, TrustTransport (align), SocketRelay, SkillUp,
    Unlock.
 
 ### Naming (owner-confirmed, applies to copy throughout)
@@ -159,7 +159,7 @@ join table — it is never derived from `price_currency`.
 - SocketRelay (`socket_relay_requests` / `socket_relay_fulfillments`): if a reward/offer is shown,
   add `price_amount` + `price_currency` + accepted set; "Cost to post = Free" should render from
   absence of a price, not `$0`.
-- LevelUp (`level_up_cohorts`): add `stipend_currency` / `microgrant_currency` FK, defaulted to
+- SkillUp (`skill_up_cohorts`): add `stipend_currency` / `microgrant_currency` FK, defaulted to
   `ServiceCredits` (these are internal SC payouts).
 - Unlock (`unlock_runtime_config`): add `incentive_currency` FK, defaulted to `ServiceCredits`.
 
@@ -254,7 +254,7 @@ issue (see §7).
 2. Build `ctf/packages/web/lib/currency/` (+ mobile mirror), incl. `assertNoFiatParity()` + tests.
    *(blocked by 1)*
 3. Retrofit schema for each in-scope plugin (price_amount/price_currency + accepted-currencies join):
-   LightHouse, Foundation, TrustTransport, SocketRelay, LevelUp, Unlock. *(blocked by 1)*
+   LightHouse, Foundation, TrustTransport, SocketRelay, SkillUp, Unlock. *(blocked by 1)*
 4. Backfill migrations per §8 Q2 decision. *(blocked by 3)*
 5. Update API routes/commands to read/write currency + accepted set; enforce no-fiat-parity server
    side. *(blocked by 3)*

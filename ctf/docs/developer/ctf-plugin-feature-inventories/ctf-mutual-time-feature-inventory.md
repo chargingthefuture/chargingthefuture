@@ -286,7 +286,7 @@ keeps that half reproducible; its stamped result stands.
   cluster), the same bar as every other screen. A signed-out visitor gets the shared
   `BackChevronButton` beside the event name instead, and only when `useSmartBack` reports in-app
   history: the full bar would offer them an account menu and a settings link they cannot use, and the
-  one-level-up fallback would push them to the all-apps page, which needs an account. With no in-app
+  one-skill-up fallback would push them to the all-apps page, which needs an account. With no in-app
   history there is nothing in-app behind them and their browser's own back still works. No hand-rolled
   back control — both pieces are the shared ones. `MutualTimePublic` was also split into `EventHeader`
   and `EventBody` to stay under the complexity limit.

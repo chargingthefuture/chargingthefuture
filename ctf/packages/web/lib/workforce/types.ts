@@ -85,7 +85,7 @@ export type WorkforceGroupedReportItem = {
   gap: number;
 };
 
-// Per-occupation (job-title) training gap. This is the signal that later tells LevelUp which
+// Per-occupation (job-title) training gap. This is the signal that later tells SkillUp which
 // training cohort to stand up: a large gap = recruit and train for this occupation.
 export type WorkforceOccupationGapItem = {
   jobTitleId: string;

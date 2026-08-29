@@ -77,8 +77,8 @@ contracts:
       - skills_hunt_submissions
       - what_works_products
       - what_works_endorsements
-      - level_up_enrollments
-      - level_up_disbursements
+      - skill_up_enrollments
+      - skill_up_disbursements
       - recurring_activities
       - peer_programming_messages
       - beacon_events
@@ -130,8 +130,8 @@ contracts:
       - skills_hunt_submissions
       - what_works_products
       - what_works_endorsements
-      - level_up_enrollments
-      - level_up_disbursements
+      - skill_up_enrollments
+      - skill_up_disbursements
       - recurring_activities
       - peer_programming_messages
       - beacon_events

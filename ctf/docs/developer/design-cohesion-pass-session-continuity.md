@@ -214,14 +214,14 @@ hexCount | file
 2 | components/gentle-pulse/gp-right-panel.tsx
 3 | components/gentle-pulse/gp-sessions.tsx
 1 | components/gentle-pulse/gp-sidebar.tsx
-4 | components/level-up/level-up-public-shell.tsx
-1 | components/level-up/lu-achievements.tsx
-20 | components/level-up/lu-admin-shell.tsx
-3 | components/level-up/lu-browse.tsx
-1 | components/level-up/lu-progress.tsx
-1 | components/level-up/lu-right-panel.tsx
-2 | components/level-up/lu-trainers.tsx
-2 | components/level-up/lu-wallet.tsx
+4 | components/skill-up/skill-up-public-shell.tsx
+1 | components/skill-up/su-achievements.tsx
+20 | components/skill-up/su-admin-shell.tsx
+3 | components/skill-up/su-browse.tsx
+1 | components/skill-up/su-progress.tsx
+1 | components/skill-up/su-right-panel.tsx
+2 | components/skill-up/su-trainers.tsx
+2 | components/skill-up/su-wallet.tsx
 20 | components/lighthouse/lighthouse-admin-shell.tsx
 11 | components/lighthouse/lighthouse-browse.tsx
 7 | components/lighthouse/lighthouse-chat.tsx
@@ -446,7 +446,7 @@ branch; every commit passed the pre-commit typecheck gate and the pre-push lint+
   all `*-public-shell` files were converted.
 - **The hex audit had a blind spot:** files that import static color CONSTANTS from a `*-shared.ts`
   (no inline hex) are theme-blind but invisible to a hex grep. A constant-import sweep found and
-  converted 7 such files (click-log-incident-list, lu-sidebar, lu-cohort-card, wp-comparison-chart,
+  converted 7 such files (click-log-incident-list, su-sidebar, su-cohort-card, wp-comparison-chart,
   wp-empty-main, ww-suggest-guidance, ww-problem-section).
 - **CSS modules were outside the original audit.** Themed via `var(--ctf-X, #exactdefault)`
   substitution (byte-identical under default by definition): `comic-review-dashboard.module.css`
@@ -459,7 +459,7 @@ branch; every commit passed the pre-commit typecheck gate and the pre-push lint+
    trust-transport: all admin shells/panels, public shells, remaining member surfaces, world-map chrome.
 3. Batch 2 — custom-token tier: chyme, click-log, contributions (was already token-wired via t props),
    recurring-activity, gentle-pulse, mood, skills-taxonomy, unlock, weekly-performance.
-4. Batch 3 — foundation (getter lives in `foundation-ui.ts`), lighthouse, peer-programming, level-up,
+4. Batch 3 — foundation (getter lives in `foundation-ui.ts`), lighthouse, peer-programming, skill-up,
    what-works, directory.
 5. Batch 4 — new workforce-style getters created for dirs that had none: `beacon-shared.ts`,
    `bug-reports-shared.ts`, `comic-shared.ts`, `safety-shared.ts`, `feed-announcements-shared.ts`,
@@ -494,7 +494,7 @@ byte-identical by construction — `getThemeTokens('default')` returns the shipp
 green.
 
 - Covered: announcements, chyme, click-log, comic, community, contributions, currency, directory,
-  feed, foundation, gdp, gentle-pulse, level-up, lighthouse, mood, peer-programming,
+  feed, foundation, gdp, gentle-pulse, skill-up, lighthouse, mood, peer-programming,
   recurring-activity, service-credits (incl. the `sc-styles.ts` shared sheet → `makeStyles` factory),
   skills-hunt, skills-taxonomy, socket-relay, trust, trust-transport, unlock, weekly-performance,
   workforce, and shared components (FormField, ShareLink, StreamChatSearch, etc.).

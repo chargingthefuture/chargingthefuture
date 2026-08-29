@@ -34,7 +34,7 @@ export function MobileScreenHeader({
   actions?: ReactNode;
 }) {
   // History-aware back (owner decision, 2026-07-17): return to the previous in-app page when one
-  // exists; otherwise fall back to the shared one-level-up destination (resolveBackTarget via
+  // exists; otherwise fall back to the shared one-skill-up destination (resolveBackTarget via
   // useSmartBack) so a deep-linked or freshly-opened screen still has a sensible way back.
   const back = useSmartBack(backHref);
 

@@ -12,7 +12,7 @@ interface WorkforceTrainingGapsProps {
 }
 
 // Top occupation-level gaps: the demand a sector's job titles carry vs how many are recruited. This is
-// the signal that later tells LevelUp which training cohorts to stand up and recruit for.
+// the signal that later tells SkillUp which training cohorts to stand up and recruit for.
 export function WorkforceTrainingGaps({ occupationItems, limit = 10 }: WorkforceTrainingGapsProps) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
