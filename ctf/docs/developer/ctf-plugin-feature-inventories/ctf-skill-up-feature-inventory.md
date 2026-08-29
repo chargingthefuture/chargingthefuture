@@ -89,7 +89,9 @@ deferred. That future model is where `max_concurrent` becomes load-bearing again
 - **Approval → term:** the admin approves a proposal and picks a **1/3/5-month** term; a real cohort
   opens with `start = today`, `end = today + term`, `auto_created = true`, and the `source_*` fields. If
   the occupation already has an open auto cohort (the `uq_skill_up_auto_cohort_active_source` guard
-  fires), the proposal is marked `superseded` and no second cohort opens.
+  fires), the proposal is marked `superseded` and no second cohort opens. The cohort's title is the
+  occupation on its own ("Journalists / Reporters") — no plugin-name prefix; see the 2026-08-29 change
+  log entry.
 - **Economics (one global policy, admin-editable):** every approved cohort is stamped with the deposit
   (`default_required_credits`, default 0 = free to join — sets `allow_no_deposit`), the trainer split
   (`default_trainer_split_percent`, default 25%), the completion bonus (`default_completion_bonus_credits`,
@@ -292,6 +294,16 @@ that exist today.
   can exceed the live "Members in a cohort now" KPI; the section copy says so rather than leaving the
   two numbers looking contradictory. Read-only and admin-gated by the existing route gate — no new
   route, no schema change, no contract change, and no member-facing surface moves.
+- 2026-08-29: **Cohort titles drop the plugin-name prefix (owner report).** A cohort opened from the
+  proposal queue was titled `<plugin name>: <occupation>` — "LevelUp: Journalists / Reporters" on the
+  rows written before the rename, "SkillUp: …" after it. Every one of those cards is already inside
+  SkillUp, so the prefix repeated the plugin's own name on each row and spent width a phone does not
+  have. The template in `approveCohortProposal` (`lib/skill-up/auto-cohort.ts`) now writes
+  `proposal.occupation` alone, and
+  `ctf/db/migrations/post/0009_skill_up_cohort_title_drop_plugin_prefix.sql` strips the prefix from
+  the `skill_up_cohorts.title` rows already written under the old template (guarded on the prefix
+  being present, so re-runs are no-ops). Nothing else changes: the cohort's `track` still carries the
+  occupation, and the `description` is untouched.
 - 2026-08-29: **Renamed the plugin LevelUp → SkillUp (owner decision), as a hard cutover with no
   aliases.** Member-facing name, slug, folders, files, code identifiers, API routes, contracts and
   database tables all move together. `/apps/level-up` and every `/api/level-up/*` route are gone and
