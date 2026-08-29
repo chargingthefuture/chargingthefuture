@@ -82,6 +82,10 @@ export interface Cohort {
   seatsAvailable?: number;
   seats?: number;
   requiredCredits?: number;
+  // The cohort's economic policy, already returned by GET /api/skill-up/cohorts (mapCohort). The
+  // browse card reads these to show what a learner gets back and what a trainer earns.
+  trainerSplitPercent?: number;
+  completionBonusCredits?: number;
   status?: string;
   milestoneCount?: number;
   tags?: string[];
@@ -176,4 +180,61 @@ export function trackRepeatsTitle(title: string | null | undefined, track: strin
   }
   const normalizedTitle = normalize(title ?? '').replace(/^(?:level|skill)up:\s*/, '');
   return normalizedTitle === normalizedTrack;
+}
+
+// What a cohort actually moves in ServiceCredits, derived from its own stored policy so the card
+// stays right whatever the cohort was configured with.
+//
+// Where the numbers come from, all in `releaseMilestoneCredits` (lib/skill-up/repository.ts):
+//   - The learner's deposit is held in escrow per milestone and released back to them IN FULL as
+//     each milestone is validated, so a learner who finishes gets their whole deposit back. It is
+//     held, not consumed.
+//   - The trainer is granted `held x split / (100 - split)` on each release — newly issued credits,
+//     not a slice of the learner's deposit. Summed over every milestone that works out to the whole
+//     deposit x split / (100 - split), whatever the milestone percentages are.
+//   - The completion bonus is granted to the LEARNER on their final milestone, not the trainer.
+// A cohort with no deposit therefore moves nothing to the trainer: the release path skips the grant
+// when the computed amount is zero.
+export type CohortEconomics = {
+  depositCredits: number;
+  learnerBonusCredits: number;
+  trainerPerLearnerCredits: number;
+  enrolledCount: number;
+  trainerSoFarCredits: number;
+  // False when the cohort holds no deposit and grants no bonus — nothing moves, and the card says
+  // that plainly rather than advertising a row of zeros.
+  carriesCredits: boolean;
+};
+
+// Match the server's rounding (repository.ts roundCurrency) so the card cannot show a figure the
+// ledger would not produce.
+function roundCredits(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export function cohortEconomics(cohort: Cohort): CohortEconomics {
+  const depositCredits = Math.max(0, cohort.requiredCredits ?? 0);
+  const learnerBonusCredits = Math.max(0, cohort.completionBonusCredits ?? 0);
+  const split = cohort.trainerSplitPercent ?? 0;
+
+  // A split of 100 or more has no meaning here (the server rejects it outright), so it earns nothing
+  // rather than dividing by zero.
+  const trainerPerLearnerCredits =
+    split > 0 && split < 100 ? roundCredits((depositCredits * split) / (100 - split)) : 0;
+
+  // seatsAvailable is seats minus live enrollments, so this is how many people are in the cohort
+  // right now — the figure that makes the trainer total move as members join.
+  const enrolledCount =
+    cohort.seats != null && cohort.seatsAvailable != null
+      ? Math.max(0, cohort.seats - cohort.seatsAvailable)
+      : 0;
+
+  return {
+    depositCredits,
+    learnerBonusCredits,
+    trainerPerLearnerCredits,
+    enrolledCount,
+    trainerSoFarCredits: roundCredits(trainerPerLearnerCredits * enrolledCount),
+    carriesCredits: depositCredits > 0 || learnerBonusCredits > 0,
+  };
 }
