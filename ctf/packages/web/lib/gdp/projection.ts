@@ -48,7 +48,7 @@ export interface ProjectionSource {
  */
 export const trustTransportOpenRequestSource: ProjectionSource = {
   pluginSlug: 'trust-transport',
-  label: 'TrustTransport requests still open',
+  label: 'TrustTransport open requests',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string; total: string }>(
       `SELECT price_currency AS currency_code,
@@ -88,7 +88,7 @@ export const foundationOpenQuoteSource: ProjectionSource = {
 };
 
 /**
- * LightHouse homes still available: an active listing that nobody has been accepted into yet. The
+ * LightHouse homes available: an active listing that nobody has been accepted into yet. The
  * listing IS the post here — a home offered, waiting for a seeker — so it is projected the same way an
  * open ride or an unclaimed request is, at ONE month of the listed rent (the same unit the recognition
  * source uses when a match is accepted, so the number simply moves from this figure into the real index
@@ -101,7 +101,7 @@ export const foundationOpenQuoteSource: ProjectionSource = {
  */
 export const lighthouseOpenListingSource: ProjectionSource = {
   pluginSlug: 'lighthouse',
-  label: 'LightHouse homes still available',
+  label: 'LightHouse homes available',
   async loadVolumes() {
     const result = await queryDb<{ currency_code: string; total: string }>(
       `SELECT CASE WHEN p.monthly_rent > 0 AND p.rent_currency IS NOT NULL THEN p.rent_currency ELSE $1 END AS currency_code,
@@ -212,7 +212,7 @@ export interface ProjectedSourceContribution {
   pluginSlug: string;
   label: string;
   valueIndex: number;
-  /** How many open posts this source is reporting, for the plain "N posts still open" line. */
+  /** How many open posts this source is reporting, for the plain "N open posts" line. */
   openCount: number;
 }
 
@@ -229,7 +229,7 @@ export interface ProjectionBreakdown {
 /**
  * Count how many open posts a set of volumes represents. A FREE/BARTER/RACT volume is already a count of
  * posts, so its amount IS the post count; a priced volume is one amount summed across an unknown number
- * of posts, so it counts as at least one post. This drives the plain-language "N posts still open" line
+ * of posts, so it counts as at least one post. This drives the plain-language "N open posts" line
  * only — it never feeds the figure itself.
  */
 export function countOpenPosts(volumes: CurrencyVolume[]): number {
