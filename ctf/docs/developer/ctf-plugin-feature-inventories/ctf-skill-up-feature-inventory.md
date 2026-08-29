@@ -67,12 +67,20 @@ trains**. Every Skills Taxonomy skill belongs to exactly one job title and each 
 - **Any trainerless cohort can be claimed**, not only ones the retired auto-cohort run opened —
   claiming is how a trainer attaches to a cohort at all.
 - **The audit that makes it safe.** Removing the human also removes what a human would have noticed,
-  and the abuse is: add a skill, claim the cohort, remove the skill. Every add and remove on a
-  *claimed* Directory profile is written to `skill_up_trainer_skill_audit` — every claimed profile,
-  not only people who are already trainers, because the add that enables a first claim happens before
-  that person has claimed anything, and a narrower log would hold the removal with no origin.
-  Self-deleting a profile is logged as removals too, so deleting cannot erase the trail. The rows are
-  written on the caller's transaction, so the log cannot silently miss an edit.
+  so every add and remove on a *claimed* Directory profile is written to
+  `skill_up_trainer_skill_audit`.
+- **Read that log for removals, not adds (owner note, 2026-08-29).** Adding a skill shortly before
+  claiming a cohort is **ordinary** in this product: Directory profiles largely start out
+  community-generated, members are new, and filling in real skills is what a person does when they
+  first engage. Flagging that would flag honest onboarding. What is worth looking at is a skill taken
+  back off after it has done its work — above all while the cohort claimed on it is still held. The
+  adds are recorded so a removal has an origin and the sequence reads in order; they are context, not
+  an accusation. No alerting is built yet: the natural next surface is an admin read of removals by
+  people holding a claim, and it should be built against removals, not adds.
+- The log covers every claimed profile, not only people who are already trainers, because a first
+  claim is preceded by the add that enabled it and a narrower log would hold the removal with nothing
+  before it. Self-deleting a profile is logged as removals too, so deleting cannot erase the trail.
+  Rows are written on the caller's transaction, so the log cannot silently miss an edit.
 
 ## Implemented Admin Features
 
@@ -307,7 +315,11 @@ that exist today.
   crossing point — Directory never imports `lib/skill-up`) on the caller's own transaction. The log
   deliberately covers every claimed profile rather than only current trainers: the add that enables a
   first claim precedes the claim, so a narrower log would show a removal with no origin. Retained on
-  account deletion, because erasing it would make deletion the cover-up.
+  account deletion, because erasing it would make deletion the cover-up. **The log is to be read for
+  removals, not adds** (owner note the same day): with profiles largely community-generated and
+  members new to the app, adding a skill just before claiming is ordinary onboarding, and the signal
+  is a skill withdrawn after it has done its work — especially while the cohort claimed on it is
+  still held.
 - 2026-08-29: **A cohort's track chip is hidden when it only repeats the title (owner report).** A
   cohort opened from the proposal queue takes the occupation as both its title and its `track`, so a
   card printed "Journalists / Reporters" and then a chip reading "Journalists / Reporters" directly

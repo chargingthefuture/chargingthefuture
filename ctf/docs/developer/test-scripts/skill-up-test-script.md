@@ -537,8 +537,8 @@ Result: web ☐
 
 **Expected:**
 - Step 1 writes two rows with `action = 'added'`; step 2 writes one with `action = 'removed'`. Each carries the skill name and the occupation, so the row still reads if the skill is later renamed.
-- Step 3's removal is recorded **after** the claim, so the full add / claim / remove sequence is visible in order — this is the fraud the table exists to catch.
-- Step 5 is also recorded: the log covers every claimed profile, not only people who are already trainers. A log limited to trainers would have missed step 1 for anyone claiming for the first time.
+- Step 3's removal is recorded **after** the claim, so the add / claim / remove sequence reads in order. The removal is the part worth attention: adding a skill shortly before claiming is ordinary here, since profiles largely start out community-generated and members are new, so the add on its own is not a finding.
+- Step 5 is also recorded: the log covers every claimed profile, not only people who are already trainers. A log limited to trainers would have missed step 1 for anyone claiming for the first time, leaving their later removal with nothing before it.
 - Deleting your own Directory profile records its skills as removed rather than leaving a gap.
 - Deleting your account does **not** remove these rows.
 

@@ -3441,13 +3441,17 @@ CREATE INDEX IF NOT EXISTS idx_skill_up_cohort_proposal_pending_rank
 
 -- Trainer skill audit (owner decision 2026-08-29). A person claims a cohort to train by holding a
 -- matching skill on their claimed Directory profile — no admin approval, so nothing human stands
--- between adding a skill and claiming it. That removes the bias and the queue, and it opens one
--- fraud route: add a skill, claim the cohort, remove the skill. This table is what catches it.
+-- between adding a skill and claiming it. That removes the bias and the queue, and this table is
+-- what stands in for the reviewer who is no longer there.
+--
+-- Read it for REMOVALS, not adds. Adding a skill shortly before claiming is ordinary: profiles here
+-- start out community-generated and members are new, so filling in real skills is what someone does
+-- when they first engage. A skill taken back off after it has done its work — especially while the
+-- cohort claimed on it is still held — is the thing worth looking at.
 --
 -- Every add and every remove on a CLAIMED Directory profile is written here, not only the changes
--- made by people who are already trainers: the add that enables a claim happens BEFORE the person
--- has claimed anything, so a log scoped to existing trainers would miss the first half of the
--- sequence and show a removal with no origin.
+-- made by people who are already trainers: a first claim is preceded by the add that enabled it, so
+-- a log scoped to existing trainers would hold the removal with nothing before it.
 --
 -- Written from Directory's profile-skill write path through lib/shared/skill-up-interface.ts, the
 -- sanctioned crossing point (Directory never imports lib/skill-up directly). Append-only: rows are

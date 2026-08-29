@@ -503,13 +503,16 @@ async function ensureTaxonomySelectors(
 // Record what changed about a claimed profile's skills, for SkillUp's trainer audit.
 //
 // A person qualifies to train a cohort by holding a skill under that cohort's occupation, with no
-// human approving them (owner decision 2026-08-29). So the skill list is the credential, and the way
-// to abuse it is to add a skill, claim the cohort, then remove it. This records both halves.
+// human approving them (owner decision 2026-08-29). The skill list is the credential, so the record
+// of how it changed is what stands in for the reviewer who is no longer there.
 //
-// Every claimed profile is logged, not only profiles belonging to people who are already trainers:
-// the add that enables a first claim happens before that person has claimed anything, and a log
-// scoped to existing trainers would hold the removal with no origin. An unclaimed profile has nobody
-// to attribute a change to, so it is skipped.
+// Adding a skill shortly before claiming is EXPECTED, not suspicious: profiles here start out
+// community-generated and members are new, so filling in real skills is what a person does when they
+// first engage. The tell is a REMOVAL after a claim. Adds are recorded so a removal has an origin.
+//
+// Every claimed profile is logged, not only people who are already trainers — a first claim is
+// preceded by the add that enabled it, and a log scoped to trainers would hold the removal with
+// nothing before it. An unclaimed profile has nobody to attribute a change to, so it is skipped.
 //
 // Runs on the caller's transaction, so the audit row commits with the change it describes.
 async function recordProfileSkillAudit(

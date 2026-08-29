@@ -6,11 +6,18 @@
 // one job title, and a cohort stores the job title it trains, so the check has no discretion in it
 // and therefore no bias — and no queue for the owner to work through.
 //
-// Removing the human also removes the thing a human would have noticed, so the claim is paired with
-// `skill_up_trainer_skill_audit`: every skill added to or removed from a claimed Directory profile
-// is recorded, whether or not that person is a trainer yet. The fraud this exists to catch is
-// add-skill / claim-cohort / remove-skill, and its first step happens before the person has claimed
-// anything at all.
+// Removing the human also removes what a human would have noticed, so the claim is paired with
+// `skill_up_trainer_skill_audit`.
+//
+// What that log is NOT for: adding a skill shortly before claiming a cohort is ORDINARY here, not
+// suspicious. Most Directory profiles start out community-generated, members are new to the app, and
+// filling in your real skills is exactly what a person does when they first engage. Treating that as
+// a signal would flag honest onboarding and little else.
+//
+// The tell is the REMOVAL: a skill taken off a profile after it has done its work — especially while
+// the cohort claimed on it is still held. That is someone withdrawing the credential they qualified
+// on. The adds are recorded so a removal has an origin and the sequence can be read in order; they
+// are context, not an accusation.
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
 import { insertSkillUpAudit } from 'lib/skill-up/repository';
