@@ -13,7 +13,7 @@
 // Fixed, built-in contribution weights — mirror DEFAULT_CONTRIBUTION_WEIGHTS in
 // ctf/packages/web/lib/gdp/recognition.ts. There is no database or admin step, so the index is always
 // live and needs no owner action. ServiceCredits is the native unit and counts 1:1; each completed
-// non-money exchange (FREE favor, BARTER trade) counts one point; foreign-currency settled value
+// non-money exchange (FREE request, BARTER trade) counts one point; foreign-currency settled value
 // normalizes to a USD reference. RACT (recurring activity, a by-count code) counts one point per
 // confirmed line. Notional index weights only — never a price, exchange rate, or redemption value.
 export const WEIGHTS = new Map([
@@ -103,11 +103,11 @@ export const RECOGNITION_SOURCES = [
             GROUP BY 1`,
   },
   {
-    // SocketRelay favors: mutual aid, but a post may name an offered value (issue #120). Each
-    // successfully-completed favor is recognized at its request's posted value — a priced post at
+    // SocketRelay requests: mutual aid, but a post may name an offered value (issue #120). Each
+    // successfully-completed request is recognized at its posted value — a priced post at
     // price_amount in price_currency, a post with no named value (or an amount-less type: Free, Barter)
     // as one FREE exchange by count. The standalone SocketRelay SC transfer route is intentionally not
-    // also counted here to avoid double-counting a single favor. Mirrors socketRelayFavorSource in
+    // also counted here to avoid double-counting a single request. Mirrors socketRelayFavorSource in
     // packages/web/lib/gdp/recognition.ts.
     pluginSlug: 'socket-relay',
     sql: `SELECT COALESCE(r.price_currency, 'FREE') AS currency_code,
@@ -192,7 +192,7 @@ export const PROJECTION_SOURCES = [
             GROUP BY 1`,
   },
   {
-    // SocketRelay favors waiting to be done: open or claimed, not past the 28-day expiry. A priced
+    // SocketRelay requests waiting to be done: open or claimed, not past the 28-day expiry. A priced
     // post at its posted amount, a post with no named value (or Free/Barter) one point per post.
     pluginSlug: 'socket-relay',
     sql: `SELECT COALESCE(price_currency, 'FREE') AS currency_code,

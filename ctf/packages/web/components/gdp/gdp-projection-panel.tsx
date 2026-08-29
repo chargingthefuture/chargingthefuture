@@ -15,7 +15,7 @@ import {
 //
 // Kept in its own component, below the real headline and styled apart from it (dashed border, muted
 // surface, no hero gradient), because it is NOT the Community Value Index: it counts posts that are
-// still open, and most posts never close. The panel always carries the plain-language sentence that
+// open, and most posts never close. The panel always carries the plain-language sentence that
 // says so, and it renders nothing at all when the board is empty, so it can never imply activity that
 // does not exist.
 export function GdpProjectionPanel({ projection }: { projection: GdpProjection | null | undefined }) {
@@ -73,7 +73,7 @@ export function GdpProjectionPanel({ projection }: { projection: GdpProjection |
             />
           </div>
           <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>
-            {row.openCount.toLocaleString()} {row.openCount === 1 ? "post" : "posts"} still open
+            {row.openCount.toLocaleString()} open {row.openCount === 1 ? "post" : "posts"}
           </div>
         </div>
       ))}

@@ -264,13 +264,13 @@ Result: web ☐
 
 **Role:** member
 **Surfaces:** web (desktop), web (mobile-responsive)
-**Precondition:** Seed run. Signed in. At least one open post exists that carries a value — an open TrustTransport request with a price type chosen, a Foundation quote a provider has answered but nobody has closed, an unexpired SocketRelay favor, or a recurring activity awaiting confirmation. Note the hero index figure before you start.
+**Precondition:** Seed run. Signed in. At least one open post exists that carries a value — an open TrustTransport request with a price type chosen, a Foundation quote a provider has answered but nobody has closed, an unexpired SocketRelay request, or a recurring activity awaiting confirmation. Note the hero index figure before you start.
 
 **Steps:**
 1. On `/apps/gdp`, look below the hero for the "Value waiting to happen" panel.
 2. Read its figure, its open-post count, and the italic sentence under them.
 3. Compare the panel's figure with the hero's Community Value Index figure.
-4. Complete or close one of the open posts (for example, close a SocketRelay favor successfully), then refresh `/apps/gdp`.
+4. Complete or close one of the open posts (for example, close a SocketRelay request successfully), then refresh `/apps/gdp`.
 5. In DevTools, look at the `GET /api/gdp/report/current` response body.
 
 **Expected:**
@@ -279,9 +279,9 @@ Result: web ☐
 - The sentence says the number is what open posts would add if they all closed, that most posts never close, and that it is not part of the Community Value Index and is not money.
 - The hero index figure does **not** include the projected number — the two figures move independently.
 - After a post closes, the projected figure goes down and the hero index goes up. The post is never counted in both at once.
-- A post that names an offered value moves both figures by that value, not by 1 — a SocketRelay favor offering 15 ServiceCredits adds 15 to "Value waiting to happen" while open and 15 to the hero index when it closes successfully. A post with no named value (or Free/Barter) moves each figure by one point.
+- A post that names an offered value moves both figures by that value, not by 1 — a SocketRelay request offering 15 ServiceCredits adds 15 to "Value waiting to happen" while open and 15 to the hero index when it closes successfully. A post with no named value (or Free/Barter) moves each figure by one point.
 - In the response body, the projected number appears only under `projection`; the `metrics` array contains no `gdp_projected_value_index` row and no projected value.
-- Each per-app row shows a count of posts still open, and rows with nothing open are not listed.
+- Each per-app row shows a count of open posts ("N open posts"), and rows with nothing open are not listed. No row on this card uses the word "still".
 
 Result: web ☐
 
@@ -294,7 +294,7 @@ Result: web ☐
 **Precondition:** Seed run. An active LightHouse listing with a monthly rent set (say 1,200 USD) and no accepted match. A seeker account able to request a stay, and the host account able to accept. Note the hero index figure and the projected figure before you start.
 
 **Steps:**
-1. On `/apps/gdp`, note the "LightHouse homes still available" row in the projected panel and the hero index figure.
+1. On `/apps/gdp`, note the "LightHouse homes available" row in the projected panel and the hero index figure.
 2. As the seeker, request a stay at that listing. Refresh `/apps/gdp`.
 3. As the host, accept the request. Refresh `/apps/gdp` again.
 
@@ -312,7 +312,7 @@ Result: web ☐
 
 **Role:** member
 **Surfaces:** web (desktop)
-**Precondition:** A database (or fixture) where every TrustTransport request is completed/canceled, every Foundation quote is closed, every SocketRelay favor is closed or expired, and no recurring activity is pending.
+**Precondition:** A database (or fixture) where every TrustTransport request is completed/canceled, every Foundation quote is closed, every SocketRelay request is closed or expired, and no recurring activity is pending.
 
 **Steps:**
 1. Load `/apps/gdp` and scan the area under the hero.
