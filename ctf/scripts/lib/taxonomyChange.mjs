@@ -238,6 +238,64 @@ export const TAXONOMY_CHANGES = [
   { id: 65, op: 'addSkill', sector: 'Education', occupation: 'Tutors', skill: 'Tutoring' },
   { id: 66, op: 'addSkill', sector: 'Education', occupation: 'Tutors', skill: 'Homeschooling and curriculum planning' },
   { id: 67, op: 'addSkill', sector: 'Education', occupation: 'Vocational Trainers', skill: 'Adult education and training', occupationExisting: true },
+
+  // Changes 68-78 (owner-approved 2026-08-29): the singular/plural duplicate incident, found again.
+  // A read of the live occupation list turned up "Photographer" and "Photographers / Videographers"
+  // both active under Creative & Media - the same shape as the "Marketing Specialist" /
+  // "Marketing Specialists" pair that changes 1 and 26-34 had to unwind. The harm is not cosmetic:
+  // Workforce and the Directory match holders through the occupation a skill hangs from, so a member
+  // listed under one of the pair is invisible to somebody browsing the other, and neither row shows
+  // the community's real photography capacity.
+  //
+  // The plural row is the seeded one and keeps its three original skills (Asset management and
+  // metadata tagging, Post-production and color grading, Shooting and lighting techniques). The
+  // singular row carries eight, every one of them added later. Ops 68-75 consolidate those eight
+  // into the plural occupation; op 76 deactivates the emptied duplicate. consolidateSkill is the
+  // merge-aware move, so a name already present at the target absorbs the moving copy instead of
+  // colliding - and no name in this set collides today, so all eight reparent. Member profile links
+  // point at the skill row id, which consolidateSkill does not change, so nobody loses a skill.
+  //
+  // Two near-duplicate PAIRS survive this merge and are deliberately left alone: "Lighting
+  // techniques" against "Shooting and lighting techniques", and "Photo editing and post-processing"
+  // against "Post-production and color grading". Thinning a pair means deactivating one label, and a
+  // member holding the deactivated row stops seeing that chip until they re-pick - so which one
+  // survives is the owner's pick, recorded as its own change the way ops 35-38 recorded the
+  // marketing pairs. Merging first and thinning second is the same order that worked there.
+  //
+  // Ops 77-78 fix two singular occupation names with no duplicate behind them, so a rename is the
+  // whole fix: "Apparel / Fashion Designer" against the plural Creative & Media convention
+  // (Graphic / Visual Designers, Artists / Illustrators, Photographers / Videographers), and
+  // "Machinist" against Manufacturing & Industry's (Production Workers, Quality Inspectors, Process
+  // Operators). Renaming an occupation moves no rows and breaks no member link - the row keeps its
+  // id. Left as they are: names that read as singular but are collective ("Education Support Staff",
+  // "Forensic Staff", "Hotel Staff (front desk, housekeeping)") and parenthetical ones that are
+  // already plural in substance. Applies on the next owner run of the seed-skills-taxonomy apply
+  // workflow.
+  { id: 68, op: 'consolidateSkill', skill: 'Photography', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 69, op: 'consolidateSkill', skill: 'Camera operation and settings', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 70, op: 'consolidateSkill', skill: 'Composition and framing', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 71, op: 'consolidateSkill', skill: 'Lighting techniques', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 72, op: 'consolidateSkill', skill: 'Photo editing and post-processing', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 73, op: 'consolidateSkill', skill: 'Portrait photography', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 74, op: 'consolidateSkill', skill: 'Event photography', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 75, op: 'consolidateSkill', skill: 'Product photography', fromSector: 'Creative & Media', fromOccupation: 'Photographer', fromOccupationExisting: true, toSector: 'Creative & Media', toOccupation: 'Photographers / Videographers', toOccupationExisting: true },
+  { id: 76, op: 'deactivateOccupation', sector: 'Creative & Media', occupation: 'Photographer', occupationExisting: true, acknowledgedImpact: 'Duplicate of the pre-existing "Photographers / Videographers" occupation; all 8 of its skills are consolidated there by ops 68-75, so no active skill row remains under it and member profile links are untouched (consolidateSkill moves the row, not the id). The apply engine refuses this op if any active skill remains, and the audit row records the live reference count at apply time. Reversible via reactivateOccupation.' },
+  { id: 77, op: 'renameOccupation', sector: 'Creative & Media', from: 'Apparel / Fashion Designer', to: 'Apparel / Fashion Designers' },
+  { id: 78, op: 'renameOccupation', sector: 'Manufacturing & Industry', from: 'Machinist', to: 'Machinists' },
+
+  // Change 79 (owner-approved 2026-08-29): thin the one real near-duplicate the 68-76 merge leaves
+  // behind. "Lighting techniques" (moved in by op 71) and "Shooting and lighting techniques" (the
+  // seeded row) are the same claim, and the merged occupation already carries "Camera operation and
+  // settings" and "Composition and framing" for the shooting half - so the compound label adds
+  // nothing the plainer one does not, and a member reading a list with both in it cannot tell which
+  // to pick. "Lighting techniques" survives. Same merge-then-thin order as ops 26-34 then 35-38.
+  //
+  // The OTHER pair the merge leaves - "Photo editing and post-processing" against "Post-production
+  // and color grading" - is deliberately NOT thinned, and is not a duplicate on a second look: this
+  // occupation is "Photographers / Videographers", and those two labels are the photo side and the
+  // video side of its post-production work. Deactivating either would leave half the occupation with
+  // no way to say what it does. They stay as two skills on purpose.
+  { id: 79, op: 'deactivateSkill', sector: 'Creative & Media', occupation: 'Photographers / Videographers', occupationExisting: true, skill: 'Shooting and lighting techniques', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Lighting techniques", which survives as the plainer label; the merged occupation already carries "Camera operation and settings" and "Composition and framing" for the shooting half, so no claim is lost. Members holding this row stop seeing the chip until they re-pick the surviving skill, and the audit metadata records how many were holding it at apply time. Reversible via reactivateSkill.' },
 ];
 
 // ---------------------------------------------------------------------------
