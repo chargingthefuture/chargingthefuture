@@ -146,7 +146,7 @@ web ☐
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
 - "Accepts ServiceCredits" is true only when a `socket_relay_request_accepted_currencies` row with the ServiceCredits code exists (written by the Accepted-currencies checkboxes — see SR-4a); it is never derived from `price_currency` alone.
-- On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a favor later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
+- On `/apps/gdp`, the "Value waiting to happen" panel's SocketRelay row reads "SocketRelay requests waiting to be done" and grows by the posted amount (e.g. +15 for a 15-ServiceCredits post), not by 1; a post with no named value (or Free/Barter) adds one point. When a request later closes successfully, the same amount leaves the panel and enters the Community Value Index (see GDP-12 in the GDP test script).
 
 web ☐
 
@@ -589,7 +589,7 @@ naming them.
 4. In the SocketRelay admin Fulfillments tab, the same row reads **Deleted member**, not the raw id
    and not the literal text `deleted_member`.
 
-### SR-R1 — Record a completed favor as a regular one
+### SR-R1 — Record a completed request as a regular one
 
 **Role:** member
 **Surfaces:** web (desktop), web (mobile-responsive)
@@ -602,7 +602,7 @@ naming them.
 4. On one of them, pick a cadence and record it.
 
 **Expected:**
-- The prompt appears on the ACTIVE conversation as well as on one closed successfully — a member usually knows a favor is standing while it is still happening.
+- The prompt reads "a request like this one", and appears on the ACTIVE conversation as well as on one closed successfully — a member usually knows a request is standing while it is still happening.
 - It does NOT appear on a conversation closed unsuccessfully or canceled.
 - The other participant is already filled in and named — no member search.
 - After recording, the row appears in the Recurring Activity app marked "Recorded from SocketRelay", awaiting the other member.
