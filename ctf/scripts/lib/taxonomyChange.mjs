@@ -195,6 +195,49 @@ export const TAXONOMY_CHANGES = [
   { id: 55, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Full-stack development' },
   { id: 56, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'Web and responsive design' },
   { id: 57, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Web Developers', skill: 'JavaScript / TypeScript' },
+
+  // Changes 58-67 (issue #2344, owner request 2026-08-28): childcare, plus the teaching gaps that
+  // survived a check against the live taxonomy. A full read of the live occupation list (149
+  // occupations across all 20 sectors) answered both questions the issue said only the live data
+  // could. Education is a live sector and already carries seven occupations - Primary School
+  // Teachers, Secondary School Teachers, Early-Childhood Educators, School Administrators,
+  // Vocational Trainers, University Faculty, Education Support Staff - each holding three skills and
+  // each named in the plural, which is the convention these entries follow.
+  //
+  // Teaching: five of the seven skills the issue proposed are already live under a different name,
+  // so they are deliberately NOT added here. "Early years teaching" is the Early-Childhood Educators
+  // occupation itself; "primary teaching" is its "Curriculum delivery and lesson planning";
+  // "secondary subject teaching" is "Subject-matter instruction"; "special educational needs" is
+  // "Special education support"; "early childhood development" is "Developmental activity planning".
+  // Adding them again would split holders of one thing across two names - the harm changes 26-34 had
+  // to undo. Three teaching items were genuinely absent: tutoring, homeschooling, adult education.
+  //
+  // Childcare: no occupation in any sector is a childcare home, so the issue's premise held. The
+  // near misses were each checked and rejected - Early-Childhood Educators is the trained-educator
+  // role (its third skill is "Parent communication"), Health carries clinical roles only (Nurses,
+  // Midwives, Social Workers, Therapists), and the closest Retail & Services row names its own
+  // trades, "Personal Services (hairdressers, repair)". Childcare therefore gets its own occupation
+  // under Education, sitting next to Early-Childhood Educators.
+  //
+  // "Tutors" is a second new occupation rather than a skill hung off an existing one: tutoring is
+  // the one teaching role with no live home, and Education Support Staff is school staff
+  // (Administrative assistance, Librarianship), not a private tutor.
+  //
+  // Both new occupations are seeded with skills in the same apply run, because Workforce matches
+  // holders by skill name and an occupation with no skills matches nobody and shows empty in the
+  // browser. Ops 58 and 64 create the occupations, so the addSkill ops beneath them need no
+  // occupationExisting flag; op 67 targets the pre-existing Vocational Trainers occupation and
+  // carries it. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 58, op: 'addOccupation', sector: 'Education', occupation: 'Childcare Workers' },
+  { id: 59, op: 'addSkill', sector: 'Education', occupation: 'Childcare Workers', skill: 'Childcare and babysitting' },
+  { id: 60, op: 'addSkill', sector: 'Education', occupation: 'Childcare Workers', skill: 'Infant and toddler care' },
+  { id: 61, op: 'addSkill', sector: 'Education', occupation: 'Childcare Workers', skill: 'After-school care' },
+  { id: 62, op: 'addSkill', sector: 'Education', occupation: 'Childcare Workers', skill: 'Special needs care' },
+  { id: 63, op: 'addSkill', sector: 'Education', occupation: 'Childcare Workers', skill: 'Child first aid and CPR' },
+  { id: 64, op: 'addOccupation', sector: 'Education', occupation: 'Tutors' },
+  { id: 65, op: 'addSkill', sector: 'Education', occupation: 'Tutors', skill: 'Tutoring' },
+  { id: 66, op: 'addSkill', sector: 'Education', occupation: 'Tutors', skill: 'Homeschooling and curriculum planning' },
+  { id: 67, op: 'addSkill', sector: 'Education', occupation: 'Vocational Trainers', skill: 'Adult education and training', occupationExisting: true },
 ];
 
 // ---------------------------------------------------------------------------
