@@ -59,6 +59,32 @@ rule: a missing sector is a mis-named entry, not a creation request).
   `dependency-impact` endpoint uses and aborts if the note is missing or stale).
 - A deactivated target cannot be referenced by later changes (except `reactivate*`).
 
+## Apply-time checks (what the static check cannot see)
+
+The static check only sees what the change list declares. The live rows are in the database, not the
+repo, so a change that collides with a live row validates cleanly and only goes wrong at apply time.
+These checks run in the apply engine, which does see them:
+
+- **Plural-twin guard on `addOccupation`** (added 2026-08-29). Refuses to create an occupation that
+  names a role a live occupation in the same sector already names, comparing singular forms and
+  splitting compound labels on `/`. This is the mistake the taxonomy has made twice — "Marketing
+  Specialist" beside "Marketing Specialists" (cleaned up by changes 1 and 26–34) and "Photographer"
+  beside "Photographers / Videographers" (changes 68–76) — each time splitting one role's holders
+  across two rows that neither Workforce nor the Directory joins back together, and each time
+  costing nine changes to unwind. The guard fails the whole run, so the transaction rolls back and
+  the change is corrected in a PR rather than cleaned up afterwards. Deactivated rows count: creating
+  a twin of a row somebody deliberately turned off would quietly resurrect the split.
+  It applies to changes appended from id 80 on. Everything below replays as before, because change 1
+  *is* the Marketing twin — guarding it would leave the list unable to replay itself into a fresh
+  database, aborting on the historical entry that records the problem before any cleanup could run.
+  Every `addOccupation` between 2 and 79 was checked against the live occupation list and none names
+  a twin, so the boundary costs no coverage.
+  Deliberately imperfect in the safe direction: the `/` split cannot tell that "Graphic / Visual
+  Designers" is short for "Graphic Designers / Visual Designers", so a later "Graphic Designers"
+  would not be flagged. It is a net for the obvious case, not a proof — better to miss one than to
+  block a legitimate add on a guess. `renameOccupation` is not guarded; a rename into a twin is still
+  possible and is caught only by review.
+
 ## Build tasks (ordered; no phases)
 
 1. **Define the change module** — `ctf/scripts/lib/taxonomyChange.mjs`: the change vocabulary, the
