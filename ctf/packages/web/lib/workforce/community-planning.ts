@@ -34,44 +34,77 @@ export type CommunityPlanningTeamDefinition = {
   responsibleFor: string;
 };
 
-// The ten teams and their sector mapping, transcribed from the "Team model — who helps with what"
-// table in issue #1465, using the LIVE taxonomy sector names: the table's "Trades" is the
-// "Housing & Construction" sector and its "Energy" is "Energy & Utilities" (the shorthand names
-// rendered as "not mapped" until corrected — owner-confirmed live names, 2026-07-17).
+// The teams and their sector mapping. The first ten are transcribed from the "Team model — who
+// helps with what" table in issue #1465, using the LIVE taxonomy sector names: the table's "Trades"
+// is the "Housing & Construction" sector and its "Energy" is "Energy & Utilities" (the shorthand
+// names rendered as "not mapped" until corrected — owner-confirmed live names, 2026-07-17).
+//
+// PLAN FOR THE HARDEST CASE (owner direction, 2026-08-29). The original ten teams describe a gated
+// community that still buys most of what it needs from outside: municipal water, the grid, schools,
+// courts, shops, factories. That is the easy case. A community that has to run without any of that
+// needs more capacity inside it, and a plan built for the harder case already covers the easier one
+// — so the teams are scoped to a settlement that can stand on its own, and a simply gated community
+// is then a subset, not a separate plan.
+//
+// Concretely, the first ten teams left NINE of the twenty live taxonomy sectors with no team at
+// all: Water & Sanitation, Transport & Logistics, Telecommunications & IT, Education, Public Safety
+// & Justice, Finance & Public Administration, Manufacturing & Industry, Mining / Extractive, and
+// Tourism & Hospitality. Members whose only skills sit in those sectors were invisible to every
+// roster, and the demand gaps for them were never counted. Two of the gaps contradicted the teams'
+// own descriptions: Build & Infrastructure said it was responsible for "water" and "connectivity"
+// while drawing from neither Water & Sanitation nor Telecommunications & IT, and Food & Agriculture
+// claimed "kitchen/commons planning" while every Chef / Cook lives in Tourism & Hospitality.
+//
+// Three teams are added for capacities with no home at all (Water & Sanitation, Education &
+// Childcare, Making & Repair) and six existing teams are widened. Every one of the twenty sectors is
+// now drawn from by at least one team. Sectors deliberately appear in more than one team — the same
+// way Housing & Construction always has, across Land & Site, Build & Infrastructure and Operations —
+// because building a thing and running it afterwards are different jobs staffed from the same trade.
+// Rosters de-duplicate members, so an overlap costs nothing.
 export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'legal-governance',
     name: 'Legal & Governance',
-    sectors: ['Professional & Business Services'],
+    sectors: ['Professional & Business Services', 'Public Safety & Justice'],
     responsibleFor:
-      'Entity formation, membership and gating criteria, resident agreements, liability, dispute process',
+      'Entity formation, membership and gating criteria, resident agreements, liability, and a dispute process the community can run itself rather than taking to an outside court',
   },
   {
     key: 'finance',
     name: 'Finance',
-    sectors: ['Microfinance & SME Support', 'Professional & Business Services'],
+    sectors: [
+      'Microfinance & SME Support',
+      'Professional & Business Services',
+      'Finance & Public Administration',
+    ],
     responsibleFor:
-      'Funding model, budget, land purchase financing, ongoing cost model, reserves',
+      'Funding model, budget, land purchase financing, ongoing cost model, reserves, and the bookkeeping and buying that keep it running',
   },
   {
     key: 'land-site',
     name: 'Land & Site',
-    sectors: ['Housing & Construction', 'Environmental & Waste Management'],
+    sectors: ['Housing & Construction', 'Environmental & Waste Management', 'Mining / Extractive'],
     responsibleFor:
-      'Site criteria, land search, zoning, water/soil/environmental checks, utilities feasibility',
+      'Site criteria, land search, zoning, water/soil/environmental checks, utilities feasibility, and what the ground itself can supply — water, stone, clay, aggregate',
   },
   {
     key: 'build-infrastructure',
     name: 'Build & Infrastructure',
-    sectors: ['Housing & Construction', 'Energy & Utilities'],
+    sectors: [
+      'Housing & Construction',
+      'Energy & Utilities',
+      'Water & Sanitation',
+      'Telecommunications & IT',
+    ],
     responsibleFor:
       'Site plan, housing design, build order, roads, power, water, waste, connectivity',
   },
   {
     key: 'food-agriculture',
     name: 'Food & Agriculture',
-    sectors: ['Food & Agriculture'],
-    responsibleFor: 'Growing capacity, food storage, kitchen/commons planning',
+    sectors: ['Food & Agriculture', 'Tourism & Hospitality'],
+    responsibleFor:
+      'Growing capacity, food storage, and the commons kitchen — cooking for numbers, not for one household',
   },
   {
     key: 'health-wellbeing',
@@ -83,15 +116,16 @@ export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'safety-security',
     name: 'Safety & Security',
-    sectors: ['Emergency & Reserve Roles'],
+    sectors: ['Emergency & Reserve Roles', 'Public Safety & Justice'],
     responsibleFor:
       'Gate and perimeter model, emergency plans, drills, incident process that respects member privacy',
   },
   {
     key: 'technology',
     name: 'Technology',
-    sectors: ['R&D & High-Tech'],
-    responsibleFor: 'Connectivity, community use of this platform on site, records, backups',
+    sectors: ['R&D & High-Tech', 'Telecommunications & IT'],
+    responsibleFor:
+      'Connectivity that does not depend on one outside provider, community use of this platform on site, records, backups',
   },
   {
     key: 'communications-documentation',
@@ -103,9 +137,33 @@ export const COMMUNITY_PLANNING_TEAMS: CommunityPlanningTeamDefinition[] = [
   {
     key: 'operations-maintenance',
     name: 'Operations & Maintenance',
-    sectors: ['Retail & Services', 'Housing & Construction'],
+    sectors: ['Retail & Services', 'Housing & Construction', 'Transport & Logistics'],
     responsibleFor:
-      'Move-in logistics, shared-resource scheduling, maintenance rosters, supply purchasing',
+      'Move-in logistics, shared-resource scheduling, maintenance rosters, supply purchasing, and moving people and goods in and out',
+  },
+  // The three teams below are not in the issue #1465 table. They exist because a community that
+  // cannot buy these from outside has to staff them itself, and nothing in the original ten drew
+  // from their sectors at all.
+  {
+    key: 'water-sanitation',
+    name: 'Water & Sanitation',
+    sectors: ['Water & Sanitation'],
+    responsibleFor:
+      'Drinking water and wastewater once the taps exist: sources and wells, treatment, testing, distribution, repairs. Build & Infrastructure installs it; this team keeps it safe to drink',
+  },
+  {
+    key: 'education-childcare',
+    name: 'Education & Childcare',
+    sectors: ['Education'],
+    responsibleFor:
+      'Teaching and childcare on site — school-age lessons, tutoring, childcare and after-school cover, and training adults into the skills the other teams are short of',
+  },
+  {
+    key: 'making-repair',
+    name: 'Making & Repair',
+    sectors: ['Manufacturing & Industry', 'Mining / Extractive'],
+    responsibleFor:
+      'Making and mending what cannot be ordered in: fabrication, machining, spare parts, materials processing, and keeping equipment running past the point where a supplier would replace it',
   },
 ];
 
