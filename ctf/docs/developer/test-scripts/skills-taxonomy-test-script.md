@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education) |
 
 ## How to run this
 
@@ -136,7 +136,17 @@ the existing "UX/UI Designers" occupation, a job title, not a skill). After chan
 High-Tech** lists a new **Web Developers** occupation with five skills — Front-end development, Back-end
 development, Full-stack development, Web and responsive design, JavaScript / TypeScript. "Web and responsive
 design" appears under both Web Developers and Graphic / Visual Designers on purpose (same skill name under
-several occupations is expected, not a duplicate to clean up — Workforce matches by name).
+several occupations is expected, not a duplicate to clean up — Workforce matches by name). After changes 58–67 apply,
+**Education** lists two new occupations. **Childcare Workers** shows Childcare and babysitting, Infant and
+toddler care, After-school care, Special needs care, and Child first aid and CPR. **Tutors** shows Tutoring
+and Homeschooling and curriculum planning. The pre-existing **Vocational Trainers** also lists **Adult
+education and training** alongside its three original skills (Industry liaison, Practical assessment and
+certification, Skills-based curriculum delivery). Education's seven original occupations are otherwise
+unchanged — in particular **Early-Childhood Educators** still shows exactly Developmental activity planning,
+Health and safety for young children, and Parent communication: childcare was given its own occupation
+rather than folded into the trained-educator role, so nothing moved. "Child first aid and CPR" under
+Childcare Workers and "Health and safety for young children" under Early-Childhood Educators are separate
+skills by design, not a duplicate to consolidate.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
