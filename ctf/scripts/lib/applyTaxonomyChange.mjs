@@ -19,10 +19,30 @@
 //   waiting on it — self-edit Directory "skill not listed" proposals AND nominated / community-generated
 //   profiles whose SkillsHunt nomination proposed the skill.
 
-import { normalizeTaxonomyName } from './taxonomyNames.mjs';
+import { normalizeTaxonomyName, isPluralTwin } from './taxonomyNames.mjs';
 import { TAXONOMY_CHANGES, validateTaxonomyChanges } from './taxonomyChange.mjs';
 
 const ACTOR_ID = 'taxonomy-change';
+
+// The plural-twin guard (see the addOccupation case) applies to changes appended from this id on.
+// Everything below it replays exactly as it did before the guard existed, and that is deliberate:
+// change 1 IS the "Marketing Specialist" twin, the mistake this guard exists to prevent. The list
+// then cleans it up in changes 26-34. Guarding change 1 would make the change list unable to replay
+// itself into a fresh database - the run would abort on the historical entry that records the very
+// problem, and no later cleanup would ever get the chance to run. Production never sees this
+// (the row exists there, so the change no-ops before reaching the guard), which is exactly the kind
+// of difference that would go unnoticed until somebody rebuilt an environment from scratch.
+// Every addOccupation entry between 2 and 79 was checked against the live occupation list and none
+// names a twin, so the boundary costs no coverage on anything still to apply.
+const PLURAL_TWIN_GUARD_FIRST_CHANGE_ID = 80;
+
+// The guard's decision, kept separate from the database call so it can be exercised directly:
+// given the change's id, the occupation it wants to create, and the sector's live rows, which of
+// those rows name the same role? Empty means the add may proceed.
+export function findPluralTwins(changeId, occupationName, liveRows) {
+  if (!Number.isInteger(changeId) || changeId < PLURAL_TWIN_GUARD_FIRST_CHANGE_ID) return [];
+  return (liveRows ?? []).filter((row) => isPluralTwin(occupationName, row.name));
+}
 
 async function findSectorIdByName(client, sectorName) {
   const result = await client.query(
@@ -30,6 +50,17 @@ async function findSectorIdByName(client, sectorName) {
     [sectorName],
   );
   return result.rows[0]?.id ?? null;
+}
+
+// Every occupation name live in a sector, active or not. Used by the plural-twin guard, which has
+// to see deactivated rows too: creating a twin of a row somebody deliberately turned off is the same
+// split, and would quietly resurrect the problem the deactivation was cleaning up.
+async function listJobTitleNames(client, sectorId) {
+  const result = await client.query(
+    `SELECT name, is_active FROM skills_taxonomy_job_titles WHERE sector_id = $1`,
+    [sectorId],
+  );
+  return result.rows;
 }
 
 async function findJobTitle(client, sectorId, name) {
@@ -250,6 +281,32 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
             // reseed undo a deactivation. Reactivation is its own explicit change.
             summary.noops += 1;
             break;
+          }
+          // Plural-twin guard. The taxonomy has twice grown a singular occupation beside a live
+          // plural one - "Marketing Specialist" beside "Marketing Specialists", and "Photographer"
+          // beside "Photographers / Videographers" - and each split one role's holders across two
+          // rows that neither Workforce nor the Directory joins back together. The change list's
+          // static check cannot see this: the live rows are in the database, not the repo. Here they
+          // are visible, so refuse rather than create the second row. Failing the whole run is the
+          // point - the transaction rolls back, nothing partial lands, and the change is corrected
+          // in a PR instead of being cleaned up afterwards across nine more changes.
+          // The id check is repeated here only to skip the extra query for changes the guard does
+          // not apply to; findPluralTwins enforces the boundary itself.
+          const twins =
+            op.id >= PLURAL_TWIN_GUARD_FIRST_CHANGE_ID
+              ? findPluralTwins(op.id, occupation, await listJobTitleNames(client, sectorId))
+              : [];
+          if (twins.length > 0) {
+            const listed = twins
+              .map((row) => `"${row.name}"${row.is_active ? '' : ' (deactivated)'}`)
+              .join(', ');
+            throw new Error(
+              `change ${op.id}: addOccupation "${occupation}" would sit in ${sector} alongside ${listed}, ` +
+                'which names the same role. Two rows for one role split its holders in half and neither ' +
+                'shows the real capacity. If the live row is the one you mean, drop this addOccupation and ' +
+                'use addSkill with occupationExisting: true against that name. If the live row is genuinely ' +
+                'a different role, rename one of them so the difference is legible before adding.',
+            );
           }
           const inserted = await client.query(
             `INSERT INTO skills_taxonomy_job_titles (sector_id, name, display_order, is_active)

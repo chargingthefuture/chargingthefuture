@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard) |
 
 ## How to run this
 
@@ -137,6 +137,24 @@ High-Tech** lists a new **Web Developers** occupation with five skills — Front
 development, Full-stack development, Web and responsive design, JavaScript / TypeScript. "Web and responsive
 design" appears under both Web Developers and Graphic / Visual Designers on purpose (same skill name under
 several occupations is expected, not a duplicate to clean up — Workforce matches by name).
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5b · A change that would create a duplicate occupation fails the whole apply run
+**Role:** admin (whoever starts the apply workflow) · **Surfaces:** n/a — this is the apply run, not a screen
+**Precondition:** a change-list entry with id 80 or higher whose `addOccupation` names a role an occupation
+in that sector already names (for example `Photographer` where `Photographers / Videographers` is live).
+Do not merge such an entry to try this; read the run output of a real apply instead, or reason from the
+error text below.
+**Steps:**
+1. Start the `Skills Taxonomy — Apply Changes (production)` workflow.
+2. Read the run output.
+**Expected:** The run fails and the taxonomy is completely unchanged — the apply is one transaction, so
+nothing partial lands. The error names the change id, the occupation it tried to create, the live
+occupation(s) it collides with, and what to do instead: use `addSkill` with `occupationExisting: true`
+against the live name, or rename one of the two so the difference is legible. A live row that is
+deactivated still blocks, and is labelled `(deactivated)` in the message. Changes below id 80 are not
+guarded and replay exactly as before — change 1 is itself the historical `Marketing Specialist` twin, and
+guarding it would stop the list replaying into a fresh database.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
