@@ -252,10 +252,18 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   },
 ];
 
+// Only one entry, and it earns its place: the GDP plugin's slug is 'gdp', but four surfaces key on
+// 'gross-domestic-product' — the deletion registry's service slug, the theme tokens, the shell
+// plugin config, and the account-data icon map — so this is a live mapping between two spellings
+// that both exist today, not a redirect for an old name.
+//
+// The other two entries are gone (owner decision, 2026-08-28). 'leveluptraining' outlived the
+// LevelUp -> SkillUp rename, which its own change-log entry calls a hard cutover with no aliases;
+// 'servicecredits' predated it. Neither string appeared anywhere else in the repo. There is no
+// installed base to keep a legacy spelling working for, and an alias that resolves nothing is a
+// way for a non-canonical value to pass validation.
 const pluginAliasMap: Record<string, string> = {
   'gross-domestic-product': 'gdp',
-  leveluptraining: 'skill-up',
-  servicecredits: 'service-credits',
 };
 
 export function canonicalizePluginSlug(input: string): string {
