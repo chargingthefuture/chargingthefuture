@@ -34,11 +34,11 @@ const createCohortSchema = z.object({
   seats: z.number().int().positive(),
   startDate: z.string().min(1),
   endDate: z.string().min(1),
-  requiredCredits: z.number().min(0),
+  // No requiredCredits input: every cohort takes the same deposit, set in code (owner decision
+  // 2026-08-29). A per-cohort figure would be a judgment call, which is the bias being removed.
   materialsCost: z.number().min(0).optional(),
   deviceSupport: z.boolean().optional(),
   status: z.enum(['draft', 'open', 'active', 'completed', 'canceled']).optional(),
-  allowNoDeposit: z.boolean().optional(),
   trainerSplitPercent: z.number().min(0).max(100).optional(),
   completionBonusCredits: z.number().min(0).optional(),
   stipendMode: z.enum(['none', 'scheduled', 'milestone']).optional(),

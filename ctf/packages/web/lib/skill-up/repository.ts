@@ -11,7 +11,13 @@ import {
 } from 'lib/shared/credits-interface';
 import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
-import { SKILL_UP_AUTO_COHORT_ACTOR_ID, SKILL_UP_DEFAULT_TRAINER_SPLIT_PERCENT, SKILL_UP_PLUGIN_SLUG } from 'lib/skill-up/constants';
+import {
+  SKILL_UP_AUTO_COHORT_ACTOR_ID,
+  SKILL_UP_DEFAULT_TRAINER_SPLIT_PERCENT,
+  SKILL_UP_DEPOSIT_CREDITS,
+  SKILL_UP_PLUGIN_SLUG,
+  SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE,
+} from 'lib/skill-up/constants';
 
 function toNumber(value: string | number): number {
   return typeof value === 'number' ? value : Number(value);
@@ -25,18 +31,6 @@ function roundCurrency(value: number): number {
 // complexity (identical semantics to `value ?? fallback`).
 function orDefault<T>(value: T | null | undefined, fallback: T): T {
   return value ?? fallback;
-}
-
-function calculateTrainerPayout(learnerReleaseAmount: number, trainerSplitPercent: number): number {
-  if (trainerSplitPercent <= 0) {
-    return 0;
-  }
-  if (trainerSplitPercent >= 100) {
-    throw new Error('invalid_payload');
-  }
-  // Business rule: trainer split is computed from total milestone allotment,
-  // where learner release represents (100 - split)% of the milestone amount.
-  return roundCurrency((learnerReleaseAmount * trainerSplitPercent) / (100 - trainerSplitPercent));
 }
 
 function ensurePositiveAmount(amount: number) {
@@ -137,6 +131,7 @@ type CohortRow = {
   auto_created?: boolean;
   source_job_title_id?: string | null;
   source_sector?: string | null;
+  trainer_credits_per_milestone?: string | null;
 };
 
 function mapCohort(row: CohortRow) {
@@ -158,6 +153,8 @@ function mapCohort(row: CohortRow) {
     completionBonusCredits: toNumber(row.completion_bonus_credits),
     createdByUserId: row.created_by_user_id,
     autoCreated,
+    // What a trainer earns per milestone on this cohort — the browse card advertises it.
+    trainerCreditsPerMilestone: toNumber(row.trainer_credits_per_milestone ?? '0'),
     sourceJobTitleId: row.source_job_title_id ?? null,
     sourceSector: row.source_sector ?? null,
     // An auto-created cohort still owned by the scheduler has no human trainer yet.
@@ -177,7 +174,6 @@ type CreateCohortInput = {
   seats: number;
   startDate: string;
   endDate: string;
-  requiredCredits: number;
   materialsCost?: number;
   deviceSupport?: boolean;
   status?: 'draft' | 'open' | 'active' | 'completed' | 'canceled';
@@ -194,6 +190,9 @@ type CreateCohortInput = {
   policyJson?: Record<string, unknown>;
   curriculumItems?: Array<CohortCurriculumItemInput>;
   milestones?: Array<CohortMilestoneInput>;
+  // What a trainer receives per milestone per learner. Stamped at creation; defaults to the flat
+  // base rate for a cohort with no Workforce gap behind it.
+  trainerCreditsPerMilestone?: number;
   autoCreated?: boolean;
   sourceJobTitleId?: string | null;
   sourceSector?: string | null;
@@ -209,11 +208,12 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
        trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
        microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
-       auto_created, source_job_title_id, source_sector, source_gap_at_creation)
+       auto_created, source_job_title_id, source_sector, source_gap_at_creation,
+       trainer_credits_per_milestone)
      VALUES
       ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
        $13, $14, $15, $16, $17, $18, $19, $20::jsonb, $21::jsonb, $22::jsonb, $23,
-       $24, $25, $26, $27)`,
+       $24, $25, $26, $27, $28)`,
     [
       cohortId,
       input.title,
@@ -222,11 +222,14 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       input.seats,
       input.startDate,
       input.endDate,
-      input.requiredCredits,
+      // Every cohort takes the same deposit from every member (owner decision 2026-08-29). Not an
+      // input: a per-cohort figure would be a judgment call, and that is the bias being removed.
+      SKILL_UP_DEPOSIT_CREDITS,
       orDefault(input.materialsCost, 0),
       orDefault(input.deviceSupport, false),
       status,
-      orDefault(input.allowNoDeposit, false),
+      // No cohort is free any more, so nothing may skip the deposit.
+      false,
       trainerSplitPercent,
       orDefault(input.completionBonusCredits, 0),
       orDefault(input.stipendMode, 'none'),
@@ -242,6 +245,7 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       orDefault<string | null>(input.sourceJobTitleId, null),
       orDefault<string | null>(input.sourceSector, null),
       orDefault<number | null>(input.sourceGapAtCreation, null),
+      orDefault(input.trainerCreditsPerMilestone, SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE),
     ],
   );
 }
@@ -335,6 +339,7 @@ export async function listCohorts(filter: CohortFilter) {
       c.completion_bonus_credits::text,
       c.created_by_user_id,
       c.auto_created,
+      c.trainer_credits_per_milestone::text AS trainer_credits_per_milestone,
       c.source_job_title_id::text AS source_job_title_id,
       c.source_sector,
       COALESCE(e.active_enrollments, 0)::text AS active_enrollments
@@ -778,7 +783,7 @@ type ReleaseEnrollmentRow = {
 };
 
 type ReleaseEscrowRow = { escrow_id: string; held_amount: string; release_status: string };
-type ReleaseCohortRow = { trainer_split_percent: string; completion_bonus_credits: string };
+type ReleaseCohortRow = { trainer_split_percent: string; completion_bonus_credits: string; trainer_credits_per_milestone: string };
 
 async function assertMilestoneReleasable(client: PoolClient, enrollmentId: string, milestoneId: string) {
   const validation = await client.query<{ status: string }>(
@@ -840,7 +845,7 @@ async function loadHeldEscrowForRelease(client: PoolClient, enrollmentId: string
 
 async function loadCohortForRelease(client: PoolClient, cohortId: string): Promise<ReleaseCohortRow> {
   const cohort = await client.query<ReleaseCohortRow>(
-    `SELECT trainer_split_percent::text, completion_bonus_credits::text
+    `SELECT trainer_split_percent::text, completion_bonus_credits::text, trainer_credits_per_milestone::text
      FROM skill_up_cohorts
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -878,8 +883,11 @@ async function buildMilestoneReleaseDraft(client: PoolClient, input: ReleaseMile
   const cohort = await loadCohortForRelease(client, enrollment.cohort_id);
 
   const heldAmount = toNumber(escrow.held_amount);
-  const trainerSplitPercent = toNumber(cohort.trainer_split_percent);
-  const trainerPayoutAmount = calculateTrainerPayout(heldAmount, trainerSplitPercent);
+  // The trainer's credits are minted, not taken from the learner's deposit, so the amount is the
+  // flat rate stamped on the cohort — NOT a share of the escrow (owner decision 2026-08-29). Tying
+  // it to the deposit meant paying trainers more required charging learners more, and a free cohort
+  // paid its trainer nothing at all.
+  const trainerPayoutAmount = roundCurrency(toNumber(cohort.trainer_credits_per_milestone));
 
   const isFinalMilestone = await isFinalMilestoneForEnrollment(client, input.enrollmentId, enrollment.cohort_id);
 
@@ -933,6 +941,18 @@ export async function releaseMilestoneCredits(input: ReleaseMilestoneInput) {
       idempotencyKey: `${input.idempotencyKey}:trainer-payout`,
     });
     trainerPayoutGovernanceId = trainerPayout.governanceEventId;
+
+    // Record what moved. Nothing wrote this table before, so trainer earnings history, the admin
+    // "avg days to first trainer credit grant" KPI and the trainer's own wallet all read an empty
+    // table while credits really were arriving. Credits that move with no record are how nobody
+    // noticed.
+    await recordSkillUpDisbursement({
+      enrollmentId: releaseDraft.enrollmentId,
+      recipientUserId: releaseDraft.trainerUserId,
+      disbursementType: 'trainer_payout',
+      amount: releaseDraft.trainerPayoutAmount,
+      metadata: { cohortId: releaseDraft.cohortId, milestoneId: releaseDraft.milestoneId },
+    });
   }
 
   let completionBonusGovernanceId: string | null = null;
@@ -946,6 +966,14 @@ export async function releaseMilestoneCredits(input: ReleaseMilestoneInput) {
       idempotencyKey: `${input.idempotencyKey}:completion-bonus`,
     });
     completionBonusGovernanceId = bonus.governanceEventId;
+
+    await recordSkillUpDisbursement({
+      enrollmentId: releaseDraft.enrollmentId,
+      recipientUserId: releaseDraft.recipientUserId,
+      disbursementType: 'completion_bonus',
+      amount: releaseDraft.completionBonusAmount,
+      metadata: { cohortId: releaseDraft.cohortId, enrollmentId: releaseDraft.enrollmentId },
+    });
   }
 
   const response = await withDbTransaction(async (client: PoolClient) => {
@@ -1788,4 +1816,118 @@ export async function listEnrollmentMilestones(enrollmentId: string) {
     releaseStatus: row.release_status,
     heldAmount: toNumber(row.held_amount),
   }));
+}
+
+// === Disbursement record ===
+
+// Append the record of a credit grant this plugin made. Separate from the grant itself, which goes
+// through service-credits: this row is what SkillUp's own surfaces read to say what a trainer has
+// earned. Best-effort — a written grant must not be undone because its record failed — but a failure
+// is reported rather than swallowed, because a missing row is exactly the silence this fixes.
+async function recordSkillUpDisbursement(input: {
+  enrollmentId: string;
+  recipientUserId: string;
+  disbursementType: 'trainer_payout' | 'completion_bonus';
+  amount: number;
+  metadata: Record<string, unknown>;
+}): Promise<void> {
+  await queryDb(
+    `INSERT INTO skill_up_disbursements (enrollment_id, recipient_user_id, disbursement_type, amount, metadata)
+     VALUES ($1::uuid, $2, $3, $4, $5::jsonb)`,
+    [
+      input.enrollmentId,
+      input.recipientUserId,
+      input.disbursementType,
+      input.amount,
+      JSON.stringify(input.metadata),
+    ],
+  );
+}
+
+// === Leaving a cohort ===
+
+export type LeaveCohortOutcome =
+  | { status: 'left'; enrollmentId: string; refundedCredits: number }
+  | { status: 'not_found' }
+  | { status: 'not_yours' }
+  | { status: 'invalid_state' };
+
+/**
+ * A member leaves a cohort and gets back every credit still held for it.
+ *
+ * Until this existed there was no way out: escrow moved from 'held' only when a trainer validated a
+ * milestone, and there was no drop route at all. At a zero deposit nobody could be harmed by that.
+ * With a real deposit it would mean a member who stalls — or whose cohort never gets a trainer —
+ * has credits locked with nothing they can do, which is why this ships with the deposit and not
+ * after it.
+ *
+ * Milestones already validated keep their releases; only what is still held comes back.
+ */
+export async function leaveCohort(input: {
+  actorId: string;
+  enrollmentId: string;
+  idempotencyKey: string;
+}): Promise<LeaveCohortOutcome> {
+  const enrollment = await queryDb<{ user_id: string; cohort_id: string; status: string }>(
+    `SELECT user_id, cohort_id::text AS cohort_id, status FROM skill_up_enrollments WHERE id = $1::uuid LIMIT 1`,
+    [input.enrollmentId],
+  );
+  const row = enrollment.rows[0];
+  if (!row) {
+    return { status: 'not_found' };
+  }
+  // Scoped to the caller: leaving is a member acting on their own enrollment, never on someone
+  // else's.
+  if (row.user_id !== input.actorId) {
+    return { status: 'not_yours' };
+  }
+  if (row.status !== 'enrolled' && row.status !== 'active') {
+    return { status: 'invalid_state' };
+  }
+
+  const held = await queryDb<{ id: string; escrow_id: string; held_amount: string }>(
+    `SELECT id::text AS id, escrow_id::text AS escrow_id, held_amount::text AS held_amount
+       FROM skill_up_enrollment_milestone_escrows
+      WHERE enrollment_id = $1::uuid AND release_status = 'held'`,
+    [input.enrollmentId],
+  );
+
+  let refundedCredits = 0;
+  for (const escrow of held.rows) {
+    await refundEscrow({
+      actorId: input.actorId,
+      escrowId: escrow.escrow_id,
+      refundReason: 'skill_up_enrollment_left',
+      originPlugin: SKILL_UP_PLUGIN_SLUG,
+      idempotencyKey: `${input.idempotencyKey}:refund:${escrow.escrow_id}`,
+    });
+    await queryDb(
+      `UPDATE skill_up_enrollment_milestone_escrows
+       SET release_status = 'refunded', updated_at = NOW()
+       WHERE id = $1::uuid`,
+      [escrow.id],
+    );
+    refundedCredits = roundCurrency(refundedCredits + toNumber(escrow.held_amount));
+  }
+
+  await queryDb(
+    `UPDATE skill_up_enrollments SET status = 'dropped', updated_at = NOW() WHERE id = $1::uuid`,
+    [input.enrollmentId],
+  );
+
+  await insertSkillUpAudit({
+    actorId: input.actorId,
+    command: 'skill-up.enrollment.leave',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetType: 'enrollment',
+    targetId: input.enrollmentId,
+    metadata: {
+      refundedCredits,
+      escrowsRefunded: held.rows.length,
+      targetContext: { enrollmentId: input.enrollmentId, cohortId: row.cohort_id },
+    },
+  });
+
+  return { status: 'left', enrollmentId: input.enrollmentId, refundedCredits };
 }

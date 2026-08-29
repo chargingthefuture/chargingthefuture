@@ -38,6 +38,12 @@ a member reads who runs a cohort and cannot edit it.
 8. Credits Wallet (grant-only view): the signed-in user's ServiceCredits balance, total earned through SkillUp, escrow held, and a read-only history of credits earned/granted. Exposes no spend or transfer action.
 9. Your own cohorts, on every visit (2026-08-15). Browse shows **My Cohorts** — how many cohorts you are in right now — and Progress lists each one with its milestone count (for example "2/5") and your trainer's name; a cohort you have already joined shows "✓ Enrolled" instead of an Enroll button. Before this the member screen only remembered cohorts you joined during that same visit, so coming back later showed zero and an empty Progress tab. Finished cohorts read "Completed" and ones you left read "You left this cohort", so the count of cohorts you are in never quietly includes them. If the read fails, the count shows a dash and a note explains that it could not be read — it never shows a "0" that would look like you are not enrolled anywhere.
 
+5. **Leaving a cohort returns what is still held.** Before this there was no way out of an
+   enrollment at all: escrow left `held` only when a trainer validated a milestone. With a deposit on
+   every cohort that would have stranded the credits of anyone who stalls, or whose cohort never gets
+   a trainer, so the two ship together. Milestones already validated keep their releases; only what
+   is still held comes back.
+
 ## Implemented Trainer Features
 
 1. Milestone validation endpoint for trainer/admin.
@@ -112,6 +118,35 @@ deferred. That future model is where `max_concurrent` becomes load-bearing again
   `POST /api/skill-up/cohorts/[cohortId]/claim-trainer`, which makes them the trainer of record; until
   then the cohort carries a derived `needsTrainer` flag.
 
+## Cohort Economics (owner decision, 2026-08-29)
+
+The deposit and the trainer's earnings used to be one number: the trainer received
+`held x split / (100 - split)`, derived from the learner's escrow. That coupling meant paying
+trainers more required charging learners more, and a free cohort paid its trainer nothing at all.
+The largest Workforce gaps sit in the lowest-paid occupations, so scaling the deposit by demand would
+have asked the largest stake of exactly the people the gap exists to recruit. The two are now
+separate.
+
+- **The deposit is flat: `SKILL_UP_DEPOSIT_CREDITS` = 50, the same for every cohort and every
+  member, never zero.** It is not an input to cohort creation — a per-cohort figure would be a
+  judgment call, which is the bias being removed. It is a commitment device: held in escrow, released
+  back in full as each milestone is validated, and refunded on leaving. It is not spent.
+- **The trainer's rate is minted, not taken from the learner.** Each cohort stores
+  `trainer_credits_per_milestone`, stamped at creation, granted per milestone per learner on release.
+  Base `SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE` = 10.
+- **The Workforce gap scales the trainer's rate, between 1x and 2x** (`trainerRateForGap` in
+  `lib/skill-up/auto-cohort.ts`). Training a short occupation earns more, so trainers go where the
+  need is — the demand signal aimed at the scarce side of the market. Every cohort has read
+  "Trainer TBD"; trainers are what is short, not learners. The ceiling is the 90th-percentile gap in
+  the same report rather than a fixed number: set too high, every occupation sits at the floor and
+  the signal does nothing, and one outlier gap must not compress everyone else. Stamped at creation
+  so a trainer's rate cannot drift after they claim it.
+- **Credits that move are now recorded.** `skill_up_disbursements` had no writer at all, so trainer
+  earnings history, the admin "avg days to first trainer credit grant" KPI and the trainer's wallet
+  history all read an empty table while credits really were arriving. Both the trainer grant and the
+  completion bonus now write a row.
+- The completion bonus grants to the **learner**, not the trainer.
+
 ## API Surface and Route Map
 
 - `GET /api/skill-up/cohorts`
@@ -122,6 +157,7 @@ deferred. That future model is where `max_concurrent` becomes load-bearing again
 - `GET /api/skill-up/admin/cohort-proposals` — admin-only; the ranked pending proposal queue (per `cohort.proposal_approve`/`_dismiss` read surface).
 - `POST /api/skill-up/admin/cohort-proposals/[proposalId]/approve` — admin-only; opens a cohort from a pending proposal with a chosen term of 1/3/5 months; CSRF-guarded (per `cohort.proposal_approve` contract).
 - `POST /api/skill-up/admin/cohort-proposals/[proposalId]/dismiss` — admin-only; removes a pending proposal from the queue; CSRF-guarded (per `cohort.proposal_dismiss` contract).
+- `POST /api/skill-up/enrollments/[enrollmentId]/leave` — the member leaves their own enrollment; every credit still held in escrow for it is refunded to them and the enrollment goes to `dropped`. Scoped to the caller inside the repository (it accepts no user id), CSRF-guarded, and idempotent on a supplied key so a repeat cannot refund twice (per `enrollment.leave` contract).
 - `POST /api/skill-up/enroll` — member or admin only; trainer-only accounts are blocked (per `enrollment.create` contract).
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
@@ -268,6 +304,20 @@ that exist today.
 
 ## Change Log
 
+- 2026-08-29: **Deposit decoupled from trainer earnings; leaving a cohort refunds what is held
+  (owner decision).** The deposit is now flat at 50 for every cohort and every member and is no
+  longer an input to cohort creation; `allow_no_deposit` is gone from the create path and cleared on
+  existing rows by `post/0011`. The trainer's amount no longer derives from the escrow: each cohort
+  stores `trainer_credits_per_milestone` (base 10), stamped at creation and scaled 1x-2x by the
+  Workforce gap against the 90th-percentile gap in the same report, so training a short occupation
+  earns more and the demand signal recruits trainers rather than pricing out learners.
+  `calculateTrainerPayout` is deleted. New `POST /api/skill-up/enrollments/[enrollmentId]/leave`
+  refunds every still-held escrow and drops the enrollment — it ships with the deposit rather than
+  after it, because before it existed escrow left `held` only on trainer validation and there was no
+  drop route, which at a real deposit would strand the credits of anyone who stalls.
+  `skill_up_disbursements` finally gets a writer for both the trainer grant and the completion bonus;
+  nothing had ever inserted into it, so every surface reporting trainer earnings read an empty table.
+  The browse card reads the stamped rate instead of deriving one from the deposit.
 - 2026-08-29: **The browse card says what the cohort moves, for both sides (owner directive).** With
   the repeated track chip gone the tile had room, so it now advertises the economics instead of
   leaving them to be discovered after enrolling. New pure helper `cohortEconomics` in

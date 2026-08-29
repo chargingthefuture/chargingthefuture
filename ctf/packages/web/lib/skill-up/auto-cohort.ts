@@ -18,6 +18,9 @@ import { fetchOccupationGapReport } from 'lib/shared/workforce-interface';
 import { createCohort, insertSkillUpAudit } from 'lib/skill-up/repository';
 import {
   SKILL_UP_AUTO_COHORT_ACTOR_ID,
+  SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE,
+  SKILL_UP_TRAINER_GAP_MULTIPLIER_MAX,
+  SKILL_UP_TRAINER_GAP_MULTIPLIER_MIN,
   SKILL_UP_AUTO_COHORT_DEFAULT_MILESTONES,
   SKILL_UP_AUTO_COHORT_DEFAULTS,
   type SkillUpProposalTermMonths,
@@ -422,6 +425,34 @@ export type ApproveProposalResult =
  * double-approved. If the occupation already has an open auto cohort (the unique-cohort guard fires),
  * the proposal is marked superseded and no cohort is opened.
  */
+/**
+ * What a trainer earns per milestone on a cohort for this occupation.
+ *
+ * The Workforce gap scales the rate, so training a short occupation earns more and trainers go where
+ * the need is (owner decision 2026-08-29). The demand signal is aimed at trainers, who are the
+ * scarce input — every cohort has read "Trainer TBD" — rather than at learners, where it would have
+ * been a barrier to the people the gap exists to recruit.
+ *
+ * The ceiling is the 90th-percentile gap in the same report, not a hard-coded number: a fixed
+ * ceiling set too high leaves every occupation near the floor and the signal does nothing, and one
+ * outlier gap must not compress everyone else. Computed at creation and stamped on the cohort, so a
+ * trainer's rate cannot drift after they claim it.
+ */
+export function trainerRateForGap(gap: number, allGaps: number[]): number {
+  const sorted = [...allGaps].filter((value) => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) {
+    return SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE;
+  }
+  const ceiling = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.9))];
+  const floor = sorted[0];
+  const span = ceiling - floor;
+  const position = span > 0 ? Math.min(1, Math.max(0, (gap - floor) / span)) : 0;
+  const multiplier =
+    SKILL_UP_TRAINER_GAP_MULTIPLIER_MIN +
+    position * (SKILL_UP_TRAINER_GAP_MULTIPLIER_MAX - SKILL_UP_TRAINER_GAP_MULTIPLIER_MIN);
+  return Math.round(SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE * multiplier * 100) / 100;
+}
+
 export async function approveCohortProposal(input: {
   actorId: string;
   proposalId: string;
@@ -450,6 +481,14 @@ export async function approveCohortProposal(input: {
   const startDate = todayIso();
   const endDate = addMonthsIso(startDate, input.termMonths);
 
+  // Read the current gaps so this cohort's trainer rate is scaled against the real spread rather
+  // than a number picked in advance.
+  const gapReport = await fetchOccupationGapReport().catch(() => []);
+  const trainerCreditsPerMilestone = trainerRateForGap(
+    Number(proposal.gap_at_proposal),
+    gapReport.map((item) => item.gap),
+  );
+
   try {
     const created = await createCohort({
       actorId: SKILL_UP_AUTO_COHORT_ACTOR_ID,
@@ -466,8 +505,6 @@ export async function approveCohortProposal(input: {
       endDate,
       // One global economic policy (per-occupation tuning deferred, #1197). A deposit is only required
       // when defaultRequiredCredits > 0.
-      requiredCredits: config.defaultRequiredCredits,
-      allowNoDeposit: config.defaultRequiredCredits <= 0,
       trainerSplitPercent: config.defaultTrainerSplitPercent,
       completionBonusCredits: config.defaultCompletionBonusCredits,
       milestones: SKILL_UP_AUTO_COHORT_DEFAULT_MILESTONES.map((milestone) => ({ ...milestone })),
@@ -476,6 +513,7 @@ export async function approveCohortProposal(input: {
       sourceJobTitleId: proposal.source_job_title_id,
       sourceSector: proposal.sector,
       sourceGapAtCreation: Number(proposal.gap_at_proposal),
+      trainerCreditsPerMilestone,
     });
 
     await queryDb(

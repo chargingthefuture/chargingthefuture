@@ -435,3 +435,30 @@ contracts:
     purpose: training_cohort_management
     retentionClass: transactional_long_lived
     idempotency: false
+
+  - pluginId: skill-up
+    command: enrollment.leave
+    version: 1.0.0
+    description: A member leaves their own cohort enrollment. Every credit still held in escrow for that enrollment is refunded to them; milestones already validated keep their releases. Scoped to the caller's own enrollment - it takes no user id from the request. Idempotent on the supplied key so a repeated request cannot refund twice.
+    inputSchema:
+      enrollmentId:
+        type: string
+        required: true
+      idempotencyKey:
+        type: string
+        required: true
+    outputSchema:
+      enrollmentId:
+        type: string
+      refundedCredits:
+        type: number
+    dataAccess:
+      - skill_up_enrollments
+      - skill_up_enrollment_milestone_escrows
+      - skill_up_audit_events
+      - service_credits_escrow_holds
+      - service_credits_wallets
+      - service_credits_transfers
+    purpose: training_cohort_management
+    retentionClass: transactional_long_lived
+    idempotency: true

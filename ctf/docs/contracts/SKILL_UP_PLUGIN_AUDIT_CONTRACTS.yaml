@@ -252,3 +252,26 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skill-up
+    command: enrollment.leave
+    commandVersion: 1.0.0
+    purpose: training_cohort_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - enrollment_record
+      - escrow_balance
+    targetContext:
+      workspaceId: workspace_identifier
+      enrollmentId: enrollment_identifier
+      cohortId: cohort_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
