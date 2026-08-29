@@ -474,6 +474,10 @@ export async function approveCohortProposal(input: {
       status: 'open',
       autoCreated: true,
       sourceJobTitleId: proposal.source_job_title_id,
+      // The occupation this cohort trains, which the trainer claim gate matches Directory skills
+      // against. Same id as the source gap here, but a distinct field: without it a newly approved
+      // cohort would open unclaimable, since job_title_id is what the gate reads.
+      jobTitleId: proposal.source_job_title_id,
       sourceSector: proposal.sector,
       sourceGapAtCreation: Number(proposal.gap_at_proposal),
     });

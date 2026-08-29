@@ -324,7 +324,8 @@ that exist today.
   `trainer` role check — that role comes from Clerk token claims, which was the manual step being
   removed — and any trainerless cohort is now claimable, not only ones the retired generator opened.
   New `skill_up_cohorts.job_title_id` names the occupation a cohort trains and is required on create
-  (`POST /api/skill-up/cohorts`); `post/0010` backfills it. New table
+  (`POST /api/skill-up/cohorts`); `post/0010` backfills it, and `approveCohortProposal` sets it from
+  the proposal's occupation so a newly approved cohort does not open unclaimable. New table
   `skill_up_trainer_skill_audit` records every skill added to or removed from a claimed Directory
   profile, written from Directory through the new `lib/shared/skill-up-interface.ts` (the sanctioned
   crossing point — Directory never imports `lib/skill-up`) on the caller's own transaction. The log
