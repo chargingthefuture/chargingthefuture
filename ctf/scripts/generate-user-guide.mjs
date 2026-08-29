@@ -2,7 +2,7 @@
 /**
  * Regenerates the public user guide from each member-facing plugin's own documentation.
  *
- * Grounding (this is the whole point): the ONLY facts fed to the model are, per plugin, the
+ * Grounding, and everything else here depends on it: the ONLY facts fed to the model are, per plugin, the
  * inventory's "Intent and Outcome" statement, its "User Features" section, and the test script's
  * "Core smoke" walkthrough — the plain-language, always-current descriptions of what the plugin is,
  * what a member can do, and how. The model rewrites those into the project's plain voice and is told,
@@ -256,7 +256,8 @@ const VOICE = `VOICE:
 - Plain, about a 6th-grade reading level. Short sentences. Everyday words. Write to a capable adult, plainly.
 - Built and run by a single operator, not a company: never use "we", "our", or "us". Prefer person-free sentences ("Open X and pick…"); a singular "I" only if unavoidable.
 - No selling ("powerful", "seamless", "game-changer", "matters deeply"), no rhetorical questions, no closing flourish, no guessing at the reader's feelings.
-- Never use any of these words: thanks, sorry, glad, happy, excited, feel free, hope, phase, punch list.`;
+- Never use any of these words: thanks, sorry, glad, happy, excited, feel free, hope, phase, punch list.
+- Never write a sentence whose job is to tell the reader which fact mattered ("that is the whole point", "which is the whole argument"). State the thing and stop.`;
 
 // Pull the JSON object out of the model's reply. Haiku often wraps it in a ```json fence or adds a
 // line of preamble, so a strict JSON.parse of the raw text rejects a perfectly good answer (that is
