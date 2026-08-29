@@ -123,7 +123,7 @@ export default async function AdminPage() {
 
   return (
     <div className={styles.page}>
-      {/* Consistent one-skill-up back control: from the admin directory, back goes to the home hub.
+      {/* Consistent one-level-up back control: from the admin directory, back goes to the home hub.
           The shared header resolves the destination from the path (see resolveBackTarget). */}
       <MobileScreenHeader
         title="Admin"

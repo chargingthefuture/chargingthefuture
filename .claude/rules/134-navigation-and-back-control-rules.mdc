@@ -10,8 +10,8 @@ hard rule. Read this before adding, moving, or "fixing" any back button or scree
 
 **Policy update (owner-directed, 2026-07-17): back is history-first.** The in-app back control now
 returns to the **previous in-app page** when there is one, and only falls back to the tailored
-one-skill-up destination when there is no in-app history (e.g. the installed web app opened straight
-onto a deep link). The earlier "always one-skill-up, never history" rule is superseded. The shared
+one-level-up destination when there is no in-app history (e.g. the installed web app opened straight
+onto a deep link). The earlier "always one-level-up, never history" rule is superseded. The shared
 pieces implement this — nothing changes for callers, and the ban on hand-rolled back controls stands.
 
 **Mobile-first update (owner decision, 2026-07-20 — see rule 105):** the web app now renders the
@@ -39,7 +39,7 @@ There are exactly three shared pieces. Use them; never hand-roll a back control.
 
 All three resolve behavior through **`useSmartBack()`** (`lib/nav/back-history.tsx`): previous
 in-app page when the per-tab history stack has one (real `router.back()`, so scroll/state restore),
-else the one-skill-up fallback from **`resolveBackTarget(pathname)`** (`lib/nav/back-target.ts` —
+else the one-level-up fallback from **`resolveBackTarget(pathname)`** (`lib/nav/back-target.ts` —
 an `/admin/*` page → `/admin`; `/admin` → home; `/account/*` → `/account`; everything else → all
 apps). The history stack is maintained by **`NavHistoryTracker`**, mounted once in the root layout —
 do not mount it again. **Never compute a back destination by hand** and never call `router.back()`

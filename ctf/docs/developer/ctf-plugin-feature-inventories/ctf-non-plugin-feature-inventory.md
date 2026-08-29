@@ -467,7 +467,7 @@ An owner-curated list of real community comments, shown two ways on the public (
 - 2026-07-17: **History-aware back navigation (owner directive) + shared admin↔member navigation
   controls.** The in-app back control (the shared chevron on every screen) now returns to the
   **previous in-app page** when there is one, instead of always jumping one level up; the tailored
-  one-skill-up destination (`resolveBackTarget`) remains the fallback for screens opened with no
+  one-level-up destination (`resolveBackTarget`) remains the fallback for screens opened with no
   in-app history (deep links, installed-app cold starts). Implemented centrally in
   `ctf/packages/web/lib/nav/back-history.tsx`: `NavHistoryTracker` (mounted once in the root layout)
   keeps a per-tab pathname stack in sessionStorage, `useSmartBack()` picks real history back vs the

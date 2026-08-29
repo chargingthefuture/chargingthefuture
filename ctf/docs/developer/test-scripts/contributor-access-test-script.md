@@ -10,7 +10,7 @@
 | **Surfaces** | Web (desktop), Web (mobile-responsive) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-08-05 (commit efb8d7710) |
+| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
 
 > **Android note:** The Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is web-only. No android checkboxes appear in this script.
 

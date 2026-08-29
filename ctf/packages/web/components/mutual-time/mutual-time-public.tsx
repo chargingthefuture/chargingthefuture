@@ -89,7 +89,7 @@ export function MutualTimePublic({ initialEvent, initialViewer, isSignedIn, sign
 // the shared back chevron.
 //
 // That chevron shows only when there is somewhere in-app to go back to. A visitor usually arrives here
-// from a link pasted somewhere else entirely, so there is nothing in-app behind them; the one-skill-up
+// from a link pasted somewhere else entirely, so there is nothing in-app behind them; the one-level-up
 // fallback would push them to the all-apps page, which needs an account. Their browser's own back still
 // returns them to wherever the link came from. A signed-in member never needs it here — they already
 // have the standard top bar above.
