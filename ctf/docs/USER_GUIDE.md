@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-08-29_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -27,7 +27,7 @@ The other half is a grid of every app, with a search box and a choice of order �
 
 ## Unlock
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-08-23_
 
 Unlock is how a new account gets approved: you send the web address of your Quora profile, and a person reads it.
 
@@ -46,7 +46,7 @@ If you cannot find the address of your own profile, the screen carries a note te
 
 ## Directory
 
-_Last updated: 2026-07-31_
+_Last updated: 2026-08-28_
 
 Directory is a list of members and the skills they have.
 
@@ -81,7 +81,7 @@ Track all your requests, active connections, and past work in one place. Get not
 
 ## Chyme
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-24_
 
 Chyme is a live audio room where survivors can connect, listen, speak, and chat together in real time.
 
@@ -100,7 +100,7 @@ You can send ServiceCredits as a tip to another member in the room right now usi
 
 ## Mutual Time
 
-_Last updated: 2026-08-13_
+_Last updated: 2026-08-28_
 
 Mutual Time finds an hour a group can meet, from one link everyone opens — no calendar is collected from anyone.
 
@@ -119,7 +119,7 @@ Anyone can open the link, whether or not they are signed in or approved. A visit
 
 ## SocketRelay
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-28_
 
 SocketRelay is where you post a task or favor you need help with, or claim someone else's request to help them out.
 
@@ -137,7 +137,7 @@ After a favor is complete, you can record it as an ongoing arrangement (like a r
 
 ## Beacon
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-08-12_
 
 Beacon is a live broadcast where members can watch, chat, and react together.
 
@@ -155,7 +155,7 @@ After the event ends, the recording stays on Beacon and gets posted to the Commo
 
 ## PeerProgramming
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-27_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
@@ -173,7 +173,7 @@ After your cohort ends, a feedback box appears where you can write a note about 
 
 ## Mood
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-08-17_
 
 Mood lets you check in on how you're doing, and see how the community is doing overall.
 
@@ -189,7 +189,7 @@ The community can see a chart of all the mood check-ins together, but no one can
 
 ## WhatWorks
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-08-28_
 
 WhatWorks is a shared list of tools that survivors say help with specific problems.
 
@@ -207,7 +207,7 @@ Suggest a new tool for a problem you know about. Give the product name, a link t
 
 ## SkillsHunt
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-08-29_
 
 SkillsHunt is a round-based nomination system where members submit and review skills and work experience.
 
@@ -225,7 +225,7 @@ View the leaderboard to see accepted nominations ranked by points. Team leaderbo
 
 ## Workforce
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-29_
 
 Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.
 
@@ -243,7 +243,7 @@ Browse occupations sorted by the biggest gaps between the number of people neede
 
 ## Skills Taxonomy
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-29_
 
 Skills Taxonomy is the shared list of work sectors, job titles, and skills that the platform uses.
 
@@ -256,7 +256,7 @@ Members can browse the Skills Taxonomy to see what sectors, job titles, and skil
 
 ## ServiceCredits
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-29_
 
 ServiceCredits is where you view and send credits within the Skills Economy.
 
@@ -274,7 +274,7 @@ The Economy tab shows numbers about credits across the whole platform — how ma
 
 ## Contributions
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-19_
 
 Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.
 
@@ -292,7 +292,7 @@ You can dismiss the fundraiser banner for two months if you want. It collapses t
 
 ## Knowledge Library
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-08-28_
 
 Knowledge Library is where you lend your own public Quora writing to the assistant, so it can answer from more than one person's experience.
 
@@ -311,7 +311,7 @@ Before you can type anything you tick six separate lines of consent — one box 
 
 ## SkillUp
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-08-29_
 
 SkillUp is where you can enroll in skills training cohorts and track your progress and credits.
 
@@ -329,7 +329,7 @@ If a problem comes up with an enrollment, you can open a dispute and add comment
 
 ## Trust
 
-_Last updated: 2026-08-14_
+_Last updated: 2026-08-29_
 
 Trust shows what you have actually done in the app, written as plain lines other members can read.
 
@@ -366,7 +366,7 @@ When a trip is finished, you see a record of what it was worth in whatever curre
 
 ## LightHouse
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-08-17_
 
 LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.
 
@@ -384,7 +384,7 @@ If a host makes you uncomfortable, you can block them from any listing. When you
 
 ## ClickLog
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-08-23_
 
 ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.
 
@@ -402,7 +402,7 @@ You can edit or delete your own incidents at any time. An untagged incident's sh
 
 ## Recurring Activity
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-08-18_
 
 Recurring Activity is where you record and confirm ongoing arrangements with other members — who you work with, what you trade, and how often.
 
@@ -420,7 +420,7 @@ Many apps have a quick prompt that lets you record an arrangement without leavin
 
 ## GDP
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-08-28_
 
 GDP shows community metrics on a dashboard.
 
@@ -434,7 +434,7 @@ The GDP dashboard loads when you sign in and visit the app. It displays data abo
 
 ## Reporting a problem
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-08-28_
 
 Reporting a problem sends a note about anything that went wrong, from wherever you are in the app.
 
