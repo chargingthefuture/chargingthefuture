@@ -43,6 +43,7 @@ import type {
   SkillsHuntSubmissionInput,
   SkillsHuntSubmissionReviewInput,
 } from './types';
+import { isRoundAcceptingSubmissions } from './round-window';
 import { checkUrlLiveness } from './url-validation';
 import { reportError } from 'lib/observability/report';
 import { recomputeMissionProgressForUser } from './missions';
@@ -607,8 +608,13 @@ async function ensureSubmissionWindow(client: PoolClient, roundId: string): Prom
     throw new Error('skills_hunt_round_not_found');
   }
 
-  const now = Date.now();
-  if (round.status !== 'active' || now < round.starts_at.getTime() || now > round.ends_at.getTime()) {
+  // Same check the Scout tab runs before it offers the form, so the two cannot disagree.
+  const accepting = isRoundAcceptingSubmissions({
+    status: round.status,
+    startsAtMs: round.starts_at.getTime(),
+    endsAtMs: round.ends_at.getTime(),
+  });
+  if (!accepting) {
     throw new Error('skills_hunt_round_not_active');
   }
 }

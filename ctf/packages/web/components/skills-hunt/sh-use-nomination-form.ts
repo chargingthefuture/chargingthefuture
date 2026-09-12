@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { MAX_SKILLS, type SkillsHuntRound } from "./sh-shared";
+import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
 import type { ScoutFormModel } from "./sh-scout-tab";
 
-// A nomination is ready to submit once there is an active round, a plausible full name,
-// at least one skill, and a country (the server enforces the same set).
+// A nomination is ready to submit once the round is open, the full name is plausible, there is at
+// least one skill, and there is a country (the server enforces the same set).
+//
+// "Open" means the status is active and today falls inside the round's dates. Checking only the
+// status was the bug: a round keeps its active status after its end date passes, so the form went
+// on accepting nominations that the server then refused one by one.
 function isNominationReady(
   activeRound: SkillsHuntRound | null,
   fullName: string,
@@ -13,7 +18,7 @@ function isNominationReady(
   country: string,
 ): boolean {
   return (
-    activeRound !== null &&
+    isRoundOpenForNominations(activeRound) &&
     fullName.trim().length >= 2 &&
     allSkillCount > 0 &&
     country.trim().length > 0

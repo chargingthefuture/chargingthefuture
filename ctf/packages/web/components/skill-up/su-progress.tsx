@@ -2,7 +2,9 @@
 
 import { BookMarked, BookOpen } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getSkillUpTokens, type Enrollment, enrollmentPct } from "./su-shared";
+import { useState } from "react";
+import { reportError } from "lib/observability/report";
+import { getSkillUpTokens, idempotencyKey, type Enrollment, enrollmentPct } from "./su-shared";
 
 const STEPS = ["Choose a cohort", "Pay credits into escrow", "Complete milestones", "Trainer validates & credits release"];
 
@@ -42,7 +44,81 @@ function EmptyProgress({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-export function SkillUpProgress({ enrollments, onBrowse }: { enrollments: Enrollment[]; onBrowse: () => void }) {
+// Leaving returns every credit still held for the enrollment. Offered only while the enrollment is
+// live: once it is finished or already left there is nothing held to return, and the server says so.
+function LeaveControl({ enrollment, onLeft }: { enrollment: Enrollment; onLeft: () => void }) {
+  const { theme } = useTheme();
+  const t = getSkillUpTokens(theme);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function leave() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/skill-up/enrollments/${enrollment.enrollmentId}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ idempotencyKey: idempotencyKey() }),
+      });
+      const data = (await res.json().catch(() => null)) as { refundedCredits?: number; message?: string } | null;
+      setBusy(false);
+      if (!res.ok) {
+        setError(data?.message ?? `Could not leave this cohort (${res.status}).`);
+        return;
+      }
+      setConfirming(false);
+      setNotice(`You left this cohort. ${data?.refundedCredits ?? 0} SC returned to your balance.`);
+      onLeft();
+    } catch (err) {
+      setBusy(false);
+      reportError(err, { area: "skill-up", op: "enrollment_leave" });
+      setError(err instanceof Error ? `Could not leave this cohort: ${err.message}` : "Network error. Try again.");
+    }
+  }
+
+  if (notice) {
+    return <div style={{ marginTop: 12, fontSize: 12, color: t.ACCENT }}>{notice}</div>;
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {error && <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
+      {confirming ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>
+            Leave this cohort? Everything still held comes back to you.
+          </span>
+          <button type="button" onClick={() => void leave()} disabled={busy}
+            style={{ background: t.ACCENT, color: "#000", border: "none", borderRadius: 7, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer" }}>
+            {busy ? "…" : "Yes, leave"}
+          </button>
+          <button type="button" onClick={() => setConfirming(false)} disabled={busy}
+            style={{ background: "transparent", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 7, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>
+            Stay
+          </button>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)}
+          style={{ background: "transparent", color: t.TEXT_SUBTLE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 7, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>
+          Leave cohort
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function SkillUpProgress({
+  enrollments,
+  onBrowse,
+  onLeft,
+}: {
+  enrollments: Enrollment[];
+  onBrowse: () => void;
+  onLeft?: () => void;
+}) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
   if (enrollments.length === 0) return <EmptyProgress onBrowse={onBrowse} />;
@@ -67,6 +143,7 @@ export function SkillUpProgress({ enrollments, onBrowse }: { enrollments: Enroll
             ) : (
               <div style={{ fontSize: 12, color: t.TEXT_SUBTLE }}>{PLACEHOLDER_NOTE[enr.status] ?? "Enrolled — awaiting cohort start"}</div>
             )}
+            {enr.isCurrent && <LeaveControl enrollment={enr} onLeft={() => onLeft?.()} />}
           </div>
         );
       })}
