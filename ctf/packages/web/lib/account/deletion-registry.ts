@@ -594,6 +594,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('skill_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
       retain('skill_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
       retain('skill_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
+      // Retained deliberately. This log exists because nobody approves trainers by hand: the skills
+      // on a claimed Directory profile are the credential, and the abuse is to add a skill, claim a
+      // cohort, then remove it. If deleting the account erased the trail, deleting would BE the
+      // cover-up. It holds a user id and skill ids, no profile content.
+      retain('skill_up_trainer_skill_audit', 'Record of skill changes behind trainer cohort claims; retained as the integrity trail for claims already made.'),
       retain('skill_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
       retain('skill_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
     ],

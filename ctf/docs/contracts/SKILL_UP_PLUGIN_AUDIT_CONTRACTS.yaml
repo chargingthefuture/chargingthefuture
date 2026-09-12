@@ -194,16 +194,18 @@ auditEvents:
     actorId: principal
     pluginId: skill-up
     command: cohort.claim_trainer
-    commandVersion: 1.0.0
+    commandVersion: 1.1.0
     purpose: training_cohort_management
     policyDecision:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
       - cohort_configuration
+      - directory_profile_skills
     targetContext:
       workspaceId: workspace_identifier
       cohortId: cohort_identifier
+      matchedSkillIds: qualifying_skill_identifiers
     requestId: request_identifier
     traceId: trace_identifier
     result:

@@ -317,13 +317,16 @@ policies:
 
   - pluginId: skill-up
     command: cohort.claim_trainer
-    version: 1.0.0
+    version: 1.1.0
     requiredRoles:
+      - user
       - admin
-      - trainer
     attributePolicies:
       tenancy: same_workspace
       profileStatus: approved_user_or_admin
+      # The gate is a skills match, not a pre-assigned role (owner decision 2026-08-29): the
+      # claimant's claimed Directory profile must carry a skill under the cohort's occupation.
+      directorySkillMatchesCohortOccupation: required
     consentRequirements:
       scopes:
         - skill_up_manage_cohorts
@@ -336,7 +339,9 @@ policies:
       containsPHI: false
       requiresAdditionalAudit: true
     denyConditions:
-      - insufficient_role
+      - cohort_has_no_occupation
+      - no_claimed_profile
+      - no_matching_skill
 
   - pluginId: skill-up
     command: cohort.proposal_approve
