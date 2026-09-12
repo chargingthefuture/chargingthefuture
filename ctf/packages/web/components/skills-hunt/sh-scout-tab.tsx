@@ -2,6 +2,7 @@
 
 import { Search, CheckCircle, ExternalLink, Send } from "lucide-react";
 import { BIO_MAX, type Tab, type SkillsHuntRound } from "./sh-shared";
+import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
 import { SkillsPicker } from "./sh-skills-picker";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from '@/hooks/useTheme';
@@ -55,6 +56,28 @@ function NoActiveRound() {
       <div>
         <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>No active round right now</div>
         <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>Check back soon — rounds open when there are survivors ready to be nominated. Your nominations help build the Directory so the economy can grow.</div>
+      </div>
+    </div>
+  );
+}
+
+// The round is still marked active but its dates have run out, so the server will refuse every
+// nomination. Say that here rather than drawing the form and letting the refusal arrive on submit.
+// The leaderboard and My finds tabs still read this round, so it is named rather than hidden.
+function RoundWindowClosed({ round }: { round: SkillsHuntRound }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntTokens(theme);
+  const endedOn = new Date(round.endsAtIso).toLocaleDateString();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 24px", gap: 20, textAlign: "center" }}>
+      <div style={{ width: 72, height: 72, borderRadius: 20, background: `${t.ACCENT}10`, border: `1px dashed ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Search size={32} style={{ color: t.ACCENT, opacity: 0.5 }} />
+      </div>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>Nominations for {round.name} have closed</div>
+        <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>
+          This round ran until {endedOn} and is no longer taking nominations. Your finds and the leaderboard for it are still here. An admin opens the next round.
+        </div>
       </div>
     </div>
   );
@@ -267,6 +290,7 @@ export function SkillsHuntScoutTab({
 }) {
   if (noActiveRound) return <NoActiveRound />;
   if (submitted) return <SubmittedState onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
+  if (activeRound && !isRoundOpenForNominations(activeRound)) return <RoundWindowClosed round={activeRound} />;
   return (
     <div>
       <RoundHeader activeRound={activeRound} rounds={rounds} onSelectRound={onSelectRound} />

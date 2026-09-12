@@ -71,6 +71,26 @@ Result: web ☐
 
 ---
 
+### SH-1b — A round past its end date says nominations have closed instead of showing the form
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** One round with `status = 'active'` whose `ends_at` is in the past, and no other active round. (In the database: `UPDATE skills_hunt_rounds SET ends_at = NOW() - INTERVAL '1 day' WHERE id = '<round>';` — nothing in the app moves a round's status when its dates run out, which is the situation being tested.)
+
+**Steps:**
+1. Sign in as a member.
+2. Open `/apps/skills-hunt` and stay on the Scout tab.
+3. Read what is on screen; do not try to submit.
+4. Open the Leaderboard tab, then My finds.
+
+**Expected:** The Scout tab shows a panel reading "Nominations for *round name* have closed", naming the date the round ran until and saying an admin opens the next round. No nomination form and no submit button. This is not the "No active round right now" panel — the round exists and is named. The Leaderboard and My finds tabs still load that round's data.
+
+**Regression guard:** before 2026-09-12 this drew a working nomination form. Filling it in and pressing Submit returned "Round is not currently active." after the fact, which read as the form being broken. If the form appears here, the client and the server have gone back to disagreeing about what "active" means.
+
+Result: web ☐
+
+---
+
 ### SH-2 — Submission: happy path with taxonomy skills
 
 **Role:** member · **Surfaces:** web, android
