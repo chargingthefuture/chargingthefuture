@@ -86,6 +86,10 @@ export interface Cohort {
   // browse card reads these to show what a learner gets back and what a trainer earns.
   trainerSplitPercent?: number;
   completionBonusCredits?: number;
+  // What a trainer earns per milestone per learner on this cohort, stamped at creation and scaled by
+  // the Workforce gap. The card reads this rather than deriving anything from the deposit.
+  trainerCreditsPerMilestone?: number;
+  milestoneCountForEarnings?: number;
   status?: string;
   milestoneCount?: number;
   tags?: string[];
@@ -189,12 +193,12 @@ export function trackRepeatsTitle(title: string | null | undefined, track: strin
 //   - The learner's deposit is held in escrow per milestone and released back to them IN FULL as
 //     each milestone is validated, so a learner who finishes gets their whole deposit back. It is
 //     held, not consumed.
-//   - The trainer is granted `held x split / (100 - split)` on each release — newly issued credits,
-//     not a slice of the learner's deposit. Summed over every milestone that works out to the whole
-//     deposit x split / (100 - split), whatever the milestone percentages are.
+//   - The trainer is granted the cohort's flat `trainer_credits_per_milestone` on each release —
+//     newly issued credits, not a slice of the learner's deposit, and not a function of it. Over a
+//     learner who finishes, that is the rate times the milestone count.
 //   - The completion bonus is granted to the LEARNER on their final milestone, not the trainer.
-// A cohort with no deposit therefore moves nothing to the trainer: the release path skips the grant
-// when the computed amount is zero.
+// Every cohort now carries the same deposit, so the learner's side is the same everywhere; what
+// differs between cohorts is the trainer's rate, which the gap scales.
 export type CohortEconomics = {
   depositCredits: number;
   learnerBonusCredits: number;
@@ -215,12 +219,12 @@ function roundCredits(value: number): number {
 export function cohortEconomics(cohort: Cohort): CohortEconomics {
   const depositCredits = Math.max(0, cohort.requiredCredits ?? 0);
   const learnerBonusCredits = Math.max(0, cohort.completionBonusCredits ?? 0);
-  const split = cohort.trainerSplitPercent ?? 0;
-
-  // A split of 100 or more has no meaning here (the server rejects it outright), so it earns nothing
-  // rather than dividing by zero.
-  const trainerPerLearnerCredits =
-    split > 0 && split < 100 ? roundCredits((depositCredits * split) / (100 - split)) : 0;
+  // The trainer's rate no longer derives from the deposit (owner decision 2026-08-29): their credits
+  // are minted, not taken from the learner, so the cohort carries a flat per-milestone rate scaled by
+  // the Workforce gap. Multiply by the milestone count to get what one learner finishing is worth.
+  const perMilestone = Math.max(0, cohort.trainerCreditsPerMilestone ?? 0);
+  const milestones = Math.max(0, cohort.milestoneCount ?? cohort.milestoneCountForEarnings ?? 0);
+  const trainerPerLearnerCredits = roundCredits(perMilestone * milestones);
 
   // seatsAvailable is seats minus live enrollments, so this is how many people are in the cohort
   // right now — the figure that makes the trainer total move as members join.
