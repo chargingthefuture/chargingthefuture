@@ -34,7 +34,8 @@ const createCohortSchema = z.object({
   seats: z.number().int().positive(),
   startDate: z.string().min(1),
   endDate: z.string().min(1),
-  requiredCredits: z.number().min(0),
+  // No requiredCredits input: every cohort takes the same deposit, set in code (owner decision
+  // 2026-08-29). A per-cohort figure would be a judgment call, which is the bias being removed.
   // The Skills Taxonomy occupation this cohort trains. Required (owner decision 2026-08-29): it is
   // what the trainer claim gate matches a person's Directory skills against, so a cohort without one
   // can never be claimed.
@@ -42,7 +43,6 @@ const createCohortSchema = z.object({
   materialsCost: z.number().min(0).optional(),
   deviceSupport: z.boolean().optional(),
   status: z.enum(['draft', 'open', 'active', 'completed', 'canceled']).optional(),
-  allowNoDeposit: z.boolean().optional(),
   trainerSplitPercent: z.number().min(0).max(100).optional(),
   completionBonusCredits: z.number().min(0).optional(),
   stipendMode: z.enum(['none', 'scheduled', 'milestone']).optional(),
