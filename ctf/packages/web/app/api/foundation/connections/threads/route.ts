@@ -3,8 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createConnectionThread, insertFoundationAudit } from 'lib/foundation/repository';
 import { notifySafe } from 'lib/notifications/repository';
-import { reportError } from 'lib/observability/report';
-import { failureReason } from 'lib/errors/failure';
+import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type CreateThreadInput =
   | { ok: true; providerId: string; idempotencyKey: string }
@@ -44,8 +43,8 @@ async function readCreateThreadInput(request: Request): Promise<CreateThreadInpu
   };
 }
 
-// Map a create-thread repository error to the matching HTTP response. Unknown errors are reported and
-// surfaced as a 503.
+// Map a create-thread repository error to the matching HTTP response. Anything this does not
+// recognize is reported and surfaced as a 503 that carries a quotable reference.
 function mapCreateThreadError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : '';
 
@@ -58,7 +57,7 @@ function mapCreateThreadError(error: unknown): NextResponse {
 
   if (code === 'rate_limit_exceeded') {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'Thread create rate limit exceeded.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'You already have the maximum number of open connections. Close one to start another.' },
       { status: 429 },
     );
   }
@@ -78,11 +77,19 @@ function mapCreateThreadError(error: unknown): NextResponse {
     );
   }
 
-  reportError(error, { area: 'foundation', op: 'connections_threads' });
-  return NextResponse.json(
-    { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Thread create unavailable.' },
-    { status: 503 },
-  );
+  // Anything else is a genuine failure of a step in this route (the capacity read, the provider
+  // lookup, the Stream channel, the insert). The member keeps plain copy, but the response now carries
+  // a reference that also appears in the error report, so a screenshot of this banner can be matched to
+  // the log line that says what actually broke (rule 137 points 2 and 4). The previous answer —
+  // "Thread create unavailable." with no reference — was a dead end for everyone who saw it.
+  return failureResponse({
+    summary: 'Could not open a connection with this provider right now.',
+    error,
+    code: FOUNDATION_ERROR_CODE.persistenceUnavailable,
+    area: 'foundation',
+    op: 'connections_threads',
+    audience: 'member',
+  });
 }
 
 export async function POST(request: Request) {
