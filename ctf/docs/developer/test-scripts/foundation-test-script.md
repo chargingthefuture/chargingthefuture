@@ -814,3 +814,56 @@ Result: web ☐
 - After recording, the row appears in the Recurring Activity app marked "Recorded from Foundation", awaiting the provider's confirmation, and the prompt is gone from both the thread and the quote row.
 
 Result: web ☐
+
+
+### FDN-27 — A call that fails for an unexpected reason gives you a reference to quote (added 2026-09-12)
+
+**Role:** Member (survivor, caller)
+**Surface:** Web
+
+**Precondition:** Signed in as a member, on a provider who has instant calls enabled. You need a way
+to make one call-path request fail for a reason the route does not recognize — the simplest is to
+point the app at a database that is unreachable, or to temporarily rename the
+`foundation_connection_threads` table in a scratch database. Do not do this against production.
+
+**Steps:**
+1. Open the provider's profile, click "Connect now," complete the consent dialog, and click
+   "Start call."
+2. Read the error the dialog shows, in full.
+3. Look in the server log (or Sentry) for a Foundation error report from the same moment.
+
+**Expected:**
+- The error reads in plain words — "Could not open a connection with this provider right now." — with
+  no table name, SQL, or stack text in it.
+- It ends with a reference in square brackets, like `[ref 1a2b3c4d]`.
+- That same reference appears in the server's error report, alongside the real reason. A member who
+  screenshots this banner has given you everything needed to find the log line.
+- The old answer — "Thread create unavailable." with nothing after it — must not appear.
+
+Result: web ☐
+
+
+### FDN-28 — A failed audit write does not report a working call as broken (added 2026-09-12)
+
+**Role:** Member (survivor, caller)
+**Surface:** Web
+
+**Precondition:** A scratch database where you can make writes to `foundation_admin_audit_trail`
+fail (for example, rename the table). Everything else about Foundation works normally. Do not do
+this against production.
+
+**Steps:**
+1. Open a provider's profile and click "Connect now," then start a call.
+2. Whatever the screen shows, check the database for a new row in `foundation_connection_threads`
+   for you and that provider.
+3. Try the same call a second time.
+4. Check the server log for a Foundation `insert_audit` error report.
+
+**Expected:**
+- The call proceeds normally both times. The member is never told the call could not be started when
+  the connection was in fact created.
+- The audit failure is visible in the server log as a reported error, not silent.
+- Before this change the first attempt created the thread and then answered 503, and every retry
+  answered 503 the same way, so the member could never get through. That must not happen.
+
+Result: web ☐

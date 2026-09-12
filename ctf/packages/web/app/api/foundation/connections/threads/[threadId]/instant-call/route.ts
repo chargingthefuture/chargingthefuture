@@ -3,8 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { ringInstantCall } from 'lib/foundation/instant-call';
 import { insertFoundationAudit } from 'lib/foundation/repository';
-import { reportError } from 'lib/observability/report';
-import { failureReason } from 'lib/errors/failure';
+import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type RingInput = {
   authorizedBlocks?: number;
@@ -96,11 +95,17 @@ function mapRingError(error: unknown): NextResponse {
     );
   }
 
-  reportError(error, { area: 'foundation', op: 'connections_instant_call_ring' });
-  return NextResponse.json(
-    { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not start the call.' },
-    { status: 503 },
-  );
+  // Unrecognized: a real failure of a step in this route. The member keeps plain copy, and the
+  // response carries a reference that also appears in the error report, so a screenshot of the
+  // banner can be matched to the log line that says what broke (rule 137 points 2 and 4).
+  return failureResponse({
+    summary: 'Could not start the call right now.',
+    error,
+    code: FOUNDATION_ERROR_CODE.persistenceUnavailable,
+    area: 'foundation',
+    op: 'connections_instant_call_ring',
+    audience: 'member',
+  });
 }
 
 // Place an instant 1:1 call ring (Foundation "Connect now", issue #808 tasks 3 and 4). The caller is a
