@@ -183,3 +183,78 @@ All inserts target tables and columns that already exist in `ctf/schema.sql`; no
 table, column, constraint, index, or contract is added or changed, so no
 `schema.sql` migration is required (recorded here per
 `.claude/rules/122-schema-drift-predeployment-rules.mdc`).
+
+## The seed broke twice on dropped columns — and now has a smoke test — 2026-09-13
+
+`Demo — Seed Schema` had been failing on main. Every seed statement writes an explicit
+column list, so a column removed from `ctf/schema.sql` breaks the insert that still names
+it, and nothing noticed until someone ran the workflow by hand.
+
+Three separate breakages were fixed:
+
+1. **SkillsHunt** — `claimed_professions` was dropped on 2026-08-27. The column came out of
+   the `skills_hunt_submissions` column list but its value was left in the `VALUES` clause,
+   so the statement had 17 columns and 18 expressions. Postgres answered "INSERT has more
+   expressions than target columns", which names no table.
+2. **SkillUp** — `stipend_mode` / `stipend_amount_per_payout` were dropped on 2026-09-12 and
+   `microgrant_mode` / `microgrant_amount` on 2026-09-13, and all four stayed in the cohort
+   insert. The demo cohort's description also advertised "service-credit stipends", a payout
+   that no longer exists.
+3. **SkillUp, the demo cohort had no occupation** — a cohort now carries `job_title_id`, the
+   occupation the trainer-claim gate matches a person's Directory skills against. The seed
+   predates that column, so the demo cohort was one no trainer could claim. It now names the
+   seeded `Platform Engineer` job title, and the taxonomy step runs before the SkillUp step so
+   the row exists to point at. The demo owner's Directory profile carries two skills under that
+   occupation, so the claim gate resolves.
+
+### The demo deposit is the current figure
+
+The demo cohort asked for 300 credits and both enrollments recorded 300 deposited, while the
+first owner's wallet held 50 in escrow — so the demo contradicted itself, and it showed a
+deposit the product no longer asks for. Every cohort now takes the same flat deposit,
+`SKILL_UP_DEPOSIT_CREDITS` (50). The cohort, both enrollments, and the second owner's wallet
+(450 available / 50 held, matching the first owner's shape) all carry that figure. The
+`starterCredits` key in the cohort's `policy_json` is dropped: nothing reads it, and it named
+the old number.
+
+### What stops it happening a fourth time
+
+- **`.github/workflows/demo-seed-smoke.yml`** loads `schema.sql` and `schema.demo.sql` into a
+  throwaway Postgres service container and runs the seed twice against it. It runs after merge
+  on the paths that can break the seed, weekly, and on demand, and files a `test-failure` issue
+  when it breaks. Not a pull-request check: PR CI is already long, and this matches how
+  `unit-tests.yml` is set up.
+- **The failure now names the step.** The seed's twenty-odd plugin steps ran inside one `try`
+  with one message, which is the anti-pattern rule 137 exists for. Each step is now a named
+  entry, and the error carries the Postgres detail, so a break reads
+  `seed:demo failed: step "skill-up" failed: column "stipend_mode" of relation
+  "skill_up_cohorts" does not exist (sqlstate 42703)`.
+
+### Running the seed against a plain Postgres
+
+The pool asked for SSL unconditionally (Neon requires it). A plain Postgres — the CI service
+container, or a local one — usually has no SSL at all and refuses the handshake, so the seed
+could not be run anywhere but Neon. An explicit `sslmode=disable` in the connection string, or
+`PGSSLMODE=disable`, now turns SSL off. Neon connection strings are unaffected.
+
+To run it locally against a blank database, mirror the workflow: create `public.users`
+(the Clerk mirror carried over from v2 — it exists in the real database but `schema.sql` only
+ALTERs it), load `ctf/schema.sql`, load `ctf/schema.demo.sql`, then run the seed.
+
+No table, column, constraint, index, or contract is added or changed by any of this, so no
+`schema.sql` migration is required (recorded here per
+`.claude/rules/122-schema-drift-predeployment-rules.mdc`). The seed writes only to the
+`demo` schema.
+
+### The committed `schema.demo.sql` lags the generator, and that is harmless
+
+The committed copy is currently five post-migrations behind what `generateDemoSchema.mjs`
+produces from `ctf/schema.sql`. Nothing applies the committed file as-is: every workflow that
+loads it (`seed-demo.yml`, `provision-demo-schema.yml`, `demo-seed-smoke.yml`) regenerates it
+first, so what reaches a database is always freshly generated. The only other reader is
+`audit-orphan-tables.mjs`, which scans it for table names.
+
+Regenerating it was deliberately left out of this change: the file's name marks it
+DB-impacting to the schema-drift gate, which then requires a matching `ctf/schema.sql` edit —
+correct behavior for a schema file, and there is no schema change here to pair it with.
+Regenerate it in a commit that actually changes `ctf/schema.sql`.
