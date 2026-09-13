@@ -181,7 +181,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'skill-up',
     name: 'SkillUp',
-    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
+    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.',
     availabilityState: 'implemented_shell',
     navRank: 170,
     isVisible: true,
