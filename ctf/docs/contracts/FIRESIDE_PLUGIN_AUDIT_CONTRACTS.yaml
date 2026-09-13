@@ -1,0 +1,42 @@
+# Fireside audit events. Every write is recorded; the public read is not, because it has no actor.
+auditEvents:
+  - eventId: fireside.comment.create
+    policyDecision: allow
+    actor: member
+    targetType: comment
+    result: published | held_for_approval
+    metadata: [postRepo, postSlug]
+    notes: The result says whether it went public immediately or is waiting on the author's approval.
+  - eventId: fireside.comment.withdraw
+    policyDecision: allow
+    actor: member
+    targetType: comment
+    result: withdrawn
+    metadata: []
+  - eventId: fireside.comment.set_export
+    policyDecision: allow
+    actor: member
+    targetType: comment
+    result: export_on | export_off
+    metadata: []
+    notes: >-
+      Recorded because it is the decision that lets a comment leave the app for a place it cannot be
+      recalled from. Who chose it and when is worth being able to show.
+  - eventId: fireside.reaction.toggle
+    policyDecision: allow
+    actor: member
+    targetType: comment
+    result: added | removed
+    metadata: [kind]
+  - eventId: fireside.comment.remove
+    policyDecision: allow
+    actor: admin
+    targetType: comment
+    result: removed
+    metadata: []
+  - eventId: fireside.comment.restore
+    policyDecision: allow
+    actor: admin
+    targetType: comment
+    result: restored
+    metadata: []

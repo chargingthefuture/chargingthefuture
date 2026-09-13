@@ -1,0 +1,239 @@
+# Fireside — threaded conversation under published blog posts.
+#
+# The one thing to read before changing anything here: `fireside.thread.read` is PUBLIC. It answers
+# a caller with no account, because the blog is public and the conversation under it is too. Every
+# other command needs a signed-in member.
+commands:
+  - pluginId: fireside
+    command: fireside.thread.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [repo, slug]
+      properties:
+        repo:
+          type: string
+        slug:
+          type: string
+    outputSchema:
+      type: object
+      properties:
+        thread:
+          type: object
+          properties:
+            id:
+              type: string
+            isClosed:
+              type: boolean
+            commentCount:
+              type: integer
+        comments:
+          type: array
+          items:
+            $ref: '#/definitions/PublicComment'
+        viewer:
+          type: object
+          properties:
+            isSignedIn:
+              type: boolean
+    dataAccess:
+      - fireside_threads (select)
+      - fireside_comments (select)
+      - fireside_reactions (select)
+      - unlock_verification_submissions (select, access_tier only, to decide whose comments are public)
+    purpose: Read the public conversation under one blog post, plus the signed-in reader's own held comments
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.comment.create
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [postRepo, postSlug, body]
+      properties:
+        postRepo:
+          type: string
+        postSlug:
+          type: string
+        postTitle:
+          type: string
+        parentCommentId:
+          type: [string, 'null']
+        body:
+          type: string
+          minLength: 2
+          maxLength: 4000
+    outputSchema:
+      type: object
+      properties:
+        commentId:
+          type: string
+        isPubliclyVisible:
+          type: boolean
+        notice:
+          type: [string, 'null']
+    dataAccess:
+      - fireside_threads (insert, select)
+      - fireside_comments (insert, select)
+      - fireside_audit_events (insert)
+      - unlock_verification_submissions (select, access_tier only)
+    purpose: Write a comment under a post; held from public view until the author is approved in Unlock
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.comment.withdraw
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId]
+      properties:
+        commentId:
+          type: string
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - fireside_comments (update)
+      - fireside_audit_events (insert)
+    purpose: The author takes their own comment down; the body is emptied and the row kept so replies keep their parent
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.comment.set_export
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId, exportToBlog]
+      properties:
+        commentId:
+          type: string
+        exportToBlog:
+          type: boolean
+    outputSchema:
+      type: object
+      properties:
+        exportToBlog:
+          type: boolean
+    dataAccess:
+      - fireside_comments (update)
+      - fireside_audit_events (insert)
+    purpose: The author chooses whether this comment may be copied into the blog's published build, which is captured by the Internet Archive and cannot be withdrawn afterwards. Off by default.
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.reaction.toggle
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId, kind]
+      properties:
+        commentId:
+          type: string
+        kind:
+          type: string
+          enum: [recognize, helpful, same_here]
+    outputSchema:
+      type: object
+      properties:
+        outcome:
+          type: string
+          enum: [added, removed]
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_reactions (insert, delete)
+      - fireside_audit_events (insert)
+    purpose: Leave or take back a reaction on a comment
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.own.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+    outputSchema:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/definitions/OwnComment'
+        page:
+          type: integer
+        lastPage:
+          type: integer
+        total:
+          type: integer
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - fireside_reactions (select)
+      - unlock_verification_submissions (select, access_tier only)
+    purpose: Everything the signed-in member has written here, each labeled live, held, removed or withdrawn
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.comment.remove
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId, action]
+      properties:
+        commentId:
+          type: string
+        action:
+          type: string
+          enum: [remove, restore]
+        reason:
+          type: string
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - fireside_comments (update)
+      - fireside_audit_events (insert)
+    purpose: Admin moderation. Separate from whether the author is approved, so approving somebody never resurrects a removed comment
+    retentionClass: moderation_record
+
+definitions:
+  PublicComment:
+    type: object
+    description: What a public reader receives. A display name, never a user id or an email.
+    properties:
+      id:
+        type: string
+      parentCommentId:
+        type: [string, 'null']
+      authorName:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      reactions:
+        type: object
+      viewerReactions:
+        type: array
+        items:
+          type: string
+      isOwn:
+        type: boolean
+  OwnComment:
+    type: object
+    description: The author's own view, including comments nobody else can see yet.
+    allOf:
+      - $ref: '#/definitions/PublicComment'
+      - type: object
+        properties:
+          state:
+            type: string
+            enum: [live, held_for_approval, removed, withdrawn]
+          exportToBlog:
+            type: boolean
+          postRepo:
+            type: string
+          postSlug:
+            type: string
+          postTitle:
+            type: string
