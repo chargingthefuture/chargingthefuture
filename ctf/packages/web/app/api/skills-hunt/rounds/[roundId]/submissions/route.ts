@@ -3,7 +3,7 @@ import { ensureMutationCsrf, requireSkillsHuntReadAccess, requireSkillsHuntSubmi
 import { isReservedUsername } from 'lib/auth/username-policy';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
+import { createSubmission, describeSubmissionInputProblem, listSubmissions } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -196,9 +196,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   }
 
   const input = toSubmissionInput(roundId, body);
-  if (!validateSubmissionInput(input)) {
+  // Name the rule that failed rather than answering every one of them with the same sentence. This
+  // is the scout's own form, so the sentence has to be enough to fix it without server logs.
+  const inputProblem = describeSubmissionInputProblem(input);
+  if (inputProblem) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid submission payload.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: inputProblem },
       { status: 400 },
     );
   }
