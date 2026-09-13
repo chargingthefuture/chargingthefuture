@@ -238,9 +238,10 @@ async function seedServiceCredits(c) {
     // Skill-Up cohort. Plus a real member↔member transfer both can see.
     await c.query(
       `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
-       VALUES ($1, 500, 0, NOW())
+       VALUES ($1, 450, 50, NOW())
        ON CONFLICT (user_id) DO UPDATE SET
-         available_balance = EXCLUDED.available_balance, updated_at = NOW()`,
+         available_balance = EXCLUDED.available_balance,
+         escrow_balance = EXCLUDED.escrow_balance, updated_at = NOW()`,
       [OWNER2],
     );
     const xfer2 = sha256id(OWNER, OWNER2, '40');
@@ -337,10 +338,10 @@ async function seedSkillUp(c) {
       'A 12-week program to land your next tech role. Live mentorship, portfolio reviews, and a milestone-gated deposit you get back as you finish each milestone.',
       'Career Prep', 25,
       CURRENT_DATE - INTERVAL '14 days', CURRENT_DATE + INTERVAL '70 days',
-      300, 100, true, 'open', false, 25, 200, 10, $3::uuid,
+      50, 100, true, 'open', false, 25, 200, 10, $3::uuid,
       '{"dropout":{"day7":75,"day21":50,"after":0}}'::jsonb,
       '{"trainerSplitPercent":25,"completionBonus":200}'::jsonb,
-      '{"regionalBands":{"default":1.0},"starterCredits":300}'::jsonb,
+      '{"regionalBands":{"default":1.0}}'::jsonb,
       $2)
      ON CONFLICT (id) DO UPDATE SET
        title = EXCLUDED.title, status = EXCLUDED.status,
@@ -370,7 +371,7 @@ async function seedSkillUp(c) {
   await c.query(
     `INSERT INTO skill_up_enrollments
      (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
-     VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
+     VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
      ON CONFLICT (id) DO UPDATE SET
        status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
     [ID.enrollmentOwner, ID.cohort, OWNER, TRAINER],
@@ -386,7 +387,7 @@ async function seedSkillUp(c) {
     await c.query(
       `INSERT INTO skill_up_enrollments
        (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
-       VALUES ($1::uuid, $2::uuid, $3, 'active', 300, $4)
+       VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
        ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
       [sha256id('lu-enrollment', OWNER2), ID.cohort, OWNER2, TRAINER],

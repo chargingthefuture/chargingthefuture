@@ -207,6 +207,16 @@ Three separate breakages were fixed:
    the row exists to point at. The demo owner's Directory profile carries two skills under that
    occupation, so the claim gate resolves.
 
+### The demo deposit is the current figure
+
+The demo cohort asked for 300 credits and both enrollments recorded 300 deposited, while the
+first owner's wallet held 50 in escrow — so the demo contradicted itself, and it showed a
+deposit the product no longer asks for. Every cohort now takes the same flat deposit,
+`SKILL_UP_DEPOSIT_CREDITS` (50). The cohort, both enrollments, and the second owner's wallet
+(450 available / 50 held, matching the first owner's shape) all carry that figure. The
+`starterCredits` key in the cohort's `policy_json` is dropped: nothing reads it, and it named
+the old number.
+
 ### What stops it happening a fourth time
 
 - **`.github/workflows/demo-seed-smoke.yml`** loads `schema.sql` and `schema.demo.sql` into a
