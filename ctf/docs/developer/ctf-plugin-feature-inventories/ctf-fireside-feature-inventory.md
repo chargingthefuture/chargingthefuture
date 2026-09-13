@@ -138,7 +138,9 @@ faults in two weeks came from a rule written in two places that disagreed.
 ## Web and Android Delivery Status
 
 - Web: the plugin screen (your own comments, the guidelines, and the export queue for an admin) and
-  all nine routes. Phone-width, paged.
+  all nine routes. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
+  the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
+  actually reads.
 - The blog-side widget: not in this repository. It ships from `wiki-site`.
 - Android: out of scope, web-only per rule 105. Recorded in `ctf/config/plugin-parity-contracts.json`
   with `requiresMobileSurface: false` — the native app carries only Clerk, Chyme, bug reporting and
@@ -205,6 +207,16 @@ member active only in Fireside is seen by being read, which is what the plugin i
   answering a deliberate offender item by item is a race that cannot be won and deleting the account
   settles it once. The export-review functions live in `lib/fireside/export-review.ts` rather than
   the repository: that file is about the conversation, this one is about what leaves the app.
+
+- 2026-09-13: **Fixed: Fireside had no tile in the apps list.** Owner report. The plugin was added to
+  `fallbackPluginRegistry` in the code and not to the `ctf_plugin_registry` seed, and the launcher
+  reads the table — the array is only a fallback for an empty table, which does not happen in
+  production. Every route worked and no member could reach any of them. The row is now in the
+  `schema.sql` seed and in migration `0016`, since an existing database is not re-seeded by
+  `schema.sql` alone. `schema.demo.sql` was regenerated rather than hand-edited.
+  `ctf/scripts/check-plugin-registry-seed.mjs` now fails the build on any plugin in the code registry
+  with no seed row, as the job `plugin-registry-seed-gate`. A comment in `schema.sql` already warned
+  about this and did not prevent it, because nothing read the comment.
 
 ## Build Checklist
 
