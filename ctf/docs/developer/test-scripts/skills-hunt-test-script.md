@@ -35,7 +35,7 @@ Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at l
 web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
-From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL (required — marked with *), a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
 web ☐
 
 **CS-3 — Leaderboard tab loads**
@@ -136,7 +136,7 @@ Result: web ☐
 
 ---
 
-### SH-2c — A nomination with no Quora URL is accepted, and every refusal names its rule
+### SH-2c — The Quora URL is required, and every refusal names its rule
 
 **Role:** member · **Surfaces:** web
 
@@ -145,12 +145,14 @@ Result: web ☐
 **Steps:**
 1. Sign in and open the Scout tab.
 2. Fill in a full name and a country, pick one skill, and leave the Quora Profile URL field empty.
-3. Press Submit.
-4. Now provoke each refusal in turn and read the message: clear the skills and submit; clear the country and submit; set the full name to a single letter and submit.
+3. Read the Quora field's label and look at the Submit button.
+4. Paste a link that is not a Quora profile (e.g. `https://example.com/someone`) and submit.
+5. Paste a real Quora profile URL and submit.
+6. Now provoke each refusal in turn and read the message: clear the skills and submit; clear the country and submit; set the full name to a single letter and submit.
 
-**Expected:** Step 3 succeeds — the field is labeled "social proof — highly recommended" with no required marker, and the server agrees with that. Each refusal in step 4 names its own rule and its limit ("Pick at least one skill, and no more than 10 in total.", "Country is required…", "Full name must be 2–100 characters…"). None of them reads "Invalid submission payload."
+**Expected:** Step 3 — the label reads **"Quora Profile URL *"** with the accent-colored required marker and no "highly recommended" hint, and Submit is disabled while the field is empty (same treatment as Country). Step 4 is refused with "A Quora profile URL is required — paste the link to their profile…" — a blank field and a non-Quora link read the same sentence. Step 5 succeeds. Each refusal in step 6 names its own rule and its limit ("Pick at least one skill, and no more than 10 in total.", "Country is required…", "Full name must be 2–100 characters…"). None of them reads "Invalid submission payload."
 
-**Regression guard:** before 2026-09-12 step 3 was refused. The form enabled Submit without a URL and the server required at least one character, so a complete nomination came back rejected — with the shared sentence, which named neither the field nor the rule, so there was no way to tell which of seven checks had failed. `lib/skills-hunt/submission-input.test.ts` holds the same cases in code.
+**History:** this case asserted the opposite until 2026-09-13 — the field was presented as optional and the input validation accepted a blank value, though `createSubmission` refused it anyway with "Invalid Quora profile URL.", so the two layers disagreed. The owner settled it as required; the label, the Submit gate, the input validation, and the command contract now all say the same thing. `lib/skills-hunt/submission-input.test.ts` holds the blank and non-Quora cases in code.
 
 Result: web ☐
 
