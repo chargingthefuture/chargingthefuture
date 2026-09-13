@@ -1,0 +1,135 @@
+name: Demo Seed Smoke (non-blocking)
+
+# Loads schema.sql and schema.demo.sql into a throwaway Postgres and runs the demo seed
+# against it, exactly as `Demo — Seed Schema` does against the real database.
+#
+# Why this exists: the seed writes explicit column lists, so dropping a column from
+# schema.sql breaks it — but nothing notices until someone runs the seed workflow by
+# hand. That happened twice. `claimed_professions` was dropped on 2026-08-27 and its
+# value was left behind in the VALUES clause; the stipend and microgrant columns were
+# dropped on 2026-09-12 and 2026-09-13 and stayed in the SkillUp insert. Both times the
+# seed had been broken on main for days.
+#
+# Deliberately NOT a pull_request check, matching unit-tests.yml: PR CI is already long,
+# and this needs a database service. It runs after merge on the paths that can break the
+# seed, on a weekly schedule, and on demand, and files a `test-failure` issue when it
+# breaks.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ctf/schema.sql'
+      - 'ctf/schema.demo.sql'
+      - 'ctf/db/migrations/**'
+      - 'ctf/scripts/seedDemo.mjs'
+      - 'ctf/scripts/generateDemoSchema.mjs'
+      - '.github/workflows/demo-seed-smoke.yml'
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays at 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  demo-seed-smoke:
+    name: Demo seed against a throwaway database
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ctf_smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # No secret involved: this is a throwaway service container, thrown away with the runner.
+      SMOKE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ctf_smoke?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Install psql client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Regenerate schema.demo.sql from schema.sql
+        run: node ctf/scripts/generateDemoSchema.mjs
+
+      - name: Load the schemas
+        id: schemas
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # `users` is the Clerk mirror carried over from v2. It lives in the real database
+          # but is not created by schema.sql, which only ALTERs it — so a blank database
+          # needs the shell of it before schema.sql will load. Columns come from the ALTERs.
+          psql "$SMOKE_DATABASE_URL" -v ON_ERROR_STOP=1 -q \
+            -c "CREATE TABLE IF NOT EXISTS public.users (id TEXT PRIMARY KEY, email TEXT, created_at TIMESTAMPTZ DEFAULT NOW());"
+          psql "$SMOKE_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f ctf/schema.sql
+          psql "$SMOKE_DATABASE_URL" -v ON_ERROR_STOP=1 -q -f ctf/schema.demo.sql
+
+      - name: Run the demo seed
+        id: seed
+        if: steps.schemas.outcome == 'success'
+        continue-on-error: true
+        env:
+          DATABASE_URL_DIRECT: postgresql://postgres:postgres@127.0.0.1:5432/ctf_smoke?sslmode=disable
+          # Fake Clerk ids: the seed only writes them as text, and nothing here reaches Clerk.
+          DEMO_OWNER_ID: user_smokeOwnerOne
+          DEMO_SECOND_OWNER_ID: user_smokeOwnerTwo
+          DEMO_TESTER_ADMIN_ID: user_smokeTesterAdmin
+          DEMO_TESTER_MEMBER_ID: user_smokeTesterMember
+        run: |
+          set -euo pipefail
+          cd ctf
+          node scripts/seedDemo.mjs
+          # Re-run: the seed promises to be idempotent, so a second pass must also pass.
+          node scripts/seedDemo.mjs
+
+      - name: File a test-failure issue
+        if: steps.schemas.outcome == 'failure' || steps.seed.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Demo seed is broken on main"
+          gh label create test-failure --repo "$GITHUB_REPOSITORY" --color b60205 \
+            --description "A scheduled/post-merge check failed" --force || true
+          body="$(printf 'Loading the schemas or running the demo seed against a blank Postgres failed, so the `Demo — Seed Schema` workflow will fail against the real database too.\n\nUsually this is a column dropped from schema.sql that is still named in a seed statement.\n\nRun: %s\n\nThe failing step is named in the log line ("seed:demo failed: step \\"<plugin>\\" failed: ...").' "$RUN_URL")"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --label test-failure --state open \
+            --search "$title in:title" --json number --jq '.[0].number' || true)"
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --label test-failure --body "$body"
+          fi
+
+      - name: Mark the run failed if the seed failed
+        if: steps.schemas.outcome == 'failure' || steps.seed.outcome == 'failure'
+        run: exit 1
