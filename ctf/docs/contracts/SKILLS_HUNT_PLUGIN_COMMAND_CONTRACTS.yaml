@@ -119,7 +119,9 @@ contracts:
     version: 1.1.0
     description: >-
       Create a contributor submission with validated profile URL, skill set, and
-      the nominee's location. `country` is required; `state`/`city` are optional. On accept the
+      the nominee's location. `quoraProfileUrl` is required and must be a Quora profile link (owner
+      decision, 2026-09-13): the input validation refuses a blank or non-Quora value by name before
+      any outbound request is made. `country` is required; `state`/`city` are optional. On accept the
       location carries into the generated directory profile (the shared member profile). Admins are
       exempt from the scout rate limits (the rolling weekly submission cap and the reputation-driven
       pre-approval/restricted gate); the active-round window and the one-active-submission-per-Quora-URL
@@ -745,3 +747,11 @@ changelog:
       the status the submission moved from, the status it moved to, and whether the review also
       brought a removed row back to life. An accept on a pending row and an accept on a removed,
       flagged row were previously written identically.
+  - date: 2026-09-13
+    change: >-
+      skills-hunt.submission.create enforces the `quoraProfileUrl: required` this contract has
+      always declared. Input validation had accepted a blank value since 2026-09-12, leaving the
+      code out of step with the contract — though a blank one was still refused a step later, by
+      the normalizer inside createSubmission, as "Invalid Quora profile URL.". The rule now sits
+      with the other six, so a scout reads a sentence naming the field. Owner decision: the field
+      is mandatory, and the Scout tab's label carries the required marker. No schema change.

@@ -40,7 +40,7 @@ export interface ScoutFormModel {
 
 const WHY_ITEMS = [
   { icon: "🧩", text: "You nominate someone you believe may be a survivor — certainty not required" },
-  { icon: "🔗", text: "Quora profile = social proof, reducing trafficker infiltration risk" },
+  { icon: "🔗", text: "Their Quora profile helps verify they are a real person, reducing trafficker infiltration risk" },
   { icon: "⚡", text: "Skills from the taxonomy populate the Directory so we can trade and build our own economy" },
   { icon: "🏆", text: "Points are granted on admin acceptance — taxonomy skills earn more" },
 ];
@@ -152,7 +152,7 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
 
       <div>
         <label htmlFor="sh-scout-quora" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
-          Quora Profile URL <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(social proof — highly recommended)</span>
+          Quora Profile URL <span style={{ color: t.ACCENT }}>*</span>
         </label>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.quora), t), borderRadius: 10 }}>
           <ExternalLink size={14} style={{ color: t.MUTED, flexShrink: 0 }} />
@@ -230,7 +230,10 @@ function RoundHeader({ activeRound, rounds, onSelectRound }: {
 function NominationForm({ form }: { form: ScoutFormModel }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && form.country.trim().length > 0 && !form.submitting;
+  // The Quora URL is required (owner decision, 2026-09-13), so the button waits for one rather
+  // than letting the form submit into a server refusal. The server checks the link is a real
+  // Quora profile URL and says so by name; this only checks the field was filled in.
+  const canSubmit = form.fullName.trim().length >= 2 && form.allSkillCount > 0 && form.country.trim().length > 0 && form.quora.trim().length > 0 && !form.submitting;
   return (
     <div style={{ flex: "1 1 320px", maxWidth: 580 }}>
       <div style={{ marginBottom: 20 }}>

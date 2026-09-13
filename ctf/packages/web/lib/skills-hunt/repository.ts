@@ -508,18 +508,24 @@ function hasValidSubmissionBio(bio: string): boolean {
   return bio.length === 0 || bio.length <= SKILLS_HUNT_MAX_BIO_LENGTH;
 }
 
-// The Quora URL is optional, which is what the Scout tab has always said: the field is labeled
-// "social proof — highly recommended" and carries no required marker, and the form lets you submit
-// without one. This check used to demand at least one character, so a nomination with the field left
-// blank was refused by the server after the form had accepted it — and the refusal named no field,
-// so there was nothing on screen to say which of seven rules had failed.
+// The Quora URL is required (owner decision, 2026-09-13, and the Scout tab's label now carries the
+// required marker to say so). It was treated as optional here from 2026-08 onward, but only here:
+// `createSubmission` has always run `normalizeQuoraProfileUrl` on the value unconditionally, and
+// that throws on an empty string, so a blank field was refused either way — just one step later,
+// with "Invalid Quora profile URL." instead of a sentence naming the field. Checking it here means
+// the scout reads the same rule the form shows, before any outbound request is made.
 //
-// Length is still capped when one is given, the liveness check still runs on it, and an admin still
-// reviews every nomination. Making the field mandatory instead would be the opposite fix and would
-// need the Scout tab's label to say so.
+// The check is the full one, not merely "not empty": a value that is not a Quora profile link fails
+// at the same point as a blank one, so the message is the same in both cases.
 function hasValidSubmissionUrl(input: SkillsHuntSubmissionInput): boolean {
   const quoraProfileUrl = typeof input.quoraProfileUrl === 'string' ? input.quoraProfileUrl.trim() : '';
-  return isLengthInRange(quoraProfileUrl, 0, SKILLS_HUNT_MAX_URL_LENGTH);
+  if (!isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH)) return false;
+  try {
+    normalizeQuoraProfileUrl(quoraProfileUrl);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Spec §2.1: ≥1 skill, sum capped at 10. Free-text proposed skills keep the short 40-char
@@ -566,7 +572,7 @@ const SUBMISSION_INPUT_RULES: ReadonlyArray<{
   },
   {
     ok: (input) => hasValidSubmissionUrl(input),
-    problem: `The Quora profile URL must be ${SKILLS_HUNT_MAX_URL_LENGTH} characters or fewer.`,
+    problem: `A Quora profile URL is required — paste the link to their profile (for example https://www.quora.com/profile/Their-Name), ${SKILLS_HUNT_MAX_URL_LENGTH} characters or fewer.`,
   },
   {
     ok: (_input, fields) => hasValidSubmissionSkills(fields.skills, fields.proposedSkills),
