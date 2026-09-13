@@ -508,9 +508,18 @@ function hasValidSubmissionBio(bio: string): boolean {
   return bio.length === 0 || bio.length <= SKILLS_HUNT_MAX_BIO_LENGTH;
 }
 
+// The Quora URL is optional, which is what the Scout tab has always said: the field is labeled
+// "social proof — highly recommended" and carries no required marker, and the form lets you submit
+// without one. This check used to demand at least one character, so a nomination with the field left
+// blank was refused by the server after the form had accepted it — and the refusal named no field,
+// so there was nothing on screen to say which of seven rules had failed.
+//
+// Length is still capped when one is given, the liveness check still runs on it, and an admin still
+// reviews every nomination. Making the field mandatory instead would be the opposite fix and would
+// need the Scout tab's label to say so.
 function hasValidSubmissionUrl(input: SkillsHuntSubmissionInput): boolean {
   const quoraProfileUrl = typeof input.quoraProfileUrl === 'string' ? input.quoraProfileUrl.trim() : '';
-  return isLengthInRange(quoraProfileUrl, 1, SKILLS_HUNT_MAX_URL_LENGTH);
+  return isLengthInRange(quoraProfileUrl, 0, SKILLS_HUNT_MAX_URL_LENGTH);
 }
 
 // Spec §2.1: ≥1 skill, sum capped at 10. Free-text proposed skills keep the short 40-char
@@ -537,20 +546,50 @@ function hasUnsafeSubmissionText(fields: NormalizedSubmissionFields): boolean {
   ]);
 }
 
-export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boolean {
+// Each rule paired with the sentence a scout sees when it is the one that failed (rule 137). A
+// single "Invalid submission payload." for all seven is what a person reads after filling in a long
+// form, and it names neither the field nor the limit, so there is nothing to act on. The order is
+// the order the fields appear on the Scout tab, so the first failure reported is the highest one on
+// screen.
+const SUBMISSION_INPUT_RULES: ReadonlyArray<{
+  ok: (input: SkillsHuntSubmissionInput, fields: NormalizedSubmissionFields) => boolean;
+  problem: string;
+}> = [
+  { ok: (input) => hasValidSubmissionRoundId(input), problem: 'That round id is not valid.' },
+  {
+    ok: (_input, fields) => hasValidSubmissionFullName(fields.fullName),
+    problem: `Full name must be ${SKILLS_HUNT_MIN_FULL_NAME_LENGTH}–${SKILLS_HUNT_MAX_FULL_NAME_LENGTH} characters, letters and spaces only.`,
+  },
+  {
+    ok: (_input, fields) => hasValidSubmissionBio(fields.bio),
+    problem: `Bio must be ${SKILLS_HUNT_MAX_BIO_LENGTH} characters or fewer.`,
+  },
+  {
+    ok: (input) => hasValidSubmissionUrl(input),
+    problem: `The Quora profile URL must be ${SKILLS_HUNT_MAX_URL_LENGTH} characters or fewer.`,
+  },
+  {
+    ok: (_input, fields) => hasValidSubmissionSkills(fields.skills, fields.proposedSkills),
+    problem: `Pick at least one skill, and no more than ${SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION} in total.`,
+  },
+  {
+    ok: (_input, fields) => hasValidSubmissionLocation(fields),
+    problem: `Country is required, and no location field may be longer than ${SKILLS_HUNT_MAX_LOCATION_LENGTH} characters.`,
+  },
+  {
+    ok: (_input, fields) => !hasUnsafeSubmissionText(fields),
+    problem: 'One of the text fields contains characters that are not allowed.',
+  },
+];
+
+// The first rule this submission breaks, in plain words, or null when it breaks none.
+export function describeSubmissionInputProblem(input: SkillsHuntSubmissionInput): string | null {
   const fields = normalizeSubmissionFields(input);
+  return SUBMISSION_INPUT_RULES.find((rule) => !rule.ok(input, fields))?.problem ?? null;
+}
 
-  const checks = [
-    hasValidSubmissionRoundId(input),
-    hasValidSubmissionFullName(fields.fullName),
-    hasValidSubmissionBio(fields.bio),
-    hasValidSubmissionUrl(input),
-    hasValidSubmissionSkills(fields.skills, fields.proposedSkills),
-    hasValidSubmissionLocation(fields),
-    !hasUnsafeSubmissionText(fields),
-  ];
-
-  return checks.every((ok) => ok);
+export function validateSubmissionInput(input: SkillsHuntSubmissionInput): boolean {
+  return describeSubmissionInputProblem(input) === null;
 }
 
 export function validateReviewInput(input: SkillsHuntSubmissionReviewInput): boolean {

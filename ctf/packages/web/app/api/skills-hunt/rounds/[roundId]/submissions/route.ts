@@ -3,10 +3,10 @@ import { ensureMutationCsrf, requireSkillsHuntReadAccess, requireSkillsHuntSubmi
 import { isReservedUsername } from 'lib/auth/username-policy';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { createSubmission, listSubmissions, validateSubmissionInput } from 'lib/skills-hunt/repository';
+import { createSubmission, describeSubmissionInputProblem, listSubmissions } from 'lib/skills-hunt/repository';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
-import { failureReason } from 'lib/errors/failure';
+import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type SubmissionBody = Partial<Omit<SkillsHuntSubmissionInput, 'roundId'>>;
 
@@ -64,8 +64,6 @@ const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
   },
 ];
 
-// Map a thrown createSubmission error message to the HTTP response shape.
-// Unknown messages fall through to a 503 persistence-unavailable response.
 // Plain words for the status of the nomination that is in the way.
 function describeBlockingStatus(status: string): string {
   if (status === 'pending') return 'is waiting for review';
@@ -92,7 +90,10 @@ function describeDuplicate(message: string): string {
   return 'This person is already nominated. An admin can reject or remove the existing nomination if it should not stand.';
 }
 
-function mapSubmissionCreateError(message: string): { status: number; code: string; responseMessage: string } {
+// The refusal this route recognizes, or null when the error is a raw failure the route has no
+// sentence for. Null is what sends the caller down the reason-carrying path rather than answering
+// every unknown database error with the same four words.
+function mapSubmissionCreateError(message: string): { status: number; code: string; responseMessage: string } | null {
   if (message.startsWith('skills_hunt_duplicate_submission')) {
     return {
       status: 409,
@@ -117,11 +118,7 @@ function mapSubmissionCreateError(message: string): { status: number; code: stri
     return { status: matched.status, code: matched.code, responseMessage: matched.responseMessage };
   }
 
-  return {
-    status: 503,
-    code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable,
-    responseMessage: 'Unable to create submission.',
-  };
+  return null;
 }
 
 function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSubmissionInput {
@@ -165,6 +162,53 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   }
 }
 
+// Audit the failed nomination and answer it. Split out of POST so that function stays inside the
+// complexity budget (rule 116), and so the two kinds of failure sit side by side where a reader can
+// see which is which.
+function respondToSubmissionFailure(
+  error: unknown,
+  context: { actorId: string; isAdmin: boolean; roundId: string },
+): NextResponse {
+  const message = error instanceof Error ? error.message : 'unknown';
+  const matched = mapSubmissionCreateError(message);
+  const code = matched?.code ?? SKILLS_HUNT_ERROR_CODE.persistenceUnavailable;
+
+  logSkillsHuntAudit({
+    actorId: context.actorId,
+    command: 'skills-hunt.submission.create',
+    status: 'allow',
+    reason: 'active_round_required',
+    targetType: 'submission',
+    targetId: 'pending',
+    result: 'failure',
+    errorCategory: code,
+    metadata: { roundId: context.roundId },
+  });
+
+  // A refusal this route knows about is a deliberate sentence for the scout, so it is returned as
+  // written, with the error reported alongside it.
+  if (matched) {
+    reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_submissions' });
+    return NextResponse.json({ ok: false, code, message: matched.responseMessage }, { status: matched.status });
+  }
+
+  // Anything else arrived as a raw failure — a database error, most often. This used to answer
+  // "Unable to create submission." and drop the reason, leaving a scout with a sentence that says
+  // only that something went wrong. Rule 137: an admin reads the reason in the text, and a member
+  // reads the plain sentence plus a short reference that is also written into the error report, so a
+  // screenshot ties to a log line without printing internals to every scout.
+  return failureResponse({
+    summary: 'Unable to create submission',
+    error,
+    code,
+    area: 'skills-hunt',
+    op: 'rounds_roundid_submissions',
+    status: 503,
+    audience: context.isAdmin ? 'operator' : 'member',
+    extra: { roundId: context.roundId },
+  });
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntSubmitAccess();
   if (!gate.allowed) {
@@ -196,9 +240,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
   }
 
   const input = toSubmissionInput(roundId, body);
-  if (!validateSubmissionInput(input)) {
+  // Name the rule that failed rather than answering every one of them with the same sentence. This
+  // is the scout's own form, so the sentence has to be enough to fix it without server logs.
+  const inputProblem = describeSubmissionInputProblem(input);
+  if (inputProblem) {
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: 'Invalid submission payload.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: inputProblem },
       { status: 400 },
     );
   }
@@ -222,22 +269,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ rou
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
   } catch (error) {
-    reportError(error, { area: 'skills-hunt', op: 'rounds_roundid_submissions' });
-    const message = error instanceof Error ? error.message : 'unknown';
-    const { status, code, responseMessage } = mapSubmissionCreateError(message);
-
-    logSkillsHuntAudit({
-      actorId: gate.auth.userId,
-      command: 'skills-hunt.submission.create',
-      status: 'allow',
-      reason: 'active_round_required',
-      targetType: 'submission',
-      targetId: 'pending',
-      result: 'failure',
-      errorCategory: code,
-      metadata: { roundId },
-    });
-
-    return NextResponse.json({ ok: false, code, message: responseMessage }, { status });
+    return respondToSubmissionFailure(error, { actorId: gate.auth.userId, isAdmin: gate.auth.isAdmin, roundId });
   }
 }
