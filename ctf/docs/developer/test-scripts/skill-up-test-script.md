@@ -67,6 +67,7 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 
 **Expected:**
 - Without filters, at least the seed cohort card appears.
+- Nothing on this screen, or on the Apps list entry that led here, promises a "stipend" — the catalog summary now reads "earn credits as you reach each milestone". SkillUp moves credits on milestone release, trainer grant, and completion bonus only.
 - Filtering by matching track narrows the list to include the seed cohort; filtering by a track that matches nothing shows an empty state (no error).
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
@@ -232,6 +233,7 @@ Result: web ☐
 - Escrow filter tab shows the 300 SC held for the seed cohort enrollment.
 - No "Spend", "Transfer", or "Send credits" button appears anywhere on this screen — the wallet is read-only.
 - No "Total Spent" or "running balance per row" columns appear (known real-data deviation; absence is correct).
+- Every row is a milestone release, a trainer credit grant, a completion bonus, or an achievement badge. **No row reads "Stipend"** — stipends were removed on 2026-09-12 and nothing can write that entry. (A "Microgrant" label still exists in the code and is likewise unreachable; seeing one would mean something started writing a disbursement type that has no flow behind it.)
 
 Result: web ☐
 
