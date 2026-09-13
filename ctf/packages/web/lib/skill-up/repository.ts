@@ -186,9 +186,6 @@ type CreateCohortInput = {
   allowNoDeposit?: boolean;
   trainerSplitPercent?: number;
   completionBonusCredits?: number;
-  stipendMode?: 'none' | 'scheduled' | 'milestone';
-  stipendAmountPerPayout?: number;
-  stipendIntervalDays?: number | null;
   micrograntMode?: 'none' | 'cohort_pool' | 'separate_grant';
   micrograntAmount?: number;
   refundPolicyJson?: Record<string, unknown>;
@@ -211,7 +208,7 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
   await client.query(
     `INSERT INTO skill_up_cohorts
       (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
-       trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout, stipend_interval_days, microgrant_mode,
+       trainer_split_percent, completion_bonus_credits, microgrant_mode,
        microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
        auto_created, source_job_title_id, source_sector, source_gap_at_creation, job_title_id)
      VALUES
@@ -233,9 +230,6 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       orDefault(input.allowNoDeposit, false),
       trainerSplitPercent,
       orDefault(input.completionBonusCredits, 0),
-      orDefault(input.stipendMode, 'none'),
-      orDefault(input.stipendAmountPerPayout, 0),
-      orDefault<number | null>(input.stipendIntervalDays, null),
       orDefault(input.micrograntMode, 'none'),
       orDefault(input.micrograntAmount, 0),
       JSON.stringify(orDefault(input.refundPolicyJson, {})),

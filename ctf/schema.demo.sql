@@ -2698,7 +2698,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
-  ('skill-up',           'SkillUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.','implemented_shell', 170, TRUE),
+  ('skill-up',           'SkillUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.','implemented_shell', 170, TRUE),
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
@@ -3271,9 +3271,6 @@ CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE,
   trainer_split_percent NUMERIC NOT NULL,
   completion_bonus_credits NUMERIC NOT NULL DEFAULT 0,
-  stipend_mode TEXT NOT NULL DEFAULT 'none',
-  stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0,
-  stipend_interval_days INTEGER,
   microgrant_mode TEXT NOT NULL DEFAULT 'none',
   microgrant_amount NUMERIC NOT NULL DEFAULT 0,
   refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -3297,9 +3294,6 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT 
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_amount_per_payout NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_interval_days INTEGER;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -3308,10 +3302,10 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS policy_json JSON
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Multi-currency (issue #120): SkillUp stipends and microgrants are internal ServiceCredits payouts.
--- stipend_currency / microgrant_currency name the currency of stipend_amount_per_payout / microgrant_amount;
--- both default to ServiceCredits (code 'SC').
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS stipend_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+-- Multi-currency (issue #120): SkillUp microgrants are internal ServiceCredits payouts.
+-- microgrant_currency names the currency of microgrant_amount; it defaults to ServiceCredits ('SC').
+-- The matching stipend columns were dropped on 2026-09-12 (post/0012): nothing ever read them, no
+-- flow was ever specified, and the app was advertising a payout it could not make.
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
 -- Auto-cohort creation (issue #904): SkillUp stands up cohorts from Workforce occupation gaps.
 -- auto_created marks a cohort the scheduled run created (vs a human-built one). source_job_title_id

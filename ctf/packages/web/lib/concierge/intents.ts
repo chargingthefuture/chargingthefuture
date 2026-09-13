@@ -167,10 +167,10 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   {
     slug: 'skill-up',
     name: 'SkillUp',
-    blurb: 'Goal-based cohorts with milestones and stipends.',
+    blurb: 'Goal-based cohorts with milestones.',
     keywords: [
       'save money', 'save $', 'savings goal', 'a goal', 'milestone', 'lose track', 'stay on track',
-      'learn a skill with a trainer', 'cohort', 'stipend', 'training program',
+      'learn a skill with a trainer', 'cohort', 'training program',
     ],
     starter: 'I want to save $1,000 in 90 days but I always lose track.',
   },

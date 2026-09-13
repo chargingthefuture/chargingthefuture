@@ -179,7 +179,6 @@ Core tables:
 5. `skill_up_enrollment_milestone_escrows`
 6. `skill_up_milestone_validations`
 7. `skill_up_disbursements`
-8. `skill_up_stipend_schedules`
 9. `skill_up_disputes`
 10. `skill_up_dispute_comments`
 11. `skill_up_rate_limit_counters`
@@ -198,8 +197,9 @@ Core tables:
 
 Auto-cohort columns on `skill_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_skill_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
 
-Multi-currency (issue #120): `skill_up_cohorts` carries `stipend_currency` and `microgrant_currency`
-(FK → `currencies.code`), naming the currency of `stipend_amount_per_payout` and `microgrant_amount`.
+Multi-currency (issue #120): `skill_up_cohorts` carries `microgrant_currency`
+(FK → `currencies.code`), naming the currency of `microgrant_amount`. The matching stipend columns
+were dropped on 2026-09-12 — see the change log.
 Both default to ServiceCredits (code `SC`) — these are internal token payouts. No surface renders a
 ServiceCredits amount at a fiat equivalent (the no-fiat-parity rule from issue #120).
 
@@ -303,6 +303,21 @@ that exist today.
 
 ## Change Log
 
+- 2026-09-12: **Stipends removed; they were never a feature (owner decision).** `skill_up_cohorts`
+  carried `stipend_mode`, `stipend_amount_per_payout`, `stipend_interval_days` and
+  `stipend_currency`, and `createCohort` wrote all four — but nothing ever read them. There was no
+  payout flow, no route, no schedule table (this inventory listed `skill_up_stipend_schedules` as
+  data-model item 8, and it was never in `schema.sql`), and no owner-approved spec saying what a
+  stipend was meant to do. The only thing that behaved as though the feature existed was the copy:
+  the plugin catalog told members they would "earn stipends as you reach each milestone", so the app
+  advertised a payout it had no code to make. Dropped the four columns (`post/0012` — they only ever
+  held their defaults), the `CreateCohortInput` fields and their INSERT columns, the three fields on
+  the `POST /api/skill-up/cohorts` schema, the unreachable `Stipend` label in the wallet history, and
+  the stipend wording in the catalog summary and the Concierge blurb and keywords. Every credit
+  SkillUp moves is a milestone release, a trainer grant, or a completion bonus. **Microgrants
+  (`microgrant_mode`, `microgrant_amount`, `microgrant_currency`, plus the wallet's `Microgrant`
+  label) are in exactly the same state and were left in place** — the decision covered stipends, and
+  removing them is the same edit whenever it is wanted.
 - 2026-08-29: **The browse card says what the cohort moves, for both sides (owner directive).** With
   the repeated track chip gone the tile had room, so it now advertises the economics instead of
   leaving them to be discovered after enrolling. New pure helper `cohortEconomics` in

@@ -125,7 +125,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'skill-up',
     name: 'SkillUp',
     kind: 'plugin',
-    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn stipends as you reach each milestone.',
+    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.',
   },
   {
     id: 'click-log',
