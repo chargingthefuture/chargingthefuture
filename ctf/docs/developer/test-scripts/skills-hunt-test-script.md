@@ -54,6 +54,28 @@ web ☐
 
 ## Member walkthrough
 
+### SH-0q — The Quora profile URL is required by the form, not only by the server
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates.
+
+**Steps:**
+1. Open the Scout tab and fill in a full name, at least one skill and a country. Leave the Quora Profile URL empty.
+2. Look at the Submit control.
+3. Paste any text that is not a Quora profile link into the URL field and submit.
+4. Replace it with a real Quora profile URL and submit.
+
+**Expected:**
+- The Quora Profile URL label carries the required marker.
+- At step 2 Submit does not act on an empty URL field. Before this was fixed the button was live, the nomination went out, and the refusal came back from the server instead of from the form.
+- At step 3 Submit stays live — a half-typed or malformed link does not disable it — and the refusal names the field and shows the expected shape of the link.
+- At step 4 the nomination is accepted.
+- A deleted or emptied Quora account is still a valid URL and is accepted. Being unbanned is not a condition; the link resolving is.
+
+Result: web ☐
+
+---
+
 ### SH-1 — Round discovery: active, upcoming, and closed rounds are visible
 
 **Role:** member · **Surfaces:** web, android

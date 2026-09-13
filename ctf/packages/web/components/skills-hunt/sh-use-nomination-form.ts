@@ -6,22 +6,31 @@ import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
 import type { ScoutFormModel } from "./sh-scout-tab";
 
 // A nomination is ready to submit once the round is open, the full name is plausible, there is at
-// least one skill, and there is a country (the server enforces the same set).
+// least one skill, there is a country, and there is a Quora profile URL (the server enforces the
+// same set).
 //
 // "Open" means the status is active and today falls inside the round's dates. Checking only the
 // status was the bug: a round keeps its active status after its end date passes, so the form went
 // on accepting nominations that the server then refused one by one.
+//
+// The Quora URL is required and has been since the field was added — the label carries the required
+// marker and the server refuses a blank one by name. This gate left it out, so Submit lit up on an
+// empty field and the refusal arrived from the server instead of the form. Only emptiness is checked
+// here: a malformed URL keeps the button live and comes back with the server's own sentence naming
+// the field, rather than disabling Submit part-way through typing a link.
 function isNominationReady(
   activeRound: SkillsHuntRound | null,
   fullName: string,
   allSkillCount: number,
   country: string,
+  quora: string,
 ): boolean {
   return (
     isRoundOpenForNominations(activeRound) &&
     fullName.trim().length >= 2 &&
     allSkillCount > 0 &&
-    country.trim().length > 0
+    country.trim().length > 0 &&
+    quora.trim().length > 0
   );
 }
 
@@ -83,8 +92,9 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   }
 
   async function handleSubmit() {
-    // Country is required (the server enforces it too); full name and at least one skill as before.
-    if (!isNominationReady(activeRound, fullName, allSkillCount, country)) return;
+    // Country and the Quora profile URL are both required (the server enforces both); full name and
+    // at least one skill as before.
+    if (!isNominationReady(activeRound, fullName, allSkillCount, country, quora)) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
