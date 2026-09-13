@@ -4,6 +4,7 @@ import { ChevronDown, User } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_COLOR, TRACK_COLORS, cohortEconomics, getSkillUpTokens, trackRepeatsTitle, type Cohort, type CohortEconomics, type SkillUpTokens } from "./su-shared";
+import { ClaimTrainerRow } from "./su-claim-trainer";
 
 function enrollButtonView(t: SkillUpTokens, isEnrolled: boolean, isEnrolling: boolean, isFull: boolean) {
   if (isEnrolled) return { bg: `${t.ACCENT}30`, color: t.ACCENT, label: "✓ Enrolled", locked: true };
@@ -165,11 +166,13 @@ export function SkillUpCohortCard({
   isEnrolled,
   isEnrolling,
   onEnroll,
+  onClaimed,
 }: {
   cohort: Cohort;
   isEnrolled: boolean;
   isEnrolling: boolean;
   onEnroll: (cohort: Cohort) => void;
+  onClaimed: () => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
@@ -198,6 +201,9 @@ export function SkillUpCohortCard({
         {cohort.trainerName ?? "Trainer TBD"}
         {cohort.milestoneCount != null && <><span style={{ color: t.FAINT }}>·</span>{cohort.milestoneCount} milestones</>}
       </div>
+      {/* Offered on the card rather than behind the Details toggle: a cohort with nobody teaching it
+          is asking for somebody, and the ask should not be a thing you have to open to find. */}
+      {cohort.needsTrainer ? <ClaimTrainerRow cohortId={cohort.id} t={t} onClaimed={onClaimed} /> : null}
       <CohortDetails economics={economics} tags={tags} t={t} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
         <div>

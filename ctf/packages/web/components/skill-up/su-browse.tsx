@@ -17,6 +17,7 @@ export function SkillUpBrowse({
   enrolledIds,
   enrollingId,
   onEnroll,
+  onClaimed,
 }: {
   cohorts: Cohort[];
   openCount: number;
@@ -29,6 +30,7 @@ export function SkillUpBrowse({
   enrolledIds: Set<string>;
   enrollingId: string | null;
   onEnroll: (cohort: Cohort) => void;
+  onClaimed: () => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
@@ -98,6 +100,7 @@ export function SkillUpBrowse({
               isEnrolled={enrolledIds.has(cohort.id)}
               isEnrolling={enrollingId === cohort.id}
               onEnroll={onEnroll}
+              onClaimed={onClaimed}
             />
           ))}
         </div>
