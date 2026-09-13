@@ -415,14 +415,18 @@ function useProfileEditor(
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify(buildProfilePayload(form, editing)),
       });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; profile?: AdminDirectoryProfile; message?: string };
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; profile?: AdminDirectoryProfile; message?: string; reason?: string };
       if (res.ok && body.ok && body.profile) {
         const updated = body.profile;
         setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
         closeDrawer();
         return;
       }
-      setDrawerError(body.message ?? "Could not save this profile.");
+      // This is the admin screen, so the reason the server gives is shown rather than swallowed
+      // (rule 137). A save that fails on a database error used to read "Unable to update profile."
+      // and nothing else, which is what made a broken query here take two weeks to find.
+      const saveFailure = body.message ?? "Could not save this profile.";
+      setDrawerError(body.reason ? `${saveFailure} ${body.reason}` : saveFailure);
     } catch (caught) {
       setDrawerError(failureText(caught, { area: 'directory', op: 'save', fallback: "Could not save this profile." }));
     } finally {
