@@ -94,6 +94,11 @@ export interface Cohort {
   milestoneCount?: number;
   tags?: string[];
   startDate?: string;
+  // True while the cohort is still owned by the scheduler that opened it, which is the
+  // server's own test for "has no trainer". Already sent by GET /api/skill-up/cohorts; the
+  // browse card reads it to offer the claim control rather than working the question out from
+  // a missing trainer name, which is a different question.
+  needsTrainer?: boolean;
 }
 
 // One of the signed-in member's own enrollments, exactly as GET /api/skill-up/enrollments returns it.

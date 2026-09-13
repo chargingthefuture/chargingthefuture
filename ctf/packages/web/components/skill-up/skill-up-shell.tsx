@@ -306,6 +306,7 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
             enrolledIds={enrolledIds}
             enrollingId={enrollingId}
             onEnroll={(cohort) => void handleEnroll(cohort)}
+            onClaimed={() => void handleRefresh()}
           />
         )}
         progress={<SkillUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} onLeft={() => void handleRefresh()} />}

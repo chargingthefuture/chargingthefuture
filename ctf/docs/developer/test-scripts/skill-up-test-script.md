@@ -110,6 +110,31 @@ Result: web ☐
 
 ---
 
+### LU-1c — Claiming a cohort as its trainer, from the member screen
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member who is **not** an admin. At least one cohort with no trainer is visible in browse (its card reads "Trainer TBD"). Have on hand a Directory profile you have claimed.
+
+**Steps:**
+1. With your claimed Directory profile carrying no skill for that cohort's occupation, open browse and look at the card.
+2. Activate **Claim as trainer**.
+3. Add a skill for that occupation to your Directory profile, return to SkillUp and reload.
+4. Activate **Claim as trainer** again.
+5. Sign in as a second member with no claimed Directory profile at all, and activate it on another trainerless cohort.
+
+**Expected:**
+- The card shows a line saying nobody is scheduled to teach this one yet, and a **Claim as trainer** control, without opening Details. A cohort that already has a trainer shows neither.
+- At step 2 the claim is refused and the card shows the server's own sentence, which names what to change — that the profile carries no skill for this occupation and adding one you actually have will let you claim it. It is not a generic failure.
+- At step 4 the claim succeeds, the card says you are the trainer for this cohort, and the list reloads so the cohort no longer offers the control. The cohort's trainer name is now yours on reload.
+- At step 5 the refusal says to claim your Directory profile first.
+- None of this needs an admin. The whole flow works for a signed-in member with read access.
+- A cohort whose occupation was never set refuses with the sentence about no occupation to match against, which names an admin as the person who can fix it.
+- At phone width the control and any refusal wrap rather than overflowing, and the page does not scroll sideways.
+
+Result: web ☐
+
+---
+
 ### LU-2 — Cohort detail view
 
 **Role:** member · **Surfaces:** web, android
