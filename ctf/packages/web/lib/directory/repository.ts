@@ -536,8 +536,12 @@ async function recordProfileSkillAudit(
 
   let userId = knownUserId ?? null;
   if (!userId) {
+    // Compare as text, like every other query against this table. `directory_profiles.id` is varchar
+    // in the carried-over v2 database (see #534) even though schema.sql declares it UUID, and Postgres
+    // has no `varchar = uuid` operator — so `id = $1::uuid` does not merely miss, it throws
+    // "operator does not exist: character varying = uuid" before the row is ever looked at.
     const owner = await client.query<{ claimed_by_user_id: string | null }>(
-      'SELECT claimed_by_user_id FROM directory_profiles WHERE id = $1::uuid',
+      'SELECT claimed_by_user_id FROM directory_profiles WHERE id::text = $1',
       [profileId],
     );
     userId = owner.rows[0]?.claimed_by_user_id ?? null;

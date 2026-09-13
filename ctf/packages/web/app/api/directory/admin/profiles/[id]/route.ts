@@ -30,6 +30,11 @@ function optionalStringArray(value: unknown): string[] | undefined {
 
 // Maps a persistence error to the response used by PUT. A message mentioning a "_not_found" selector
 // is a client validation problem (400); anything else is a persistence failure (503).
+//
+// The reason travels with the failure. This is an admin surface, so under rule 137 it belongs in the
+// response text rather than only in the error report: a bare "Unable to update profile." is what a
+// database error looked like here for two weeks while every skill edit was being rejected, and it said
+// nothing about which query was failing or why.
 function mapSelectorError(error: unknown): NextResponse {
   const message = error instanceof Error ? error.message : 'unknown';
   const isValidation = message.includes('_not_found');
@@ -39,6 +44,7 @@ function mapSelectorError(error: unknown): NextResponse {
       ok: false,
       code: isValidation ? DIRECTORY_ERROR_CODE.invalidPayload : DIRECTORY_ERROR_CODE.persistenceUnavailable,
       message: isValidation ? 'Invalid selector references in profile payload.' : 'Unable to update profile.',
+      reason: failureReason(error),
     },
     { status: isValidation ? 400 : 503 },
   );

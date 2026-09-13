@@ -301,6 +301,20 @@ edit screen now uses the same picker (skills editable, no free-text box), also s
 an allow/deny audit line.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A1c · Saving a skill change works, and a failed save says why
+**Role:** admin · **Surfaces:** web (`/admin/directory`)
+**Precondition:** A profile that is **unclaimed** and one that is **claimed**. Both are exercised, because the skill audit only writes rows for a claimed profile and the lookup that decides which it is was the thing that broke.
+**Steps:**
+1. Open the edit drawer for the unclaimed profile, add a skill in the picker, press Save.
+2. Reopen it and confirm the skill is there.
+3. Do the same on the claimed profile: add a skill, save, reopen, confirm.
+4. Remove a skill from the claimed profile, save, reopen, confirm it is gone.
+5. Check `skill_up_trainer_skill_audit`: the claimed profile's add and remove are each a row; the unclaimed profile wrote none.
+**Expected:** Every save succeeds. No "Unable to update profile." banner in any of the four saves.
+**Regression guard:** between 2026-08-29 and 2026-09-12 every one of these saves failed. The audit's owner lookup compared `id = $1::uuid` against `directory_profiles.id`, which is varchar in the carried-over database, so Postgres threw `operator does not exist: character varying = uuid`, the surrounding transaction rolled back, and the whole profile edit was lost. It passed every automated check because a `schema.sql`-shaped database declares that column UUID and the comparison works there — so this case has to be run against a database with the carried-over varchar column to mean anything.
+**Also check:** force a save failure (for example, point the drawer at a profile id that does not exist) and confirm the banner now carries the server's reason after the sentence, rather than "Unable to update profile." alone.
+**Result:** web ☐ — notes:
+
 ### DIR-A1b · Admin list paging, and search across the whole collection
 **Role:** admin · **Surfaces:** web (`/admin/directory`)
 **Steps:**
