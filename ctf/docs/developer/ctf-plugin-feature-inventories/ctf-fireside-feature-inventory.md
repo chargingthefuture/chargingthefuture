@@ -119,7 +119,9 @@ faults in two weeks came from a rule written in two places that disagreed.
 
 - Web: the plugin screen (your own comments, the guidelines) and all seven routes. Phone-width, paged.
 - The blog-side widget: not in this repository. It ships from `wiki-site`.
-- Android: out of scope, web-only per rule 105.
+- Android: out of scope, web-only per rule 105. Recorded in `ctf/config/plugin-parity-contracts.json`
+  with `requiresMobileSurface: false` — the native app carries only Clerk, Chyme, bug reporting and
+  settings, and a conversation that lives under a blog post is not one of those.
 
 ## Seed Coverage Status
 

@@ -122,6 +122,12 @@
       "requiresExplicitWebShell": true
     },
     {
+      "slug": "fireside",
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": true
+    },
+    {
       "slug": "contributions",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
