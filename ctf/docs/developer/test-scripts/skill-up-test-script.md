@@ -334,6 +334,26 @@ Result: web ☐
 
 ---
 
+### LU-10b — The cohort card shows a real trainer rate, not zero
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** An open cohort with a trainer rate set (`trainer_credits_per_milestone`, default 10) and the standard three-milestone skeleton, with at least one person enrolled.
+
+**Steps:**
+1. Open the SkillUp browse list.
+2. Read the cohort card's "Trainer earns" figure and the line under it.
+3. Compare against the cohort's own numbers: the per-milestone rate times the milestone count is what one learner finishing is worth; that times the people enrolled is the running total.
+4. Open the cohort's detail view and confirm it reports the same rate.
+
+**Expected:** A cohort at 10 per milestone with three milestones reads "30 SC per learner", and with one person enrolled, "30 SC from 1 enrolled". Not zero.
+
+**Regression guard:** before 2026-09-12 every card read "Trainer earns 0 SC per learner" whatever the rate was, because no server query sent a milestone count and the card multiplied by the missing field. If a card reads zero again, check the count reaching the client before checking the stored rate — the rate was never the fault. A genuine zero is still possible and means something different: a cohort whose rate really is zero, or one with no milestones at all, since the grant fires on a milestone release.
+
+Result: web ☐
+
+---
+
 ### LU-11 — Public shell copy accuracy (unauthenticated)
 
 **Role:** unauthenticated · **Surfaces:** web, android

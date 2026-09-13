@@ -133,6 +133,7 @@ type CohortRow = {
   source_sector?: string | null;
   job_title_id?: string | null;
   trainer_credits_per_milestone?: string | null;
+  milestone_count?: string | null;
 };
 
 function mapCohort(row: CohortRow) {
@@ -157,6 +158,9 @@ function mapCohort(row: CohortRow) {
     jobTitleId: row.job_title_id ?? null,
     // What a trainer earns per milestone on this cohort — the browse card advertises it.
     trainerCreditsPerMilestone: toNumber(row.trainer_credits_per_milestone ?? '0'),
+    // How many milestones the cohort has. The card multiplies the two to show what one learner
+    // finishing is worth, so a query that omits this reports every trainer rate as zero.
+    milestoneCount: Number(row.milestone_count ?? '0'),
     sourceJobTitleId: row.source_job_title_id ?? null,
     sourceSector: row.source_sector ?? null,
     // An auto-created cohort still owned by the scheduler has no human trainer yet.
@@ -338,7 +342,8 @@ export async function listCohorts(filter: CohortFilter) {
       c.trainer_credits_per_milestone::text AS trainer_credits_per_milestone,
       c.source_job_title_id::text AS source_job_title_id,
       c.source_sector,
-      COALESCE(e.active_enrollments, 0)::text AS active_enrollments
+      COALESCE(e.active_enrollments, 0)::text AS active_enrollments,
+      COALESCE(m.milestone_count, 0)::text AS milestone_count
      FROM skill_up_cohorts c
      LEFT JOIN (
        SELECT cohort_id, COUNT(*)::int AS active_enrollments
@@ -346,6 +351,11 @@ export async function listCohorts(filter: CohortFilter) {
        WHERE status IN ('enrolled', 'active')
        GROUP BY cohort_id
      ) e ON e.cohort_id = c.id
+     LEFT JOIN (
+       SELECT cohort_id, COUNT(*)::int AS milestone_count
+       FROM skill_up_milestones
+       GROUP BY cohort_id
+     ) m ON m.cohort_id = c.id
      ${whereSql}
      ORDER BY c.start_date ASC, c.created_at DESC`,
     values,
@@ -374,7 +384,10 @@ export async function getCohortDetail(cohortId: string) {
       allow_no_deposit,
       trainer_split_percent::text,
       completion_bonus_credits::text,
-      created_by_user_id
+      created_by_user_id,
+      auto_created,
+      job_title_id::text AS job_title_id,
+      trainer_credits_per_milestone::text AS trainer_credits_per_milestone
      FROM skill_up_cohorts
      WHERE id = $1::uuid
      LIMIT 1`,
@@ -410,6 +423,9 @@ export async function getCohortDetail(cohortId: string) {
 
   return {
     ...mapCohort(cohort.rows[0]),
+    // The milestones are loaded in full just below, so the count comes from them rather than from a
+    // second query — and never from the row, whose SELECT does not carry one.
+    milestoneCount: milestones.rows.length,
     seatsAvailable: mapCohort(cohort.rows[0]).seats - Number(enrollmentCount.rows[0]?.total ?? '0'),
     curriculum: curriculum.rows.map((item) => ({
       id: item.id,
