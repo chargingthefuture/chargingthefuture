@@ -103,8 +103,11 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
         }),
       });
       if (!res.ok) {
-        const err = (await res.json()) as { message?: string };
-        throw new Error(err.message ?? "Failed to submit nomination.");
+        const err = (await res.json()) as { message?: string; reference?: string };
+        // A failure the server could not name carries a short reference that is also written into
+        // the error report, so a screenshot of this banner can be tied to the log line behind it.
+        const text = err.message ?? "Failed to submit nomination.";
+        throw new Error(err.reference ? `${text} (reference ${err.reference})` : text);
       }
       setSubmitted(true);
     } catch (e) {
