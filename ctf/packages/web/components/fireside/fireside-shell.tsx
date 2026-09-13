@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
+import { FiresideExportQueue } from "./fireside-export-queue";
+import { Pager } from "./fireside-pager";
 import { FiresideThreadView } from "./fireside-thread-view";
 
 // What a member manages about their own part in Fireside. Reading and writing happen under the blog
@@ -23,6 +25,18 @@ type OwnComment = {
   postRepo: string;
   state: "live" | "held_for_approval" | "removed" | "withdrawn";
   exportToBlog: boolean;
+  exportReview: "not_requested" | "pending" | "approved" | "refused";
+  exportRefusalReason: string | null;
+};
+
+// What the author is told about their own export request. The switch is one of two keys — an admin
+// holds the other — so a member who turns it on is owed the state, not left assuming their words
+// are already on their way to the blog.
+const EXPORT_NOTE: Record<OwnComment["exportReview"], string | null> = {
+  not_requested: null,
+  pending: "Waiting on an admin to read it before anything is copied to the blog.",
+  approved: "Approved for the blog. Switch this off any time before it is copied and it will not be.",
+  refused: "An admin declined this one for the blog. It stays here in the conversation.",
 };
 
 const STATE_LABEL: Record<OwnComment["state"], string> = {
@@ -57,10 +71,48 @@ function Guidelines({ t }: { t: PluginShellTokens }) {
         </p>
         <p style={{ marginBottom: 0 }}>
           Anyone can read this without an account. Writing needs one, and what you write becomes
-          public once you are approved.
+          public here once you are approved. Copying a comment onto the blog itself is a separate,
+          stricter step: the author asks for it and an admin agrees, and neither one alone does it.
         </p>
       </div>
     </details>
+  );
+}
+
+// The export request and what state it is in. Its own component so CommentRow stays inside the
+// complexity budget (rule 116), and because asking for a comment to go on the blog is a different
+// decision from anything else on the row.
+function ExportRequestRow({
+  comment,
+  t,
+  busy,
+  onToggleExport,
+}: {
+  comment: OwnComment;
+  t: PluginShellTokens;
+  busy: boolean;
+  onToggleExport: (id: string, next: boolean) => void;
+}) {
+  const note = EXPORT_NOTE[comment.exportReview];
+  const refused = comment.exportReview === "refused";
+  return (
+    <>
+      <label style={{ fontSize: 11, color: t.SUBTLE, display: "flex", alignItems: "center", gap: 6 }}>
+        <input
+          type="checkbox"
+          checked={comment.exportToBlog}
+          disabled={busy || refused}
+          onChange={(e) => onToggleExport(comment.id, e.target.checked)}
+        />
+        Ask for this to be published with the post
+      </label>
+      {note && (
+        <div style={{ fontSize: 11, color: t.FAINT, lineHeight: 1.6, flexBasis: "100%" }}>
+          {note}
+          {refused && comment.exportRefusalReason ? ` ${comment.exportRefusalReason}` : ""}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -97,15 +149,7 @@ function CommentRow({
       </div>
       {editable && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
-          <label style={{ fontSize: 11, color: t.SUBTLE, display: "flex", alignItems: "center", gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={comment.exportToBlog}
-              disabled={busy}
-              onChange={(e) => onToggleExport(comment.id, e.target.checked)}
-            />
-            Let this be published with the post
-          </label>
+          <ExportRequestRow comment={comment} t={t} busy={busy} onToggleExport={onToggleExport} />
           <button
             type="button"
             onClick={() => onWithdraw(comment.id)}
@@ -131,6 +175,7 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openPost, setOpenPost] = useState<{ repo: string; slug: string; title: string } | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   const load = useCallback(async (wanted: number) => {
     setLoading(true);
@@ -177,7 +222,9 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
 
   return (
     <div style={{ background: t.BG, minHeight: "100%", padding: "20px 16px 48px" }}>
-      {openPost ? (
+      {queueOpen ? (
+        <FiresideExportQueue t={t} onClose={() => { setQueueOpen(false); void load(page); }} />
+      ) : openPost ? (
         <FiresideThreadView
           postRepo={openPost.repo}
           postSlug={openPost.slug}
@@ -193,6 +240,13 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
         Conversation under the posts on the blog. This screen is your side of it — everything you
         have written, and what is happening to each one.
       </p>
+
+      {isAdmin && (
+        <button type="button" onClick={() => setQueueOpen(true)}
+          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: t.ACCENT, cursor: "pointer", marginBottom: 16 }}>
+          Blog export queue
+        </button>
+      )}
 
       <Guidelines t={t} />
 
@@ -227,18 +281,7 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
               onOpenThread={(row) => setOpenPost({ repo: row.postRepo, slug: row.postSlug, title: row.postTitle })}
             />
           ))}
-          {/* Paged, never an endless list — accessibility rule. */}
-          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
-            <button type="button" disabled={page <= 1} onClick={() => void load(page - 1)}
-              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, color: t.TEXT, cursor: page <= 1 ? "default" : "pointer", opacity: page <= 1 ? 0.4 : 1 }}>
-              Previous
-            </button>
-            <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: "center" }}>Page {page} of {lastPage}</span>
-            <button type="button" disabled={page >= lastPage} onClick={() => void load(page + 1)}
-              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, color: t.TEXT, cursor: page >= lastPage ? "default" : "pointer", opacity: page >= lastPage ? 0.4 : 1 }}>
-              Next
-            </button>
-          </div>
+          <Pager page={page} lastPage={lastPage} t={t} onPage={(next) => void load(next)} />
         </>
       )}
       </>

@@ -57,16 +57,31 @@ describe('commentStateForAuthor', () => {
 });
 
 describe('mayExportToBlog', () => {
-  it('exports only what the author asked to have exported', () => {
-    expect(mayExportToBlog({ status: 'visible', authorIsApproved: true, exportOptIn: true })).toBe(true);
-    expect(mayExportToBlog({ status: 'visible', authorIsApproved: true, exportOptIn: false })).toBe(false);
+  const live = { status: 'visible' as const, authorIsApproved: true };
+
+  it('needs both keys turned', () => {
+    expect(mayExportToBlog({ ...live, exportOptIn: true, exportReview: 'approved' })).toBe(true);
+    expect(mayExportToBlog({ ...live, exportOptIn: false, exportReview: 'approved' })).toBe(false);
+    expect(mayExportToBlog({ ...live, exportOptIn: true, exportReview: 'pending' })).toBe(false);
+  });
+
+  // The case this gate was added for: an account posting spam or bait opts its own comment in, and
+  // that alone must never put the text on a permanently archived page beside real writing.
+  it('refuses an opt-in nobody has reviewed, and one an admin declined', () => {
+    expect(mayExportToBlog({ ...live, exportOptIn: true, exportReview: 'not_requested' })).toBe(false);
+    expect(mayExportToBlog({ ...live, exportOptIn: true, exportReview: 'refused' })).toBe(false);
+  });
+
+  // Consent is the author's to withdraw right up until the copy is made, approval or no approval.
+  it('stops exporting once the author switches the request off', () => {
+    expect(mayExportToBlog({ ...live, exportOptIn: false, exportReview: 'approved' })).toBe(false);
   });
 
   // Export puts the text somewhere it cannot be withdrawn from, so everything that hides a comment
-  // from the public also keeps it out of the build.
+  // from the public also keeps it out of the build — an admin approval does not override that.
   it('never exports a comment the public cannot already see', () => {
-    expect(mayExportToBlog({ status: 'visible', authorIsApproved: false, exportOptIn: true })).toBe(false);
-    expect(mayExportToBlog({ status: 'removed', authorIsApproved: true, exportOptIn: true })).toBe(false);
-    expect(mayExportToBlog({ status: 'withdrawn', authorIsApproved: true, exportOptIn: true })).toBe(false);
+    expect(mayExportToBlog({ status: 'visible', authorIsApproved: false, exportOptIn: true, exportReview: 'approved' })).toBe(false);
+    expect(mayExportToBlog({ status: 'removed', authorIsApproved: true, exportOptIn: true, exportReview: 'approved' })).toBe(false);
+    expect(mayExportToBlog({ status: 'withdrawn', authorIsApproved: true, exportOptIn: true, exportReview: 'approved' })).toBe(false);
   });
 });

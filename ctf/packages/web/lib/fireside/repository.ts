@@ -15,6 +15,7 @@ import {
   FIRESIDE_REACTION_KINDS,
 } from './constants';
 import type {
+  ExportReview,
   FiresideComment,
   FiresideCommentInput,
   FiresideCommentStatus,
@@ -127,6 +128,8 @@ type CommentRow = {
   body: string;
   status: FiresideCommentStatus;
   export_to_blog: boolean;
+  export_review: ExportReview;
+  export_refusal_reason: string | null;
   created_at: string;
   post_repo: string;
   post_slug: string;
@@ -172,6 +175,8 @@ const COMMENT_SELECT = `
          c.body,
          c.status,
          c.export_to_blog,
+         c.export_review,
+         c.export_refusal_reason,
          to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS created_at,
          t.post_repo, t.post_slug, t.post_title
     FROM fireside_comments c
@@ -298,6 +303,8 @@ export async function listOwnComments(userId: string, limit = 50, offset = 0): P
     ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], userId),
     state: commentStateForAuthor({ status: row.status, authorIsApproved }),
     exportToBlog: row.export_to_blog,
+    exportReview: row.export_review,
+    exportRefusalReason: row.export_refusal_reason,
     postRepo: row.post_repo,
     postSlug: row.post_slug,
     postTitle: row.post_title,
@@ -320,19 +327,11 @@ export async function countOwnComments(userId: string): Promise<number> {
 export async function withdrawOwnComment(userId: string, commentId: string): Promise<boolean> {
   const result = await queryDb(
     `UPDATE fireside_comments
-        SET status = 'withdrawn', body = '', export_to_blog = FALSE, updated_at = NOW()
+        SET status = 'withdrawn', body = '', export_to_blog = FALSE,
+            export_review = 'not_requested', export_reviewed_by = NULL, export_reviewed_at = NULL,
+            updated_at = NOW()
       WHERE id = $1::uuid AND author_user_id = $2 AND status <> 'withdrawn'`,
     [commentId, userId],
-  );
-  return (result.rowCount ?? 0) > 0;
-}
-
-/** The author chooses whether this comment may be copied into the blog's published build. */
-export async function setExportPreference(userId: string, commentId: string, exportToBlog: boolean): Promise<boolean> {
-  const result = await queryDb(
-    `UPDATE fireside_comments SET export_to_blog = $3, updated_at = NOW()
-      WHERE id = $1::uuid AND author_user_id = $2 AND status = 'visible'`,
-    [commentId, userId, exportToBlog],
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -374,7 +373,12 @@ export async function moderateComment(input: {
     ? await queryDb(
         `UPDATE fireside_comments
             SET status = 'removed', removed_by = $2, removed_at = NOW(), removal_reason = $3,
-                export_to_blog = FALSE, updated_at = NOW()
+                export_to_blog = FALSE,
+                -- A removed comment leaves the export queue: there is nothing to decide about
+                -- copying out something that is no longer in the conversation. An export an admin
+                -- already refused keeps that record; anything else resets.
+                export_review = CASE WHEN export_review = 'refused' THEN 'refused' ELSE 'not_requested' END,
+                updated_at = NOW()
           WHERE id = $1::uuid AND status = 'visible'`,
         [input.commentId, input.adminId, input.reason],
       )

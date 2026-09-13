@@ -71,6 +71,8 @@ async function seed() {
 
   for (const comment of comments) {
     await pool.query(
+      // Export columns are left at their defaults: no opt-in, no pending request. A seeded request
+      // would put a decision in the admin's export queue that nobody actually made.
       `INSERT INTO fireside_comments
          (id, thread_id, parent_comment_id, author_user_id, author_username, body, status, created_at, updated_at)
        VALUES ($1::uuid, $2::uuid, NULL, $3, $4, $5, 'visible', $6::timestamptz, $6::timestamptz)

@@ -113,10 +113,13 @@ commands:
       properties:
         exportToBlog:
           type: boolean
+        exportReview:
+          type: string
+          enum: [not_requested, pending, approved, refused]
     dataAccess:
-      - fireside_comments (update)
+      - fireside_comments (select, update)
       - fireside_audit_events (insert)
-    purpose: The author chooses whether this comment may be copied into the blog's published build, which is captured by the Internet Archive and cannot be withdrawn afterwards. Off by default.
+    purpose: The author asks for this comment to be copied into the blog's published build, or takes the ask back. Off by default, and asking only queues it — an admin has to approve before anything leaves the app. A comment an admin already declined cannot be re-queued.
     retentionClass: community_content
   - pluginId: fireside
     command: fireside.reaction.toggle
@@ -237,3 +240,74 @@ definitions:
             type: string
           postTitle:
             type: string
+  - pluginId: fireside
+    command: fireside.export.queue.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+    outputSchema:
+      type: object
+      properties:
+        requests:
+          type: array
+          items:
+            type: object
+            properties:
+              commentId:
+                type: string
+              body:
+                type: string
+              authorName:
+                type: string
+              authorRecord:
+                type: object
+                properties:
+                  comments:
+                    type: integer
+                  removed:
+                    type: integer
+                  exportsRefused:
+                    type: integer
+                  exportsApproved:
+                    type: integer
+        page:
+          type: integer
+        lastPage:
+          type: integer
+        total:
+          type: integer
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - unlock_verification_submissions (select, access_tier only)
+    purpose: The pending blog-export requests an admin works, oldest first, each carrying the author's own record here so a repeated offender is answered as an account rather than item by item
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.export.approve
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId, action]
+      properties:
+        commentId:
+          type: string
+        action:
+          type: string
+          enum: [approve, refuse]
+        reason:
+          type: string
+          maxLength: 500
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - fireside_comments (update)
+      - fireside_audit_events (insert)
+    purpose: An admin turns the second of the two keys on copying a comment into the blog's published build, or declines it. Only a pending request can be decided, and a refusal is final for that comment.
+    retentionClass: community_content

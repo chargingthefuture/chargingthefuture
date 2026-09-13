@@ -31,6 +31,7 @@ export const FIRESIDE_ERROR_CODE = {
   notFound: 'fireside_not_found',
   forbidden: 'fireside_forbidden',
   threadClosed: 'fireside_thread_closed',
+  exportRefused: 'fireside_export_refused',
   rateLimited: 'fireside_rate_limited',
   csrfDenied: 'fireside_csrf_denied',
   persistenceUnavailable: 'fireside_persistence_unavailable',
@@ -41,3 +42,8 @@ export const FIRESIDE_ERROR_CODE = {
 // broken page, and both cost the person who wrote it.
 export const FIRESIDE_HELD_NOTICE =
   'Saved. It stays private until your account is approved — that means a person reads what you wrote, which is the same look the app already does before anyone is verified. Once you are approved, everything you have written here appears at once.';
+
+// Shown beside a comment whose author has asked for it to go into the blog's published build. Said
+// at the moment of asking, so nobody believes their words are already on their way out of the app.
+export const FIRESIDE_EXPORT_PENDING_NOTICE =
+  'Asked. An admin reads it before anything is copied to the blog, because that page is permanently archived and cannot be pulled back. Until then it stays here in the conversation, and you can switch this off at any time.';
