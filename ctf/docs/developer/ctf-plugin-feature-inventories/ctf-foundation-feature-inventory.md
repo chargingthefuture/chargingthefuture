@@ -177,6 +177,34 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-09-12: **A failed call now says which attempt it was, and a bookkeeping failure no longer
+  reports a working call as broken (owner report: a member could not start a Foundation call on two
+  consecutive nights, seeing "Thread create unavailable." each time).** Three changes on the
+  "Connect now" path:
+  - `insertFoundationAudit` no longer throws. Every Foundation route calls it from inside the same
+    `try` that wraps the real work, so a failed audit write was caught by the route's catch-all and
+    returned as a 5xx — telling the member the action failed after it had already been committed, and
+    failing the same way on every retry. It now reports the failure through `reportError` and steps
+    over it (rule 137 point 6). The audit row is still attempted on every call; only its failure mode
+    changed.
+  - The unrecognized-error answers on the eight call-path routes (`POST /connections/threads`, the
+    ring, the call-state poll, answer, decline, end, extend, and the incoming-call inbox) now go
+    through `failureResponse` with `audience: 'member'`. The member still reads plain copy, but the
+    body carries a `reference` that also appears in the server's error report, and the caller's
+    surface shows it as `[ref 1a2b3c4d]`. A screenshot of the banner is now enough to find the log
+    line that says what actually broke (rule 137 points 2, 4 and 11).
+  - The Stream chat calls that `createConnectionThread` makes while its Postgres transaction is open
+    (`ensureFoundationStreamChannel`, `createFoundationParticipantToken`) are bounded to 8 seconds.
+    Both already degraded to `null` on any failure; without a bound, a Stream app that never answered
+    held a pooled database connection for as long as it took, which is how one slow dependency could
+    take the whole plugin down. The timeout only makes the existing degrade happen promptly.
+
+  Two member-visible strings changed on this path. "Thread create unavailable." is now "Could not
+  open a connection with this provider right now." and the open-connection cap, which read "Thread
+  create rate limit exceeded.", now reads "You already have the maximum number of open connections.
+  Close one to start another." — the cap is on how many connections a member has open, not on how
+  fast they act, and the old wording said neither. No schema, route, or contract change.
+
 
 - 2026-08-05: **Member blocks enforced (issue #809 task 4).** Provider search
   (`GET /api/foundation/providers/search`) now hides a provider who is blocked (either direction)

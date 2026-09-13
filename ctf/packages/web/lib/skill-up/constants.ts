@@ -11,7 +11,30 @@ export const SKILL_UP_ERROR_CODE = {
   unavailable: 'skill_up_unavailable',
 } as const;
 
+// Unused. Kept only so its absence is not mistaken for a grant that exists: nothing in this codebase
+// hands a new member starting credits. The credits a member actually begins with come from Unlock
+// approval (`unlock_quora_verification_approval`), plus their mutual-credit line.
 export const SKILL_UP_DEFAULT_STARTER_CREDITS = 500;
+
+// Every cohort takes the same deposit, from every member (owner decision 2026-08-29). Flat and small
+// on purpose: it is a commitment device, and a per-cohort or per-occupation figure would be a
+// judgment call, which is bias. It is never zero.
+//
+// 50 sits against what a member actually holds — the Unlock approval grant, with the mutual-credit
+// line behind it — so joining two cohorts does not require going into credit-debt. The deposit is
+// held in escrow and returned in full as each milestone is validated; leaving a cohort refunds
+// whatever is still held. It is not spent.
+export const SKILL_UP_DEPOSIT_CREDITS = 50;
+
+// What a trainer receives per milestone, per learner, before the gap scaling below. Minted, not
+// taken from the learner's deposit.
+export const SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE = 10;
+
+// Training a short occupation earns more: the Workforce gap scales the trainer's rate between these
+// bounds. Capped so one outlier occupation cannot dominate, and floored at the base so a small gap
+// never pays less than the flat rate.
+export const SKILL_UP_TRAINER_GAP_MULTIPLIER_MIN = 1;
+export const SKILL_UP_TRAINER_GAP_MULTIPLIER_MAX = 2;
 export const SKILL_UP_DEFAULT_TRAINER_SPLIT_PERCENT = 25;
 
 // Auto-cohort creation (issue #904). The scheduled run is the actor on every cohort it stands up,

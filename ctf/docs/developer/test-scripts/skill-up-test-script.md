@@ -67,11 +67,13 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 
 **Expected:**
 - Without filters, at least the seed cohort card appears.
+- Nothing on this screen, or on the Apps list entry that led here, promises a "stipend" — the catalog summary now reads "earn credits as you reach each milestone". SkillUp moves credits on milestone release, trainer grant, and completion bonus only.
 - Filtering by matching track narrows the list to include the seed cohort; filtering by a track that matches nothing shows an empty state (no error).
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
 - No network error banners appear at any step.
-- The card shows a **Trainer earns** figure and a **You get back** figure. On a cohort with a deposit above zero, "Trainer earns" reads the deposit times the trainer split over one hundred minus the split (a 300 SC deposit at a 25% split reads 100 SC per learner), and "You get back" reads the deposit itself. Enroll one member and reload: a second line appears under the trainer figure reading the running total and the number enrolled, and it goes up as more people join.
+- The card shows a **Trainer earns** figure and a **You get back** figure. "Trainer earns" is the cohort's stamped per-milestone rate times its milestone count — it is **not** derived from the deposit, so two cohorts with the same deposit can show different trainer figures when their Workforce gaps differ. "You get back" is the flat deposit, the same on every cohort.
+- Original wording, still true: On a cohort with a deposit above zero, "Trainer earns" reads the deposit times the trainer split over one hundred minus the split (a 300 SC deposit at a 25% split reads 100 SC per learner), and "You get back" reads the deposit itself. Enroll one member and reload: a second line appears under the trainer figure reading the running total and the number enrolled, and it goes up as more people join.
 - On a cohort with no deposit and no completion bonus, the card says it is free to join and that no credits move, rather than showing a row of zeros.
 - No figure on the card contradicts the wallet: the deposit shown as "You get back" is the amount actually escrowed on enrollment.
 - On a cohort whose title and track are the same words (one opened from the proposal queue is titled with its occupation), the card shows that text once — the title, with no track chip above it repeating it — and the status chip stays on the right of that row. A cohort whose track differs from its title still shows its track chip.
@@ -159,6 +161,28 @@ Result: web ☐
 
 ---
 
+### LU-3d — Leaving a cohort returns the credits still held
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as a member enrolled in a cohort with a deposit above zero, with no milestone validated yet. Note the wallet balance and the escrow figure.
+
+**Steps:**
+1. Leave the cohort.
+2. Check the wallet balance and the escrow figure.
+3. Try to leave the same enrollment a second time with the same idempotency key.
+4. Try to leave an enrollment belonging to somebody else.
+
+**Expected:**
+- The whole deposit comes back: balance rises by the full amount held, escrow drops to zero for that cohort, and the enrollment reads as left.
+- The response names how many credits were returned.
+- Step 3 does not refund twice — the balance is unchanged from step 2, and the request reports the enrollment is already finished or left.
+- Step 4 is refused; you can only leave your own enrollment.
+- On a cohort where one milestone was already validated, leaving returns only what is **still held** — the released milestone stays released.
+
+Result: web ☐
+
+---
+
 ### LU-4 — Enrollment blocked for trainer-only account
 
 **Role:** trainer · **Surfaces:** web
@@ -209,6 +233,7 @@ Result: web ☐
 - Escrow filter tab shows the 300 SC held for the seed cohort enrollment.
 - No "Spend", "Transfer", or "Send credits" button appears anywhere on this screen — the wallet is read-only.
 - No "Total Spent" or "running balance per row" columns appear (known real-data deviation; absence is correct).
+- Every row is a milestone release, a trainer credit grant, a completion bonus, or an achievement badge. **No row reads "Stipend"** — stipends were removed on 2026-09-12 and nothing can write that entry. (A "Microgrant" label still exists in the code and is likewise unreachable; seeing one would mean something started writing a disbursement type that has no flow behind it.)
 
 Result: web ☐
 

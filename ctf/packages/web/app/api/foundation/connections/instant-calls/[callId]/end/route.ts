@@ -3,7 +3,7 @@ import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { endInstantCall } from 'lib/foundation/instant-call';
 import { insertFoundationAudit } from 'lib/foundation/repository';
-import { reportError } from 'lib/observability/report';
+import { failureResponse } from 'lib/errors/failure';
 
 // End an instant 1:1 call (Foundation "Connect now", issue #808 task 3). Either participant may end it,
 // from any non-terminal state: the caller can cancel a still-ringing call, and either party can hang up an
@@ -50,10 +50,16 @@ export async function POST(request: Request, context: { params: Promise<{ callId
         { status: 404 },
       );
     }
-    reportError(error, { area: 'foundation', op: 'connections_instant_call_end' });
-    return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not end the call.' },
-      { status: 503 },
-    );
+    // Unrecognized: a real failure of a step in this route. The member keeps plain copy, and the
+    // response carries a reference that also appears in the error report, so a screenshot of the
+    // banner can be matched to the log line that says what broke (rule 137 points 2 and 4).
+    return failureResponse({
+      summary: 'Could not end the call right now.',
+      error,
+      code: FOUNDATION_ERROR_CODE.persistenceUnavailable,
+      area: 'foundation',
+      op: 'connections_instant_call_end',
+      audience: 'member',
+    });
   }
 }
