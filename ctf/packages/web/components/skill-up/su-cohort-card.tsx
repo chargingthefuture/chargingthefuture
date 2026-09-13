@@ -1,6 +1,7 @@
 "use client";
 
-import { User } from "lucide-react";
+import { ChevronDown, User } from "lucide-react";
+import { useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_COLOR, TRACK_COLORS, cohortEconomics, getSkillUpTokens, trackRepeatsTitle, type Cohort, type CohortEconomics, type SkillUpTokens } from "./su-shared";
 
@@ -73,6 +74,72 @@ function EarningsRow({ economics, t }: { economics: CohortEconomics; t: SkillUpT
   );
 }
 
+// Every cohort runs in English unless the people in it agree otherwise. Said on the card rather than
+// in a policy page because the moment it matters is the moment before somebody enrolls, and a learner
+// who cannot follow the session has already put a deposit down by the time they find out.
+function LanguageNote({ t }: { t: SkillUpTokens }) {
+  return (
+    <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, lineHeight: 1.5, marginBottom: 12 }}>
+      Sessions are held in English by default. A trainer may run part or all of a cohort in another
+      language when everyone enrolled agrees to it, and English stays the default either way. If you do
+      not read or speak English comfortably, ask the trainer before you enroll — no translation is
+      provided and nobody here is responsible for arranging one.
+    </div>
+  );
+}
+
+// The figures, the tags and the language note, behind a toggle. The card carried all of it at once and
+// had become hard to read at a glance; what stays visible is what somebody scanning a list needs —
+// who teaches it, how long it runs, seats, deposit — and the rest opens on request.
+function CohortDetails({
+  economics,
+  tags,
+  t,
+}: {
+  economics: CohortEconomics;
+  tags: string[];
+  t: SkillUpTokens;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "4px 0",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: t.TEXT_SUBTLE,
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        {open ? "Hide details" : "Details"}
+        <ChevronDown size={12} style={{ transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          {tags.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {tags.map((tag) => (
+                <span key={tag} style={{ fontSize: 10, color: t.FAINT, background: t.BORDER_SOLID, padding: "2px 8px", borderRadius: 10 }}>{tag}</span>
+              ))}
+            </div>
+          )}
+          <EarningsRow economics={economics} t={t} />
+          <LanguageNote t={t} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function cohortLabels(cohort: Cohort, statusKey: string, isFull: boolean) {
   return {
     statusLabel: isFull ? "Full" : statusKey.charAt(0).toUpperCase() + statusKey.slice(1),
@@ -107,34 +174,31 @@ export function SkillUpCohortCard({
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
   const { trackColor, isFull, statusColor, statusLabel, seatsLabel, tags, costLabel } = cohortView(t, cohort);
-  // The chip is dropped when it only repeats the title the card already prints below it.
+  // The chip is dropped when it only repeats the title it sits beside.
   const trackHidden = trackRepeatsTitle(cohort.title, cohort.track);
   const economics = cohortEconomics(cohort);
 
   return (
     <div style={{ background: t.SURFACE, borderRadius: 12, padding: "16px", border: `1px solid ${t.BORDER_SOLID}`, opacity: isFull ? 0.7 : 1 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        {cohort.track && !trackHidden && <span style={{ fontSize: 10, fontWeight: 600, color: trackColor, background: `${trackColor}18`, padding: "3px 8px", borderRadius: 20 }}>{cohort.track}</span>}
-        {/* marginLeft:auto keeps the status chip on the right whether or not the track chip
-            rendered — the row is space-between, which would otherwise pull a lone chip left. */}
-        <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, color: statusColor, background: `${statusColor}15`, padding: "3px 8px", borderRadius: 20 }}>
-          {statusLabel}
-        </span>
+      {/* Title and chips share one row. The chips used to sit on a row of their own, and on every
+          cohort whose track repeats its title that row rendered empty on the left — a band of
+          whitespace above the title with nothing in it. Putting them together closes the gap and
+          lines the status chip up with the title it belongs to. */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: t.TEXT_BODY, lineHeight: 1.4, minWidth: 0 }}>{cohort.title}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          {cohort.track && !trackHidden && <span style={{ fontSize: 10, fontWeight: 600, color: trackColor, background: `${trackColor}18`, padding: "3px 8px", borderRadius: 20 }}>{cohort.track}</span>}
+          <span style={{ fontSize: 10, fontWeight: 600, color: statusColor, background: `${statusColor}15`, padding: "3px 8px", borderRadius: 20 }}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
-      <div style={{ fontSize: 14, fontWeight: 600, color: t.TEXT_BODY, marginBottom: 8, lineHeight: 1.4 }}>{cohort.title}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: t.TEXT_SUBTLE, marginBottom: 12 }}>
         <User size={12} />
         {cohort.trainerName ?? "Trainer TBD"}
         {cohort.milestoneCount != null && <><span style={{ color: t.FAINT }}>·</span>{cohort.milestoneCount} milestones</>}
       </div>
-      {tags.length > 0 && (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-          {tags.map((tag) => (
-            <span key={tag} style={{ fontSize: 10, color: t.FAINT, background: t.BORDER_SOLID, padding: "2px 8px", borderRadius: 10 }}>{tag}</span>
-          ))}
-        </div>
-      )}
-      <EarningsRow economics={economics} t={t} />
+      <CohortDetails economics={economics} tags={tags} t={t} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
         <div>
           <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Seats</div>
