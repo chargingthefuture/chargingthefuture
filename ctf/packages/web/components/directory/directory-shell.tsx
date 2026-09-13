@@ -16,7 +16,7 @@ import { failureText } from 'lib/errors/client-failure';
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
-  description: "Nominate someone you believe may be a survivor. Their Quora profile is the social proof, their skills join our economy, and you earn points on acceptance.",
+  description: "Nominate someone you believe may be a survivor. Their Quora profile helps verify they are a real person, their skills join our economy, and you earn points on acceptance.",
   ctaLabel: "Submit a community profile",
   ctaUrl: "/apps/skills-hunt?tab=scout",
   isActive: true,
