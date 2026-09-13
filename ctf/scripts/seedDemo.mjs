@@ -43,6 +43,25 @@ function requireEnv(name) {
   return value;
 }
 
+/**
+ * Spell out a Postgres failure. `err.message` alone is often too thin to act on —
+ * "INSERT has more expressions than target columns" does not say which table, and
+ * that is the exact failure this seed hit twice after columns were dropped from
+ * schema.sql without the matching seed statement being updated. node-postgres
+ * carries the rest on the error object; this puts it on the one printed line.
+ */
+function describeDbError(err) {
+  if (!(err instanceof Error)) return String(err);
+  const facts = [];
+  if (err.table) facts.push(`table ${err.table}`);
+  if (err.column) facts.push(`column ${err.column}`);
+  if (err.constraint) facts.push(`constraint ${err.constraint}`);
+  if (err.detail) facts.push(err.detail);
+  if (err.hint) facts.push(`hint: ${err.hint}`);
+  if (err.code) facts.push(`sqlstate ${err.code}`);
+  return facts.length > 0 ? `${err.message} (${facts.join('; ')})` : err.message;
+}
+
 const OWNER = requireEnv('DEMO_OWNER_ID');
 
 // Optional second REAL Clerk user — the counterparty for two-sided marketplace
@@ -311,23 +330,22 @@ async function seedSkillUp(c) {
     `INSERT INTO skill_up_cohorts
      (id, title, description, track, seats, start_date, end_date, required_credits,
       materials_cost, device_support, status, allow_no_deposit, trainer_split_percent,
-      completion_bonus_credits, stipend_mode, stipend_amount_per_payout,
-      microgrant_mode, microgrant_amount, refund_policy_json, payout_policy_json,
-      policy_json, created_by_user_id)
+      completion_bonus_credits, trainer_credits_per_milestone, job_title_id,
+      refund_policy_json, payout_policy_json, policy_json, created_by_user_id)
      VALUES
      ($1::uuid, 'Career Acceleration — Demo Cohort',
-      'A 12-week program to land your next tech role. Featuring live mentorship, portfolio reviews, and service-credit stipends.',
+      'A 12-week program to land your next tech role. Live mentorship, portfolio reviews, and a milestone-gated deposit you get back as you finish each milestone.',
       'Career Prep', 25,
       CURRENT_DATE - INTERVAL '14 days', CURRENT_DATE + INTERVAL '70 days',
-      300, 100, true, 'open', false, 25, 200,
-      'milestone', 75, 'cohort_pool', 150,
+      300, 100, true, 'open', false, 25, 200, 10, $3::uuid,
       '{"dropout":{"day7":75,"day21":50,"after":0}}'::jsonb,
       '{"trainerSplitPercent":25,"completionBonus":200}'::jsonb,
       '{"regionalBands":{"default":1.0},"starterCredits":300}'::jsonb,
       $2)
      ON CONFLICT (id) DO UPDATE SET
-       title = EXCLUDED.title, status = EXCLUDED.status, updated_at = NOW()`,
-    [ID.cohort, TRAINER],
+       title = EXCLUDED.title, status = EXCLUDED.status,
+       job_title_id = EXCLUDED.job_title_id, updated_at = NOW()`,
+    [ID.cohort, TRAINER, ID.taxJobTitle],
   );
 
   await c.query(
@@ -407,7 +425,6 @@ async function seedSkillsHunt(c) {
       'quora.com/profile/demo-participant',
       '["TypeScript","PostgreSQL","React","Node.js"]'::jsonb,
       '["OpenTelemetry","eBPF"]'::jsonb,
-      '["Software Engineer","Platform Engineer"]'::jsonb,
       $4, 'accepted', $5, 50, 10, true, 'valid', NOW() - INTERVAL '2 days')
      ON CONFLICT (id) DO UPDATE SET
        status = EXCLUDED.status, points_awarded = EXCLUDED.points_awarded`,
@@ -1288,9 +1305,16 @@ async function main() {
     process.env.DATABASE_URL;
   if (!connStr) throw new Error('DATABASE_URL_DIRECT or DATABASE_URL is required');
 
+  // Neon requires SSL and presents a certificate this script does not pin, hence
+  // rejectUnauthorized: false. A plain Postgres — a throwaway container in CI, or a
+  // local one — usually has no SSL at all and refuses the handshake outright, so an
+  // explicit sslmode=disable in the URL (or PGSSLMODE=disable) turns it off.
+  const sslDisabled =
+    /[?&]sslmode=disable\b/.test(connStr) || process.env.PGSSLMODE === 'disable';
+
   const pool = new Pool({
     connectionString: connStr,
-    ssl: { rejectUnauthorized: false },
+    ssl: sslDisabled ? false : { rejectUnauthorized: false },
     options: '-c search_path=demo,public',
   });
 
@@ -1305,30 +1329,46 @@ async function main() {
   try {
     await client.query('BEGIN');
 
-    await seedUnlock(client);
-    await seedServiceCredits(client);
-    await seedGdp(client);
-    await seedWeeklyPerformance(client);
-    await seedSkillUp(client);
-    await seedSkillsHunt(client);
-    await seedDirectory(client);
-    await seedWorkforce(client);
-    await seedLighthouse(client);
-    await seedFeedAnnouncements(client);
-    await seedTrust(client);
-    await seedMood(client);
-    // Taxonomy before Foundation: foundation_provider_skills FK-references
-    // skills_taxonomy_skills, so the skills must exist first.
-    await seedSkillsTaxonomy(client);
-    await seedFoundation(client);
-    await seedChyme(client);
-    await seedTrustTransport(client);
-    await seedPeerProgramming(client);
-    await seedSocketRelay(client);
-    await seedClickLog(client);
-    await seedWhatWorks(client);
-    await seedContributions(client);
-    await seedRecurringActivity(client);
+    // One named entry per step so a failure says which step it was (rule 137).
+    // The whole seed runs in one transaction, so the first failure ends the run;
+    // without the name, the thrown Postgres error ("column x does not exist")
+    // does not say which of the twenty-odd plugin seeds wrote the statement.
+    const steps = [
+      ['unlock', seedUnlock],
+      ['service-credits', seedServiceCredits],
+      ['gdp', seedGdp],
+      ['weekly-performance', seedWeeklyPerformance],
+      // Taxonomy before SkillUp: the demo cohort names the occupation it trains
+      // (job_title_id), which is the occupation the trainer-claim gate matches a
+      // person's Directory skills against. Before Foundation too —
+      // foundation_provider_skills FK-references skills_taxonomy_skills.
+      ['skills-taxonomy', seedSkillsTaxonomy],
+      ['skill-up', seedSkillUp],
+      ['skills-hunt', seedSkillsHunt],
+      ['directory', seedDirectory],
+      ['workforce', seedWorkforce],
+      ['lighthouse', seedLighthouse],
+      ['feed + announcements', seedFeedAnnouncements],
+      ['trust', seedTrust],
+      ['mood', seedMood],
+      ['foundation', seedFoundation],
+      ['chyme', seedChyme],
+      ['trust-transport', seedTrustTransport],
+      ['peer-programming', seedPeerProgramming],
+      ['socket-relay', seedSocketRelay],
+      ['click-log', seedClickLog],
+      ['what-works', seedWhatWorks],
+      ['contributions', seedContributions],
+      ['recurring-activity', seedRecurringActivity],
+    ];
+
+    for (const [name, run] of steps) {
+      try {
+        await run(client);
+      } catch (err) {
+        throw new Error(`step "${name}" failed: ${describeDbError(err)}`, { cause: err });
+      }
+    }
 
     await client.query('COMMIT');
     console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
@@ -1355,6 +1395,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('seed:demo failed:', err instanceof Error ? err.message : err);
+  console.error('seed:demo failed:', err instanceof Error ? err.message : describeDbError(err));
   process.exit(1);
 });

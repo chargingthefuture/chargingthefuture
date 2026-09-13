@@ -7822,3 +7822,134 @@ BEGIN
 END
 $$;
 
+
+-- ── post migration: 0009_skill_up_cohort_title_drop_plugin_prefix.sql ──
+-- post/0009: Drop the plugin-name prefix from SkillUp cohort titles.
+--
+-- Cohorts opened from the Workforce talent-gap proposal queue were titled
+-- "<plugin name>: <occupation>" — "LevelUp: Journalists / Reporters" before the
+-- 2026-08-29 rename, "SkillUp: …" after it. Every one of those cards is already
+-- inside the SkillUp plugin, so the prefix repeated the plugin's own name on each
+-- row and ate width that a phone does not have (owner report, 2026-08-29). The
+-- title template now writes the occupation on its own; this brings the rows that
+-- were written under the old template into line.
+--
+-- Guarded on the prefix still being present, so a title that never carried one is
+-- untouched and a second run changes nothing. TRIM handles a stray space after the
+-- colon; a row that is nothing but the prefix is left alone rather than emptied.
+UPDATE skill_up_cohorts
+SET title = TRIM(SUBSTRING(title FROM 10)),
+    updated_at = NOW()
+WHERE title LIKE 'LevelUp: %'
+  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+
+UPDATE skill_up_cohorts
+SET title = TRIM(SUBSTRING(title FROM 10)),
+    updated_at = NOW()
+WHERE title LIKE 'SkillUp: %'
+  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+
+
+-- ── post migration: 0010_skill_up_cohort_job_title_backfill.sql ──
+-- post/0010: Give every existing SkillUp cohort the occupation it trains.
+--
+-- A cohort now carries job_title_id — the Skills Taxonomy occupation it trains — because that is
+-- what the trainer claim gate matches a person's Directory skills against (owner decision
+-- 2026-08-29). New cohorts are required to supply it. The rows written before it existed need it
+-- filled in, or nobody can claim them.
+--
+-- Two passes, most reliable first:
+--   1. Cohorts the retired auto-cohort run opened already know their occupation exactly — it is in
+--      source_job_title_id. Copy it across.
+--   2. Hand-built cohorts have only the free-text `track`. Where that text matches an active job
+--      title name exactly (case- and whitespace-insensitive), use it. Anything that does not match
+--      is left NULL on purpose rather than guessed at: an unclaimable cohort is a visible problem,
+--      a wrongly-matched one silently lets the wrong person train.
+--
+-- Guarded on job_title_id still being NULL, so re-running changes nothing.
+UPDATE skill_up_cohorts
+SET job_title_id = source_job_title_id,
+    updated_at = NOW()
+WHERE job_title_id IS NULL
+  AND source_job_title_id IS NOT NULL;
+
+UPDATE skill_up_cohorts c
+SET job_title_id = j.id,
+    updated_at = NOW()
+FROM skills_taxonomy_job_titles j
+WHERE c.job_title_id IS NULL
+  AND j.is_active = TRUE
+  AND lower(btrim(c.track)) = lower(btrim(j.name))
+  -- Only when the name is unambiguous across the taxonomy.
+  AND (
+    SELECT count(*) FROM skills_taxonomy_job_titles k
+    WHERE k.is_active = TRUE AND lower(btrim(k.name)) = lower(btrim(c.track))
+  ) = 1;
+
+
+-- ── post migration: 0011_skill_up_deposit_and_trainer_rate.sql ──
+-- post/0011: Put every cohort on the flat deposit and give it a trainer rate.
+--
+-- Owner decision 2026-08-29. Two things change together:
+--
+--   1. Every cohort takes the same deposit from every member, and it is never zero. Cohorts written
+--      before this carry required_credits = 0, which meant their trainer earned nothing, because the
+--      trainer's amount used to be derived from the escrow. Those cohorts are moved to the flat 50.
+--      This applies to people enrolling from now on; it does not retroactively charge anyone who
+--      already joined, and it does not touch escrow that is already held.
+--   2. The trainer's rate is no longer derived from the deposit at all. It is stamped on the cohort
+--      (trainer_credits_per_milestone, column default 10) and scaled by the Workforce gap at
+--      creation. Rows written before the column existed take the default, which is the correct flat
+--      rate for a cohort with no gap recorded.
+--
+-- allow_no_deposit is cleared on the same rows: a free cohort is no longer a thing, so leaving the
+-- flag set would let an enrollment skip the deposit the cohort now requires.
+--
+-- Guarded on the values still being the pre-change ones, so re-running changes nothing.
+UPDATE skill_up_cohorts
+SET required_credits = 50,
+    allow_no_deposit = FALSE,
+    updated_at = NOW()
+WHERE required_credits = 0
+  AND status IN ('draft', 'open', 'active');
+
+
+-- ── post migration: 0012_skill_up_drop_stipend_columns.sql ──
+-- post/0012: Drop the SkillUp stipend columns.
+--
+-- SkillUp carried stipend_mode, stipend_amount_per_payout, stipend_interval_days and
+-- stipend_currency on every cohort. createCohort wrote all four; nothing ever read them. There was
+-- no payout flow, no schedule table (the inventory listed skill_up_stipend_schedules, which was
+-- never in schema.sql), no route, and no owner-approved spec describing what a stipend was meant to
+-- do. Meanwhile the plugin catalog told members they would "earn stipends as you reach each
+-- milestone" — the app advertising a payout it had no code to make.
+--
+-- Owner decision 2026-09-12: stipends are not a feature; the fields and the copy come out. Every
+-- credit SkillUp moves is a milestone release, a trainer grant, or a completion bonus.
+--
+-- Safe to drop: the columns only ever held their defaults ('none', 0, NULL, 'SC'), because nothing
+-- ever set them to anything else. Guarded with IF EXISTS so a fresh database that never had them
+-- no-ops, and idempotent on re-run.
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_mode;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_amount_per_payout;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_interval_days;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_currency;
+
+
+-- ── post migration: 0013_skill_up_drop_microgrant_columns.sql ──
+-- post/0013: Drop the SkillUp microgrant columns.
+--
+-- The same removal as post/0012 did for stipends, for the same reason. SkillUp carried
+-- microgrant_mode, microgrant_amount and microgrant_currency on every cohort; createCohort wrote
+-- them and nothing ever read them. No payout flow, no route, no spec, and the wallet history
+-- carried a "Microgrant" label for a disbursement type nothing can write.
+--
+-- Owner decision 2026-09-13: microgrants are not a feature either. Every credit SkillUp moves is a
+-- milestone release, a trainer grant, or a completion bonus.
+--
+-- Safe to drop: the columns only ever held their defaults ('none', 0, 'SC'). Guarded with IF EXISTS
+-- so a fresh database that never had them no-ops, and idempotent on re-run.
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_mode;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_amount;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_currency;
+
