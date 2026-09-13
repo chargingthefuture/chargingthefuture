@@ -156,6 +156,26 @@ Result: web ☐
 
 ---
 
+### SH-2d — A submit failure the route cannot name still says something usable
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** An active round inside its dates, and a way to force a raw failure inside `createSubmission` — for example, rename `skills_hunt_submissions` in a scratch database so the insert throws, then rename it back.
+
+**Steps:**
+1. As an admin, fill in a valid nomination and submit.
+2. Read the banner.
+3. Repeat as a non-admin member.
+4. Find the matching row in the error report and compare it to what was on screen.
+
+**Expected:** Neither banner reads "Unable to create submission." on its own. The admin sees that sentence followed by the reason the database gave. The member sees the plain sentence plus a short reference, and that same reference appears on the error-report row, so a screenshot of the banner can be tied to the log line behind it.
+
+**Note:** the seven deliberate refusals are not part of this case — round not active, duplicate, taken down, weekly limit and the rest keep their own sentences and carry no reference. This covers only the catch-all, which before 2026-09-12 answered every unrecognized error with four words and dropped the reason.
+
+Result: web ☐
+
+---
+
 ### SH-3 — Submission: member without a Clerk username can still submit
 
 **Role:** member (no Clerk username set) · **Surfaces:** web
