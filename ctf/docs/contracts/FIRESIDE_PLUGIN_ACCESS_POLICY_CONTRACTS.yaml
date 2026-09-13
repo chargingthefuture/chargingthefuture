@@ -6,6 +6,7 @@
 policies:
   - pluginId: fireside
     command: fireside.thread.read
+    version: 1.0.0
     requiredRoles: []
     minUnlockTier: none
     requiresAuthentication: false
@@ -16,6 +17,7 @@ policies:
       nobody is left wondering where their words went.
   - pluginId: fireside
     command: fireside.comment.create
+    version: 1.0.0
     requiredRoles: [member]
     minUnlockTier: any_authenticated
     requiresAuthentication: true
@@ -30,6 +32,7 @@ policies:
       ctf/config/unlock-tier-exception-allowlist.json and enforced by CI.
   - pluginId: fireside
     command: fireside.reaction.toggle
+    version: 1.0.0
     requiredRoles: [member]
     minUnlockTier: any_authenticated
     requiresAuthentication: true
@@ -40,6 +43,7 @@ policies:
       approved.
   - pluginId: fireside
     command: fireside.comment.withdraw
+    version: 1.0.0
     requiredRoles: [member]
     minUnlockTier: any_authenticated
     requiresAuthentication: true
@@ -47,6 +51,7 @@ policies:
     notes: Author-only. Scoped by author_user_id in the update, never by a client-supplied id alone.
   - pluginId: fireside
     command: fireside.comment.set_export
+    version: 1.0.0
     requiredRoles: [member]
     minUnlockTier: any_authenticated
     requiresAuthentication: true
@@ -57,6 +62,7 @@ policies:
     notes: Author-only, scoped by author_user_id.
   - pluginId: fireside
     command: fireside.own.read
+    version: 1.0.0
     requiredRoles: [member]
     minUnlockTier: any_authenticated
     requiresAuthentication: true
@@ -64,6 +70,7 @@ policies:
     notes: Returns only the caller's own rows.
   - pluginId: fireside
     command: fireside.comment.remove
+    version: 1.0.0
     requiredRoles: [admin]
     minUnlockTier: approved_full
     requiresAuthentication: true
