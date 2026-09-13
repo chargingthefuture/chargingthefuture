@@ -233,9 +233,10 @@ Core tables:
 
 Auto-cohort columns on `skill_up_cohorts` (issue #904): `auto_created` (bool), `source_job_title_id` (UUID, references `skills_taxonomy_job_titles.id` by convention — no hard FK, mirroring `directory_profiles.job_title_id`), `source_sector` (text), `source_gap_at_creation` (numeric). A partial unique index `uq_skill_up_auto_cohort_active_source` on `source_job_title_id WHERE auto_created = TRUE AND status IN ('open','active')` enforces at most one open/active auto cohort per occupation (the database-level idempotency guard).
 
-Multi-currency (issue #120): `skill_up_cohorts` carries `microgrant_currency`
-(FK → `currencies.code`), naming the currency of `microgrant_amount`. The matching stipend columns
-were dropped on 2026-09-12 — see the change log.
+Issue #120's SkillUp currency columns are gone with the payouts they described: the stipend columns
+on 2026-09-12 (`post/0012`) and the microgrant columns on 2026-09-13 (`post/0013`). Neither payout
+was ever built. Every credit SkillUp moves is a milestone release, a trainer grant, or a completion
+bonus.
 Both default to ServiceCredits (code `SC`) — these are internal token payouts. No surface renders a
 ServiceCredits amount at a fiat equivalent (the no-fiat-parity rule from issue #120).
 
@@ -339,6 +340,18 @@ that exist today.
 
 ## Change Log
 
+- 2026-09-13: **Microgrants removed, and the Concierge entry stopped describing SkillUp as a savings
+  tracker (owner decision).** Microgrants were the same dead payout as stipends: `microgrant_mode`,
+  `microgrant_amount` and `microgrant_currency` written on every cohort by `createCohort`, read by
+  nothing, with an unreachable `Microgrant` label in the wallet history. Dropped the three columns
+  (`post/0013` — they only ever held their defaults), the two `CreateCohortInput` fields and their
+  INSERT columns, the two fields on the `POST /api/skill-up/cohorts` schema, and the wallet label.
+  Separately, Concierge's SkillUp entry routed on `save money` / `savings goal` / `lose track` and
+  opened with "I want to save $1,000 in 90 days" — a savings tracker, not this plugin. Concierge
+  matches a member's own words against those keywords, so the wrong ones pulled people here for a
+  problem SkillUp does not solve and kept it from the ones it does. The blurb, keywords and starter
+  now describe training for an occupation the community is short of. The same wording was corrected
+  in `concierge-problem-to-feature-map.md`.
 - 2026-08-29: **Deposit decoupled from trainer earnings; leaving a cohort refunds what is held
   (owner decision).** The deposit is now flat at 50 for every cohort and every member and is no
   longer an input to cohort creation; `allow_no_deposit` is gone from the create path and cleared on

@@ -182,8 +182,6 @@ type CreateCohortInput = {
   allowNoDeposit?: boolean;
   trainerSplitPercent?: number;
   completionBonusCredits?: number;
-  micrograntMode?: 'none' | 'cohort_pool' | 'separate_grant';
-  micrograntAmount?: number;
   refundPolicyJson?: Record<string, unknown>;
   payoutPolicyJson?: Record<string, unknown>;
   policyJson?: Record<string, unknown>;
@@ -207,14 +205,14 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
   await client.query(
     `INSERT INTO skill_up_cohorts
       (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support, status, allow_no_deposit,
-       trainer_split_percent, completion_bonus_credits, microgrant_mode,
-       microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
+       trainer_split_percent, completion_bonus_credits,
+       refund_policy_json, payout_policy_json, policy_json, created_by_user_id,
        auto_created, source_job_title_id, source_sector, source_gap_at_creation, job_title_id,
        trainer_credits_per_milestone)
      VALUES
       ($1, $2, $3, $4, $5, $6::date, $7::date, $8, $9, $10, $11, $12,
-       $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20,
-       $21, $22, $23, $24, $25::uuid, $26)`,
+       $13, $14, $15::jsonb, $16::jsonb, $17::jsonb, $18,
+       $19, $20, $21, $22, $23::uuid, $24)`,
     [
       cohortId,
       input.title,
@@ -233,8 +231,6 @@ async function insertCohortRow(client: PoolClient, cohortId: string, input: Crea
       false,
       trainerSplitPercent,
       orDefault(input.completionBonusCredits, 0),
-      orDefault(input.micrograntMode, 'none'),
-      orDefault(input.micrograntAmount, 0),
       JSON.stringify(orDefault(input.refundPolicyJson, {})),
       JSON.stringify(orDefault(input.payoutPolicyJson, {})),
       JSON.stringify(orDefault(input.policyJson, {})),
