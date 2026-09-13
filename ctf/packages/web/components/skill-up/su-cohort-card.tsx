@@ -140,8 +140,11 @@ export function SkillUpCohortCard({
           <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Seats</div>
           <div style={{ fontSize: 13, fontWeight: 600, color: isFull ? t.FAINT : t.TEXT_BODY }}>{seatsLabel}</div>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Cost</div>
+        {/* "Cost" was wrong twice over: the deposit comes back to the learner as milestones are signed
+            off, and describing a credits movement as a cost is the money framing the brand voice rules
+            out. The label says what the figure is, and the row above already says how it returns. */}
+        <div style={{ textAlign: "center", maxWidth: 110 }}>
+          <div style={{ fontSize: 11, color: t.TEXT_SUBTLE, lineHeight: 1.3 }}>Returnable deposit</div>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT }}>{costLabel} SC</div>
         </div>
         <EnrollButton

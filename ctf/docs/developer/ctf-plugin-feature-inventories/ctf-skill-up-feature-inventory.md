@@ -340,6 +340,8 @@ that exist today.
 
 ## Change Log
 
+- 2026-09-12: **The cohort card's "Cost" label is now "Returnable deposit".** Owner directive. The word was wrong twice over. The 50 credits are not spent: they are held and returned to the learner as each milestone is signed off, or returned in full on leaving the cohort — which the row directly above the label already says. And describing a credits movement as a cost is exactly the money framing the brand voice rules out; credits are a non-fiat internal unit, not cash. The figure and its source (`required_credits`) are unchanged; only the label is. The middle column takes a small max-width so the two-word label wraps predictably at phone width instead of crowding the Enroll button.
+
 - 2026-09-13: **Microgrants removed, and the Concierge entry stopped describing SkillUp as a savings
   tracker (owner decision).** Microgrants were the same dead payout as stipends: `microgrant_mode`,
   `microgrant_amount` and `microgrant_currency` written on every cohort by `createCohort`, read by
