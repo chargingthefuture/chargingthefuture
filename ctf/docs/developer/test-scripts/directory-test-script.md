@@ -91,6 +91,7 @@ share."** — no "guarantee" / "your identity is protected" wording anywhere on 
 2. Read every section.
 3. If you have a profile that holds a skill the taxonomy lists under more than one occupation (e.g.
    "First Aid & CPR"), confirm that skill shows as **one** chip, not two identical ones.
+4. Look at the Quora card under the name, on a profile that has a Quora URL and on one that does not.
 **Expected:** Name renders as "First Last" (`first_name` required, `last_name` optional). You see job
 title, sector, location ("City, State, Country" — only the parts that are set; a non-US member may show
 just a country), specializations/skills, and the bio. Each skill **name appears at most once** — no
@@ -99,7 +100,11 @@ the "Community-generated profile" line; once that profile is **claimed**, that l
 while the "Nominated by @handle" line still shows (the backend keeps `source = 'community-generated'`
 either way; the admin surface still shows the community-generated record). No endorsements, reviews, booking, or chat
 sections appear (those were removed as out-of-scope mockup elements). Confirm a carried-over v2 profile
-shows its city/state/country (the data was cloned from v2 and is now read directly). On android, the
+shows its city/state/country (the data was cloned from v2 and is now read directly). The Quora card is the link and nothing else: it reads **"View Quora profile"** with **no second
+line** under it (the line calling the Quora profile the social proof was removed on 2026-09-13 —
+using the app and giving real value is what stands as proof), and tapping it still opens the
+ShareLink popup with the full URL, Copy link, and Open in new tab. A profile with no URL on file
+still shows the muted "Quora profile not linked yet" card. On android, the
 profile detail's privacy note reads **"🔒 Privacy First — Profiles show only what each member chooses
 to share."** — it must not promise a privacy "guarantee" or that "your identity is never exposed".
 **Result:** web ☐ mobile ☐ — notes:
