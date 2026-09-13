@@ -184,6 +184,73 @@ Result: web ☐
 
 ---
 
+### LU-3f — Leaving before the start lets you change your mind and enroll again
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** An open cohort that has not started, and a member not yet enrolled in it.
+
+**Steps:**
+1. Enroll. Confirm the deposit is held and the Browse card reads Enrolled.
+2. Go to Progress and leave the cohort. Confirm the credits come back.
+3. Return to Browse. The card should offer Enroll again, not Enrolled.
+4. Enroll a second time in the same cohort.
+5. Check the enrollment rows for that cohort and member.
+6. Now try to create a second **live** enrollment in the same cohort for the same member, directly against the database.
+
+**Expected:** Step 4 succeeds. Step 5 shows the dropped row still there — the record of what happened is kept, not erased — alongside the new live one. Step 6 is refused by the unique index: one live enrollment per person per cohort still holds.
+
+**Also:** a cohort the member **completed** is not re-enrollable. Only a dropped enrollment frees the slot.
+
+**Regression guard:** before 2026-09-13 step 4 failed. The index was unconditional, so the dropped row held the slot forever while the seat check — which counts only enrolled and active — said there was room. The application and the database disagreed, and the database won at the INSERT.
+
+Result: web ☐
+
+---
+
+### LU-3g — A refused leave does not leave the buttons up
+
+**Role:** member · **Surfaces:** web
+
+**Steps:**
+1. Get a leave to be refused — the simplest is to press Leave on a class that has started (see LU-3e).
+2. Read what is on the card afterwards.
+
+**Expected:** The refusal is shown once and the Yes/Stay buttons are gone, with the card re-read from the server. Pressing again is not offered, because the server has already said no.
+
+**Regression guard:** before 2026-09-13 a refusal left the confirmation up with the error beside it, so the same press could be repeated against a row the server had already rejected — which is how one refusal turned into a red banner on every card at once.
+
+Result: web ☐
+
+---
+
+### LU-3e — A class that has started cannot be left, and the deposit still comes back
+
+**Role:** member, then admin · **Surfaces:** web
+
+**Precondition:** Two enrollments of the same member: one in a cohort with **no** assigned trainer or a start date still ahead, and one in a cohort with an assigned trainer whose start date has passed.
+
+**Steps:**
+1. Open the Progress tab and look at both enrollments.
+2. On the not-yet-started one, press Leave cohort and confirm. Check the wallet.
+3. On the started one, look for the Leave control.
+4. Call `POST /api/skill-up/enrollments/<started id>/leave` directly, with a valid idempotency key, to confirm the server refuses it and not only the screen.
+5. Let that cohort's end date pass and run the auto-cohort job (or set `end_date` into the past and run it). Check the member's wallet and the escrow rows.
+
+**Expected:**
+- Step 2 succeeds and every credit still held comes back.
+- Step 3 shows **no** Leave button. In its place: "This class has started, so you cannot take yourself out of it. Everything still held for you comes back when the cohort closes."
+- Step 4 is refused with 409 and the same sentence. The screen and the server agree, because both read one rule — the server decides `canLeave` and the screen obeys it.
+- Step 5 returns every held escrow to the learner, marks those escrows `refunded`, and only then moves the cohort to `completed`. Nobody's credits are stranded by the gate.
+
+**Also check the failure path:** make the settlement fail (for example, point it at an escrow that cannot be refunded) and confirm the cohort is left **open** rather than closed, with the failure reported. A closed cohort nobody can get their credits out of is worse than one that closes a day late.
+
+**Regression guard:** before 2026-09-13 a learner could leave at any point, including mid-course after milestones had been signed off, and an expiring cohort closed with a plain status flip that settled nothing.
+
+Result: web ☐
+
+---
+
 ### LU-4 — Enrollment blocked for trainer-only account
 
 **Role:** trainer · **Surfaces:** web
