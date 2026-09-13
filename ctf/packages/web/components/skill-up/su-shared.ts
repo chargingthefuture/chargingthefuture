@@ -105,6 +105,9 @@ export interface Enrollment {
   cohortId: string;
   status: string;
   isCurrent: boolean;
+  // Decided by the server, never re-derived here: a class that has started cannot be left, and the
+  // screen must not offer an exit the server would refuse.
+  canLeave?: boolean;
   title: string;
   track?: string;
   trainerName?: string | null;

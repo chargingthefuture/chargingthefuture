@@ -1330,6 +1330,8 @@ export async function listMemberEnrollments(userId: string) {
     enrollment_id: string;
     cohort_id: string;
     status: string;
+    assigned_trainer_id: string | null;
+    start_date: string | null;
     title: string;
     track: string;
     trainer_name: string | null;
@@ -1340,6 +1342,8 @@ export async function listMemberEnrollments(userId: string) {
        n.id::text AS enrollment_id,
        n.cohort_id::text AS cohort_id,
        n.status,
+       n.assigned_trainer_id,
+       c.start_date::text AS start_date,
        c.title,
        c.track,
        t.display_name AS trainer_name,
@@ -1352,7 +1356,7 @@ export async function listMemberEnrollments(userId: string) {
      LEFT JOIN skill_up_milestone_validations v
        ON v.enrollment_id = e.enrollment_id AND v.milestone_id = e.milestone_id
      WHERE n.user_id = $1
-     GROUP BY n.id, n.cohort_id, n.status, n.enrolled_at, c.title, c.track, t.display_name
+     GROUP BY n.id, n.cohort_id, n.status, n.enrolled_at, c.title, c.track, t.display_name, n.assigned_trainer_id, c.start_date
      ORDER BY n.enrolled_at DESC
      LIMIT 50`,
     [userId],
@@ -1363,6 +1367,12 @@ export async function listMemberEnrollments(userId: string) {
     cohortId: row.cohort_id,
     status: row.status,
     isCurrent: row.status === 'enrolled' || row.status === 'active',
+    // Whether this person can still take themselves out. Decided here, by the same function the
+    // leave route enforces with, so the screen cannot offer an exit the server refuses — the fault
+    // that produced three separate bugs in this codebase in one week.
+    canLeave:
+      (row.status === 'enrolled' || row.status === 'active')
+      && !hasClassStarted({ assignedTrainerId: row.assigned_trainer_id, startDate: row.start_date }),
     title: row.title,
     track: row.track,
     trainerName: row.trainer_name,
@@ -1858,11 +1868,78 @@ async function recordSkillUpDisbursement(input: {
 
 // === Leaving a cohort ===
 
+// Return every credit still held against a cohort to the learner it came from, and mark each escrow
+// refunded. Used when a cohort closes: from 2026-09-13 a learner cannot take themselves out of a
+// class that has started, so this is the path by which their remaining deposit comes back.
+//
+// Deliberately settles per enrollment with a key derived from the escrow, so a re-run after a
+// partial failure refunds what is left and re-refunds nothing. Escrows already released to the
+// learner by a milestone sign-off are not touched — they are not held.
+export async function refundHeldEscrowForCohort(cohortId: string): Promise<number> {
+  const held = await queryDb<{ id: string; escrow_id: string; held_amount: string; user_id: string }>(
+    `SELECT me.id::text AS id,
+            me.escrow_id::text AS escrow_id,
+            me.held_amount::text AS held_amount,
+            e.user_id
+       FROM skill_up_enrollment_milestone_escrows me
+       JOIN skill_up_enrollments e ON e.id = me.enrollment_id
+      WHERE e.cohort_id = $1::uuid AND me.release_status = 'held'`,
+    [cohortId],
+  );
+
+  let refundedCredits = 0;
+  for (const escrow of held.rows) {
+    await refundEscrow({
+      actorId: escrow.user_id,
+      escrowId: escrow.escrow_id,
+      refundReason: 'skill_up_cohort_closed',
+      originPlugin: SKILL_UP_PLUGIN_SLUG,
+      idempotencyKey: `skill-up:cohort-close:${cohortId}:refund:${escrow.escrow_id}`,
+    });
+    await queryDb(
+      `UPDATE skill_up_enrollment_milestone_escrows
+       SET release_status = 'refunded', updated_at = NOW()
+       WHERE id = $1::uuid`,
+      [escrow.id],
+    );
+    refundedCredits = roundCurrency(refundedCredits + toNumber(escrow.held_amount));
+  }
+
+  return refundedCredits;
+}
+
 export type LeaveCohortOutcome =
   | { status: 'left'; enrollmentId: string; refundedCredits: number }
   | { status: 'not_found' }
   | { status: 'not_yours' }
-  | { status: 'invalid_state' };
+  | { status: 'invalid_state' }
+  | { status: 'already_started' };
+
+// Whether a class is under way, which is the point after which a learner can no longer take
+// themselves out of it (owner decision 2026-09-13). Two conditions, both of them fields that are
+// really maintained:
+//
+//   - somebody is teaching it — the enrollment carries an assigned trainer; and
+//   - the cohort's own start date has arrived.
+//
+// The cohort `status` column is deliberately not consulted. Nothing in the codebase ever sets a
+// cohort to 'active', so a gate resting on it would never fire.
+//
+// Before both hold, nobody has taught anything and leaving returns everything held. After, the
+// learner stays enrolled and their remaining escrow is settled when the cohort closes, so the gate
+// costs them nothing — it removes the exit, not the credits.
+export function hasClassStarted(input: { assignedTrainerId: string | null; startDate: string | null }): boolean {
+  if (!input.assignedTrainerId || !input.startDate) {
+    return false;
+  }
+
+  const start = new Date(`${input.startDate}T00:00:00Z`).getTime();
+  if (!Number.isFinite(start)) {
+    return false;
+  }
+
+  return Date.now() >= start;
+}
 
 /**
  * A member leaves a cohort and gets back every credit still held for it.
@@ -1880,8 +1957,22 @@ export async function leaveCohort(input: {
   enrollmentId: string;
   idempotencyKey: string;
 }): Promise<LeaveCohortOutcome> {
-  const enrollment = await queryDb<{ user_id: string; cohort_id: string; status: string }>(
-    `SELECT user_id, cohort_id::text AS cohort_id, status FROM skill_up_enrollments WHERE id = $1::uuid LIMIT 1`,
+  const enrollment = await queryDb<{
+    user_id: string;
+    cohort_id: string;
+    status: string;
+    assigned_trainer_id: string | null;
+    start_date: string | null;
+  }>(
+    `SELECT e.user_id,
+            e.cohort_id::text AS cohort_id,
+            e.status,
+            e.assigned_trainer_id,
+            c.start_date::text AS start_date
+       FROM skill_up_enrollments e
+       LEFT JOIN skill_up_cohorts c ON c.id = e.cohort_id
+      WHERE e.id = $1::uuid
+      LIMIT 1`,
     [input.enrollmentId],
   );
   const row = enrollment.rows[0];
@@ -1895,6 +1986,11 @@ export async function leaveCohort(input: {
   }
   if (row.status !== 'enrolled' && row.status !== 'active') {
     return { status: 'invalid_state' };
+  }
+  // Once the class is running a learner cannot take themselves out of it. Their remaining escrow is
+  // not lost — it is settled when the cohort closes.
+  if (hasClassStarted({ assignedTrainerId: row.assigned_trainer_id, startDate: row.start_date })) {
+    return { status: 'already_started' };
   }
 
   const held = await queryDb<{ id: string; escrow_id: string; held_amount: string }>(

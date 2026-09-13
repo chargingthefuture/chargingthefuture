@@ -44,8 +44,13 @@ function EmptyProgress({ onBrowse }: { onBrowse: () => void }) {
   );
 }
 
-// Leaving returns every credit still held for the enrollment. Offered only while the enrollment is
-// live: once it is finished or already left there is nothing held to return, and the server says so.
+// Leaving returns every credit still held for the enrollment, and is offered only while the server
+// says it is allowed — `canLeave`, decided by the same rule the leave route enforces with. Once the
+// class has started the control is replaced by a line saying so, because an exit that is refused on
+// press is worse than one that was never offered.
+//
+// The flag is not re-derived here on purpose. A rule written in two places is how the round window,
+// the nomination form and the trainer rate each came to disagree with their own server.
 function LeaveControl({ enrollment, onLeft }: { enrollment: Enrollment; onLeft: () => void }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
@@ -67,6 +72,11 @@ function LeaveControl({ enrollment, onLeft }: { enrollment: Enrollment; onLeft: 
       setBusy(false);
       if (!res.ok) {
         setError(data?.message ?? `Could not leave this cohort (${res.status}).`);
+        // Close the confirmation and re-read from the server. A refusal means the screen and the
+        // row disagreed, and leaving the buttons up invites the same press again — which is how a
+        // single refusal turned into a column of red banners across every card.
+        setConfirming(false);
+        onLeft();
         return;
       }
       setConfirming(false);
@@ -81,6 +91,15 @@ function LeaveControl({ enrollment, onLeft }: { enrollment: Enrollment; onLeft: 
 
   if (notice) {
     return <div style={{ marginTop: 12, fontSize: 12, color: t.ACCENT }}>{notice}</div>;
+  }
+
+  if (enrollment.canLeave === false) {
+    return (
+      <div style={{ marginTop: 12, fontSize: 12, color: t.TEXT_SUBTLE, lineHeight: 1.6 }}>
+        This class has started, so you cannot take yourself out of it. Everything still held for you
+        comes back when the cohort closes.
+      </div>
+    );
   }
 
   return (

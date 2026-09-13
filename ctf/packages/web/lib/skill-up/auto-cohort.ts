@@ -15,7 +15,8 @@
 // `skill_up_auto_cohort_config` (admin-editable).
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { fetchOccupationGapReport } from 'lib/shared/workforce-interface';
-import { createCohort, insertSkillUpAudit } from 'lib/skill-up/repository';
+import { createCohort, insertSkillUpAudit, refundHeldEscrowForCohort } from 'lib/skill-up/repository';
+import { reportError } from 'lib/observability/report';
 import {
   SKILL_UP_AUTO_COHORT_ACTOR_ID,
   SKILL_UP_TRAINER_BASE_CREDITS_PER_MILESTONE,
@@ -157,16 +158,44 @@ async function getPendingProposalJobTitleIds(): Promise<Set<string>> {
   return new Set(result.rows.map((row) => row.job_title_id));
 }
 
-// Fixed-term lifecycle: an auto cohort whose term has elapsed is closed. A plain status flip is safe
-// here — auto cohorts are created with no required deposit, so there is no escrow to settle.
+// Fixed-term lifecycle: an auto cohort whose term has elapsed is closed, and every credit still
+// held for it goes back to the learner it came from.
+//
+// The plain status flip this used to do was safe only while auto cohorts carried no deposit, which
+// its own comment said. That stopped being true when every cohort moved to the flat deposit, and
+// closing without settling would have left a learner's escrow held against a cohort that no longer
+// runs, with nothing able to release it.
+//
+// It matters more since 2026-09-13, when a learner lost the ability to take themselves out of a
+// class that has started: this is now the only path by which their remaining deposit comes back, so
+// it settles first and flips the status afterwards. A cohort that fails to settle is left open
+// rather than closed, so the next run tries again instead of stranding the credits quietly.
 async function closeExpiredAutoCohorts(): Promise<Array<{ cohortId: string; occupation: string }>> {
-  const result = await queryDb<{ id: string; track: string }>(
-    `UPDATE skill_up_cohorts
-     SET status = 'completed', updated_at = NOW()
-     WHERE auto_created = TRUE AND status IN ('open', 'active') AND end_date < CURRENT_DATE
-     RETURNING id::text AS id, track`,
+  const expiring = await queryDb<{ id: string; track: string }>(
+    `SELECT id::text AS id, track
+       FROM skill_up_cohorts
+      WHERE auto_created = TRUE AND status IN ('open', 'active') AND end_date < CURRENT_DATE`,
   );
-  return result.rows.map((row) => ({ cohortId: row.id, occupation: row.track }));
+
+  const closed: Array<{ cohortId: string; occupation: string }> = [];
+  for (const row of expiring.rows) {
+    try {
+      await refundHeldEscrowForCohort(row.id);
+    } catch (error) {
+      // Leave the cohort open and report it. A closed cohort nobody can get their credits out of is
+      // worse than one that closes a day late.
+      reportError(error, { area: 'skill-up', op: 'auto_cohort_close_settle', extra: { cohortId: row.id } });
+      continue;
+    }
+
+    await queryDb(
+      `UPDATE skill_up_cohorts SET status = 'completed', updated_at = NOW() WHERE id = $1::uuid`,
+      [row.id],
+    );
+    closed.push({ cohortId: row.id, occupation: row.track });
+  }
+
+  return closed;
 }
 
 function todayIso(): string {

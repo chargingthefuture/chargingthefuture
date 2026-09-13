@@ -1735,12 +1735,16 @@ ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS assigned_tra
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Add unique constraint if not exists (Postgres 15+)
+-- One live enrollment per person per cohort. Partial on purpose: leaving sets status to 'dropped'
+-- and keeps the row as the record of what happened, so an unconditional unique index would let that
+-- row hold the slot forever and refuse somebody who changed their mind before the class started
+-- (owner bug report 2026-09-13). The application has always counted only 'enrolled' and 'active' as
+-- occupying a seat; this makes the database agree with it. See post/0014.
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes WHERE tablename = 'skill_up_enrollments' AND indexname = 'skill_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id) WHERE status <> ''dropped''';
   END IF;
 END $$;
 -- Shed the legacy level_id column if an older database still carries it.

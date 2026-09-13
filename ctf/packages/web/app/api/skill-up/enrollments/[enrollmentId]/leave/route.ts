@@ -64,6 +64,19 @@ export async function POST(request: Request, { params }: RouteProps) {
     if (outcome.status === 'not_yours') {
       return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'You can only leave your own enrollment.' }, { status: 403 });
     }
+    // A class that is under way cannot be left (owner decision 2026-09-13). The refusal says what
+    // happens to the deposit instead, because the question a person asks on reading this is where
+    // their credits went.
+    if (outcome.status === 'already_started') {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: 'skill_up_invalid_state',
+          message: 'This class has started, so you cannot take yourself out of it. Everything still held for you comes back when the cohort closes.',
+        },
+        { status: 409 },
+      );
+    }
     if (outcome.status === 'invalid_state') {
       return NextResponse.json(
         { ok: false, code: 'skill_up_invalid_state', message: 'This enrollment is already finished or left, so there is nothing held to return.' },
