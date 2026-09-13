@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { FoundationCallAudio, type FoundationCallCredentials } from "./foundation-call-audio";
 import type { FoundationCallRingStatus, FoundationInstantCall } from "@/lib/foundation/types";
+import { failureText } from "@/lib/errors/client-failure";
 
 // Client orchestration for the Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3).
 // Audio-only for v1. One <FoundationInstantCallController> is mounted once at the shell root; it both:
@@ -80,9 +81,15 @@ export function useInstantCall(): InstantCallContextValue | null {
   return useContext(InstantCallContext);
 }
 
+// What to show when a call request comes back with an error. The four recognized codes get their own
+// plain sentence because the route's wording is not the clearest thing to read mid-call. Everything else
+// shows what the route said, plus the reference the route now attaches to an unexpected failure — that
+// reference is the same string in the server's error report, so a member who screenshots this banner or
+// files a bug report gives us the one thing that ties it to the log line (rule 137 point 11). Before
+// this, an unexpected failure read "Thread create unavailable." and there was no way to find out why.
 async function readError(res: Response, fallback: string): Promise<string> {
   try {
-    const body = (await res.json()) as { code?: string; message?: string };
+    const body = (await res.json()) as { code?: string; message?: string; reference?: string };
     if (body.code === "FOUNDATION_RATE_LIMIT_EXCEEDED") {
       return "Too many call attempts — wait a moment and try again.";
     }
@@ -95,9 +102,13 @@ async function readError(res: Response, fallback: string): Promise<string> {
     if (body.code === "FOUNDATION_CALL_BLOCK_CAP_REACHED") {
       return body.message || "You have reached the number of blocks you authorized for this call.";
     }
-    return body.message || fallback;
-  } catch {
-    return fallback;
+    const text = body.message || fallback;
+    return body.reference ? `${text} [ref ${body.reference}]` : text;
+  } catch (caught) {
+    // The error body was not JSON at all (a proxy's HTML page, an empty response). There is no server
+    // text to show, so keep the plain sentence and send the caught value to the error report instead of
+    // dropping it (rule 137 point 9).
+    return failureText(caught, { area: "foundation", op: "instant_call_read_error", fallback, audience: "member" });
   }
 }
 

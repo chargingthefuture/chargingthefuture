@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { getIncomingRing } from 'lib/foundation/instant-call';
-import { reportError } from 'lib/observability/report';
+import { failureResponse } from 'lib/errors/failure';
 
 // The signed-in member's incoming instant 1:1 call inbox (Foundation "Connect now", issue #808 task 3).
 // Returns the one live ring (if any) currently being placed to this member, so the in-app incoming-call
@@ -20,10 +20,16 @@ export async function GET() {
     const call = await getIncomingRing(gate.auth.userId);
     return NextResponse.json({ ok: true, call }, { status: 200 });
   } catch (error) {
-    reportError(error, { area: 'foundation', op: 'connections_incoming_call' });
-    return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Could not check for incoming calls.' },
-      { status: 503 },
-    );
+    // Unrecognized: a real failure of a step in this route. The member keeps plain copy, and the
+    // response carries a reference that also appears in the error report, so a screenshot of the
+    // banner can be matched to the log line that says what broke (rule 137 points 2 and 4).
+    return failureResponse({
+      summary: 'Could not check for incoming calls right now.',
+      error,
+      code: FOUNDATION_ERROR_CODE.persistenceUnavailable,
+      area: 'foundation',
+      op: 'connections_incoming_call',
+      audience: 'member',
+    });
   }
 }

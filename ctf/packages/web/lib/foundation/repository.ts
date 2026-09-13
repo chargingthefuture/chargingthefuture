@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { isBlockedBetweenTx } from 'lib/blocks/repository';
+import { reportError } from 'lib/observability/report';
 import {
   FOUNDATION_DEFAULT_PAGE,
   FOUNDATION_DEFAULT_PAGE_SIZE,
@@ -1785,6 +1786,17 @@ export async function evaluateRateLimitCommand(input: {
   });
 }
 
+// Write one row to the Foundation audit trail. This is bookkeeping that runs AFTER the real work has
+// already been committed, so it never throws (rule 137 point 6: "an audit-trail write ... that fails
+// after the real work succeeded is reported and stepped over — it is not reported to the caller as if
+// the action failed").
+//
+// Every Foundation route calls this from inside the same `try` that wraps the real work, so before this
+// guard a failed audit write was mapped by the route's catch-all into a 5xx. That turned a committed
+// action into a reported failure — a connection thread that had actually been created came back as
+// "Thread create unavailable.", and because the audit write failed the same way on every retry, the
+// member could never get past it. The failure still reaches the logs and Sentry through reportError;
+// what it no longer does is tell the member their call did not happen when it did.
 export async function insertFoundationAudit(input: {
   actorId: string;
   command: string;
@@ -1794,15 +1806,19 @@ export async function insertFoundationAudit(input: {
   targetId: string;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
-  await queryDb(
-    `
-      INSERT INTO foundation_admin_audit_trail
-        (actor_id, command, policy_status, reason, target_type, target_id, metadata)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7::jsonb)
-    `,
-    [input.actorId, input.command, input.policyStatus, input.reason, input.targetType, input.targetId, JSON.stringify(input.metadata ?? {})],
-  );
+  try {
+    await queryDb(
+      `
+        INSERT INTO foundation_admin_audit_trail
+          (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+        VALUES
+          ($1, $2, $3, $4, $5, $6, $7::jsonb)
+      `,
+      [input.actorId, input.command, input.policyStatus, input.reason, input.targetType, input.targetId, JSON.stringify(input.metadata ?? {})],
+    );
+  } catch (error) {
+    reportError(error, { area: 'foundation', op: 'insert_audit', extra: { command: input.command, targetType: input.targetType } });
+  }
 }
 
 export async function listFoundationAuditEvents(limit = 100): Promise<Array<{
