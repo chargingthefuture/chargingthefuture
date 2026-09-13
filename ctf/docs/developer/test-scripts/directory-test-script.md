@@ -70,6 +70,7 @@ can't-ship-broken checks. Member role unless noted.
 5. Repeat the skill search with different punctuation/spacing (e.g. `first-aid`, `first aid`).
 6. Type a **location** a seeded profile has — a city, state/region, or country (e.g. `United States`,
    `California`, or a seeded city) — and confirm the people in that location are returned.
+7. Read the nomination card above the list ("Help grow the Directory").
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
@@ -81,7 +82,11 @@ city/state/country. Search is punctuation-insensitive (step 5): `first-aid`, `fi
 location…". On desktop, the right rail is headed **"Recent Survivors"**
 (the most recently updated profiles — it is **not** a ranking, so it must not say "Top Providers"),
 and its privacy card reads **"Privacy First — Profiles show only what each member chooses to
-share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail.
+share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail. The
+nomination card (step 7) says a nominee's Quora profile **helps verify they are a real person** — it
+must not call the Quora profile the social proof (retired 2026-09-13). An admin can override this
+card's text from the SkillsHunt admin screen, so if you see the old sentence, check that saved row
+before filing it as a bug.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
@@ -91,6 +96,7 @@ share."** — no "guarantee" / "your identity is protected" wording anywhere on 
 2. Read every section.
 3. If you have a profile that holds a skill the taxonomy lists under more than one occupation (e.g.
    "First Aid & CPR"), confirm that skill shows as **one** chip, not two identical ones.
+4. Look at the Quora card under the name, on a profile that has a Quora URL and on one that does not.
 **Expected:** Name renders as "First Last" (`first_name` required, `last_name` optional). You see job
 title, sector, location ("City, State, Country" — only the parts that are set; a non-US member may show
 just a country), specializations/skills, and the bio. Each skill **name appears at most once** — no
@@ -99,7 +105,11 @@ the "Community-generated profile" line; once that profile is **claimed**, that l
 while the "Nominated by @handle" line still shows (the backend keeps `source = 'community-generated'`
 either way; the admin surface still shows the community-generated record). No endorsements, reviews, booking, or chat
 sections appear (those were removed as out-of-scope mockup elements). Confirm a carried-over v2 profile
-shows its city/state/country (the data was cloned from v2 and is now read directly). On android, the
+shows its city/state/country (the data was cloned from v2 and is now read directly). The Quora card is the link and nothing else: it reads **"View Quora profile"** with **no second
+line** under it (the line calling the Quora profile the social proof was removed on 2026-09-13 —
+using the app and giving real value is what stands as proof), and tapping it still opens the
+ShareLink popup with the full URL, Copy link, and Open in new tab. A profile with no URL on file
+still shows the muted "Quora profile not linked yet" card. On android, the
 profile detail's privacy note reads **"🔒 Privacy First — Profiles show only what each member chooses
 to share."** — it must not promise a privacy "guarantee" or that "your identity is never exposed".
 **Result:** web ☐ mobile ☐ — notes:

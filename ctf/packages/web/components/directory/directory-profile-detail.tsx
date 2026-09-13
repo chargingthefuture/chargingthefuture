@@ -267,10 +267,13 @@ function EditProfileButton({ tokens: t, isOwnProfile, onEdit }: { tokens: Direct
   );
 }
 
-// Quora profile — every directory profile is sourced from Quora, so this is the social proof and the
-// way to learn more before bartering, trading, or exchanging credits. The card is a ShareLink
-// trigger (the one app-wide link popup, rule 130): the popup shows the full URL with Copy link and
-// Open in new tab, so nobody is sent off-app to Quora without seeing exactly where the link goes.
+// Quora profile — every directory profile is sourced from Quora, so the link is how a viewer reads
+// more before bartering, trading, or exchanging credits. The card is a ShareLink trigger (the one
+// app-wide link popup, rule 130): the popup shows the full URL with Copy link and Open in new tab,
+// so nobody is sent off-app to Quora without seeing exactly where the link goes. The card carried a
+// second line calling the Quora profile the social proof until 2026-09-13; the owner retired that
+// claim — using the app and giving real value is what stands as proof — and the link label alone is
+// what the card needs to say.
 function QuoraProfileCard({ tokens: t, profileUrl }: { tokens: DirectoryTokens; profileUrl: string | null }) {
   if (profileUrl) {
     return (
@@ -286,9 +289,6 @@ function QuoraProfileCard({ tokens: t, profileUrl }: { tokens: DirectoryTokens; 
           <ExternalLink size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: t.ACCENT }}>View Quora profile</div>
-            <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>
-              Their Quora profile is the social proof — read more before you reach out.
-            </div>
           </div>
         </ShareLink>
       </div>
