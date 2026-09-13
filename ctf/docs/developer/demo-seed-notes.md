@@ -233,6 +233,18 @@ ALTERs it), load `ctf/schema.sql`, load `ctf/schema.demo.sql`, then run the seed
 
 No table, column, constraint, index, or contract is added or changed by any of this, so no
 `schema.sql` migration is required (recorded here per
-`.claude/rules/122-schema-drift-predeployment-rules.mdc`). `ctf/schema.demo.sql` is
-regenerated from `ctf/schema.sql` in the same commit — the committed copy had fallen five
-post-migrations behind what `generateDemoSchema.mjs` produces.
+`.claude/rules/122-schema-drift-predeployment-rules.mdc`). The seed writes only to the
+`demo` schema.
+
+### The committed `schema.demo.sql` lags the generator, and that is harmless
+
+The committed copy is currently five post-migrations behind what `generateDemoSchema.mjs`
+produces from `ctf/schema.sql`. Nothing applies the committed file as-is: every workflow that
+loads it (`seed-demo.yml`, `provision-demo-schema.yml`, `demo-seed-smoke.yml`) regenerates it
+first, so what reaches a database is always freshly generated. The only other reader is
+`audit-orphan-tables.mjs`, which scans it for table names.
+
+Regenerating it was deliberately left out of this change: the file's name marks it
+DB-impacting to the schema-drift gate, which then requires a matching `ctf/schema.sql` edit —
+correct behavior for a schema file, and there is no schema change here to pair it with.
+Regenerate it in a commit that actually changes `ctf/schema.sql`.
