@@ -5,7 +5,9 @@
 
 import { randomUUID } from 'node:crypto';
 import { queryDb } from 'lib/db/postgres';
-import { listUnlockedUserIds } from 'lib/unlock/repository';
+// Through the platform interface, never lib/unlock directly — plugins stay isolated (rule 112,
+// enforced by check-plugin-boundaries.mjs).
+import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
 import {
   FIRESIDE_MAX_COMMENTS_PER_DAY,
   FIRESIDE_MAX_COMMENT_LENGTH,
