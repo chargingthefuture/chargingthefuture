@@ -167,12 +167,18 @@ export const CONCIERGE_INTENTS: ConciergeIntent[] = [
   {
     slug: 'skill-up',
     name: 'SkillUp',
-    blurb: 'Goal-based cohorts with milestones.',
+    // Corrected 2026-09-13: this entry described a savings tracker — the blurb was generic, the
+    // keywords were 'save money' / 'savings goal' / 'lose track', and the starter read "I want to
+    // save $1,000 in 90 days". None of that is SkillUp, which runs training cohorts for the
+    // occupations Workforce shows the community is short of. Concierge routes a member by these
+    // words, so the wrong ones sent people here for the wrong problem and hid it from the ones it
+    // could help.
+    blurb: 'Train for an occupation the community is short of, with a trainer and milestones.',
     keywords: [
-      'save money', 'save $', 'savings goal', 'a goal', 'milestone', 'lose track', 'stay on track',
-      'learn a skill with a trainer', 'cohort', 'training program',
+      'learn a skill with a trainer', 'cohort', 'training program', 'get trained', 'retrain',
+      'change careers', 'no qualifications', 'need a trade', 'qualify for a job', 'milestone',
     ],
-    starter: 'I want to save $1,000 in 90 days but I always lose track.',
+    starter: 'I need training for work that is actually hiring, and I do not know where to start.',
   },
   {
     slug: 'trust',

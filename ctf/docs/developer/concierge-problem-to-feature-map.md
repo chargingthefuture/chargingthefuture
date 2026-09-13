@@ -40,7 +40,7 @@ PeerProgramming, GDP, ServiceCredits, Workforce, SkillsHunt, SkillUp, Trust, Wha
 | # | Problem (short) | Best apps | Why |
 |---|---|---|---|
 | 1 | People crowd you aiming/staring at phones | SocketRelay, Chyme | Get what you need in-network; stand with people who get it. |
-| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, SkillUp | Better paid work, and skills + stipends — on your terms. |
+| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, SkillUp | Better paid work, and training for an occupation that is short of people — on your terms. |
 | 3 | Cars sit parked outside your home | LightHouse, Chyme | Move somewhere vouched-for; lean on the community. |
 | 4 | People block/cut/hold up lines in public | SocketRelay, TrustTransport | Ask for what you need, or pay a vetted member to bring it — skip the gauntlet. |
 | 5 | Neighbors swapped for "new neighbors" who don't live there | LightHouse, Chyme | Vouched housing; community solidarity. |

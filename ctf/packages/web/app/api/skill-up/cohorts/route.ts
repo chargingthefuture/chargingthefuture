@@ -45,8 +45,6 @@ const createCohortSchema = z.object({
   status: z.enum(['draft', 'open', 'active', 'completed', 'canceled']).optional(),
   trainerSplitPercent: z.number().min(0).max(100).optional(),
   completionBonusCredits: z.number().min(0).optional(),
-  micrograntMode: z.enum(['none', 'cohort_pool', 'separate_grant']).optional(),
-  micrograntAmount: z.number().min(0).optional(),
   refundPolicyJson: jsonObjectSchema.optional(),
   payoutPolicyJson: jsonObjectSchema.optional(),
   policyJson: jsonObjectSchema.optional(),

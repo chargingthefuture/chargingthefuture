@@ -3271,8 +3271,6 @@ CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE,
   trainer_split_percent NUMERIC NOT NULL,
   completion_bonus_credits NUMERIC NOT NULL DEFAULT 0,
-  microgrant_mode TEXT NOT NULL DEFAULT 'none',
-  microgrant_amount NUMERIC NOT NULL DEFAULT 0,
   refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   policy_json JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -3294,19 +3292,16 @@ ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS status TEXT NOT 
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS allow_no_deposit BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS trainer_split_percent NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS completion_bonus_credits NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_mode TEXT NOT NULL DEFAULT 'none';
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_amount NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS refund_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS payout_policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS policy_json JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_by_user_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Multi-currency (issue #120): SkillUp microgrants are internal ServiceCredits payouts.
--- microgrant_currency names the currency of microgrant_amount; it defaults to ServiceCredits ('SC').
--- The matching stipend columns were dropped on 2026-09-12 (post/0012): nothing ever read them, no
--- flow was ever specified, and the app was advertising a payout it could not make.
-ALTER TABLE IF EXISTS skill_up_cohorts ADD COLUMN IF NOT EXISTS microgrant_currency TEXT NOT NULL DEFAULT 'SC' REFERENCES currencies(code);
+-- Issue #120's SkillUp currency columns are gone with the payouts they described: the stipend
+-- columns on 2026-09-12 (post/0012) and the microgrant columns on 2026-09-13 (post/0013). Neither
+-- payout was ever built — the columns were written at cohort creation and read by nothing. Every
+-- credit SkillUp moves is a milestone release, a trainer grant, or a completion bonus.
 -- Auto-cohort creation (issue #904): SkillUp stands up cohorts from Workforce occupation gaps.
 -- auto_created marks a cohort the scheduled run created (vs a human-built one). source_job_title_id
 -- ties it to the exact Skills Taxonomy occupation that triggered it (the Workforce gap's jobTitleId),
