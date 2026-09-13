@@ -70,6 +70,7 @@ can't-ship-broken checks. Member role unless noted.
 5. Repeat the skill search with different punctuation/spacing (e.g. `first-aid`, `first aid`).
 6. Type a **location** a seeded profile has — a city, state/region, or country (e.g. `United States`,
    `California`, or a seeded city) — and confirm the people in that location are returned.
+7. Read the nomination card above the list ("Help grow the Directory").
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
@@ -81,7 +82,11 @@ city/state/country. Search is punctuation-insensitive (step 5): `first-aid`, `fi
 location…". On desktop, the right rail is headed **"Recent Survivors"**
 (the most recently updated profiles — it is **not** a ranking, so it must not say "Top Providers"),
 and its privacy card reads **"Privacy First — Profiles show only what each member chooses to
-share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail.
+share."** — no "guarantee" / "your identity is protected" wording anywhere on the rail. The
+nomination card (step 7) says a nominee's Quora profile **helps verify they are a real person** — it
+must not call the Quora profile the social proof (retired 2026-09-13). An admin can override this
+card's text from the SkillsHunt admin screen, so if you see the old sentence, check that saved row
+before filing it as a bug.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
