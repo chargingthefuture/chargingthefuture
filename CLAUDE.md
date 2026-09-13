@@ -57,17 +57,24 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - punch list → list
 - stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
-- whole point → say the point plainly, without announcing that it is the point
-- whole argument → state the argument itself, without labeling it the argument
+- a sentence of the form "that is the whole ‹anything›" → state the point itself and stop
 - point of the thing → end on the fact itself, with no sentence explaining that it mattered
 
-Those last three are one habit, banned 2026-08-28 and 2026-08-29: the sentence that arrives after
-the facts to tell the reader which of them mattered. "That is the whole point." "Which is the whole
-argument." "That was the point of the thing." It reads as insistence, it was being written into
-nearly everything, and a reader can weigh facts without being told which one to weigh. Write the
-point as a plain statement and stop; if the sentence only labels what came before it, delete it.
-Three spellings of it are now banned, which is the sign to stop reaching for the shape at all
-rather than to find a fourth wording for it.
+Both are one habit, banned 2026-08-28 and 2026-08-29 and widened 2026-09-13: the sentence that
+arrives after the facts to tell the reader which of them mattered. It reads as insistence, it was
+being written into nearly everything, and a reader can weigh facts without being told which one to
+weigh. Write the point as a plain statement and stop; if a sentence only labels what came before
+it, delete it.
+
+The ban is on the construction, not on a list of nouns. Naming the wordings one at a time did not
+work — each one was banned in turn and the next reply reached for another noun in the same frame and
+passed through the hook untouched. So the hook now matches "that/this/which/it is the whole
+‹word›" whatever word follows, plus the same frame without the demonstrative in front of it
+("precision is the whole ‹word› of this post"). Do not go looking for a noun that slips past;
+there is nothing to find, and the sentence was doing no work in the first place.
+
+A negated form is deliberately left alone. Saying an account is not the whole story states
+something about the account rather than ranking what came before it, and the hook does not match it.
 
 When the hook blocks a reply, restate **once and briefly** in plain, factual language — none of the
 terms above, no jargon, no first-person feeling words — then stop. Do not re-send the blocked
