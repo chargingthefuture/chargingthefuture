@@ -129,20 +129,21 @@ chargingthefuture/          ← repo root
 
 ## Unlock Approval Is the Gate (Critical — all agents)
 
-**A member must be approved through Unlock to do anything in this app.** There are exactly three
+**A member must be approved through Unlock to do anything in this app.** There are exactly four
 exceptions, and they are exceptions — not a pattern, not a precedent, and not an argument for a
-fourth:
+fifth:
 
 | Feature | Owner decision | Why it is excepted |
 |---|---|---|
 | Knowledge library contribution | 2026-07-29 | Contributing is a route *into* verification: judging a contribution means looking at a real person writing real things, which is the same look Unlock asks for. Gating it reviews the same account twice. |
 | Contributions | 2026-06-10 | A not-yet-verified member can contribute and hold thank-you credits they cannot spend until they finish Unlock. Recorded as deliberate and active, not an oversight. |
 | Quora account deletion survey | 2026-08-19 | The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached. Sign-in keeps bulk junk out; it is not a claim that the member is verified. |
+| Fireside conversation | 2026-09-13 | Writing under a blog post is a route *into* verification, on the same reasoning as the Knowledge Library row above. Nothing an unapproved member writes is publicly visible; approval is per person and makes everything they have written appear at once. Reading needs no account at all, so it is not an exception — it is not gated in the first place. |
 
 Every other feature requires Unlock approval. When you build anything new the answer is
 `minUnlockTier: 'approved_full'` — the default — essentially every time.
 
-Separate from those three, a short list of **machinery** also runs unapproved because the gate
+Separate from those four, a short list of **machinery** also runs unapproved because the gate
 cannot function otherwise: the Unlock flow itself, the account area (anyone must be able to see and
 delete their own data), bug reporting (the member most likely to hit a bug is the one stuck in
 onboarding), and small feeds a gated screen needs to render. Gating those would trap a member
@@ -154,7 +155,8 @@ on any call site missing from it (`ctf/scripts/check-unlock-tier-exceptions.mjs`
 `unlock-tier-gate`). It is enforced rather than described because an agent building a new surface
 copies whatever nearby code does, and a bypass added by copy-and-paste does not look like a
 decision in review — it looks like the house style. **Adding a fourth exception is the owner's
-decision, never a build step. Ask first.**
+decision, never a build step. Ask first.** The fourth was asked for and decided on 2026-09-13;
+that it happened does not make a fifth ordinary.
 
 ## Credits Are Not Money (Critical — all agents)
 

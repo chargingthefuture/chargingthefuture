@@ -62,6 +62,12 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Nominate survivors to build the Directory and grow the economy.',
   },
   {
+    id: 'fireside',
+    name: 'Fireside',
+    kind: 'plugin',
+    summary: 'Threaded conversation under the posts on the blog.',
+  },
+  {
     id: 'unlock',
     name: 'Unlock',
     kind: 'plugin',

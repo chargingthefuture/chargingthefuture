@@ -645,6 +645,21 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'fireside',
+    name: 'Fireside',
+    dataSummary: 'Everything you wrote under a blog post, and every reaction you left.',
+    serviceScopeSupported: true,
+    tables: [
+      del('fireside_comments', 'author_user_id', 'Your comments, including any still waiting on approval.'),
+      del('fireside_reactions', 'reactor_user_id', 'Your reactions.'),
+      // A thread is a reference to a blog post, not anything about a person; an empty one holds
+      // nothing. Audit rows are kept the way every plugin keeps them: they record that a command
+      // ran, not what was said.
+      retain('fireside_threads', 'One row per blog post; holds a post reference and title, no personal data.'),
+      retain('fireside_audit_events', 'Command audit trail; records that a write happened, not its content.'),
+    ],
+  },
+  {
     slug: 'what-works',
     name: 'WhatWorks',
     dataSummary: 'Your endorsements of tools on the shared list.',

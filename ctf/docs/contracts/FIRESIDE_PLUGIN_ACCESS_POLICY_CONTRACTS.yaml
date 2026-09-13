@@ -1,0 +1,80 @@
+# Fireside access policy.
+#
+# Three postures, and the first is unusual enough to name: reading is not gated at all. No account,
+# no sign-in, no tier. The blog is public, so the conversation under it is public — the inversion of
+# a platform that gates viewing as well as writing.
+policies:
+  - pluginId: fireside
+    command: fireside.thread.read
+    version: 1.0.0
+    requiredRoles: []
+    minUnlockTier: none
+    requiresAuthentication: false
+    consentRequirements: []
+    notes: >-
+      Public. Returns a display name and never a user id or an email, because everything on this
+      shape is on the open web. A signed-in reader additionally sees their own held comments so
+      nobody is left wondering where their words went.
+  - pluginId: fireside
+    command: fireside.comment.create
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements:
+      - Writing is a route into verification. Nothing written is publicly visible until the author is
+        approved in Unlock, and the person is told so at the moment of posting rather than left to
+        discover it.
+    notes: >-
+      The fourth Unlock exception, decided 2026-09-13, on the same reasoning as the Knowledge Library
+      contribution exception: judging what somebody wrote is the same look Unlock asks for, so gating
+      it would review the same account twice. Recorded in
+      ctf/config/unlock-tier-exception-allowlist.json and enforced by CI.
+  - pluginId: fireside
+    command: fireside.reaction.toggle
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Same posture as a comment, and for the same reason: a reaction from an unverified account is
+      how a brigade would work, so it is recorded and does not count in public until the person is
+      approved.
+  - pluginId: fireside
+    command: fireside.comment.withdraw
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: Author-only. Scoped by author_user_id in the update, never by a client-supplied id alone.
+  - pluginId: fireside
+    command: fireside.comment.set_export
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements:
+      - Off by default. Exporting puts the text in the blog's published build, which is captured by
+        the Internet Archive and cannot be withdrawn afterwards by anybody, this project included.
+        The author has to ask for it.
+    notes: Author-only, scoped by author_user_id.
+  - pluginId: fireside
+    command: fireside.own.read
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: Returns only the caller's own rows.
+  - pluginId: fireside
+    command: fireside.comment.remove
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Moderation, deliberately separate from approval. Removing also clears the blog-export flag, so
+      nothing on its way out of the app can carry a removed comment with it.

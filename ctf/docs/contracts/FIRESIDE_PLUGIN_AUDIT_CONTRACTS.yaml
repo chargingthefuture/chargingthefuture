@@ -1,0 +1,97 @@
+# Fireside audit events. Every write is recorded in fireside_audit_events. The public thread read is
+# not recorded, because it has no actor: it answers callers with no account at all.
+auditEvents:
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: comment.create
+    commandVersion: 1.0.0
+    purpose: blog_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: published_or_held_for_approval
+    dataClassesAccessed:
+      - comment_body
+      - post_reference
+    targetContext:
+      commentId: comment_identifier
+      postRepo: blog_repo
+      postSlug: blog_slug
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: The result says whether it went public at once or is waiting on the author's approval.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: comment.withdraw
+    commandVersion: 1.0.0
+    purpose: author_removal
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: withdrawn
+    dataClassesAccessed:
+      - comment_body
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: comment.set_export
+    commandVersion: 1.0.0
+    purpose: publication_consent
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: export_on_or_export_off
+    dataClassesAccessed:
+      - publication_preference
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Recorded because it is the decision that lets a comment leave the app for somewhere it cannot
+      be recalled from. Who chose it and when is worth being able to show.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: reaction.toggle
+    commandVersion: 1.0.0
+    purpose: blog_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: added_or_removed
+    dataClassesAccessed:
+      - reaction_kind
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: comment.remove
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: removed_or_restored
+    dataClassesAccessed:
+      - comment_body
+      - moderation_reason
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: Admin only. Separate from approval, so approving a person never resurrects a removed comment.

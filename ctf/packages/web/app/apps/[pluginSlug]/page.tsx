@@ -18,6 +18,7 @@ import { SkillsHuntShell } from '@/components/skills-hunt/skills-hunt-shell';
 import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonomy-shell';
 import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
 import { ClickLogShell } from '@/components/click-log/click-log-shell';
+import { FiresideShell } from '@/components/fireside/fireside-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
@@ -193,6 +194,13 @@ function renderPluginShellA(selectedPlugin: SelectedPlugin, decision: AllowDecis
 
   if (selectedPlugin.slug === 'what-works') {
     return <WhatWorksShell />;
+  }
+
+  // The in-app Fireside screen is a member's own side of the conversation, so it sits behind the
+  // ordinary approved-only page gate like every other plugin route. Reading and writing happen
+  // under the blog post itself, where an unapproved member can still see their own held comments.
+  if (selectedPlugin.slug === 'fireside') {
+    return <FiresideShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'chyme') {

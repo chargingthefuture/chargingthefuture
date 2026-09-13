@@ -243,6 +243,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    slug: 'fireside',
+    name: 'Fireside',
+    summary: 'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.',
+    availabilityState: 'implemented_shell',
+    navRank: 260,
+    isVisible: true,
+  },
+  {
     slug: 'mutual-time',
     name: 'Mutual Time',
     summary: 'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.',
