@@ -198,48 +198,6 @@ commands:
       - fireside_audit_events (insert)
     purpose: Admin moderation. Separate from whether the author is approved, so approving somebody never resurrects a removed comment
     retentionClass: moderation_record
-
-definitions:
-  PublicComment:
-    type: object
-    description: What a public reader receives. A display name, never a user id or an email.
-    properties:
-      id:
-        type: string
-      parentCommentId:
-        type: [string, 'null']
-      authorName:
-        type: string
-      body:
-        type: string
-      createdAt:
-        type: string
-      reactions:
-        type: object
-      viewerReactions:
-        type: array
-        items:
-          type: string
-      isOwn:
-        type: boolean
-  OwnComment:
-    type: object
-    description: The author's own view, including comments nobody else can see yet.
-    allOf:
-      - $ref: '#/definitions/PublicComment'
-      - type: object
-        properties:
-          state:
-            type: string
-            enum: [live, held_for_approval, removed, withdrawn]
-          exportToBlog:
-            type: boolean
-          postRepo:
-            type: string
-          postSlug:
-            type: string
-          postTitle:
-            type: string
   - pluginId: fireside
     command: fireside.export.queue.read
     version: 1.0.0
@@ -311,3 +269,70 @@ definitions:
       - fireside_audit_events (insert)
     purpose: An admin turns the second of the two keys on copying a comment into the blog's published build, or declines it. Only a pending request can be decided, and a refusal is final for that comment.
     retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.thread.set_closed
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [threadId, isClosed]
+      properties:
+        threadId:
+          type: string
+        isClosed:
+          type: boolean
+        reason:
+          type: string
+          maxLength: 500
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        isClosed:
+          type: boolean
+    dataAccess:
+      - fireside_threads (update)
+      - fireside_audit_events (insert)
+    purpose: Close a conversation to new comments or open it again. Nothing already written is touched, hidden, or removed — this is about what happens next, not about what was said.
+    retentionClass: moderation_record
+definitions:
+  PublicComment:
+    type: object
+    description: What a public reader receives. A display name, never a user id or an email.
+    properties:
+      id:
+        type: string
+      parentCommentId:
+        type: [string, 'null']
+      authorName:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      reactions:
+        type: object
+      viewerReactions:
+        type: array
+        items:
+          type: string
+      isOwn:
+        type: boolean
+  OwnComment:
+    type: object
+    description: The author's own view, including comments nobody else can see yet.
+    allOf:
+      - $ref: '#/definitions/PublicComment'
+      - type: object
+        properties:
+          state:
+            type: string
+            enum: [live, held_for_approval, removed, withdrawn]
+          exportToBlog:
+            type: boolean
+          postRepo:
+            type: string
+          postSlug:
+            type: string
+          postTitle:
+            type: string
