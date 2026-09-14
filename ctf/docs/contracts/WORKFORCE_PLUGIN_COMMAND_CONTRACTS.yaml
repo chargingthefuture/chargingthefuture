@@ -221,6 +221,42 @@ contracts:
     idempotency: true
 
   - pluginId: workforce
+    command: workforce.onePercent.fetch
+    version: 1.0.0
+    description: >-
+      Fetch the caller's own "What's Your 1%" card and the arithmetic beside it. The card is built
+      from the caller's own claimed Directory listing (initials, name, occupation, skills); nobody
+      else's is ever returned and no member id is accepted from the client. The arithmetic is the
+      reverse of the overview's even split: one percent of the population estimate, a ladder of what
+      a given rate per person comes to across that many people, and the fixed list of app surfaces a
+      trade can reach them through, and a per-trade weight derived from the demand model (how many
+      practitioners of the caller's occupation a population this size needs, inverted into how many
+      people one of them serves). Read-only; computed on every call, nothing stored. A caller with
+      no claimed listing gets the arithmetic and an unclaimed card rather than a guessed name, and a
+      caller whose occupation carries no demand gets a null weight rather than a stand-in figure.
+    inputSchema: {}
+    outputSchema:
+      card:
+        type: object
+      reach:
+        type: object
+      tradeLoad:
+        type: object
+      ladder:
+        type: array
+      routes:
+        type: array
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - workforce_config
+    purpose: workforce_visibility
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: workforce
     command: workforce.admin.config.fetch
     version: 2.0.0
     description: Fetch the workforce config (population model — population, participation rate, min/max recruitable).
