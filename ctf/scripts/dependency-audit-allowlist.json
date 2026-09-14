@@ -16,31 +16,6 @@
       "severity": "moderate",
       "title": "follow-redirects leaks Custom Authentication Headers to Cross-Domain Redirect Targets"
     },
-    "1117061": {
-      "module": "fastify",
-      "severity": "high",
-      "title": "Fastify has a Body Schema Validation Bypass via Leading Space in Content-Type Header"
-    },
-    "1117894": {
-      "module": "@xmldom/xmldom",
-      "severity": "high",
-      "title": "xmldom: Uncontrolled recursion in XML serialization leads to DoS"
-    },
-    "1117897": {
-      "module": "@xmldom/xmldom",
-      "severity": "high",
-      "title": "xmldom has XML injection through unvalidated DocumentType serialization"
-    },
-    "1117900": {
-      "module": "@xmldom/xmldom",
-      "severity": "high",
-      "title": "xmldom has XML node injection through unvalidated processing instruction serialization"
-    },
-    "1117903": {
-      "module": "@xmldom/xmldom",
-      "severity": "high",
-      "title": "xmldom has XML node injection through unvalidated comment serialization"
-    },
     "1119108": {
       "module": "ws",
       "severity": "moderate",
@@ -50,11 +25,6 @@
       "module": "uuid",
       "severity": "moderate",
       "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided"
-    },
-    "1119502": {
-      "module": "qs",
-      "severity": "moderate",
-      "title": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set"
     },
     "1120422": {
       "module": "shell-quote",
@@ -95,16 +65,6 @@
       "module": "shell-quote",
       "severity": "high",
       "title": "shell-quote: Quadratic-complexity Denial of Service in `parse()` (CWE-407)"
-    },
-    "1124066": {
-      "module": "sharp",
-      "severity": "high",
-      "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591"
-    },
-    "1124273": {
-      "module": "find-my-way",
-      "severity": "high",
-      "title": "find-my-way: DDoS with HTTP2"
     },
     "1138808": {
       "module": "image-size",
