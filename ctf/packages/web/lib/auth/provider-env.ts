@@ -315,3 +315,42 @@ export function getHostedAfterSignOutUrl(): string | undefined {
   }
   return getAppUrl() ?? '/';
 }
+
+/**
+ * Adds a post-sign-in destination to a hosted sign-in URL.
+ *
+ * Sign-in is hosted on a different origin, and by default it returns people to the app's home
+ * page. For somebody arriving from a link that meant something specific — a blog reader clicking
+ * through to join one conversation — the home page is a wall of twenty-five tiles with no sign of
+ * what they came for, and a first-time visitor leaves rather than hunting for it.
+ *
+ * Only a path on this app is accepted. `returnPath` must start with a single `/`, which rules out
+ * an absolute URL and a protocol-relative `//host` — so a link somebody else composes cannot use
+ * this to send a member somewhere off-site after they sign in.
+ *
+ * @param signInUrl The hosted sign-in URL, from {@link getHostedSignInUrl}.
+ * @param returnPath An app-relative path to land on afterwards, e.g. `/apps/fireside?slug=x`.
+ * @returns The sign-in URL carrying the destination, or the URL unchanged when it cannot be added.
+ */
+export function withSignInReturn(signInUrl: string, returnPath: string): string {
+  if (!returnPath.startsWith('/') || returnPath.startsWith('//')) return signInUrl;
+
+  const appUrl = getAppUrl();
+  if (!appUrl) return signInUrl;
+
+  try {
+    const destination = new URL(returnPath, appUrl);
+    // Belt and braces: `new URL` with a relative path cannot leave the base origin, but an
+    // explicit check means a later change to how returnPath is built cannot quietly open a
+    // redirect either.
+    if (destination.origin !== new URL(appUrl).origin) return signInUrl;
+
+    const target = new URL(signInUrl);
+    target.searchParams.set('redirect_url', destination.toString());
+    return target.toString();
+  } catch {
+    // A malformed configured URL must not take the sign-in link down with it; the plain link
+    // still works and lands on the home page, which is the behavior this replaces.
+    return signInUrl;
+  }
+}
