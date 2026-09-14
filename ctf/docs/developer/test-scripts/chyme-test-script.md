@@ -40,6 +40,11 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
    reload. → web ☐ mobile ☐ android ☐
 4. **Access wall for the signed-out visitor.** Open the plugin route while signed out. You see the
    public listen view (free to listen, sign in to speak), not private member data. → web ☐ mobile ☐ android ☐
+5. **A host is not endorsed.** Signed out, with a room live, the public listen block says hosts book
+   their own slots, that a name is not a recommendation, and that the rules still apply in the room.
+   It must agree with the wording on the TI Radio guide — both read from
+   `lib/shared/hosting-disclaimer.ts`, so if one says something the other does not, somebody has
+   inlined a copy and the two will drift. → web ☐ mobile ☐ android ☐
 
 ---
 

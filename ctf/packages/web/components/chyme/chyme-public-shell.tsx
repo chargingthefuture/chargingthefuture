@@ -8,6 +8,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from 'lib/shared/hosting-disclaimer';
 
 // Live state for the one default public Chyme room, fetched client-side from
 // /api/chyme/public/room. `credentials` is present only when the room is live
@@ -105,6 +106,12 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
           <div>
             {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
             <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
+            {/* The public room is readable without an account, so a visitor can land on a live host
+                having seen nothing about how they got there. Same statement as the TI Radio guide,
+                from one shared string so the two can never drift into disagreeing. */}
+            <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 8, lineHeight: 1.5 }}>
+              {HOSTING_NOT_ENDORSEMENT_SHORT}
+            </div>
             <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} />
           </div>
         ) : null}

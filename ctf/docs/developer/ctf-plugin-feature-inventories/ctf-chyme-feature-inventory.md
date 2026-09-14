@@ -141,6 +141,9 @@ Current status:
 
 ## Change Log
 
+- 2026-09-14: **The public room card says a host is not endorsed.** Chyme's public shell is readable without an account, so a visitor can land mid-broadcast having seen nothing about how that host got there — and with TI Radio now publishing a schedule of who is hosting when, more people arrive that way than before. The live-room block now carries the short form of the shared statement: hosts book their own slots, a name is not a recommendation, and the rules still apply in the room. Same string family as the TI Radio guide, from `lib/shared/hosting-disclaimer.ts`, so the two cannot drift into disagreeing about what a listing means. Not a safety claim, on purpose. Copy only — no schema, route, or contract change, and nothing about who may listen or speak has moved.
+
+
 - 2026-08-24: **The signed-out Chyme view scrolls as a page, and its never-rendered desktop layout is
   gone.** The guest shell was pinned to exactly one viewport (`height: 100dvh; overflow: hidden`) with
   the room list scrolling inside it, so the document never scrolled and Safari's "Full Page"
