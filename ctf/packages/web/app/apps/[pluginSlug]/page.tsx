@@ -1,6 +1,11 @@
 import { evaluatePluginAccess, type AllowDecision, type PluginAuthDecision } from 'lib/auth/server-authz';
-import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { canonicalizePluginSlug, getPluginBySlug, isAdminOnlyPlugin } from 'lib/plugins/repository';
+import { getHostedSignInUrl, withSignInReturn } from 'lib/auth/provider-env';
+import {
+  canonicalizePluginSlug,
+  getPluginBySlug,
+  isAdminOnlyPlugin,
+  pluginPageMinUnlockTier,
+} from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
 import { ReviewsWidget } from '@/components/reviews/reviews-widget';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
@@ -34,6 +39,10 @@ type PluginRoutePageProps = {
     status?: string;
     startDate?: string;
     cohortId?: string;
+    // Fireside deep link from a blog post: which conversation to open on arrival.
+    repo?: string;
+    slug?: string;
+    title?: string;
   }>;
 };
 
@@ -142,10 +151,14 @@ function GenericPluginView({
 // not-yet-verified member is nudged from there toward the Unlock flow, and the
 // Hub general channel remains their support surface. Other 403s (e.g. a missing
 // username or a role requirement) keep the informative access-denied view.
-function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlugin) {
+function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlugin, returnPath: string) {
   if (decision.code === 'AUTH_UNAUTHORIZED' || decision.reason === 'unlock_required') {
     const PublicVisitorShell = getPublicVisitorShell(selectedPlugin.slug);
-    const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+    // Sign-in is hosted elsewhere and returns to the home page by default. Somebody who followed a
+    // link to one specific place — a blog reader joining one conversation — would arrive at
+    // twenty-five tiles with no sign of what they came for, and leave. The destination rides along.
+    const hostedSignIn = getHostedSignInUrl();
+    const signInUrl = hostedSignIn ? withSignInReturn(hostedSignIn, returnPath) : '/sign-in';
     // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
     // is already authenticated, so the public shell's "Sign In / Join Free"
     // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
@@ -183,7 +196,30 @@ function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlug
 // rule-116 complexity limit; each keeps the `selectedPlugin.slug === '<slug>'` idiom that
 // check-web-android-parity.mjs scans for, so the parity gate still detects every explicit web shell.
 // A helper returns null for a slug it does not own; the caller tries them in order.
-function renderPluginShellA(selectedPlugin: SelectedPlugin, decision: AllowDecision): ReactNode | null {
+// Fireside opens on one conversation when the link names one. A reader comes from a blog post, so
+// landing on their own comment list — empty, for somebody who has never written here — would lose
+// them the thing they clicked for.
+//
+// Its page gate is a signed-in account rather than full approval (pluginPageMinUnlockTier), matching
+// its API and the Unlock exception decided for it: writing here is a route into verification, so a
+// wall in front of the comment box would defeat the exception. Nothing an unapproved member writes
+// is publicly visible.
+function renderFireside(decision: AllowDecision, query: PluginSearchParams): ReactNode {
+  const repo = query.repo?.trim();
+  const slug = query.slug?.trim();
+  return (
+    <FiresideShell
+      isAdmin={decision.isAdmin}
+      initialPost={repo && slug ? { repo, slug, title: query.title?.trim() ?? '' } : null}
+    />
+  );
+}
+
+function renderPluginShellA(
+  selectedPlugin: SelectedPlugin,
+  decision: AllowDecision,
+  query: PluginSearchParams,
+): ReactNode | null {
   if (selectedPlugin.slug === 'beacon') {
     return <BeaconShell isAdmin={decision.isAdmin} />;
   }
@@ -196,11 +232,8 @@ function renderPluginShellA(selectedPlugin: SelectedPlugin, decision: AllowDecis
     return <WhatWorksShell />;
   }
 
-  // The in-app Fireside screen is a member's own side of the conversation, so it sits behind the
-  // ordinary approved-only page gate like every other plugin route. Reading and writing happen
-  // under the blog post itself, where an unapproved member can still see their own held comments.
   if (selectedPlugin.slug === 'fireside') {
-    return <FiresideShell isAdmin={decision.isAdmin} />;
+    return renderFireside(decision, query);
   }
 
   if (selectedPlugin.slug === 'chyme') {
@@ -319,6 +352,15 @@ function redirectKnowledgeBeforeGate(selectedPlugin: SelectedPlugin): void {
   }
 }
 
+// Where to come back to after signing in: this page, with the query that brought them here, so a
+// deep link into one conversation survives the round trip through the hosted sign-in page.
+function buildReturnPath(slug: string, query: PluginSearchParams): string {
+  const search = new URLSearchParams(
+    Object.entries(query).filter((entry): entry is [string, string] => Boolean(entry[1])),
+  ).toString();
+  return `/apps/${slug}${search ? `?${search}` : ''}`;
+}
+
 export default async function PluginRoutePage({ params, searchParams }: PluginRoutePageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
@@ -342,7 +384,12 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // (a leftover: it produced a 403 `missing_username` page), so the page gate matches the
   // APIs and does not require a username. Shells that show the handle fall back gracefully
   // when it is null.
-  const decision = await evaluatePluginAccess({ requireUsername: false });
+  const decision = await evaluatePluginAccess({
+    requireUsername: false,
+    minUnlockTier: pluginPageMinUnlockTier(selectedPlugin.slug),
+  });
+
+  const returnPath = buildReturnPath(selectedPlugin.slug, resolvedSearchParams);
 
   // Operator-only plugins (e.g. Weekly Performance) are admin-only: a non-admin gets a 404 for the
   // route, not the public landing, since there is no approved user-facing version. Admins fall
@@ -352,11 +399,11 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   }
 
   if (!decision.allowed) {
-    return renderAccessDenied(decision, selectedPlugin);
+    return renderAccessDenied(decision, selectedPlugin, returnPath);
   }
 
   const shell =
-    renderPluginShellA(selectedPlugin, decision) ??
+    renderPluginShellA(selectedPlugin, decision, resolvedSearchParams) ??
     renderPluginShellB(selectedPlugin, decision) ??
     renderPluginShellC(selectedPlugin, decision, resolvedSearchParams);
 

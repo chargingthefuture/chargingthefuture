@@ -21,7 +21,29 @@ const querySchema = z.object({
  * What it returns carries a display name and never a user id or an email, because everything on
  * this shape is on the open web. A signed-in reader additionally sees their own held comments, so
  * nobody is left wondering where their words went.
+ *
+ * It answers a cross-origin caller, so the blog itself can render the conversation under a post
+ * without sending anybody anywhere. Read-only and already public, so the header gives away nothing
+ * that a plain visit to this URL does not; no credentials are accepted cross-origin, which is why
+ * the signed-in reader's own held comments only appear on the app's own pages. Writing stays
+ * same-origin and keeps its CSRF and origin checks.
  */
+const PUBLIC_READ_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  // No Access-Control-Allow-Credentials: a cross-origin caller gets the signed-out view, never a
+  // reader's own held comments, whatever cookies their browser holds for this app.
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  // A conversation changes slowly and the blog is a static site; a short shared cache keeps a
+  // popular post from asking the database on every visit.
+  'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+} as const;
+
+/** Answers the browser's preflight so a cross-origin read from the blog is allowed to proceed. */
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: PUBLIC_READ_HEADERS });
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({
@@ -31,7 +53,7 @@ export async function GET(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'A post repo and slug are both required.' },
-      { status: 400 },
+      { status: 400, headers: PUBLIC_READ_HEADERS },
     );
   }
 
@@ -49,7 +71,7 @@ export async function GET(request: Request) {
         comments,
         viewer: { isSignedIn: reader.userId != null },
       },
-      { status: 200 },
+      { status: 200, headers: PUBLIC_READ_HEADERS },
     );
   } catch (error) {
     return failureResponse({

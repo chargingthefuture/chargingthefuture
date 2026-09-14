@@ -31,6 +31,21 @@ export function isAdminOnlyPlugin(slug: string): boolean {
   return ADMIN_ONLY_PLUGIN_SLUGS.has(slug);
 }
 
+// Plugin pages whose own gate is a signed-in account rather than Unlock approval, matching the
+// approved exceptions in ctf/config/unlock-tier-exception-allowlist.json. Everything else stays on
+// the default 'approved_full'.
+//
+// Fireside is here because writing a comment is a route INTO verification (owner decision,
+// 2026-09-13). Its API already runs at 'any_authenticated'; leaving the PAGE on approved-only meant
+// a member who followed a link from the blog to join a conversation met a "finish verifying" wall
+// instead of the comment box — the exact opposite of what the exception was decided for.
+export const SIGNED_IN_ONLY_PLUGIN_SLUGS = new Set<string>(['fireside']);
+
+/** The Unlock tier a plugin's own page requires. Defaults to full approval, like everything else. */
+export function pluginPageMinUnlockTier(slug: string): 'approved_full' | 'any_authenticated' {
+  return SIGNED_IN_ONLY_PLUGIN_SLUGS.has(slug) ? 'any_authenticated' : 'approved_full';
+}
+
 // Drop operator-only plugins for non-admin viewers; admins see the full list.
 export function filterPluginsForViewer<T extends { slug: string }>(plugins: T[], isAdmin: boolean): T[] {
   return isAdmin ? plugins : plugins.filter((plugin) => !ADMIN_ONLY_PLUGIN_SLUGS.has(plugin.slug));

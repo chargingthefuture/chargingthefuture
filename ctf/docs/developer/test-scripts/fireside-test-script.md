@@ -105,6 +105,31 @@ Result: web ☐
 
 ---
 
+### FS-4a — From the blog post to the right conversation, including through sign-in
+
+**Role:** signed-out visitor, then a brand-new member · **Surfaces:** web
+**Precondition:** A published blog post. Test once signed out entirely, then again with a brand-new account that has not been approved.
+
+**Steps:**
+1. Signed out, and in a browser with no session for the app, open any post on the blog and scroll to the end.
+2. Read the conversation section without signing in.
+3. Press the button under it.
+4. Sign in (or sign up) when asked.
+5. Note where you land.
+6. Repeat with an account that is signed in but not yet approved.
+
+**Expected:**
+- The conversation renders under the post for a signed-out reader, with no account and nothing to dismiss.
+- With no comments yet, it says so plainly and the button still invites the first one.
+- The button opens that same post's conversation in the app — not the app home, not the member's own comment list.
+- After signing in, you are returned to that same conversation. Landing on the home page is the failure this case exists to catch.
+- A signed-in but unapproved member reaches the comment box, not a "finish verifying" wall. What they write is saved and held, with the held notice shown at the moment of posting.
+- With the app unreachable (block the app's domain in the browser, or stop it), the post still reads normally: no error box, and the button still works because it is only a link.
+
+Result: web ☐
+
+---
+
 ### FS-5 — Asking for the blog is a request, not a switch
 
 **Role:** member (approved) · **Surfaces:** web

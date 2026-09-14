@@ -164,7 +164,14 @@ function CommentRow({
   );
 }
 
-export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
+export function FiresideShell({
+  isAdmin = false,
+  initialPost = null,
+}: {
+  isAdmin?: boolean;
+  /** A conversation named by the link that brought the member here, from a blog post. */
+  initialPost?: { repo: string; slug: string; title: string } | null;
+}) {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent("fireside", theme), theme);
   const [comments, setComments] = useState<OwnComment[]>([]);
@@ -174,7 +181,9 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [openPost, setOpenPost] = useState<{ repo: string; slug: string; title: string } | null>(null);
+  const [openPost, setOpenPost] = useState<{ repo: string; slug: string; title: string } | null>(
+    initialPost,
+  );
   const [queueOpen, setQueueOpen] = useState(false);
 
   const load = useCallback(async (wanted: number) => {
@@ -262,7 +271,8 @@ export function FiresideShell({ isAdmin = false }: { isAdmin?: boolean }) {
         <div style={{ textAlign: "center", padding: "40px 0", color: t.SUBTLE, fontSize: 13, lineHeight: 1.6 }}>
           You have not written anything here yet.
           <br />
-          Comments are left under a post on the blog, and they show up on this screen afterwards.
+          Open a post on the blog and use the conversation under it; whatever you write shows up on
+          this screen afterwards, with what is happening to each one.
         </div>
       ) : (
         <>

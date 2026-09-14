@@ -1,5 +1,5 @@
 {
-  "_comment": "The COMPLETE list of surfaces allowed to run with minUnlockTier 'any_authenticated' — usable by a signed-in member who has NOT been approved in Unlock. Unlock approval is what grants access to this app: every other surface requires it, and a new one should use the 'approved_full' default. Enforced by ctf/scripts/check-unlock-tier-exceptions.mjs; CI fails on any call site missing here, and on any entry that has stopped using the bypass, so the list can only shrink on its own. kind 'machinery' = the Unlock gate cannot function if this is gated (the flow itself, the account area, bug reporting, small feeds a gated screen needs to render). kind 'exception' = a real capability deliberately opened to unapproved members by a dated owner decision, and every one needs 'feature' and 'decision'. There are exactly four such features, named below. ADDING A FOURTH IS THE OWNER'S DECISION, NEVER A BUILD STEP — ask first; the answer for a new surface is almost always 'approved_full'.",
+  "_comment": "The COMPLETE list of surfaces allowed to run with minUnlockTier 'any_authenticated' \u2014 usable by a signed-in member who has NOT been approved in Unlock. Unlock approval is what grants access to this app: every other surface requires it, and a new one should use the 'approved_full' default. Enforced by ctf/scripts/check-unlock-tier-exceptions.mjs; CI fails on any call site missing here, and on any entry that has stopped using the bypass, so the list can only shrink on its own. kind 'machinery' = the Unlock gate cannot function if this is gated (the flow itself, the account area, bug reporting, small feeds a gated screen needs to render). kind 'exception' = a real capability deliberately opened to unapproved members by a dated owner decision, and every one needs 'feature' and 'decision'. There are exactly four such features, named below. ADDING A FOURTH IS THE OWNER'S DECISION, NEVER A BUILD STEP \u2014 ask first; the answer for a new surface is almost always 'approved_full'.",
   "version": 1,
   "exceptions": [
     {
@@ -10,7 +10,7 @@
     {
       "file": "ctf/packages/web/app/api/unlock/_lib.ts",
       "kind": "machinery",
-      "reason": "Unlock submission and status routes — same reason as the page above."
+      "reason": "Unlock submission and status routes \u2014 same reason as the page above."
     },
     {
       "file": "ctf/packages/web/app/account/page.tsx",
@@ -104,7 +104,14 @@
       "kind": "exception",
       "feature": "Fireside conversation",
       "decision": "2026-09-13",
-      "reason": "Writing a comment or leaving a reaction under a blog post, by a signed-in member who is not yet approved. Same reasoning as the Knowledge Library contribution exception: judging what somebody wrote is the same look Unlock asks for, so gating it would review the same account twice. Nothing an unapproved member writes is publicly visible — visibility is decided per person by lib/fireside/visibility.ts, and approval makes everything they have written appear at once. Reading needs no account at all and no gate, so it is not on this list."
+      "reason": "Writing a comment or leaving a reaction under a blog post, by a signed-in member who is not yet approved. Same reasoning as the Knowledge Library contribution exception: judging what somebody wrote is the same look Unlock asks for, so gating it would review the same account twice. Nothing an unapproved member writes is publicly visible \u2014 visibility is decided per person by lib/fireside/visibility.ts, and approval makes everything they have written appear at once. Reading needs no account at all and no gate, so it is not on this list."
+    },
+    {
+      "file": "ctf/packages/web/app/apps/[pluginSlug]/page.tsx",
+      "kind": "exception",
+      "feature": "Fireside conversation",
+      "decision": "2026-09-13",
+      "reason": "The Fireside PAGE, under the same exception decided for its API on 2026-09-13, and only for that one slug \u2014 pluginPageMinUnlockTier in lib/plugins/repository.ts returns 'approved_full' for every other plugin. The API already ran at 'any_authenticated' while the page did not, so a member who followed a link from a blog post to join a conversation met a 'finish verifying' wall instead of the comment box, which is the opposite of what the exception was decided for: writing here is a route INTO verification. Nothing an unapproved member writes is publicly visible."
     }
   ]
 }

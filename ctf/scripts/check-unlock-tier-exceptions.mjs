@@ -63,6 +63,15 @@ function walk(dir, acc = []) {
 // teach the next writer to stop explaining themselves.
 const CALL_RE = /minUnlockTier\s*:\s*'any_authenticated'/;
 
+// A tier passed as anything other than a literal — a variable, a helper call, a ternary — is
+// invisible to the literal match above, so a surface could drop to 'any_authenticated' at runtime
+// while this gate reported everything fine. That happened on 2026-09-14: the plugin page started
+// reading its tier from pluginPageMinUnlockTier(slug) and the gate did not notice.
+//
+// An indirect tier is not banned. It is treated exactly like a literal one: the file has to be on
+// the approved list, which is where the decision behind it is written down.
+const INDIRECT_CALL_RE = /minUnlockTier\s*:\s*(?!'(?:approved_full|any_authenticated|locked_support_only|pending_readonly)')[A-Za-z_$]/;
+
 const allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
 const allowed = new Map(allowlist.exceptions.map((entry) => [entry.file, entry]));
 
@@ -73,7 +82,7 @@ for (const file of walk(webRoot)) {
   const rel = relative(repoRoot, file);
   if (rel === SELF) continue;
   const text = readFileSync(file, 'utf8');
-  if (!CALL_RE.test(text)) continue;
+  if (!CALL_RE.test(text) && !INDIRECT_CALL_RE.test(text)) continue;
   seen.add(rel);
   if (!allowed.has(rel)) offenders.push(rel);
 }
