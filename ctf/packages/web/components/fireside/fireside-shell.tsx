@@ -184,6 +184,9 @@ export function FiresideShell({
   const [openPost, setOpenPost] = useState<{ repo: string; slug: string; title: string } | null>(
     initialPost,
   );
+  // Whether the open thread is the one the link named. It stops being true the moment the member
+  // navigates within the app, so "back" keeps meaning the place they actually came from.
+  const [cameFromPost, setCameFromPost] = useState(initialPost != null);
   const [queueOpen, setQueueOpen] = useState(false);
 
   const load = useCallback(async (wanted: number) => {
@@ -240,7 +243,8 @@ export function FiresideShell({
           postTitle={openPost.title}
           isAdmin={isAdmin}
           t={t}
-          onClose={() => { setOpenPost(null); void load(page); }}
+          cameFromPost={cameFromPost}
+          onClose={() => { setOpenPost(null); setCameFromPost(false); void load(page); }}
         />
       ) : (
       <>
@@ -288,7 +292,10 @@ export function FiresideShell({
               onWithdraw={(id) => void send(id, { method: "DELETE" }, "Could not take that down.")}
               onToggleExport={(id, next) =>
                 void send(id, { method: "PATCH", body: JSON.stringify({ exportToBlog: next }) }, "Could not change that setting.")}
-              onOpenThread={(row) => setOpenPost({ repo: row.postRepo, slug: row.postSlug, title: row.postTitle })}
+              onOpenThread={(row) => {
+                setCameFromPost(false);
+                setOpenPost({ repo: row.postRepo, slug: row.postSlug, title: row.postTitle });
+              }}
             />
           ))}
           <Pager page={page} lastPage={lastPage} t={t} onPage={(next) => void load(next)} />

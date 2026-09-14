@@ -247,6 +247,13 @@ member active only in Fireside is seen by being read, which is what the plugin i
   comment box — the opposite of an exception whose reason is that writing here is a route into
   verification. The call site is recorded in the allowlist under the same 2026-09-13 decision.
 
+  Back means the post, for somebody who arrived from one. The blog carries more than 300 posts, so
+  returning a reader to a list of their own comments — empty, for the first-timer this whole path is
+  built for — loses them exactly as thoroughly as the home page did. Opening the same thread from
+  inside the app keeps the old control, so arriving one way does not change what back means the
+  other way. Folder-shaped slugs (the archive entries) are rebuilt segment by segment so the return
+  address is the one they came from.
+
   `check-unlock-tier-exceptions.mjs` did not notice any of that, because it matched only a literal
   tier and this one arrives from a helper. It now treats any non-literal `minUnlockTier` as needing
   the same approval, which is what caught this change once the gate could see it.

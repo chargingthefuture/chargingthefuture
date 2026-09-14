@@ -124,6 +124,9 @@ Result: web ☐
 - The button opens that same post's conversation in the app — not the app home, not the member's own comment list.
 - After signing in, you are returned to that same conversation. Landing on the home page is the failure this case exists to catch.
 - A signed-in but unapproved member reaches the comment box, not a "finish verifying" wall. What they write is saved and held, with the held notice shown at the moment of posting.
+- The back control at the top of the conversation reads "Back to the post" and returns to the post you came from — not to your own comment list, which is empty for somebody who has just arrived and is the second way to lose them.
+- Open a thread the other way instead, from your own comment list inside the app, and the same control reads "Back to your comments" and goes there. Arriving one way must not change what back means the other way.
+- Try it on a post whose address has a folder in it (an archive entry, e.g. `archive/quora/...`): the conversation opens on that post and the back link returns to that same address rather than a broken one.
 - With the app unreachable (block the app's domain in the browser, or stop it), the post still reads normally: no error box, and the button still works because it is only a link.
 
 Result: web ☐
