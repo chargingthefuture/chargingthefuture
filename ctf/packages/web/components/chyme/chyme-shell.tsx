@@ -8,6 +8,7 @@ import { ChymeLiveShell, type ChymeRoomScope } from '@/components/chyme/chyme-li
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 type ChymeShellProps = {
   currentUser: {
@@ -172,6 +173,22 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
             <span style={{ fontSize: 11, color: t.FAINT, lineHeight: 1.4 }}>Download the APK from GitHub releases</span>
           </a>
         ) : null}
+      </div>
+
+      {/* A member sees host names on the TI Radio schedule the same way a visitor does, so the same
+          statement belongs here. Under the rail rather than on a card in it: the rail is a
+          horizontal scroller of fixed-width cards and a sentence does not fit one. */}
+      <div
+        style={{
+          padding: '10px 14px',
+          borderBottom: `1px solid ${t.BORDER}`,
+          background: t.HEADER,
+          fontSize: 11,
+          lineHeight: 1.5,
+          color: t.SUBTLE,
+        }}
+      >
+        {HOSTING_NOT_ENDORSEMENT_SHORT}
       </div>
 
       {/* Every opened room stays mounted; only the active one is displayed. display:none keeps the

@@ -204,6 +204,9 @@ only here would be invisible on their own trust card.
 
 ## Change Log
 
+- 2026-09-14: **The guide says plainly that a listing is not an endorsement.** A page that prints a week of discussions with a handle against each one reads as a line-up somebody curated, and nobody curated it — a slot is taken, not granted, and no one reviews the topic before it appears. That gap matters more here than on a gated screen, because this page is readable with no account and is written for people arriving from the Quora space who have no other context for what they are looking at. The intro card now carries the statement: any approved member books an open time and writes their own description, nobody reviews it first, a name is not a recommendation from this project, and the rules still apply in the room with an account going for breaking them. Deliberately **not** framed as a safety claim — saying a room is screened or moderated would be worth more than it is true, and somebody deciding whether to turn up is better served by an accurate account of what the listing actually is. The string lives in `@ctf/shared` (`packages/shared/src/copy/hosting-disclaimer.ts`) rather than in this component, because Chyme carries the same statement on three surfaces of its own — signed out, signed in, and the Android room list — and two surfaces wording it separately is how one of them ends up implying the endorsement the other disclaims. It sits in the shared package rather than the web one so the mobile app reads the same string instead of a retyped copy. Copy only — no schema, route, or contract change.
+
+
 - 2026-09-14: **TI Radio added.** Owner decision. The project runs a Quora space at
   tiradio.quora.com where people are pointed at a time and told to come talk, and a space can point
   at one time but cannot hold a schedule, let alone let somebody else put themselves on it. Mutual

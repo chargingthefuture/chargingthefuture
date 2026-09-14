@@ -23,6 +23,11 @@ admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`.
 4. Sign back in as the host and give the slot back. It returns to the guide as open.
 5. As the unapproved member, open the page. The schedule is all there, and the only thing on offer is
    "Finish verifying to host".
+6. Still signed out, read the intro card at the top. It says a slot is taken rather than granted,
+   that nobody reviews a description first, that a name is not a recommendation from the project,
+   and that the rules still apply in the room. It does **not** say the room is moderated, screened
+   or safe — that would be a claim the product cannot back, and a reader deciding whether to turn up
+   is worse off believing it.
 
 ---
 
