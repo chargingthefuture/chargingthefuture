@@ -27,6 +27,11 @@
 // USAGE
 //   DATABASE_URL=... node ctf/scripts/extractDirectoryShape.mjs > directory-shape.json
 //
+// Counts only ACTIVE skill rows throughout, matching the live workforce model's own skill arm
+// (which joins held.is_active = TRUE) and the single-query version handed to the owner. A
+// deactivated skill still attached to a profile is not something the app shows, so counting it here
+// would make the board's shape disagree with the Directory it is meant to resemble.
+//
 // Read-only: it opens one connection, runs SELECTs, and writes nothing back.
 
 import { Pool } from 'pg';
@@ -75,9 +80,10 @@ function suppressSmall(counts, floor = MIN_BUCKET) {
 
 async function fetchSkillsPerProfile(pool) {
   const { rows } = await pool.query(`
-    SELECT dp.id::text AS profile_id, COUNT(dps.skill_id)::int AS skill_count
+    SELECT dp.id::text AS profile_id, COUNT(sk.id)::int AS skill_count
     FROM directory_profiles dp
     LEFT JOIN directory_profile_skills dps ON dps.profile_id = dp.id
+    LEFT JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id AND sk.is_active = TRUE
     WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL
     GROUP BY dp.id
   `);
@@ -92,7 +98,7 @@ async function fetchSectorFrequency(pool) {
     SELECT s.name AS sector, COUNT(*)::int AS holdings
     FROM directory_profile_skills dps
     JOIN directory_profiles dp ON dp.id = dps.profile_id AND dp.is_active = TRUE AND dp.deleted_at IS NULL
-    JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
+    JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id AND sk.is_active = TRUE
     JOIN skills_taxonomy_job_titles jt ON jt.id = sk.job_title_id
     JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id
     GROUP BY s.name
@@ -111,7 +117,7 @@ async function fetchSectorPairs(pool) {
       SELECT DISTINCT dps.profile_id, s.name AS sector
       FROM directory_profile_skills dps
       JOIN directory_profiles dp ON dp.id = dps.profile_id AND dp.is_active = TRUE AND dp.deleted_at IS NULL
-      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
+      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id AND sk.is_active = TRUE
       JOIN skills_taxonomy_job_titles jt ON jt.id = sk.job_title_id
       JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id
     ) a
@@ -119,7 +125,7 @@ async function fetchSectorPairs(pool) {
       SELECT DISTINCT dps.profile_id, s.name AS sector
       FROM directory_profile_skills dps
       JOIN directory_profiles dp ON dp.id = dps.profile_id AND dp.is_active = TRUE AND dp.deleted_at IS NULL
-      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
+      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id AND sk.is_active = TRUE
       JOIN skills_taxonomy_job_titles jt ON jt.id = sk.job_title_id
       JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id
     ) b ON b.profile_id = a.profile_id AND b.sector > a.sector
@@ -140,6 +146,7 @@ async function fetchSkillScarcity(pool) {
       SELECT dps.skill_id, COUNT(DISTINCT dps.profile_id)::int AS holders
       FROM directory_profile_skills dps
       JOIN directory_profiles dp ON dp.id = dps.profile_id AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id AND sk.is_active = TRUE
       GROUP BY dps.skill_id
     ) per_skill
     GROUP BY holders
