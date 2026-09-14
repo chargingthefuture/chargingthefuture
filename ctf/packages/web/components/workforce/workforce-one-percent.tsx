@@ -142,9 +142,9 @@ function TradeLoad({ load, reach, t }: { load: OnePercentTradeLoad; reach: OnePe
       </p>
       <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '12px 0 0' }}>
         This comes from the same demand model as the Overview tab, so it differs by trade rather than
-        being one figure shown to everybody. Within a single sector the model currently splits demand
-        evenly across occupations, so two trades in the same sector share a number until the skills
-        map carries a weight for each one.
+        being one figure shown to everybody. Occupations can carry their own weight now, and until one
+        is set for your trade the model splits its sector evenly — so two trades in the same sector
+        can still share a number, and that figure sharpens as weights are added.
       </p>
     </div>
   );

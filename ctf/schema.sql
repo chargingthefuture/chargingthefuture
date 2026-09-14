@@ -2777,6 +2777,10 @@ CREATE TABLE IF NOT EXISTS skills_taxonomy_job_titles (
   sector_id UUID NOT NULL REFERENCES skills_taxonomy_sectors(id),
   name TEXT NOT NULL,
   display_order INTEGER NOT NULL DEFAULT 0,
+  -- Relative demand weight against the other occupations in the same sector. NULL means "ordinary"
+  -- and weighs 1, so a sector with no weights set splits evenly exactly as it always did. Set only
+  -- through the append-only taxonomy change list (op `setOccupationWorkforceShare`).
+  workforce_share NUMERIC,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2785,6 +2789,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS id UUI
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

@@ -43,10 +43,23 @@
 //   { id, op: 'deactivateOccupation', sector, occupation, acknowledgedImpact, occupationExisting?: true }
 //   { id, op: 'reactivateSkill', sector, occupation, skill, occupationExisting?: true, skillExisting?: true }
 //   { id, op: 'reactivateOccupation', sector, occupation, occupationExisting?: true }
+//   { id, op: 'setOccupationWorkforceShare', sector, occupation, share, rationale, occupationExisting?: true }
+//     -- the occupation's demand weight RELATIVE to the other occupations in its sector. 3 against 1
+//        means three times as many people. Not a percentage, so one occupation can be weighted
+//        without restating its siblings. An unweighted occupation counts as 1, so a sector nobody has
+//        weighted splits evenly exactly as it always did, and a part-weighted sector still behaves.
+//        `share: 0` means the model expects nobody in the occupation and is different from never
+//        having set one. Re-weighting is a new entry with the new value; the last entry wins.
 //
 // 'acknowledgedImpact' is a mandatory human-written note on every deactivation stating the reviewed
 // blast radius (how many member profiles reference the target, and why deactivating is right). The
 // apply engine re-checks the live reference counts and aborts if the impact was never acknowledged.
+//
+// 'rationale' is the same idea for a weight: a mandatory human-written note saying where the number
+// came from. A demand weight is an assertion about how many people a settlement needs in a trade,
+// and an unsourced one is worse than the even split it replaces, because it looks researched. The
+// note is what a reviewer checks; requiring it is what stops a weight list from being filled in
+// wholesale by anybody, agent included, who cannot say where the numbers came from.
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 
@@ -61,6 +74,7 @@ export const TAXONOMY_CHANGE_TYPES = [
   'deactivateOccupation',
   'reactivateSkill',
   'reactivateOccupation',
+  'setOccupationWorkforceShare',
 ];
 
 // ---------------------------------------------------------------------------
@@ -542,6 +556,23 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
         const state = skills.get(skillKey) ?? { active: false };
         state.active = true;
         skills.set(skillKey, state);
+        return;
+      }
+
+      case 'setOccupationWorkforceShare': {
+        if (!isNonEmptyString(entry.sector) || !isNonEmptyString(entry.occupation)) {
+          fail(id, 'setOccupationWorkforceShare requires non-empty sector and occupation.');
+          return;
+        }
+        if (typeof entry.share !== 'number' || !Number.isFinite(entry.share) || entry.share < 0) {
+          fail(id, 'setOccupationWorkforceShare requires a finite share of 0 or more (a weight relative to the sector\'s other occupations, not a percentage).');
+          return;
+        }
+        if (!isNonEmptyString(entry.rationale)) {
+          fail(id, 'setOccupationWorkforceShare requires a rationale saying where the number came from — an unsourced weight is worse than the even split it replaces.');
+          return;
+        }
+        if (!requireOccupation(id, entry.sector, entry.occupation, entry.occupationExisting, 'target')) return;
         return;
       }
 

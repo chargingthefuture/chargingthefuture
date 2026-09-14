@@ -194,12 +194,13 @@ export function initialsFor(firstName: string, lastName: string | null): string 
  * already shows, which is why this is derived rather than tabulated: authoring a frequency number
  * for each of ~650 occupations would be exactly the plausible-but-wrong data this module avoids.
  *
- * Known limit, and it is the taxonomy's rather than this function's: Skills Taxonomy carries a
- * `workforce_share` per sector but no weight per job title, so a sector's demand is split evenly
- * across its occupations (recorded as Gaps item 2 in the Workforce inventory). So this separates
- * trades in different sectors — a clinician and a plumber land in different places — but two
- * occupations inside one sector currently share a figure. A per-job-title weight upstream would
- * sharpen this without changing anything here.
+ * Known limit, and it is upstream data rather than this function: Skills Taxonomy gained a
+ * per-occupation `workforce_share` on 2026-09-14 (closing Gaps item 2), but it ships with no weights
+ * set, and an unweighted occupation counts as the neutral 1 — so a sector still splits evenly today.
+ * This therefore separates trades in different sectors — a clinician and a plumber land in different
+ * places — while two occupations inside one sector share a figure until somebody weights them. The
+ * mechanism exists; the numbers arrive one reviewed change-list entry at a time, and this function
+ * sharpens on its own as they do, with no edit here.
  */
 export type OnePercentTradeLoad = {
   occupationName: string;
