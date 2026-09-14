@@ -243,18 +243,32 @@ Result: web ☐
 **Precondition:** An open cohort that has not started, and a member not yet enrolled in it.
 
 **Steps:**
-1. Enroll. Confirm the deposit is held and the Browse card reads Enrolled.
-2. Go to Progress and leave the cohort. Confirm the credits come back.
-3. Return to Browse. The card should offer Enroll again, not Enrolled.
-4. Enroll a second time in the same cohort.
-5. Check the enrollment rows for that cohort and member.
-6. Now try to create a second **live** enrollment in the same cohort for the same member, directly against the database.
+1. First check the database being tested actually carries the partial rule, because the screen cannot
+   tell you. Run:
+   `SELECT indexdef FROM pg_indexes WHERE indexname = 'skill_up_enrollments_cohort_id_user_id_key';`
+   It must end in `WHERE (status <> 'dropped'::text)`. Also confirm no table constraint of that name
+   is left over:
+   `SELECT count(*) FROM pg_constraint WHERE conname = 'skill_up_enrollments_cohort_id_user_id_key';`
+   should return 0.
+2. Enroll. Confirm the deposit is held and the Browse card reads Enrolled.
+3. Go to Progress and leave the cohort. Confirm the credits come back.
+4. Return to Browse. The card should offer Enroll again, not Enrolled.
+5. Enroll a second time in the same cohort.
+6. Check the enrollment rows for that cohort and member.
+7. Now try to create a second **live** enrollment in the same cohort for the same member, directly against the database.
 
-**Expected:** Step 4 succeeds. Step 5 shows the dropped row still there — the record of what happened is kept, not erased — alongside the new live one. Step 6 is refused by the unique index: one live enrollment per person per cohort still holds.
+**Expected:** Step 1 shows the partial index and no constraint. Step 5 succeeds. Step 6 shows the dropped row still there — the record of what happened is kept, not erased — alongside the new live one. Step 7 is refused by the unique index: one live enrollment per person per cohort still holds.
 
 **Also:** a cohort the member **completed** is not re-enrollable. Only a dropped enrollment frees the slot.
 
-**Regression guard:** before 2026-09-13 step 4 failed. The index was unconditional, so the dropped row held the slot forever while the seat check — which counts only enrolled and active — said there was room. The application and the database disagreed, and the database won at the INSERT.
+**Regression guard:** before 2026-09-13 step 5 failed. The index was unconditional, so the dropped row held the slot forever while the seat check — which counts only enrolled and active — said there was room. The application and the database disagreed, and the database won at the INSERT.
+
+**Second regression guard — why step 1 is a step (2026-09-14):** the first fix left the inline
+`UNIQUE (cohort_id, user_id)` in the `CREATE TABLE`. That makes a table constraint whose backing index
+takes the same name the partial index wants, so on a freshly built database the guard saw the name,
+decided the work was done, and skipped — and a fresh database kept the unconditional rule while the
+change log said otherwise. Running this case on the long-running database alone would not have caught
+it. Run step 1 wherever you run this case, and run the case on a fresh database at least once.
 
 Result: web ☐
 
