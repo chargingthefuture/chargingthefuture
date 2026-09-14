@@ -140,6 +140,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     contributions,
     foundation,
     recurringActivity,
+    tiRadio,
   ] = await Promise.all([
     // Signing in is what "seen" means here, exactly as it does on the Weekly Performance dashboard
     // and in PeerProgramming's cohort selection: one definition across the app, and it is a
@@ -278,6 +279,13 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
         ) distinct_counterparties`,
       [userId]
     ),
+    // TI Radio slots the member hosted: still booked, and already past. A slot still ahead is a
+    // promise rather than a thing done, and a released or removed one did not happen at all.
+    queryDb<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM ti_radio_slots
+       WHERE host_user_id = $1 AND status = 'booked' AND slot_start_utc < NOW()`,
+      [userId]
+    ),
   ]);
 
   return {
@@ -298,6 +306,7 @@ export async function computeTrustSignalMetrics(userId: string): Promise<TrustSi
     contributionsConfirmed: countOf(contributions),
     foundationConnectionsAsProvider: countOf(foundation),
     recurringActivityCounterparties: countOf(recurringActivity),
+    tiRadioSlotsHosted: countOf(tiRadio),
   };
 }
 
@@ -400,6 +409,7 @@ function pushParticipationEvidence(
     { count: metrics.contributionsConfirmed, type: 'engagement-contributions', verb: 'Confirmed', singular: 'contribution', plural: 'contributions' },
     { count: metrics.foundationConnectionsAsProvider, type: 'engagement-foundation-provider', verb: 'Connected with', singular: 'member as a Foundation provider', plural: 'members as a Foundation provider' },
     { count: metrics.recurringActivityCounterparties, type: 'engagement-recurring-activity', verb: 'Ongoing activities with', singular: 'community member', plural: 'community members' },
+    { count: metrics.tiRadioSlotsHosted, type: 'engagement-ti-radio-hosted', verb: 'Hosted', singular: 'TI Radio discussion', plural: 'TI Radio discussions' },
   ];
   for (const signal of participationSignals) {
     if (signal.count > 0) {

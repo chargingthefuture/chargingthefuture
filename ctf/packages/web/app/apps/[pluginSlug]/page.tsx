@@ -334,7 +334,7 @@ function renderPluginShellC(
   return null;
 }
 
-// Knowledge redirects BEFORE the access gate, not from the shell branches. Its real page is the
+// Knowledge and TI Radio redirect BEFORE the access gate, not from the shell branches. Its real page is the
 // top-level /knowledge route, which is open to any signed-in member (owner decision, 2026-07-29)
 // and carries its own signed-out landing — the page the Quora invitation links to. When this
 // redirect sat after the gate, only fully-verified members ever reached it: a signed-out visitor
@@ -349,6 +349,15 @@ function renderPluginShellC(
 function redirectKnowledgeBeforeGate(selectedPlugin: SelectedPlugin): void {
   if (selectedPlugin.slug === 'knowledge') {
     redirect('/knowledge');
+  }
+
+  // TI Radio redirects before the gate for the same reason. Its real page is the top-level
+  // /ti-radio route, which anybody can read with no account — it is a broadcast guide, written for
+  // people arriving from the Quora space who have not joined yet. Behind the gate a signed-out
+  // visitor would get the generic sign-in card instead of the schedule, which is the opposite of
+  // what the page is for. Booking a slot on it still needs full Unlock approval.
+  if (selectedPlugin.slug === 'ti-radio') {
+    redirect('/ti-radio');
   }
 }
 

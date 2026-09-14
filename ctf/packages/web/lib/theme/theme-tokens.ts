@@ -64,6 +64,9 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   beacon: { standard: '#B91C1C', comic: '#7A1A1A' },
   // Mutual Time: the rose accent from the design mockups (#F472B6); comic uses a deep ink-pink.
   'mutual-time': { standard: '#F472B6', comic: '#7A1A4A' },
+  // TI Radio: an amber that reads as a broadcast light without borrowing Beacon's red or
+  // Foundation's warmer orange; comic uses a burnt ink tone.
+  'ti-radio': { standard: '#F59E0B', comic: '#7A4A12' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };
