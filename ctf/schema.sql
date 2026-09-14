@@ -1719,8 +1719,11 @@ CREATE TABLE IF NOT EXISTS skill_up_enrollments (
   enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   progress_percent NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (cohort_id, user_id)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  -- No inline UNIQUE (cohort_id, user_id) here on purpose. The seat rule is a partial one
+  -- (see the DO block below), and an inline UNIQUE builds a table constraint that a fresh
+  -- database then carries forever: the constraint's index takes the same name, so the guard
+  -- below saw it and skipped, and post/0014 could not drop it.
 );
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
@@ -1740,13 +1743,34 @@ ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS updated_at T
 -- row hold the slot forever and refuse somebody who changed their mind before the class started
 -- (owner bug report 2026-09-13). The application has always counted only 'enrolled' and 'active' as
 -- occupying a seat; this makes the database agree with it. See post/0014.
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE tablename = 'skill_up_enrollments' AND indexname = 'skill_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
-  ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id) WHERE status <> ''dropped''';
+-- The guard checks the shape of what is already there, not just the name. Checking the name alone
+-- was the fault: an older database (and, until this change, every fresh one) carries an
+-- unconditional UNIQUE (cohort_id, user_id), whose backing index takes exactly this name, so the
+-- guard read "already done" and left the wrong rule in place.
+DO $skill_up_enrollments_seat_unique$
+DECLARE
+  existing_is_partial BOOLEAN;
+BEGIN
+  SELECT idx.indpred IS NOT NULL
+    INTO existing_is_partial
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_index idx ON idx.indexrelid = c.oid
+   WHERE c.relname = 'skill_up_enrollments_cohort_id_user_id_key'
+     AND n.nspname = current_schema();
+
+  IF existing_is_partial IS TRUE THEN
+    RETURN;  -- the partial index is already in place
   END IF;
-END $$;
+
+  -- Either nothing is there, or an unconditional index is. If a UNIQUE table constraint owns that
+  -- index, DROP INDEX refuses it outright, so retire the constraint first.
+  ALTER TABLE skill_up_enrollments DROP CONSTRAINT IF EXISTS skill_up_enrollments_cohort_id_user_id_key;
+  DROP INDEX IF EXISTS skill_up_enrollments_cohort_id_user_id_key;
+  CREATE UNIQUE INDEX skill_up_enrollments_cohort_id_user_id_key
+    ON skill_up_enrollments (cohort_id, user_id)
+    WHERE status <> 'dropped';
+END $skill_up_enrollments_seat_unique$;
 -- Shed the legacy level_id column if an older database still carries it.
 -- It was NOT NULL with no default, so cohort-based inserts (which never set
 -- it) failed. Dropping the column also removes its dependent
