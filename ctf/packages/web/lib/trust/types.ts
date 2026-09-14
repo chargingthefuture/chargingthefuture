@@ -41,6 +41,11 @@ export interface TrustSignalMetrics {
   whatWorksEndorsements: number;
   peerProgrammingCohortsJoined: number;
   contributionsConfirmed: number;
+  // Slots a member actually hosted on the TI Radio guide: booked, and the time has been and gone.
+  // Standing up in front of whoever turned up is real participation, and a member active only here
+  // would otherwise be invisible. A booking still ahead is not counted — it is a promise, not a
+  // thing done — and nothing about who listened is recorded anywhere.
+  tiRadioSlotsHosted: number;
   // Foundation connection threads where this member is the provider — survivors chose to connect with
   // them. Provider-side only (clean social proof); the seeker side is never surfaced (help-seeking is
   // sensitive). Counts threads (one per survivor↔provider pair), so it reads as "connected with N members".

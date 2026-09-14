@@ -68,6 +68,12 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Threaded conversation under the posts on the blog.',
   },
   {
+    id: 'ti-radio',
+    name: 'TI Radio',
+    kind: 'plugin',
+    summary: 'A schedule of live discussions members host in Chyme.',
+  },
+  {
     id: 'unlock',
     name: 'Unlock',
     kind: 'plugin',

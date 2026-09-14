@@ -1,0 +1,67 @@
+# TI Radio audit events. Every command that changes the guide writes a row in
+# ti_radio_admin_audit_trail. The public guide read is not recorded: it has no actor, because it
+# answers callers with no account at all.
+auditEvents:
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: ti-radio
+    command: slot.book
+    commandVersion: 1.0.0
+    purpose: schedule_booking
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: booked
+    dataClassesAccessed:
+      - slot_time
+      - discussion_subject
+    targetContext:
+      slotId: slot_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Recorded even though it is a member action rather than an admin one. Who holds which slot is
+      the whole content of a public schedule, and a booking that later turns into a removal is only
+      readable if the booking was recorded too.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: ti-radio
+    command: slot.release
+    commandVersion: 1.0.0
+    purpose: schedule_release
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: released
+    dataClassesAccessed:
+      - slot_time
+    targetContext:
+      slotId: slot_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: The host's own doing, and recorded separately from an admin removal so the two never read alike.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: ti-radio
+    command: slot.remove
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: removed
+    dataClassesAccessed:
+      - slot_time
+      - discussion_subject
+      - moderation_reason
+    targetContext:
+      slotId: slot_identifier
+      hostUserId: host_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Admin only. The reason is kept on the row as well as here, because taking somebody's slot off a
+      public schedule is the action in this plugin that most needs to be answerable for afterwards.

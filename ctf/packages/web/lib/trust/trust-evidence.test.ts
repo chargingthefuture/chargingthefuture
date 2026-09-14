@@ -31,6 +31,7 @@ function zeroMetrics(): TrustSignalMetrics {
     contributionsConfirmed: 0,
     foundationConnectionsAsProvider: 0,
     recurringActivityCounterparties: 0,
+    tiRadioSlotsHosted: 0,
   };
 }
 
@@ -125,6 +126,7 @@ describe('buildTrustEvidence', () => {
       contributionsConfirmed: 3,
       foundationConnectionsAsProvider: 3,
       recurringActivityCounterparties: 3,
+      tiRadioSlotsHosted: 3,
     };
     const blob = buildTrustEvidence(everything, NOW)
       .map((e) => `${e.type} ${e.summary}`)

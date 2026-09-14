@@ -1,0 +1,57 @@
+# TI Radio access policy.
+#
+# Three postures, and the first is the one worth naming: reading the guide is not gated at all. No
+# account, no sign-in, no tier. It is a broadcast guide, and one nobody can read is not a guide.
+#
+# This is not a fifth Unlock exception and does not need an allowlist entry. The exceptions are about
+# `minUnlockTier: 'any_authenticated'` — a signed-in member who is not approved doing something.
+# Nothing here runs at that tier: reading needs no account at all, and every write needs full
+# approval, which is the app's default.
+policies:
+  - pluginId: ti-radio
+    command: ti-radio.guide.read
+    version: 1.0.0
+    requiredRoles: []
+    minUnlockTier: none
+    requiresAuthentication: false
+    consentRequirements: []
+    notes: >-
+      Public. Returns the handle a host published under and what they said the discussion is about,
+      and nothing else about anybody — no user ids, no contact details, and nothing at all about who
+      is listening. A signed-in reader additionally gets their own slots marked so they can find them.
+  - pluginId: ti-radio
+    command: ti-radio.slot.book
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements:
+      - The host's handle, the subject, and any description go on a page anyone can read without an
+        account. The booking form says so before the slot is taken, rather than leaving it to be
+        discovered.
+    notes: >-
+      The app's default gate, deliberately. Unlike writing a comment, booking is not a route into
+      verification: it puts a member's name on a public schedule and commits them to turning up, so
+      it is something you do once you are approved.
+  - pluginId: ti-radio
+    command: ti-radio.slot.release
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Host-only, scoped by host_user_id inside the transaction rather than by a client-supplied id
+      alone. Refused once the slot has started: by then people have turned up.
+  - pluginId: ti-radio
+    command: ti-radio.slot.remove
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Moderation, separate from the host's own release so the two are never confused in the record.
+      The guide is public, so something nobody should be pointed at has to be removable by somebody
+      other than the person who put it there; the audit row is what makes that safe in an app with
+      one admin.
