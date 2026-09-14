@@ -8,6 +8,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
 // /api/chyme/public/room. `credentials` is present only when the room is live
@@ -81,6 +82,14 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, marginBottom: 6 }}>Live audio rooms for survivors</div>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 12, lineHeight: 1.5 }}>Listen in for free. Sign in to speak, react, or host your own room.</div>
+        {/* On the always-visible invitation card rather than beside the live player. Inside the
+            isLive branch this showed only to somebody already listening — the one person who least
+            needs telling — and a signed-out visitor arriving from the TI Radio schedule usually gets
+            here BEFORE the room goes live. Same statement as the TI Radio guide, one shared string,
+            so the two can never drift into disagreeing about what a listing means. */}
+        <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 12, lineHeight: 1.5 }}>
+          {HOSTING_NOT_ENDORSEMENT_SHORT}
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {verifyUrl ? (
             <a href={verifyUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>

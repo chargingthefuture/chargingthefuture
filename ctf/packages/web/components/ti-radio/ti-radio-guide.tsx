@@ -13,6 +13,7 @@ import {
   TI_RADIO_SPACE_LABEL,
   TI_RADIO_SPACE_URL,
 } from 'lib/ti-radio/constants';
+import { HOSTING_NOT_ENDORSEMENT } from '@ctf/shared';
 import type { TiRadioGuide, TiRadioGuideSlot } from 'lib/ti-radio/types';
 import { TiRadioHostForm } from './ti-radio-host-form';
 import { TiRadioSlotRow } from './ti-radio-slot-row';
@@ -217,6 +218,20 @@ function GuideIntro({
       <p style={{ fontSize: 12, color: t.SUBTLE, margin: '10px 0 0', lineHeight: 1.55 }}>
         First come, first served. You can hold {TI_RADIO_MAX_SLOTS_PER_DAY} slots in any{' '}
         {TI_RADIO_ROLLING_WINDOW_HOURS} hours, and you can give a slot back any time before it starts.
+      </p>
+      {/* A page that lists who is hosting reads as a line-up somebody picked. Nobody picked it, and
+          saying so here is cheaper than correcting the impression after somebody acts on it. */}
+      <p
+        style={{
+          fontSize: 12,
+          color: t.SUBTLE,
+          margin: '10px 0 0',
+          lineHeight: 1.55,
+          paddingTop: 10,
+          borderTop: `1px solid ${t.BORDER_SOLID}`,
+        }}
+      >
+        {HOSTING_NOT_ENDORSEMENT}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
         <a href={TI_RADIO_MEETING_ROUTE} style={linkButton(t, true)}>
