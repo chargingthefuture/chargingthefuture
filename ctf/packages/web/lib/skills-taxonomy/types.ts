@@ -13,6 +13,12 @@ export type TaxonomyJobTitle = {
   sectorId: string;
   name: string;
   displayOrder: number;
+  /**
+   * Demand weight against the other occupations in the same sector — relative, not a percentage.
+   * null means nobody has set one, and the model counts it as 1 so an unweighted sector splits
+   * evenly exactly as it always did. Set only through the append-only taxonomy change list.
+   */
+  workforceShare: number | null;
   isActive: boolean;
   createdAtIso: string;
   updatedAtIso: string;
@@ -41,6 +47,7 @@ export type TaxonomyHierarchyJobTitle = {
   id: string;
   name: string;
   displayOrder: number;
+  workforceShare: number | null;
   isActive: boolean;
   skills: TaxonomyHierarchySkill[];
 };
