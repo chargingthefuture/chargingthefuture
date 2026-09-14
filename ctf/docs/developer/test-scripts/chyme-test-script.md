@@ -40,11 +40,20 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
    reload. → web ☐ mobile ☐ android ☐
 4. **Access wall for the signed-out visitor.** Open the plugin route while signed out. You see the
    public listen view (free to listen, sign in to speak), not private member data. → web ☐ mobile ☐ android ☐
-5. **A host is not endorsed.** Signed out, with a room live, the public listen block says hosts book
-   their own slots, that a name is not a recommendation, and that the rules still apply in the room.
-   It must agree with the wording on the TI Radio guide — both read from
-   `lib/shared/hosting-disclaimer.ts`, so if one says something the other does not, somebody has
-   inlined a copy and the two will drift. → web ☐ mobile ☐ android ☐
+5. **A host is not endorsed, signed out, whether or not anything is live.** Open Chyme signed out
+   **with no room live**. The invitation card ("Listen in for free…") says hosts book their own
+   slots, that a name is not a recommendation, and that the rules still apply in the room. Then open
+   it again **while a room is live** and confirm the same line is still on screen. Both states
+   matter: a visitor arriving from the TI Radio schedule usually gets here before the room starts,
+   and an earlier draft showed this only once somebody was already listening. → web ☐ mobile ☐ android ☐
+6. **A host is not endorsed, signed in.** Open Chyme as a member. The same statement sits under the
+   rooms rail, above the room you are in. A member reads the same public TI Radio schedule, so the
+   signed-in view must not be the one screen that omits it. → web ☐ mobile ☐ android ☐
+7. **The three wordings agree.** Compare the line on the Chyme signed-out card, the Chyme signed-in
+   view, and the TI Radio guide's intro card. All three read from `lib/shared/hosting-disclaimer.ts`
+   (the guide uses the long form, Chyme the short one). If any of them says something the others do
+   not, somebody has inlined a copy and they will drift. None of them may claim the room is
+   moderated, screened or safe — that is a claim the product cannot back. → web ☐ mobile ☐ android ☐
 
 ---
 
