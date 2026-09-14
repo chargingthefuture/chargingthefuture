@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
-import { FIRESIDE_REACTION_KINDS, FIRESIDE_REACTION_LABELS } from "@/lib/fireside/constants";
+import { FIRESIDE_REACTION_KINDS, FIRESIDE_REACTION_LABELS, firesidePostUrl } from "@/lib/fireside/constants";
 
 // One post's conversation, opened from inside the app. The same data the blog widget will show, on
 // the screen a member already has.
@@ -116,6 +116,7 @@ export function FiresideThreadView({
   isAdmin,
   t,
   onClose,
+  cameFromPost = false,
 }: {
   postRepo: string;
   postSlug: string;
@@ -123,6 +124,8 @@ export function FiresideThreadView({
   isAdmin: boolean;
   t: PluginShellTokens;
   onClose: () => void;
+  /** True when a link from the post opened this, rather than the member's own comment list. */
+  cameFromPost?: boolean;
 }) {
   const [comments, setComments] = useState<ThreadComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,10 +224,19 @@ export function FiresideThreadView({
 
   return (
     <div>
-      <button type="button" onClick={onClose}
-        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
-        ‹ Back to your comments
-      </button>
+      {/* Back means the post for somebody who arrived from one — they were reading it a moment ago,
+          and they may have written nothing here, so a list of their own comments is an empty room. */}
+      {cameFromPost ? (
+        <a href={firesidePostUrl(postRepo, postSlug)}
+          style={{ display: "inline-block", color: t.ACCENT, fontSize: 12, fontWeight: 600, textDecoration: "none", padding: "0 0 12px" }}>
+          ‹ Back to the post
+        </a>
+      ) : (
+        <button type="button" onClick={onClose}
+          style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
+          ‹ Back to your comments
+        </button>
+      )}
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 14px" }}>{postTitle || postSlug}</h2>
 
       {error && (

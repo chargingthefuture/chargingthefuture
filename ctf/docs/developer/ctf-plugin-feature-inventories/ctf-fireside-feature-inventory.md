@@ -29,30 +29,36 @@ the project controls rather than on a platform that has erased five of its accou
 
 ## Implemented User Features
 
-1. **Read without an account.** Every comment under a post is public. No sign-in, no gate, nothing
-   to create. Reading is not something anybody has to qualify for.
+1. **Read without an account.** Every comment under a post is public, and it renders under the post
+   on the blog itself — no sign-in, no gate, nothing to create. Reading is not something anybody has
+   to qualify for.
 2. **Write with an account.** Signing in is enough to leave a comment or a reaction. Nothing written
    is publicly visible until that person is approved in the app.
-3. **Told at the moment of posting.** A held comment says so on screen, in plain words, including
+3. **The button under the post carries you to the same conversation.** Writing happens in the app,
+   because the write routes are same-origin and a signed-in session lives on the app's domain. The
+   link names the post, the app opens that exact conversation on arrival, and somebody who has to
+   sign in first is returned to it rather than to a home page of twenty-five tiles. A first-time
+   reader who lands somewhere they did not ask for leaves.
+4. **Told at the moment of posting.** A held comment says so on screen, in plain words, including
    that a person will read it. A comment that saves and silently does not appear reads as
    censorship or as a broken page.
-4. **Approval is per person, and retroactive.** When somebody is approved, every comment and every
+5. **Approval is per person, and retroactive.** When somebody is approved, every comment and every
    reaction they have left appears at once. One decision, not one per item.
-5. **You always see your own words.** Held, removed or live, a member sees what they wrote, with a
+6. **You always see your own words.** Held, removed or live, a member sees what they wrote, with a
    label saying which.
-6. **Replies, one level deep.** A reply to a comment, and no reply to a reply. Deeper nesting is
+7. **Replies, one level deep.** A reply to a comment, and no reply to a reply. Deeper nesting is
    unreadable at phone width, which is the only width this app has.
-7. **Three reactions** — I recognize this, This helped, Same here. A fixed set rather than free
+8. **Three reactions** — I recognize this, This helped, Same here. A fixed set rather than free
    emoji, so a count means the same thing on every comment.
-8. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
+9. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
    so a reply underneath keeps its parent.
-9. **Ask for a comment to be published with the post.** Off unless the author turns it on. Turning
+10. **Ask for a comment to be published with the post.** Off unless the author turns it on. Turning
    it on asks; it does not publish. An admin reads the request before anything is copied into the
    blog's own build, where it is searchable and captured by the Internet Archive and where nobody,
    this project included, can withdraw it later. The screen says which state the request is in —
    waiting, approved, or declined — and the author can take the ask back at any point before the
    copy is made, approved or not.
-10. **Your own comments in one list,** on the Fireside screen in the app, paged, each labeled live,
+11. **Your own comments in one list,** on the Fireside screen in the app, paged, each labeled live,
     held, removed or withdrawn.
 
 ## Implemented Admin Features
@@ -141,7 +147,10 @@ faults in two weeks came from a rule written in two places that disagreed.
   all nine routes. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
   the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
   actually reads.
-- The blog-side widget: not in this repository. It ships from `wiki-site`.
+- The blog-side widget: shipped, and it lives in the `wiki-site` repository. It renders the
+  conversation under each post for any reader, with no account, and hands off to the app to write.
+  `/api/fireside/threads` answers it cross-origin (read-only, no credentials accepted, so a
+  cross-origin caller always gets the signed-out view).
 - Android: out of scope, web-only per rule 105. Recorded in `ctf/config/plugin-parity-contracts.json`
   with `requiresMobileSurface: false` — the native app carries only Clerk, Chyme, bug reporting and
   settings, and a conversation that lives under a blog post is not one of those.
@@ -164,8 +173,10 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Gaps and Known Technical Debt
 
-1. The blog-side widget does not exist yet, so the only way to write a comment today is by calling
-   the route directly. Until that ships, this plugin is data and rules with no front door.
+1. Writing from the blog page itself is not possible and is not planned: the write routes are
+   same-origin with CSRF and origin checks, and a credentialed cross-origin form would break
+   silently for anybody whose browser blocks third-party cookies. The button hands off to the app
+   instead, which is where approval, moderation and deletion already live.
 2. Both halves of the export decision are recorded and nothing reads them yet. The job that copies
    approved, opted-in comments into the blog build is the next piece, and it belongs in `wiki-site`
    alongside the widget. It must read `mayExportToBlog` rather than either column on its own.
@@ -218,6 +229,35 @@ member active only in Fireside is seen by being read, which is what the plugin i
   with no seed row, as the job `plugin-registry-seed-gate`. A comment in `schema.sql` already warned
   about this and did not prevent it, because nothing read the comment.
 
+- 2026-09-14: **Fireside has a front door.** Owner report: a reader sent from the blog to sign in
+  would land on the app's home page, twenty-five tiles deep, with no sign of the conversation they
+  clicked for — and a first-time visitor leaves rather than hunting for it. Three things were wrong
+  and all three are fixed. The blog had no comment section at all, so the plugin could not be reached
+  by anybody: `wiki-site` now renders the conversation under every post for any reader, and
+  `/api/fireside/threads` answers cross-origin for it, read-only and without accepting credentials.
+  The app could not be told which conversation to open, so `/apps/fireside` now takes the post's
+  repo and slug and opens that thread on arrival. And the hosted sign-in page returned everybody to
+  the home page regardless of where they came from; `withSignInReturn` carries an app-relative
+  destination through it, refusing anything that is not a path on this app so the parameter cannot
+  be used to send a member off-site.
+
+  The page gate also moved from `approved_full` to `any_authenticated` for this one slug, via
+  `pluginPageMinUnlockTier`. The API had been running at that tier since the exception was decided,
+  while the page had not, so a member following the link met a "finish verifying" wall instead of the
+  comment box — the opposite of an exception whose reason is that writing here is a route into
+  verification. The call site is recorded in the allowlist under the same 2026-09-13 decision.
+
+  Back means the post, for somebody who arrived from one. The blog carries more than 300 posts, so
+  returning a reader to a list of their own comments — empty, for the first-timer this whole path is
+  built for — loses them exactly as thoroughly as the home page did. Opening the same thread from
+  inside the app keeps the old control, so arriving one way does not change what back means the
+  other way. Folder-shaped slugs (the archive entries) are rebuilt segment by segment so the return
+  address is the one they came from.
+
+  `check-unlock-tier-exceptions.mjs` did not notice any of that, because it matched only a literal
+  tier and this one arrives from a helper. It now treats any non-literal `minUnlockTier` as needing
+  the same approval, which is what caught this change once the gate could see it.
+
 ## Build Checklist
 
 1. Schema, migration `post/0015`, deletion-registry entry. Done.
@@ -225,7 +265,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
 3. Repository, access gates, seven routes. Done.
 4. Plugin registry, catalog, shell, the dynamic plugin page. Done.
 5. Contracts, this inventory, the manual test script, the seed. Done.
-6. The comment widget in `wiki-site`, calling these routes. Blocked by nothing here; it is the next
+6. ~~The comment widget in `wiki-site`.~~ Shipped 2026-09-14.
    piece and it ships from the other repository.
 7. The job that copies opted-in comments into the blog build. Blocked by 6.
 8. An admin queue screen for recent comments. Blocked by nothing; the route exists.

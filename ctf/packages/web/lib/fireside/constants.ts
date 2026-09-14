@@ -10,6 +10,19 @@ export const FIRESIDE_PLUGIN_ID = 'fireside';
 // width this app has.
 export const FIRESIDE_MAX_REPLY_DEPTH = 1;
 
+// Where a conversation's post lives. Somebody who arrived here from a post was reading it a moment
+// ago, and with 300-odd posts on the blog, "back" has to mean the one they came from — anything
+// else loses them, which is the same bounce the deep link exists to prevent.
+export const FIRESIDE_BLOG_ARTICLE_BASE = 'https://chargingthefuture.github.io/chargingthefuture/article';
+
+/** The post a thread belongs to, as a reader's address for it. */
+export function firesidePostUrl(repo: string, slug: string): string {
+  return `${FIRESIDE_BLOG_ARTICLE_BASE}/${encodeURIComponent(repo)}/${slug
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`;
+}
+
 export const FIRESIDE_MAX_COMMENT_LENGTH = 4000;
 export const FIRESIDE_MIN_COMMENT_LENGTH = 2;
 
