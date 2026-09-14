@@ -59,7 +59,11 @@ policies:
       - Off by default. Exporting puts the text in the blog's published build, which is captured by
         the Internet Archive and cannot be withdrawn afterwards by anybody, this project included.
         The author has to ask for it.
-    notes: Author-only, scoped by author_user_id.
+      - Asking is one of two keys and grants nothing on its own. An admin has to approve the request
+        as well, and the author can take the ask back at any point before the copy is made.
+    notes: >-
+      Author-only, scoped by author_user_id. A comment an admin has declined stays declined: the
+      switch cannot re-queue it, because a refusal that can be toggled back is not a refusal.
   - pluginId: fireside
     command: fireside.own.read
     version: 1.0.0
@@ -78,3 +82,23 @@ policies:
     notes: >-
       Moderation, deliberately separate from approval. Removing also clears the blog-export flag, so
       nothing on its way out of the app can carry a removed comment with it.
+  - pluginId: fireside
+    command: fireside.export.queue.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Shows only comments whose authors asked for them. An unapproved author's comment is not
+      publicly visible in the app yet, so it does not reach this queue until Unlock approves them.
+  - pluginId: fireside
+    command: fireside.export.approve
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      The second of two keys. Approving publishes nothing by itself — the author's own opt-in still
+      has to be on when the copy is made. Refusing is final for that comment.

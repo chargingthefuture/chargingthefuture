@@ -2712,7 +2712,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
   ('beacon',             'Beacon',               'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.','implemented_shell', 230, TRUE),
   ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
-  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE)
+  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE),
+  ('fireside',           'Fireside',             'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.','implemented_shell', 260, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -7260,6 +7261,15 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   -- where it becomes searchable and is captured by the Internet Archive. Off by default: the words
   -- are the author's, permanence is their call, and a capture cannot be withdrawn later.
   export_to_blog BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Two keys, not one. The author opting in above asks for it; an admin has to agree here before
+  -- anything is copied out. An account made to post spam or bait would otherwise be able to place
+  -- that text on a permanently archived page beside the project's own writing, and a web capture
+  -- cannot be pulled back by anybody afterwards.
+  export_review TEXT NOT NULL DEFAULT 'not_requested'
+    CHECK (export_review IN ('not_requested','pending','approved','refused')),
+  export_reviewed_by TEXT,
+  export_reviewed_at TIMESTAMPTZ,
+  export_refusal_reason TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7274,10 +7284,15 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_by TEXT
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removal_reason TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_to_blog BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_review TEXT NOT NULL DEFAULT 'not_requested';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_by TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
 CREATE INDEX IF NOT EXISTS fireside_comments_author_idx ON fireside_comments (author_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS fireside_comments_export_review_idx ON fireside_comments (export_review, created_at);
 
 CREATE TABLE IF NOT EXISTS fireside_reactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

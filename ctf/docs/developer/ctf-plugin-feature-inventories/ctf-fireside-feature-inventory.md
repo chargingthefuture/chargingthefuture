@@ -46,9 +46,12 @@ the project controls rather than on a platform that has erased five of its accou
    emoji, so a count means the same thing on every comment.
 8. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
    so a reply underneath keeps its parent.
-9. **Choose whether a comment is published with the post.** Off unless the author turns it on. On
-   means it may be copied into the blog's own build, where it is searchable and captured by the
-   Internet Archive — and where nobody, this project included, can withdraw it later.
+9. **Ask for a comment to be published with the post.** Off unless the author turns it on. Turning
+   it on asks; it does not publish. An admin reads the request before anything is copied into the
+   blog's own build, where it is searchable and captured by the Internet Archive and where nobody,
+   this project included, can withdraw it later. The screen says which state the request is in —
+   waiting, approved, or declined — and the author can take the ask back at any point before the
+   copy is made, approved or not.
 10. **Your own comments in one list,** on the Fireside screen in the app, paged, each labeled live,
     held, removed or withdrawn.
 
@@ -59,10 +62,19 @@ the project controls rather than on a platform that has erased five of its accou
    never reads to the author as a verification problem.
 2. Removing a comment also clears its blog-export permission, so nothing on its way out of the app
    can carry a removed comment with it.
-3. **Close a thread** to new comments without removing what is already there.
-4. Every write is recorded in `fireside_audit_events`, including who changed a comment's export
-   permission and when — that being the decision that lets text leave the app for somewhere it
-   cannot be recalled from.
+3. **Approve or decline a comment for the blog.** The author asking is one key; this is the other,
+   and neither does anything alone. The queue is on the Fireside screen, oldest request first, and
+   declining is final for that comment — the author cannot put it back in the queue by switching
+   their own request on again.
+4. **See the author's record beside each request** — how many comments they have written here, how
+   many were removed, how many exports were declined or approved. An account with removals or
+   refusals behind it is flagged on the row, with the note that the decision worth making is about
+   the account rather than the comment. Moderating item by item is a losing race against somebody
+   doing it deliberately; deleting the account settles it once.
+5. **Close a thread** to new comments without removing what is already there.
+6. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
+   the author's request and the admin's answer — because that pair is what lets text leave the app
+   for somewhere it cannot be recalled from.
 
 ## API Surface and Route Map
 
@@ -75,6 +87,8 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
+| `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
+| `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
 
 ## Data Model and Storage Contracts
 
@@ -86,7 +100,7 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
-| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `author_username` is written at creation so the public read touches no identity table. Indexed by thread and by author. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, and by `(export_review, created_at)` for the admin queue. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
 
@@ -110,14 +124,23 @@ faults in two weeks came from a rule written in two places that disagreed.
   alone.
 - Deletion: same rights as the Commons, from the same account screen. Comments and reactions are
   deleted outright; threads and audit rows are retained and the deletion contract says why.
-- A comment already exported into the blog build cannot be recalled from a web archive. Export is off
-  by default, only the author can turn it on, and the screen says so before they do.
+- A comment already exported into the blog build cannot be recalled from a web archive. Two separate
+  people have to agree before one gets there: the author asks, which is off by default and nobody
+  else can turn on, and an admin approves. Neither key does anything alone, an author can withdraw
+  the ask at any point before the copy is made, and a refusal is final for that comment. The screen
+  says all of this before the choice is made.
+- The admin queue shows the author's own record here beside each request — comments written, removed,
+  exports declined and approved — so an account that keeps doing this is answered once, by deleting
+  the account, rather than chased comment by comment.
 - Rate limit: 25 comments per person per day. A ceiling on how much one account can do in an
   afternoon before anybody looks at it, not a judgment about quality.
 
 ## Web and Android Delivery Status
 
-- Web: the plugin screen (your own comments, the guidelines) and all seven routes. Phone-width, paged.
+- Web: the plugin screen (your own comments, the guidelines, and the export queue for an admin) and
+  all nine routes. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
+  the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
+  actually reads.
 - The blog-side widget: not in this repository. It ships from `wiki-site`.
 - Android: out of scope, web-only per rule 105. Recorded in `ctf/config/plugin-parity-contracts.json`
   with `requiresMobileSurface: false` — the native app carries only Clerk, Chyme, bug reporting and
@@ -127,8 +150,10 @@ faults in two weeks came from a rule written in two places that disagreed.
 
 `ctf/scripts/seedFiresidePhase0.mjs` seeds one thread against a real published post and two comments
 under it with deterministic ids, so the screens have something to render locally. It seeds no
-reactions and no removed comment; both are quick to make by hand and a seeded removal would put a
-row in front of a reviewer that nobody decided on.
+reactions, no removed comment, and no pending blog-export request; all three are quick to make by
+hand, and a seeded removal or a seeded request would put a decision in front of a reviewer that
+nobody actually made. Seeded comments therefore start at `export_review = 'not_requested'`, which is
+the column's default.
 
 ## Trust Signal
 
@@ -141,13 +166,17 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 1. The blog-side widget does not exist yet, so the only way to write a comment today is by calling
    the route directly. Until that ships, this plugin is data and rules with no front door.
-2. The export permission is recorded and nothing reads it. The job that copies opted-in comments
-   into the blog build is the next piece, and it belongs in `wiki-site` alongside the widget.
-3. No admin list screen. An admin can remove or restore a comment by id, but there is no queue view
-   of recent comments to work through. The route is the surface for now.
-4. Closing a thread has a repository function and no route.
-5. No notification when somebody replies to you.
-6. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
+2. Both halves of the export decision are recorded and nothing reads them yet. The job that copies
+   approved, opted-in comments into the blog build is the next piece, and it belongs in `wiki-site`
+   alongside the widget. It must read `mayExportToBlog` rather than either column on its own.
+3. No general admin list of recent comments. The export queue is a screen, but removing or restoring
+   a comment outside a thread still means calling the route by id.
+4. The author's record counts only what happened in Fireside. An account being a problem in several
+   parts of the app at once is not visible from this screen, and deciding to delete an account on one
+   plugin's tally alone would miss that.
+5. Closing a thread has a repository function and no route.
+6. No notification when somebody replies to you.
+7. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
    whole argument for storing them here is that they are searchable — worth doing before volume
    rather than after.
 
@@ -164,6 +193,30 @@ member active only in Fireside is seen by being read, which is what the plugin i
   in public GitHub Discussions and so ties a survivor's identity to the repository, and one is
   another service to run that knows nothing about Unlock, the moderation panel or the deletion path.
   The fourth Unlock exception was decided the same day, on the Knowledge Library reasoning.
+
+- 2026-09-13: **An admin now has to approve a comment before it can be copied into the blog's
+  published build.** Owner directive. The author's own opt-in was the only condition, and one
+  condition is not enough for a page that is permanently archived and sits beside the project's own
+  writing: an account opened to post spam or bait could have put that text there and nobody could
+  take it back. Two keys now — the author asks, an admin agrees, and neither alone does anything.
+  A refusal is final for that comment, because a refusal that can be re-queued by toggling a switch
+  is not a refusal. `fireside_comments` gains `export_review`, `export_reviewed_by`,
+  `export_reviewed_at` and `export_refusal_reason`; `mayExportToBlog` gains the third condition and
+  its tests cover every way the two keys disagree. The admin queue screen shows each author's record
+  here — comments, removals, refusals, approvals — and flags an account with history, because
+  answering a deliberate offender item by item is a race that cannot be won and deleting the account
+  settles it once. The export-review functions live in `lib/fireside/export-review.ts` rather than
+  the repository: that file is about the conversation, this one is about what leaves the app.
+
+- 2026-09-13: **Fixed: Fireside had no tile in the apps list.** Owner report. The plugin was added to
+  `fallbackPluginRegistry` in the code and not to the `ctf_plugin_registry` seed, and the launcher
+  reads the table — the array is only a fallback for an empty table, which does not happen in
+  production. Every route worked and no member could reach any of them. The row is now in the
+  `schema.sql` seed and in migration `0016`, since an existing database is not re-seeded by
+  `schema.sql` alone. `schema.demo.sql` was regenerated rather than hand-edited.
+  `ctf/scripts/check-plugin-registry-seed.mjs` now fails the build on any plugin in the code registry
+  with no seed row, as the job `plugin-registry-seed-gate`. A comment in `schema.sql` already warned
+  about this and did not prevent it, because nothing read the comment.
 
 ## Build Checklist
 

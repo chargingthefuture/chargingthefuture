@@ -4,6 +4,19 @@ export type FiresideReactionKind = (typeof FIRESIDE_REACTION_KINDS)[number];
 
 export type FiresideCommentStatus = 'visible' | 'removed' | 'withdrawn';
 
+/**
+ * Where a comment stands on being copied into the blog's published build.
+ *
+ * 'not_requested' — the author has not asked. The starting state and the state an author returns it
+ *   to by switching the request off.
+ * 'pending'       — the author asked; an admin has not looked yet.
+ * 'approved'      — an admin agreed. Only this state, and only alongside the author's own opt-in,
+ *   lets a comment out of the app.
+ * 'refused'       — an admin declined it, and it stays declined. Switching the request back on does
+ *   not re-open it, because a refusal that can be re-queued is not a refusal.
+ */
+export type ExportReview = 'not_requested' | 'pending' | 'approved' | 'refused';
+
 /** The blog post a thread belongs to, as the address wiki-site mints its article URLs from. */
 export type FiresidePostRef = {
   repo: string;
@@ -40,6 +53,9 @@ export type FiresideComment = {
 export type FiresideOwnComment = FiresideComment & {
   state: 'live' | 'held_for_approval' | 'removed' | 'withdrawn';
   exportToBlog: boolean;
+  exportReview: ExportReview;
+  /** What an admin said when they declined it, shown to the author as written. */
+  exportRefusalReason: string | null;
   postRepo: string;
   postSlug: string;
   postTitle: string;
@@ -51,4 +67,30 @@ export type FiresideCommentInput = {
   postTitle: string;
   parentCommentId: string | null;
   body: string;
+};
+
+/** One pending export request, as the admin queue shows it. */
+export type FiresideExportRequest = {
+  commentId: string;
+  body: string;
+  authorUserId: string;
+  authorName: string;
+  postRepo: string;
+  postSlug: string;
+  postTitle: string;
+  requestedAt: string;
+  /** The author's record here, so a repeated offender is answered as an account, not an item. */
+  authorRecord: FiresideAuthorRecord;
+};
+
+/**
+ * What this account has done in Fireside, counted. It exists so an admin looking at one bad request
+ * can see whether it is the first or the fifth: several refusals or removals against one account is
+ * a question about the account, which is settled once, rather than item by item forever.
+ */
+export type FiresideAuthorRecord = {
+  comments: number;
+  removed: number;
+  exportsRefused: number;
+  exportsApproved: number;
 };

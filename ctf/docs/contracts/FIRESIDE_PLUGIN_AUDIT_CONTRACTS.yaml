@@ -95,3 +95,44 @@ auditEvents:
     requestId: request_identifier
     traceId: trace_identifier
     notes: Admin only. Separate from approval, so approving a person never resurrects a removed comment.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: export.approve
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: export_approved_or_export_refused
+    dataClassesAccessed:
+      - comment_body
+      - moderation_reason
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Admin only, and the second of two keys on copying a comment out to the blog's published build.
+      Recorded separately from comment.remove because refusing an export is not the same judgment as
+      taking a comment down, and a run of refusals against one account is its own signal.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: export.refuse
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: export_refused
+    dataClassesAccessed:
+      - comment_body
+      - moderation_reason
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: Final for that comment. The author cannot re-queue it by switching their own request back on.

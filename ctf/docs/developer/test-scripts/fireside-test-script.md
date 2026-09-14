@@ -105,7 +105,7 @@ Result: web ☐
 
 ---
 
-### FS-5 — Export is off until the author asks
+### FS-5 — Asking for the blog is a request, not a switch
 
 **Role:** member (approved) · **Surfaces:** web
 **Precondition:** An approved member with one public comment.
@@ -114,14 +114,42 @@ Result: web ☐
 1. Open the Fireside screen in the app and find the comment.
 2. Read the export control before touching it.
 3. Turn it on, then off.
-4. Withdraw a different comment that had export turned on.
+4. Turn it on again and leave it on.
+5. Withdraw a different comment that had the request turned on.
 
 **Expected:**
-- The control is off by default on every comment.
-- What it says makes the consequence clear before the choice: turning it on lets the comment be published with the post, where it is searchable and archived, and cannot be withdrawn afterwards.
+- The control is off by default on every comment, and asks rather than publishes: nothing is copied anywhere on turning it on.
+- What it says makes the consequence clear before the choice: the comment may be published with the post, where it is searchable and archived, and cannot be withdrawn by anybody afterwards.
+- With it on, the comment reads as waiting on an admin. It does not read as published.
 - Turning it on and off is recorded in the audit trail both times.
-- Withdrawing a comment turns its export permission off as part of the same action.
+- Withdrawing a comment turns its request off as part of the same action, and takes it out of the admin queue.
 - The control is not offered on a removed or withdrawn comment.
+
+Result: web ☐
+
+---
+
+### FS-5a — An admin holds the second key, and a refusal is final
+
+**Role:** admin, then member · **Surfaces:** web
+**Precondition:** FS-5 left one comment with its request on.
+
+**Steps:**
+1. As an admin, open the Fireside screen and the blog export queue.
+2. Read the row, including the line about the author's record.
+3. Decline the request.
+4. As the author, return to the Fireside screen and try to turn the request on again.
+5. As the admin, reopen the queue.
+6. Repeat with a second comment, approving it this time.
+
+**Expected:**
+- The queue lists only requests whose authors asked, oldest first, paged rather than endless.
+- Each row shows the author's record here: comments written, removals, exports declined and approved. An author with a removal or a refusal behind them is flagged, with the note that the account is the decision worth making.
+- Declining takes the row out of the queue.
+- The author sees that it was declined, and the checkbox will not go back on. The refusal message says the comment stays in the conversation and is not being copied out.
+- An approved request also leaves the queue, and the author's screen says approved with the note that switching it off still stops the copy.
+- Approving a request whose author then turns their own switch off leaves the comment not exportable — both keys have to be turned at the moment of copying.
+- Both decisions are recorded in the audit trail, separately from a comment removal.
 
 Result: web ☐
 
@@ -216,6 +244,6 @@ Result: web ☐
 - Fireside is listed with the same rights as the Commons, and its summary names comments and reactions.
 - After deletion their comments and reactions are gone from the thread.
 - The threads themselves remain — a thread is a reference to a blog post, not anything about a person.
-- Anything they had exported into the blog's published build is **not** recalled, which is why the export control says so before the choice is made.
+- Anything already copied into the blog's published build is **not** recalled, which is why the export control says so before the choice is made and why an admin has to agree before a copy is ever made.
 
 Result: web ☐

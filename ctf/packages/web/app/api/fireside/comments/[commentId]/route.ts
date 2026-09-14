@@ -2,10 +2,36 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ensureMutationCsrf, requireFiresideAuthor } from 'lib/fireside/_lib';
 import { FIRESIDE_ERROR_CODE } from 'lib/fireside/constants';
-import { insertFiresideAudit, setExportPreference, withdrawOwnComment } from 'lib/fireside/repository';
+import { setExportPreference } from 'lib/fireside/export-review';
+import { insertFiresideAudit, withdrawOwnComment } from 'lib/fireside/repository';
 import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type RouteProps = { params: Promise<{ commentId: string }> };
+
+/**
+ * Turn a refusal from the export-request write into the answer the author reads. Split out of PATCH
+ * so that handler stays inside the complexity budget (rule 116), and because the two ways a request
+ * can be turned down read better side by side than spread through the handler.
+ */
+function refuseExportChange(outcome: 'already_refused' | 'not_found'): NextResponse {
+  if (outcome === 'not_found') {
+    return NextResponse.json(
+      { ok: false, code: FIRESIDE_ERROR_CODE.notFound, message: 'No live comment of yours with that id.' },
+      { status: 404 },
+    );
+  }
+  // Said plainly rather than silently ignored. The author is owed the reason their switch does
+  // nothing, and a refusal that can be re-queued by toggling is not a refusal.
+  return NextResponse.json(
+    {
+      ok: false,
+      code: FIRESIDE_ERROR_CODE.exportRefused,
+      message:
+        'An admin already declined this one for the blog. Your comment stays in the conversation here; it is not being copied out.',
+    },
+    { status: 409 },
+  );
+}
 
 const patchSchema = z.object({ exportToBlog: z.boolean() });
 
@@ -54,11 +80,15 @@ export async function DELETE(request: Request, { params }: RouteProps) {
 }
 
 /**
- * Whether this comment may be copied into the blog's own published build, where it becomes
- * searchable and is captured by the Internet Archive.
+ * The author asks for this comment to be copied into the blog's own published build, where it
+ * becomes searchable and is captured by the Internet Archive — or takes the ask back.
  *
- * Off unless the author turns it on. The words are theirs, so permanence is their call — and a web
+ * Off unless the author turns it on. The words are theirs, so permanence is their call, and a web
  * capture cannot be withdrawn afterwards by anybody, this project included.
+ *
+ * Turning it on queues the request rather than granting it: an admin has to agree as well, because
+ * the build is a public page beside the project's own writing and an account posting spam or bait
+ * would otherwise put its text there permanently. Turning it off always works, approved or not.
  */
 export async function PATCH(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -88,13 +118,9 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   }
 
   try {
-    const done = await setExportPreference(gate.auth.userId, commentId, parsed.data.exportToBlog);
-    if (!done) {
-      return NextResponse.json(
-        { ok: false, code: FIRESIDE_ERROR_CODE.notFound, message: 'No live comment of yours with that id.' },
-        { status: 404 },
-      );
-    }
+    const outcome = await setExportPreference(gate.auth.userId, commentId, parsed.data.exportToBlog);
+    if (outcome !== 'saved') return refuseExportChange(outcome);
+
     await insertFiresideAudit({
       actorId: gate.auth.userId,
       command: 'fireside.comment.set_export',
@@ -102,9 +128,16 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       reason: 'author_choice',
       targetType: 'comment',
       targetId: commentId,
-      result: parsed.data.exportToBlog ? 'export_on' : 'export_off',
+      result: parsed.data.exportToBlog ? 'export_requested' : 'export_withdrawn',
     });
-    return NextResponse.json({ ok: true, exportToBlog: parsed.data.exportToBlog }, { status: 200 });
+    return NextResponse.json(
+      {
+        ok: true,
+        exportToBlog: parsed.data.exportToBlog,
+        exportReview: parsed.data.exportToBlog ? 'pending' : 'not_requested',
+      },
+      { status: 200 },
+    );
   } catch (error) {
     return failureResponse({
       summary: 'Unable to change that setting',

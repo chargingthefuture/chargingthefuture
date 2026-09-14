@@ -14,8 +14,11 @@
 // Pure on purpose: the rule is the thing most likely to be re-derived wrongly somewhere else, and
 // four faults in two weeks came from exactly that — a rule written in two places that disagreed.
 // Every caller reads it from here, including the public route and the author's own screen.
+//
+// Copying a comment out to the blog's published build is a third, stricter question, answered by
+// mayExportToBlog at the bottom of this file. It needs both the author and an admin to say yes.
 
-import type { FiresideCommentStatus } from './types';
+import type { ExportReview, FiresideCommentStatus } from './types';
 
 export type CommentVisibilityInput = {
   status: FiresideCommentStatus;
@@ -49,10 +52,19 @@ export function commentStateForAuthor(input: CommentVisibilityInput): CommentSta
  * Whether a comment may be copied into the blog's own published build, where it becomes searchable
  * and is captured by the Internet Archive.
  *
- * Three conditions, and the third is the one that matters: the author has to have asked for it.
- * The words belong to whoever wrote them, so permanence is their choice and the default is off — a
- * web capture cannot be withdrawn afterwards by anybody, including us.
+ * Four conditions, and two of them are separate keys held by different people. The author has to
+ * ask (`exportOptIn`), because the words are theirs and permanence is their call — a web capture
+ * cannot be withdrawn later by anybody, this project included. An admin then has to agree
+ * (`exportReview`), because the build is a public page sitting beside the project's own writing:
+ * an account opened to post spam or bait could otherwise put that text there permanently, and
+ * nobody could take it back.
+ *
+ * Neither key does anything alone. An approved export whose author later withdraws consent stops
+ * being exportable; an opted-in comment nobody has reviewed stays in the conversation and out of
+ * the build.
  */
-export function mayExportToBlog(input: CommentVisibilityInput & { exportOptIn: boolean }): boolean {
-  return input.exportOptIn && isPubliclyVisible(input);
+export function mayExportToBlog(
+  input: CommentVisibilityInput & { exportOptIn: boolean; exportReview: ExportReview },
+): boolean {
+  return input.exportOptIn && input.exportReview === 'approved' && isPubliclyVisible(input);
 }

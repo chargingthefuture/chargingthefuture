@@ -1733,12 +1733,16 @@ ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS assigned_tra
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_enrollments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Add unique constraint if not exists (Postgres 15+)
+-- One live enrollment per person per cohort. Partial on purpose: leaving sets status to 'dropped'
+-- and keeps the row as the record of what happened, so an unconditional unique index would let that
+-- row hold the slot forever and refuse somebody who changed their mind before the class started
+-- (owner bug report 2026-09-13). The application has always counted only 'enrolled' and 'active' as
+-- occupying a seat; this makes the database agree with it. See post/0014.
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes WHERE tablename = 'skill_up_enrollments' AND indexname = 'skill_up_enrollments_cohort_id_user_id_key' AND schemaname = current_schema()
   ) THEN
-    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id)';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key ON skill_up_enrollments(cohort_id, user_id) WHERE status <> ''dropped''';
   END IF;
 END $$;
 -- Shed the legacy level_id column if an older database still carries it.
@@ -2706,7 +2710,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
   ('beacon',             'Beacon',               'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.','implemented_shell', 230, TRUE),
   ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
-  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE)
+  ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE),
+  ('fireside',           'Fireside',             'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.','implemented_shell', 260, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -7194,6 +7199,139 @@ ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_act
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS push_community BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS discreet_push BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS notification_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- ============================================================================
+-- Fireside — threaded conversation on published blog posts (owner decision, 2026-09-13)
+-- ----------------------------------------------------------------------------
+-- One thread per blog post, comments under it, reactions on those comments.
+--
+-- Reading is public and needs no account. Writing needs a signed-in member, and nothing a member
+-- writes is publicly visible until they are approved in Unlock — the same route-into-verification
+-- the Knowledge Library contribution exception already runs on. Approval is per person, not per
+-- comment: when somebody is approved, everything they have written becomes visible at once.
+--
+-- Deliberately separate from Commons. Commons is support and learning the app; Fireside is
+-- conversation about trafficking and rebuilding, which needs its own moderation posture even
+-- though an admin works both from one panel.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS fireside_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- The blog post this thread belongs to, as the wiki-site article address: the repo namespace and
+  -- the slug, matching the front matter that mints the URL. Stored rather than derived so a thread
+  -- survives a post being renamed in the registry.
+  post_repo TEXT NOT NULL,
+  post_slug TEXT NOT NULL,
+  post_title TEXT NOT NULL DEFAULT '',
+  -- An admin can close a thread to new comments without removing what is already there.
+  is_closed BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_repo TEXT;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_slug TEXT;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS is_closed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS fireside_threads_post_key ON fireside_threads (post_repo, post_slug);
+
+CREATE TABLE IF NOT EXISTS fireside_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id UUID NOT NULL REFERENCES fireside_threads(id) ON DELETE CASCADE,
+  -- Threading is one level deep on purpose: a reply to a comment, and no reply to a reply. Deeper
+  -- nesting is unreadable at phone width, which is the only width this app has.
+  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  author_user_id TEXT NOT NULL,
+  -- The name printed beside the comment, written at creation the way other tables here denormalize
+  -- an author_username. Stored rather than joined: the public read must not touch an identity table
+  -- at all, and a later rename should not rewrite what an old comment was signed with.
+  author_username TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL,
+  -- Moderation state, which is separate from whether the author is approved. A comment is publicly
+  -- visible only when BOTH hold: status 'visible', and the author approved in Unlock. Keeping them
+  -- apart means approving a person does not un-remove something an admin took down.
+  status TEXT NOT NULL DEFAULT 'visible' CHECK (status IN ('visible','removed','withdrawn')),
+  removed_by TEXT,
+  removed_at TIMESTAMPTZ,
+  removal_reason TEXT,
+  -- Whether the author chose to let this comment be copied into the blog's own published build,
+  -- where it becomes searchable and is captured by the Internet Archive. Off by default: the words
+  -- are the author's, permanence is their call, and a capture cannot be withdrawn later.
+  export_to_blog BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Two keys, not one. The author opting in above asks for it; an admin has to agree here before
+  -- anything is copied out. An account made to post spam or bait would otherwise be able to place
+  -- that text on a permanently archived page beside the project's own writing, and a web capture
+  -- cannot be pulled back by anybody afterwards.
+  export_review TEXT NOT NULL DEFAULT 'not_requested'
+    CHECK (export_review IN ('not_requested','pending','approved','refused')),
+  export_reviewed_by TEXT,
+  export_reviewed_at TIMESTAMPTZ,
+  export_refusal_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS thread_id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS parent_comment_id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS author_user_id TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS author_username TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'visible';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_by TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removal_reason TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_to_blog BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_review TEXT NOT NULL DEFAULT 'not_requested';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_by TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
+CREATE INDEX IF NOT EXISTS fireside_comments_author_idx ON fireside_comments (author_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS fireside_comments_export_review_idx ON fireside_comments (export_review, created_at);
+
+CREATE TABLE IF NOT EXISTS fireside_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  reactor_user_id TEXT NOT NULL,
+  -- A short fixed set rather than free emoji, so the counts mean the same thing on every comment.
+  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS comment_id UUID;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS reactor_user_id TEXT;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS kind TEXT;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS fireside_reactions_one_per_person ON fireside_reactions (comment_id, reactor_user_id, kind);
+
+CREATE TABLE IF NOT EXISTS fireside_audit_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  target_type TEXT NOT NULL DEFAULT '',
+  target_id TEXT NOT NULL DEFAULT '',
+  result TEXT NOT NULL DEFAULT '',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS command TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS fireside_audit_events_created_idx ON fireside_audit_events (created_at DESC);
 COMMIT;
 
 
@@ -7821,4 +7959,340 @@ BEGIN
   DROP TABLE _login_gap_evidence;
 END
 $$;
+
+
+-- ── post migration: 0009_skill_up_cohort_title_drop_plugin_prefix.sql ──
+-- post/0009: Drop the plugin-name prefix from SkillUp cohort titles.
+--
+-- Cohorts opened from the Workforce talent-gap proposal queue were titled
+-- "<plugin name>: <occupation>" — "LevelUp: Journalists / Reporters" before the
+-- 2026-08-29 rename, "SkillUp: …" after it. Every one of those cards is already
+-- inside the SkillUp plugin, so the prefix repeated the plugin's own name on each
+-- row and ate width that a phone does not have (owner report, 2026-08-29). The
+-- title template now writes the occupation on its own; this brings the rows that
+-- were written under the old template into line.
+--
+-- Guarded on the prefix still being present, so a title that never carried one is
+-- untouched and a second run changes nothing. TRIM handles a stray space after the
+-- colon; a row that is nothing but the prefix is left alone rather than emptied.
+UPDATE skill_up_cohorts
+SET title = TRIM(SUBSTRING(title FROM 10)),
+    updated_at = NOW()
+WHERE title LIKE 'LevelUp: %'
+  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+
+UPDATE skill_up_cohorts
+SET title = TRIM(SUBSTRING(title FROM 10)),
+    updated_at = NOW()
+WHERE title LIKE 'SkillUp: %'
+  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+
+
+-- ── post migration: 0010_skill_up_cohort_job_title_backfill.sql ──
+-- post/0010: Give every existing SkillUp cohort the occupation it trains.
+--
+-- A cohort now carries job_title_id — the Skills Taxonomy occupation it trains — because that is
+-- what the trainer claim gate matches a person's Directory skills against (owner decision
+-- 2026-08-29). New cohorts are required to supply it. The rows written before it existed need it
+-- filled in, or nobody can claim them.
+--
+-- Two passes, most reliable first:
+--   1. Cohorts the retired auto-cohort run opened already know their occupation exactly — it is in
+--      source_job_title_id. Copy it across.
+--   2. Hand-built cohorts have only the free-text `track`. Where that text matches an active job
+--      title name exactly (case- and whitespace-insensitive), use it. Anything that does not match
+--      is left NULL on purpose rather than guessed at: an unclaimable cohort is a visible problem,
+--      a wrongly-matched one silently lets the wrong person train.
+--
+-- Guarded on job_title_id still being NULL, so re-running changes nothing.
+UPDATE skill_up_cohorts
+SET job_title_id = source_job_title_id,
+    updated_at = NOW()
+WHERE job_title_id IS NULL
+  AND source_job_title_id IS NOT NULL;
+
+UPDATE skill_up_cohorts c
+SET job_title_id = j.id,
+    updated_at = NOW()
+FROM skills_taxonomy_job_titles j
+WHERE c.job_title_id IS NULL
+  AND j.is_active = TRUE
+  AND lower(btrim(c.track)) = lower(btrim(j.name))
+  -- Only when the name is unambiguous across the taxonomy.
+  AND (
+    SELECT count(*) FROM skills_taxonomy_job_titles k
+    WHERE k.is_active = TRUE AND lower(btrim(k.name)) = lower(btrim(c.track))
+  ) = 1;
+
+
+-- ── post migration: 0011_skill_up_deposit_and_trainer_rate.sql ──
+-- post/0011: Put every cohort on the flat deposit and give it a trainer rate.
+--
+-- Owner decision 2026-08-29. Two things change together:
+--
+--   1. Every cohort takes the same deposit from every member, and it is never zero. Cohorts written
+--      before this carry required_credits = 0, which meant their trainer earned nothing, because the
+--      trainer's amount used to be derived from the escrow. Those cohorts are moved to the flat 50.
+--      This applies to people enrolling from now on; it does not retroactively charge anyone who
+--      already joined, and it does not touch escrow that is already held.
+--   2. The trainer's rate is no longer derived from the deposit at all. It is stamped on the cohort
+--      (trainer_credits_per_milestone, column default 10) and scaled by the Workforce gap at
+--      creation. Rows written before the column existed take the default, which is the correct flat
+--      rate for a cohort with no gap recorded.
+--
+-- allow_no_deposit is cleared on the same rows: a free cohort is no longer a thing, so leaving the
+-- flag set would let an enrollment skip the deposit the cohort now requires.
+--
+-- Guarded on the values still being the pre-change ones, so re-running changes nothing.
+UPDATE skill_up_cohorts
+SET required_credits = 50,
+    allow_no_deposit = FALSE,
+    updated_at = NOW()
+WHERE required_credits = 0
+  AND status IN ('draft', 'open', 'active');
+
+
+-- ── post migration: 0012_skill_up_drop_stipend_columns.sql ──
+-- post/0012: Drop the SkillUp stipend columns.
+--
+-- SkillUp carried stipend_mode, stipend_amount_per_payout, stipend_interval_days and
+-- stipend_currency on every cohort. createCohort wrote all four; nothing ever read them. There was
+-- no payout flow, no schedule table (the inventory listed skill_up_stipend_schedules, which was
+-- never in schema.sql), no route, and no owner-approved spec describing what a stipend was meant to
+-- do. Meanwhile the plugin catalog told members they would "earn stipends as you reach each
+-- milestone" — the app advertising a payout it had no code to make.
+--
+-- Owner decision 2026-09-12: stipends are not a feature; the fields and the copy come out. Every
+-- credit SkillUp moves is a milestone release, a trainer grant, or a completion bonus.
+--
+-- Safe to drop: the columns only ever held their defaults ('none', 0, NULL, 'SC'), because nothing
+-- ever set them to anything else. Guarded with IF EXISTS so a fresh database that never had them
+-- no-ops, and idempotent on re-run.
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_mode;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_amount_per_payout;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_interval_days;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS stipend_currency;
+
+
+-- ── post migration: 0013_skill_up_drop_microgrant_columns.sql ──
+-- post/0013: Drop the SkillUp microgrant columns.
+--
+-- The same removal as post/0012 did for stipends, for the same reason. SkillUp carried
+-- microgrant_mode, microgrant_amount and microgrant_currency on every cohort; createCohort wrote
+-- them and nothing ever read them. No payout flow, no route, no spec, and the wallet history
+-- carried a "Microgrant" label for a disbursement type nothing can write.
+--
+-- Owner decision 2026-09-13: microgrants are not a feature either. Every credit SkillUp moves is a
+-- milestone release, a trainer grant, or a completion bonus.
+--
+-- Safe to drop: the columns only ever held their defaults ('none', 0, 'SC'). Guarded with IF EXISTS
+-- so a fresh database that never had them no-ops, and idempotent on re-run.
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_mode;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_amount;
+ALTER TABLE IF EXISTS skill_up_cohorts DROP COLUMN IF EXISTS microgrant_currency;
+
+
+-- ── post migration: 0014_skill_up_enrollment_reenroll_after_leaving.sql ──
+-- post/0014: let somebody enroll again in a cohort they left before it started.
+--
+-- Owner bug report 2026-09-13: leave a cohort, change your mind, and enrolling again is refused.
+--
+-- The table carried an unconditional UNIQUE (cohort_id, user_id). Leaving does not delete the
+-- enrollment - it sets status to 'dropped' and keeps the row as the record of what happened - so
+-- that row went on holding the slot forever and the database refused every later attempt.
+--
+-- The code has always disagreed with the index. assertEnrollmentSeatAvailable counts only
+-- status IN ('enrolled','active'), so a dropped row occupies no seat as far as the application is
+-- concerned; the seat check passed and the INSERT then failed on the constraint. This is the same
+-- fault, in the same shape, as the SkillsHunt duplicate guard fixed on 2026-08-27: a blanket unique
+-- index where the code's rule is a partial one.
+--
+-- The predicate excludes 'dropped' only. A live enrollment still blocks a second one, and a
+-- completed cohort is not re-enrollable either - finishing is not a reason to start again.
+DROP INDEX IF EXISTS skill_up_enrollments_cohort_id_user_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS skill_up_enrollments_cohort_id_user_id_key
+  ON skill_up_enrollments (cohort_id, user_id)
+  WHERE status <> 'dropped';
+
+
+-- ── post migration: 0015_fireside_tables.sql ──
+-- Fireside: threads, comments, reactions and audit. Safe to re-run; every object is IF NOT EXISTS.
+
+-- ============================================================================
+-- Fireside — threaded conversation on published blog posts (owner decision, 2026-09-13)
+-- ----------------------------------------------------------------------------
+-- One thread per blog post, comments under it, reactions on those comments.
+--
+-- Reading is public and needs no account. Writing needs a signed-in member, and nothing a member
+-- writes is publicly visible until they are approved in Unlock — the same route-into-verification
+-- the Knowledge Library contribution exception already runs on. Approval is per person, not per
+-- comment: when somebody is approved, everything they have written becomes visible at once.
+--
+-- Deliberately separate from Commons. Commons is support and learning the app; Fireside is
+-- conversation about trafficking and rebuilding, which needs its own moderation posture even
+-- though an admin works both from one panel.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS fireside_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- The blog post this thread belongs to, as the wiki-site article address: the repo namespace and
+  -- the slug, matching the front matter that mints the URL. Stored rather than derived so a thread
+  -- survives a post being renamed in the registry.
+  post_repo TEXT NOT NULL,
+  post_slug TEXT NOT NULL,
+  post_title TEXT NOT NULL DEFAULT '',
+  -- An admin can close a thread to new comments without removing what is already there.
+  is_closed BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_repo TEXT;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_slug TEXT;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS post_title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS is_closed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS fireside_threads ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS fireside_threads_post_key ON fireside_threads (post_repo, post_slug);
+
+CREATE TABLE IF NOT EXISTS fireside_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  thread_id UUID NOT NULL REFERENCES fireside_threads(id) ON DELETE CASCADE,
+  -- Threading is one level deep on purpose: a reply to a comment, and no reply to a reply. Deeper
+  -- nesting is unreadable at phone width, which is the only width this app has.
+  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  author_user_id TEXT NOT NULL,
+  -- The name printed beside the comment, written at creation the way other tables here denormalize
+  -- an author_username. Stored rather than joined: the public read must not touch an identity table
+  -- at all, and a later rename should not rewrite what an old comment was signed with.
+  author_username TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL,
+  -- Moderation state, which is separate from whether the author is approved. A comment is publicly
+  -- visible only when BOTH hold: status 'visible', and the author approved in Unlock. Keeping them
+  -- apart means approving a person does not un-remove something an admin took down.
+  status TEXT NOT NULL DEFAULT 'visible' CHECK (status IN ('visible','removed','withdrawn')),
+  removed_by TEXT,
+  removed_at TIMESTAMPTZ,
+  removal_reason TEXT,
+  -- Whether the author chose to let this comment be copied into the blog's own published build,
+  -- where it becomes searchable and is captured by the Internet Archive. Off by default: the words
+  -- are the author's, permanence is their call, and a capture cannot be withdrawn later.
+  export_to_blog BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS thread_id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS parent_comment_id UUID;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS author_user_id TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS author_username TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'visible';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_by TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS removal_reason TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_to_blog BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
+CREATE INDEX IF NOT EXISTS fireside_comments_author_idx ON fireside_comments (author_user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS fireside_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  reactor_user_id TEXT NOT NULL,
+  -- A short fixed set rather than free emoji, so the counts mean the same thing on every comment.
+  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS comment_id UUID;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS reactor_user_id TEXT;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS kind TEXT;
+ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS fireside_reactions_one_per_person ON fireside_reactions (comment_id, reactor_user_id, kind);
+
+CREATE TABLE IF NOT EXISTS fireside_audit_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  target_type TEXT NOT NULL DEFAULT '',
+  target_id TEXT NOT NULL DEFAULT '',
+  result TEXT NOT NULL DEFAULT '',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS actor_id TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS command TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS policy_status TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS fireside_audit_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS fireside_audit_events_created_idx ON fireside_audit_events (created_at DESC);
+
+
+-- ── post migration: 0016_fireside_export_review.sql ──
+-- Fireside: an admin has to approve a comment before it is copied into the blog's published build.
+--
+-- The author opting in was the only condition before this, and one condition is not enough here.
+-- The build is a public, permanently archived page that sits beside the project's own writing, so
+-- an account made to post spam or bait could put that text next to real content and nobody could
+-- pull it back afterwards. Two keys instead: the author asks, and an admin agrees. Neither alone
+-- does anything.
+--
+-- A refusal is also a record. Repeated refusals against one account answer a different question
+-- than any single comment does — whether the account belongs here at all — which is cheaper to act
+-- on once than to chase item by item.
+
+ALTER TABLE IF EXISTS fireside_comments
+  ADD COLUMN IF NOT EXISTS export_review TEXT NOT NULL DEFAULT 'not_requested';
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_by TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
+
+-- Added separately from the column so a database that already carries the column still gains the
+-- check, and so re-running this file is safe.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fireside_comments_export_review_check'
+  ) THEN
+    ALTER TABLE fireside_comments
+      ADD CONSTRAINT fireside_comments_export_review_check
+      CHECK (export_review IN ('not_requested','pending','approved','refused'));
+  END IF;
+END $$;
+
+-- The admin queue reads pending requests oldest first, so the wait is fair and the index matches.
+CREATE INDEX IF NOT EXISTS fireside_comments_export_review_idx
+  ON fireside_comments (export_review, created_at);
+
+-- The apps list reads ctf_plugin_registry, not the array in packages/web/lib/plugins/repository.ts.
+-- That array is only the fallback for an empty or unreadable table, which never happens in
+-- production, so a plugin with no row here has no tile and members cannot reach it. Fireside was
+-- added to the array and not to this table, so it shipped invisible. Upsert, so re-running is safe
+-- and so a fresh database seeded from schema.sql lands on the same values.
+INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availability_state, nav_rank, is_visible)
+VALUES (
+  'fireside',
+  'Fireside',
+  'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.',
+  'implemented_shell',
+  260,
+  TRUE
+)
+ON CONFLICT (plugin_slug) DO UPDATE SET
+  display_name       = EXCLUDED.display_name,
+  summary            = EXCLUDED.summary,
+  availability_state = EXCLUDED.availability_state,
+  nav_rank           = EXCLUDED.nav_rank,
+  is_visible         = EXCLUDED.is_visible,
+  updated_at         = NOW();
 

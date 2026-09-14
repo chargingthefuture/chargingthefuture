@@ -417,6 +417,21 @@ jobs:
       - name: Fail on British spellings
         run: node ctf/scripts/check-us-spelling.mjs
 
+  plugin-registry-seed-gate:
+    name: Plugin Registry Seed Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The apps list reads the ctf_plugin_registry table, and the array in the code is only a
+      # fallback for an empty table — which never happens in production. So a plugin added to the
+      # array and not to the seed ships with working routes and no tile, which is indistinguishable
+      # from the plugin not existing. A comment in schema.sql said so and did not stop it happening.
+      - name: Fail on a plugin with no registry seed row
+        run: node ctf/scripts/check-plugin-registry-seed.mjs
+
   orphan-route-gate:
     name: Orphan Route Gate
     runs-on: ubuntu-latest

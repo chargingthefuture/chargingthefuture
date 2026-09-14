@@ -700,8 +700,9 @@ When creating a new plugin from scratch, ALL of the following must be completed 
    - Update `ctf/config/plugin-parity-contracts.json` with parity entry
    - Update `ctf/packages/web/lib/plugins/repository.ts` registry entry
 
-8. **Plugin Registry**
+8. **Plugin Registry** — two places, and missing the second one means the plugin has no tile
    - Add entry to `ctf/packages/web/lib/plugins/repository.ts` with slug, name, summary, availability state, nav rank
+   - **Add the matching row to the `ctf_plugin_registry` seed in `ctf/schema.sql`, and to a migration under `ctf/db/migrations/post/`.** The apps list reads that table; the array in `repository.ts` is only a fallback for an empty or unreadable table, which never happens in production. A plugin in the array alone ships with working routes and no way for a member to reach them. An existing database is not re-seeded by `schema.sql`, so the migration is what makes it appear. Enforced by `ctf/scripts/check-plugin-registry-seed.mjs` (job `plugin-registry-seed-gate`).
 
 9. **Trust Signal (if the plugin has real member participation)**
    - If members complete/accept/claim/publish real rows in this plugin, add one categorical Trust signal so a member active only here is still seen — per [132-trust-signal-coverage-rules.mdc](.claude/rules/132-trust-signal-coverage-rules.mdc). Add a metric to `TrustSignalMetrics`, a coarse `COUNT` to `computeTrustSignalMetrics`, an entry to the `participationSignals` array in `buildTrustEvidence` (all in `ctf/packages/web/lib/trust/`), bump `TRUST_SNAPSHOT_MODEL`, and add the table to the `trust.signal.snapshot.refresh` contract `dataAccess`.

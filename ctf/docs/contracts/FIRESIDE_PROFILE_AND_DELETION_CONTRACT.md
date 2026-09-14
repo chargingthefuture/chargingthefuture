@@ -31,10 +31,15 @@ is never shown to anybody, never exported, and cannot be restored by an admin.
 
 ## The one thing deletion cannot reach
 
-A comment the author chose to export into the blog's published build has been copied into a static
-site and captured by the Internet Archive. That capture is not ours to edit, and deleting the row
-here does not remove it from a web archive.
+A comment that has been copied into the blog's published build is in a static site and captured by
+the Internet Archive. That capture is not ours to edit, and deleting the row here does not remove it
+from a web archive.
 
-This is why export is off by default and why only the author can turn it on. Everything in this
-plugin is deletable except what somebody deliberately asked to make permanent, and the screen that
-offers the choice says so before they make it.
+Two separate people have to agree before a comment can get there. The author asks, which is off by
+default and never granted by anyone else, because the words are theirs and permanence is their call.
+An admin then approves, because the build is a public page beside the project's own writing and an
+account opened to post spam or bait could otherwise place text there that nobody can take back. The
+author can withdraw the ask at any point before the copy is made, approval or no approval.
+
+Everything in this plugin is deletable except what somebody deliberately asked to make permanent and
+an admin agreed to, and the screen that offers the choice says so before it is made.
