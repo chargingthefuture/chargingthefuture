@@ -1,82 +1,17 @@
 {
-  "_comment": "BURN-DOWN list for check-dependency-audit.mjs: advisories open in the locked production tree that this repo cannot currently close. Every entry is a transitive package pinned by a parent, or one with no published fix, waiting on an upstream release \u2014 none is a package this repo chose directly at a vulnerable version. The list may only ever shrink: the gate fails on a new advisory not listed here AND on a listed advisory that no longer applies. Never add an entry to silence the gate; update the dependency instead, via pnpm.overrides in ctf/package.json.",
+  "_comment": "BURN-DOWN list for check-dependency-audit.mjs: advisories open in the locked production tree that this repo cannot currently close. An entry is allowed only when there is no published fix to move to, or when a parent pins the vulnerable version and cannot be overridden. Every entry MUST carry a note saying which parent brings the package in, what release it waits on, and the date that was last checked — without it the next reader has to re-derive the whole tree. Reaching a package through a transitive path is not on its own a reason to list it: where a fixed version is published, pin it with pnpm.overrides in ctf/package.json as \"package@exact-installed-version\": \"fixed\", so the entry stops matching once the parent moves on. The list may only ever shrink: the gate fails on a new advisory not listed here AND on a listed advisory that no longer applies. Never add an entry to silence the gate; update the dependency instead.",
   "advisories": {
-    "1115805": {
-      "module": "lodash-es",
-      "severity": "high",
-      "title": "lodash vulnerable to Code Injection via `_.template` imports key names"
-    },
-    "1115809": {
-      "module": "lodash-es",
-      "severity": "moderate",
-      "title": "lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit`"
-    },
-    "1116560": {
-      "module": "follow-redirects",
-      "severity": "moderate",
-      "title": "follow-redirects leaks Custom Authentication Headers to Cross-Domain Redirect Targets"
-    },
-    "1119108": {
-      "module": "ws",
-      "severity": "moderate",
-      "title": "ws: Uninitialized memory disclosure"
-    },
-    "1119441": {
-      "module": "uuid",
-      "severity": "moderate",
-      "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided"
-    },
-    "1120422": {
-      "module": "shell-quote",
-      "severity": "critical",
-      "title": "shell-quote quote() does not escape newlines in object .op values"
-    },
-    "1120743": {
-      "module": "form-data",
-      "severity": "high",
-      "title": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames"
-    },
-    "1123259": {
-      "module": "ws",
-      "severity": "high",
-      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks"
-    },
-    "1123260": {
-      "module": "ws",
-      "severity": "high",
-      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks"
-    },
-    "1123482": {
-      "module": "websocket-driver",
-      "severity": "moderate",
-      "title": "websocket-driver: Resource limit bypass via message compression"
-    },
-    "1123483": {
-      "module": "websocket-driver",
-      "severity": "critical",
-      "title": "websocket-driver: Message corruption via abuse of protocol length headers"
-    },
-    "1123528": {
-      "module": "@babel/core",
-      "severity": "low",
-      "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment"
-    },
-    "1123944": {
-      "module": "shell-quote",
-      "severity": "high",
-      "title": "shell-quote: Quadratic-complexity Denial of Service in `parse()` (CWE-407)"
-    },
     "1138808": {
       "module": "image-size",
       "severity": "high",
       "title": "image-size: ICNS parser allows denial of service through an infinite loop",
-      "note": "No patched version is published \u2014 the advisory reports the fixed range as none. Reaches the tree through Metro inside Expo (packages/mobile), a build-time path several levels down that this repo does not choose a version for. Remove as soon as image-size ships a fix."
+      "note": "No patched version is published — the advisory reports the fixed range as none, and 2.0.2 (the latest release) is still inside the vulnerable range <=2.0.2. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path several levels down that this repo does not choose a version for; an override has nothing fixed to point at. Remove as soon as image-size ships a fix. Checked 2026-09-14."
     },
     "1138809": {
       "module": "image-size",
       "severity": "high",
       "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
-      "note": "No patched version is published \u2014 the advisory reports the fixed range as none. Reaches the tree through Metro inside Expo (packages/mobile), a build-time path several levels down that this repo does not choose a version for. Remove as soon as image-size ships a fix."
+      "note": "No patched version is published — the advisory reports the fixed range as none, and 2.0.2 (the latest release) is still inside the vulnerable range <=2.0.2. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path several levels down that this repo does not choose a version for; an override has nothing fixed to point at. Remove as soon as image-size ships a fix. Checked 2026-09-14."
     }
   }
 }

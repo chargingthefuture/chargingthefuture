@@ -1,0 +1,152 @@
+# TI Radio — a published schedule of live discussions members host in Chyme.
+#
+# The one thing to read before changing anything here: `ti-radio.guide.read` is PUBLIC. It answers a
+# caller with no account, because a broadcast guide nobody can read is not a guide, and this one is
+# written for people arriving from the Quora space at tiradio.quora.com who have not joined yet.
+# Every command that changes the schedule needs an approved member.
+commands:
+  - pluginId: ti-radio
+    command: ti-radio.guide.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        guide:
+          type: object
+          properties:
+            slots:
+              type: array
+              items:
+                type: object
+                properties:
+                  slotStartIso:
+                    type: string
+                  slotEndIso:
+                    type: string
+                  state:
+                    type: string
+                    enum: [open, booked]
+                  isOnAir:
+                    type: boolean
+                  booking:
+                    type: [object, 'null']
+                    properties:
+                      id:
+                        type: string
+                      hostUsername:
+                        type: string
+                      title:
+                        type: string
+                      description:
+                        type: [string, 'null']
+                      isViewerHost:
+                        type: boolean
+            windowStartIso:
+              type: string
+            windowEndIso:
+              type: string
+            slotMinutes:
+              type: integer
+            maxSlotsPerDay:
+              type: integer
+            viewer:
+              type: object
+              properties:
+                isSignedIn:
+                  type: boolean
+                canHost:
+                  type: boolean
+                isAdmin:
+                  type: boolean
+                bookedSlotStarts:
+                  type: array
+                  items:
+                    type: string
+    dataAccess:
+      - ti_radio_slots (select)
+      - unlock_verification_submissions (select, access_tier only, to decide whether the viewer may host)
+    purpose: Read the week of slots, booked and open, plus what this viewer may do
+    retentionClass: community_content
+  - pluginId: ti-radio
+    command: ti-radio.slot.book
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [slotStart, title]
+      properties:
+        slotStart:
+          type: string
+          description: ISO UTC start, exactly on a 90-minute boundary from midnight UTC
+        title:
+          type: string
+          minLength: 3
+          maxLength: 120
+        description:
+          type: [string, 'null']
+          maxLength: 500
+    outputSchema:
+      type: object
+      properties:
+        booking:
+          type: object
+          properties:
+            id:
+              type: string
+            hostUsername:
+              type: string
+            title:
+              type: string
+    dataAccess:
+      - ti_radio_slots (select, insert)
+      - ti_radio_admin_audit_trail (insert)
+    purpose: Claim an empty slot and become its host
+    retentionClass: community_content
+    idempotency: false
+    notes: >-
+      First come, first served, settled by a partial unique index on slot_start_utc rather than by a
+      read-then-write, so two members pressing at the same moment produce one booking and one honest
+      refusal. The rolling ceiling of three slots in any 24 hours is checked in the same transaction.
+  - pluginId: ti-radio
+    command: ti-radio.slot.release
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [slotId]
+      properties:
+        slotId:
+          type: string
+    outputSchema:
+      type: object
+      properties:
+        slotStartIso:
+          type: string
+    dataAccess:
+      - ti_radio_slots (select, update)
+      - ti_radio_admin_audit_trail (insert)
+    purpose: The host gives their own slot back, before it starts
+    retentionClass: community_content
+  - pluginId: ti-radio
+    command: ti-radio.slot.remove
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [slotId]
+      properties:
+        slotId:
+          type: string
+        reason:
+          type: [string, 'null']
+          maxLength: 300
+    outputSchema:
+      type: object
+      properties:
+        slotStartIso:
+          type: string
+    dataAccess:
+      - ti_radio_slots (select, update)
+      - ti_radio_admin_audit_trail (insert)
+    purpose: An admin takes a booked slot off the public schedule
+    retentionClass: community_content

@@ -266,6 +266,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    slug: 'ti-radio',
+    name: 'TI Radio',
+    summary: 'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.',
+    availabilityState: 'implemented_shell',
+    navRank: 270,
+    isVisible: true,
+  },
+  {
     slug: 'mutual-time',
     name: 'Mutual Time',
     summary: 'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.',

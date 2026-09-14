@@ -68,6 +68,7 @@ contracts:
       - contributions_submissions
       - foundation_connection_threads
       - recurring_activities
+      - ti_radio_slots
     purpose: trust_signal_aggregation
     retentionClass: derived_short_lived
     idempotency: true
