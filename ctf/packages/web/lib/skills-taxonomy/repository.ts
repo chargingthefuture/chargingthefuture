@@ -31,6 +31,7 @@ type JobTitleRow = {
   sector_id: string;
   name: string;
   display_order: number;
+  workforce_share: string | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -146,6 +147,7 @@ function mapJobTitle(row: JobTitleRow): TaxonomyJobTitle {
     sectorId: row.sector_id,
     name: row.name,
     displayOrder: row.display_order,
+    workforceShare: toNumberOrNull(row.workforce_share),
     isActive: row.is_active,
     createdAtIso: row.created_at.toISOString(),
     updatedAtIso: row.updated_at.toISOString(),
@@ -371,7 +373,7 @@ export async function getSectorById(id: string): Promise<TaxonomySector | null> 
 export async function listJobTitles(includeInactive = true): Promise<TaxonomyJobTitle[]> {
   const result = await queryDb<JobTitleRow>(
     `
-      SELECT id, sector_id, name, display_order, is_active, created_at, updated_at
+      SELECT id, sector_id, name, display_order, workforce_share::text, is_active, created_at, updated_at
       FROM skills_taxonomy_job_titles
       WHERE ($1::boolean OR is_active = true)
       ORDER BY display_order ASC, name ASC
@@ -385,7 +387,7 @@ export async function listJobTitles(includeInactive = true): Promise<TaxonomyJob
 export async function getJobTitleById(id: string): Promise<TaxonomyJobTitle | null> {
   const result = await queryDb<JobTitleRow>(
     `
-      SELECT id, sector_id, name, display_order, is_active, created_at, updated_at
+      SELECT id, sector_id, name, display_order, workforce_share::text, is_active, created_at, updated_at
       FROM skills_taxonomy_job_titles
       WHERE id = $1
     `,
@@ -437,6 +439,7 @@ function mapHierarchyJobTitle(row: JobTitleRow): TaxonomyHierarchyJobTitle {
     id: row.id,
     name: row.name,
     displayOrder: row.display_order,
+    workforceShare: toNumberOrNull(row.workforce_share),
     isActive: row.is_active,
     skills: [],
   };
@@ -467,7 +470,7 @@ export async function getHierarchy(includeInactive = false): Promise<TaxonomyHie
 
     const jobTitlesResult = await client.query<JobTitleRow>(
       `
-        SELECT id, sector_id, name, display_order, is_active, created_at, updated_at
+        SELECT id, sector_id, name, display_order, workforce_share::text, is_active, created_at, updated_at
         FROM skills_taxonomy_job_titles
         WHERE ($1::boolean OR is_active = true)
         ORDER BY display_order ASC, name ASC

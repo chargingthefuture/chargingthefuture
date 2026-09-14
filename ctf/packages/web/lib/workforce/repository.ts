@@ -7,6 +7,10 @@ import {
   type WorkforceSkillLevel,
 } from './skill-level';
 import {
+  UNWEIGHTED_OCCUPATION_WEIGHT,
+  splitDemandByWeight,
+} from './demand-split';
+import {
   WORKFORCE_DEFAULT_MAX_RECRUITABLE,
   WORKFORCE_DEFAULT_MIN_RECRUITABLE,
   WORKFORCE_DEFAULT_PAGE,
@@ -117,7 +121,7 @@ export function validateConfigInput(input: WorkforceConfigInput): boolean {
 // ---------------------------------------------------------------------------
 
 type SectorModelRow = { id: string; name: string; workforce_share: string | null };
-type JobTitleModelRow = { id: string; sector_id: string; name: string };
+type JobTitleModelRow = { id: string; sector_id: string; name: string; workforce_share: string | null };
 type MemberModelRow = {
   profile_id: string;
   job_title_sector_id: string | null;
@@ -228,7 +232,7 @@ async function fetchWorkforceModelInputs(): Promise<{
        ORDER BY display_order ASC, name ASC`,
     ),
     queryDb<JobTitleModelRow>(
-      `SELECT id::text AS id, sector_id::text AS sector_id, name
+      `SELECT id::text AS id, sector_id::text AS sector_id, name, workforce_share::text AS workforce_share
        FROM skills_taxonomy_job_titles
        WHERE is_active = TRUE
        ORDER BY display_order ASC, name ASC`,
@@ -280,17 +284,21 @@ function groupJobTitlesBySector(jobTitles: JobTitleModelRow[]): Map<string, JobT
   return jobTitlesBySector;
 }
 
-// Per-occupation demand: split a sector's demand evenly across its active job titles.
+// Per-occupation demand: split a sector's demand across its active job titles by relative weight.
+// The weighting itself lives in ./demand-split so it can be tested without a database; this only
+// feeds it the sector's job titles and their shares.
 function buildJobTitleDemand(
   jobTitlesBySector: Map<string, JobTitleModelRow[]>,
   sectorDemand: Map<string, number>,
 ): Map<string, number> {
   const jobTitleDemand = new Map<string, number>();
   for (const [sectorId, list] of jobTitlesBySector) {
-    const demand = sectorDemand.get(sectorId) ?? 0;
-    const per = list.length > 0 ? Math.round(demand / list.length) : 0;
-    for (const jt of list) {
-      jobTitleDemand.set(jt.id, per);
+    const items = list.map((jt) => ({
+      id: jt.id,
+      workforceShare: jt.workforce_share === null ? null : toFiniteNumber(jt.workforce_share, UNWEIGHTED_OCCUPATION_WEIGHT),
+    }));
+    for (const [id, demand] of splitDemandByWeight(items, sectorDemand.get(sectorId) ?? 0)) {
+      jobTitleDemand.set(id, demand);
     }
   }
   return jobTitleDemand;

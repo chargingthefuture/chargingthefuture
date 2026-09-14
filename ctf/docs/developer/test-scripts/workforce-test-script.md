@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting |
 
 ## How to run this
 
@@ -263,6 +263,29 @@ read it.
 **Expected:** None exist — Workforce is read-only and recruited derives live, so there is nothing to
 recompute, sync, or export, and occupations are read from Skills Taxonomy (no occupation write
 surface). The only admin write is the config save.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WF-A4 · Per-occupation demand follows the weight, and is still even without one (added 2026-09-14)
+**Role:** admin · **Surfaces:** web
+**Precondition:** know one sector and at least two of the occupations under it.
+**Steps:**
+1. Open the per-occupation training-gap view (Occupations, or the training-gaps panel) and note the
+   demand target of two occupations in the **same** sector.
+2. With no weight set on either, confirm the two targets match — the even split is still what an
+   unweighted sector produces, and this is the check that the weight column changed nothing on its
+   own.
+3. Have a `setOccupationWorkforceShare` entry applied for one of them (appended to
+   `ctf/scripts/lib/taxonomyChange.mjs`, then the owner-run seed-skills-taxonomy workflow). Use a
+   weight of 3 against its unweighted sibling's implicit 1.
+4. Reload the view and compare the two targets again.
+5. Check the sector's own total across all its occupations before and after.
+**Expected:** Before any weight, the occupations in a sector share one figure. After the weight
+applies, the weighted occupation carries about three times its unweighted sibling, and the sector's
+total across its occupations is unchanged — the weight redistributes a sector's demand, it does not
+add to it. Nothing is recomputed or backfilled: per-occupation demand is derived live on every read,
+so the new figure appears on the next page load with no job to run. A weight can only arrive through
+the change list; there is **no** admin control for it anywhere on this surface, and adding one would
+re-open the ungoverned write path removed on 2026-08-28.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

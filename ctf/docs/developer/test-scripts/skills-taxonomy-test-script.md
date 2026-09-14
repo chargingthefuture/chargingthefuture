@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale) |
 
 ## How to run this
 
@@ -177,6 +177,28 @@ against the live name, or rename one of the two so the difference is legible. A 
 deactivated still blocks, and is labeled `(deactivated)` in the message. Changes below id 80 are not
 guarded and replay exactly as before — change 1 is itself the historical `Marketing Specialist` twin, and
 guarding it would stop the list replaying into a fresh database.
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5c · An occupation weight applies, and a weight without a rationale never ships (added 2026-09-14)
+**Role:** admin (whoever starts the apply workflow) · **Surfaces:** n/a — the change list and the apply run
+**Steps:**
+1. Append a `setOccupationWorkforceShare` entry naming a live sector and occupation, with a `share`
+   and a `rationale` saying where the number came from. Run `pnpm --dir ctf run check:taxonomy-changes`.
+2. Temporarily drop the `rationale`, re-run the check, then put it back.
+3. Temporarily set `share` to a negative number, re-run the check, then put it back.
+4. Start the `Skills Taxonomy — Apply Changes (production)` workflow and read the run output.
+5. Re-run the same apply a second time without changing anything.
+6. Open the Workforce per-occupation view (WF-A4) and compare that occupation against an unweighted
+   sibling in the same sector.
+**Expected:** The valid entry passes the check. Without a rationale the check **fails** and says an
+unsourced weight is worse than the even split it replaces — this is the guard that stops a weight
+list being filled in wholesale by anybody who cannot say where the numbers came from, so it must
+fail. A negative share fails too. The apply run reports the weight set and names the previous value;
+a second run of the same entry reports it as a no-op rather than writing again. Nothing is
+recomputed or backfilled — per-occupation demand is derived live on read — so the Workforce figure
+moves on the next page load. The audit row for the change records `action: 'update'` with the weight
+detail in its reason and metadata; it is **not** a new action verb, because that column is
+check-constrained and an unlisted verb is rejected at apply time and rolls the whole run back.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app

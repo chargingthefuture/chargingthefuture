@@ -65,7 +65,7 @@ async function listJobTitleNames(client, sectorId) {
 
 async function findJobTitle(client, sectorId, name) {
   const result = await client.query(
-    `SELECT id, is_active FROM skills_taxonomy_job_titles
+    `SELECT id, is_active, workforce_share::text AS workforce_share FROM skills_taxonomy_job_titles
       WHERE sector_id = $1 AND lower(name) = lower($2) LIMIT 1`,
     [sectorId, name],
   );
@@ -215,6 +215,7 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
     reparents: 0,
     deactivations: 0,
     reactivations: 0,
+    weightsSet: 0,
     proposalsMarkedPromoted: 0,
     directoryProposalsMarkedPromoted: 0,
     directorySkillsAutoAttached: 0,
@@ -638,6 +639,44 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
             reason: `change ${op.id}: reactivateOccupation`, metadata: meta,
           });
           summary.reactivations += 1;
+          summary.applied += 1;
+          break;
+        }
+
+        // Set the occupation's demand weight against its siblings in the sector. Writing the weight
+        // is all this does — nothing is recomputed here, because per-occupation demand is derived
+        // live on every read of the workforce model rather than stored anywhere.
+        case 'setOccupationWorkforceShare': {
+          const sector = normalizeTaxonomyName(op.sector);
+          const sectorId = await findSectorIdByName(client, sector);
+          if (!sectorId) {
+            summary.missingSectors.push(`${sector} (change ${op.id})`);
+            break;
+          }
+          const jobTitle = await findJobTitle(client, sectorId, normalizeTaxonomyName(op.occupation));
+          if (!jobTitle) {
+            summary.missingTargets.push(`occupation "${op.occupation}" in ${sector} (change ${op.id})`);
+            break;
+          }
+          const current = jobTitle.workforce_share === null ? null : Number.parseFloat(jobTitle.workforce_share);
+          if (current !== null && Number.isFinite(current) && current === op.share) {
+            summary.noops += 1;
+            break;
+          }
+          await client.query(
+            `UPDATE skills_taxonomy_job_titles SET workforce_share = $2, updated_at = NOW() WHERE id = $1`,
+            [jobTitle.id, op.share],
+          );
+          // 'update', not a new verb: skills_taxonomy_change_events.action is check-constrained to
+          // create/update/delete/rename/reparent/deactivate/reactivate, and a value outside it is
+          // rejected at apply time and rolls the whole run back. The specificity belongs in reason
+          // and metadata, which is what they are for.
+          await recordChangeEvent(client, {
+            targetType: 'job-title', targetId: jobTitle.id, action: 'update',
+            reason: `change ${op.id}: setOccupationWorkforceShare to ${op.share} — ${op.rationale}`,
+            metadata: { ...meta, change: 'workforce-share', previousShare: current, share: op.share },
+          });
+          summary.weightsSet += 1;
           summary.applied += 1;
           break;
         }
