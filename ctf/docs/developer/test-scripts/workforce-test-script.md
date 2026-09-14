@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, rate ladder, five routes) |
 
 ## How to run this
 
@@ -48,6 +48,10 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    — it is read-only (the only member write is the service-scoped delete). → web ☐ mobile ☐
 4. **Empty state is handled.** If there are no sectors/occupations and no Directory members, the
    screen shows a clear empty state, not a broken or blank panel. → web ☐ mobile ☐
+5. **What's your 1%? shows your own figures.** Open the last tab, "What's your 1%?". It shows a
+   card with your initials, your name, and the skills from your Directory listing; a line reading
+   50,000 people; a rate table whose first row is $5 → $250,000; and five routes, each a link to a
+   part of the app. Nobody else's card is anywhere on the screen. → web ☐ mobile ☐
 
 ---
 
@@ -224,6 +228,34 @@ The header and tab row stay pinned to the top while the content moves under them
 preview offers a **Full Page** option and it captures the screen all the way to the bottom of the
 content, not just the one screenful that was visible. This is checked on every view because each one
 used to carry its own scrolling box.
+**Result:** web ☐ mobile ☐ — notes:
+
+### WF-12 · What's your 1%? — your own card, your own arithmetic
+**Role:** member · **Surfaces:** all
+**Precondition:** signed in, with a claimed Directory listing carrying at least one skill. Run step 6
+with a second account that has no claimed listing.
+**Steps:**
+1. Open Workforce and scroll the tab row to its end. The last tab reads "What's your 1%?".
+2. Read the card: initials in the avatar box, your first and last name, your occupation, and your
+   skills as chips.
+3. Cross-check the chips against your Directory listing — same skills, same order, including any
+   skill you added yourself that is not in the shared catalog.
+4. Read the rate table. Confirm the rows are $5 / $20 / $50 / $100 / $250 per person per year, that
+   the middle column reads $250,000 / $1,000,000 / $2,500,000 / $5,000,000 / $12,500,000, and that
+   the first row's third column reads 3.5×.
+5. Click each of the five route links in turn (Foundation, Foundation, PeerProgramming, SkillUp,
+   Knowledge Library). Each one opens that part of the app — none 404s.
+6. Sign in as an account with no claimed Directory listing and open the same tab.
+7. Sign out entirely and try to reach the tab.
+**Expected:** The card is yours and only yours — no other member's name, initials or skills appear
+anywhere on the screen, and there is no control for looking somebody else up. The figures are the
+same for everybody (50,000 people; the ladder above); only the card differs. The closing paragraph
+says the figures are speculative and not a forecast of anybody's earnings. On an account with no
+claimed listing (step 6) the card is replaced by "Your card is not built yet" and a link to the
+Directory, and the table and routes still render — the arithmetic does not depend on the listing.
+Signed out (step 7), the tab is not reachable; the app asks for a sign-in rather than showing an
+empty card. Nothing on this screen is editable and nothing is saved — reopening shows the same
+figures, recomputed.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

@@ -4,6 +4,11 @@
 // the whole repository is prohibited. Enforced by ctf/scripts/check-plugin-boundaries.mjs.
 export {
   countActiveDirectoryProfiles,
+  // The signed-in member's own claimed Directory profile. Workforce reads it for the What's Your
+  // 1% card, which shows a member their own name, occupation and skills and nobody else's. Added
+  // 2026-09-14: the card is built from the Directory's own listing rather than a second copy of a
+  // member's skills, so there is one place a skill is recorded and the card cannot drift from it.
+  getOwnProfile,
   // Asks whether a Quora URL is on Directory's takedown list. SkillsHunt reads it so a nomination
   // of someone who asked to be removed is refused up front, rather than accepted and paid for.
   isQuoraUrlSuppressed,

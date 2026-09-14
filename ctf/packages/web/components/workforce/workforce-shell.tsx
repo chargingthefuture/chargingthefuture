@@ -19,11 +19,12 @@ import { WorkforceTrainingGaps } from './workforce-training-gaps';
 import { WorkforceBucketDrilldown } from './workforce-bucket-drilldown';
 import { WorkforceOccupations } from './workforce-occupations';
 import { WorkforceCommunityPlanning } from './workforce-community-planning';
+import { WorkforceOnePercent } from './workforce-one-percent';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { RefreshButton } from '@/components/shared/refresh-button';
 
-type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations' | 'community-planning';
+type SidebarView = 'overview' | 'sector' | 'skill-level' | 'occupations' | 'community-planning' | 'one-percent';
 
 interface WorkforceData {
   dashboard: WorkforceDashboard | null;
@@ -396,6 +397,8 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     <WorkforceOccupations />
   ) : view === 'community-planning' ? (
     <WorkforceCommunityPlanning />
+  ) : view === 'one-percent' ? (
+    <WorkforceOnePercent t={t} />
   ) : (
     <WorkforceDashboardContent
       t={t}
@@ -414,6 +417,10 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
       { key: 'skill-level', label: 'Skill Level' },
       { key: 'occupations', label: 'Occupations' },
       { key: 'community-planning', label: 'Community' },
+      // Last on the rail on purpose (owner decision, 2026-09-14). Every tab before it answers what
+      // the population looks like; this one answers what the member reading it could do, so it
+      // reads as the question the others build up to.
+      { key: 'one-percent', label: "What's your 1%?" },
     ];
     // The whole document scrolls here, like every other screen: the shell is only
     // *at least* one viewport tall and nothing inside it owns a scrollbar. Pinning the
