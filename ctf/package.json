@@ -29,6 +29,7 @@
     "seed:what-works": "node ./scripts/seedWhatWorks.mjs",
     "seed:recurring-activity": "node ./scripts/seedRecurringActivityPhase0.mjs",
     "seed:mutual-time": "node ./scripts/seedMutualTime.mjs",
+    "seed:ti-radio": "node ./scripts/seedTiRadioPhase0.mjs",
     "migrate:file": "node ./scripts/runMigrationFile.mjs",
     "migrate:schema": "node ./scripts/runMigrationFile.mjs --file=./schema.sql",
     "migrate:demo-schema": "node ./scripts/migrateToDemo.mjs",

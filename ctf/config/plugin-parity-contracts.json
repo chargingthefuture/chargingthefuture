@@ -152,6 +152,12 @@
       "requiresExplicitWebShell": false
     },
     {
+      "slug": "ti-radio",
+      "mobileFeatureDirs": [],
+      "requiresMobileSurface": false,
+      "requiresExplicitWebShell": true
+    },
+    {
       "slug": "mutual-time",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,

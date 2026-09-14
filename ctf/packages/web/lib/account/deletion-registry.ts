@@ -660,6 +660,19 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'ti-radio',
+    name: 'TI Radio',
+    dataSummary: 'The slots you booked to host a discussion, and what you said each one was about.',
+    serviceScopeSupported: true,
+    tables: [
+      del('ti_radio_slots', 'host_user_id', 'Your booked slots, including ones you released or an admin removed.'),
+      // Audit rows are kept the way every plugin keeps them: they record that a command ran, not
+      // what was said. The row names an actor id and a slot id, which is what makes a removal
+      // answerable for afterwards.
+      retain('ti_radio_admin_audit_trail', 'Command audit trail; records that a booking, release, or removal happened.'),
+    ],
+  },
+  {
     slug: 'what-works',
     name: 'WhatWorks',
     dataSummary: 'Your endorsements of tools on the shared list.',
