@@ -17,7 +17,12 @@
 //
 // One string, shared, because two surfaces making the same promise in different words is how one of
 // them ends up implying an endorsement the other disclaims. Plain copy with no plugin imports, so
-// either capability can read it without crossing a boundary (rule 112).
+// any capability can read it without crossing a boundary (rule 112).
+//
+// It lives in @ctf/shared rather than in the web package because Chyme is on the Android keep-list
+// (rule 105) and the native room carries the same statement. A copy pasted into the mobile package
+// would be a second wording free to drift from this one — the exact failure this file exists to
+// prevent — so the string crosses the package boundary instead of the text being retyped.
 
 /** The endorsement disclaimer, for any surface that publishes who is hosting. */
 export const HOSTING_NOT_ENDORSEMENT =

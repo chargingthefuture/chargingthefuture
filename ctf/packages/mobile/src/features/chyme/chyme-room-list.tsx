@@ -22,6 +22,7 @@ import {
   View,
 } from 'react-native';
 import { Radio } from 'lucide-react-native';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 import { type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 
@@ -138,6 +139,11 @@ export const ChymeRoomList: React.FC<Props> = ({
             </Text>
           </View>
         )}
+        {/* Same statement as both web surfaces, from the one string in @ctf/shared rather than a
+            copy typed in here — a second wording would be free to drift, and this is exactly the
+            promise that must not say different things in different places. Under the list so it
+            reads as a note about what the list is, not as a warning about the room above it. */}
+        <Text style={styles.disclaimer}>{HOSTING_NOT_ENDORSEMENT_SHORT}</Text>
       </ScrollView>
     </View>
   );
@@ -258,5 +264,6 @@ function makeStyles(t: ThemeTokens, accent: string) {
     roomMetaText: { fontSize: 12, color: pick(t.isComic, t.textSecondary, '#16A34A'), fontFamily: interFamily('400') },
     upcomingPlaceholder: { paddingVertical: 24, alignItems: 'center' },
     upcomingText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22, fontFamily: interFamily('400') },
+    disclaimer: { fontSize: 11, color: t.textSecondary, lineHeight: 17, marginTop: 14, fontFamily: interFamily('400') },
   });
 }

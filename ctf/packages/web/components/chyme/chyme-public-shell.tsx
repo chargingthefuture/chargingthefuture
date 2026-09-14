@@ -8,7 +8,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
-import { HOSTING_NOT_ENDORSEMENT_SHORT } from 'lib/shared/hosting-disclaimer';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
 // /api/chyme/public/room. `credentials` is present only when the room is live

@@ -8,7 +8,7 @@ import { ChymeLiveShell, type ChymeRoomScope } from '@/components/chyme/chyme-li
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
-import { HOSTING_NOT_ENDORSEMENT_SHORT } from 'lib/shared/hosting-disclaimer';
+import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 type ChymeShellProps = {
   currentUser: {

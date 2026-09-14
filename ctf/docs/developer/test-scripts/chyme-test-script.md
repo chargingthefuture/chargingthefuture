@@ -49,11 +49,15 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 6. **A host is not endorsed, signed in.** Open Chyme as a member. The same statement sits under the
    rooms rail, above the room you are in. A member reads the same public TI Radio schedule, so the
    signed-in view must not be the one screen that omits it. → web ☐ mobile ☐ android ☐
-7. **The three wordings agree.** Compare the line on the Chyme signed-out card, the Chyme signed-in
-   view, and the TI Radio guide's intro card. All three read from `lib/shared/hosting-disclaimer.ts`
-   (the guide uses the long form, Chyme the short one). If any of them says something the others do
-   not, somebody has inlined a copy and they will drift. None of them may claim the room is
-   moderated, screened or safe — that is a claim the product cannot back. → web ☐ mobile ☐ android ☐
+7. **A host is not endorsed, on Android.** Open Chyme in the Android app and read under the room
+   list. The same statement is there. Chyme is on the keep-list, so this surface is not covered by
+   "web-only" and must not be the one that omits it. → web ☐ mobile ☐ android ☐
+8. **All four wordings agree.** Compare the line on the Chyme signed-out card, the Chyme signed-in
+   view, the Android room list, and the TI Radio guide's intro card. All four read from
+   `@ctf/shared` (`packages/shared/src/copy/hosting-disclaimer.ts`) — the guide uses the long form,
+   Chyme the short one. If any of them says something the others do not, somebody has inlined a copy
+   and they will drift. None of them may claim the room is moderated, screened or safe — that is a
+   claim the product cannot back. → web ☐ mobile ☐ android ☐
 
 ---
 

@@ -13,7 +13,7 @@ import {
   TI_RADIO_SPACE_LABEL,
   TI_RADIO_SPACE_URL,
 } from 'lib/ti-radio/constants';
-import { HOSTING_NOT_ENDORSEMENT } from 'lib/shared/hosting-disclaimer';
+import { HOSTING_NOT_ENDORSEMENT } from '@ctf/shared';
 import type { TiRadioGuide, TiRadioGuideSlot } from 'lib/ti-radio/types';
 import { TiRadioHostForm } from './ti-radio-host-form';
 import { TiRadioSlotRow } from './ti-radio-slot-row';
