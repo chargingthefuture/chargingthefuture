@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   computeOnePercentRateLadder,
   computeOnePercentReach,
+  computeOwnEstimate,
+  computeTradeLoad,
   initialsFor,
   ONE_PERCENT_ROUTES,
 } from './one-percent';
@@ -79,5 +81,57 @@ describe('initialsFor', () => {
   it('copes with a missing last name rather than rendering an empty avatar', () => {
     expect(initialsFor('Ada', null)).toBe('A');
     expect(initialsFor('  ', null)).toBe('?');
+  });
+});
+
+describe('computeTradeLoad', () => {
+  const reach = computeOnePercentReach();
+
+  // The weight that makes this screen per-person. Two trades the model needs different numbers of
+  // land on different figures, which is the whole reason it is derived from the demand model rather
+  // than shown as one ladder to everybody.
+  it('inverts the demand model into people served by one practitioner', () => {
+    const load = computeTradeLoad({ occupationName: 'Plumber', practitionersNeeded: 4_000, reach });
+    expect(load?.peoplePerPractitioner).toBe(1_250);
+    expect(load?.multipleOfNaturalLoad).toBe(40);
+  });
+
+  it('separates a trade the model needs more of from one it needs fewer of', () => {
+    const many = computeTradeLoad({ occupationName: 'Nurse', practitionersNeeded: 20_000, reach });
+    const few = computeTradeLoad({ occupationName: 'Surveyor', practitionersNeeded: 500, reach });
+    expect(many?.peoplePerPractitioner).toBe(250);
+    expect(few?.peoplePerPractitioner).toBe(10_000);
+    expect(many!.multipleOfNaturalLoad).toBeGreaterThan(few!.multipleOfNaturalLoad);
+  });
+
+  // No claimed occupation, or an occupation carrying no demand, has no honest figure behind it.
+  // Returning null makes the screen say so instead of printing Infinity or inventing a number.
+  it('returns nothing rather than a guess when there is no occupation or no demand', () => {
+    expect(computeTradeLoad({ occupationName: null, practitionersNeeded: 4_000, reach })).toBeNull();
+    expect(computeTradeLoad({ occupationName: 'Plumber', practitionersNeeded: 0, reach })).toBeNull();
+  });
+});
+
+describe('computeOwnEstimate', () => {
+  const reach = computeOnePercentReach();
+
+  it('multiplies what you charge by how often one person needs you', () => {
+    const row = computeOwnEstimate(reach, 200, 0.5);
+    expect(row?.ratePerPersonUsd).toBe(100);
+    expect(row?.annualUsd).toBe(5_000_000);
+  });
+
+  // A trade called once every few years must stay expressible. Rounding it to zero jobs a year
+  // would silently erase exactly the trades this input exists for.
+  it('keeps a trade engaged less than once a year expressible', () => {
+    const row = computeOwnEstimate(reach, 1_000, 0.1);
+    expect(row?.ratePerPersonUsd).toBe(100);
+    expect(row?.annualUsd).toBe(5_000_000);
+  });
+
+  it('returns nothing for absent or nonsensical input rather than a zero row', () => {
+    expect(computeOwnEstimate(reach, 0, 2)).toBeNull();
+    expect(computeOwnEstimate(reach, 200, 0)).toBeNull();
+    expect(computeOwnEstimate(reach, Number.NaN, 2)).toBeNull();
   });
 });

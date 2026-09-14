@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, rate ladder, five routes) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) |
 
 ## How to run this
 
@@ -50,8 +50,10 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    screen shows a clear empty state, not a broken or blank panel. → web ☐ mobile ☐
 5. **What's your 1%? shows your own figures.** Open the last tab, "What's your 1%?". It shows a
    card with your initials, your name, and the skills from your Directory listing; a line reading
-   50,000 people; a rate table whose first row is $5 → $250,000; and five routes, each a link to a
-   part of the app. Nobody else's card is anywhere on the screen. → web ☐ mobile ☐
+   50,000 people; a "What your trade normally carries" block naming your occupation and how many
+   people one of you serves; two inputs for your own rate and frequency; a reference table whose
+   first row is $5 → $250,000; and five routes, each a link to a part of the app. Nobody else's
+   card is anywhere on the screen. → web ☐ mobile ☐
 
 ---
 
@@ -245,17 +247,27 @@ with a second account that has no claimed listing.
    the first row's third column reads 3.5×.
 5. Click each of the five route links in turn (Foundation, Foundation, PeerProgramming, SkillUp,
    Knowledge Library). Each one opens that part of the app — none 404s.
-6. Sign in as an account with no claimed Directory listing and open the same tab.
-7. Sign out entirely and try to reach the tab.
+6. Read the "What your trade normally carries" block. Note the occupation it names and the
+   people-served figure. Sign in as a second account whose Directory listing carries an occupation
+   in a **different sector**, open the same tab, and compare — the figures must differ. Two
+   occupations in the **same** sector will currently match; that is the taxonomy's even split
+   within a sector (inventory Gaps item 2), not a bug to file.
+7. Type a rate and a frequency into "Your own numbers" — try 250 and 0.5. A result box appears
+   showing $125 per person per year and $6,250,000. Clear either field; the box disappears. Enter
+   0 or a negative number in either; no box appears and nothing errors.
+8. Reload the page. The two numbers you typed are gone — they are not saved anywhere.
+9. Sign in as an account with no claimed Directory listing and open the same tab.
+10. Sign out entirely and try to reach the tab.
 **Expected:** The card is yours and only yours — no other member's name, initials or skills appear
-anywhere on the screen, and there is no control for looking somebody else up. The figures are the
-same for everybody (50,000 people; the ladder above); only the card differs. The closing paragraph
-says the figures are speculative and not a forecast of anybody's earnings. On an account with no
-claimed listing (step 6) the card is replaced by "Your card is not built yet" and a link to the
-Directory, and the table and routes still render — the arithmetic does not depend on the listing.
-Signed out (step 7), the tab is not reachable; the app asks for a sign-in rather than showing an
-empty card. Nothing on this screen is editable and nothing is saved — reopening shows the same
-figures, recomputed.
+anywhere on the screen, and there is no control for looking somebody else up. The 1% headline
+(50,000 people) and the reference ladder are the same for everybody; the trade block and your own
+numbers are not, which is the point of the tab. The closing paragraph says the figures are
+speculative and not a forecast of anybody's earnings. On an account with no claimed listing (step 9)
+the card is replaced by "Your card is not built yet" and a link to the Directory, the trade block is
+absent entirely rather than showing a stand-in figure, and the inputs, table and routes still render
+— the arithmetic does not depend on the listing. Signed out (step 10), the tab is not reachable; the
+app asks for a sign-in rather than showing an empty card. Nothing on this screen is saved: the two
+numbers you type live in the browser only and are gone on reload, and everything else recomputes.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

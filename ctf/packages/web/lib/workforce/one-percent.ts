@@ -176,3 +176,90 @@ export function initialsFor(firstName: string, lastName: string | null): string 
   const last = (lastName ?? '').trim().charAt(0).toUpperCase();
   return `${first}${last}` || '?';
 }
+
+/**
+ * What one practitioner of a trade naturally serves, and how far 1% is beyond it.
+ *
+ * The first version of this screen showed every member the same figures. That contradicted its own
+ * premise: it claims to be about the person reading it, and two people with different trades listed
+ * were handed an identical answer. A trade needs a weight, and the weight has to be real.
+ *
+ * The app already holds one. The demand model says how many practitioners of an occupation a
+ * population of this size needs — `WorkforceOccupation.target`, computed from the sector's
+ * `workforce_share` against the working population. Invert it and you get the number this screen
+ * wants: how many people one practitioner of that trade serves when the trade is staffed normally.
+ * A trade the model needs many of serves fewer people each; a trade it needs few of serves more.
+ *
+ * Nothing is invented here. Every input is a figure the Workforce overview already computes and
+ * already shows, which is why this is derived rather than tabulated: authoring a frequency number
+ * for each of ~650 occupations would be exactly the plausible-but-wrong data this module avoids.
+ *
+ * Known limit, and it is the taxonomy's rather than this function's: Skills Taxonomy carries a
+ * `workforce_share` per sector but no weight per job title, so a sector's demand is split evenly
+ * across its occupations (recorded as Gaps item 2 in the Workforce inventory). So this separates
+ * trades in different sectors — a clinician and a plumber land in different places — but two
+ * occupations inside one sector currently share a figure. A per-job-title weight upstream would
+ * sharpen this without changing anything here.
+ */
+export type OnePercentTradeLoad = {
+  occupationName: string;
+  /** How many of this trade the model says a population this size needs. */
+  practitionersNeeded: number;
+  /** People served by one practitioner when the trade is staffed to that number. */
+  peoplePerPractitioner: number;
+  /** How many times that natural load reaching 1% would be. The stretch the routes exist to cover. */
+  multipleOfNaturalLoad: number;
+};
+
+export function computeTradeLoad(input: {
+  occupationName: string | null;
+  practitionersNeeded: number;
+  reach: OnePercentReach;
+}): OnePercentTradeLoad | null {
+  const { occupationName, practitionersNeeded, reach } = input;
+  // No claimed occupation, or an occupation the model carries no demand for, means there is no
+  // honest figure to show. The screen says so rather than printing a divide-by-zero or a guess.
+  if (!occupationName || practitionersNeeded <= 0 || reach.population <= 0) {
+    return null;
+  }
+  const peoplePerPractitioner = Math.round(reach.population / practitionersNeeded);
+  return {
+    occupationName,
+    practitionersNeeded,
+    peoplePerPractitioner,
+    multipleOfNaturalLoad:
+      peoplePerPractitioner > 0
+        ? Math.round((reach.peopleReached / peoplePerPractitioner) * 10) / 10
+        : 0,
+  };
+}
+
+/**
+ * The member's own figure, from the two numbers only they can supply.
+ *
+ * The ladder above is a reading device — find the row nearest what you charge. This is the row a
+ * member writes themselves, and it carries the second weight the trade needs: how often one person
+ * needs you in a year. A trade called once every few years and a trade called monthly cannot share
+ * a rate, and no table in this app knows which is which. The member does, so the member enters it.
+ *
+ * `jobsPerPersonPerYear` is deliberately a rate rather than a count, so a trade engaged less than
+ * once a year is expressible (0.5 is once every two years) instead of rounding to nothing.
+ */
+export function computeOwnEstimate(
+  reach: OnePercentReach,
+  ratePerJobUsd: number,
+  jobsPerPersonPerYear: number,
+): OnePercentRateRow | null {
+  if (!Number.isFinite(ratePerJobUsd) || !Number.isFinite(jobsPerPersonPerYear)) return null;
+  if (ratePerJobUsd <= 0 || jobsPerPersonPerYear <= 0) return null;
+  const ratePerPersonUsd = Math.round(ratePerJobUsd * jobsPerPersonPerYear);
+  const annualUsd = Math.round(ratePerJobUsd * jobsPerPersonPerYear * reach.peopleReached);
+  return {
+    ratePerPersonUsd,
+    annualUsd,
+    multipleOfAverageEarnings:
+      reach.averageEarningsUsd > 0
+        ? Math.round((annualUsd / reach.averageEarningsUsd) * 10) / 10
+        : 0,
+  };
+}

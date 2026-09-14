@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { WorkforceTokens } from './workforce-shared';
+import { computeOwnEstimate } from '@/lib/workforce/one-percent';
 import type {
   OnePercentCard,
   OnePercentRateRow,
   OnePercentReach,
   OnePercentRoute,
+  OnePercentTradeLoad,
 } from '@/lib/workforce/one-percent';
 
 // What's Your 1% — the last tab on Workforce, and the only one about the member reading it.
@@ -22,6 +24,7 @@ import type {
 type Payload = {
   card: OnePercentCard;
   reach: OnePercentReach;
+  tradeLoad: OnePercentTradeLoad | null;
   ladder: OnePercentRateRow[];
   routes: OnePercentRoute[];
 };
@@ -120,6 +123,121 @@ function Card({ card, t }: { card: OnePercentCard; t: WorkforceTokens }) {
   );
 }
 
+function TradeLoad({ load, reach, t }: { load: OnePercentTradeLoad; reach: OnePercentReach; t: WorkforceTokens }) {
+  return (
+    <div style={{ marginTop: 24, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 14, padding: 18 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: t.TEXT, margin: '0 0 8px' }}>
+        What your trade normally carries
+      </h3>
+      <p style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, margin: 0 }}>
+        A population of {reach.population.toLocaleString('en-US')} needs about{' '}
+        <strong>{load.practitionersNeeded.toLocaleString('en-US')}</strong> people doing what you do
+        ({load.occupationName}). Staffed to that number, one of you serves about{' '}
+        <strong>{load.peoplePerPractitioner.toLocaleString('en-US')} people</strong>.
+      </p>
+      <p style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, margin: '10px 0 0' }}>
+        Your 1% is {reach.peopleReached.toLocaleString('en-US')} — about{' '}
+        <strong>{load.multipleOfNaturalLoad}×</strong> that. Which is the honest size of the thing,
+        and it is why the routes below exist: that many is not reachable one job at a time.
+      </p>
+      <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '12px 0 0' }}>
+        This comes from the same demand model as the Overview tab, so it differs by trade rather than
+        being one figure shown to everybody. Within a single sector the model currently splits demand
+        evenly across occupations, so two trades in the same sector share a number until the skills
+        map carries a weight for each one.
+      </p>
+    </div>
+  );
+}
+
+function OwnEstimate({ reach, t }: { reach: OnePercentReach; t: WorkforceTokens }) {
+  const [rate, setRate] = useState('');
+  const [frequency, setFrequency] = useState('');
+
+  const row = useMemo(
+    () => computeOwnEstimate(reach, Number.parseFloat(rate), Number.parseFloat(frequency)),
+    [reach, rate, frequency],
+  );
+
+  const field: React.CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+    background: t.BG,
+    border: `1px solid ${t.BORDER}`,
+    borderRadius: 8,
+    color: t.TEXT,
+    fontSize: 14,
+    padding: '9px 10px',
+  };
+  const label: React.CSSProperties = { fontSize: 12, color: t.MUTED, display: 'block', marginBottom: 5 };
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: t.TEXT, margin: '0 0 6px' }}>
+        Your own numbers
+      </h3>
+      <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 14px' }}>
+        How often one person needs you is the part no table in this app knows, and it is different
+        for every trade — a job somebody calls for once every few years is not the same as one they
+        come back for monthly. You know yours. Nothing here is saved or sent anywhere.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <label style={label} htmlFor="one-percent-rate">
+            What you charge for one job ($)
+          </label>
+          <input
+            id="one-percent-rate"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            placeholder="250"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            style={field}
+          />
+        </div>
+        <div style={{ flex: '1 1 150px', minWidth: 0 }}>
+          <label style={label} htmlFor="one-percent-frequency">
+            Times one person needs you a year
+          </label>
+          <input
+            id="one-percent-frequency"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0.5"
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value)}
+            style={field}
+          />
+        </div>
+      </div>
+      <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '8px 0 0' }}>
+        Less than once a year is fine — 0.5 is once every two years, 0.1 is once a decade.
+      </p>
+      {row && (
+        <div
+          aria-live="polite"
+          style={{ marginTop: 14, background: t.SURFACE, border: `1px solid ${t.ACCENT}`, borderRadius: 12, padding: 16 }}
+        >
+          <div style={{ fontSize: 12, color: t.MUTED }}>
+            {usd(row.ratePerPersonUsd)} per person per year, across{' '}
+            {reach.peopleReached.toLocaleString('en-US')} people
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: t.TEXT, marginTop: 4 }}>
+            {usd(row.annualUsd)}
+          </div>
+          <div style={{ fontSize: 12, color: t.MUTED, marginTop: 4 }}>
+            {row.multipleOfAverageEarnings}× the even-split average earnings
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Ladder({ reach, ladder, t }: { reach: OnePercentReach; ladder: OnePercentRateRow[]; t: WorkforceTokens }) {
   return (
     <div style={{ marginTop: 24 }}>
@@ -127,8 +245,8 @@ function Ladder({ reach, ladder, t }: { reach: OnePercentReach; ladder: OnePerce
         Reading it backwards
       </h3>
       <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 14px' }}>
-        Pick the row closest to what you already charge one person, once, in a year. The column on
-        the right is that rate across {reach.peopleReached.toLocaleString('en-US')} people.
+        The same arithmetic at round numbers, if you would rather read it off than type yours in.
+        The right-hand column is that rate across {reach.peopleReached.toLocaleString('en-US')} people.
       </p>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 340 }}>
@@ -229,7 +347,7 @@ export function WorkforceOnePercent({ t }: { t: WorkforceTokens }) {
     return <div style={{ padding: 20, fontSize: 13, color: t.MUTED }}>Loading…</div>;
   }
 
-  const { card, reach, ladder, routes } = data;
+  const { card, reach, tradeLoad, ladder, routes } = data;
 
   return (
     <div style={{ padding: '20px 16px 48px' }}>
@@ -237,12 +355,15 @@ export function WorkforceOnePercent({ t }: { t: WorkforceTokens }) {
         What&rsquo;s your 1%?
       </h2>
       <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 20px' }}>
-        One percent of the five million estimate is{' '}
+        One percent of the {reach.population.toLocaleString('en-US')} estimate is{' '}
         <strong style={{ color: t.TEXT }}>{reach.peopleReached.toLocaleString('en-US')} people</strong>.
-        This is yours alone — nobody else sees it, and you see nobody else&rsquo;s.
+        What that means depends on your trade, so the figures below are worked from the skills on
+        your own listing. This is yours alone — nobody else sees it, and you see nobody else&rsquo;s.
       </p>
 
       <Card card={card} t={t} />
+      {tradeLoad && <TradeLoad load={tradeLoad} reach={reach} t={t} />}
+      <OwnEstimate reach={reach} t={t} />
       <Ladder reach={reach} ladder={ladder} t={t} />
       <Routes routes={routes} t={t} />
 
