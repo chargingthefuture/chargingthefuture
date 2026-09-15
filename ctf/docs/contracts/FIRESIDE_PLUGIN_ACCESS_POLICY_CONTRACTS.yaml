@@ -103,6 +103,18 @@ policies:
       The second of two keys. Approving publishes nothing by itself — the author's own opt-in still
       has to be on when the copy is made. Refusing is final for that comment.
   - pluginId: fireside
+    command: fireside.thread.set_closed
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Closing is not removing, and the two are kept apart the same way moderation and approval are.
+      A closed thread keeps every comment under it, publicly readable, and refuses only new ones.
+      Reversible through the same route, so an early close does not need database access to undo.
+      Audited in both directions.
+  - pluginId: fireside
     command: fireside.admin.comments.read
     version: 1.0.0
     requiredRoles: [admin]
