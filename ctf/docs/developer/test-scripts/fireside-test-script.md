@@ -194,10 +194,21 @@ Result: web ☐
 3. Ask an admin to try to restore it.
 
 **Expected:**
-- The words are gone. The reply underneath is still there and still attached — the row is kept for exactly that reason.
+- It asks before doing anything, and says what cannot be undone: nobody can put the words back, and
+  anything already copied into the blog's build stays there. Canceling leaves the comment alone.
+- The words are gone from the conversation. The reply underneath is still there and still attached —
+  the row is kept for exactly that reason.
 - Signed out, neither the comment nor its text appears.
-- The author sees it on their own screen labeled as taken down by them.
+- The author sees it on their own screen labeled as taken down by them, **with what they wrote**,
+  struck through and marked as their own copy. A row that reads only "Withdrawn." is the failure
+  this case was extended to catch.
+- Request `/api/fireside/threads` for that post, signed out and signed in as the author. The text
+  is in neither response. The author's copy comes back only from `/api/fireside/mine`.
+- Request `/api/fireside/export`. The text is not there either.
+- A comment taken down before this shipped has no copy to show, and says so rather than showing an
+  empty space.
 - An admin cannot restore a withdrawn comment. Restore is for admin removals only.
+- Delete the account afterwards: the copy goes with the row, and the author's own screen is empty.
 
 Result: web ☐
 
