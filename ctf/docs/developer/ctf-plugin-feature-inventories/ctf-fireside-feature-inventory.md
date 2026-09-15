@@ -62,6 +62,10 @@ the project controls rather than on a platform that has erased five of its accou
    copy is made, approved or not.
 11. **Your own comments in one list,** on the Fireside screen in the app, paged, each labeled live,
     held, removed or withdrawn.
+12. **A way to the blog, and a way back out.** The screen carries the standard app header with the
+    shared back control, and a link to the blog both at the top and in the empty state — the
+    conversation happens under the posts, so a member who has written nothing yet needs the route
+    there on the screen rather than in a search engine.
 
 ## Implemented Admin Features
 
@@ -214,6 +218,16 @@ member active only in Fireside is seen by being read, which is what the plugin i
   screen. A held reply does not notify late when its author is approved — that needs a hook into
   Unlock approval, which is a cross-plugin change, and it is recorded as a gap rather than
   pretended away.
+- 2026-09-14: **The Fireside screen had no header and no way to the blog.** Owner report, from the
+  shipped screen. Two separate things. It was built without `MobileScreenHeader`, so at phone width
+  — the only width this web app renders — there was no back control at all, which rule 134 forbids;
+  it now carries the same header, back chevron and top actions as every other screen. And nothing on
+  the screen linked to the blog, so a member who opened Fireside before writing anything was told to
+  "open a post on the blog" with no way to do it. A link sits beside the export-queue button and
+  again in the empty state, pointing at `FIRESIDE_BLOG_BASE` — the blog root, which
+  `FIRESIDE_BLOG_ARTICLE_BASE` is now derived from so the two addresses cannot drift apart. The
+  in-thread "Back to the post" and "Back to your comments" links are untouched: they move between
+  views inside one screen, which is not what the shared back control is for.
 
 - 2026-09-13: **Fireside added.** Owner decision. Quora deletes this project's accounts as fast as
   they are made, and its comments are neither searchable nor bookmarkable, so the conversation that

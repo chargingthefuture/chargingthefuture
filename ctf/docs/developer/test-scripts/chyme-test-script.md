@@ -42,7 +42,7 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
    public listen view (free to listen, sign in to speak), not private member data. → web ☐ mobile ☐ android ☐
 5. **A host is not endorsed, signed out, whether or not anything is live.** Open Chyme signed out
    **with no room live**. The invitation card ("Listen in for free…") says hosts book their own
-   slots, that a name is not a recommendation, and that the rules still apply in the room. Then open
+   slots, that a name is not an endorsement, and that the rules still apply in the room. Then open
    it again **while a room is live** and confirm the same line is still on screen. Both states
    matter: a visitor arriving from the TI Radio schedule usually gets here before the room starts,
    and an earlier draft showed this only once somebody was already listening. → web ☐ mobile ☐ android ☐
