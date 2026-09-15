@@ -188,16 +188,10 @@ member active only in Fireside is seen by being read, which is what the plugin i
    same-origin with CSRF and origin checks, and a credentialed cross-origin form would break
    silently for anybody whose browser blocks third-party cookies. The button hands off to the app
    instead, which is where approval, moderation and deletion already live.
-2. Both halves of the export decision are recorded and nothing reads them yet. The job that copies
-   approved, opted-in comments into the blog build is the next piece, and it belongs in `wiki-site`
-   alongside the widget. It must read `mayExportToBlog` rather than either column on its own.
-3. The author's record counts only what happened in Fireside. An account being a problem in several
 2. The app's half of the export is built and the blog's half is not. `/api/fireside/export` answers
    with the comments both keys have cleared, and nothing in `wiki-site` reads it yet, so no comment
    has actually been copied into a build. The reader belongs there alongside the widget.
-3. No general admin list of recent comments. The export queue is a screen, but removing or restoring
-   a comment outside a thread still means calling the route by id.
-4. The author's record counts only what happened in Fireside. An account being a problem in several
+3. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
 4. Closing a thread has a repository function and no route.
