@@ -308,6 +308,40 @@ Result: web ☐
 
 ---
 
+### FS-12 — The export feed answers with both keys turned, and nothing else
+
+**Role:** nobody, then admin · **Surfaces:** web (public)
+**Precondition:** Five comments from an approved member, one in each of these states: asked and
+approved, asked and not yet reviewed, asked and declined, approved and then switched back off by its
+author, and approved but since removed by an admin. Plus one asked-and-approved comment whose author
+is **not** approved in Unlock. Signed out, private window.
+
+**Steps:**
+1. Request `/api/fireside/export`.
+2. Read the response.
+3. Ask for it again with the `nextCursor` it returned, if it returned one.
+4. Request it with a cursor of `nonsense` and with `limit=99999`.
+
+**Expected:**
+- Only the asked-and-approved comment from the approved author comes back. All five other states are
+  absent — this is the case that catches a feed reading one column and walking past the other key.
+- The comment whose author asked and whose admin approved, but who then switched their own request
+  off, is not there. Consent withdrawn before the copy stops the copy.
+- Each comment carries a display name, the post it belongs under, and its text. **No user id and no
+  email appear anywhere in the response** — what this feeds is captured by web archives.
+- `scanned` can be larger than the number of comments returned. That is correct: a row refused by
+  the rule is scanned and not kept.
+- Following `nextCursor` never returns a comment twice and never skips one, including when the
+  refused rows sit at the end of a page.
+- `nextCursor` is null once the last read came back short.
+- A cursor that cannot be read is refused with a sentence saying what a cursor is, not answered from
+  the beginning as though it were absent. A limit past the ceiling is clamped rather than honored.
+- No sign-in, no 401, no 403. Reading this needs no account, the same as the conversation itself.
+
+Result: web ☐
+
+---
+
 ### FS-14 — Every part of the screen is readable
 
 **Role:** member, then admin · **Surfaces:** web

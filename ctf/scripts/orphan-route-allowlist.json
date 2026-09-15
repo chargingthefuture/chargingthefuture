@@ -174,6 +174,11 @@
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
+      "route": "/api/fireside/export",
+      "kind": "external",
+      "reason": "Called by the chargingthefuture/wiki-site build, which copies approved, opted-in Fireside comments into the blog's published build. The blog is a separate repository, so the only caller is outside this one."
+    },
+    {
       "route": "/api/foundation/admin/audit-events",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
