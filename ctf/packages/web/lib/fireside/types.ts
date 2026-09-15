@@ -101,3 +101,23 @@ export type FiresideAuthorRecord = {
   exportsRefused: number;
   exportsApproved: number;
 };
+
+/**
+ * One comment as the blog's published build receives it.
+ *
+ * Deliberately narrower than what a reader sees in the app: no reaction counts, no viewer state,
+ * no user id. What ships here is copied into a static build that web archives capture, so the
+ * shape carries only the words, who wrote them by display name, and which post they belong under.
+ * Nothing on it can be withdrawn later, by anybody, which is why two people have to agree before a
+ * comment reaches it.
+ */
+export type FiresideExportableComment = {
+  commentId: string;
+  parentCommentId: string | null;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  postRepo: string;
+  postSlug: string;
+  postTitle: string;
+};
