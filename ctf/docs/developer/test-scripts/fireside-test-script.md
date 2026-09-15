@@ -350,3 +350,37 @@ is **not** approved in Unlock. Signed out, private window.
 - No sign-in, no 401, no 403. Reading this needs no account, the same as the conversation itself.
 
 Result: web ☐
+
+---
+
+### FS-18 — Being told somebody answered you
+
+**Role:** two members and an unapproved member · **Surfaces:** web
+**Precondition:** An approved member with a comment on a post. A second approved member, and a
+third who is signed in but not yet approved.
+
+**Steps:**
+1. As the second member, reply to the first member's comment.
+2. As the first member, open the notifications feed.
+3. Press the notification.
+4. As the first member, reply to your own comment, then check your own feed again.
+5. As the unapproved member, reply to the same comment. Check the first member's feed.
+6. Approve that third member in Unlock. Check the feed again.
+7. As the second member, post a new top-level comment on the same post, not a reply.
+
+**Expected:**
+- The first member is told somebody replied. The text names no content and no person — it can land
+  on a lock screen, so it says nothing that would matter to somebody reading over a shoulder.
+- Pressing it opens that conversation, not the app home and not their own comment list.
+- Replying to your own comment tells you nothing. In a conversation that has just started this is
+  most replies, and a feed full of your own replies is a feed nobody reads.
+- The unapproved member's reply notifies nobody, because nobody else can see it yet. A notification
+  pointing at something the recipient opens and cannot find is worse than none.
+- Approving that member makes the reply appear, and **no notification arrives late**. That is the
+  current behavior and a recorded gap, not a bug to file — catching it up needs a hook into Unlock
+  approval.
+- A new top-level comment notifies nobody. It answers nobody.
+- With notifications unreachable or misconfigured, posting a reply still succeeds. The comment is
+  the thing that matters; being told is best-effort.
+
+Result: web ☐
