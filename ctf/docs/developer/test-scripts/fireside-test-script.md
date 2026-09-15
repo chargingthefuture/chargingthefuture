@@ -448,6 +448,73 @@ Result: web ☐
 
 ---
 
+### FS-16 — The admin list of every comment, and its page in the address bar
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** More than 20 comments across at least two posts, including one already removed by
+an admin and one already taken down by its author.
+
+**Steps:**
+1. Open the Fireside screen as an admin and press Recent comments.
+2. Read the first page, then page forward.
+3. Look at the address bar. Copy the link, open it in a new tab.
+4. Press the browser back button.
+5. Edit the address to a page number far past the end and load it.
+6. Remove a live comment from this list, then put it back.
+7. Find the comment its author took down.
+
+**Expected:**
+- Newest first, 20 to a page, with which range of how many on screen.
+- Removed and withdrawn comments are in the list, not hidden. An admin list that shows only live
+  comments cannot be used to undo anything, which is the failure this case exists to catch.
+- The page number is in the address bar, and the copied link opens on that same page.
+- Back returns to the previous page of the list rather than leaving the screen.
+- A page past the end lands on the last page with rows on it, not on an empty screen.
+- Removing works from here, and the removed row stays in the list with "Put it back" on it, which
+  restores it. Both are in the audit trail.
+- The comment its author took down has no control on it at all, and says so. An admin cannot
+  restore a withdrawal, and a button that always fails is worse than no button.
+- Removing from here also cancels any request to publish that comment with the post.
+
+Result: web ☐
+
+---
+
+### FS-17 — Searching what people wrote
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Comments including one containing the word `rebuilding`, one containing the exact
+phrase `what was done`, one containing an apostrophe (`it's`), and at least 25 matching a common
+word so the results page.
+
+**Steps:**
+1. Open Recent comments as an admin and search for `rebuilding`.
+2. Search for the quoted phrase `"what was done"`.
+3. Search for `it's`.
+4. Search for a common word, then page through the results.
+5. Search for something no comment contains.
+6. Clear the search.
+7. Search for an author's name, and for a post title.
+
+**Expected:**
+- The word search finds the comment, and finds it whatever case it was typed in.
+- The quoted phrase matches only comments with those words together, not comments that merely
+  contain all three somewhere.
+- `it's` returns results rather than an error. A search box that breaks on an apostrophe is the
+  failure this case exists to catch — the raw tsquery function throws on exactly that input.
+- The count says how many matched and the pager pages through them. The number on screen matches
+  the number of rows you can actually reach by paging.
+- A search with no matches says so and says what it searches, rather than showing an empty screen.
+- Clearing returns to the full list, on page one.
+- A name or a post title finds nothing, and the empty message says it searches what people wrote.
+  That is the current behavior, not a bug — worth knowing before somebody reports it as one.
+- A member has no search anywhere. This is an admin tool; a search across every thread for a member
+  would be the browse view that is tabled.
+
+Result: web ☐
+
+---
+
 ### FS-18 — Being told somebody answered you
 
 **Role:** two members and an unapproved member · **Surfaces:** web

@@ -7347,6 +7347,12 @@ ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS comment_id UUI
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS reactor_user_id TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS kind TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Comment bodies are searchable, which is one of the four reasons these live in Postgres rather
+-- than in a chat product. The `english` configuration here has to match the one the search query
+-- uses, or the index is silently not used.
+CREATE INDEX IF NOT EXISTS fireside_comments_body_search_idx
+  ON fireside_comments USING GIN (to_tsvector('english', body));
+
 CREATE UNIQUE INDEX IF NOT EXISTS fireside_reactions_one_per_person ON fireside_reactions (comment_id, reactor_user_id, kind);
 
 CREATE TABLE IF NOT EXISTS fireside_audit_events (
@@ -8621,4 +8627,22 @@ ALTER TABLE IF EXISTS fireside_reactions
 
 COMMENT ON COLUMN fireside_reactions.kind IS
   'One of the three reactions, or a vote. A downvote is stored and never returned as a count to anybody.';
+
+
+-- ── post migration: 0021_fireside_comment_search.sql ──
+-- Fireside: make the comment bodies searchable.
+--
+-- Being searchable is one of the four reasons these comments are in Postgres rather than in a chat
+-- product, and nothing indexed them — every search would have been a sequential scan of the table,
+-- getting slower for the rest of the app as the conversation grew. Cheaper to add before there is
+-- volume than after.
+--
+-- An expression index rather than a stored tsvector column: the body is the only input, the
+-- expression is deterministic, and a generated column would have to be kept in step by every write
+-- path. `english` is the configuration the search query uses, and the two have to match or the
+-- index is not used at all.
+
+CREATE INDEX IF NOT EXISTS fireside_comments_body_search_idx
+  ON fireside_comments
+  USING GIN (to_tsvector('english', body));
 

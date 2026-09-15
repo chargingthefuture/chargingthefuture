@@ -34,6 +34,29 @@ describe('withdrawn_body stays with its author', () => {
     expect(listOwn).toContain('WHERE c.author_user_id = $1');
   });
 
+  it('is null on the admin read, which has no column to read it from', () => {
+    // The admin list of every comment builds the same shape as the author's own list. It must not
+    // carry the author's private copy, and the select behind it does not contain the column — so
+    // this is a hard null rather than a filter somebody could later relax.
+    const listRecent = repositorySql.slice(
+      repositorySql.indexOf('export async function listRecentComments'),
+      repositorySql.indexOf('export async function countAllComments'),
+    );
+    expect(listRecent).toContain('withdrawnBody: null');
+    expect(listRecent).toContain('${COMMENT_SELECT}');
+    expect(listRecent).not.toContain('OWN_COMMENT_SELECT');
+  });
+
+  it('is null on the admin search too, which reads the same shape', () => {
+    const search = repositorySql.slice(
+      repositorySql.indexOf('export async function searchComments'),
+      repositorySql.indexOf('export async function countSearchComments'),
+    );
+    expect(search).toContain('withdrawnBody: null');
+    expect(search).toContain('${COMMENT_SELECT}');
+    expect(search).not.toContain('OWN_COMMENT_SELECT');
+  });
+
   it('never reaches the blog export feed', () => {
     expect(exportSql).not.toContain('withdrawn_body');
   });

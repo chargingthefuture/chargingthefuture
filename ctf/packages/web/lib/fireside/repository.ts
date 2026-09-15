@@ -361,6 +361,109 @@ export async function listOwnComments(userId: string, limit = 50, offset = 0): P
   }));
 }
 
+/**
+ * Every comment, newest first, for an admin to work through.
+ *
+ * The export queue is a screen for one decision; this is the other half of moderation, which until
+ * now meant knowing a comment's id and calling the route by hand. It shows removed and withdrawn
+ * rows as well as live ones: a list that hides what an admin already acted on is a list they cannot
+ * use to undo anything.
+ *
+ * The author's approval state is resolved so each row can say whether it is actually public yet —
+ * the same rule as everywhere else, read from visibility.ts rather than guessed at from `status`.
+ */
+export async function listRecentComments(limit = 20, offset = 0): Promise<FiresideOwnComment[]> {
+  const result = await queryDb<CommentRow>(
+    `${COMMENT_SELECT}
+      ORDER BY c.created_at DESC
+      LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  if (result.rows.length === 0) return [];
+
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.author_user_id));
+  const { counts, viewer } = await readReactions(result.rows.map((row) => row.id), null);
+
+  return result.rows.map((row) => ({
+    ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], null),
+    state: commentStateForAuthor({
+      status: row.status,
+      authorIsApproved: approved.has(row.author_user_id),
+    }),
+    exportToBlog: row.export_to_blog,
+    exportReview: row.export_review,
+    exportRefusalReason: row.export_refusal_reason,
+    // Always null here, and deliberately so. `withdrawn_body` is the author's own copy of something
+    // they took down, and this is an admin read: the select behind it does not carry that column at
+    // all, so there is nothing to return even if somebody later wanted it here.
+    withdrawnBody: null,
+    postRepo: row.post_repo,
+    postSlug: row.post_slug,
+    postTitle: row.post_title,
+  }));
+}
+
+/**
+ * Comments matching a search, newest first.
+ *
+ * Being searchable is one of the four reasons these are in Postgres rather than in a chat product,
+ * and until now nothing indexed them. `websearch_to_tsquery` rather than `to_tsquery` because the
+ * input is typed by a person: it takes quoted phrases and `or` and a leading `-` the way a search
+ * box is expected to, and — the reason it matters here — it cannot be made to throw by an
+ * unbalanced quote or a stray operator, which `to_tsquery` does on input as ordinary as `it's`.
+ *
+ * The `english` configuration has to match the one in the index or Postgres quietly does a
+ * sequential scan instead.
+ */
+export async function searchComments(
+  query: string,
+  limit = 20,
+  offset = 0,
+): Promise<FiresideOwnComment[]> {
+  const result = await queryDb<CommentRow>(
+    `${COMMENT_SELECT}
+      WHERE to_tsvector('english', c.body) @@ websearch_to_tsquery('english', $1)
+      ORDER BY c.created_at DESC
+      LIMIT $2 OFFSET $3`,
+    [query, limit, offset],
+  );
+  if (result.rows.length === 0) return [];
+
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.author_user_id));
+  const { counts, viewer } = await readReactions(result.rows.map((row) => row.id), null);
+
+  return result.rows.map((row) => ({
+    ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], null),
+    state: commentStateForAuthor({
+      status: row.status,
+      authorIsApproved: approved.has(row.author_user_id),
+    }),
+    exportToBlog: row.export_to_blog,
+    exportReview: row.export_review,
+    exportRefusalReason: row.export_refusal_reason,
+    // Null for the same reason as the admin list above: this is an admin read built from
+    // COMMENT_SELECT, which does not carry the author's own copy of anything they took down.
+    withdrawnBody: null,
+    postRepo: row.post_repo,
+    postSlug: row.post_slug,
+    postTitle: row.post_title,
+  }));
+}
+
+export async function countSearchComments(query: string): Promise<number> {
+  const result = await queryDb<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM fireside_comments c
+      WHERE to_tsvector('english', c.body) @@ websearch_to_tsquery('english', $1)`,
+    [query],
+  );
+  return Number(result.rows[0]?.count ?? '0');
+}
+
+export async function countAllComments(): Promise<number> {
+  const result = await queryDb<{ count: string }>(`SELECT COUNT(*) AS count FROM fireside_comments`);
+  return Number(result.rows[0]?.count ?? '0');
+}
+
 export async function countOwnComments(userId: string): Promise<number> {
   const result = await queryDb<{ count: string }>(
     `SELECT COUNT(*) AS count FROM fireside_comments WHERE author_user_id = $1`,

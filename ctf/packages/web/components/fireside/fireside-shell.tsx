@@ -7,6 +7,7 @@ import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { FIRESIDE_BLOG_BASE } from "@/lib/fireside/constants";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
+import { FiresideAdminComments } from "./fireside-admin-comments";
 import { FiresideExportQueue } from "./fireside-export-queue";
 import { Pager } from "./fireside-pager";
 import { FiresideThreadView } from "./fireside-thread-view";
@@ -258,6 +259,7 @@ export function FiresideShell({
   // navigates within the app, so "back" keeps meaning the place they actually came from.
   const [cameFromPost, setCameFromPost] = useState(initialPost != null);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [adminListOpen, setAdminListOpen] = useState(false);
 
   const load = useCallback(async (wanted: number) => {
     setLoading(true);
@@ -311,6 +313,8 @@ export function FiresideShell({
       <div style={{ padding: "20px 16px 48px" }}>
       {queueOpen ? (
         <FiresideExportQueue t={t} onClose={() => { setQueueOpen(false); void load(page); }} />
+      ) : adminListOpen ? (
+        <FiresideAdminComments t={t} onClose={() => { setAdminListOpen(false); void load(page); }} />
       ) : openPost ? (
         <FiresideThreadView
           postRepo={openPost.repo}
@@ -332,10 +336,16 @@ export function FiresideShell({
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         <BlogLink t={t} label="Open the blog" />
         {isAdmin && (
-          <button type="button" onClick={() => setQueueOpen(true)}
-            style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
-            Blog export queue
-          </button>
+          <>
+            <button type="button" onClick={() => setQueueOpen(true)}
+              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
+              Blog export queue
+            </button>
+            <button type="button" onClick={() => setAdminListOpen(true)}
+              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
+              Recent comments
+            </button>
+          </>
         )}
       </div>
 

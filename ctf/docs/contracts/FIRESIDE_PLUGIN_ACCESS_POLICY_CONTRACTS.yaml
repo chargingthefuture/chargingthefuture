@@ -121,6 +121,18 @@ policies:
       Reversible through the same route, so an early close does not need database access to undo.
       Audited in both directions.
   - pluginId: fireside
+    command: fireside.admin.comments.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      A read, so it writes no audit row; the moderation it leads to is recorded by
+      fireside.comment.remove. It carries a display name rather than a user id, the same as every
+      other comment shape here, and it does not carry the author's own copy of anything they took
+      down — that column is on the author-scoped read alone.
+  - pluginId: fireside
     command: fireside.export.feed.read
     version: 1.0.0
     requiredRoles: []
