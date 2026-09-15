@@ -9,19 +9,21 @@ import { queryDb } from 'lib/db/postgres';
 // enforced by check-plugin-boundaries.mjs).
 import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
 import {
+  FIRESIDE_ALL_REACTION_KINDS,
+  FIRESIDE_COUNTED_KINDS,
   FIRESIDE_MAX_COMMENTS_PER_DAY,
   FIRESIDE_MAX_COMMENT_LENGTH,
   FIRESIDE_MIN_COMMENT_LENGTH,
-  FIRESIDE_REACTION_KINDS,
 } from './constants';
 import type {
   ExportReview,
+  FiresideAnyReactionKind,
   FiresideComment,
   FiresideCommentInput,
   FiresideCommentStatus,
+  FiresideCountedKind,
   FiresideOwnComment,
   FiresidePostRef,
-  FiresideReactionKind,
   FiresideThread,
 } from './types';
 import { commentStateForAuthor, isPubliclyVisible } from './visibility';
@@ -136,19 +138,31 @@ type CommentRow = {
   post_title: string;
 };
 
-function emptyReactionCounts(): Record<FiresideReactionKind, number> {
-  return { recognize: 0, helpful: 0, same_here: 0 };
+function emptyReactionCounts(): Record<FiresideCountedKind, number> {
+  return { recognize: 0, helpful: 0, same_here: 0, upvote: 0 };
+}
+
+/**
+ * Whether this kind may appear in a count anybody is shown.
+ *
+ * `downvote` is stored and is never counted. The person who left one sees their own — that is their
+ * own data, and the button has to be able to show as pressed — but no total of them goes to the
+ * author, a reader, or an admin screen. What a downvote should eventually do is undecided, and a
+ * number on a screen would decide it (owner, 2026-09-14).
+ */
+function isCountedKind(kind: string): kind is FiresideCountedKind {
+  return (FIRESIDE_COUNTED_KINDS as readonly string[]).includes(kind);
 }
 
 async function readReactions(commentIds: string[], viewerUserId: string | null): Promise<{
-  counts: Map<string, Record<FiresideReactionKind, number>>;
-  viewer: Map<string, FiresideReactionKind[]>;
+  counts: Map<string, Record<FiresideCountedKind, number>>;
+  viewer: Map<string, FiresideAnyReactionKind[]>;
 }> {
-  const counts = new Map<string, Record<FiresideReactionKind, number>>();
-  const viewer = new Map<string, FiresideReactionKind[]>();
+  const counts = new Map<string, Record<FiresideCountedKind, number>>();
+  const viewer = new Map<string, FiresideAnyReactionKind[]>();
   if (commentIds.length === 0) return { counts, viewer };
 
-  const result = await queryDb<{ comment_id: string; kind: FiresideReactionKind; reactor_user_id: string }>(
+  const result = await queryDb<{ comment_id: string; kind: FiresideAnyReactionKind; reactor_user_id: string }>(
     `SELECT comment_id::text AS comment_id, kind, reactor_user_id
        FROM fireside_reactions
       WHERE comment_id = ANY($1::uuid[])`,
@@ -156,13 +170,16 @@ async function readReactions(commentIds: string[], viewerUserId: string | null):
   );
 
   for (const row of result.rows) {
-    if (!FIRESIDE_REACTION_KINDS.includes(row.kind)) continue;
+    const mine = viewerUserId != null && row.reactor_user_id === viewerUserId;
+    // A downvote reaches the viewer list and never the counts. Somebody sees their own; nobody
+    // sees a total.
+    if (mine && (FIRESIDE_ALL_REACTION_KINDS as readonly string[]).includes(row.kind)) {
+      viewer.set(row.comment_id, [...(viewer.get(row.comment_id) ?? []), row.kind]);
+    }
+    if (!isCountedKind(row.kind)) continue;
     const existing = counts.get(row.comment_id) ?? emptyReactionCounts();
     existing[row.kind] += 1;
     counts.set(row.comment_id, existing);
-    if (viewerUserId && row.reactor_user_id === viewerUserId) {
-      viewer.set(row.comment_id, [...(viewer.get(row.comment_id) ?? []), row.kind]);
-    }
   }
   return { counts, viewer };
 }
@@ -184,8 +201,8 @@ const COMMENT_SELECT = `
 
 function toComment(
   row: CommentRow,
-  reactions: Record<FiresideReactionKind, number>,
-  viewerReactions: FiresideReactionKind[],
+  reactions: Record<FiresideCountedKind, number>,
+  viewerReactions: FiresideAnyReactionKind[],
   viewerUserId: string | null,
 ): FiresideComment {
   return {
@@ -336,10 +353,17 @@ export async function withdrawOwnComment(userId: string, commentId: string): Pro
   return (result.rowCount ?? 0) > 0;
 }
 
+/** The other vote, for a kind that is one — pressing one clears the other. Null for a reaction. */
+function opposingVote(kind: FiresideAnyReactionKind): FiresideAnyReactionKind | null {
+  if (kind === 'upvote') return 'downvote';
+  if (kind === 'downvote') return 'upvote';
+  return null;
+}
+
 export async function toggleReaction(
   userId: string,
   commentId: string,
-  kind: FiresideReactionKind,
+  kind: FiresideAnyReactionKind,
 ): Promise<'added' | 'removed' | 'not_found'> {
   const exists = await queryDb<{ id: string }>(
     `SELECT id::text AS id FROM fireside_comments WHERE id = $1::uuid AND status = 'visible' LIMIT 1`,
@@ -352,6 +376,16 @@ export async function toggleReaction(
     [commentId, userId, kind],
   );
   if ((removed.rowCount ?? 0) > 0) return 'removed';
+
+  // Holding both votes on one comment says nothing, so taking one side drops the other. The three
+  // reactions are not votes and do not clear anything.
+  const opposing = opposingVote(kind);
+  if (opposing) {
+    await queryDb(
+      `DELETE FROM fireside_reactions WHERE comment_id = $1::uuid AND reactor_user_id = $2 AND kind = $3`,
+      [commentId, userId, opposing],
+    );
+  }
 
   await queryDb(
     `INSERT INTO fireside_reactions (id, comment_id, reactor_user_id, kind)

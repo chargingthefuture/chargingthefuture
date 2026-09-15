@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
-import { FIRESIDE_REACTION_KINDS, FIRESIDE_REACTION_LABELS, firesidePostUrl } from "@/lib/fireside/constants";
+import {
+  FIRESIDE_REACTION_KINDS,
+  FIRESIDE_REACTION_LABELS,
+  FIRESIDE_VOTE_KINDS,
+  FIRESIDE_VOTE_LABELS,
+  firesidePostUrl,
+} from "@/lib/fireside/constants";
 
 // One post's conversation, opened from inside the app. The same data the blog widget will show, on
 // the screen a member already has.
@@ -21,6 +27,58 @@ type ThreadComment = {
   viewerReactions: string[];
   isOwn: boolean;
 };
+
+// Agree and disagree.
+//
+// Two things about them are deliberate and should not be "improved" later without asking. Neither
+// moves the comment — the thread is oldest first, and nothing anywhere reads a count to decide
+// position, which is the inversion of the platform this exists as an alternative to. And the
+// disagree count is not shown, to anybody: the press is recorded, the person who left it sees
+// their own, and no total appears on any screen (owner decision, 2026-09-14). The server does not
+// return that total either, so this is not the only thing standing between it and a reader.
+function Votes({
+  comment,
+  t,
+  onReact,
+  busy,
+}: {
+  comment: ThreadComment;
+  t: PluginShellTokens;
+  onReact: (commentId: string, kind: string) => void;
+  busy: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      {FIRESIDE_VOTE_KINDS.map((kind) => {
+        const mine = comment.viewerReactions.includes(kind);
+        // Only `upvote` is ever in the counts the server sends; `downvote` has no key there.
+        const count = kind === "upvote" ? comment.reactions?.upvote ?? 0 : null;
+        return (
+          <button
+            key={kind}
+            type="button"
+            disabled={busy}
+            onClick={() => onReact(comment.id, kind)}
+            aria-pressed={mine}
+            style={{
+              background: mine ? `${t.ACCENT}22` : "transparent",
+              border: `1px solid ${mine ? t.ACCENT : t.BORDER}`,
+              color: mine ? t.ACCENT : t.SUBTLE,
+              borderRadius: 20,
+              padding: "3px 10px",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: busy ? "default" : "pointer",
+            }}
+          >
+            {FIRESIDE_VOTE_LABELS[kind]}
+            {count != null && count > 0 ? ` · ${count}` : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function Reactions({
   comment,
@@ -260,7 +318,8 @@ export function FiresideThreadView({
             <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
               <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
               <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{comment.body}</div>
-              <Reactions comment={comment} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
+              <Votes comment={comment} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
+            <Reactions comment={comment} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
               <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                 <button type="button" onClick={() => setReplyTo(comment.id)}
                   style={{ background: "transparent", border: "none", color: t.SUBTLE, fontSize: 11, cursor: "pointer", padding: 0 }}>
@@ -278,6 +337,7 @@ export function FiresideThreadView({
               <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
                 <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
                 <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{reply.body}</div>
+                <Votes comment={reply} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
                 <Reactions comment={reply} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
               </div>
             ))}

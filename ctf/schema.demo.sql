@@ -2775,6 +2775,10 @@ CREATE TABLE IF NOT EXISTS skills_taxonomy_job_titles (
   sector_id UUID NOT NULL REFERENCES skills_taxonomy_sectors(id),
   name TEXT NOT NULL,
   display_order INTEGER NOT NULL DEFAULT 0,
+  -- Relative demand weight against the other occupations in the same sector. NULL means "ordinary"
+  -- and weighs 1, so a sector with no weights set splits evenly exactly as it always did. Set only
+  -- through the append-only taxonomy change list (op `setOccupationWorkforceShare`).
+  workforce_share NUMERIC,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2783,6 +2787,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS id UUI
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -7322,7 +7327,11 @@ CREATE TABLE IF NOT EXISTS fireside_reactions (
   comment_id UUID NOT NULL REFERENCES fireside_comments(id) ON DELETE CASCADE,
   reactor_user_id TEXT NOT NULL,
   -- A short fixed set rather than free emoji, so the counts mean the same thing on every comment.
-  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here')),
+  -- The last two are votes. Neither moves a comment: the thread is ordered oldest first and nothing
+  -- reads a vote total to decide position, which is the inversion of the platform this exists as an
+  -- alternative to. A downvote is stored and never returned as a count to anybody — see
+  -- FIRESIDE_COUNTED_KINDS in packages/web/lib/fireside/constants.ts.
+  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here','upvote','downvote')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS id UUID;
@@ -8534,4 +8543,54 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   nav_rank           = EXCLUDED.nav_rank,
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
+
+
+-- ── post migration: 0018_job_title_workforce_share.sql ──
+-- Skills Taxonomy: a per-occupation demand weight, so a sector's headcount stops being split
+-- evenly across the jobs inside it.
+--
+-- Sectors have carried `workforce_share` since the model was built. Occupations never have, so
+-- `buildJobTitleDemand` divided a sector's demand by the number of job titles in it and gave every
+-- one the same number. That says a settlement needs as many Surveyors as Electricians because both
+-- sit under Housing & Construction, which is not true of any real population and was never claimed
+-- to be — it was the only split available with no weight to read.
+--
+-- Everything that reads per-occupation demand inherited the flatness: the training-gap report that
+-- tells SkillUp which cohorts to stand up, the occupations browse ordering, and the per-trade figure
+-- on the Workforce screens.
+--
+-- NULL is the deliberate default and means "ordinary", weighted 1 against its siblings. So this
+-- migration changes no number anywhere: with every occupation NULL the normalized split is the even
+-- split it already performed. Weights arrive one at a time through the append-only taxonomy change
+-- list (op `setOccupationWorkforceShare`), each reviewed in a pull request with a written rationale,
+-- because a number nobody can source is worse than an even split that is honest about being one.
+--
+-- Weights are relative within a sector, not percentages: 3 against 1 means three times as many
+-- people. A sector whose weights are all zero falls back to the even split rather than dividing by
+-- zero and blanking the sector.
+
+ALTER TABLE IF EXISTS skills_taxonomy_job_titles
+  ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
+
+
+-- ── post migration: 0020_fireside_votes.sql ──
+-- Fireside: voting, which does not change what order anything is read in.
+--
+-- The point of this plugin is to be an alternative to a platform where what gets read is decided by
+-- what was voted on. So a vote here is a count beside a comment and nothing else: comments stay in
+-- the order they were written, oldest first, and nothing reads a vote total to decide position.
+--
+-- A downvote is recorded and never counted in public. What it should eventually do — cancel an
+-- upvote, or be read only as feedback — is not decided yet (owner, 2026-09-14), and showing a
+-- number now would settle that by accident. The application keeps it out of every count it builds;
+-- this file only makes the row storable.
+
+ALTER TABLE IF EXISTS fireside_reactions DROP CONSTRAINT IF EXISTS fireside_reactions_kind_check;
+
+ALTER TABLE IF EXISTS fireside_reactions
+  ADD CONSTRAINT fireside_reactions_kind_check
+  CHECK (kind IN ('recognize','helpful','same_here','upvote','downvote'));
+
+COMMENT ON COLUMN fireside_reactions.kind IS
+  'One of the three reactions, or a vote. A downvote is stored and never returned as a count to anybody.';
 

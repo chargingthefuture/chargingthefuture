@@ -132,7 +132,7 @@ commands:
           type: string
         kind:
           type: string
-          enum: [recognize, helpful, same_here]
+          enum: [recognize, helpful, same_here, upvote, downvote]
     outputSchema:
       type: object
       properties:
@@ -143,7 +143,7 @@ commands:
       - fireside_comments (select)
       - fireside_reactions (insert, delete)
       - fireside_audit_events (insert)
-    purpose: Leave or take back a reaction on a comment
+    purpose: Leave or take back a reaction, or a vote, on a comment. A vote changes a number beside the comment and nothing else — it never moves the comment, because the thread is ordered oldest first and nothing reads a count to decide position. Pressing one vote clears the other. No count of `downvote` is returned by this or any other command.
     retentionClass: community_content
   - pluginId: fireside
     command: fireside.own.read

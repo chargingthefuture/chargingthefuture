@@ -39,6 +39,42 @@ export const FIRESIDE_REACTION_LABELS: Record<(typeof FIRESIDE_REACTION_KINDS)[n
   same_here: 'Same here',
 };
 
+/**
+ * Voting, which is a different thing from the reactions above and is stored the same way.
+ *
+ * Neither vote changes where a comment sits. Comments are ordered oldest first and that is the only
+ * order there is — a vote does not move anything up or down the thread, and nothing anywhere reads
+ * a count to decide position (owner decision, 2026-09-14). This is the inversion of the platform
+ * this exists as an alternative to, where what gets read is decided by what was voted on.
+ *
+ * A person holds one of these per comment at a time: pressing one clears the other, because holding
+ * both says nothing.
+ */
+export const FIRESIDE_VOTE_KINDS = ['upvote', 'downvote'] as const;
+
+export const FIRESIDE_VOTE_LABELS: Record<(typeof FIRESIDE_VOTE_KINDS)[number], string> = {
+  upvote: 'Agree',
+  downvote: 'Disagree',
+};
+
+/** Everything that may be stored in `fireside_reactions.kind`, and everything a route will accept. */
+export const FIRESIDE_ALL_REACTION_KINDS = [
+  ...FIRESIDE_REACTION_KINDS,
+  ...FIRESIDE_VOTE_KINDS,
+] as const;
+
+/**
+ * The kinds that may ever appear in a count returned to anybody.
+ *
+ * `downvote` is deliberately missing and must stay missing. It is recorded, and the person who left
+ * it sees their own, but no count of it is shown to anybody — not the author, not a reader, not an
+ * admin screen (owner decision, 2026-09-14; what it should eventually do, whether it cancels an
+ * upvote or is only read as feedback, is not decided yet, and showing a number now would settle
+ * that by accident). Keeping it out of this list is what makes that structural rather than
+ * something each screen has to remember.
+ */
+export const FIRESIDE_COUNTED_KINDS = [...FIRESIDE_REACTION_KINDS, 'upvote'] as const;
+
 export const FIRESIDE_ERROR_CODE = {
   invalidPayload: 'fireside_invalid_payload',
   notFound: 'fireside_not_found',
