@@ -47,7 +47,9 @@ the project controls rather than on a platform that has erased five of its accou
 6. **You always see your own words.** Held, removed or live, a member sees what they wrote, with a
    label saying which.
 7. **Replies, one level deep.** A reply to a comment, and no reply to a reply. Deeper nesting is
-   unreadable at phone width, which is the only width this app has.
+   unreadable at phone width, which is the only width this app has. When somebody answers you, you
+   are told, and the notification opens that conversation. Nothing arrives for a reply you cannot
+   see yet, and nothing arrives for replying to yourself.
 8. **Three reactions** — I recognize this, This helped, Same here. A fixed set rather than free
    emoji, so a count means the same thing on every comment.
 9. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
@@ -191,11 +193,12 @@ member active only in Fireside is seen by being read, which is what the plugin i
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
 5. Closing a thread has a repository function and no route.
-6. No notification when somebody replies to you.
+6. A reply notification does not arrive late. A held reply notifies nobody, and approving its
+   author later makes the reply appear without telling the person it answered. Catching that up
+   means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
 7. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
    whole argument for storing them here is that they are searchable — worth doing before volume
    rather than after.
-
 ## Change Log
 
 - 2026-09-14: **Fixed: the whole Fireside screen was hard to read.** Owner report, every section.
@@ -218,6 +221,23 @@ member active only in Fireside is seen by being read, which is what the plugin i
     background it sits on. It is `#F87171` now, 6.22:1, in the same places.
 
   No layout, no copy and no behavior changed — this is color and type size only.
+- 2026-09-14: **Somebody answering you now tells you.** Nothing did, so a reply sat unseen unless
+  the person it answered happened to return to the post. It goes through the platform's own
+  notification system rather than anything new — `notifySafe`, category `community`, deep-linked to
+  that conversation with the repo and slug the rest of the plugin already passes around.
+
+  Who gets told is a visibility question, so the rule lives in `visibility.ts` with the others and
+  is tested there rather than sitting inline in the route. Three conditions. It has to be a reply, a
+  new top-level comment answers nobody. The reply has to be publicly visible, because nothing an
+  unapproved member writes is, and a notification about something the recipient opens and cannot
+  find is worse than none. And nobody is told they replied to themselves, which in a conversation
+  that has just started is most replies.
+
+  Best-effort: `notifySafe` swallows its own failures, so a comment that saved never fails because
+  the notification did. The summary names no content and no person, because it can land on a lock
+  screen. A held reply does not notify late when its author is approved — that needs a hook into
+  Unlock approval, which is a cross-plugin change, and it is recorded as a gap rather than
+  pretended away.
 - 2026-09-14: **The blog build can now read the comments both keys have cleared.** The two halves of
   the export decision had been recorded since 2026-09-13 and nothing read them, so no comment had
   ever left the app. `/api/fireside/export` is that feed: `listExportableComments` in
