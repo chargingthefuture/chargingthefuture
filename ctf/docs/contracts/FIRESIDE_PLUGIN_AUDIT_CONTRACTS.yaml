@@ -136,3 +136,43 @@ auditEvents:
     requestId: request_identifier
     traceId: trace_identifier
     notes: Final for that comment. The author cannot re-queue it by switching their own request back on.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: thread.close
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: closed
+    dataClassesAccessed:
+      - post_reference
+      - moderation_reason
+    targetContext:
+      threadId: thread_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Admin only. Recorded apart from comment.remove because it touches no comment: everything
+      already written stays where it is and stays readable, and only new comments are refused.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
+    command: thread.reopen
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: reopened
+    dataClassesAccessed:
+      - post_reference
+      - moderation_reason
+    targetContext:
+      threadId: thread_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: The other direction of the same decision, recorded so a close and its undo both show who and when.
