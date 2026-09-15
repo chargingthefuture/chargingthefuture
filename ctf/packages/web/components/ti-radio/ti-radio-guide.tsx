@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Radio, ArrowUpRight, Globe } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -41,11 +41,28 @@ export function TiRadioGuideView({ initialGuide, signInUrl, verifyUrl }: Props) 
   const [hosting, setHosting] = useState<TiRadioGuideSlot | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hostFormRef = useRef<HTMLDivElement | null>(null);
 
   // Detected on mount so the server render stays deterministic.
   useEffect(() => {
     setTz(detectTimeZone());
   }, []);
+
+  // The form opens at the top of the guide, above every day. Press an open row on Thursday and the
+  // form is a screen or two above where you are looking, so nothing appears to happen and the row
+  // reads as broken. Bring the form to the middle of the screen when it opens. The form focuses its
+  // own first field without scrolling, so a keyboard or screen-reader user lands in the same place.
+  useEffect(() => {
+    if (!hosting) {
+      return;
+    }
+    const node = hostFormRef.current;
+    if (!node?.scrollIntoView) {
+      return;
+    }
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+  }, [hosting]);
 
   const refresh = useCallback(async () => {
     const payload = await requestJson<{ guide: TiRadioGuide }>('/api/ti-radio/guide');
@@ -125,19 +142,21 @@ export function TiRadioGuideView({ initialGuide, signInUrl, verifyUrl }: Props) 
         <GuideIntro t={t} isSignedIn={isSignedIn} canHost={canHost} signInUrl={signInUrl} verifyUrl={verifyUrl} />
 
         {hosting && (
-          <TiRadioHostForm
-            slotStartIso={hosting.slotStartIso}
-            slotEndIso={hosting.slotEndIso}
-            tz={tz}
-            t={t}
-            busy={busy}
-            error={error}
-            onCancel={() => {
-              setHosting(null);
-              setError(null);
-            }}
-            onSubmit={onBook}
-          />
+          <div ref={hostFormRef}>
+            <TiRadioHostForm
+              slotStartIso={hosting.slotStartIso}
+              slotEndIso={hosting.slotEndIso}
+              tz={tz}
+              t={t}
+              busy={busy}
+              error={error}
+              onCancel={() => {
+                setHosting(null);
+                setError(null);
+              }}
+              onSubmit={onBook}
+            />
+          </div>
         )}
 
         {error && !hosting && (
