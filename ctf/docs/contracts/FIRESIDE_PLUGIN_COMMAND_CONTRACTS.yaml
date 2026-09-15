@@ -208,9 +208,15 @@ commands:
         page:
           type: integer
           minimum: 1
+        q:
+          type: string
+          maxLength: 200
+          description: Searches the comment bodies. Quoted phrases, `or`, and a leading minus all work.
     outputSchema:
       type: object
       properties:
+        query:
+          type: string
         comments:
           type: array
           items:
@@ -244,7 +250,7 @@ commands:
       - fireside_threads (select)
       - fireside_reactions (select)
       - unlock_verification_submissions (select, access_tier only, to say whether a row is public yet)
-    purpose: Every comment, newest first and paged, for an admin to work through. Removed and withdrawn rows are included, because a list that hides what was already acted on cannot be used to undo it. An out-of-range page clamps to the last one.
+    purpose: Every comment, newest first and paged, searchable by body, for an admin to work through. Removed and withdrawn rows are included, because a list that hides what was already acted on cannot be used to undo it. An out-of-range page clamps to the last one.
     retentionClass: community_content
   - pluginId: fireside
     command: fireside.export.queue.read

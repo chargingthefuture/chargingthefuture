@@ -47,6 +47,16 @@ describe('withdrawn_body stays with its author', () => {
     expect(listRecent).not.toContain('OWN_COMMENT_SELECT');
   });
 
+  it('is null on the admin search too, which reads the same shape', () => {
+    const search = repositorySql.slice(
+      repositorySql.indexOf('export async function searchComments'),
+      repositorySql.indexOf('export async function countSearchComments'),
+    );
+    expect(search).toContain('withdrawnBody: null');
+    expect(search).toContain('${COMMENT_SELECT}');
+    expect(search).not.toContain('OWN_COMMENT_SELECT');
+  });
+
   it('never reaches the blog export feed', () => {
     expect(exportSql).not.toContain('withdrawn_body');
   });

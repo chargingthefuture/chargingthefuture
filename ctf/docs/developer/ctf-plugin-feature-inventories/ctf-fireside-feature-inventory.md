@@ -90,8 +90,9 @@ the project controls rather than on a platform that has erased five of its accou
 5. **Close a thread** to new comments without removing what is already there, and open it again.
    The control is on the conversation itself, a member reads a line saying it is closed rather than
    being left to guess, and the comment box is not offered when writing would be refused.
-6. **A list of every comment, newest first,** paged, with the page in the address bar so it can be
-   linked and the back button works. Removed and withdrawn rows are listed alongside live ones: a
+6. **A list of every comment, newest first,** searchable by what people wrote, paged, with the page
+   in the address bar so it can be linked and the back button works. Removed and withdrawn rows are
+   listed alongside live ones: a
    list that hides what was already acted on cannot be used to undo anything, and undoing is most
    of what a moderation list is for. A comment its own author took down carries no control, because
    nobody can put that one back.
@@ -109,7 +110,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/comments/[commentId]` | PATCH | Author | Turn the blog-export permission on or off. |
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
-| `/api/fireside/admin/comments` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. |
+| `/api/fireside/admin/comments?q=` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. `q` searches the bodies. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
 | `/api/fireside/admin/threads/[threadId]` | POST | Admin | Close a conversation to new comments, or open it again. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
@@ -126,6 +127,7 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the whole table instead. |
 | `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, and by `(export_review, created_at)` for the admin queue. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
@@ -206,12 +208,30 @@ member active only in Fireside is seen by being read, which is what the plugin i
 4. A reply notification does not arrive late. A held reply notifies nobody, and approving its
    author later makes the reply appear without telling the person it answered. Catching that up
    means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-5. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
-   whole argument for storing them here is that they are searchable — worth doing before volume
-   rather than after.
+5. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
+   has no way to search the conversation. A search across every thread for a member is close to the
+   browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
+   rather than arriving as a side effect of this.
 6. The member's own comment list and the blog export queue page without putting the page in the
    address bar. The admin list of every comment does; those two predate it and should follow.
 ## Change Log
+
+- 2026-09-14: **The comment bodies are indexed, and the moderation list searches them.** Being
+  searchable is one of the four reasons these comments are in Postgres rather than in a chat
+  product, and nothing indexed them — every search would have been a sequential scan that got
+  slower for the rest of the app as the conversation grew. Cheaper before there is volume than
+  after. A GIN index on `to_tsvector('english', body)`, and the query uses the same configuration,
+  because a mismatch there is not an error: Postgres just does not use the index.
+
+  `websearch_to_tsquery` rather than `to_tsquery`, because the input is typed by a person. It takes
+  quoted phrases, `or`, and a leading minus the way a search box is expected to, and it cannot be
+  made to throw by an unbalanced quote or a stray operator — `to_tsquery` throws on input as
+  ordinary as `it's`. The search is passed as a parameter, never built into the SQL.
+
+  Deliberately admin-only. A member-facing search across every thread is close to the
+  browse-every-conversation view the owner tabled on 2026-09-13, so it is recorded as a gap and
+  waits to be asked for rather than arriving as a side effect of indexing. Searching is submitted
+  rather than run on every keystroke: each key would otherwise be a query against the whole table.
 
 - 2026-09-14: **An admin can see every comment now, not just the export queue.** The queue answers
   one question — may this go on the blog — and it was the only admin screen, so removing or
