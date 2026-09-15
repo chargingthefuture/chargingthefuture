@@ -373,6 +373,35 @@ Result: web ☐
 
 ---
 
+### FS-14 — Every part of the screen is readable
+
+**Role:** member, then admin · **Surfaces:** web
+**Precondition:** A member with at least one comment, one of which has an export request pending.
+Use a phone-width window.
+
+**Steps:**
+1. Open the Fireside screen and read every section top to bottom.
+2. Open "What this room is for".
+3. Look at the row's state label, the export request line, and the note under it.
+4. Open a conversation and read a comment, its author name, and the Reply control.
+5. As an admin, open the blog export queue and read a row.
+
+**Expected:**
+- Nothing on any of these screens is smaller than 13px, and the paragraphs people actually read are
+  15px.
+- The controls are in the plugin's own accent, a warm orange, not gray. A gray control reads as
+  disabled, which is what the fallback color made every button on this screen look like.
+- The "Showing 1–20 of N" count and the export state note are legible, not near-invisible. Those
+  two were in the faintest token in the palette.
+- The state label beside each comment — Live, Held, Removed, You took this down — is readable
+  against the card.
+- Nothing moved. This case is about color and size only; a layout or copy change here is a
+  regression, not an improvement.
+
+Result: web ☐
+
+---
+
 ### FS-16 — The admin list of every comment, and its page in the address bar
 
 **Role:** admin · **Surfaces:** web
