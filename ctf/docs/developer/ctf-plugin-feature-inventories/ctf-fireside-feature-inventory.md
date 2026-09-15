@@ -226,6 +226,26 @@ member active only in Fireside is seen by being read, which is what the plugin i
   back, and anything already copied into the blog's build stays there — rather than asking a bare
   "are you sure?". It uses `window.confirm`, which is what this repo already does for a destructive
   step in twenty-odd other places.
+- 2026-09-14: **Fixed: the whole Fireside screen was hard to read.** Owner report, every section.
+  Measured rather than argued, against the page background `#0F1117`:
+
+  - The plugin had no entry in `PLUGIN_ACCENTS`, so `getAppAccent('fireside', …)` returned the
+    neutral fallback gray `#6B7280` — 3.90:1, which fails. That accent paints every control on the
+    screen: the export-queue button, the post-title link, Reply, the filled submit button. Most of
+    why the page read as washed out is that its highlight color was gray. Fireside now has
+    `#F4794F`, a lighter relative of the blog's own primary (`hsl(10 100% 40%)` = `#CC2200`, itself
+    only 3.41:1 here). Same hue family, so the conversation looks like one thing in both places.
+  - `t.FAINT` is 2.50:1 and was carrying real content: the "Showing 1–20 of N" count, and the note
+    telling an author what state their export request is in. No text on these screens uses it now.
+  - Half the text was 10–12px. One scale across all four components: nothing a member reads is
+    under 13px, body copy is 15px at line-height 1.7.
+  - Reading copy — the screen's description, the guidelines, the empty state, the export queue's
+    description — was in the secondary gray. It is body color now. The secondary gray stays for
+    what is genuinely secondary (author names, counts, loading), where it passes at 7.43:1.
+  - The destructive red `#EF4444` was 4.57:1 on the card surface and lower on the tinted alert
+    background it sits on. It is `#F87171` now, 6.22:1, in the same places.
+
+  No layout, no copy and no behavior changed — this is color and type size only.
 - 2026-09-14: **Closing a conversation is a route now, not just a function nobody could call.**
   `setThreadClosed` had been in the repository since the plugin shipped and nothing called it, so a
   thread listed as closable could not actually be closed by anybody without database access.
