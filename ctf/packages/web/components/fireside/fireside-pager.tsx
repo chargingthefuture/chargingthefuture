@@ -20,12 +20,12 @@ export function Pager({
   return (
     <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 16 }}>
       <button type="button" disabled={atStart} onClick={() => onPage(page - 1)}
-        style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, color: t.TEXT, cursor: atStart ? "default" : "pointer", opacity: atStart ? 0.4 : 1 }}>
+        style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 14, color: t.TEXT, cursor: atStart ? "default" : "pointer", opacity: atStart ? 0.4 : 1 }}>
         Previous
       </button>
-      <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: "center" }}>Page {page} of {lastPage}</span>
+      <span style={{ fontSize: 14, color: t.SUBTLE, alignSelf: "center" }}>Page {page} of {lastPage}</span>
       <button type="button" disabled={atEnd} onClick={() => onPage(page + 1)}
-        style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 12, color: t.TEXT, cursor: atEnd ? "default" : "pointer", opacity: atEnd ? 0.4 : 1 }}>
+        style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 14, color: t.TEXT, cursor: atEnd ? "default" : "pointer", opacity: atEnd ? 0.4 : 1 }}>
         Next
       </button>
     </div>

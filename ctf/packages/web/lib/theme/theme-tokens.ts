@@ -67,6 +67,13 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   // TI Radio: an amber that reads as a broadcast light without borrowing Beacon's red or
   // Foundation's warmer orange; comic uses a burnt ink tone.
   'ti-radio': { standard: '#F59E0B', comic: '#7A4A12' },
+  // A lighter relative of the blog's own primary (hsl(10 100% 40%)), which is too dark to read on
+  // this app's background at 3.41:1. Same hue family, so the conversation looks like one thing in
+  // both places; light enough to pass at 6.91:1 on the page and 7.69:1 for the black label on a
+  // filled button. Without an entry here Fireside fell back to the neutral gray #6B7280, which is
+  // 3.90:1 — every control on the screen was painted in a color that fails AA, which is most of
+  // why the whole page read as washed out (owner report, 2026-09-14).
+  fireside: { standard: '#F4794F', comic: '#7A3320' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };

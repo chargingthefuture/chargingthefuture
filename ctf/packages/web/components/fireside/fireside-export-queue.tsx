@@ -41,9 +41,9 @@ function AuthorLine({ record, t }: { record: AuthorRecord; t: PluginShellTokens 
   return (
     <div
       style={{
-        fontSize: 11,
+        fontSize: 13,
         lineHeight: 1.6,
-        color: flagged ? "#F59E0B" : t.FAINT,
+        color: flagged ? "#F59E0B" : t.SUBTLE,
         background: flagged ? "rgba(245,158,11,0.08)" : "transparent",
         border: flagged ? "1px solid rgba(245,158,11,0.25)" : "1px solid transparent",
         borderRadius: 8,
@@ -77,17 +77,17 @@ function RequestCard({
 }) {
   return (
     <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
-      <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>
+      <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>
         {request.authorName} · under {request.postTitle || request.postSlug}
       </div>
-      <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{request.body}</div>
+      <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{request.body}</div>
       <AuthorLine record={request.authorRecord} t={t} />
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
         <button
           type="button"
           disabled={busy}
           onClick={() => onDecide(request.commentId, "approve")}
-          style={{ background: t.ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}
+          style={{ background: t.ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 14, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}
         >
           Approve for the blog
         </button>
@@ -95,7 +95,7 @@ function RequestCard({
           type="button"
           disabled={busy}
           onClick={() => onDecide(request.commentId, "refuse")}
-          style={{ background: "transparent", color: "#EF4444", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}
+          style={{ background: "transparent", color: "#F87171", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 8, padding: "7px 14px", fontSize: 14, fontWeight: 600, cursor: busy ? "default" : "pointer", opacity: busy ? 0.5 : 1 }}
         >
           Decline
         </button>
@@ -166,33 +166,33 @@ export function FiresideExportQueue({ t, onClose }: { t: PluginShellTokens; onCl
   return (
     <div>
       <button type="button" onClick={onClose}
-        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
+        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
         ‹ Back to your comments
       </button>
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 6px" }}>Blog export queue</h2>
-      <p style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6, marginTop: 0 }}>
+      <p style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, marginTop: 0 }}>
         Comments whose authors asked for them to be copied into the blog&rsquo;s published build.
         That page is captured by a web archive and cannot be pulled back afterwards, so nothing
         leaves the app until you agree here. Declining is final for that comment.
       </p>
 
       {error && (
-        <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 13, color: "#EF4444" }}>
+        <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>
+        <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
       ) : requests.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: t.SUBTLE, fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ textAlign: "center", padding: "40px 0", color: t.SUBTLE, fontSize: 15, lineHeight: 1.6 }}>
           Nothing waiting.
           <br />
           A request appears here when a member asks for one of their comments to go into the blog.
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 11, color: t.FAINT, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 10 }}>
             Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}
           </div>
           {requests.map((request) => (
