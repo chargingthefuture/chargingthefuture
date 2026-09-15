@@ -198,7 +198,6 @@ commands:
       - fireside_audit_events (insert)
     purpose: Admin moderation. Separate from whether the author is approved, so approving somebody never resurrects a removed comment
     retentionClass: moderation_record
-
   - pluginId: fireside
     command: fireside.admin.comments.read
     version: 1.0.0
@@ -252,47 +251,6 @@ commands:
       - unlock_verification_submissions (select, access_tier only, to say whether a row is public yet)
     purpose: Every comment, newest first and paged, searchable by body, for an admin to work through. Removed and withdrawn rows are included, because a list that hides what was already acted on cannot be used to undo it. An out-of-range page clamps to the last one.
     retentionClass: community_content
-definitions:
-  PublicComment:
-    type: object
-    description: What a public reader receives. A display name, never a user id or an email.
-    properties:
-      id:
-        type: string
-      parentCommentId:
-        type: [string, 'null']
-      authorName:
-        type: string
-      body:
-        type: string
-      createdAt:
-        type: string
-      reactions:
-        type: object
-      viewerReactions:
-        type: array
-        items:
-          type: string
-      isOwn:
-        type: boolean
-  OwnComment:
-    type: object
-    description: The author's own view, including comments nobody else can see yet.
-    allOf:
-      - $ref: '#/definitions/PublicComment'
-      - type: object
-        properties:
-          state:
-            type: string
-            enum: [live, held_for_approval, removed, withdrawn]
-          exportToBlog:
-            type: boolean
-          postRepo:
-            type: string
-          postSlug:
-            type: string
-          postTitle:
-            type: string
   - pluginId: fireside
     command: fireside.export.queue.read
     version: 1.0.0
@@ -364,3 +322,133 @@ definitions:
       - fireside_audit_events (insert)
     purpose: An admin turns the second of the two keys on copying a comment into the blog's published build, or declines it. Only a pending request can be decided, and a refusal is final for that comment.
     retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.export.feed.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        cursor:
+          type: string
+          description: Where the previous read stopped. Omit it to start from the oldest comment.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+    outputSchema:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              commentId:
+                type: string
+              parentCommentId:
+                type: [string, 'null']
+              authorName:
+                type: string
+              body:
+                type: string
+              createdAt:
+                type: string
+              postRepo:
+                type: string
+              postSlug:
+                type: string
+              postTitle:
+                type: string
+        scanned:
+          type: integer
+          description: How many rows were looked at, which is more than were returned when a row was refused.
+        nextCursor:
+          type: [string, 'null']
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - unlock_verification_submissions (select, access_tier only, to decide whose comments may be copied out)
+    purpose: The comments the blog's published build may copy in, so the conversation ships inside the build rather than being fetched into the page afterwards. Every row is decided by mayExportToBlog and nothing else, so neither key alone lets a comment out.
+    retentionClass: community_content
+definitions:
+  PublicComment:
+    type: object
+    description: What a public reader receives. A display name, never a user id or an email.
+    properties:
+      id:
+        type: string
+      parentCommentId:
+        type: [string, 'null']
+      authorName:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      reactions:
+        type: object
+      viewerReactions:
+        type: array
+        items:
+          type: string
+      isOwn:
+        type: boolean
+  OwnComment:
+    type: object
+    description: The author's own view, including comments nobody else can see yet.
+    allOf:
+      - $ref: '#/definitions/PublicComment'
+      - type: object
+        properties:
+          state:
+            type: string
+            enum: [live, held_for_approval, removed, withdrawn]
+          exportToBlog:
+            type: boolean
+          postRepo:
+            type: string
+          postSlug:
+            type: string
+          postTitle:
+            type: string
+definitions:
+  PublicComment:
+    type: object
+    description: What a public reader receives. A display name, never a user id or an email.
+    properties:
+      id:
+        type: string
+      parentCommentId:
+        type: [string, 'null']
+      authorName:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      reactions:
+        type: object
+      viewerReactions:
+        type: array
+        items:
+          type: string
+      isOwn:
+        type: boolean
+  OwnComment:
+    type: object
+    description: The author's own view, including comments nobody else can see yet.
+    allOf:
+      - $ref: '#/definitions/PublicComment'
+      - type: object
+        properties:
+          state:
+            type: string
+            enum: [live, held_for_approval, removed, withdrawn]
+          exportToBlog:
+            type: boolean
+          postRepo:
+            type: string
+          postSlug:
+            type: string
+          postTitle:
+            type: string
