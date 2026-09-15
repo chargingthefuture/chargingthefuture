@@ -76,6 +76,7 @@ commands:
       - fireside_comments (insert, select)
       - fireside_audit_events (insert)
       - unlock_verification_submissions (select, access_tier only)
+      - notifications (insert, when the comment is a visible reply, to tell the author it answered)
     purpose: Write a comment under a post; held from public view until the author is approved in Unlock
     retentionClass: community_content
   - pluginId: fireside
