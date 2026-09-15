@@ -307,3 +307,38 @@ an admin and one already taken down by its author.
 - Removing from here also cancels any request to publish that comment with the post.
 
 Result: web ☐
+
+---
+
+### FS-17 — Searching what people wrote
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** Comments including one containing the word `rebuilding`, one containing the exact
+phrase `what was done`, one containing an apostrophe (`it's`), and at least 25 matching a common
+word so the results page.
+
+**Steps:**
+1. Open Recent comments as an admin and search for `rebuilding`.
+2. Search for the quoted phrase `"what was done"`.
+3. Search for `it's`.
+4. Search for a common word, then page through the results.
+5. Search for something no comment contains.
+6. Clear the search.
+7. Search for an author's name, and for a post title.
+
+**Expected:**
+- The word search finds the comment, and finds it whatever case it was typed in.
+- The quoted phrase matches only comments with those words together, not comments that merely
+  contain all three somewhere.
+- `it's` returns results rather than an error. A search box that breaks on an apostrophe is the
+  failure this case exists to catch — the raw tsquery function throws on exactly that input.
+- The count says how many matched and the pager pages through them. The number on screen matches
+  the number of rows you can actually reach by paging.
+- A search with no matches says so and says what it searches, rather than showing an empty screen.
+- Clearing returns to the full list, on page one.
+- A name or a post title finds nothing, and the empty message says it searches what people wrote.
+  That is the current behavior, not a bug — worth knowing before somebody reports it as one.
+- A member has no search anywhere. This is an admin tool; a search across every thread for a member
+  would be the browse view that is tabled.
+
+Result: web ☐

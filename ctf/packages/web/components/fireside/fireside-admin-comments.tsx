@@ -82,8 +82,58 @@ function Row({
   );
 }
 
+// Searching the comment bodies. Submitted rather than searched-as-you-type: each press of a key
+// would be a query against the whole table, and a moderator looking for one comment knows what they
+// are looking for before they start.
+function SearchBox({
+  t,
+  value,
+  onChange,
+  onSubmit,
+  onClear,
+}: {
+  t: PluginShellTokens;
+  value: string;
+  onChange: (next: string) => void;
+  onSubmit: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+      style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}
+    >
+      <label htmlFor="fireside-admin-search" style={{ flexBasis: "100%", fontSize: 13, color: t.SUBTLE }}>
+        Search what people wrote. Quoted words are kept together, and a minus sign leaves one out.
+      </label>
+      <input
+        id="fireside-admin-search"
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="A word or a phrase"
+        style={{ flex: 1, minWidth: 160, boxSizing: "border-box", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 12px", fontSize: 15, color: t.TEXT }}
+      />
+      <button type="submit"
+        style={{ background: t.ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+        Search
+      </button>
+      {value && (
+        <button type="button" onClick={onClear}
+          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, color: t.SUBTLE, cursor: "pointer" }}>
+          Clear
+        </button>
+      )}
+    </form>
+  );
+}
+
 export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; onClose: () => void }) {
   const [page, setPage] = useUrlPage("comments");
+  // `draft` is what is typed; `query` is what was actually searched for. Keeping them apart is why
+  // typing does not fire a query against the whole table on every keystroke.
+  const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState("");
   const [comments, setComments] = useState<AdminComment[]>([]);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -91,11 +141,13 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async (wanted: number) => {
+  const load = useCallback(async (wanted: number, search: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/fireside/admin/comments?page=${wanted}`);
+      const params = new URLSearchParams({ page: String(wanted) });
+      if (search) params.set("q", search);
+      const res = await fetch(`/api/fireside/admin/comments?${params.toString()}`);
       if (!res.ok) {
         const body = (await res.json()) as { message?: string };
         throw new Error(body.message ?? "Could not load recent comments.");
@@ -119,7 +171,7 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
     }
   }, [setPage]);
 
-  useEffect(() => { void load(page); }, [load, page]);
+  useEffect(() => { void load(page, query); }, [load, page, query]);
 
   async function moderate(id: string, action: "remove" | "restore") {
     setBusyId(id);
@@ -134,7 +186,7 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
         const body = (await res.json()) as { message?: string };
         throw new Error(body.message ?? "Could not change that comment.");
       }
-      await load(page);
+      await load(page, query);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not change that comment.");
     } finally {
@@ -154,6 +206,14 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
         down. Removing a comment also cancels any request to publish it with the post.
       </p>
 
+      <SearchBox
+        t={t}
+        value={draft}
+        onChange={setDraft}
+        onSubmit={() => { setPage(1); setQuery(draft.trim()); }}
+        onClear={() => { setDraft(""); setPage(1); setQuery(""); }}
+      />
+
       {error && (
         <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>
           {error}
@@ -164,12 +224,15 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
         <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
       ) : comments.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: t.SUBTLE, fontSize: 15, lineHeight: 1.7 }}>
-          Nobody has written anything here yet.
+          {query
+            ? `Nothing here matches “${query}”. It searches what people wrote, not their names or the post titles.`
+            : "Nobody has written anything here yet."}
         </div>
       ) : (
         <>
           <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 10 }}>
             Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}
+            {query ? ` matching “${query}”` : ""}
           </div>
           {comments.map((comment) => (
             <Row key={comment.id} comment={comment} t={t} busy={busyId === comment.id}

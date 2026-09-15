@@ -2775,6 +2775,10 @@ CREATE TABLE IF NOT EXISTS skills_taxonomy_job_titles (
   sector_id UUID NOT NULL REFERENCES skills_taxonomy_sectors(id),
   name TEXT NOT NULL,
   display_order INTEGER NOT NULL DEFAULT 0,
+  -- Relative demand weight against the other occupations in the same sector. NULL means "ordinary"
+  -- and weighs 1, so a sector with no weights set splits evenly exactly as it always did. Set only
+  -- through the append-only taxonomy change list (op `setOccupationWorkforceShare`).
+  workforce_share NUMERIC,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2783,6 +2787,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS id UUI
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -7330,6 +7335,12 @@ ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS comment_id UUI
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS reactor_user_id TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS kind TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Comment bodies are searchable, which is one of the four reasons these live in Postgres rather
+-- than in a chat product. The `english` configuration here has to match the one the search query
+-- uses, or the index is silently not used.
+CREATE INDEX IF NOT EXISTS fireside_comments_body_search_idx
+  ON fireside_comments USING GIN (to_tsvector('english', body));
+
 CREATE UNIQUE INDEX IF NOT EXISTS fireside_reactions_one_per_person ON fireside_reactions (comment_id, reactor_user_id, kind);
 
 CREATE TABLE IF NOT EXISTS fireside_audit_events (
@@ -8534,4 +8545,50 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
   nav_rank           = EXCLUDED.nav_rank,
   is_visible         = EXCLUDED.is_visible,
   updated_at         = NOW();
+
+
+-- ── post migration: 0018_job_title_workforce_share.sql ──
+-- Skills Taxonomy: a per-occupation demand weight, so a sector's headcount stops being split
+-- evenly across the jobs inside it.
+--
+-- Sectors have carried `workforce_share` since the model was built. Occupations never have, so
+-- `buildJobTitleDemand` divided a sector's demand by the number of job titles in it and gave every
+-- one the same number. That says a settlement needs as many Surveyors as Electricians because both
+-- sit under Housing & Construction, which is not true of any real population and was never claimed
+-- to be — it was the only split available with no weight to read.
+--
+-- Everything that reads per-occupation demand inherited the flatness: the training-gap report that
+-- tells SkillUp which cohorts to stand up, the occupations browse ordering, and the per-trade figure
+-- on the Workforce screens.
+--
+-- NULL is the deliberate default and means "ordinary", weighted 1 against its siblings. So this
+-- migration changes no number anywhere: with every occupation NULL the normalized split is the even
+-- split it already performed. Weights arrive one at a time through the append-only taxonomy change
+-- list (op `setOccupationWorkforceShare`), each reviewed in a pull request with a written rationale,
+-- because a number nobody can source is worse than an even split that is honest about being one.
+--
+-- Weights are relative within a sector, not percentages: 3 against 1 means three times as many
+-- people. A sector whose weights are all zero falls back to the even split rather than dividing by
+-- zero and blanking the sector.
+
+ALTER TABLE IF EXISTS skills_taxonomy_job_titles
+  ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
+
+
+-- ── post migration: 0021_fireside_comment_search.sql ──
+-- Fireside: make the comment bodies searchable.
+--
+-- Being searchable is one of the four reasons these comments are in Postgres rather than in a chat
+-- product, and nothing indexed them — every search would have been a sequential scan of the table,
+-- getting slower for the rest of the app as the conversation grew. Cheaper to add before there is
+-- volume than after.
+--
+-- An expression index rather than a stored tsvector column: the body is the only input, the
+-- expression is deterministic, and a generated column would have to be kept in step by every write
+-- path. `english` is the configuration the search query uses, and the two have to match or the
+-- index is not used at all.
+
+CREATE INDEX IF NOT EXISTS fireside_comments_body_search_idx
+  ON fireside_comments
+  USING GIN (to_tsvector('english', body));
 

@@ -7337,6 +7337,12 @@ ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS comment_id UUI
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS reactor_user_id TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS kind TEXT;
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Comment bodies are searchable, which is one of the four reasons these live in Postgres rather
+-- than in a chat product. The `english` configuration here has to match the one the search query
+-- uses, or the index is silently not used.
+CREATE INDEX IF NOT EXISTS fireside_comments_body_search_idx
+  ON fireside_comments USING GIN (to_tsvector('english', body));
+
 CREATE UNIQUE INDEX IF NOT EXISTS fireside_reactions_one_per_person ON fireside_reactions (comment_id, reactor_user_id, kind);
 
 CREATE TABLE IF NOT EXISTS fireside_audit_events (
