@@ -49,17 +49,17 @@ const STATE_LABEL: Record<OwnComment["state"], string> = {
 const STATE_COLOR: Record<OwnComment["state"], string> = {
   live: "#10B981",
   held_for_approval: "#F59E0B",
-  removed: "#EF4444",
+  removed: "#F87171",
   withdrawn: "#94A3B8",
 };
 
 function Guidelines({ t }: { t: PluginShellTokens }) {
   return (
     <details style={{ marginBottom: 20 }}>
-      <summary style={{ fontSize: 13, fontWeight: 600, color: t.TEXT, cursor: "pointer" }}>
+      <summary style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, cursor: "pointer" }}>
         What this room is for
       </summary>
-      <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6, marginTop: 10 }}>
+      <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, marginTop: 10 }}>
         <p style={{ marginTop: 0 }}>
           Fireside is conversation about trafficking and rebuilding, under the posts on the blog. It
           is not the Commons — that is where you ask about the app and get help using it.
@@ -97,7 +97,7 @@ function ExportRequestRow({
   const refused = comment.exportReview === "refused";
   return (
     <>
-      <label style={{ fontSize: 11, color: t.SUBTLE, display: "flex", alignItems: "center", gap: 6 }}>
+      <label style={{ fontSize: 13, color: t.SUBTLE, display: "flex", alignItems: "center", gap: 6 }}>
         <input
           type="checkbox"
           checked={comment.exportToBlog}
@@ -107,7 +107,7 @@ function ExportRequestRow({
         Ask for this to be published with the post
       </label>
       {note && (
-        <div style={{ fontSize: 11, color: t.FAINT, lineHeight: 1.6, flexBasis: "100%" }}>
+        <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.7, flexBasis: "100%", marginTop: 4 }}>
           {note}
           {refused && comment.exportRefusalReason ? ` ${comment.exportRefusalReason}` : ""}
         </div>
@@ -137,15 +137,15 @@ function CommentRow({
     <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14, marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
         <button type="button" onClick={() => onOpenThread(comment)}
-          style={{ fontSize: 12, color: t.ACCENT, background: "transparent", border: "none", padding: 0, textAlign: "left", cursor: "pointer", minWidth: 0 }}>
+          style={{ fontSize: 14, color: t.ACCENT, background: "transparent", border: "none", padding: 0, textAlign: "left", cursor: "pointer", minWidth: 0 }}>
           {comment.postTitle || comment.postSlug}
         </button>
-        <span style={{ fontSize: 10, fontWeight: 600, color: STATE_COLOR[comment.state], flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: STATE_COLOR[comment.state], flexShrink: 0 }}>
           {STATE_LABEL[comment.state]}
         </span>
       </div>
-      <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-        {comment.body || <em style={{ color: t.FAINT }}>Withdrawn.</em>}
+      <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+        {comment.body || <em style={{ color: t.SUBTLE }}>Withdrawn.</em>}
       </div>
       {editable && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
@@ -154,7 +154,7 @@ function CommentRow({
             type="button"
             onClick={() => onWithdraw(comment.id)}
             disabled={busy}
-            style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 11, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}
+            style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}
           >
             Take it down
           </button>
@@ -249,14 +249,14 @@ export function FiresideShell({
       ) : (
       <>
       <h1 style={{ fontSize: 20, fontWeight: 700, color: t.TEXT, margin: "0 0 6px" }}>Fireside</h1>
-      <p style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6, marginTop: 0 }}>
+      <p style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.6, marginTop: 0 }}>
         Conversation under the posts on the blog. This screen is your side of it — everything you
         have written, and what is happening to each one.
       </p>
 
       {isAdmin && (
         <button type="button" onClick={() => setQueueOpen(true)}
-          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: t.ACCENT, cursor: "pointer", marginBottom: 16 }}>
+          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer", marginBottom: 16 }}>
           Blog export queue
         </button>
       )}
@@ -264,15 +264,15 @@ export function FiresideShell({
       <Guidelines t={t} />
 
       {error && (
-        <div role="alert" style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 13, color: "#EF4444" }}>
+        <div role="alert" style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>
           {error}
         </div>
       )}
 
       {loading ? (
-        <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>
+        <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
       ) : comments.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: t.SUBTLE, fontSize: 13, lineHeight: 1.6 }}>
+        <div style={{ textAlign: "center", padding: "40px 0", color: t.TEXT, fontSize: 15, lineHeight: 1.7 }}>
           You have not written anything here yet.
           <br />
           Open a post on the blog and use the conversation under it; whatever you write shows up on
@@ -280,7 +280,7 @@ export function FiresideShell({
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 11, color: t.FAINT, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 10 }}>
             Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total}
           </div>
           {comments.map((comment) => (

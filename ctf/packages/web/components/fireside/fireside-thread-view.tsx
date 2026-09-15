@@ -51,7 +51,7 @@ function Reactions({
               color: mine ? t.ACCENT : t.SUBTLE,
               borderRadius: 20,
               padding: "3px 10px",
-              fontSize: 11,
+              fontSize: 13,
               cursor: busy ? "default" : "pointer",
             }}
           >
@@ -86,10 +86,10 @@ function Composer({
   return (
     <div style={{ marginTop: 20 }}>
       {replyTo && (
-        <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>
           Replying to a comment.{" "}
           <button type="button" onClick={onCancelReply}
-            style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 11, cursor: "pointer", padding: 0 }}>
+            style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, cursor: "pointer", padding: 0 }}>
             Cancel
           </button>
         </div>
@@ -99,10 +99,10 @@ function Composer({
         onChange={(e) => onDraft(e.target.value)}
         placeholder="Say something about this post"
         rows={4}
-        style={{ width: "100%", boxSizing: "border-box", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12, fontSize: 13, color: t.TEXT, lineHeight: 1.6 }}
+        style={{ width: "100%", boxSizing: "border-box", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12, fontSize: 15, color: t.TEXT, lineHeight: 1.6 }}
       />
       <button type="button" disabled={busy || empty} onClick={onPost}
-        style={{ marginTop: 8, background: t.ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: busy || empty ? "default" : "pointer", opacity: busy || empty ? 0.5 : 1 }}>
+        style={{ marginTop: 8, background: t.ACCENT, color: "#000", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 15, fontWeight: 600, cursor: busy || empty ? "default" : "pointer", opacity: busy || empty ? 0.5 : 1 }}>
         {busy ? "Posting…" : "Post"}
       </button>
     </div>
@@ -228,47 +228,47 @@ export function FiresideThreadView({
           and they may have written nothing here, so a list of their own comments is an empty room. */}
       {cameFromPost ? (
         <a href={firesidePostUrl(postRepo, postSlug)}
-          style={{ display: "inline-block", color: t.ACCENT, fontSize: 12, fontWeight: 600, textDecoration: "none", padding: "0 0 12px" }}>
+          style={{ display: "inline-block", color: t.ACCENT, fontSize: 14, fontWeight: 600, textDecoration: "none", padding: "0 0 12px" }}>
           ‹ Back to the post
         </a>
       ) : (
         <button type="button" onClick={onClose}
-          style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
+          style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
           ‹ Back to your comments
         </button>
       )}
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 14px" }}>{postTitle || postSlug}</h2>
 
       {error && (
-        <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 13, color: "#EF4444" }}>
+        <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>
           {error}
         </div>
       )}
       {notice && (
-        <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", fontSize: 13, color: "#F59E0B", lineHeight: 1.6 }}>
+        <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", fontSize: 15, color: "#F59E0B", lineHeight: 1.6 }}>
           {notice}
         </div>
       )}
 
       {loading ? (
-        <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>
+        <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
       ) : top.length === 0 ? (
-        <div style={{ fontSize: 13, color: t.SUBTLE, padding: "16px 0" }}>Nothing here yet. Say the first thing.</div>
+        <div style={{ fontSize: 15, color: t.SUBTLE, padding: "16px 0" }}>Nothing here yet. Say the first thing.</div>
       ) : (
         top.map((comment) => (
           <div key={comment.id} style={{ marginBottom: 16 }}>
             <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
-              <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
-              <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{comment.body}</div>
+              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
+              <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{comment.body}</div>
               <Reactions comment={comment} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
               <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
                 <button type="button" onClick={() => setReplyTo(comment.id)}
-                  style={{ background: "transparent", border: "none", color: t.SUBTLE, fontSize: 11, cursor: "pointer", padding: 0 }}>
+                  style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0 }}>
                   Reply
                 </button>
                 {isAdmin && !comment.isOwn && (
                   <button type="button" disabled={busy} onClick={() => void moderate(comment.id)}
-                    style={{ background: "transparent", border: "none", color: "#EF4444", fontSize: 11, cursor: busy ? "default" : "pointer", padding: 0 }}>
+                    style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, cursor: busy ? "default" : "pointer", padding: 0 }}>
                     Remove
                   </button>
                 )}
@@ -276,8 +276,8 @@ export function FiresideThreadView({
             </div>
             {comments.filter((reply) => reply.parentCommentId === comment.id).map((reply) => (
               <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
-                <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{reply.body}</div>
+                <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
+                <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{reply.body}</div>
                 <Reactions comment={reply} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
               </div>
             ))}
