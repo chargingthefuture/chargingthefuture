@@ -52,6 +52,14 @@ the project controls rather than on a platform that has erased five of its accou
    see yet, and nothing arrives for replying to yourself.
 8. **Three reactions** — I recognize this, This helped, Same here. A fixed set rather than free
    emoji, so a count means the same thing on every comment.
+8a. **Agree and disagree.** A vote changes a number beside a comment and nothing else. It never
+   moves the comment: the thread is oldest first and nothing reads a count to decide what gets
+   read, which is the inversion of the platform this exists as an alternative to. The agree count
+   is shown. The disagree count is shown to nobody — not the author, not a reader, not an admin —
+   because what a disagree should eventually do is not decided yet, and a number on a screen would
+   decide it. The person who left one sees their own. Pressing one clears the other.
+9. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
+   so a reply underneath keeps its parent.
 9. **Take your own comment down,** at any time, with no admin involved. The words go from the
    conversation; the row stays so a reply underneath keeps its parent. It asks before doing it,
    because it cannot be undone and no admin can put the words back. You keep your own copy of what
@@ -120,6 +128,8 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, and by `(export_review, created_at)` for the admin queue. |
+| `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. `kind` is one of the three reactions or one of the two votes, constrained in the database. A `downvote` row is stored and is never returned as a count: `FIRESIDE_COUNTED_KINDS` in `lib/fireside/constants.ts` has no such member, and every count is built from that list rather than from whatever the table happens to hold. |
 | `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, and by `(export_review, created_at)` for the admin queue. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
@@ -207,6 +217,26 @@ member active only in Fireside is seen by being read, which is what the plugin i
    rather than after.
 ## Change Log
 
+- 2026-09-14: **Agree and disagree, which do not move anything.** Owner decision. The three
+  reactions were the only way to answer a comment and there was no way to say plainly that you
+  agreed. Both votes are stored in `fireside_reactions` alongside the reactions, so there is one
+  mechanism rather than two.
+
+  Two properties are the point of it and are enforced rather than described. **A vote never changes
+  what order comments are read in** — the thread is ordered oldest first, no comment read joins or
+  sorts on `fireside_reactions`, and `votes.test.ts` asserts both against the SQL the repository is
+  built from. This is the inversion of the platform Fireside exists as an alternative to, where what
+  gets read is decided by what was voted on, and it is the kind of promise that quietly stops being
+  true unless something fails when it does. **No count of `downvote` is returned to anybody** — not
+  the author, not a reader, not an admin. `FIRESIDE_COUNTED_KINDS` has no such member and every
+  count is accumulated behind one `isCountedKind` guard, so a screen cannot show a total the server
+  never sends. The person who left one still sees their own, because the control has to be able to
+  show as pressed, and that is their own data rather than a tally of anybody else's.
+
+  What a disagree should eventually do — cancel an agree, or be read only as feedback — is
+  deliberately undecided (owner, 2026-09-14). A number on a screen would settle that by accident,
+  which is why there is not one yet. Pressing one vote clears the other, since holding both says
+  nothing. The three shipped reactions are untouched.
 - 2026-09-14: **Taking your own comment down now asks first, and you keep your own copy.** Owner
   report, from the shipped screen: after withdrawing, the row read "Withdrawn." and nothing else, so
   the words were gone for the person who wrote them too — and there had been no confirmation, for an

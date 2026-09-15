@@ -7335,7 +7335,11 @@ CREATE TABLE IF NOT EXISTS fireside_reactions (
   comment_id UUID NOT NULL REFERENCES fireside_comments(id) ON DELETE CASCADE,
   reactor_user_id TEXT NOT NULL,
   -- A short fixed set rather than free emoji, so the counts mean the same thing on every comment.
-  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here')),
+  -- The last two are votes. Neither moves a comment: the thread is ordered oldest first and nothing
+  -- reads a vote total to decide position, which is the inversion of the platform this exists as an
+  -- alternative to. A downvote is stored and never returned as a count to anybody — see
+  -- FIRESIDE_COUNTED_KINDS in packages/web/lib/fireside/constants.ts.
+  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here','upvote','downvote')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS id UUID;
@@ -8595,4 +8599,26 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body 
 
 COMMENT ON COLUMN fireside_comments.withdrawn_body IS
   'What the author wrote, kept for the author alone after they take a comment down. Never returned by the public thread read or the blog export feed.';
+
+
+-- ── post migration: 0020_fireside_votes.sql ──
+-- Fireside: voting, which does not change what order anything is read in.
+--
+-- The point of this plugin is to be an alternative to a platform where what gets read is decided by
+-- what was voted on. So a vote here is a count beside a comment and nothing else: comments stay in
+-- the order they were written, oldest first, and nothing reads a vote total to decide position.
+--
+-- A downvote is recorded and never counted in public. What it should eventually do — cancel an
+-- upvote, or be read only as feedback — is not decided yet (owner, 2026-09-14), and showing a
+-- number now would settle that by accident. The application keeps it out of every count it builds;
+-- this file only makes the row storable.
+
+ALTER TABLE IF EXISTS fireside_reactions DROP CONSTRAINT IF EXISTS fireside_reactions_kind_check;
+
+ALTER TABLE IF EXISTS fireside_reactions
+  ADD CONSTRAINT fireside_reactions_kind_check
+  CHECK (kind IN ('recognize','helpful','same_here','upvote','downvote'));
+
+COMMENT ON COLUMN fireside_reactions.kind IS
+  'One of the three reactions, or a vote. A downvote is stored and never returned as a count to anybody.';
 

@@ -413,6 +413,41 @@ Result: web ☐
 
 ---
 
+### FS-15 — Voting changes a number and nothing else
+
+**Role:** two members, then an admin, then nobody · **Surfaces:** web
+**Precondition:** A conversation with at least three comments written at different times, by
+different people.
+
+**Steps:**
+1. Note the order the comments are in.
+2. As one member, agree with the third comment. Agree with it from a second account too.
+3. Reload and look at the order again.
+4. Disagree with the first comment, from both accounts.
+5. Reload. Look at the first comment as its author, as a signed-out reader, and as an admin.
+6. Press agree on a comment you have already disagreed with.
+7. Press agree a second time on the same comment.
+
+**Expected:**
+- The order never changes. Oldest first, before and after every vote. A comment that moves up
+  because it was agreed with is the failure this case exists to catch — it is the behavior this
+  plugin is an alternative to.
+- The agree count goes to 2 and is visible to everybody, including a signed-out reader.
+- **No disagree count appears anywhere** — not on the author's own screen, not for a reader, not on
+  any admin screen. Check the raw response from `/api/fireside/threads` as well: there is no
+  `downvote` key in the counts at all. A zero would be as wrong as a two.
+- Your own disagree still shows as pressed when you are signed in as the person who left it. That
+  is your own press, not a count of anybody else's.
+- Pressing agree on something you disagreed with leaves you agreeing and not disagreeing. Holding
+  both is not a state you can reach.
+- Pressing agree twice takes it back, the same as a reaction.
+- A signed-in but unapproved member can press either, and neither counts in public until they are
+  approved — the same rule as their comments.
+
+Result: web ☐
+
+---
+
 ### FS-18 — Being told somebody answered you
 
 **Role:** two members and an unapproved member · **Surfaces:** web
