@@ -7337,7 +7337,11 @@ CREATE TABLE IF NOT EXISTS fireside_reactions (
   comment_id UUID NOT NULL REFERENCES fireside_comments(id) ON DELETE CASCADE,
   reactor_user_id TEXT NOT NULL,
   -- A short fixed set rather than free emoji, so the counts mean the same thing on every comment.
-  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here')),
+  -- The last two are votes. Neither moves a comment: the thread is ordered oldest first and nothing
+  -- reads a vote total to decide position, which is the inversion of the platform this exists as an
+  -- alternative to. A downvote is stored and never returned as a count to anybody — see
+  -- FIRESIDE_COUNTED_KINDS in packages/web/lib/fireside/constants.ts.
+  kind TEXT NOT NULL CHECK (kind IN ('recognize','helpful','same_here','upvote','downvote')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS fireside_reactions ADD COLUMN IF NOT EXISTS id UUID;

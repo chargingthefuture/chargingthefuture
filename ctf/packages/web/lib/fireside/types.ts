@@ -1,6 +1,23 @@
-import type { FIRESIDE_REACTION_KINDS } from './constants';
+import type {
+  FIRESIDE_ALL_REACTION_KINDS,
+  FIRESIDE_COUNTED_KINDS,
+  FIRESIDE_REACTION_KINDS,
+  FIRESIDE_VOTE_KINDS,
+} from './constants';
 
 export type FiresideReactionKind = (typeof FIRESIDE_REACTION_KINDS)[number];
+
+/** Agree or disagree. Neither changes where a comment sits in the thread. */
+export type FiresideVoteKind = (typeof FIRESIDE_VOTE_KINDS)[number];
+
+/** Anything storable in `fireside_reactions.kind` — the three reactions and the two votes. */
+export type FiresideAnyReactionKind = (typeof FIRESIDE_ALL_REACTION_KINDS)[number];
+
+/**
+ * The kinds that may appear in a count anybody is shown. `downvote` is not one of them and must
+ * not become one: it is recorded, its own author sees it, and no total of it is returned.
+ */
+export type FiresideCountedKind = (typeof FIRESIDE_COUNTED_KINDS)[number];
 
 export type FiresideCommentStatus = 'visible' | 'removed' | 'withdrawn';
 
@@ -42,9 +59,17 @@ export type FiresideComment = {
   authorName: string;
   body: string;
   createdAt: string;
-  reactions: Record<FiresideReactionKind, number>;
-  /** Which reactions the signed-in viewer has left. Empty for a signed-out reader. */
-  viewerReactions: FiresideReactionKind[];
+  /**
+   * How many people left each countable kind. There is no `downvote` key, by construction — see
+   * FiresideCountedKind. Nothing reads these to decide order; the thread is oldest first.
+   */
+  reactions: Record<FiresideCountedKind, number>;
+  /**
+   * What the signed-in viewer has left on this comment, which may include their own downvote:
+   * that is their own data, and the control has to be able to show as pressed. Empty for a
+   * signed-out reader.
+   */
+  viewerReactions: FiresideAnyReactionKind[];
   /** True when the viewer wrote it, so their own screen can label its state. */
   isOwn: boolean;
 };

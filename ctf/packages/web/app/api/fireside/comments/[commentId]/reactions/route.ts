@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ensureMutationCsrf, requireFiresideAuthor } from 'lib/fireside/_lib';
-import { FIRESIDE_ERROR_CODE, FIRESIDE_REACTION_KINDS } from 'lib/fireside/constants';
+import { FIRESIDE_ALL_REACTION_KINDS, FIRESIDE_ERROR_CODE } from 'lib/fireside/constants';
 import { insertFiresideAudit, toggleReaction } from 'lib/fireside/repository';
 import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type RouteProps = { params: Promise<{ commentId: string }> };
 
-const bodySchema = z.object({ kind: z.enum(FIRESIDE_REACTION_KINDS) });
+const bodySchema = z.object({ kind: z.enum(FIRESIDE_ALL_REACTION_KINDS) });
 
 /**
- * Leave or take back a reaction. Signing in is enough to press it; whether it counts in public
- * follows the same rule as a comment, because a reaction from an unverified account is how a
+ * Leave or take back a reaction, or a vote. Signing in is enough to press it; whether it counts in
+ * public follows the same rule as a comment, because a reaction from an unverified account is how a
  * brigade would work. Approving the person makes everything they have left count at once.
+ *
+ * A vote changes a number beside a comment and nothing else. It does not move the comment: the
+ * thread is ordered oldest first and nothing reads a count to decide position. A downvote is
+ * recorded and never returned as a count to anybody — only the person who left it sees their own.
  */
 export async function POST(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -39,7 +43,7 @@ export async function POST(request: Request, { params }: RouteProps) {
       {
         ok: false,
         code: FIRESIDE_ERROR_CODE.invalidPayload,
-        message: `Pick one of: ${FIRESIDE_REACTION_KINDS.join(', ')}.`,
+        message: `Pick one of: ${FIRESIDE_ALL_REACTION_KINDS.join(', ')}.`,
       },
       { status: 400 },
     );

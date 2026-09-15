@@ -40,7 +40,10 @@ policies:
     notes: >-
       Same posture as a comment, and for the same reason: a reaction from an unverified account is
       how a brigade would work, so it is recorded and does not count in public until the person is
-      approved.
+      approved. Covers the two votes as well. A vote never changes where a comment sits, and no
+      count of `downvote` is returned to anybody — the person who left one sees their own, because
+      the control has to show as pressed, and no total appears on any screen. What a downvote should
+      eventually do is undecided (owner, 2026-09-14), and a number on a screen would decide it.
   - pluginId: fireside
     command: fireside.comment.withdraw
     version: 1.0.0
