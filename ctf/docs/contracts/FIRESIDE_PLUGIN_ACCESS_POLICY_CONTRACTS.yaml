@@ -114,3 +114,18 @@ policies:
       A closed thread keeps every comment under it, publicly readable, and refuses only new ones.
       Reversible through the same route, so an early close does not need database access to undo.
       Audited in both directions.
+  - pluginId: fireside
+    command: fireside.export.feed.read
+    version: 1.0.0
+    requiredRoles: []
+    minUnlockTier: none
+    requiresAuthentication: false
+    consentRequirements:
+      - Nothing reaches this feed unless both keys are turned — the author asked for it, and an
+        admin agreed. Either one alone returns nothing.
+    notes: >-
+      Public, for the same reason fireside.thread.read is: every comment it returns is already
+      readable by anybody on that route, one post at a time, and the caller is a static build with
+      nowhere to keep a secret. It carries a display name and never a user id. The rows it may
+      return are decided by lib/fireside/visibility.ts (mayExportToBlog) and by nothing in the route
+      itself, so a change to the rule cannot be walked past here.

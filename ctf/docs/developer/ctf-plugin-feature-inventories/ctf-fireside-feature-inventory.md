@@ -102,6 +102,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/admin/threads/[threadId]` | POST | Admin | Close a conversation to new comments, or open it again. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
 | `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
+| `/api/fireside/export` | GET | **Public, no account** | The comments the blog's published build may copy in, oldest first, read by cursor. Every row is decided by `mayExportToBlog`. |
 
 ## Data Model and Storage Contracts
 
@@ -184,9 +185,9 @@ member active only in Fireside is seen by being read, which is what the plugin i
    same-origin with CSRF and origin checks, and a credentialed cross-origin form would break
    silently for anybody whose browser blocks third-party cookies. The button hands off to the app
    instead, which is where approval, moderation and deletion already live.
-2. Both halves of the export decision are recorded and nothing reads them yet. The job that copies
-   approved, opted-in comments into the blog build is the next piece, and it belongs in `wiki-site`
-   alongside the widget. It must read `mayExportToBlog` rather than either column on its own.
+2. The app's half of the export is built and the blog's half is not. `/api/fireside/export` answers
+   with the comments both keys have cleared, and nothing in `wiki-site` reads it yet, so no comment
+   has actually been copied into a build. The reader belongs there alongside the widget.
 3. No general admin list of recent comments. The export queue is a screen, but removing or restoring
    a comment outside a thread still means calling the route by id.
 4. The author's record counts only what happened in Fireside. An account being a problem in several
@@ -209,6 +210,26 @@ member active only in Fireside is seen by being read, which is what the plugin i
   comment was taken down. The comment box is hidden on a closed thread, because `createComment`
   already refuses there and a form that always fails is worse than no form. `FiresideThreadView`
   was split (the comment list is its own component) to stay inside the rule-116 length limit.
+- 2026-09-14: **The blog build can now read the comments both keys have cleared.** The two halves of
+  the export decision had been recorded since 2026-09-13 and nothing read them, so no comment had
+  ever left the app. `/api/fireside/export` is that feed: `listExportableComments` in
+  `export-review.ts` runs every row it scans through `mayExportToBlog` and has no filter of its own,
+  so neither key alone can let a comment out. The SQL narrows the scan for speed and is deliberately
+  a superset of the rule — three of its four conditions, never the fourth — and if the rule is ever
+  loosened that clause has to be widened first. Rows are dropped after the database returns them, so
+  the feed is read by following a cursor rather than by counting: the cursor steps over what was
+  scanned, not over what was kept, and a dropped row cannot cause a later one to be skipped. The
+  route is public for the same reason `/api/fireside/threads` is — every comment it returns is
+  already readable there one post at a time, and the caller is a static build with nowhere to keep a
+  secret. The shape carries a display name and never a user id, because what it feeds is captured by
+  web archives and cannot be pulled back. Its only caller is in `wiki-site`, which is why it is on
+  the orphan-route allowlist as external.
+
+  `FIRESIDE_PLUGIN_COMMAND_CONTRACTS.yaml` was also fixed while adding to it: two commands,
+  `fireside.export.queue.read` and `fireside.export.approve`, had been appended after the
+  `definitions:` block, which made the whole file invalid YAML — nothing in CI parses these
+  contracts, so it had gone unnoticed since the day they were added. Both are back under
+  `commands:` and `definitions:` is last. No wording changed.
 - 2026-09-14: **The Fireside screen had no header and no way to the blog.** Owner report, from the
   shipped screen. Two separate things. It was built without `MobileScreenHeader`, so at phone width
   — the only width this web app renders — there was no back control at all, which rule 134 forbids;

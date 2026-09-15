@@ -198,6 +198,7 @@ commands:
       - fireside_audit_events (insert)
     purpose: Admin moderation. Separate from whether the author is approved, so approving somebody never resurrects a removed comment
     retentionClass: moderation_record
+
   - pluginId: fireside
     command: fireside.export.queue.read
     version: 1.0.0
@@ -295,6 +296,54 @@ commands:
       - fireside_audit_events (insert)
     purpose: Close a conversation to new comments or open it again. Nothing already written is touched, hidden, or removed — this is about what happens next, not about what was said.
     retentionClass: moderation_record
+  - pluginId: fireside
+    command: fireside.export.feed.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        cursor:
+          type: string
+          description: Where the previous read stopped. Omit it to start from the oldest comment.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+    outputSchema:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              commentId:
+                type: string
+              parentCommentId:
+                type: [string, 'null']
+              authorName:
+                type: string
+              body:
+                type: string
+              createdAt:
+                type: string
+              postRepo:
+                type: string
+              postSlug:
+                type: string
+              postTitle:
+                type: string
+        scanned:
+          type: integer
+          description: How many rows were looked at, which is more than were returned when a row was refused.
+        nextCursor:
+          type: [string, 'null']
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - unlock_verification_submissions (select, access_tier only, to decide whose comments may be copied out)
+    purpose: The comments the blog's published build may copy in, so the conversation ships inside the build rather than being fetched into the page afterwards. Every row is decided by mayExportToBlog and nothing else, so neither key alone lets a comment out.
+    retentionClass: community_content
 definitions:
   PublicComment:
     type: object
