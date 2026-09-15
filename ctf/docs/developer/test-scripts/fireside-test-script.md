@@ -278,6 +278,36 @@ Result: web ☐
 
 ---
 
+### FS-11 — The Fireside screen has a way back and a way to the blog
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Two members — one who has written here, and one who has written nothing. Use a
+phone-width window, which is the width the web app renders at for everybody.
+
+**Steps:**
+1. Open the apps list and tap Fireside.
+2. Look at the top of the screen.
+3. Press the back chevron.
+4. Return to Fireside as the member who has written nothing and read the empty state.
+5. Press the link to the blog.
+6. Open a thread from your own comment list, then use the link at the top of that thread.
+
+**Expected:**
+- The screen carries the same header as every other screen: back chevron on the left, the plugin
+  icon and the title, and the report-bug / settings / account controls on the right. A screen with
+  no back control at phone width is the failure this case exists to catch.
+- Back returns to the page you came from — the apps list if that is where you started.
+- A link to the blog is on the screen whether or not you have written anything: once beside the
+  admin export-queue button at the top, and again in the empty state under the sentence telling you
+  to open a post. It opens the blog in a new tab, leaving the app where it was.
+- Inside a thread, "Back to the post" and "Back to your comments" still work as FS-4a describes.
+  Those move between views within the screen; they are not the screen's back control and neither
+  replaces the other.
+
+Result: web ☐
+
+---
+
 ### FS-13 — Closing a conversation stops new comments and hides nothing
 
 **Role:** admin, then member, then nobody · **Surfaces:** web
