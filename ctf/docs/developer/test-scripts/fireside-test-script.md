@@ -342,6 +342,37 @@ Result: web ☐
 
 ---
 
+### FS-13 — Closing a conversation stops new comments and hides nothing
+
+**Role:** admin, then member, then nobody · **Surfaces:** web
+**Precondition:** A post whose conversation has at least two comments, one with a reply.
+
+**Steps:**
+1. As an admin, open that conversation in the app and close it.
+2. As a member, open the same conversation.
+3. Try to post a comment there anyway, by calling `/api/fireside/comments` directly.
+4. Signed out, read the same post on the blog.
+5. As the admin, open it again.
+
+**Expected:**
+- Every comment already written is still there, for the member and for a signed-out reader alike.
+  Closing is not removing, and a case where anything disappears is the failure this catches.
+- The member reads a line saying the conversation is closed to new comments and that what is there
+  stays. They are not left to work out why the box is gone.
+- The comment box is not offered at all on a closed thread. Writing there is refused by the app
+  anyway, and a form that always fails is worse than no form.
+- The direct call is refused, with a sentence naming the conversation as closed — the screen hiding
+  the box is convenience, not the rule.
+- Opening it again restores the box, through the same control. Neither direction needs database
+  access.
+- Both the close and the reopen are in the audit trail, with who did it and when.
+- Closing a conversation nobody has commented on yet is refused with a sentence saying a thread
+  exists once somebody has commented.
+
+Result: web ☐
+
+---
+
 ### FS-14 — Every part of the screen is readable
 
 **Role:** member, then admin · **Surfaces:** web

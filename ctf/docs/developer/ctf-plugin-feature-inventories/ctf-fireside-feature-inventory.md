@@ -83,7 +83,9 @@ the project controls rather than on a platform that has erased five of its accou
    refusals behind it is flagged on the row, with the note that the decision worth making is about
    the account rather than the comment. Moderating item by item is a losing race against somebody
    doing it deliberately; deleting the account settles it once.
-5. **Close a thread** to new comments without removing what is already there.
+5. **Close a thread** to new comments without removing what is already there, and open it again.
+   The control is on the conversation itself, a member reads a line saying it is closed rather than
+   being left to guess, and the comment box is not offered when writing would be refused.
 6. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
    the author's request and the admin's answer — because that pair is what lets text leave the app
    for somewhere it cannot be recalled from.
@@ -99,6 +101,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
+| `/api/fireside/admin/threads/[threadId]` | POST | Admin | Close a conversation to new comments, or open it again. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
 | `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
 | `/api/fireside/export` | GET | **Public, no account** | The comments the blog's published build may copy in, oldest first, read by cursor. Every row is decided by `mayExportToBlog`. |
@@ -192,11 +195,10 @@ member active only in Fireside is seen by being read, which is what the plugin i
 4. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
-5. Closing a thread has a repository function and no route.
-6. A reply notification does not arrive late. A held reply notifies nobody, and approving its
+5. A reply notification does not arrive late. A held reply notifies nobody, and approving its
    author later makes the reply appear without telling the person it answered. Catching that up
    means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-7. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
+6. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
    whole argument for storing them here is that they are searchable — worth doing before volume
    rather than after.
 ## Change Log
@@ -221,6 +223,16 @@ member active only in Fireside is seen by being read, which is what the plugin i
     background it sits on. It is `#F87171` now, 6.22:1, in the same places.
 
   No layout, no copy and no behavior changed — this is color and type size only.
+- 2026-09-14: **Closing a conversation is a route now, not just a function nobody could call.**
+  `setThreadClosed` had been in the repository since the plugin shipped and nothing called it, so a
+  thread listed as closable could not actually be closed by anybody without database access.
+  `/api/fireside/admin/threads/[threadId]` is admin-gated, audited in both directions, and takes
+  the same route to reopen — a conversation closed early should not need a migration to undo.
+  Closing is deliberately not removing: everything already written stays where it is and stays
+  readable, and the member-facing line says so rather than leaving somebody to conclude their
+  comment was taken down. The comment box is hidden on a closed thread, because `createComment`
+  already refuses there and a form that always fails is worse than no form. `FiresideThreadView`
+  was split (the comment list is its own component) to stay inside the rule-116 length limit.
 - 2026-09-14: **Somebody answering you now tells you.** Nothing did, so a reply sat unseen unless
   the person it answered happened to return to the post. It goes through the platform's own
   notification system rather than anything new — `notifySafe`, category `community`, deep-linked to

@@ -109,6 +109,105 @@ function Composer({
   );
 }
 
+// The comments themselves, top level with their replies under them. Its own component purely so
+// FiresideThreadView stays inside the rule-116 length budget; it holds no state of its own.
+function ThreadComments({
+  comments,
+  loading,
+  isAdmin,
+  t,
+  busy,
+  onReact,
+  onReply,
+  onRemove,
+}: {
+  comments: ThreadComment[];
+  loading: boolean;
+  isAdmin: boolean;
+  t: PluginShellTokens;
+  busy: boolean;
+  onReact: (commentId: string, kind: string) => void;
+  onReply: (commentId: string) => void;
+  onRemove: (commentId: string) => void;
+}) {
+  if (loading) return <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>;
+
+  const top = comments.filter((comment) => comment.parentCommentId == null);
+  if (top.length === 0) {
+    return <div style={{ fontSize: 13, color: t.SUBTLE, padding: "16px 0" }}>Nothing here yet. Say the first thing.</div>;
+  }
+
+  return (
+    <>
+      {top.map((comment) => (
+        <div key={comment.id} style={{ marginBottom: 16 }}>
+          <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
+            <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
+            <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{comment.body}</div>
+            <Reactions comment={comment} t={t} onReact={onReact} busy={busy} />
+            <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+              <button type="button" onClick={() => onReply(comment.id)}
+                style={{ background: "transparent", border: "none", color: t.SUBTLE, fontSize: 13, cursor: "pointer", padding: 0 }}>
+                Reply
+              </button>
+              {isAdmin && !comment.isOwn && (
+                <button type="button" disabled={busy} onClick={() => onRemove(comment.id)}
+                  style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, cursor: busy ? "default" : "pointer", padding: 0 }}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+          {comments.filter((reply) => reply.parentCommentId === comment.id).map((reply) => (
+            <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
+              <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{reply.body}</div>
+              <Reactions comment={reply} t={t} onReact={onReact} busy={busy} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+// Whether this conversation is still open, and an admin's control over that.
+//
+// Closing is not removing. Everything written stays where it is and stays readable — it says the
+// talking is done, not that the talk was wrong, which is why the line a member reads says so
+// plainly rather than leaving them to guess what happened.
+function ThreadState({
+  thread,
+  isAdmin,
+  t,
+  busy,
+  onSetClosed,
+}: {
+  thread: { id: string; isClosed: boolean } | null;
+  isAdmin: boolean;
+  t: PluginShellTokens;
+  busy: boolean;
+  onSetClosed: (next: boolean) => void;
+}) {
+  if (!thread) return null;
+  return (
+    <>
+      {thread.isClosed && (
+        <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER}`, fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
+          This conversation is closed to new comments. Everything already written stays here and
+          stays readable.
+        </div>
+      )}
+      {isAdmin && (
+        <button type="button" disabled={busy} onClick={() => onSetClosed(!thread.isClosed)}
+          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 600, color: t.SUBTLE, cursor: busy ? "default" : "pointer", marginBottom: 12 }}>
+          {thread.isClosed ? "Open this conversation again" : "Close this conversation to new comments"}
+        </button>
+      )}
+    </>
+  );
+}
+
 export function FiresideThreadView({
   postRepo,
   postSlug,
@@ -128,6 +227,7 @@ export function FiresideThreadView({
   cameFromPost?: boolean;
 }) {
   const [comments, setComments] = useState<ThreadComment[]>([]);
+  const [thread, setThread] = useState<{ id: string; isClosed: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -144,8 +244,12 @@ export function FiresideThreadView({
         const body = (await res.json()) as { message?: string };
         throw new Error(body.message ?? "Could not load this conversation.");
       }
-      const data = (await res.json()) as { comments: ThreadComment[] };
+      const data = (await res.json()) as {
+        comments: ThreadComment[];
+        thread: { id: string; isClosed: boolean } | null;
+      };
       setComments(data.comments);
+      setThread(data.thread);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load this conversation.");
     } finally {
@@ -200,6 +304,28 @@ export function FiresideThreadView({
     }
   }
 
+  async function setClosed(next: boolean) {
+    if (!thread) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/fireside/admin/threads/${thread.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ isClosed: next, reason: "Set from the thread view." }),
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { message?: string };
+        throw new Error(body.message ?? "Could not change whether this conversation is open.");
+      }
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not change whether this conversation is open.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function moderate(commentId: string) {
     setBusy(true);
     try {
@@ -220,8 +346,6 @@ export function FiresideThreadView({
     }
   }
 
-  const top = comments.filter((c) => c.parentCommentId == null);
-
   return (
     <div>
       {/* Back means the post for somebody who arrived from one — they were reading it a moment ago,
@@ -239,6 +363,8 @@ export function FiresideThreadView({
       )}
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 14px" }}>{postTitle || postSlug}</h2>
 
+      <ThreadState thread={thread} isAdmin={isAdmin} t={t} busy={busy} onSetClosed={(next) => void setClosed(next)} />
+
       {error && (
         <div role="alert" style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>
           {error}
@@ -250,50 +376,28 @@ export function FiresideThreadView({
         </div>
       )}
 
-      {loading ? (
-        <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
-      ) : top.length === 0 ? (
-        <div style={{ fontSize: 15, color: t.SUBTLE, padding: "16px 0" }}>Nothing here yet. Say the first thing.</div>
-      ) : (
-        top.map((comment) => (
-          <div key={comment.id} style={{ marginBottom: 16 }}>
-            <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
-              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
-              <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{comment.body}</div>
-              <Reactions comment={comment} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
-              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                <button type="button" onClick={() => setReplyTo(comment.id)}
-                  style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", padding: 0 }}>
-                  Reply
-                </button>
-                {isAdmin && !comment.isOwn && (
-                  <button type="button" disabled={busy} onClick={() => void moderate(comment.id)}
-                    style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, cursor: busy ? "default" : "pointer", padding: 0 }}>
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-            {comments.filter((reply) => reply.parentCommentId === comment.id).map((reply) => (
-              <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
-                <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{reply.body}</div>
-                <Reactions comment={reply} t={t} onReact={(id, kind) => void react(id, kind)} busy={busy} />
-              </div>
-            ))}
-          </div>
-        ))
-      )}
-
-      <Composer
+      <ThreadComments
+        comments={comments}
+        loading={loading}
+        isAdmin={isAdmin}
         t={t}
-        draft={draft}
-        onDraft={setDraft}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
         busy={busy}
-        onPost={() => void post()}
+        onReact={(id, kind) => void react(id, kind)}
+        onReply={setReplyTo}
+        onRemove={(id) => void moderate(id)}
       />
+
+      {!thread?.isClosed && (
+        <Composer
+          t={t}
+          draft={draft}
+          onDraft={setDraft}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          busy={busy}
+          onPost={() => void post()}
+        />
+      )}
     </div>
   );
 }
