@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview |
 
 ## How to run this
 
@@ -238,6 +238,10 @@ used to carry its own scrolling box.
 with a second account that has no claimed listing.
 **Steps:**
 1. Open Workforce and scroll the tab row to its end. The last tab reads "What's your 1%?".
+1a. **Straight from a link.** Open `/apps/workforce?view=one-percent` in a fresh tab. It lands on
+   "What's your 1%?" with no sideways scrolling, and that tab is the one marked active on the rail.
+   Repeat with `?view=sector` and confirm it lands on Sectors, then with `?view=nonsense` and with no
+   parameter at all — both land on Overview rather than an empty screen.
 2. Read the card: initials in the avatar box, your first and last name, your occupation, and your
    skills as chips.
 3. Cross-check the chips against your Directory listing — same skills, same order, including any
