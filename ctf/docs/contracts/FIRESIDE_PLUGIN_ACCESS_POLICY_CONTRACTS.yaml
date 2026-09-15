@@ -105,3 +105,18 @@ policies:
     notes: >-
       The second of two keys. Approving publishes nothing by itself — the author's own opt-in still
       has to be on when the copy is made. Refusing is final for that comment.
+  - pluginId: fireside
+    command: fireside.export.feed.read
+    version: 1.0.0
+    requiredRoles: []
+    minUnlockTier: none
+    requiresAuthentication: false
+    consentRequirements:
+      - Nothing reaches this feed unless both keys are turned — the author asked for it, and an
+        admin agreed. Either one alone returns nothing.
+    notes: >-
+      Public, for the same reason fireside.thread.read is: every comment it returns is already
+      readable by anybody on that route, one post at a time, and the caller is a static build with
+      nowhere to keep a secret. It carries a display name and never a user id. The rows it may
+      return are decided by lib/fireside/visibility.ts (mayExportToBlog) and by nothing in the route
+      itself, so a change to the rule cannot be walked past here.
