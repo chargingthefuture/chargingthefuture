@@ -10,10 +10,15 @@ export const FIRESIDE_PLUGIN_ID = 'fireside';
 // width this app has.
 export const FIRESIDE_MAX_REPLY_DEPTH = 1;
 
+// The blog itself. Conversation happens under the posts, so a member who opens Fireside and has
+// never written anything needs the way there to be on the screen — without it the only route to the
+// thing this plugin is about is a search engine (owner report, 2026-09-14).
+export const FIRESIDE_BLOG_BASE = 'https://chargingthefuture.github.io/chargingthefuture';
+
 // Where a conversation's post lives. Somebody who arrived here from a post was reading it a moment
 // ago, and with 300-odd posts on the blog, "back" has to mean the one they came from — anything
 // else loses them, which is the same bounce the deep link exists to prevent.
-export const FIRESIDE_BLOG_ARTICLE_BASE = 'https://chargingthefuture.github.io/chargingthefuture/article';
+export const FIRESIDE_BLOG_ARTICLE_BASE = `${FIRESIDE_BLOG_BASE}/article`;
 
 /** The post a thread belongs to, as a reader's address for it. */
 export function firesidePostUrl(repo: string, slug: string): string {
