@@ -323,8 +323,37 @@ async function loadWorkforceData(
   return { data, warning: failedSectionsMessage(sectorRes, skillRes, occRes, profileRes) };
 }
 
+// The tab rail, and the set of names a link may open. One list, because a link that names a tab the
+// rail does not carry would fail silently and land the reader on Overview with no explanation.
+const SIDEBAR_VIEWS: { key: SidebarView; label: string }[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'sector', label: 'Sectors' },
+  { key: 'skill-level', label: 'Skill Level' },
+  { key: 'occupations', label: 'Occupations' },
+  { key: 'community-planning', label: 'Community' },
+  // Last on the rail on purpose (owner decision, 2026-09-14). Every tab before it answers what
+  // the population looks like; this one answers what the member reading it could do, so it
+  // reads as the question the others build up to.
+  { key: 'one-percent', label: "What's your 1%?" },
+];
+
+// Open a tab straight from a link: /apps/workforce?view=one-percent.
+//
+// The rail is a horizontal scroller, and "What's your 1%?" sits at the far end of it, so a reader
+// sent here by a post had to know to scroll sideways before they could find the thing they were
+// sent for. Anything off the list falls back to Overview rather than showing an empty screen.
+//
+// Read from window rather than useSearchParams, the same way the Peer Programming shell reads its
+// room links, so this client shell does not need a Suspense boundary around it.
+function initialViewFromUrl(): SidebarView {
+  if (typeof window === 'undefined') return 'overview';
+  const asked = new URLSearchParams(window.location.search).get('view');
+  const match = SIDEBAR_VIEWS.find((v) => v.key === asked);
+  return match ? match.key : 'overview';
+}
+
 export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
-  const [view, setView] = useState<SidebarView>('overview');
+  const [view, setView] = useState<SidebarView>(initialViewFromUrl);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -411,17 +440,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     />
   );
 
-    const views: { key: SidebarView; label: string }[] = [
-      { key: 'overview', label: 'Overview' },
-      { key: 'sector', label: 'Sectors' },
-      { key: 'skill-level', label: 'Skill Level' },
-      { key: 'occupations', label: 'Occupations' },
-      { key: 'community-planning', label: 'Community' },
-      // Last on the rail on purpose (owner decision, 2026-09-14). Every tab before it answers what
-      // the population looks like; this one answers what the member reading it could do, so it
-      // reads as the question the others build up to.
-      { key: 'one-percent', label: "What's your 1%?" },
-    ];
+    const views = SIDEBAR_VIEWS;
     // The whole document scrolls here, like every other screen: the shell is only
     // *at least* one viewport tall and nothing inside it owns a scrollbar. Pinning the
     // shell to exactly 100dvh and scrolling an inner box instead leaves the document
