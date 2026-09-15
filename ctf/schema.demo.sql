@@ -7298,6 +7298,13 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   export_reviewed_by TEXT,
   export_reviewed_at TIMESTAMPTZ,
   export_refusal_reason TEXT,
+  -- What the author wrote, kept for the author alone once they take the comment down. `body` still
+  -- empties on withdrawal, so the words leave the conversation for everybody else; this is the copy
+  -- the person who wrote them can still see on their own screen. Taking a comment down cannot be
+  -- undone, so the moment somebody most needs to read what they wrote is just after they have
+  -- destroyed it. Read only by /api/fireside/mine, which returns the caller's own rows; never by
+  -- the public thread read and never by the blog export feed.
+  withdrawn_body TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7316,6 +7323,7 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_review T
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_by TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
@@ -8571,6 +8579,26 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
 
 ALTER TABLE IF EXISTS skills_taxonomy_job_titles
   ADD COLUMN IF NOT EXISTS workforce_share NUMERIC;
+
+
+-- ── post migration: 0019_fireside_withdrawn_body.sql ──
+-- Fireside: an author keeps their own copy of a comment they took down.
+--
+-- Withdrawing emptied `body`, so the words were gone for everybody including the person who wrote
+-- them. On their own screen the comment became the single word "Withdrawn." with no way to see what
+-- it had said (owner report, 2026-09-14). That is worse than it sounds: taking a comment down
+-- cannot be undone, so the moment a member most needs to see what they wrote is the moment after
+-- they have destroyed it, when they are checking whether they meant to.
+--
+-- `body` still empties, and nothing about who can read what changes. This column is the author's
+-- own copy: it is read only on /api/fireside/mine, which returns the caller's own rows and nothing
+-- else, and it is never selected by the public thread read or by the blog export feed. Deleting the
+-- account still takes it, because that deletes the whole row.
+
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
+
+COMMENT ON COLUMN fireside_comments.withdrawn_body IS
+  'What the author wrote, kept for the author alone after they take a comment down. Never returned by the public thread read or the blog export feed.';
 
 
 -- ── post migration: 0020_fireside_votes.sql ──

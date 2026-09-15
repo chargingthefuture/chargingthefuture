@@ -81,6 +81,13 @@ export type FiresideOwnComment = FiresideComment & {
   exportReview: ExportReview;
   /** What an admin said when they declined it, shown to the author as written. */
   exportRefusalReason: string | null;
+  /**
+   * What the author wrote, kept for them after they take a comment down, and null otherwise.
+   *
+   * Only ever on this shape — the author's own view of their own rows. The public comment type
+   * above has no such field, so there is nowhere for it to be returned to anybody else.
+   */
+  withdrawnBody: string | null;
   postRepo: string;
   postSlug: string;
   postTitle: string;

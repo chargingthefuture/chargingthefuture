@@ -7,7 +7,7 @@ the reactions they left.
 
 | Table | Personal data it holds |
 |---|---|
-| `fireside_comments` | `author_user_id`, `author_username` (the name printed beside the comment, written at creation), `body` |
+| `fireside_comments` | `author_user_id`, `author_username` (the name printed beside the comment, written at creation), `body`, `withdrawn_body` (the author's own copy of a comment they took down — returned only on `/api/fireside/mine`, never by the public thread read or the blog export feed) |
 | `fireside_reactions` | `reactor_user_id` |
 | `fireside_threads` | Nothing personal — a post reference and a title |
 | `fireside_audit_events` | `actor_id` on each recorded write |
@@ -25,9 +25,20 @@ not what was said.
 
 ## Taking one comment down
 
-Separate from account deletion and available at any time. The author withdraws it, the body is
+Separate from account deletion and available at any time. The author withdraws it, `body` is
 emptied, and the row stays so that a reply underneath does not lose its parent. A withdrawn comment
-is never shown to anybody, never exported, and cannot be restored by an admin.
+is never shown to anybody else, never exported, and cannot be restored by an admin. The screen asks
+before doing it, because it cannot be undone.
+
+The words are copied to `withdrawn_body` first, which is the author's own copy and nobody else's.
+It is read by one query — `listOwnComments`, scoped to the caller's own rows — and it is not in the
+select that feeds the public thread read, so there is no shape that could return it to anybody
+else. Deleting the account still takes it, because that deletes the whole row.
+
+This is a deliberate narrowing of what withdrawal destroys, decided 2026-09-14 on an owner report:
+taking a comment down cannot be undone, so the moment somebody most needs to read what they wrote
+is just after they have destroyed it, when they are checking whether they meant that one. What
+withdrawal means to everybody else is unchanged.
 
 ## The one thing deletion cannot reach
 
