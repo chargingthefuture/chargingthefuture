@@ -83,9 +83,12 @@ the project controls rather than on a platform that has erased five of its accou
    refusals behind it is flagged on the row, with the note that the decision worth making is about
    the account rather than the comment. Moderating item by item is a losing race against somebody
    doing it deliberately; deleting the account settles it once.
-5. **Close a thread** to new comments without removing what is already there.
+5. **Close a thread** to new comments without removing what is already there, and open it again.
+   The control is on the conversation itself, a member reads a line saying it is closed rather than
+   being left to guess, and the comment box is not offered when writing would be refused.
 6. **A list of every comment, newest first,** searchable by what people wrote, paged, with the page
-   in the address bar so it can be linked and the back button works. Removed and withdrawn rows are listed alongside live ones: a
+   in the address bar so it can be linked and the back button works. Removed and withdrawn rows are
+   listed alongside live ones: a
    list that hides what was already acted on cannot be used to undo anything, and undoing is most
    of what a moderation list is for. A comment its own author took down carries no control, because
    nobody can put that one back.
@@ -105,6 +108,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
 | `/api/fireside/admin/comments?q=` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. `q` searches the bodies. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
+| `/api/fireside/admin/threads/[threadId]` | POST | Admin | Close a conversation to new comments, or open it again. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
 | `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
 | `/api/fireside/export` | GET | **Public, no account** | The comments the blog's published build may copy in, oldest first, read by cursor. Every row is decided by `mayExportToBlog`. |
@@ -196,15 +200,14 @@ member active only in Fireside is seen by being read, which is what the plugin i
 3. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
-4. Closing a thread has a repository function and no route.
-5. A reply notification does not arrive late. A held reply notifies nobody, and approving its
+4. A reply notification does not arrive late. A held reply notifies nobody, and approving its
    author later makes the reply appear without telling the person it answered. Catching that up
    means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-6. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
+5. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
-7. The member's own comment list and the blog export queue page without putting the page in the
+6. The member's own comment list and the blog export queue page without putting the page in the
    address bar. The admin list of every comment does; those two predate it and should follow.
 ## Change Log
 
@@ -242,6 +245,18 @@ member active only in Fireside is seen by being read, which is what the plugin i
   outside the screen on back. The clamp is the route's, which answers with the page it actually
   used, so a linked number past the end lands on the last page. The other two Fireside lists still
   page without the URL and are recorded as a gap.
+## Change Log
+
+- 2026-09-14: **Closing a conversation is a route now, not just a function nobody could call.**
+  `setThreadClosed` had been in the repository since the plugin shipped and nothing called it, so a
+  thread listed as closable could not actually be closed by anybody without database access.
+  `/api/fireside/admin/threads/[threadId]` is admin-gated, audited in both directions, and takes
+  the same route to reopen — a conversation closed early should not need a migration to undo.
+  Closing is deliberately not removing: everything already written stays where it is and stays
+  readable, and the member-facing line says so rather than leaving somebody to conclude their
+  comment was taken down. The comment box is hidden on a closed thread, because `createComment`
+  already refuses there and a form that always fails is worse than no form. `FiresideThreadView`
+  was split (the comment list is its own component) to stay inside the rule-116 length limit.
 - 2026-09-14: **Somebody answering you now tells you.** Nothing did, so a reply sat unseen unless
   the person it answered happened to return to the post. It goes through the platform's own
   notification system rather than anything new — `notifySafe`, category `community`, deep-linked to
