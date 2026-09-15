@@ -68,3 +68,27 @@ export function mayExportToBlog(
 ): boolean {
   return input.exportOptIn && input.exportReview === 'approved' && isPubliclyVisible(input);
 }
+
+/**
+ * Whether the author of a comment should be told that somebody answered it.
+ *
+ * Here with the other visibility rules rather than in the route, because it is a visibility
+ * question wearing a different hat: it asks who may know a reply exists. Three conditions, and each
+ * one is a way this goes wrong in practice.
+ *
+ * It has to be a reply — a new top-level comment answers nobody. The reply has to be publicly
+ * visible, because nothing an unapproved member writes is, and telling somebody about a reply they
+ * will open and not find is worse than telling them nothing. And nobody is told about their own
+ * reply to themselves, which is most replies in a conversation that has just started.
+ */
+export function shouldNotifyParentAuthor(input: {
+  parentCommentId: string | null;
+  isPubliclyVisible: boolean;
+  parentAuthorUserId: string | null;
+  replierUserId: string;
+}): boolean {
+  if (!input.parentCommentId) return false;
+  if (!input.isPubliclyVisible) return false;
+  if (!input.parentAuthorUserId) return false;
+  return input.parentAuthorUserId !== input.replierUserId;
+}

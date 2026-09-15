@@ -303,6 +303,20 @@ export async function createComment(
   return { status: 'created', commentId, isPubliclyVisible: approved.has(userId) };
 }
 
+/**
+ * Who wrote a comment, for telling them somebody answered it.
+ *
+ * Returns the id only, never anything shown on a screen: the caller hands it to the notification
+ * system, which addresses a member without displaying anything about them.
+ */
+export async function findCommentAuthorUserId(commentId: string): Promise<string | null> {
+  const result = await queryDb<{ author_user_id: string }>(
+    `SELECT author_user_id FROM fireside_comments WHERE id = $1::uuid LIMIT 1`,
+    [commentId],
+  );
+  return result.rows[0]?.author_user_id ?? null;
+}
+
 /** The author's own comments, in one list, each labeled with what is happening to it. */
 export async function listOwnComments(userId: string, limit = 50, offset = 0): Promise<FiresideOwnComment[]> {
   const result = await queryDb<CommentRow>(
