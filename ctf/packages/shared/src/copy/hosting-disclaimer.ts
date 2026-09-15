@@ -11,6 +11,12 @@
 // misled by the shape of the page, not by anything it says — which is exactly the kind of wrong
 // impression worth correcting in the copy rather than in an apology later.
 //
+// Owner directive, 2026-09-15: the word is endorsement, not recommendation. A recommendation is a
+// soft opinion somebody is free to weigh, and disclaiming one concedes that the project was offering
+// an opinion at all. What a reader actually infers from a published schedule under this project's
+// name is that the project stands behind the people on it, and that is the thing being denied. The
+// constant has been named HOSTING_NOT_ENDORSEMENT since it was written; the copy now agrees with it.
+//
 // It is deliberately not a safety claim. Saying a room is moderated, screened or safe would be
 // worth more than it is true, and a person deciding whether to turn up is better served by an
 // accurate account of what the listing is: a booking, and rules that apply afterwards.
@@ -27,9 +33,10 @@
 /** The endorsement disclaimer, for any surface that publishes who is hosting. */
 export const HOSTING_NOT_ENDORSEMENT =
   'A slot is taken, not granted. Any approved member can book an open time and write their own '
-  + 'description, nobody reviews it first, and a name here is not a recommendation from this project. '
-  + 'The rules still apply in the room, and an account goes for breaking them.';
+  + 'description, nobody reviews it first, and a name here is not an endorsement — this project '
+  + 'does not vouch for a host or for what gets said in their room. The rules still apply in the room, '
+  + 'and an account goes for breaking them.';
 
 /** The short form, for a card with no room for the full statement. */
 export const HOSTING_NOT_ENDORSEMENT_SHORT =
-  'Hosts book their own slots. A name here is not a recommendation, and the rules still apply in the room.';
+  'Hosts book their own slots. A name here is not an endorsement, and the rules still apply in the room.';

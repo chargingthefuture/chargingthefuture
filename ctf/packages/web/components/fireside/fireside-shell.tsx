@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Flame } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+import { FIRESIDE_BLOG_BASE } from "@/lib/fireside/constants";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
 import { FiresideExportQueue } from "./fireside-export-queue";
 import { Pager } from "./fireside-pager";
@@ -76,6 +79,33 @@ function Guidelines({ t }: { t: PluginShellTokens }) {
         </p>
       </div>
     </details>
+  );
+}
+
+// The way to the conversation itself. Reading and writing happen under the posts on the blog, and
+// this screen is only a member's own side of it — so without a link out, somebody who lands here
+// with nothing written has no route to the thing the plugin is about except a search engine (owner
+// report, 2026-09-14). It opens in a new tab so the member keeps their place in the app.
+function BlogLink({ t, label }: { t: PluginShellTokens; label: string }) {
+  return (
+    <a
+      href={FIRESIDE_BLOG_BASE}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "inline-block",
+        background: "transparent",
+        border: `1px solid ${t.BORDER}`,
+        borderRadius: 8,
+        padding: "8px 14px",
+        fontSize: 12,
+        fontWeight: 600,
+        color: t.ACCENT,
+        textDecoration: "none",
+      }}
+    >
+      {label}
+    </a>
   );
 }
 
@@ -233,7 +263,12 @@ export function FiresideShell({
   }
 
   return (
-    <div style={{ background: t.BG, minHeight: "100%", padding: "20px 16px 48px" }}>
+    <div style={{ background: t.BG, minHeight: "100%" }}>
+      {/* The shared screen header, so the way back is the same control as everywhere else in the
+          app (rule 134). This screen shipped without one and had no way back at phone width, which
+          is the breakpoint the whole web app renders at (owner report, 2026-09-14). */}
+      <MobileScreenHeader title="Fireside" accent={t.ACCENT} icon={<Flame size={18} color={t.ACCENT} />} />
+      <div style={{ padding: "20px 16px 48px" }}>
       {queueOpen ? (
         <FiresideExportQueue t={t} onClose={() => { setQueueOpen(false); void load(page); }} />
       ) : openPost ? (
@@ -254,12 +289,15 @@ export function FiresideShell({
         have written, and what is happening to each one.
       </p>
 
-      {isAdmin && (
-        <button type="button" onClick={() => setQueueOpen(true)}
-          style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: t.ACCENT, cursor: "pointer", marginBottom: 16 }}>
-          Blog export queue
-        </button>
-      )}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        <BlogLink t={t} label="Open the blog" />
+        {isAdmin && (
+          <button type="button" onClick={() => setQueueOpen(true)}
+            style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 12, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
+            Blog export queue
+          </button>
+        )}
+      </div>
 
       <Guidelines t={t} />
 
@@ -277,6 +315,9 @@ export function FiresideShell({
           <br />
           Open a post on the blog and use the conversation under it; whatever you write shows up on
           this screen afterwards, with what is happening to each one.
+          <div style={{ marginTop: 16 }}>
+            <BlogLink t={t} label="Open the blog" />
+          </div>
         </div>
       ) : (
         <>
@@ -303,6 +344,7 @@ export function FiresideShell({
       )}
       </>
       )}
+      </div>
     </div>
   );
 }
