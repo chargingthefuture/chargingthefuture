@@ -95,7 +95,7 @@ commands:
     dataAccess:
       - fireside_comments (update)
       - fireside_audit_events (insert)
-    purpose: The author takes their own comment down; the body is emptied and the row kept so replies keep their parent
+    purpose: The author takes their own comment down. `body` empties and the row is kept so replies keep their parent; the words are copied to `withdrawn_body`, which only that author's own read returns. Cannot be undone, so the screen asks first.
     retentionClass: community_content
   - pluginId: fireside
     command: fireside.comment.set_export

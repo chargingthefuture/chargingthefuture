@@ -167,8 +167,12 @@ async function readReactions(commentIds: string[], viewerUserId: string | null):
   return { counts, viewer };
 }
 
-const COMMENT_SELECT = `
-  SELECT c.id::text AS id,
+// What every read of a comment returns. `withdrawn_body` is deliberately NOT here: this select
+// feeds the public thread read, and the author's own copy of something they took down must not be
+// reachable from a shape that anybody can request. Only OWN_COMMENT_SELECT below adds it, and only
+// listOwnComments uses that, scoped to the caller's own rows.
+const COMMENT_COLUMNS = `
+         c.id::text AS id,
          c.parent_comment_id::text AS parent_comment_id,
          c.author_user_id,
          c.author_username,
@@ -178,9 +182,21 @@ const COMMENT_SELECT = `
          c.export_review,
          c.export_refusal_reason,
          to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS created_at,
-         t.post_repo, t.post_slug, t.post_title
+         t.post_repo, t.post_slug, t.post_title`;
+
+const COMMENT_FROM = `
     FROM fireside_comments c
     JOIN fireside_threads t ON t.id = c.thread_id`;
+
+const COMMENT_SELECT = `
+  SELECT ${COMMENT_COLUMNS}
+  ${COMMENT_FROM}`;
+
+/** The same rows plus the author's own copy of anything they took down. Author-scoped reads only. */
+const OWN_COMMENT_SELECT = `
+  SELECT ${COMMENT_COLUMNS},
+         c.withdrawn_body
+  ${COMMENT_FROM}`;
 
 function toComment(
   row: CommentRow,
@@ -288,8 +304,8 @@ export async function createComment(
 
 /** The author's own comments, in one list, each labeled with what is happening to it. */
 export async function listOwnComments(userId: string, limit = 50, offset = 0): Promise<FiresideOwnComment[]> {
-  const result = await queryDb<CommentRow>(
-    `${COMMENT_SELECT}
+  const result = await queryDb<CommentRow & { withdrawn_body: string | null }>(
+    `${OWN_COMMENT_SELECT}
       WHERE c.author_user_id = $1
       ORDER BY c.created_at DESC
       LIMIT $2 OFFSET $3`,
@@ -305,6 +321,9 @@ export async function listOwnComments(userId: string, limit = 50, offset = 0): P
     exportToBlog: row.export_to_blog,
     exportReview: row.export_review,
     exportRefusalReason: row.export_refusal_reason,
+    // What they wrote, for them alone, once they have taken it down. Null on everything else, so a
+    // screen shows it only where there is something to show.
+    withdrawnBody: row.status === 'withdrawn' ? row.withdrawn_body : null,
     postRepo: row.post_repo,
     postSlug: row.post_slug,
     postTitle: row.post_title,
@@ -321,13 +340,25 @@ export async function countOwnComments(userId: string): Promise<number> {
 
 /**
  * The author takes their own comment down. Kept as a row with `withdrawn` rather than deleted, so a
- * reply under it does not lose its parent; the body is emptied because withdrawing means the words
- * go, not merely that they are hidden.
+ * reply under it does not lose its parent; `body` is emptied because withdrawing means the words go
+ * from the conversation, not merely that they are hidden.
+ *
+ * The words are copied to `withdrawn_body` first, which is the author's own copy and nobody else's.
+ * Taking a comment down cannot be undone, so the moment somebody most needs to read what they wrote
+ * is just after they have destroyed it, when they are checking whether they meant to (owner report,
+ * 2026-09-14). Only /api/fireside/mine reads that column, and it returns the caller's own rows;
+ * the public thread read and the blog export feed never select it.
+ *
+ * Copies from `body` rather than taking the text as an argument: the row is the truth about what
+ * was written, and a client-supplied body could put words in somebody's mouth on their own screen.
  */
 export async function withdrawOwnComment(userId: string, commentId: string): Promise<boolean> {
   const result = await queryDb(
     `UPDATE fireside_comments
-        SET status = 'withdrawn', body = '', export_to_blog = FALSE,
+        SET status = 'withdrawn',
+            withdrawn_body = COALESCE(NULLIF(body, ''), withdrawn_body),
+            body = '',
+            export_to_blog = FALSE,
             export_review = 'not_requested', export_reviewed_by = NULL, export_reviewed_at = NULL,
             updated_at = NOW()
       WHERE id = $1::uuid AND author_user_id = $2 AND status <> 'withdrawn'`,

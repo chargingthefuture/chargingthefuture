@@ -27,6 +27,8 @@ type OwnComment = {
   exportToBlog: boolean;
   exportReview: "not_requested" | "pending" | "approved" | "refused";
   exportRefusalReason: string | null;
+  /** What they wrote, kept for them alone once they have taken it down. Null on everything else. */
+  withdrawnBody: string | null;
 };
 
 // What the author is told about their own export request. The switch is one of two keys — an admin
@@ -116,6 +118,44 @@ function ExportRequestRow({
   );
 }
 
+// Taking a comment down cannot be undone: the words leave the conversation and no admin can put
+// them back (restore is for admin removals only). A member reported doing it and only then
+// wondering whether they had meant to (2026-09-14), so it asks first, and it names the two things
+// that are actually irreversible rather than asking a bare "are you sure?".
+function confirmWithdraw(): boolean {
+  return window.confirm(
+    "Take this comment down?\n\n" +
+      "The words leave the conversation and nobody can put them back — not you, and not an admin. " +
+      "You will still see your own copy of it on this screen.\n\n" +
+      "Anything already copied into the blog's published build stays there; that copy is archived " +
+      "and cannot be recalled by anybody.",
+  );
+}
+
+// A comment the author took down, on the author's own screen.
+//
+// It used to read "Withdrawn." and nothing else, so the words were gone for the person who wrote
+// them too (owner report, 2026-09-14). Taking a comment down cannot be undone, which makes the
+// moment right after it the moment somebody most needs to see what they wrote — to check they
+// meant that one. It is shown struck through and labeled, so it never reads as though the comment
+// is still in the conversation.
+function WithdrawnBody({ comment, t }: { comment: OwnComment; t: PluginShellTokens }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: t.SUBTLE, marginBottom: 6 }}>
+        You took this down. Nobody else can see it. This is your copy.
+      </div>
+      {comment.withdrawnBody ? (
+        <div style={{ color: t.SUBTLE, textDecoration: "line-through" }}>{comment.withdrawnBody}</div>
+      ) : (
+        // Comments taken down before the copy was kept have nothing to show, and saying so is
+        // better than an empty space that looks like a bug.
+        <em style={{ color: t.SUBTLE }}>This one was taken down before the app started keeping your copy.</em>
+      )}
+    </div>
+  );
+}
+
 function CommentRow({
   comment,
   t,
@@ -145,7 +185,7 @@ function CommentRow({
         </span>
       </div>
       <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-        {comment.body || <em style={{ color: t.FAINT }}>Withdrawn.</em>}
+        {comment.body || <WithdrawnBody comment={comment} t={t} />}
       </div>
       {editable && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
@@ -289,7 +329,10 @@ export function FiresideShell({
               comment={comment}
               t={t}
               busyId={busyId}
-              onWithdraw={(id) => void send(id, { method: "DELETE" }, "Could not take that down.")}
+              onWithdraw={(id) => {
+                if (!confirmWithdraw()) return;
+                void send(id, { method: "DELETE" }, "Could not take that down.");
+              }}
               onToggleExport={(id, next) =>
                 void send(id, { method: "PATCH", body: JSON.stringify({ exportToBlog: next }) }, "Could not change that setting.")}
               onOpenThread={(row) => {

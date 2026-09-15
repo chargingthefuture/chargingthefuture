@@ -71,7 +71,10 @@ policies:
     minUnlockTier: any_authenticated
     requiresAuthentication: true
     consentRequirements: []
-    notes: Returns only the caller's own rows.
+    notes: >-
+      Returns only the caller's own rows. It is the one read that carries `withdrawn_body`, the
+      author's own copy of a comment they took down; the select behind the public thread read does
+      not contain that column, so there is no shape that could return it to anybody else.
   - pluginId: fireside
     command: fireside.comment.remove
     version: 1.0.0
