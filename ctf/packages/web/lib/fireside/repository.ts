@@ -376,6 +376,10 @@ export async function listRecentComments(limit = 20, offset = 0): Promise<Firesi
     exportToBlog: row.export_to_blog,
     exportReview: row.export_review,
     exportRefusalReason: row.export_refusal_reason,
+    // Always null here, and deliberately so. `withdrawn_body` is the author's own copy of something
+    // they took down, and this is an admin read: the select behind it does not carry that column at
+    // all, so there is nothing to return even if somebody later wanted it here.
+    withdrawnBody: null,
     postRepo: row.post_repo,
     postSlug: row.post_slug,
     postTitle: row.post_title,
