@@ -52,8 +52,12 @@ the project controls rather than on a platform that has erased five of its accou
    see yet, and nothing arrives for replying to yourself.
 8. **Three reactions** — I recognize this, This helped, Same here. A fixed set rather than free
    emoji, so a count means the same thing on every comment.
-9. **Take your own comment down,** at any time, with no admin involved. The words go; the row stays
-   so a reply underneath keeps its parent.
+9. **Take your own comment down,** at any time, with no admin involved. The words go from the
+   conversation; the row stays so a reply underneath keeps its parent. It asks before doing it,
+   because it cannot be undone and no admin can put the words back. You keep your own copy of what
+   you wrote, shown struck through on your screen and nowhere else — the moment somebody most needs
+   to read what they wrote is just after they have destroyed it, when they are checking that they
+   meant that one.
 10. **Ask for a comment to be published with the post.** Off unless the author turns it on. Turning
    it on asks; it does not publish. An admin reads the request before anything is copied into the
    blog's own build, where it is searchable and captured by the Internet Archive and where nobody,
@@ -124,6 +128,7 @@ about that quota.
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
 | `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the whole table instead. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. Indexed by thread, by author, and by `(export_review, created_at)` for the admin queue. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
 
@@ -247,6 +252,25 @@ member active only in Fireside is seen by being read, which is what the plugin i
   page without the URL and are recorded as a gap.
 ## Change Log
 
+- 2026-09-14: **Taking your own comment down now asks first, and you keep your own copy.** Owner
+  report, from the shipped screen: after withdrawing, the row read "Withdrawn." and nothing else, so
+  the words were gone for the person who wrote them too — and there had been no confirmation, for an
+  action no admin can undo. Both halves are the same problem. `fireside_comments` gains
+  `withdrawn_body`; `withdrawOwnComment` copies `body` into it and then empties `body`, so what
+  withdrawal means to everybody else is unchanged. It is copied from the row rather than taken as an
+  argument, since a client-supplied body could put words in somebody's mouth on their own screen.
+
+  The column is reachable from one query. `COMMENT_SELECT`, which feeds the public thread read, was
+  split into shared columns plus a `FROM`, and only `OWN_COMMENT_SELECT` adds `withdrawn_body`;
+  `listOwnComments` is its only caller and is scoped to `author_user_id = $1`. The guarantee is
+  which select carries the column rather than a filter somebody has to remember, and
+  `withdrawn-copy.test.ts` asserts exactly that — including that the blog export feed never selects
+  it. Deleting the account still takes it, because that deletes the whole row.
+
+  The confirmation names the two things that are actually irreversible — nobody can put the words
+  back, and anything already copied into the blog's build stays there — rather than asking a bare
+  "are you sure?". It uses `window.confirm`, which is what this repo already does for a destructive
+  step in twenty-odd other places.
 - 2026-09-14: **Fixed: the whole Fireside screen was hard to read.** Owner report, every section.
   Measured rather than argued, against the page background `#0F1117`:
 

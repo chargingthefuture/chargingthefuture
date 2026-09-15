@@ -7300,6 +7300,13 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   export_reviewed_by TEXT,
   export_reviewed_at TIMESTAMPTZ,
   export_refusal_reason TEXT,
+  -- What the author wrote, kept for the author alone once they take the comment down. `body` still
+  -- empties on withdrawal, so the words leave the conversation for everybody else; this is the copy
+  -- the person who wrote them can still see on their own screen. Taking a comment down cannot be
+  -- undone, so the moment somebody most needs to read what they wrote is just after they have
+  -- destroyed it. Read only by /api/fireside/mine, which returns the caller's own rows; never by
+  -- the public thread read and never by the blog export feed.
+  withdrawn_body TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7318,6 +7325,7 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_review T
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_by TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
