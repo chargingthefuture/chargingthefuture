@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { commentStateForAuthor, isPubliclyVisible, isVisibleToAuthor, mayExportToBlog } from './visibility';
+import {
+  commentStateForAuthor,
+  isPubliclyVisible,
+  isVisibleToAuthor,
+  mayExportToBlog,
+  shouldNotifyParentAuthor,
+} from './visibility';
 
 describe('isPubliclyVisible', () => {
   it('shows a visible comment from an approved author', () => {
@@ -83,5 +89,36 @@ describe('mayExportToBlog', () => {
     expect(mayExportToBlog({ status: 'visible', authorIsApproved: false, exportOptIn: true, exportReview: 'approved' })).toBe(false);
     expect(mayExportToBlog({ status: 'removed', authorIsApproved: true, exportOptIn: true, exportReview: 'approved' })).toBe(false);
     expect(mayExportToBlog({ status: 'withdrawn', authorIsApproved: true, exportOptIn: true, exportReview: 'approved' })).toBe(false);
+  });
+});
+
+describe('shouldNotifyParentAuthor', () => {
+  const base = {
+    parentCommentId: 'parent-1',
+    isPubliclyVisible: true,
+    parentAuthorUserId: 'ada',
+    replierUserId: 'bo',
+  };
+
+  it('tells the author of the comment that was answered', () => {
+    expect(shouldNotifyParentAuthor(base)).toBe(true);
+  });
+
+  it('says nothing about a new top-level comment, which answers nobody', () => {
+    expect(shouldNotifyParentAuthor({ ...base, parentCommentId: null })).toBe(false);
+  });
+
+  it('says nothing about a reply the recipient cannot see yet', () => {
+    // Nothing an unapproved member writes is publicly visible. A notification about a reply that
+    // the recipient opens and cannot find is worse than no notification at all.
+    expect(shouldNotifyParentAuthor({ ...base, isPubliclyVisible: false })).toBe(false);
+  });
+
+  it('does not tell somebody they replied to themselves', () => {
+    expect(shouldNotifyParentAuthor({ ...base, replierUserId: 'ada' })).toBe(false);
+  });
+
+  it('says nothing when the parent comment has no author to tell', () => {
+    expect(shouldNotifyParentAuthor({ ...base, parentAuthorUserId: null })).toBe(false);
   });
 });

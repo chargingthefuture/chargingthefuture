@@ -8,7 +8,14 @@ import {
   FIRESIDE_MAX_COMMENT_LENGTH,
   FIRESIDE_MIN_COMMENT_LENGTH,
 } from 'lib/fireside/constants';
-import { createComment, insertFiresideAudit, type CommentRefusal } from 'lib/fireside/repository';
+import {
+  createComment,
+  findCommentAuthorUserId,
+  insertFiresideAudit,
+  type CommentRefusal,
+} from 'lib/fireside/repository';
+import { shouldNotifyParentAuthor } from 'lib/fireside/visibility';
+import { notifySafe } from 'lib/notifications/repository';
 import { failureReason, failureResponse } from 'lib/errors/failure';
 
 const bodySchema = z.object({
@@ -79,6 +86,69 @@ async function readCommentInput(
   return { ok: true, data: parsed.data };
 }
 
+/**
+ * Tell somebody their comment was answered.
+ *
+ * Only for a reply that is actually visible to the person being told. Nothing an unapproved member
+ * writes is publicly visible, and a notification about something the recipient opens and cannot
+ * find is worse than no notification — so a held reply notifies nobody. It does not arrive later
+ * when its author is approved either; that is recorded as a gap rather than pretended away.
+ *
+ * Nobody is told about their own reply to themselves.
+ *
+ * Best-effort by way of notifySafe: a comment that saved must not fail because the notification
+ * did. The summary names no content and no person, because it can land on a lock screen.
+ */
+async function notifyParentAuthor(input: {
+  parentCommentId: string | null;
+  replierUserId: string;
+  isPubliclyVisible: boolean;
+  postRepo: string;
+  postSlug: string;
+  postTitle: string;
+  commentId: string;
+}): Promise<void> {
+  if (!input.parentCommentId) return;
+
+  const parentAuthorUserId = await findCommentAuthorUserId(input.parentCommentId);
+  // The rule itself lives with the other visibility rules, and is tested there. The null check is
+  // repeated so the type narrows; the rule covers it too, and both should stay.
+  if (parentAuthorUserId == null) return;
+  if (!shouldNotifyParentAuthor({ ...input, parentAuthorUserId })) return;
+
+  const query = new URLSearchParams({ repo: input.postRepo, slug: input.postSlug });
+  if (input.postTitle) query.set('title', input.postTitle);
+
+  await notifySafe({
+    userId: parentAuthorUserId,
+    sourcePlugin: 'fireside',
+    notificationType: 'fireside.reply',
+    category: 'community',
+    summary: 'Somebody replied to your comment on the blog.',
+    linkPath: `/apps/fireside?${query.toString()}`,
+    // The reply's own id, so re-emitting the same event never pings twice.
+    targetRef: input.commentId,
+  });
+}
+
+/** Unpacks a create outcome for notifyParentAuthor, so POST stays inside its complexity budget. */
+async function notifyForOutcome(
+  outcome: Awaited<ReturnType<typeof createComment>>,
+  replierUserId: string,
+  data: z.infer<typeof bodySchema>,
+): Promise<void> {
+  if (outcome.status !== 'created') return;
+  await notifyParentAuthor({
+    parentCommentId: data.parentCommentId ?? null,
+    replierUserId,
+    isPubliclyVisible: outcome.isPubliclyVisible,
+    postRepo: data.postRepo,
+    postSlug: data.postSlug,
+    postTitle: data.postTitle ?? '',
+    commentId: outcome.commentId,
+  });
+}
+
 // Record what happened and answer it. Split out of POST for the complexity budget (rule 116), and
 // because the two outcomes read better side by side than buried in the middle of the handler.
 async function answerCreated(
@@ -137,6 +207,8 @@ export async function POST(request: Request) {
       parentCommentId: parsed.data.parentCommentId ?? null,
       body: parsed.data.body,
     });
+    // After the comment is written, and never in a way that can undo it.
+    await notifyForOutcome(outcome, gate.auth.userId, parsed.data);
     return await answerCreated(outcome, gate.auth.userId, parsed.data.postRepo, parsed.data.postSlug);
   } catch (error) {
     return failureResponse({
