@@ -78,7 +78,12 @@ the project controls rather than on a platform that has erased five of its accou
    the account rather than the comment. Moderating item by item is a losing race against somebody
    doing it deliberately; deleting the account settles it once.
 5. **Close a thread** to new comments without removing what is already there.
-6. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
+6. **A list of every comment, newest first,** paged, with the page in the address bar so it can be
+   linked and the back button works. Removed and withdrawn rows are listed alongside live ones: a
+   list that hides what was already acted on cannot be used to undo anything, and undoing is most
+   of what a moderation list is for. A comment its own author took down carries no control, because
+   nobody can put that one back.
+7. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
    the author's request and the admin's answer — because that pair is what lets text leave the app
    for somewhere it cannot be recalled from.
 
@@ -92,6 +97,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/comments/[commentId]` | PATCH | Author | Turn the blog-export permission on or off. |
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
+| `/api/fireside/admin/comments` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
 | `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
@@ -180,18 +186,36 @@ member active only in Fireside is seen by being read, which is what the plugin i
 2. Both halves of the export decision are recorded and nothing reads them yet. The job that copies
    approved, opted-in comments into the blog build is the next piece, and it belongs in `wiki-site`
    alongside the widget. It must read `mayExportToBlog` rather than either column on its own.
-3. No general admin list of recent comments. The export queue is a screen, but removing or restoring
-   a comment outside a thread still means calling the route by id.
-4. The author's record counts only what happened in Fireside. An account being a problem in several
+3. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
-5. Closing a thread has a repository function and no route.
+4. Closing a thread has a repository function and no route.
+5. The member's own comment list and the blog export queue page without putting the page in the
+   address bar. The admin list of every comment does; those two predate it and should follow.
 6. No notification when somebody replies to you.
 7. Search is a Postgres table scan waiting to happen. Nothing indexes comment bodies yet, and the
    whole argument for storing them here is that they are searchable — worth doing before volume
    rather than after.
 
 ## Change Log
+
+- 2026-09-14: **An admin can see every comment now, not just the export queue.** The queue answers
+  one question — may this go on the blog — and it was the only admin screen, so removing or
+  restoring a comment outside a thread meant knowing its id and calling the route by hand.
+  `/api/fireside/admin/comments` lists everything newest first, paged, and the screen shows removed
+  and withdrawn rows alongside live ones: a list that hides what was already acted on cannot be used
+  to undo anything. A comment its own author withdrew carries no control, since restore is for admin
+  removals only and a button that always fails is worse than no button.
+
+  The page is in the address bar, which the accessibility rule in rule 100 asks for and which no
+  Fireside list did before — put the page in the URL so it can be linked and the back button works,
+  say which range of how many is on screen, and clamp an out-of-range page rather than showing
+  nothing. `useUrlPage` is the first two: it reads `window.location` rather than `useSearchParams`,
+  which would put a Suspense boundary requirement on a client shell rendered inside a dynamic route,
+  and it writes with `history.pushState` so paging neither re-runs a server segment nor steps
+  outside the screen on back. The clamp is the route's, which answers with the page it actually
+  used, so a linked number past the end lands on the last page. The other two Fireside lists still
+  page without the URL and are recorded as a gap.
 
 - 2026-09-13: **Fireside added.** Owner decision. Quora deletes this project's accounts as fast as
   they are made, and its comments are neither searchable nor bookmarkable, so the conversation that

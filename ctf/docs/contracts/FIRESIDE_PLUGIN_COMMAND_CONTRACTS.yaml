@@ -199,6 +199,53 @@ commands:
     purpose: Admin moderation. Separate from whether the author is approved, so approving somebody never resurrects a removed comment
     retentionClass: moderation_record
 
+  - pluginId: fireside
+    command: fireside.admin.comments.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+    outputSchema:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              body:
+                type: string
+              authorName:
+                type: string
+              createdAt:
+                type: string
+              postRepo:
+                type: string
+              postSlug:
+                type: string
+              postTitle:
+                type: string
+              state:
+                type: string
+                enum: [live, held_for_approval, removed, withdrawn]
+        page:
+          type: integer
+        lastPage:
+          type: integer
+        total:
+          type: integer
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - fireside_reactions (select)
+      - unlock_verification_submissions (select, access_tier only, to say whether a row is public yet)
+    purpose: Every comment, newest first and paged, for an admin to work through. Removed and withdrawn rows are included, because a list that hides what was already acted on cannot be used to undo it. An out-of-range page clamps to the last one.
+    retentionClass: community_content
 definitions:
   PublicComment:
     type: object

@@ -275,3 +275,35 @@ Result: web ☐
 - Anything already copied into the blog's published build is **not** recalled, which is why the export control says so before the choice is made and why an admin has to agree before a copy is ever made.
 
 Result: web ☐
+
+---
+
+### FS-16 — The admin list of every comment, and its page in the address bar
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** More than 20 comments across at least two posts, including one already removed by
+an admin and one already taken down by its author.
+
+**Steps:**
+1. Open the Fireside screen as an admin and press Recent comments.
+2. Read the first page, then page forward.
+3. Look at the address bar. Copy the link, open it in a new tab.
+4. Press the browser back button.
+5. Edit the address to a page number far past the end and load it.
+6. Remove a live comment from this list, then put it back.
+7. Find the comment its author took down.
+
+**Expected:**
+- Newest first, 20 to a page, with which range of how many on screen.
+- Removed and withdrawn comments are in the list, not hidden. An admin list that shows only live
+  comments cannot be used to undo anything, which is the failure this case exists to catch.
+- The page number is in the address bar, and the copied link opens on that same page.
+- Back returns to the previous page of the list rather than leaving the screen.
+- A page past the end lands on the last page with rows on it, not on an empty screen.
+- Removing works from here, and the removed row stays in the list with "Put it back" on it, which
+  restores it. Both are in the audit trail.
+- The comment its author took down has no control on it at all, and says so. An admin cannot
+  restore a withdrawal, and a button that always fails is worse than no button.
+- Removing from here also cancels any request to publish that comment with the post.
+
+Result: web ☐

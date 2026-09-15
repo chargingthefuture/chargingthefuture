@@ -311,6 +311,49 @@ export async function listOwnComments(userId: string, limit = 50, offset = 0): P
   }));
 }
 
+/**
+ * Every comment, newest first, for an admin to work through.
+ *
+ * The export queue is a screen for one decision; this is the other half of moderation, which until
+ * now meant knowing a comment's id and calling the route by hand. It shows removed and withdrawn
+ * rows as well as live ones: a list that hides what an admin already acted on is a list they cannot
+ * use to undo anything.
+ *
+ * The author's approval state is resolved so each row can say whether it is actually public yet —
+ * the same rule as everywhere else, read from visibility.ts rather than guessed at from `status`.
+ */
+export async function listRecentComments(limit = 20, offset = 0): Promise<FiresideOwnComment[]> {
+  const result = await queryDb<CommentRow>(
+    `${COMMENT_SELECT}
+      ORDER BY c.created_at DESC
+      LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  if (result.rows.length === 0) return [];
+
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.author_user_id));
+  const { counts, viewer } = await readReactions(result.rows.map((row) => row.id), null);
+
+  return result.rows.map((row) => ({
+    ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], null),
+    state: commentStateForAuthor({
+      status: row.status,
+      authorIsApproved: approved.has(row.author_user_id),
+    }),
+    exportToBlog: row.export_to_blog,
+    exportReview: row.export_review,
+    exportRefusalReason: row.export_refusal_reason,
+    postRepo: row.post_repo,
+    postSlug: row.post_slug,
+    postTitle: row.post_title,
+  }));
+}
+
+export async function countAllComments(): Promise<number> {
+  const result = await queryDb<{ count: string }>(`SELECT COUNT(*) AS count FROM fireside_comments`);
+  return Number(result.rows[0]?.count ?? '0');
+}
+
 export async function countOwnComments(userId: string): Promise<number> {
   const result = await queryDb<{ count: string }>(
     `SELECT COUNT(*) AS count FROM fireside_comments WHERE author_user_id = $1`,

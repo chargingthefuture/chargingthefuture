@@ -102,3 +102,15 @@ policies:
     notes: >-
       The second of two keys. Approving publishes nothing by itself — the author's own opt-in still
       has to be on when the copy is made. Refusing is final for that comment.
+  - pluginId: fireside
+    command: fireside.admin.comments.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      A read, so it writes no audit row; the moderation it leads to is recorded by
+      fireside.comment.remove. It carries a display name rather than a user id, the same as every
+      other comment shape here, and it does not carry the author's own copy of anything they took
+      down — that column is on the author-scoped read alone.
