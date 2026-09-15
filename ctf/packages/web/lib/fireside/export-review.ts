@@ -11,7 +11,14 @@
 import { queryDb } from 'lib/db/postgres';
 // Through the platform interface, never lib/unlock directly — plugins stay isolated (rule 112).
 import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
-import type { ExportReview, FiresideAuthorRecord, FiresideExportRequest } from './types';
+import type {
+  ExportReview,
+  FiresideAuthorRecord,
+  FiresideCommentStatus,
+  FiresideExportRequest,
+  FiresideExportableComment,
+} from './types';
+import { mayExportToBlog } from './visibility';
 
 export type ExportPreferenceOutcome = 'saved' | 'already_refused' | 'not_found';
 
@@ -174,4 +181,143 @@ export async function reviewExportRequest(input: {
     ],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * How many comments one call of the export feed will look at. A ceiling rather than a page size:
+ * some of what is scanned is dropped below, so a caller reads the feed by following the cursor
+ * until it comes back null, not by counting comments.
+ */
+export const FIRESIDE_EXPORT_SCAN_LIMIT = 200;
+
+type ExportableRow = {
+  id: string;
+  parent_comment_id: string | null;
+  body: string;
+  author_user_id: string;
+  author_username: string | null;
+  status: FiresideCommentStatus;
+  export_to_blog: boolean;
+  export_review: ExportReview;
+  created_at: string;
+  created_at_cursor: string;
+  post_repo: string;
+  post_slug: string;
+  post_title: string;
+};
+
+/**
+ * Where a read of the export feed stopped, as `<created_at>|<id>`. Keyset rather than an offset
+ * because rows are dropped after the database returns them — an offset counted against the scanned
+ * set and the kept set at the same time, and would skip comments.
+ */
+export function parseExportCursor(cursor: string | null): { createdAt: string; id: string } | null {
+  if (!cursor) return null;
+  const separator = cursor.lastIndexOf('|');
+  if (separator <= 0 || separator === cursor.length - 1) return null;
+  return { createdAt: cursor.slice(0, separator), id: cursor.slice(separator + 1) };
+}
+
+/**
+ * Whether a caller's cursor is one this feed could have issued. The route refuses a cursor that
+ * fails this rather than quietly starting over from the oldest comment: a build that believes it is
+ * resuming and is in fact restarting looks like it is working, and only the wrong output says
+ * otherwise.
+ */
+export function isReadableExportCursor(cursor: string): boolean {
+  return parseExportCursor(cursor) != null;
+}
+
+/** A caller's limit, held between one row and the scan ceiling. */
+function clampScanLimit(limit: number | undefined): number {
+  if (limit == null || Number.isNaN(limit)) return FIRESIDE_EXPORT_SCAN_LIMIT;
+  return Math.min(Math.max(limit, 1), FIRESIDE_EXPORT_SCAN_LIMIT);
+}
+
+/**
+ * Where the next read starts, or null once there is nothing left. A scan that came back short of
+ * what it asked for reached the end, which is the only signal a caller needs — counting comments
+ * would not work, because a scanned row can be refused and returned to nobody.
+ */
+function nextExportCursor(rows: ExportableRow[], limit: number): string | null {
+  if (rows.length < limit) return null;
+  const last = rows[rows.length - 1];
+  return `${last.created_at_cursor}|${last.id}`;
+}
+
+function toExportableComment(row: ExportableRow): FiresideExportableComment {
+  return {
+    commentId: row.id,
+    parentCommentId: row.parent_comment_id,
+    authorName: row.author_username || 'A member',
+    body: row.body,
+    createdAt: row.created_at,
+    postRepo: row.post_repo,
+    postSlug: row.post_slug,
+    postTitle: row.post_title,
+  };
+}
+
+/**
+ * The comments the blog's published build may copy in, oldest first.
+ *
+ * `mayExportToBlog` decides every row, and nothing here decides anything itself. The WHERE clause
+ * below narrows the scan for speed and is a deliberate superset of that rule — it applies three of
+ * the four conditions and never the fourth, so a row the rule would allow can never be filtered out
+ * before the rule sees it. **If `mayExportToBlog` is ever loosened, widen this clause first**, or
+ * the database will quietly answer a question the rule was supposed to.
+ *
+ * Reading either export column on its own is what this shape exists to prevent. `export_to_blog`
+ * alone is the author asking, which is one key; `export_review = 'approved'` alone is an admin
+ * agreeing to a request the author may since have withdrawn. Copying on either one walks past the
+ * other, into a build that web archives capture and nobody can pull back.
+ */
+export async function listExportableComments(input?: { cursor?: string | null; limit?: number }): Promise<{
+  comments: FiresideExportableComment[];
+  scanned: number;
+  nextCursor: string | null;
+}> {
+  const limit = clampScanLimit(input?.limit);
+  const cursor = parseExportCursor(input?.cursor ?? null);
+
+  const result = await queryDb<ExportableRow>(
+    `SELECT c.id::text AS id,
+            c.parent_comment_id::text AS parent_comment_id,
+            c.body,
+            c.author_user_id,
+            c.author_username,
+            c.status,
+            c.export_to_blog,
+            c.export_review,
+            to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS created_at,
+            to_char(c.created_at, 'YYYY-MM-DD HH24:MI:SS.USOF') AS created_at_cursor,
+            t.post_repo, t.post_slug, t.post_title
+       FROM fireside_comments c
+       JOIN fireside_threads t ON t.id = c.thread_id
+      WHERE c.status = 'visible'
+        AND c.export_to_blog = TRUE
+        AND c.export_review = 'approved'
+        AND ($1::timestamptz IS NULL OR (c.created_at, c.id) > ($1::timestamptz, $2::uuid))
+      ORDER BY c.created_at ASC, c.id ASC
+      LIMIT $3`,
+    [cursor?.createdAt ?? null, cursor?.id ?? null, limit],
+  );
+
+  const rows = result.rows;
+  if (rows.length === 0) return { comments: [], scanned: 0, nextCursor: null };
+
+  const approved = await listUnlockedUserIds(rows.map((row) => row.author_user_id));
+  const comments = rows
+    .filter((row) =>
+      mayExportToBlog({
+        status: row.status,
+        authorIsApproved: approved.has(row.author_user_id),
+        exportOptIn: row.export_to_blog,
+        exportReview: row.export_review,
+      }),
+    )
+    .map(toExportableComment);
+
+  // The cursor tracks what was scanned, not what was kept, so a dropped row is still stepped over.
+  return { comments, scanned: rows.length, nextCursor: nextExportCursor(rows, limit) };
 }
