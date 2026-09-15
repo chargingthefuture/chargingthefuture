@@ -546,6 +546,18 @@ Profile read + compliance-delete surface: the profile is read-only (owner decisi
 
 ### Change Log
 
+- 2026-09-15: **Any Workforce tab opens straight from a link.** `/apps/workforce?view=one-percent`
+  lands on "What's your 1%?" instead of Overview, and the same works for every other tab key
+  (`overview`, `sector`, `skill-level`, `occupations`, `community-planning`, `one-percent`). Owner
+  directive: the Peace Battle 2 page on the blog sends a reader straight to their own figures, and
+  telling them to open Workforce and scroll a horizontal tab rail sideways to its far end is the
+  hunting that link exists to remove. The rail is now one module-level list that is both the tabs
+  drawn and the set of names a link may open, so a link naming a tab the rail does not carry cannot
+  silently fail; an unknown value and no value at all both fall back to Overview rather than an empty
+  screen. Read from `window.location.search` rather than `useSearchParams`, matching the Peer
+  Programming shell's room links, so this client shell still needs no Suspense boundary. No schema,
+  route, or contract change — the page is the same page and nothing about who may read it moved.
+
 - 2026-08-24: **The Workforce screen now scrolls the page itself, so Safari's "Full Page"
   screenshot captures the whole screen (owner report).** The shell used to be pinned to exactly one
   viewport tall (`height: 100dvh`) with the dashboard, Occupations, and Community views each
