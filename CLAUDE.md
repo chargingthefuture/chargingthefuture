@@ -169,6 +169,31 @@ donations) are real money and are described as such. The committed statement of 
 `ctf/docs/DISCLAIMER.md`; the approved phrasing lives in `ctf/docs/BRAND_VOICE_LEXICON.md`. Any
 money-framing of credits in this repo is an error, not a claim.
 
+## The Owner Has No Terminal (Critical — all agents)
+
+The owner works from a phone. There is no terminal, no shell, no `psql`, no `pnpm`, no local
+checkout. Telling them to run a command is telling them to do something they cannot do, and it has
+been said to them repeatedly by agents who did not record it.
+
+So never end a piece of work with a command for the owner to run. When something has to happen
+against production — a query, a backfill, a one-off check — there are exactly three ways to deliver
+it, and an agent picks one rather than handing over instructions:
+
+1. **A screen in the app.** Best for anything that will be wanted more than once. Admin-gated,
+   read-only where it can be, with a control that copies the result as plain text so it can be
+   pasted into a message from a phone. The Directory invite queue
+   (`/admin/directory/invite-queue`) is the worked example.
+2. **SQL the owner pastes into the Neon dashboard.** Best for a one-off. Give the statement itself
+   in the reply, ready to paste, with no shell wrapper around it — no `psql`, no `-f`, no
+   `infisical run`. A file in `ctf/scripts/sql/` is for the repository's record; the reply carries
+   the text.
+3. **A GitHub Action.** Best when it has to run on a schedule or needs a secret the dashboard does
+   not hold. Never print member data or any secret into the logs or the job summary.
+
+An agent session usually cannot reach the production database either: this container has no
+`DATABASE_URL` and no Infisical client, so "run it yourself" is not the answer that replaces asking
+the owner. Build the screen, or hand over the paste-ready statement.
+
 ## Secrets — Infisical is the single source of truth
 
 All secrets are stored in the self-hosted Infisical instance. The Infisical `production`

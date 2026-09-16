@@ -17,10 +17,12 @@
 --   advocacy-only   — every listed skill is Advocacy. Write the general invitation.
 --   no-skill        — listed with nothing recorded. Not ready for a post; find out what they do first.
 --
--- Run against the production database, read-only:
---   psql "$DATABASE_URL" -f ctf/scripts/sql/directory-invite-queue.sql
--- Or with the Infisical bootstrap:
---   infisical run --env=production -- psql "$DATABASE_URL" -f ctf/scripts/sql/directory-invite-queue.sql
+-- How to run it: paste the statement below into the Neon dashboard's SQL editor. The owner works
+-- from a phone and has no terminal, so a shell command is not a way to deliver this (see CLAUDE.md,
+-- "The Owner Has No Terminal"). The same list is also a screen in the app at
+-- /admin/directory/invite-queue, which is the better route when it is wanted more than once.
+--
+-- Read-only. No writes, no temporary tables.
 
 WITH already_written AS (
   -- Quora handles, lower case, no /profile/ prefix. Add a handle here when its post merges.
