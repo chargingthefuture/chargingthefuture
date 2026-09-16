@@ -14,6 +14,9 @@ export type LighthouseProfile = {
   desiredMoveInDateIso: string | null;
   budgetMin: number | null;
   budgetMax: number | null;
+  // Currency the budget range is stated in (references currencies.code). Null on a profile saved
+  // before the picker existed, which reads as "not stated" rather than as any particular currency.
+  budgetCurrency: string | null;
   desiredCountry: string | null;
   desiredCity: string | null;
   // Opt-in: show this housing need on the Wanted tab. False for every profile saved before the
@@ -36,6 +39,7 @@ export type LighthouseWantedPosting = {
   desiredMoveInDateIso: string | null;
   budgetMin: number | null;
   budgetMax: number | null;
+  budgetCurrency: string | null;
   updatedAtIso: string;
 };
 
@@ -95,6 +99,7 @@ export type LighthouseProfileInput = {
   desiredMoveInDateIso?: string | null;
   budgetMin?: number | null;
   budgetMax?: number | null;
+  budgetCurrency?: string | null;
   desiredCountry?: string | null;
   desiredCity?: string | null;
   isWantedPublic?: boolean;

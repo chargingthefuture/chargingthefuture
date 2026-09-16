@@ -93,6 +93,7 @@ function LighthouseTabContent({
       {tab === "wanted" && (
         <LighthouseWanted
           postings={wantedPostings}
+          currencies={currencyMap}
           totalCount={wantedPostings.length}
           error={wantedError}
           onListYourPlace={onListYourPlace}

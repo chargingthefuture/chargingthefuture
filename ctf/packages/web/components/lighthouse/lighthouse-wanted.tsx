@@ -2,7 +2,7 @@
 
 import { CalendarDays, MapPin, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getLighthouseTokens, type LighthouseTokens, type WantedPosting } from "./shared";
+import { formatBudgetRange, getLighthouseTokens, type CurrencyMap, type LighthouseTokens, type WantedPosting } from "./shared";
 
 // The demand side of LightHouse. A member deciding whether to offer a room otherwise sees only
 // other people's listings, which says nothing about whether anyone needs one — and on this product
@@ -25,21 +25,6 @@ function moveInLabel(posting: WantedPosting): string {
   return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/**
- * The budget range as plain numbers. No currency symbol: the seeker form asks for an amount and
- * never asks which currency it is in, so printing a "$" here would state something the member never
- * said. Empty string when neither end of the range was filled in.
- */
-function budgetLabel(posting: WantedPosting): string {
-  const min = typeof posting.budgetMin === "number" ? posting.budgetMin : null;
-  const max = typeof posting.budgetMax === "number" ? posting.budgetMax : null;
-  const format = (value: number) => value.toLocaleString("en-US");
-  if (min !== null && max !== null) return min === max ? format(min) : `${format(min)}–${format(max)}`;
-  if (min !== null) return `${format(min)} or more`;
-  if (max !== null) return `up to ${format(max)}`;
-  return "";
-}
-
 function MetaRow({ posting, t }: { posting: WantedPosting; t: LighthouseTokens }) {
   const place = placeLabel(posting);
   const moveIn = moveInLabel(posting);
@@ -56,10 +41,10 @@ function MetaRow({ posting, t }: { posting: WantedPosting; t: LighthouseTokens }
   );
 }
 
-function WantedCard({ posting, t }: { posting: WantedPosting; t: LighthouseTokens }) {
+function WantedCard({ posting, currencies, t }: { posting: WantedPosting; currencies: CurrencyMap; t: LighthouseTokens }) {
   const needs = posting.housingNeeds?.trim() ?? "";
   const intro = posting.bio?.trim() ?? "";
-  const budget = budgetLabel(posting);
+  const budget = formatBudgetRange(posting, currencies);
   return (
     <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, padding: 16 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 8, lineHeight: 1.45, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
@@ -70,7 +55,7 @@ function WantedCard({ posting, t }: { posting: WantedPosting; t: LighthouseToken
         <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 10, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{intro}</div>
       ) : null}
       {budget ? (
-        <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>
+        <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600, overflowWrap: "anywhere" }}>
           Can pay {budget} <span style={{ color: t.MUTED, fontWeight: 400 }}>a month</span>
         </div>
       ) : null}
@@ -92,11 +77,14 @@ function EmptyState({ t }: { t: LighthouseTokens }) {
 
 export function LighthouseWanted({
   postings,
+  currencies,
   totalCount,
   error,
   onListYourPlace,
 }: {
   postings: WantedPosting[];
+  /** Currency catalog, so a budget renders in its own currency — ServiceCredits never as a "$". */
+  currencies: CurrencyMap;
   totalCount: number;
   error: string | null;
   /** Jumps to the host tab. Seeing the demand is the point; offering a place is the next step. */
@@ -127,7 +115,7 @@ export function LighthouseWanted({
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {postings.map((posting) => (
-            <WantedCard key={posting.id} posting={posting} t={t} />
+            <WantedCard key={posting.id} posting={posting} currencies={currencies} t={t} />
           ))}
         </div>
       )}

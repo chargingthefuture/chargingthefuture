@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab — LH-10 and LH-11) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab and the budget currency picker — LH-10, LH-10b and LH-11) |
 
 > Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
 
@@ -212,14 +212,28 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
 1. Open the **You** tab. Note that the *Show what I'm looking for on the Wanted tab* box starts
    **unticked** on a profile saved before this shipped.
 2. Fill what you're looking for, the country, the **City or area you want**, a move-in date, a budget
-   range and a short introduction. Tick the box and save.
+   range, a **Budget currency** and a short introduction. Tick the box and save.
 3. Sign in as the second member, open LightHouse, and open the **Wanted** tab.
 4. Back on the first account, untick the box and save. Reload the tab on the second account.
 **Expected:** After step 3 the posting is listed with what you're looking for, the city and country,
-the move-in date, the introduction, and the budget as plain numbers with **no currency symbol** (the
-form never asks which currency). It shows **no name, no phone number and no Signal link**, and there
-is no way to message the person from it — requesting a stay still only runs from a listing. After
-step 4 the posting is gone. Turning off "I'm actively looking" takes it down the same way.
+the move-in date, the introduction, and the budget **in the currency you picked**. It shows **no
+name, no phone number and no Signal link**, and there is no way to message the person from it —
+requesting a stay still only runs from a listing. After step 4 the posting is gone. Turning off "I'm
+actively looking" takes it down the same way.
+**Result:** web ☐ mobile ☐ — notes:
+
+### LH-10b · A budget reads in its own currency
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. On **You**, set a budget range with **Budget currency** set to a fiat currency, publish, and read
+   the card on the **Wanted** tab.
+2. Change **Budget currency** to ServiceCredits, save, and read the card again.
+3. Clear both budget amounts and save.
+**Expected:** The fiat budget shows with that currency's symbol. The ServiceCredits budget reads as
+the amount followed by **ServiceCredits** — never a "$", never a bare "SC", and never a
+credits-to-fiat equivalence, exactly as a listing's rent behaves (LH-2). With both amounts cleared
+the card shows no budget line at all rather than a currency with no figure. On a narrow (mobile)
+width a long label like "ServiceCredits" stays inside the card instead of spilling past its edge.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-11 · A blocked member's wanted posting is hidden

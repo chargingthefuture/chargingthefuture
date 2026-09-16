@@ -19,6 +19,15 @@ contracts:
         type: string
         required: false
         description: The city or area the member wants to move to. Shown on a published wanted posting.
+      budgetCurrency:
+        type: string
+        required: false
+        description: >-
+          Currency the budget range is stated in (references currencies.code). Stored only alongside
+          an amount — clearing both budget fields clears it. Null on a profile saved before the
+          picker existed, which reads as "not stated" rather than as any particular currency; it is
+          never backfilled to a guess. A ServiceCredits budget is rendered by its label and never at
+          a fiat figure.
       isWantedPublic:
         type: boolean
         required: false

@@ -39,6 +39,7 @@ export interface Profile {
   desiredMoveInDateIso?: string;
   budgetMin?: number;
   budgetMax?: number;
+  budgetCurrency?: string | null;
   desiredCountry?: string;
   desiredCity?: string;
   isWantedPublic?: boolean;
@@ -59,7 +60,47 @@ export interface WantedPosting {
   desiredMoveInDateIso?: string | null;
   budgetMin?: number | null;
   budgetMax?: number | null;
+  budgetCurrency?: string | null;
   updatedAtIso?: string;
+}
+
+/**
+ * A published budget range, formatted in the currency the member named. Null when they gave no
+ * budget at all.
+ *
+ * Every rule the rent display follows applies here: a ServiceCredits budget reads as
+ * "20 ServiceCredits", never with a "$" and never at a fiat equivalent; a barter or amount-less
+ * currency renders its label alone, because a range of it means nothing. A budget saved before the
+ * currency picker existed carries no currency, so it falls back to the bare number it has always
+ * been — the one case where the figure genuinely names no currency, and inventing one for it would
+ * be the display asserting something the member never said.
+ */
+/** True for a currency that carries no figure at all (barter, or any kind that needs no amount). */
+function isAmountLess(currency: Currency): boolean {
+  return currency.kind === "barter" || !currency.requiresAmount;
+}
+
+/** Assembles the two ends of a range, given whatever renders one end of it. */
+function joinRange(min: number | null, max: number | null, render: (value: number) => string): string | null {
+  if (min !== null && max !== null) return min === max ? render(min) : `${render(min)}–${render(max)}`;
+  if (min !== null) return `${render(min)} or more`;
+  if (max !== null) return `up to ${render(max)}`;
+  return null;
+}
+
+export function formatBudgetRange(posting: WantedPosting, currencies: CurrencyMap): string | null {
+  const min = typeof posting.budgetMin === "number" ? posting.budgetMin : null;
+  const max = typeof posting.budgetMax === "number" ? posting.budgetMax : null;
+  if (min === null && max === null) return null;
+
+  const currency = posting.budgetCurrency ? currencies[posting.budgetCurrency] : undefined;
+  if (currency && isAmountLess(currency)) {
+    return currency.isServiceCredits ? SERVICE_CREDITS_LABEL : currency.label;
+  }
+
+  return joinRange(min, max, (value) =>
+    currency ? formatPrice(value, currency) : value.toLocaleString("en-US"),
+  );
 }
 
 export interface Property {

@@ -43,6 +43,7 @@ type LighthouseProfileRow = {
   desired_move_in_date: Date | string | null;
   budget_min: number | string | null;
   budget_max: number | string | null;
+  budget_currency: string | null;
   desired_country: string | null;
   desired_city: string | null;
   is_wanted_public: boolean;
@@ -58,6 +59,7 @@ type LighthouseWantedPostingRow = {
   desired_move_in_date: Date | string | null;
   budget_min: number | string | null;
   budget_max: number | string | null;
+  budget_currency: string | null;
   updated_at: Date | string;
 };
 
@@ -193,6 +195,7 @@ function mapProfile(row: LighthouseProfileRow): LighthouseProfile {
     desiredMoveInDateIso: row.desired_move_in_date ? toIso(row.desired_move_in_date) : null,
     budgetMin: parseNullableNumber(row.budget_min),
     budgetMax: parseNullableNumber(row.budget_max),
+    budgetCurrency: row.budget_currency,
     desiredCountry: row.desired_country,
     desiredCity: row.desired_city,
     isWantedPublic: row.is_wanted_public === true,
@@ -210,6 +213,7 @@ function mapWantedPosting(row: LighthouseWantedPostingRow): LighthouseWantedPost
     desiredMoveInDateIso: row.desired_move_in_date ? toIso(row.desired_move_in_date) : null,
     budgetMin: parseNullableNumber(row.budget_min),
     budgetMax: parseNullableNumber(row.budget_max),
+    budgetCurrency: row.budget_currency,
     updatedAtIso: toIso(row.updated_at),
   };
 }
@@ -409,6 +413,7 @@ export async function getProfile(userId: string): Promise<LighthouseProfile | nu
         desired_move_in_date,
         budget_min,
         budget_max,
+        budget_currency,
         desired_country,
         desired_city,
         is_wanted_public,
@@ -447,9 +452,9 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
     const upserted = await client.query(
       `
         INSERT INTO lighthouse_profiles
-          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_move_in_date, budget_min, budget_max, desired_country, desired_city, is_wanted_public, updated_at)
+          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_move_in_date, budget_min, budget_max, budget_currency, desired_country, desired_city, is_wanted_public, updated_at)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, $13, $14, NOW())
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, $13, $14, $15, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
           profile_type = EXCLUDED.profile_type,
@@ -462,6 +467,7 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
           desired_move_in_date = EXCLUDED.desired_move_in_date,
           budget_min = EXCLUDED.budget_min,
           budget_max = EXCLUDED.budget_max,
+          budget_currency = EXCLUDED.budget_currency,
           desired_country = EXCLUDED.desired_country,
           desired_city = EXCLUDED.desired_city,
           is_wanted_public = EXCLUDED.is_wanted_public,
@@ -480,6 +486,7 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
           desired_move_in_date,
           budget_min,
           budget_max,
+          budget_currency,
           desired_country,
           desired_city,
           is_wanted_public,
@@ -497,6 +504,7 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
         normalizeNullableText(input.desiredMoveInDateIso),
         input.budgetMin ?? null,
         input.budgetMax ?? null,
+        normalizeNullableText(input.budgetCurrency),
         normalizeNullableText(input.desiredCountry),
         normalizeNullableText(input.desiredCity),
         // Publishing is opt-in, so an omitted flag means "not published" rather than "leave as is":
@@ -582,6 +590,7 @@ export async function listWantedPostings(input: {
           desired_move_in_date,
           budget_min,
           budget_max,
+          budget_currency,
           updated_at
         FROM lighthouse_profiles
         ${publishedWhere}
@@ -1365,6 +1374,7 @@ export async function listLighthouseProfiles(profileType?: 'seeker' | 'host'): P
         desired_move_in_date,
         budget_min,
         budget_max,
+        budget_currency,
         desired_country,
         desired_city,
         is_wanted_public,

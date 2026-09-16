@@ -2285,6 +2285,10 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   desired_move_in_date DATE NULL,
   budget_min NUMERIC NULL,
   budget_max NUMERIC NULL,
+  -- The currency the budget range is stated in (references currencies.code). Without it a budget is
+  -- a bare number, which a reader can only guess at — and guessing "$" at a ServiceCredits figure is
+  -- the one reading the multi-currency rule forbids. NULL on a row saved before this column existed.
+  budget_currency TEXT NULL REFERENCES currencies(code),
   desired_country TEXT NULL,
   desired_city TEXT NULL,
   -- Opt-in: show this member's housing need on the Wanted tab, where anyone browsing LightHouse can
@@ -2392,6 +2396,7 @@ ALTER TABLE IF EXISTS lighthouse_profiles
   ADD COLUMN IF NOT EXISTS desired_move_in_date DATE NULL,
   ADD COLUMN IF NOT EXISTS budget_min NUMERIC NULL,
   ADD COLUMN IF NOT EXISTS budget_max NUMERIC NULL,
+  ADD COLUMN IF NOT EXISTS budget_currency TEXT NULL REFERENCES currencies(code),
   ADD COLUMN IF NOT EXISTS desired_country TEXT NULL,
   ADD COLUMN IF NOT EXISTS desired_city TEXT NULL,
   ADD COLUMN IF NOT EXISTS is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,

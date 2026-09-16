@@ -38,6 +38,7 @@ function parseProfileInput(body: ProfileBody): LighthouseProfileInput {
     desiredMoveInDateIso: asString(body.desiredMoveInDateIso),
     budgetMin: asNumber(body.budgetMin),
     budgetMax: asNumber(body.budgetMax),
+    budgetCurrency: asString(body.budgetCurrency),
     desiredCountry: asString(body.desiredCountry),
     desiredCity: asString(body.desiredCity),
     // Publishing a housing need on the Wanted tab is opt-in: a body that says nothing about it means

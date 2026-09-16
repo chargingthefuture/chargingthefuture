@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { CountrySelect } from "@/components/shared/location-select";
+import { CurrencySelect } from "@/components/shared/currency-select";
 import { getLighthouseTokens, type Profile } from "./shared";
 import { failureText } from 'lib/errors/client-failure';
 
@@ -22,6 +23,7 @@ type SeekerForm = {
   desiredMoveInDateIso: string;
   budgetMin: string;
   budgetMax: string;
+  budgetCurrency: string;
   bio: string;
   phoneNumber: string;
   signalUrl: string;
@@ -39,6 +41,9 @@ const EMPTY_FORM: SeekerForm = {
   desiredMoveInDateIso: "",
   budgetMin: "",
   budgetMax: "",
+  // Matches the host form's rent-currency default, so the two sides of LightHouse start from the
+  // same currency rather than from two different guesses.
+  budgetCurrency: "USD",
   bio: "",
   phoneNumber: "",
   signalUrl: "",
@@ -79,6 +84,9 @@ function profileToForm(p: Profile): SeekerForm {
     desiredMoveInDateIso: dateInputValue(p.desiredMoveInDateIso),
     budgetMin: numberInputValue(p.budgetMin),
     budgetMax: numberInputValue(p.budgetMax),
+    // A profile saved before the picker existed named no currency; the form offers the default
+    // rather than a blank option, so saving always settles the question one way or the other.
+    budgetCurrency: p.budgetCurrency || "USD",
     bio: textInputValue(p.bio),
     phoneNumber: textInputValue(p.phoneNumber),
     signalUrl: textInputValue(p.signalUrl),
@@ -87,19 +95,35 @@ function profileToForm(p: Profile): SeekerForm {
   };
 }
 
+/** A trimmed text field as the endpoint wants it: an empty box is null, not an empty string. */
+function trimmedOrNull(value: string): string | null {
+  return value.trim() || null;
+}
+
+/**
+ * The budget currency to store. Only meaningful alongside an amount: a currency on its own says
+ * nothing, and storing one for an empty budget would put a figure-less currency on a posting that
+ * shows no figure.
+ */
+function budgetCurrencyToStore(form: SeekerForm, budgetMin: number | null, budgetMax: number | null): string | null {
+  if (budgetMin === null && budgetMax === null) return null;
+  return trimmedOrNull(form.budgetCurrency);
+}
+
 // Builds the POST body for saving a seeker profile, normalizing empty inputs to null.
 function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budgetMax: number | null) {
   return {
     profileType: "seeker",
-    housingNeeds: form.housingNeeds.trim() || null,
-    desiredCountry: form.desiredCountry.trim() || null,
-    desiredCity: form.desiredCity.trim() || null,
-    desiredMoveInDateIso: form.desiredMoveInDateIso.trim() || null,
+    housingNeeds: trimmedOrNull(form.housingNeeds),
+    desiredCountry: trimmedOrNull(form.desiredCountry),
+    desiredCity: trimmedOrNull(form.desiredCity),
+    desiredMoveInDateIso: trimmedOrNull(form.desiredMoveInDateIso),
     budgetMin,
     budgetMax,
-    bio: form.bio.trim() || null,
-    phoneNumber: form.phoneNumber.trim() || null,
-    signalUrl: form.signalUrl.trim() || null,
+    budgetCurrency: budgetCurrencyToStore(form, budgetMin, budgetMax),
+    bio: trimmedOrNull(form.bio),
+    phoneNumber: trimmedOrNull(form.phoneNumber),
+    signalUrl: trimmedOrNull(form.signalUrl),
     isActive: form.isActive,
     isWantedPublic: form.isWantedPublic,
   };
@@ -221,6 +245,19 @@ export function LighthouseSeekerProfile() {
           {field("desiredMoveInDateIso", "Ideal move-in date", { type: "date" })}
           {field("budgetMin", "Least you can pay / month", { type: "number", placeholder: "0" })}
           {field("budgetMax", "Most you can pay / month", { type: "number", placeholder: "0" })}
+          <div style={{ flex: "1 1 160px", minWidth: 140 }}>
+            <label htmlFor="lighthouse-seeker-budget-currency" style={labelStyle}>Budget currency</label>
+            <CurrencySelect
+              id="lighthouse-seeker-budget-currency"
+              value={form.budgetCurrency}
+              onChange={(code) => setField("budgetCurrency", code)}
+              ariaLabel="Budget currency"
+            />
+            <div style={{ fontSize: 11, color: t.MUTED, marginTop: 4, lineHeight: 1.5 }}>
+              What the two amounts above are in. ServiceCredits is a choice here, the same as on a
+              listing.
+            </div>
+          </div>
           <div style={{ flex: "1 1 100%" }}>{field("bio", "About you (optional)", { textarea: true, placeholder: "A short introduction a host will read." })}</div>
           {field("phoneNumber", "Phone (optional)")}
           {field("signalUrl", "Signal link (optional)", { placeholder: "https://signal.me/#p/…" })}
@@ -238,9 +275,10 @@ export function LighthouseSeekerProfile() {
           </label>
           <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6, lineHeight: 1.6, paddingLeft: 24 }}>
             Anyone browsing LightHouse then sees what you’re looking for, the place and date, your
-            budget range and your short introduction — so someone deciding whether to offer a room can
-            see that people are asking. Your name, your phone number and your Signal link are never
-            shown, and nobody can message you from it. Untick the box any time to take it down.
+            budget range in the currency you picked, and your short introduction — so someone deciding
+            whether to offer a room can see that people are asking. Your name, your phone number and
+            your Signal link are never shown, and nobody can message you from it. Untick the box any
+            time to take it down.
           </div>
         </div>
 

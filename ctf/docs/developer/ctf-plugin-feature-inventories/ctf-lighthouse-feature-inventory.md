@@ -59,8 +59,9 @@ access, and nothing prompts a "create your profile" step on entry. The `lighthou
 longer a precondition for browsing, hosting, or matching.
 
 1. Optional shared preference fields: bio, phone number, signal URL, active status.
-2. Optional seeker preference fields: housing needs, desired move-in date, budget min/max, desired
-   country, desired city, and the Wanted-tab publish opt-in (`isWantedPublic`, §1.3b).
+2. Optional seeker preference fields: housing needs, desired move-in date, budget min/max, budget
+   currency, desired country, desired city, and the Wanted-tab publish opt-in (`isWantedPublic`,
+   §1.3b).
 3. Optional host preference fields: `hasProperty` indicator.
 4. Verification rendering and first-name display behavior are retained where a profile exists.
 5. **Seeker self-service screen (2026-07-14).** A "Your details" tab
@@ -101,8 +102,15 @@ the host tab.
    profile that existed before this shipped is unpublished (`is_wanted_public` defaults FALSE).
    Un-ticking it, or turning off "I'm actively looking", takes the posting down on the next read.
 2. **What a posting shows:** what they are looking for, the short introduction, the city and country,
-   the ideal move-in date, and the budget range. The budget renders as plain numbers with no currency
-   symbol, because the form never asks which currency the amount is in.
+   the ideal move-in date, and the budget range **in the currency the member named**. The seeker form
+   carries a **Budget currency** picker (the shared `CurrencySelect`, the same control and catalog the
+   host form uses for rent, defaulting to `USD`), stored on `lighthouse_profiles.budget_currency`.
+   The budget follows every rule the rent display follows: a ServiceCredits budget reads as
+   "20 ServiceCredits" and never carries a "$" or a fiat equivalent; a barter or amount-less currency
+   renders its label alone, since a range of it means nothing. A budget saved before the picker
+   existed names no currency and falls back to the bare number — the one case where the figure
+   genuinely states no currency. The currency is stored only alongside an amount: clearing both
+   budget fields clears it.
 3. **What a posting never shows:** the member's id, name, phone number, or Signal link. The
    repository query names its safe columns one by one rather than reusing the profile row mapping, so
    a later column added to `lighthouse_profiles` cannot leak through it.
@@ -241,8 +249,9 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
   Member-gated read (`requireLighthouseReadAccess`), no write method. Returns only rows where
   `is_wanted_public = TRUE AND is_active = TRUE AND service_deleted_at IS NULL`, with postings from
   anyone the reader has blocked (or who blocked them) left out in both directions. The response
-  carries the need, the short intro, the city/country, the move-in date, the budget range and
-  `updatedAtIso` — and deliberately **no member id, no phone number and no Signal link**.
+  carries the need, the short intro, the city/country, the move-in date, the budget range with its
+  `budgetCurrency`, and `updatedAtIso` — and deliberately **no member id, no phone number and no
+  Signal link**.
   Publishing is not a route of its own: it is the `isWantedPublic` field on
   `POST /api/lighthouse/profile`.
 
@@ -289,8 +298,11 @@ listed here were removed on 2026-08-03 — see §1.6 above.
 Required entities for parity scope:
 
 1. `lighthouse_profiles` — the optional per-member extension data. Since 2026-09-15 it also carries
-   `desired_city` (TEXT, nullable) and `is_wanted_public` (BOOLEAN NOT NULL DEFAULT FALSE), the
-   opt-in that puts a member's housing need on the Wanted tab. A partial index
+   `desired_city` (TEXT, nullable), `budget_currency` (TEXT, nullable, FK → `currencies(code)` — the
+   currency the budget range is stated in), and `is_wanted_public` (BOOLEAN NOT NULL DEFAULT FALSE),
+   the opt-in that puts a member's housing need on the Wanted tab. `budget_currency` is deliberately
+   **not** backfilled: a budget saved before the picker existed named no currency, and writing `USD`
+   onto it would be a migration inventing a fact about someone's money. A partial index
    (`idx_lighthouse_profiles_wanted_public`) covers exactly the published set
    (`is_wanted_public AND is_active AND service_deleted_at IS NULL`, `updated_at DESC`) so that read
    does not scan the table. Deleting LightHouse data deletes the row, which takes the posting with
@@ -318,6 +330,9 @@ Multi-currency / no-fiat-parity (issue #120):
    ServiceCredits" badge (two distinct fields) — never as a ServiceCredits↔fiat equivalence.
 2. ServiceCredits (`currencies.code='SC'`) renders as the label "ServiceCredits", never the bare code,
    and never at a fiat figure.
+3. A seeker's budget is shown in its own `budget_currency` and obeys both rules above (2026-09-15).
+   Both sides of LightHouse now name their currency: a listing says what the rent is in, and a wanted
+   posting says what the budget is in.
 
 Contract expectations:
 
@@ -381,10 +396,21 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   people on it is the side asking — so the board read as emptier than the need behind it. The seeker
   details a member already fills in can now be published, on a tick box, to a new **Wanted** tab
   beside Browse (§1.3b).
-  - Schema: `lighthouse_profiles` gains `desired_city` (TEXT) and `is_wanted_public` (BOOLEAN NOT
-    NULL DEFAULT FALSE), plus the partial index `idx_lighthouse_profiles_wanted_public`. Migration
-    `ctf/db/migrations/post/0022_lighthouse_wanted_postings.sql`. The FALSE default is what keeps
-    every profile saved before today unpublished.
+  - Schema: `lighthouse_profiles` gains `desired_city` (TEXT), `budget_currency` (TEXT, FK →
+    `currencies(code)`) and `is_wanted_public` (BOOLEAN NOT NULL DEFAULT FALSE), plus the partial
+    index `idx_lighthouse_profiles_wanted_public`. Migrations
+    `ctf/db/migrations/post/0022_lighthouse_wanted_postings.sql` and
+    `0023_lighthouse_budget_currency.sql`. The FALSE default is what keeps every profile saved
+    before today unpublished.
+  - Budget currency (owner decision, same day): the seeker form asked for an amount per month and
+    never asked which currency it was in. On a private profile a bare number was survivable; on a
+    published posting a reader has to guess, and the guess is a dollar sign — which is exactly what
+    the multi-currency rule forbids on a ServiceCredits figure. The form now carries the shared
+    `CurrencySelect` (the same control and catalog the host form uses for rent, default `USD`), and
+    `formatBudgetRange` in `components/lighthouse/shared.ts` renders the range under the rent rules:
+    ServiceCredits by label, barter/amount-less currencies by label alone, and the bare number only
+    for a row that predates the picker. `budget_currency` is not backfilled, for the reason recorded
+    in §4.
   - Route: `GET /api/lighthouse/wanted` (read-only, member-gated, blocks applied both ways).
     Publishing rides the existing `POST /api/lighthouse/profile` as `isWantedPublic`, so a need lives
     in one place and comes down with one tick.
