@@ -4,11 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileScreenHeader } from "@/components/shared/mobile-screen-header";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { FIRESIDE_BLOG_BASE } from "@/lib/fireside/constants";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
-import { FiresideAdminComments } from "./fireside-admin-comments";
-import { FiresideExportQueue } from "./fireside-export-queue";
 import { Pager } from "./fireside-pager";
 import { FiresideThreadView } from "./fireside-thread-view";
 
@@ -258,8 +257,6 @@ export function FiresideShell({
   // Whether the open thread is the one the link named. It stops being true the moment the member
   // navigates within the app, so "back" keeps meaning the place they actually came from.
   const [cameFromPost, setCameFromPost] = useState(initialPost != null);
-  const [queueOpen, setQueueOpen] = useState(false);
-  const [adminListOpen, setAdminListOpen] = useState(false);
 
   const load = useCallback(async (wanted: number) => {
     setLoading(true);
@@ -309,13 +306,18 @@ export function FiresideShell({
       {/* The shared screen header, so the way back is the same control as everywhere else in the
           app (rule 134). This screen shipped without one and had no way back at phone width, which
           is the breakpoint the whole web app renders at (owner report, 2026-09-14). */}
-      <MobileScreenHeader title="Fireside" accent={t.ACCENT} icon={<Flame size={18} color={t.ACCENT} />} />
+      {/* The admin pill, shown only to admins, is the way to moderation — the same control every
+          other plugin uses for it (rule 131: one dedicated admin page per plugin). The export queue
+          and the comments list used to open inside this screen, which left Fireside with no row in
+          the admin directory and an admin with nowhere to look (owner report, 2026-09-16). */}
+      <MobileScreenHeader
+        title="Fireside"
+        accent={t.ACCENT}
+        icon={<Flame size={18} color={t.ACCENT} />}
+        actions={<PluginAdminButton href="/admin/fireside" isAdmin={isAdmin} accent={t.ACCENT} />}
+      />
       <div style={{ padding: "20px 16px 48px" }}>
-      {queueOpen ? (
-        <FiresideExportQueue t={t} onClose={() => { setQueueOpen(false); void load(page); }} />
-      ) : adminListOpen ? (
-        <FiresideAdminComments t={t} onClose={() => { setAdminListOpen(false); void load(page); }} />
-      ) : openPost ? (
+      {openPost ? (
         <FiresideThreadView
           postRepo={openPost.repo}
           postSlug={openPost.slug}
@@ -335,18 +337,6 @@ export function FiresideShell({
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
         <BlogLink t={t} label="Open the blog" />
-        {isAdmin && (
-          <>
-            <button type="button" onClick={() => setQueueOpen(true)}
-              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
-              Blog export queue
-            </button>
-            <button type="button" onClick={() => setAdminListOpen(true)}
-              style={{ background: "transparent", border: `1px solid ${t.BORDER}`, borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 600, color: t.ACCENT, cursor: "pointer" }}>
-              Recent comments
-            </button>
-          </>
-        )}
       </div>
 
       <Guidelines t={t} />

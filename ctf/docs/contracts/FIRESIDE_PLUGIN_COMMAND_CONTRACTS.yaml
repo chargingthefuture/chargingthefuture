@@ -350,6 +350,90 @@ commands:
     purpose: Close a conversation to new comments or open it again. Nothing already written is touched, hidden, or removed — this is about what happens next, not about what was said.
     retentionClass: moderation_record
   - pluginId: fireside
+    command: fireside.admin.threads.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+    outputSchema:
+      type: object
+      properties:
+        threads:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              postRepo:
+                type: string
+              postSlug:
+                type: string
+              postTitle:
+                type: string
+              isClosed:
+                type: boolean
+              commentCount:
+                type: integer
+              hiddenCount:
+                type: integer
+              lastCommentAt:
+                type: [string, 'null']
+        page:
+          type: integer
+        lastPage:
+          type: integer
+        total:
+          type: integer
+    dataAccess:
+      - fireside_threads (select)
+      - fireside_comments (select, counts only)
+    purpose: Every conversation, the newest-commented first and paged, so closing one does not require already knowing which blog post it is under. Closed threads and threads whose comments have all been taken out are listed and labeled rather than dropped.
+    retentionClass: community_content
+  - pluginId: fireside
+    command: fireside.admin.audit.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 500
+    outputSchema:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              actorId:
+                type: string
+              command:
+                type: string
+              policyStatus:
+                type: string
+              reason:
+                type: string
+              targetType:
+                type: string
+              targetId:
+                type: string
+              result:
+                type: string
+              createdAt:
+                type: string
+    dataAccess:
+      - fireside_audit_events (select)
+    purpose: The audit trail, newest first, so somebody can read it. Every write here has recorded a row since the plugin shipped and nothing in the app could read one back; a record nobody can read is not a check on anything.
+    retentionClass: moderation_record
+  - pluginId: fireside
     command: fireside.export.feed.read
     version: 1.0.0
     inputSchema:
