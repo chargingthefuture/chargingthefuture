@@ -42,7 +42,7 @@ export const externalCleanupRegistry: Readonly<Record<string, ExternalCleanup>> 
   chyme: fromBoolean('Chyme', deleteChymeStreamData),
   beacon: fromBoolean('Beacon', deleteBeaconStreamData),
   foundation: fromBoolean('Foundation', deleteFoundationStreamData),
-  lighthouse: fromBoolean('Lighthouse', deleteLighthouseStreamData),
+  lighthouse: fromBoolean('LightHouse', deleteLighthouseStreamData),
   'socket-relay': fromBoolean('SocketRelay', deleteSocketRelayStreamData),
   'trust-transport': fromBoolean('TrustTransport', deleteTrustTransportStreamData),
 };

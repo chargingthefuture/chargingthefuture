@@ -28,10 +28,12 @@ async function main() {
     await client.query(
       `
         INSERT INTO lighthouse_profiles
-          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_country)
+          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_country, desired_city, is_wanted_public, budget_min, budget_max, budget_currency)
         VALUES
-          ('seed-lighthouse-seeker-01', 'seeker', 'Seed seeker profile for LightHouse validation.', '+10000000001', 'https://signal.me/#seed-seeker', TRUE, FALSE, '2 bedroom near transit', 'US'),
-          ('seed-lighthouse-host-01', 'host', 'Seed host profile for LightHouse validation.', '+10000000002', 'https://signal.me/#seed-host', TRUE, TRUE, NULL, 'US')
+          -- The seeker publishes their need (is_wanted_public TRUE) so the Wanted tab has a row to
+          -- render in dev; the host does not, so the "published vs not" split is visible too.
+          ('seed-lighthouse-seeker-01', 'seeker', 'Seed seeker profile for LightHouse validation.', '+10000000001', 'https://signal.me/#seed-seeker', TRUE, FALSE, '2 bedroom near transit', 'US', 'Austin', TRUE, 900, 1400, 'USD'),
+          ('seed-lighthouse-host-01', 'host', 'Seed host profile for LightHouse validation.', '+10000000002', 'https://signal.me/#seed-host', TRUE, TRUE, NULL, 'US', NULL, FALSE, NULL, NULL, NULL)
         ON CONFLICT (user_id)
         DO UPDATE SET
           profile_type = EXCLUDED.profile_type,
@@ -42,6 +44,11 @@ async function main() {
           has_property = EXCLUDED.has_property,
           housing_needs = EXCLUDED.housing_needs,
           desired_country = EXCLUDED.desired_country,
+          desired_city = EXCLUDED.desired_city,
+          is_wanted_public = EXCLUDED.is_wanted_public,
+          budget_min = EXCLUDED.budget_min,
+          budget_max = EXCLUDED.budget_max,
+          budget_currency = EXCLUDED.budget_currency,
           updated_at = NOW()
       `,
     );
@@ -110,7 +117,7 @@ async function main() {
     );
 
     await client.query('COMMIT');
-    console.log('Lighthouse phase-2 seed fixtures applied.');
+    console.log('LightHouse phase-2 seed fixtures applied.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

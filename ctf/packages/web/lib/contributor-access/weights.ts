@@ -5,7 +5,7 @@
 // counts the SAME events per member; this file only names them and assigns default weights.
 //
 // Default weights are inversely related to each event's expected base rate: a rare, large action
-// (hosting a Lighthouse stay) is worth many small, frequent ones (a Chyme tip). The owner tunes
+// (hosting a LightHouse stay) is worth many small, frequent ones (a Chyme tip). The owner tunes
 // them without a redeploy via contributor_access_config.weights (per-key JSONB override; a missing
 // key falls back to the default here).
 //
@@ -56,7 +56,7 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
   'value.foundation_calls_answered': 'Foundation answered charged call',
   'value.socket_relay_requests_fulfilled': 'SocketRelay request closed successful',
   'value.trust_transport_trips_completed': 'TrustTransport trip completed',
-  'value.lighthouse_stays_completed': 'Lighthouse stay completed',
+  'value.lighthouse_stays_completed': 'LightHouse stay completed',
   'value.chyme_tips_sent': 'Chyme peer tip sent',
   'value.service_credits_peer_sends': 'ServiceCredits direct peer send',
   'value.contributions_confirmed_usd': 'Contributions confirmed (per USD)',

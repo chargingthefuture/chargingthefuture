@@ -99,7 +99,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (code === 'property_not_found') {
       return NextResponse.json(
-        { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: `Lighthouse property not found: ${failureReason(error)}` },
+        { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: `LightHouse property not found: ${failureReason(error)}` },
         { status: 404 },
       );
     }

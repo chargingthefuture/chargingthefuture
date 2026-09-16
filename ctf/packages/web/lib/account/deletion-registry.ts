@@ -352,8 +352,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   },
   {
     slug: 'lighthouse',
-    name: 'Lighthouse',
-    dataSummary: 'Your Lighthouse profile, extension record, and any property listings you created.',
+    name: 'LightHouse',
+    dataSummary: 'Your LightHouse profile, extension record, and any property listings you created.',
     serviceScopeSupported: true,
     tables: [
       del('lighthouse_matches', 'seeker_user_id', 'Stay requests you sent to hosts.'),
@@ -366,7 +366,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         [],
         'Stay requests other members sent to your listings — the record stays with the seeker, your identity does not.',
       ),
-      del('lighthouse_blocks', 'blocker_user_id', 'The Lighthouse blocks you created.'),
+      del('lighthouse_blocks', 'blocker_user_id', 'The LightHouse blocks you created.'),
       // Blocks pointing AT the deleted account are removed, not pseudonymized: the block's purpose
       // (preventing interaction with that account) ends when the account does, a returning person
       // would arrive on a new Clerk id the old row could not catch anyway, and collapsing several
@@ -374,8 +374,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // moment one blocker had blocked two departed members. Abuse EVIDENCE lives in
       // member_safety_reports, not here.
       del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
-      soft('lighthouse_profiles', 'user_id', 'service_deleted_at', 'Your Lighthouse profile.'),
-      soft('lighthouse_user_extension', 'user_id', 'service_deleted_at', 'Your Lighthouse plugin extension record.'),
+      soft('lighthouse_profiles', 'user_id', 'service_deleted_at', 'Your LightHouse profile.'),
+      soft('lighthouse_user_extension', 'user_id', 'service_deleted_at', 'Your LightHouse plugin extension record.'),
       retain(
         'lighthouse_properties',
         'Property listings you created.',
