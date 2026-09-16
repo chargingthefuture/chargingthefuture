@@ -27,9 +27,9 @@ function asStringOr(value: unknown, fallback: string): string {
 // Maps a repository error code (thrown as an Error message) to the exact status/body it produced
 // before. Keeping this as a lookup table preserves each response 1:1 while avoiding a long if-chain.
 const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
-  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.', status: 404 },
-  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.', status: 404 },
-  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.', status: 404 },
+  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'LightHouse profile not found.', status: 404 },
+  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'LightHouse property not found.', status: 404 },
+  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'LightHouse match not found.', status: 404 },
   not_owner: { code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
   policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
   blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'This listing is not available to you.', status: 403 },

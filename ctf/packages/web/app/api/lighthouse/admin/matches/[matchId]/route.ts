@@ -82,7 +82,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (code === 'match_not_found') {
       return NextResponse.json(
-        { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: `Lighthouse match not found: ${failureReason(error)}` },
+        { ok: false, code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: `LightHouse match not found: ${failureReason(error)}` },
         { status: 404 },
       );
     }

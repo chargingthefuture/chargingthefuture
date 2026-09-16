@@ -169,3 +169,10 @@ surfaces.
 ## Plugin Name Joining Convention
 
 User-facing plugin names that are two words are written as one joined PascalCase word (e.g. PeerProgramming, ServiceCredits, SkillsHunt, SocketRelay). Internal plugins keep the space (e.g. Weekly Performance).
+
+The joined form capitalizes the second word too, and that is what settles a spelling asked about on
+2026-09-15: it is **LightHouse**, not "Lighthouse". It is two words joined, the same as SocketRelay
+and SkillsHunt, and it is the name the registry carries. Only two things keep the lower-case `h`:
+code identifiers (`LighthouseShell`, `getLighthouseTokens`, `lighthouse_profiles`, the `lighthouse`
+slug, the `/apps/lighthouse` path), which are spelled however the code spells them, and commit
+messages already written, which cannot be edited. Every string a member reads says LightHouse.
