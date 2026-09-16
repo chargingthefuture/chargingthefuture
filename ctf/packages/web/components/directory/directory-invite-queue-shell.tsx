@@ -44,13 +44,13 @@ export function DirectoryInviteQueueShell() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    let canceled = false;
 
     async function load() {
       try {
         const response = await fetch('/api/directory/admin/invite-queue');
         const payload = (await response.json()) as { rows?: DirectoryInviteQueueRow[]; message?: string };
-        if (cancelled) {
+        if (canceled) {
           return;
         }
         if (!response.ok) {
@@ -59,7 +59,7 @@ export function DirectoryInviteQueueShell() {
         }
         setRows(payload.rows ?? []);
       } catch (caught) {
-        if (!cancelled) {
+        if (!canceled) {
           setError(caught instanceof Error ? caught.message : 'The queue did not load.');
         }
       }
@@ -67,7 +67,7 @@ export function DirectoryInviteQueueShell() {
 
     void load();
     return () => {
-      cancelled = true;
+      canceled = true;
     };
   }, []);
 
