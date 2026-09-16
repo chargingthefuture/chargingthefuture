@@ -17,6 +17,11 @@
 --   advocacy-only   — every listed skill is Advocacy. Write the general invitation.
 --   no-skill        — listed with nothing recorded. Not ready for a post; find out what they do first.
 --
+-- Every id comparison is cast to text. On the cloned production database
+-- directory_profile_skills.profile_id is a v2 varchar column while directory_profiles.id is a
+-- uuid, and an untyped comparison fails with "operator does not exist: uuid = character
+-- varying". The app's own queries cast for the same reason.
+--
 -- Run against the production database, read-only:
 --   psql "$DATABASE_URL" -f ctf/scripts/sql/directory-invite-queue.sql
 -- Or with the Infisical bootstrap:
@@ -33,26 +38,26 @@ WITH already_written AS (
 ),
 listed_skills AS (
   SELECT
-    ps.profile_id,
+    ps.profile_id::text AS profile_id,
     string_agg(s.name, '; ' ORDER BY ps.display_order, s.name) AS skills,
     count(*) AS skill_count,
     count(*) FILTER (WHERE s.name ILIKE '%advocacy%') AS advocacy_count
   FROM directory_profile_skills ps
-  JOIN skills_taxonomy_skills s ON s.id = ps.skill_id
+  JOIN skills_taxonomy_skills s ON s.id::text = ps.skill_id::text
   WHERE s.is_active
-  GROUP BY ps.profile_id
+  GROUP BY ps.profile_id::text
 ),
 pending_skills AS (
   -- Free-text skills a member added that an admin has not promoted into the taxonomy yet. They
   -- still say what somebody does, so a post can use them.
   SELECT
-    profile_id,
+    profile_id::text AS profile_id,
     string_agg(skill_label, '; ' ORDER BY skill_label) AS proposed_skills,
     count(*) AS proposed_count
   FROM directory_profile_proposed_skills
   -- Every row is written with status 'pending' and the set is replaced wholesale on each edit,
   -- so there is no rejected state to filter out.
-  GROUP BY profile_id
+  GROUP BY profile_id::text
 )
 SELECT
   p.id AS profile_id,
@@ -75,10 +80,10 @@ SELECT
     ELSE 'skill-specific'
   END AS invite_kind
 FROM directory_profiles p
-LEFT JOIN listed_skills ls ON ls.profile_id = p.id
-LEFT JOIN pending_skills pn ON pn.profile_id = p.id
-LEFT JOIN skills_taxonomy_sectors sec ON sec.id = p.sector_id
-LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+LEFT JOIN listed_skills ls ON ls.profile_id = p.id::text
+LEFT JOIN pending_skills pn ON pn.profile_id = p.id::text
+LEFT JOIN skills_taxonomy_sectors sec ON sec.id::text = p.sector_id::text
+LEFT JOIN skills_taxonomy_job_titles jt ON jt.id::text = p.job_title_id::text
 WHERE p.deleted_at IS NULL
   AND p.is_active
   AND coalesce(p.profile_url, '') <> ''

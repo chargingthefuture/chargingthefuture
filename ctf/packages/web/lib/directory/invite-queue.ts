@@ -94,24 +94,28 @@ function handleFromUrl(url: string): string {
 export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRow[]> {
   const result = await queryDb<QueueDbRow>(
     `
+      -- profile_id is compared as text on both joins below. On the cloned production database it is
+      -- a v2 varchar column while directory_profiles.id is a uuid, so an untyped comparison fails
+      -- with "operator does not exist: uuid = character varying". Every other query in
+      -- lib/directory/repository.ts casts for the same reason.
       WITH listed_skills AS (
         SELECT
-          ps.profile_id,
+          ps.profile_id::text AS profile_id,
           array_agg(s.name ORDER BY ps.display_order, s.name) AS skills,
           count(*) AS skill_count,
           count(*) FILTER (WHERE s.name ILIKE $1) AS advocacy_count
         FROM directory_profile_skills ps
-        JOIN skills_taxonomy_skills s ON s.id = ps.skill_id
+        JOIN skills_taxonomy_skills s ON s.id::text = ps.skill_id::text
         WHERE s.is_active
-        GROUP BY ps.profile_id
+        GROUP BY ps.profile_id::text
       ),
       pending_skills AS (
         SELECT
-          profile_id,
+          profile_id::text AS profile_id,
           array_agg(skill_label ORDER BY skill_label) AS pending_skills,
           count(*) AS pending_count
         FROM directory_profile_proposed_skills
-        GROUP BY profile_id
+        GROUP BY profile_id::text
       )
       SELECT
         p.id::text AS profile_id,
@@ -130,10 +134,10 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
         coalesce(ls.advocacy_count, 0)::text AS advocacy_count,
         coalesce(pn.pending_count, 0)::text AS pending_count
       FROM directory_profiles p
-      LEFT JOIN listed_skills ls ON ls.profile_id = p.id
-      LEFT JOIN pending_skills pn ON pn.profile_id = p.id
-      LEFT JOIN skills_taxonomy_sectors sec ON sec.id = p.sector_id
-      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
+      LEFT JOIN listed_skills ls ON ls.profile_id = p.id::text
+      LEFT JOIN pending_skills pn ON pn.profile_id = p.id::text
+      LEFT JOIN skills_taxonomy_sectors sec ON sec.id::text = p.sector_id::text
+      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id::text = p.job_title_id::text
       WHERE p.deleted_at IS NULL
         AND p.is_active
         AND coalesce(p.profile_url, '') <> ''
