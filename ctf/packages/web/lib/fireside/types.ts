@@ -146,3 +146,33 @@ export type FiresideExportableComment = {
   postSlug: string;
   postTitle: string;
 };
+
+/**
+ * One conversation as the admin list shows it.
+ *
+ * Wider than `FiresideThread` on purpose: an admin decides whether to close a conversation by
+ * looking at what is happening in it, and "12 comments, 3 of them taken out, last one an hour ago"
+ * is that, where a bare title is not. `hiddenCount` counts removed and withdrawn rows together —
+ * an admin list hides nothing (rule 131), so a thread whose comments are all gone still shows why
+ * it looks empty instead of reading as a thread nobody ever wrote in.
+ */
+export type FiresideAdminThread = FiresideThread & {
+  /** Removed by an admin or taken down by their authors, counted together. */
+  hiddenCount: number;
+  /** When the most recent comment arrived, or null for a thread whose comments are all gone. */
+  lastCommentAt: string | null;
+};
+
+/** One row of `fireside_audit_events`, as the admin audit screen reads it. */
+export type FiresideAuditEvent = {
+  id: string;
+  actorId: string;
+  command: string;
+  policyStatus: string;
+  reason: string;
+  targetType: string;
+  targetId: string;
+  result: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};

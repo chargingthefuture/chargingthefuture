@@ -17,7 +17,9 @@ import {
 } from './constants';
 import type {
   ExportReview,
+  FiresideAdminThread,
   FiresideAnyReactionKind,
+  FiresideAuditEvent,
   FiresideComment,
   FiresideCommentInput,
   FiresideCommentStatus,
@@ -586,4 +588,92 @@ export async function deleteAllForUser(userId: string): Promise<{ comments: numb
   const reactions = await queryDb(`DELETE FROM fireside_reactions WHERE reactor_user_id = $1`, [userId]);
   const comments = await queryDb(`DELETE FROM fireside_comments WHERE author_user_id = $1`, [userId]);
   return { comments: comments.rowCount ?? 0, reactions: reactions.rowCount ?? 0 };
+}
+
+type AdminThreadRow = ThreadRow & {
+  hidden_count: string | number | null;
+  last_comment_at: string | null;
+};
+
+/**
+ * Every conversation, the busiest first, for the admin screen.
+ *
+ * Closing a thread has existed since the plugin shipped and the only way to reach the control was
+ * to open the post it belongs to, which means already knowing which post. This is the list that
+ * makes it a thing an admin can actually do.
+ *
+ * Closed threads are listed alongside open ones, and a thread whose every comment has been taken
+ * out still appears with the count saying so — an admin list hides nothing (rule 131), and the
+ * thread an admin most needs to find is usually the one something was already done to.
+ */
+export async function listAllThreads(limit = 20, offset = 0): Promise<FiresideAdminThread[]> {
+  const result = await queryDb<AdminThreadRow>(
+    `SELECT t.id::text AS id, t.post_repo, t.post_slug, t.post_title, t.is_closed,
+            COUNT(c.id) FILTER (WHERE c.status = 'visible') AS comment_count,
+            COUNT(c.id) FILTER (WHERE c.status <> 'visible') AS hidden_count,
+            MAX(c.created_at) AS last_comment_at
+       FROM fireside_threads t
+       LEFT JOIN fireside_comments c ON c.thread_id = t.id
+      GROUP BY t.id
+      ORDER BY MAX(c.created_at) DESC NULLS LAST, t.created_at DESC
+      LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  return result.rows.map((row) => ({
+    ...mapThread(row),
+    hiddenCount: Number(row.hidden_count ?? '0'),
+    lastCommentAt: row.last_comment_at,
+  }));
+}
+
+export async function countAllThreads(): Promise<number> {
+  const result = await queryDb<{ count: string }>(`SELECT COUNT(*) AS count FROM fireside_threads`);
+  return Number(result.rows[0]?.count ?? '0');
+}
+
+type AuditRow = {
+  id: string;
+  actor_id: string;
+  command: string;
+  policy_status: string;
+  reason: string;
+  target_type: string;
+  target_id: string;
+  result: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+/**
+ * The audit trail, newest first, so somebody can read it.
+ *
+ * Every write here has recorded a row since the plugin shipped and nothing in the app ever showed
+ * one. A record nobody can read is not a check on anything (rule 131), and this plugin's admin
+ * powers are the kind that need one: removing somebody's words, and agreeing to copy them onto a
+ * page that a web archive will keep forever.
+ */
+export async function listFiresideAuditEvents(limit = 100): Promise<FiresideAuditEvent[]> {
+  // Clamped rather than trusted: the caller is an admin, but an unbounded limit from a query string
+  // is still a way to ask the database for the whole table.
+  const capped = Math.min(Math.max(Math.trunc(limit) || 100, 1), 500);
+  const result = await queryDb<AuditRow>(
+    `SELECT id::text AS id, actor_id, command, policy_status, reason,
+            target_type, target_id, result, metadata, created_at
+       FROM fireside_audit_events
+      ORDER BY created_at DESC
+      LIMIT $1`,
+    [capped],
+  );
+  return result.rows.map((row) => ({
+    id: row.id,
+    actorId: row.actor_id,
+    command: row.command,
+    policyStatus: row.policy_status,
+    reason: row.reason,
+    targetType: row.target_type,
+    targetId: row.target_id,
+    result: row.result,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at,
+  }));
 }
