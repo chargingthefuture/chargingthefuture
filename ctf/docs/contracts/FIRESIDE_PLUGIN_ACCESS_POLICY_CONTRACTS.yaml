@@ -133,6 +133,30 @@ policies:
       other comment shape here, and it does not carry the author's own copy of anything they took
       down — that column is on the author-scoped read alone.
   - pluginId: fireside
+    command: fireside.admin.threads.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      A read, so it writes no audit row of its own; closing or opening a conversation from it is
+      recorded by fireside.thread.set_closed. It carries counts and post titles and no comment body,
+      no author name and no user id — deciding whether a conversation should stay open does not
+      need to name anybody in it.
+  - pluginId: fireside
+    command: fireside.admin.audit.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      A read, and the one place actor ids are shown on a Fireside screen — which is the point of an
+      audit trail and is admin-only for that reason. It carries no comment body: a row says what was
+      done to which comment, not what the comment said. The limit is clamped in the repository
+      rather than trusted from the query string.
+  - pluginId: fireside
     command: fireside.export.feed.read
     version: 1.0.0
     requiredRoles: []

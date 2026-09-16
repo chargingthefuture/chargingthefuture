@@ -43,6 +43,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
+  // Moderating the conversation under the blog posts: the blog-export queue, every comment, the
+  // conversations themselves, and the audit trail.
+  { href: '/admin/fireside', name: 'Fireside' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/skill-up', name: 'SkillUp' },
   { href: '/admin/lighthouse', name: 'LightHouse' },

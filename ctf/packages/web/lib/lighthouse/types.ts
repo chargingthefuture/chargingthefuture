@@ -14,7 +14,32 @@ export type LighthouseProfile = {
   desiredMoveInDateIso: string | null;
   budgetMin: number | null;
   budgetMax: number | null;
+  // Currency the budget range is stated in (references currencies.code). Null on a profile saved
+  // before the picker existed, which reads as "not stated" rather than as any particular currency.
+  budgetCurrency: string | null;
   desiredCountry: string | null;
+  desiredCity: string | null;
+  // Opt-in: show this housing need on the Wanted tab. False for every profile saved before the
+  // Wanted tab existed, and false until the member ticks the box themselves.
+  isWantedPublic: boolean;
+  updatedAtIso: string;
+};
+
+/**
+ * One published housing need, as anyone browsing LightHouse sees it. Deliberately narrower than
+ * LighthouseProfile: no member id, no phone number, no Signal link. A wanted posting is a demand
+ * signal to read, not a contact route — stay requests still only run seeker → host.
+ */
+export type LighthouseWantedPosting = {
+  id: string;
+  housingNeeds: string | null;
+  bio: string | null;
+  desiredCity: string | null;
+  desiredCountry: string | null;
+  desiredMoveInDateIso: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  budgetCurrency: string | null;
   updatedAtIso: string;
 };
 
@@ -74,7 +99,10 @@ export type LighthouseProfileInput = {
   desiredMoveInDateIso?: string | null;
   budgetMin?: number | null;
   budgetMax?: number | null;
+  budgetCurrency?: string | null;
   desiredCountry?: string | null;
+  desiredCity?: string | null;
+  isWantedPublic?: boolean;
 };
 
 export type LighthousePropertyInput = {

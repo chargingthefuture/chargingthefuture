@@ -9,6 +9,10 @@ policies:
       tenancy: same_workspace
       profileTypeLock: enforced
       profileOwnershipOrAdmin: required
+      # Publishing a housing need to the Wanted tab is the member's own explicit choice, stored as
+      # is_wanted_public. It defaults false and is never inferred from any other field.
+      wantedPostingPublication: opt_in_default_off
+      wantedPostingDisclosure: needs_and_preferences_only_no_identity_or_contact
     consentRequirements:
       scopes:
         - lighthouse_profile_management

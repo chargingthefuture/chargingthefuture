@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { Pager } from "./fireside-pager";
+import { useUrlPage } from "./fireside-url-page";
 
 // The admin's half of the two keys on copying a comment out to the blog's published build.
 //
@@ -104,9 +105,11 @@ function RequestCard({
   );
 }
 
-export function FiresideExportQueue({ t, onClose }: { t: PluginShellTokens; onClose: () => void }) {
+export function FiresideExportQueue({ t }: { t: PluginShellTokens }) {
+  // The page is in the address bar, so a queue page can be linked and the back button works
+  // (rule 100). It used to be local state here, which is the gap the inventory recorded.
+  const [page, setPage] = useUrlPage("queue");
   const [requests, setRequests] = useState<ExportRequest[]>([]);
-  const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -127,17 +130,20 @@ export function FiresideExportQueue({ t, onClose }: { t: PluginShellTokens; onCl
       };
       if (!res.ok) throw new Error(data.message ?? "Could not load the export queue.");
       setRequests(data.requests ?? []);
-      setPage(data.page ?? 1);
       setLastPage(data.lastPage ?? 1);
       setTotal(data.total ?? 0);
+      // The server clamps an out-of-range page and answers with the one it used, so a linked page
+      // number past the end lands on the last page rather than on nothing — which is what a
+      // bookmarked queue page does as soon as the queue drains.
+      if (data.page && data.page !== wanted) setPage(data.page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load the export queue.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPage]);
 
-  useEffect(() => { void load(1); }, [load]);
+  useEffect(() => { void load(page); }, [load, page]);
 
   async function decide(commentId: string, action: "approve" | "refuse") {
     setBusyId(commentId);
@@ -165,10 +171,6 @@ export function FiresideExportQueue({ t, onClose }: { t: PluginShellTokens; onCl
 
   return (
     <div>
-      <button type="button" onClick={onClose}
-        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
-        ‹ Back to your comments
-      </button>
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 6px" }}>Blog export queue</h2>
       <p style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, marginTop: 0 }}>
         Comments whose authors asked for them to be copied into the blog&rsquo;s published build.
@@ -204,7 +206,7 @@ export function FiresideExportQueue({ t, onClose }: { t: PluginShellTokens; onCl
               onDecide={(id, action) => void decide(id, action)}
             />
           ))}
-          <Pager page={page} lastPage={lastPage} t={t} onPage={(next) => void load(next)} />
+          <Pager page={page} lastPage={lastPage} t={t} onPage={setPage} />
         </>
       )}
     </div>

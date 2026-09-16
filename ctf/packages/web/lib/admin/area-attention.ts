@@ -62,6 +62,16 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
     `SELECT COUNT(*)::int AS n FROM trust_transport_risk_signals
        WHERE is_resolved = FALSE AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
+  // The blog-export queue: a comment whose author asked for it to be copied into the blog's
+  // published build, still waiting on an admin. The three conditions are the queue's own, so the
+  // dot never points at a screen that then shows nothing. Compared on `updated_at` rather than
+  // `created_at` because that is the column the request itself moves, and the queue already reads
+  // it as the time the author asked.
+  fireside: [
+    `SELECT COUNT(*)::int AS n FROM fireside_comments
+       WHERE export_review = 'pending' AND export_to_blog = TRUE AND status = 'visible'
+         AND ($1::timestamptz IS NULL OR updated_at > $1)`,
+  ],
   'what-works': [
     `SELECT COUNT(*)::int AS n FROM what_works_products
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,

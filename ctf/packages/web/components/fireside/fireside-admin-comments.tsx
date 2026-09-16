@@ -128,7 +128,7 @@ function SearchBox({
   );
 }
 
-export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; onClose: () => void }) {
+export function FiresideAdminComments({ t }: { t: PluginShellTokens }) {
   const [page, setPage] = useUrlPage("comments");
   // `draft` is what is typed; `query` is what was actually searched for. Keeping them apart is why
   // typing does not fire a query against the whole table on every keystroke.
@@ -196,10 +196,6 @@ export function FiresideAdminComments({ t, onClose }: { t: PluginShellTokens; on
 
   return (
     <div>
-      <button type="button" onClick={onClose}
-        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 14, fontWeight: 600, cursor: "pointer", padding: "0 0 12px" }}>
-        ‹ Back to your comments
-      </button>
       <h2 style={{ fontSize: 15, fontWeight: 600, color: t.TEXT, margin: "0 0 6px" }}>Recent comments</h2>
       <p style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, marginTop: 0 }}>
         Everything written here, newest first, including what has already been removed or taken

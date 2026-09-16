@@ -2285,7 +2285,17 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   desired_move_in_date DATE NULL,
   budget_min NUMERIC NULL,
   budget_max NUMERIC NULL,
+  -- The currency the budget range is stated in (references currencies.code). Without it a budget is
+  -- a bare number, which a reader can only guess at — and guessing "$" at a ServiceCredits figure is
+  -- the one reading the multi-currency rule forbids. NULL on a row saved before this column existed.
+  budget_currency TEXT NULL REFERENCES currencies(code),
   desired_country TEXT NULL,
+  desired_city TEXT NULL,
+  -- Opt-in: show this member's housing need on the Wanted tab, where anyone browsing LightHouse can
+  -- read it. Defaults FALSE so no existing seeker's details become visible by upgrading. What is
+  -- published is only the need itself (what they are looking for, where, when, budget range and the
+  -- short intro) — never the phone number, never the Signal link, and never the member id.
+  is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
   service_deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -2386,7 +2396,10 @@ ALTER TABLE IF EXISTS lighthouse_profiles
   ADD COLUMN IF NOT EXISTS desired_move_in_date DATE NULL,
   ADD COLUMN IF NOT EXISTS budget_min NUMERIC NULL,
   ADD COLUMN IF NOT EXISTS budget_max NUMERIC NULL,
+  ADD COLUMN IF NOT EXISTS budget_currency TEXT NULL REFERENCES currencies(code),
   ADD COLUMN IF NOT EXISTS desired_country TEXT NULL,
+  ADD COLUMN IF NOT EXISTS desired_city TEXT NULL,
+  ADD COLUMN IF NOT EXISTS is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS service_deleted_at TIMESTAMPTZ NULL,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -2467,6 +2480,11 @@ ALTER TABLE IF EXISTS lighthouse_admin_audit_trail
 
 CREATE INDEX IF NOT EXISTS idx_lighthouse_profiles_profile_type ON lighthouse_profiles(profile_type);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_profiles_updated_at ON lighthouse_profiles(updated_at DESC);
+-- The Wanted tab reads only published, actively-looking, not-deleted rows, newest first. A partial
+-- index on that exact set keeps the read off a full table scan as the seeker table grows.
+CREATE INDEX IF NOT EXISTS idx_lighthouse_profiles_wanted_public
+  ON lighthouse_profiles(updated_at DESC)
+  WHERE is_wanted_public = TRUE AND is_active = TRUE AND service_deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_lighthouse_properties_host_user_id ON lighthouse_properties(host_user_id);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_properties_updated_at ON lighthouse_properties(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_lighthouse_matches_property_id ON lighthouse_matches(property_id);

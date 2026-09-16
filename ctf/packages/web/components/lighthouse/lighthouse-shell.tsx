@@ -5,9 +5,10 @@ import { Home, Search } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { useTheme } from "@/hooks/useTheme";
 import type { Currency } from "@/lib/currency/types";
-import { BG, getLighthouseTokens, listingAcceptsCredits, type ChatCredentials, type CurrencyMap, type Match, type Property, type Tab } from "./shared";
+import { BG, getLighthouseTokens, listingAcceptsCredits, type ChatCredentials, type CurrencyMap, type Match, type Property, type Tab, type WantedPosting } from "./shared";
 import { type ListingFilter, filterProperties } from "./lighthouse-filter-sidebar";
 import { LighthouseBrowse } from "./lighthouse-browse";
+import { LighthouseWanted } from "./lighthouse-wanted";
 import { LighthouseMatches } from "./lighthouse-matches";
 import { LighthouseChat } from "./lighthouse-chat";
 import { LighthouseHost } from "./lighthouse-host";
@@ -31,6 +32,8 @@ function LighthouseTabContent({
   tab,
   visibleProperties,
   properties,
+  wantedPostings,
+  wantedError,
   currencyMap,
   creditsCount,
   saved,
@@ -46,10 +49,15 @@ function LighthouseTabContent({
   onSelectProperty,
   onSelectMatch,
   onEditHandled,
+  onListYourPlace,
 }: {
   tab: Tab;
   visibleProperties: Property[];
   properties: Property[];
+  wantedPostings: WantedPosting[];
+  // Non-null when the wanted list could not be read; the tab says so instead of reading as "nobody
+  // is looking", which is the one wrong message for this screen to show by accident.
+  wantedError: string | null;
   currencyMap: CurrencyMap;
   creditsCount: number;
   saved: string[];
@@ -67,6 +75,7 @@ function LighthouseTabContent({
   onSelectProperty: (property: Property) => void;
   onSelectMatch: (match: Match | null) => void;
   onEditHandled: () => void;
+  onListYourPlace: () => void;
 }) {
   return (
     <>
@@ -79,6 +88,15 @@ function LighthouseTabContent({
           saved={saved}
           onToggleSave={onToggleSave}
           onSelect={onSelectProperty}
+        />
+      )}
+      {tab === "wanted" && (
+        <LighthouseWanted
+          postings={wantedPostings}
+          currencies={currencyMap}
+          totalCount={wantedPostings.length}
+          error={wantedError}
+          onListYourPlace={onListYourPlace}
         />
       )}
       {tab === "matches" && (
@@ -109,6 +127,8 @@ function LighthouseTabContent({
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [wantedPostings, setWantedPostings] = useState<WantedPosting[]>([]);
+  const [wantedError, setWantedError] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("browse");
@@ -137,6 +157,20 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       setProperties(await fetchItems<Property>("/api/lighthouse/properties"));
 
       setMatches(await fetchItems<Match>("/api/lighthouse/matches"));
+
+      // Published housing needs — the demand side. Read separately from the listings so a failure
+      // here shows on the Wanted tab alone and never blanks out browse; an empty list and a failed
+      // read must not look the same, so the tab is told which one happened.
+      try {
+        const wantedRes = await fetch("/api/lighthouse/wanted");
+        if (!wantedRes.ok) throw new Error(`Wanted postings request failed (${wantedRes.status}).`);
+        const wantedData = (await wantedRes.json()) as { items?: WantedPosting[] };
+        setWantedPostings(wantedData.items ?? []);
+        setWantedError(null);
+      } catch (caught) {
+        setWantedPostings([]);
+        setWantedError(failureText(caught, { area: 'lighthouse', op: 'fetch_wanted', fallback: "Could not load who is looking for a place.", audience: 'member' }));
+      }
 
       // Currency catalog, fetched once, so the card/detail can format rent in its own currency
       // (a fiat symbol, or the ServiceCredits label — never a "$" for ServiceCredits).
@@ -240,6 +274,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       tab={tab}
       visibleProperties={visibleProperties}
       properties={properties}
+      wantedPostings={wantedPostings}
+      wantedError={wantedError}
       currencyMap={currencyMap}
       creditsCount={creditsCount}
       saved={saved}
@@ -255,11 +291,13 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       onSelectProperty={setSelectedProperty}
       onSelectMatch={setSelectedMatch}
       onEditHandled={() => setEditPropertyId(null)}
+      onListYourPlace={() => setTab("host")}
     />
   );
 
     const tabs: { key: Tab; label: string }[] = [
       { key: "browse", label: "Browse" },
+      { key: "wanted", label: "Wanted" },
       { key: "matches", label: "Matches" },
       { key: "chat", label: "Direct Line" },
       { key: "profile", label: "You" },
@@ -286,9 +324,12 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
             <RefreshButton onRefresh={() => fetchAll()} title="Refresh" />
             <MobileTopActions />
           </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
+          {/* Six tabs no longer divide evenly into a 390px phone without squeezing "Direct Line"
+              to nothing, so the strip scrolls sideways the same way the filter row below it does:
+              each tab keeps its own width and grows to fill the row when there is room to spare. */}
+          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px", overflowX: "auto" }}>
             {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+              <button key={key} onClick={() => setTab(key)} style={{ flex: "1 0 auto", padding: "8px 10px", whiteSpace: "nowrap", borderRadius: 8, background: tab === key ? `${t.ACCENT}1A` : "transparent", border: `1px solid ${tab === key ? t.ACCENT + "40" : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
             ))}
           </div>
           {tab === "browse" && (

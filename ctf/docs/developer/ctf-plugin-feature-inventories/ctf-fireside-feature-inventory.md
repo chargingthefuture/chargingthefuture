@@ -96,17 +96,27 @@ the project controls rather than on a platform that has erased five of its accou
    the account rather than the comment. Moderating item by item is a losing race against somebody
    doing it deliberately; deleting the account settles it once.
 5. **Close a thread** to new comments without removing what is already there, and open it again.
-   The control is on the conversation itself, a member reads a line saying it is closed rather than
-   being left to guess, and the comment box is not offered when writing would be refused.
+   Two routes to the same control: on the conversation itself, and from the Conversations list on
+   the admin page. A member reads a line saying it is closed rather than being left to guess, and
+   the comment box is not offered when writing would be refused.
 6. **A list of every comment, newest first,** searchable by what people wrote, paged, with the page
    in the address bar so it can be linked and the back button works. Removed and withdrawn rows are
    listed alongside live ones: a
    list that hides what was already acted on cannot be used to undo anything, and undoing is most
    of what a moderation list is for. A comment its own author took down carries no control, because
    nobody can put that one back.
-7. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
+7. **A list of every conversation,** the one with the newest comment first, paged. Each row says how
+   many comments are in it and how many were removed or taken down, so a thread that reads as empty
+   says why rather than looking like one nobody wrote in. Closed conversations are listed alongside
+   open ones and labeled.
+8. **An audit log an admin can read.** Every write has recorded a row since the plugin shipped and
+   nothing in the app ever showed one; a record nobody can read is not a check on anything.
+9. Every write is recorded in `fireside_audit_events`, including both halves of an export decision —
    the author's request and the admin's answer — because that pair is what lets text leave the app
    for somewhere it cannot be recalled from.
+10. All of the above live on one screen, `/admin/fireside`, reached from the admin directory like
+   every other plugin's admin page. The four tabs are the export queue, every comment, the
+   conversations, and the audit log.
 
 ## API Surface and Route Map
 
@@ -120,7 +130,9 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
 | `/api/fireside/admin/comments?q=` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. `q` searches the bodies. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
+| `/api/fireside/admin/threads` | GET | Admin | Every conversation, the one with the newest comment first, paged. Each carries its comment count, how many were removed or taken down, and when the last one arrived. |
 | `/api/fireside/admin/threads/[threadId]` | POST | Admin | Close a conversation to new comments, or open it again. |
+| `/api/fireside/admin/audit-events?limit=` | GET | Admin | The audit trail, newest first. `limit` is clamped to 500. |
 | `/api/fireside/admin/export-queue` | GET | Admin | Pending blog-export requests, oldest first, paged, each with the author's record here. |
 | `/api/fireside/admin/export-queue/[commentId]` | POST | Admin | Approve or decline one export request. Only a pending request can be decided; a refusal is final. |
 | `/api/fireside/export` | GET | **Public, no account** | The comments the blog's published build may copy in, oldest first, read by cursor. Every row is decided by `mayExportToBlog`. |
@@ -172,10 +184,12 @@ faults in two weeks came from a rule written in two places that disagreed.
 
 ## Web and Android Delivery Status
 
-- Web: the plugin screen (your own comments, the guidelines, and the export queue for an admin) and
-  all nine routes. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
+- Web: the member screen (your own comments and the guidelines), the admin screen at
+  `/admin/fireside` (blog export queue, every comment, the conversations, the audit log), and all
+  thirteen route files. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
   the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
-  actually reads.
+  actually reads. The admin screen has a row in the admin directory, with a "new to review" dot
+  while an export request is waiting.
 - The blog-side widget: shipped, and it lives in the `wiki-site` repository. It renders the
   conversation under each post for any reader, with no account, and hands off to the app to write.
   `/api/fireside/threads` answers it cross-origin (read-only, no credentials accepted, so a
@@ -219,10 +233,37 @@ member active only in Fireside is seen by being read, which is what the plugin i
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
-6. The member's own comment list and the blog export queue page without putting the page in the
-   address bar. The admin list of every comment does; those two predate it and should follow.
+6. The member's own comment list pages without putting the page in the address bar. The admin lists
+   all do; the member one predates them and should follow.
 
 ## Change Log
+
+- 2026-09-16: **Fireside has an admin page** (owner report: there was none). Every admin power here
+  already existed, and two of them had a screen — but that screen was a pair of buttons on the
+  member's own Fireside page, so the plugin had no row in the admin directory and an admin looking
+  for it found nothing. `/admin/fireside` is now the one place moderation lives, the same shape as
+  every other plugin's admin page (rule 131), with four tabs: the blog export queue, every comment,
+  the conversations, and the audit log. The member screen keeps the standard Admin pill in its
+  header instead of the two buttons, and a member sees no pill at all.
+
+  Two of the four tabs are new surfaces over routes that already existed or were one query away.
+  **Conversations** lists every thread, the newest-commented first, with its comment count and how
+  many were removed or taken down; closing a thread was reachable only from the post it belongs to,
+  which means already knowing which post, and with hundreds of posts on the blog that is not a thing
+  anybody can do at the moment they need to. Closed threads and threads whose comments have all been
+  taken out are listed and labeled rather than dropped — an admin list hides nothing, and the thread
+  most needed is usually the one something was already done to.
+
+  **Audit log** reads `fireside_audit_events`, which every write in this plugin has been filling
+  since it shipped while nothing in the app could read one back. The powers on this screen are
+  taking somebody's words out of the conversation and agreeing to copy them onto a page a web
+  archive keeps forever; a record of who did that, which nobody can read, is not a check on
+  anything.
+
+  Also here: the admin directory row carries the "new to review" dot when an export request is
+  waiting, matched to the queue's own three conditions so it never points at a screen that then
+  shows nothing; and the export queue now puts its page in the address bar, which closes half of
+  recorded gap 6.
 
 - 2026-09-14: **The comment bodies are indexed, and the moderation list searches them.** Being
   searchable is one of the four reasons these comments are in Postgres rather than in a chat

@@ -163,7 +163,7 @@ Result: web ☐
 **Precondition:** FS-5 left one comment with its request on.
 
 **Steps:**
-1. As an admin, open the Fireside screen and the blog export queue.
+1. As an admin, open `/admin/fireside` and stay on the Blog export queue tab it opens on.
 2. Read the row, including the line about the author's record.
 3. Decline the request.
 4. As the author, return to the Fireside screen and try to turn the request on again.
@@ -359,7 +359,9 @@ Result: web ☐
 **Precondition:** A post whose conversation has at least two comments, one with a reply.
 
 **Steps:**
-1. As an admin, open that conversation in the app and close it.
+1. As an admin, open that conversation in the app and close it. Do it once from the conversation
+   itself and once from the Conversations tab of `/admin/fireside` — the same control, two routes to
+   it.
 2. As a member, open the same conversation.
 3. Try to post a comment there anyway, by calling `/api/fireside/comments` directly.
 4. Signed out, read the same post on the blog.
@@ -395,7 +397,7 @@ Use a phone-width window.
 2. Open "What this room is for".
 3. Look at the row's state label, the export request line, and the note under it.
 4. Open a conversation and read a comment, its author name, and the Reply control.
-5. As an admin, open the blog export queue and read a row.
+5. As an admin, open `/admin/fireside` and read a row of the export queue.
 
 **Expected:**
 - Nothing on any of these screens is smaller than 13px, and the paragraphs people actually read are
@@ -455,7 +457,7 @@ Result: web ☐
 an admin and one already taken down by its author.
 
 **Steps:**
-1. Open the Fireside screen as an admin and press Recent comments.
+1. Open `/admin/fireside` as an admin and press the Comments tab.
 2. Read the first page, then page forward.
 3. Look at the address bar. Copy the link, open it in a new tab.
 4. Press the browser back button.
@@ -488,7 +490,7 @@ phrase `what was done`, one containing an apostrophe (`it's`), and at least 25 m
 word so the results page.
 
 **Steps:**
-1. Open Recent comments as an admin and search for `rebuilding`.
+1. Open the Comments tab of `/admin/fireside` as an admin and search for `rebuilding`.
 2. Search for the quoted phrase `"what was done"`.
 3. Search for `it's`.
 4. Search for a common word, then page through the results.
@@ -544,5 +546,42 @@ third who is signed in but not yet approved.
 - A new top-level comment notifies nobody. It answers nobody.
 - With notifications unreachable or misconfigured, posting a reply still succeeds. The comment is
   the thing that matters; being told is best-effort.
+
+Result: web ☐
+
+---
+
+### FS-19 — Fireside has an admin page, and it is where moderation lives
+
+**Role:** admin, then member · **Surfaces:** web
+**Precondition:** At least one conversation with comments, one comment already removed, and one
+export request waiting. Use a phone-width window.
+
+**Steps:**
+1. As an admin, open `/admin` and look for Fireside in the directory.
+2. Open it. Read the four tabs and move through each one.
+3. On the Conversations tab, close a conversation and open it again.
+4. Open the Audit log tab and find what you just did.
+5. Press the member view control in the header, then the back control.
+6. As an ordinary member, open `/admin/fireside` directly in the address bar.
+7. As a member, open `/apps/fireside` and look at the header.
+
+**Expected:**
+- Fireside has a row in the admin directory, and a dot on it while an export request is waiting.
+  Pressing the row opens `/admin/fireside` on the export queue — the tab the dot points at.
+- Four tabs: the export queue, every comment, the conversations, and the audit log. Each renders its
+  own loading, empty and populated states, and nothing is cut off at phone width.
+- The Conversations tab lists one row per post somebody has commented under, the most recent first,
+  with how many comments are in it and how many were removed or taken down. Closed conversations are
+  listed alongside open ones and say which they are — an admin list hides nothing.
+- Closing and opening again both work from that list, without opening the post.
+- The audit log shows what was just done, who did it and when, newest first. Before this existed the
+  rows were written and nothing could read them.
+- The member view control opens `/apps/fireside`, and back from the admin page goes to `/admin`.
+- A member who types the admin address is sent to the member screen. Nothing admin-only renders and
+  no denial page is shown — they asked for a page that is not theirs, and the member screen is the
+  one they wanted.
+- The member screen has no export queue or comments-list buttons on it any more. An admin sees an
+  Admin pill in its header instead; a member sees no pill at all.
 
 Result: web ☐

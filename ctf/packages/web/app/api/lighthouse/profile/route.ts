@@ -38,16 +38,21 @@ function parseProfileInput(body: ProfileBody): LighthouseProfileInput {
     desiredMoveInDateIso: asString(body.desiredMoveInDateIso),
     budgetMin: asNumber(body.budgetMin),
     budgetMax: asNumber(body.budgetMax),
+    budgetCurrency: asString(body.budgetCurrency),
     desiredCountry: asString(body.desiredCountry),
+    desiredCity: asString(body.desiredCity),
+    // Publishing a housing need on the Wanted tab is opt-in: a body that says nothing about it means
+    // not published, never "keep whatever was there".
+    isWantedPublic: asBoolean(body.isWantedPublic, false),
   };
 }
 
 // Maps a repository error code (thrown as an Error message) to the exact status/body it produced
 // before. Keeping this as a lookup table preserves each response 1:1 while avoiding a long if-chain.
 const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string; status: number }> = {
-  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.', status: 404 },
-  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'Lighthouse property not found.', status: 404 },
-  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'Lighthouse match not found.', status: 404 },
+  profile_not_found: { code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'LightHouse profile not found.', status: 404 },
+  property_not_found: { code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'LightHouse property not found.', status: 404 },
+  match_not_found: { code: LIGHTHOUSE_ERROR_CODE.matchNotFound, message: 'LightHouse match not found.', status: 404 },
   not_owner: { code: LIGHTHOUSE_ERROR_CODE.notOwner, message: 'Operation requires ownership.', status: 403 },
   policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
   blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'This listing is not available to you.', status: 403 },
@@ -141,7 +146,7 @@ export async function GET() {
     const profile = await getProfile(gate.auth.userId);
     if (!profile) {
       return NextResponse.json(
-        { ok: false, code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'Lighthouse profile not found.' },
+        { ok: false, code: LIGHTHOUSE_ERROR_CODE.profileNotFound, message: 'LightHouse profile not found.' },
         { status: 404 },
       );
     }
