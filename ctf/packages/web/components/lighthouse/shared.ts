@@ -25,7 +25,7 @@ export function getLighthouseTokens(theme: ThemeName): LighthouseTokens {
   return getPluginShellTokens(accent, theme);
 }
 
-export type Tab = "browse" | "matches" | "chat" | "host" | "profile";
+export type Tab = "browse" | "wanted" | "matches" | "chat" | "host" | "profile";
 
 export interface Profile {
   id: string;
@@ -40,6 +40,25 @@ export interface Profile {
   budgetMin?: number;
   budgetMax?: number;
   desiredCountry?: string;
+  desiredCity?: string;
+  isWantedPublic?: boolean;
+  updatedAtIso?: string;
+}
+
+/**
+ * A housing need a member chose to publish, as the Wanted tab receives it from
+ * `GET /api/lighthouse/wanted`. It carries no member id and no contact details — reading it tells
+ * you someone is looking, not who they are or how to reach them.
+ */
+export interface WantedPosting {
+  id: string;
+  housingNeeds?: string | null;
+  bio?: string | null;
+  desiredCity?: string | null;
+  desiredCountry?: string | null;
+  desiredMoveInDateIso?: string | null;
+  budgetMin?: number | null;
+  budgetMax?: number | null;
   updatedAtIso?: string;
 }
 

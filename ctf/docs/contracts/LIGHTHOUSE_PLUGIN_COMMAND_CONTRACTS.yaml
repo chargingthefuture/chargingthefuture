@@ -2,7 +2,12 @@ contracts:
   - pluginId: lighthouse
     command: lighthouse.profile.upsert
     version: 1.0.0
-    description: Create or update a seeker or host profile with role-bound validation.
+    description: >-
+      Create or update a seeker or host profile with role-bound validation. Also carries the
+      Wanted-tab publish opt-in: when `isWantedPublic` is true the member's housing need is readable
+      by any member through GET /api/lighthouse/wanted, without their id, phone number or Signal
+      link. The flag is not sticky — a body that omits it stores false, so a client that does not
+      know about the Wanted tab can never publish a need by accident.
     inputSchema:
       profileType:
         type: string
@@ -10,6 +15,16 @@ contracts:
       profile:
         type: object
         required: true
+      desiredCity:
+        type: string
+        required: false
+        description: The city or area the member wants to move to. Shown on a published wanted posting.
+      isWantedPublic:
+        type: boolean
+        required: false
+        description: >-
+          Opt-in to showing this housing need on the Wanted tab. Defaults false, including for every
+          profile saved before the field existed. Setting it false takes the posting down.
     outputSchema:
       profileId:
         type: string

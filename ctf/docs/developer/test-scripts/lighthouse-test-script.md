@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab — LH-10 and LH-11) |
 
 > Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
 
@@ -55,6 +55,10 @@ Member role unless noted.
    failure). Save your details, come back, and the request goes through. → web ☐ mobile ☐
 5. **Match request is single.** Send a match request on a property, then try again on the same one.
    The second attempt is refused as a duplicate, not silently doubled. → web ☐ mobile ☐
+6. **Both sides are visible.** The tab strip carries **Wanted** beside Browse. Open it: it lists what
+   members are looking for, or says nobody has published anything yet — never a spinner that never
+   ends, and never a blank screen. On a narrow (mobile) width all six tabs are reachable, scrolling
+   the strip sideways if needed; "Direct Line" is not squeezed to nothing. → web ☐ mobile ☐
 
 ---
 
@@ -201,11 +205,39 @@ The header back chevron returns to the page you came from (falling back to All A
 directly), and the admin screen header shows a "Member view" pill opening `/apps/lighthouse`.
 **Result:** web ☐ mobile ☐ — notes:
 
+### LH-10 · Publish what you're looking for (the Wanted tab)
+**Role:** member · **Surfaces:** all
+**Precondition:** a second member account to read the tab with.
+**Steps:**
+1. Open the **You** tab. Note that the *Show what I'm looking for on the Wanted tab* box starts
+   **unticked** on a profile saved before this shipped.
+2. Fill what you're looking for, the country, the **City or area you want**, a move-in date, a budget
+   range and a short introduction. Tick the box and save.
+3. Sign in as the second member, open LightHouse, and open the **Wanted** tab.
+4. Back on the first account, untick the box and save. Reload the tab on the second account.
+**Expected:** After step 3 the posting is listed with what you're looking for, the city and country,
+the move-in date, the introduction, and the budget as plain numbers with **no currency symbol** (the
+form never asks which currency). It shows **no name, no phone number and no Signal link**, and there
+is no way to message the person from it — requesting a stay still only runs from a listing. After
+step 4 the posting is gone. Turning off "I'm actively looking" takes it down the same way.
+**Result:** web ☐ mobile ☐ — notes:
+
+### LH-11 · A blocked member's wanted posting is hidden
+**Role:** member · **Surfaces:** all
+**Precondition:** LH-10 done, so a second member has a published posting.
+**Steps:**
+1. Block that member at `/account/blocks`.
+2. Reopen the **Wanted** tab.
+3. From the blocked member's account, open the **Wanted** tab too.
+**Expected:** Neither side sees the other's posting — a block hides the person in both directions,
+the same as it hides their listings.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ### LH-DEL · Account deletion clears the Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
-Lighthouse match message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
+LightHouse match message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
 1. As that member, send a match-thread message, then delete the whole account
    (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path).

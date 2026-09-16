@@ -17,6 +17,7 @@ import type {
   LighthouseProfileType,
   LighthouseProperty,
   LighthousePropertyInput,
+  LighthouseWantedPosting,
 } from './types';
 import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
@@ -43,6 +44,20 @@ type LighthouseProfileRow = {
   budget_min: number | string | null;
   budget_max: number | string | null;
   desired_country: string | null;
+  desired_city: string | null;
+  is_wanted_public: boolean;
+  updated_at: Date | string;
+};
+
+type LighthouseWantedPostingRow = {
+  id: string;
+  housing_needs: string | null;
+  bio: string | null;
+  desired_city: string | null;
+  desired_country: string | null;
+  desired_move_in_date: Date | string | null;
+  budget_min: number | string | null;
+  budget_max: number | string | null;
   updated_at: Date | string;
 };
 
@@ -179,6 +194,22 @@ function mapProfile(row: LighthouseProfileRow): LighthouseProfile {
     budgetMin: parseNullableNumber(row.budget_min),
     budgetMax: parseNullableNumber(row.budget_max),
     desiredCountry: row.desired_country,
+    desiredCity: row.desired_city,
+    isWantedPublic: row.is_wanted_public === true,
+    updatedAtIso: toIso(row.updated_at),
+  };
+}
+
+function mapWantedPosting(row: LighthouseWantedPostingRow): LighthouseWantedPosting {
+  return {
+    id: row.id,
+    housingNeeds: row.housing_needs,
+    bio: row.bio,
+    desiredCity: row.desired_city,
+    desiredCountry: row.desired_country,
+    desiredMoveInDateIso: row.desired_move_in_date ? toIso(row.desired_move_in_date) : null,
+    budgetMin: parseNullableNumber(row.budget_min),
+    budgetMax: parseNullableNumber(row.budget_max),
     updatedAtIso: toIso(row.updated_at),
   };
 }
@@ -379,6 +410,8 @@ export async function getProfile(userId: string): Promise<LighthouseProfile | nu
         budget_min,
         budget_max,
         desired_country,
+        desired_city,
+        is_wanted_public,
         updated_at
       FROM lighthouse_profiles
       WHERE user_id = $1
@@ -414,9 +447,9 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
     const upserted = await client.query(
       `
         INSERT INTO lighthouse_profiles
-          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_move_in_date, budget_min, budget_max, desired_country, updated_at)
+          (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, housing_needs, desired_move_in_date, budget_min, budget_max, desired_country, desired_city, is_wanted_public, updated_at)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, NOW())
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, $12, $13, $14, NOW())
         ON CONFLICT (user_id)
         DO UPDATE SET
           profile_type = EXCLUDED.profile_type,
@@ -430,6 +463,8 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
           budget_min = EXCLUDED.budget_min,
           budget_max = EXCLUDED.budget_max,
           desired_country = EXCLUDED.desired_country,
+          desired_city = EXCLUDED.desired_city,
+          is_wanted_public = EXCLUDED.is_wanted_public,
           service_deleted_at = NULL,
           updated_at = NOW()
         RETURNING
@@ -446,6 +481,8 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
           budget_min,
           budget_max,
           desired_country,
+          desired_city,
+          is_wanted_public,
           updated_at
       `,
       [
@@ -461,6 +498,10 @@ export async function upsertProfile(actorUserId: string, input: LighthouseProfil
         input.budgetMin ?? null,
         input.budgetMax ?? null,
         normalizeNullableText(input.desiredCountry),
+        normalizeNullableText(input.desiredCity),
+        // Publishing is opt-in, so an omitted flag means "not published" rather than "leave as is":
+        // a client that does not know about the Wanted tab must never publish a need by accident.
+        typeof input.isWantedPublic === 'boolean' ? input.isWantedPublic : false,
       ],
     );
 
@@ -484,6 +525,81 @@ export async function deleteProfile(userId: string): Promise<void> {
 
     await client.query('DELETE FROM lighthouse_profiles WHERE user_id = $1', [userId]);
   });
+}
+
+/**
+ * Published housing needs, newest first — the demand side of LightHouse.
+ *
+ * Three conditions decide what is published: the member ticked the box (`is_wanted_public`), they
+ * are still actively looking (`is_active`), and they have not deleted their LightHouse data
+ * (`service_deleted_at`). Un-ticking the box or turning off "actively looking" takes the posting
+ * down on the next read; nothing else has to happen.
+ *
+ * The SELECT names the safe columns one by one rather than mapping the profile row: the phone
+ * number, the Signal link and the member id must not leave this function, and listing the columns
+ * is what makes that true no matter how the row type later grows. Blocks hide the posting in both
+ * directions, the same as a listing — a block hides the person, not only their listings.
+ */
+export async function listWantedPostings(input: {
+  page?: number;
+  pageSize?: number;
+  viewerUserId?: string | null;
+}): Promise<{ items: LighthouseWantedPosting[]; total: number; pagination: { page: number; pageSize: number } }> {
+  const paging = normalizePage(input.page, input.pageSize);
+  const viewerUserId = normalizeNullableText(input.viewerUserId);
+
+  const publishedWhere = `
+      WHERE is_wanted_public = TRUE
+        AND is_active = TRUE
+        AND service_deleted_at IS NULL
+        AND (
+          $1::text IS NULL
+          OR NOT EXISTS (
+            SELECT 1
+            FROM member_blocks
+            WHERE (blocker_user_id = $1 AND blocked_user_id = lighthouse_profiles.user_id)
+               OR (blocker_user_id = lighthouse_profiles.user_id AND blocked_user_id = $1)
+          )
+        )`;
+
+  const [countResult, rows] = await Promise.all([
+    queryDb<CountRow>(
+      `
+        SELECT COUNT(*)::text AS total
+        FROM lighthouse_profiles
+        ${publishedWhere}
+      `,
+      [viewerUserId],
+    ),
+    queryDb<LighthouseWantedPostingRow>(
+      `
+        SELECT
+          id,
+          housing_needs,
+          bio,
+          desired_city,
+          desired_country,
+          desired_move_in_date,
+          budget_min,
+          budget_max,
+          updated_at
+        FROM lighthouse_profiles
+        ${publishedWhere}
+        ORDER BY updated_at DESC
+        OFFSET $2 LIMIT $3
+      `,
+      [viewerUserId, paging.offset, paging.pageSize],
+    ),
+  ]);
+
+  return {
+    items: rows.rows.map(mapWantedPosting),
+    total: parseCountRow(countResult.rows),
+    pagination: {
+      page: paging.page,
+      pageSize: paging.pageSize,
+    },
+  };
 }
 
 // Leaves out a listing whose host is blocked in either direction from the viewer. A block hides the
@@ -1250,6 +1366,8 @@ export async function listLighthouseProfiles(profileType?: 'seeker' | 'host'): P
         budget_min,
         budget_max,
         desired_country,
+        desired_city,
+        is_wanted_public,
         updated_at
       FROM lighthouse_profiles
       WHERE ($1::text IS NULL OR profile_type = $1)

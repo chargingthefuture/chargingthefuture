@@ -16,6 +16,11 @@ all: no LightHouse profile, no approval step — open it and the listings are th
 location, its rent, and its details. Listing a place is self-service, and the same member can be
 both a host and someone looking for a place at the same time.
 
+Both sides are visible. **Browse** is the places on offer; **Wanted** is what members are looking
+for, in their own words — the city and date they need, the budget they can manage, and a short
+introduction. Publishing a housing need is a tick box on the member's own details and shows nobody's
+name, phone number or Signal link; reading one tells you people are asking, not who they are.
+
 Asking to stay is the one action that needs the member's own details filled in first. The host
 accepts or rejects the request, and an accepted request opens a private chat between just those two
 people. An accepted match can also be recorded as an ongoing housing arrangement — how often it
@@ -55,7 +60,7 @@ longer a precondition for browsing, hosting, or matching.
 
 1. Optional shared preference fields: bio, phone number, signal URL, active status.
 2. Optional seeker preference fields: housing needs, desired move-in date, budget min/max, desired
-   country.
+   country, desired city, and the Wanted-tab publish opt-in (`isWantedPublic`, §1.3b).
 3. Optional host preference fields: `hasProperty` indicator.
 4. Verification rendering and first-name display behavior are retained where a profile exists.
 5. **Seeker self-service screen (2026-07-14).** A "Your details" tab
@@ -82,6 +87,33 @@ longer a precondition for browsing, hosting, or matching.
    move-in date. A member with no active profile is routed to the "Your details" screen first;
    duplicate and blocked cases are shown inline. The action is hidden on the member's own listing.
 6. Duplicate active/pending match-request prevention remains required.
+
+### 1.3b Wanted postings — the demand side (2026-09-15)
+
+A **Wanted** tab sits beside Browse and shows what members are looking for, so LightHouse is not only
+a board of places on offer. A member who is weighing up offering a room can see that people are
+asking, written in those people's own words; the tab carries a **List your place** button that opens
+the host tab.
+
+1. **Publishing is opt-in and lives on the member's own details.** The "Your details" screen
+   (`lighthouse-seeker-profile.tsx`) has a tick box, *Show what I'm looking for on the Wanted tab*,
+   plus a **City or area you want** field. Nothing is published until that box is ticked; every
+   profile that existed before this shipped is unpublished (`is_wanted_public` defaults FALSE).
+   Un-ticking it, or turning off "I'm actively looking", takes the posting down on the next read.
+2. **What a posting shows:** what they are looking for, the short introduction, the city and country,
+   the ideal move-in date, and the budget range. The budget renders as plain numbers with no currency
+   symbol, because the form never asks which currency the amount is in.
+3. **What a posting never shows:** the member's id, name, phone number, or Signal link. The
+   repository query names its safe columns one by one rather than reusing the profile row mapping, so
+   a later column added to `lighthouse_profiles` cannot leak through it.
+4. **A posting is not a contact route.** There is no "message this person" action and no
+   host → seeker match direction: a stay request still runs seeker → host from a listing. The tab is
+   a demand signal to read.
+5. **Blocks apply in both directions**, the same as they do to a listing — a block hides the person,
+   not only their place.
+6. Web (desktop + mobile-responsive) only; the six-tab strip scrolls sideways on a phone so
+   "Direct Line" is not squeezed out. Read failure shows an explicit message rather than the empty
+   state, so "could not load" never reads as "nobody is looking".
 
 ### 1.4 Host Property Management
 
@@ -203,6 +235,17 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 - `PUT /api/lighthouse/profile`
 - `DELETE /api/lighthouse/profile`
 
+### 3.1b Wanted Postings API
+
+- `GET /api/lighthouse/wanted` — the published housing needs, newest first (`?page=`, `?pageSize=`).
+  Member-gated read (`requireLighthouseReadAccess`), no write method. Returns only rows where
+  `is_wanted_public = TRUE AND is_active = TRUE AND service_deleted_at IS NULL`, with postings from
+  anyone the reader has blocked (or who blocked them) left out in both directions. The response
+  carries the need, the short intro, the city/country, the move-in date, the budget range and
+  `updatedAtIso` — and deliberately **no member id, no phone number and no Signal link**.
+  Publishing is not a route of its own: it is the `isWantedPublic` field on
+  `POST /api/lighthouse/profile`.
+
 ### 3.2 Property APIs
 
 - `GET /api/lighthouse/properties`
@@ -245,7 +288,13 @@ listed here were removed on 2026-08-03 — see §1.6 above.
 
 Required entities for parity scope:
 
-1. `lighthouse_profiles`
+1. `lighthouse_profiles` — the optional per-member extension data. Since 2026-09-15 it also carries
+   `desired_city` (TEXT, nullable) and `is_wanted_public` (BOOLEAN NOT NULL DEFAULT FALSE), the
+   opt-in that puts a member's housing need on the Wanted tab. A partial index
+   (`idx_lighthouse_profiles_wanted_public`) covers exactly the published set
+   (`is_wanted_public AND is_active AND service_deleted_at IS NULL`, `updated_at DESC`) so that read
+   does not scan the table. Deleting LightHouse data deletes the row, which takes the posting with
+   it.
 2. `lighthouse_properties` — includes `monthly_rent` (listed amount) and `rent_currency`
    (FK → `currencies(code)`; the currency the rent is listed in). Backfilled to `USD` for existing
    non-null rents; Canadian listings with no cost yet keep NULL.
@@ -286,6 +335,13 @@ Contract expectations:
 5. Role checks for seeker-only and host-only match actions.
 6. Block operations must enforce authz and abuse-resistant policy controls.
 7. LightHouse-specific rate-limit strategy remains a tracked hardening task for rewrite planning.
+8. **A wanted posting is opt-in and anonymous** (2026-09-15). `is_wanted_public` defaults FALSE, so
+   no existing seeker's details became visible when the column shipped; the seeker screen states, in
+   the copy next to the tick box, exactly which fields become visible and that the name, phone number
+   and Signal link never do. `listWantedPostings` selects the safe columns explicitly instead of
+   reusing the profile row mapping, which is what keeps that true as the table grows. `GET
+   /api/lighthouse/wanted` is member-gated, has no write method, and hides postings in both
+   directions of a block.
 
 ## 6) Web and Android Delivery Status
 
@@ -318,6 +374,30 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    than guessed at.
 
 ## 9) Change Log
+
+- 2026-09-15: **A member can publish what they are looking for, not only what they have to offer
+  (owner report).** LightHouse showed one side of the market. A member weighing up offering a room
+  saw other people's listings and nothing about whether anyone needed one, and the side with the most
+  people on it is the side asking — so the board read as emptier than the need behind it. The seeker
+  details a member already fills in can now be published, on a tick box, to a new **Wanted** tab
+  beside Browse (§1.3b).
+  - Schema: `lighthouse_profiles` gains `desired_city` (TEXT) and `is_wanted_public` (BOOLEAN NOT
+    NULL DEFAULT FALSE), plus the partial index `idx_lighthouse_profiles_wanted_public`. Migration
+    `ctf/db/migrations/post/0022_lighthouse_wanted_postings.sql`. The FALSE default is what keeps
+    every profile saved before today unpublished.
+  - Route: `GET /api/lighthouse/wanted` (read-only, member-gated, blocks applied both ways).
+    Publishing rides the existing `POST /api/lighthouse/profile` as `isWantedPublic`, so a need lives
+    in one place and comes down with one tick.
+  - Privacy: a posting carries no member id, no phone number and no Signal link, and opens no
+    conversation — there is still no host → seeker request direction. `listWantedPostings` names its
+    columns rather than mapping the profile row, so a future column cannot leak through it.
+  - Web: `lighthouse-wanted.tsx`, a sixth tab in `lighthouse-shell.tsx` (the tab strip now scrolls
+    sideways so "Direct Line" is not squeezed on a phone), and the tick box plus a city field on
+    `lighthouse-seeker-profile.tsx`. Android: out of scope (web-only per rule 105).
+  - Also in this change: the member-facing spelling is **LightHouse**, and the strings that read
+    "Lighthouse" were corrected — the three not-found API messages, the account-deletion entries, the
+    external-cleanup label, and the contributor-access weight label. Code identifiers, the `lighthouse`
+    slug and the `/apps/lighthouse` path are unchanged. Recorded in `ctf/docs/BRAND_VOICE_LEXICON.md`.
 
 - 2026-08-18: **Intent and Outcome statement added — it now ships to the public user guide.** As of
   2026-08-18 the guide generator (`ctf/scripts/generate-user-guide.mjs`) reads each inventory's

@@ -18,6 +18,7 @@ import { failureText } from 'lib/errors/client-failure';
 type SeekerForm = {
   housingNeeds: string;
   desiredCountry: string;
+  desiredCity: string;
   desiredMoveInDateIso: string;
   budgetMin: string;
   budgetMax: string;
@@ -25,13 +26,16 @@ type SeekerForm = {
   phoneNumber: string;
   signalUrl: string;
   isActive: boolean;
+  isWantedPublic: boolean;
 };
 
-type StringFormKey = Exclude<keyof SeekerForm, "isActive">;
+type StringFormKey = Exclude<keyof SeekerForm, "isActive" | "isWantedPublic">;
+type BooleanFormKey = "isActive" | "isWantedPublic";
 
 const EMPTY_FORM: SeekerForm = {
   housingNeeds: "",
   desiredCountry: "",
+  desiredCity: "",
   desiredMoveInDateIso: "",
   budgetMin: "",
   budgetMax: "",
@@ -39,6 +43,7 @@ const EMPTY_FORM: SeekerForm = {
   phoneNumber: "",
   signalUrl: "",
   isActive: true,
+  isWantedPublic: false,
 };
 
 function toNumberOrNull(value: string): number | null {
@@ -55,18 +60,30 @@ function dateInputValue(iso: string | null | undefined): string {
   return match ? match[0] : "";
 }
 
+/** A saved text value as the form wants it: a missing one becomes an empty input, not "undefined". */
+function textInputValue(value: string | null | undefined): string {
+  return value ?? "";
+}
+
+/** A saved number as the form wants it: an unset budget is an empty box, not a "0". */
+function numberInputValue(value: number | null | undefined): string {
+  return typeof value === "number" ? String(value) : "";
+}
+
 // Maps a saved profile into the editable form, normalizing missing values to empty strings.
 function profileToForm(p: Profile): SeekerForm {
   return {
-    housingNeeds: p.housingNeeds ?? "",
-    desiredCountry: p.desiredCountry ?? "",
+    housingNeeds: textInputValue(p.housingNeeds),
+    desiredCountry: textInputValue(p.desiredCountry),
+    desiredCity: textInputValue(p.desiredCity),
     desiredMoveInDateIso: dateInputValue(p.desiredMoveInDateIso),
-    budgetMin: typeof p.budgetMin === "number" ? String(p.budgetMin) : "",
-    budgetMax: typeof p.budgetMax === "number" ? String(p.budgetMax) : "",
-    bio: p.bio ?? "",
-    phoneNumber: p.phoneNumber ?? "",
-    signalUrl: p.signalUrl ?? "",
+    budgetMin: numberInputValue(p.budgetMin),
+    budgetMax: numberInputValue(p.budgetMax),
+    bio: textInputValue(p.bio),
+    phoneNumber: textInputValue(p.phoneNumber),
+    signalUrl: textInputValue(p.signalUrl),
     isActive: p.isActive ?? true,
+    isWantedPublic: p.isWantedPublic ?? false,
   };
 }
 
@@ -76,6 +93,7 @@ function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budg
     profileType: "seeker",
     housingNeeds: form.housingNeeds.trim() || null,
     desiredCountry: form.desiredCountry.trim() || null,
+    desiredCity: form.desiredCity.trim() || null,
     desiredMoveInDateIso: form.desiredMoveInDateIso.trim() || null,
     budgetMin,
     budgetMax,
@@ -83,6 +101,7 @@ function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budg
     phoneNumber: form.phoneNumber.trim() || null,
     signalUrl: form.signalUrl.trim() || null,
     isActive: form.isActive,
+    isWantedPublic: form.isWantedPublic,
   };
 }
 
@@ -119,6 +138,11 @@ export function LighthouseSeekerProfile() {
   }, []);
 
   function setField(key: StringFormKey, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  function setFlag(key: BooleanFormKey, value: boolean) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
   }
@@ -193,6 +217,7 @@ export function LighthouseSeekerProfile() {
             <label htmlFor="lighthouse-seeker-country" style={labelStyle}>Country you want to move to</label>
             <CountrySelect id="lighthouse-seeker-country" value={form.desiredCountry} onChange={(v) => setField("desiredCountry", v)} style={inputStyle} />
           </div>
+          {field("desiredCity", "City or area you want", { placeholder: "e.g. Vancouver" })}
           {field("desiredMoveInDateIso", "Ideal move-in date", { type: "date" })}
           {field("budgetMin", "Least you can pay / month", { type: "number", placeholder: "0" })}
           {field("budgetMax", "Most you can pay / month", { type: "number", placeholder: "0" })}
@@ -202,9 +227,22 @@ export function LighthouseSeekerProfile() {
         </div>
 
         <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14, fontSize: 13, color: t.TEXT, cursor: "pointer" }}>
-          <input type="checkbox" checked={form.isActive} onChange={(e) => { setForm((prev) => ({ ...prev, isActive: e.target.checked })); setSaved(false); }} aria-label="Actively looking for housing" />
+          <input type="checkbox" checked={form.isActive} onChange={(e) => setFlag("isActive", e.target.checked)} aria-label="Actively looking for housing" />
           I’m actively looking for housing
         </label>
+
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.BORDER}` }}>
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: t.TEXT, cursor: "pointer" }}>
+            <input type="checkbox" checked={form.isWantedPublic} onChange={(e) => setFlag("isWantedPublic", e.target.checked)} aria-label="Show what I'm looking for on the Wanted tab" style={{ marginTop: 3 }} />
+            <span>Show what I’m looking for on the <strong>Wanted</strong> tab</span>
+          </label>
+          <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6, lineHeight: 1.6, paddingLeft: 24 }}>
+            Anyone browsing LightHouse then sees what you’re looking for, the place and date, your
+            budget range and your short introduction — so someone deciding whether to offer a room can
+            see that people are asking. Your name, your phone number and your Signal link are never
+            shown, and nobody can message you from it. Untick the box any time to take it down.
+          </div>
+        </div>
 
         {error ? <div style={{ color: "#EF4444", fontSize: 13, marginTop: 12 }}>{error}</div> : null}
         {saved ? (
