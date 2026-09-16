@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import {
@@ -29,6 +29,14 @@ type Props = {
 export function TiRadioHostForm({ slotStartIso, slotEndIso, tz, t, busy, error, onCancel, onSubmit }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const titleRef = useRef<HTMLInputElement | null>(null);
+
+  // A member who pressed a row is ready to type, and somebody on a keyboard or a screen reader has
+  // no other way to tell the form opened. Focus is moved without scrolling, because the guide is
+  // already bringing this form into view and two scrolls at once land in the wrong place.
+  useEffect(() => {
+    titleRef.current?.focus({ preventScroll: true });
+  }, []);
 
   return (
     <div style={{ borderRadius: 14, background: t.SURFACE, border: `1px solid ${t.ACCENT}55`, padding: 16, marginBottom: 16 }}>
@@ -54,6 +62,7 @@ export function TiRadioHostForm({ slotStartIso, slotEndIso, tz, t, busy, error, 
       </label>
       <input
         id="ti-radio-title"
+        ref={titleRef}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         maxLength={TI_RADIO_MAX_TITLE_LENGTH}

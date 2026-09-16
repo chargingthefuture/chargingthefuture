@@ -17,8 +17,9 @@ admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`.
 
 1. Sign out completely. Open `/ti-radio`. The week of slots renders, with times in your own timezone.
    No sign-in prompt and no gate.
-2. As the approved member, press an empty slot, write what it is about, and take it. Your handle and
-   subject appear on that row.
+2. As the approved member, scroll down to a slot near the end of the week and press it. The form
+   comes into view on its own and the cursor is already in the subject field. Write what it is
+   about and take it. Your handle and subject appear on that row.
 3. Sign out and open the page again. The booking is there, with the handle and subject.
 4. Sign back in as the host and give the slot back. It returns to the guide as open.
 5. As the unapproved member, open the page. The schedule is all there, and the only thing on offer is
@@ -271,5 +272,31 @@ Result: web ☐
 - The slots are gone and those times read as open.
 - The audit rows remain. They record that a command ran, not what was said, and an admin removal has
   to stay answerable for after the account is gone.
+
+Result: web ☐
+
+---
+
+### TR-13 — Pressing a slot brings the form into view
+
+**Role:** member, approved · **Surfaces:** web
+**Precondition:** Signed in and approved, on a phone-width viewport. The guide scrolled far enough
+that the top of the page is off screen.
+
+**Steps:**
+1. Scroll to a day near the end of the week and press an open slot.
+2. Without scrolling, look at the screen.
+3. Press Escape or the close control, then press a different open slot.
+4. Repeat step 1 with the operating system set to reduce motion.
+5. Repeat step 1 using only the keyboard: tab to an open slot and press Enter.
+
+**Expected:**
+- The booking form is on screen, roughly centered, without the tester scrolling. It renders above
+  the days, so what moved is the page, not the form.
+- The cursor is in the subject field, so typing starts the subject with no further press.
+- The second press replaces the first form rather than opening a second one anywhere on the page.
+- With reduce motion set, the page jumps to the form instead of gliding. It still arrives.
+- On the keyboard path, focus lands in the subject field and the form is visible — a screen-reader
+  user has no other signal that anything opened.
 
 Result: web ☐
