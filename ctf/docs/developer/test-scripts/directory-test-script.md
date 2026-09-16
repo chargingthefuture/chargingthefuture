@@ -440,6 +440,30 @@ there is drift, not an expected gap.
 
 **Result:** matches ☐ — drift notes:
 
+### DIR-A7 · Invite queue reads, and copies from a phone
+**Role:** admin · **Surfaces:** web (admin surface)
+**Precondition:** At least two active profiles with a Quora address, one carrying a skill that is not
+the Advocacy placeholder and one carrying only that placeholder.
+**Steps:**
+1. Open `/admin/directory/invite-queue` as the admin, on a phone-width viewport.
+2. Read the counts line and the rows.
+3. Look for your own listing, and for anybody who already has an invite post on the blog.
+4. Press **Copy the whole queue**, then paste into any text field.
+5. Sign in as an approved member who is not an admin and open the same address.
+**Expected:**
+- Step 2: rows render with name, Quora address, skills, and a plain-language label — "Write about the
+  skill", "General invitation", or "Nothing recorded yet". The counts line adds up to the number of
+  rows shown.
+- Step 2: a row whose only skill is the Advocacy placeholder reads **General invitation**. Advocacy
+  stands in for a trade nobody has stated, so that row's post cannot name one.
+- Step 3: neither appears. The owner's own listing is not an invitation to anybody, and a second post
+  to somebody already written about is the thing this screen exists to prevent.
+- Step 4: the clipboard holds plain text, one block per person, readable without a spreadsheet. This
+  is the path that matters — the person who writes the invite posts works from a phone.
+- Step 5: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
+  object from the public sources it was built from, which is why it is admin-only here.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Known gaps — do not file these as bugs
