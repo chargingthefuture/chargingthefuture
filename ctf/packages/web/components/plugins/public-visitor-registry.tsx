@@ -4,6 +4,7 @@ import { ChymePublicShell } from '@/components/chyme/chyme-public-shell';
 import { ClickLogPublicShell } from '@/components/click-log/click-log-public-shell';
 import { ContributionsPublicShell } from '@/components/contributions/contributions-public-shell';
 import { DirectoryPublicShell } from '@/components/directory/directory-public-shell';
+import { FiresidePublicShell } from '@/components/fireside/fireside-public-shell';
 import { FoundationPublicShell } from '@/components/foundation/foundation-public-shell';
 import { GdpPublicShell } from '@/components/gdp/gdp-public-shell';
 import { SkillUpPublicShell } from '@/components/skill-up/skill-up-public-shell';
@@ -60,6 +61,7 @@ const PUBLIC_VISITOR_SHELLS: Record<string, PublicVisitorShell> = {
   'click-log': ClickLogPublicShell,
   contributions: ContributionsPublicShell,
   directory: DirectoryPublicShell,
+  fireside: FiresidePublicShell,
   foundation: FoundationPublicShell,
   gdp: GdpPublicShell,
   'skill-up': SkillUpPublicShell,

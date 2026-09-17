@@ -190,6 +190,10 @@ faults in two weeks came from a rule written in two places that disagreed.
   the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
   actually reads. The admin screen has a row in the admin directory, with a "new to review" dot
   while an export request is waiting.
+- The signed-out visitor view at `/apps/fireside`: shipped, as
+  `components/fireside/fireside-public-shell.tsx`, registered in the public visitor registry. It
+  sends the visitor to the blog first, because the conversation is already open to them, and asks
+  for an account only for writing.
 - The blog-side widget: shipped, and it lives in the `wiki-site` repository. It renders the
   conversation under each post for any reader, with no account, and hands off to the app to write.
   `/api/fireside/threads` answers it cross-origin (read-only, no credentials accepted, so a
@@ -237,6 +241,16 @@ member active only in Fireside is seen by being read, which is what the plugin i
    all do; the member one predates them and should follow.
 
 ## Change Log
+
+- 2026-09-17: **A signed-out visitor gets a real Fireside page** (owner report: the page was
+  unenticing and described the feature wrongly). Fireside had no entry in the public visitor
+  registry, so it fell through to `GenericPublicShell`, whose copy says the app has no public view
+  yet and that signing in is what opens it. For Fireside both halves are false: the conversation
+  renders under each blog post for any reader with no account, and an account is needed only to
+  write. The new shell leads with a link straight to the blog, states the three things that make
+  the conversation worth reading — open to read, never ranked, and still there in a year — and puts
+  the account ask under writing, where it belongs. It shows no per-user data, which a signed-out
+  shell cannot.
 
 - 2026-09-16: **Fireside has an admin page** (owner report: there was none). Every admin power here
   already existed, and two of them had a screen — but that screen was a pair of buttons on the
