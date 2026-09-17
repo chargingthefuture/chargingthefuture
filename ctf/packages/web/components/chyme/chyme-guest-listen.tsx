@@ -29,6 +29,48 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+// Join the live call, retrying the transient failures described above. Returns `null` once joined,
+// or the last error. `create: false` — a guest only ever joins an existing live call, never starts
+// one. Kept out of the component so the effect below stays readable (rule 116).
+async function joinLiveCall(activeCall: Call, isCanceled: () => boolean): Promise<unknown | null> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= GUEST_JOIN_ATTEMPTS; attempt += 1) {
+    try {
+      await activeCall.join({ create: false });
+      return null;
+    } catch (error) {
+      lastError = error;
+      if (isCanceled() || attempt === GUEST_JOIN_ATTEMPTS) {
+        return lastError;
+      }
+      await delay(GUEST_JOIN_RETRY_BASE_MS * attempt);
+    }
+  }
+  return lastError;
+}
+
+// Did the room end between the server minting the guest token and the guest trying to use it? The
+// room counts as "live" whenever a member's presence row is fresh, which outlives their actual
+// Stream connection by up to the presence window — so a join can fail simply because there is no
+// longer a call to join. Re-reading the public room tells that apart from a genuine fault.
+async function isRoomStillLive(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/chyme/public/room');
+    if (!res.ok) {
+      return true;
+    }
+    const data = await res.json();
+    return data?.ok ? !!data.isLive : true;
+  } catch {
+    // Can't tell — treat it as still live so a network blip doesn't hide a room that is up.
+    return true;
+  }
+}
+
 // Signed-out listener. Connects an ephemeral guest Stream identity to the SAME call members are in
 // and plays its audio — receive-only. The guest never publishes: camera and microphone are disabled
 // and there is no unmute/raise-hand control, so this is listen-only on the client. Speaking requires
@@ -72,68 +114,45 @@ export function ChymeGuestListen({
     });
     const activeCall = videoClient.call(CHYME_CALL_TYPE, toCallIdForChyme(credentials.streamChannelId));
 
-    // Did the room end between the server minting this token and the guest trying to use it? The
-    // room is "live" whenever a member's presence row is fresh, which outlives their actual Stream
-    // connection by up to the presence window — so a join can fail simply because there is no
-    // longer a call to join. Re-read the public room to tell that apart from a genuine fault.
-    async function roomStillLive(): Promise<boolean> {
-      try {
-        const res = await fetch('/api/chyme/public/room');
-        if (!res.ok) return true;
-        const data = await res.json();
-        return data?.ok ? !!data.isLive : true;
-      } catch {
-        // Can't tell — treat it as still live so a network blip doesn't hide a room that is up.
-        return true;
-      }
-    }
-
     void (async () => {
       // Disable the mic and camera BEFORE joining so the browser never prompts a guest for device
       // access — they can only listen, so there is nothing to publish and no reason to ask.
       try { await activeCall.camera.disable(); } catch { /* no camera */ }
       try { await activeCall.microphone.disable(); } catch { /* already muted */ }
 
-      for (let attempt = 1; attempt <= GUEST_JOIN_ATTEMPTS; attempt += 1) {
-        try {
-          // create: false — a guest only ever joins an existing live call, never starts one.
-          await activeCall.join({ create: false });
-          if (canceled) return;
-          setClient(videoClient);
-          setCall(activeCall);
-          setStatus('joined');
-          return;
-        } catch (error) {
-          if (canceled) return;
-          if (attempt < GUEST_JOIN_ATTEMPTS) {
-            await delay(GUEST_JOIN_RETRY_BASE_MS * attempt);
-            if (canceled) return;
-            continue;
-          }
-
-          if (await roomStillLive()) {
-            if (canceled) return;
-            reportError(error, {
-              area: 'chyme',
-              op: 'guest_listen_join',
-              extra: {
-                streamUserId: credentials.streamUserId,
-                callType: CHYME_CALL_TYPE,
-                callId: toCallIdForChyme(credentials.streamChannelId),
-                attempts: GUEST_JOIN_ATTEMPTS,
-              },
-            });
-            setErrorDetail(error instanceof Error ? error.message : String(error));
-            setStatus('error');
-            return;
-          }
-
-          // The room ended while we were connecting. Expected, not a fault, so it is not reported.
-          if (canceled) return;
-          onRoomGone?.();
-          return;
-        }
+      const joinError = await joinLiveCall(activeCall, () => canceled);
+      if (canceled) {
+        return;
       }
+      if (!joinError) {
+        setClient(videoClient);
+        setCall(activeCall);
+        setStatus('joined');
+        return;
+      }
+
+      const stillLive = await isRoomStillLive();
+      if (canceled) {
+        return;
+      }
+      if (!stillLive) {
+        // The room ended while we were connecting. Expected, not a fault, so it is not reported.
+        onRoomGone?.();
+        return;
+      }
+
+      reportError(joinError, {
+        area: 'chyme',
+        op: 'guest_listen_join',
+        extra: {
+          streamUserId: credentials.streamUserId,
+          callType: CHYME_CALL_TYPE,
+          callId: toCallIdForChyme(credentials.streamChannelId),
+          attempts: GUEST_JOIN_ATTEMPTS,
+        },
+      });
+      setErrorDetail(describeError(joinError));
+      setStatus('error');
     })();
 
     return () => {
