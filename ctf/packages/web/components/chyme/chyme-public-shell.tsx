@@ -116,7 +116,7 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
       {/* Locked bottom bar. The Join Free / Finish verifying button that sat beside this was the
           page's third copy of the same action and is gone (owner directive, 2026-09-17); the
           invitation card carries it. What is left is not a sign-in control — it is the statement
-          that hosting a room needs an account, which is why it is greyed and does nothing. */}
+          that hosting a room needs an account, which is why it is grayed and does nothing. */}
       <div style={{ padding: '10px 12px', borderTop: `1px solid ${t.BORDER}`, background: SURFACE, display: 'flex', gap: 8, flexShrink: 0 }}>
         <div style={{ flex: 1, padding: '10px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, color: t.MUTED, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'not-allowed', opacity: 0.6 }}>
           <Lock size={12} /> Start a Room

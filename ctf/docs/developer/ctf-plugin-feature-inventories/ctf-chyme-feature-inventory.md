@@ -147,7 +147,7 @@ Current status:
   of a visitor three times before they had read what the room is. The invitation card keeps it,
   because it is the only one of the three that says what signing in gets you ("Listen in for free.
   Sign in to speak, react, or host your own room."). The header is now the back control and the
-  title; the bottom bar keeps only the greyed, locked **Start a Room**, which is not a sign-in
+  title; the bottom bar keeps only the grayed, locked **Start a Room**, which is not a sign-in
   control but the statement that hosting needs an account. The `verifyUrl` variant collapses the same
   way: a member part-way through Unlock sees one **Finish verifying** link, on the card. Second part
   of the same report: the search box and the Healing / Economy / Housing / Legal / Skills tags are

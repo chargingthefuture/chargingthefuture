@@ -158,7 +158,7 @@ screenful.
 In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
 to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
 link when the visitor has an account part-way through Unlock). The green header carries the back
-control and the title only, with no sign-in or join button. The bottom bar carries only the greyed,
+control and the title only, with no sign-in or join button. The bottom bar carries only the grayed,
 locked **Start a Room**, which does nothing on purpose — hosting needs an account. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
 page.
