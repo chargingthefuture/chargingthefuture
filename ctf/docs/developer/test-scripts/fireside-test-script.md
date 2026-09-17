@@ -585,3 +585,33 @@ export request waiting. Use a phone-width window.
   Admin pill in its header instead; a member sees no pill at all.
 
 Result: web ☐
+
+---
+
+### FS-20 — The signed-out page at /apps/fireside describes Fireside accurately
+
+**Role:** nobody · **Surfaces:** web (public)
+**Precondition:** None. Use a private window with no session, at phone width.
+
+**Steps:**
+1. Open `https://app.chargingthefuture.com/apps/fireside`.
+2. Read the page top to bottom.
+3. Press "Read the conversation".
+4. Go back and press "Create a free account".
+5. Press the back control in the header.
+
+**Expected:**
+- The page is about Fireside. It says the conversation is under the posts on the blog, that reading
+  it needs no account, that comments are never reordered by a count, and that what is written stays
+  on a site the project runs. The generic wording this replaced said the app has no public view yet
+  and that signing in is what opens one; both are false here and neither should appear.
+- The first control sends the visitor to the blog, not to sign-in. The account ask is further down
+  and is attached to writing.
+- "Read the conversation" opens the blog. "Create a free account" opens the hosted sign-in.
+- No comment, name, count or any other per-user data renders. The page has no session and must not
+  pretend to.
+- The header back control returns to `/apps`.
+- Everything is in the plugin's warm orange accent and readable at phone width, with nothing cut off
+  and no sideways scroll.
+
+Result: web ☐
