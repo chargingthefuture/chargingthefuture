@@ -17,6 +17,18 @@ import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 
+// A first join can fail for reasons that clear on their own: the guest Stream identity was minted
+// milliseconds earlier and has not propagated, the SFU is mid-reconnect, or the network blipped
+// while the page was still loading. Before this, one such failure ended the visit — the guest saw
+// "try refreshing" and nothing retried. Three attempts with a widening gap cover the transient
+// cases without hammering Stream when the failure is real.
+const GUEST_JOIN_ATTEMPTS = 3;
+const GUEST_JOIN_RETRY_BASE_MS = 700;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Signed-out listener. Connects an ephemeral guest Stream identity to the SAME call members are in
 // and plays its audio — receive-only. The guest never publishes: camera and microphone are disabled
 // and there is no unmute/raise-hand control, so this is listen-only on the client. Speaking requires
@@ -25,14 +37,23 @@ export function ChymeGuestListen({
   credentials,
   participantCount,
   accent = '#22C55E',
+  onRoomGone,
 }: {
   credentials: StreamJoinCredentials;
   participantCount: number;
   accent?: string;
+  // Called when the join failed and a fresh read of the public room says the room is no longer
+  // live. The parent then drops back to the honest "no public rooms right now" view instead of
+  // leaving a dead error box under a room heading that claims the visitor is listening.
+  onRoomGone?: () => void;
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
+  // The verbatim reason the join failed. The member room already shows its Stream error this way;
+  // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
+  // to go on but "try refreshing".
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
@@ -51,22 +72,67 @@ export function ChymeGuestListen({
     });
     const activeCall = videoClient.call(CHYME_CALL_TYPE, toCallIdForChyme(credentials.streamChannelId));
 
-    void (async () => {
+    // Did the room end between the server minting this token and the guest trying to use it? The
+    // room is "live" whenever a member's presence row is fresh, which outlives their actual Stream
+    // connection by up to the presence window — so a join can fail simply because there is no
+    // longer a call to join. Re-read the public room to tell that apart from a genuine fault.
+    async function roomStillLive(): Promise<boolean> {
       try {
-        // Disable the mic and camera BEFORE joining so the browser never prompts a guest for device
-        // access — they can only listen, so there is nothing to publish and no reason to ask.
-        try { await activeCall.camera.disable(); } catch { /* no camera */ }
-        try { await activeCall.microphone.disable(); } catch { /* already muted */ }
-        // create: false — a guest only ever joins an existing live call, never starts one.
-        await activeCall.join({ create: false });
-        if (canceled) return;
-        setClient(videoClient);
-        setCall(activeCall);
-        setStatus('joined');
-      } catch (error) {
-        if (canceled) return;
-        reportError(error, { area: 'chyme', op: 'guest_listen_join', extra: { streamUserId: credentials.streamUserId } });
-        setStatus('error');
+        const res = await fetch('/api/chyme/public/room');
+        if (!res.ok) return true;
+        const data = await res.json();
+        return data?.ok ? !!data.isLive : true;
+      } catch {
+        // Can't tell — treat it as still live so a network blip doesn't hide a room that is up.
+        return true;
+      }
+    }
+
+    void (async () => {
+      // Disable the mic and camera BEFORE joining so the browser never prompts a guest for device
+      // access — they can only listen, so there is nothing to publish and no reason to ask.
+      try { await activeCall.camera.disable(); } catch { /* no camera */ }
+      try { await activeCall.microphone.disable(); } catch { /* already muted */ }
+
+      for (let attempt = 1; attempt <= GUEST_JOIN_ATTEMPTS; attempt += 1) {
+        try {
+          // create: false — a guest only ever joins an existing live call, never starts one.
+          await activeCall.join({ create: false });
+          if (canceled) return;
+          setClient(videoClient);
+          setCall(activeCall);
+          setStatus('joined');
+          return;
+        } catch (error) {
+          if (canceled) return;
+          if (attempt < GUEST_JOIN_ATTEMPTS) {
+            await delay(GUEST_JOIN_RETRY_BASE_MS * attempt);
+            if (canceled) return;
+            continue;
+          }
+
+          if (await roomStillLive()) {
+            if (canceled) return;
+            reportError(error, {
+              area: 'chyme',
+              op: 'guest_listen_join',
+              extra: {
+                streamUserId: credentials.streamUserId,
+                callType: CHYME_CALL_TYPE,
+                callId: toCallIdForChyme(credentials.streamChannelId),
+                attempts: GUEST_JOIN_ATTEMPTS,
+              },
+            });
+            setErrorDetail(error instanceof Error ? error.message : String(error));
+            setStatus('error');
+            return;
+          }
+
+          // The room ended while we were connecting. Expected, not a fault, so it is not reported.
+          if (canceled) return;
+          onRoomGone?.();
+          return;
+        }
       }
     })();
 
@@ -77,7 +143,7 @@ export function ChymeGuestListen({
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
     };
-  }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId]);
+  }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
@@ -94,7 +160,7 @@ export function ChymeGuestListen({
     );
   }
   if (status === 'error') {
-    return <GuestNote accent={accent} text="Couldn't connect to the live room. Try refreshing." />;
+    return <GuestNote accent={accent} text="Couldn't connect to the live room. Try refreshing." detail={errorDetail} />;
   }
   if (status !== 'joined' || !client || !call) {
     return <GuestNote accent={accent} text="Connecting to the live room…" />;
@@ -109,12 +175,18 @@ export function ChymeGuestListen({
   );
 }
 
-function GuestNote({ accent, text }: { accent: string; text: string }) {
+function GuestNote({ accent, text, detail }: { accent: string; text: string; detail?: string | null }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}12`, border: `1px solid ${accent}30`, color: t.SUBTLE, fontSize: 13 }}>
-      <Radio size={16} style={{ color: accent }} /> {text}
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}12`, border: `1px solid ${accent}30`, color: t.SUBTLE, fontSize: 13 }}>
+      <Radio size={16} style={{ color: accent, flexShrink: 0, marginTop: 2 }} />
+      <div>
+        <div>{text}</div>
+        {detail ? (
+          <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED, lineHeight: 1.5, wordBreak: 'break-word' }}>{detail}</div>
+        ) : null}
+      </div>
     </div>
   );
 }
