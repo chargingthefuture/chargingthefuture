@@ -226,6 +226,28 @@ Seeded content:
 
 ## Change Log
 
+- 2026-09-18: **A taken-down profile could be re-listed by writing its URL another way (owner
+  request, after the same defect was found in Unlock).** `isQuoraUrlSuppressed` matches the takedown
+  list by exact string, and `normalizeQuoraProfileUrl` returned the URL with whatever scheme, host,
+  path casing and trailing slash the caller typed — so a profile somebody had asked to have removed
+  was blocked only for the exact spelling recorded, and a nomination that dropped `www.`, added a
+  slash or came from a language subdomain (`es.quora.com`) went straight through. The same function
+  writes `directory_quora_url_history`, so the change trail an admin reads carried the same
+  inconsistency. It also accepted any host *ending* in `quora.com`, so `evil-quora.com` passed as
+  Quora. The rules now live once in `lib/shared/quora-url.ts` (`canonicalizeQuoraUrl`), called by
+  this plugin and by SkillsHunt — they key the same form on purpose, and were previously two copies
+  kept in step by a comment. Canonical form: `https://www.quora.com` + the lowercased path with
+  trailing slashes removed; any Quora path is still accepted, since a profile may carry a link to a
+  post. Migration `0027_canonical_quora_urls_directory_skills_hunt.sql` re-keys
+  `directory_suppressed_quora_urls.normalized_url` and both `directory_quora_url_history` normalized
+  columns. Where two spellings of one link were both active on the takedown list, the partial unique
+  index allows one active row, so one is re-keyed and does the blocking and the other is kept as the
+  record of that person's request rather than deleted. Verified on a local Postgres: after the
+  migration a takedown blocks every spelling of the link, including a share link and a language
+  subdomain, and an unrelated profile is still not blocked; a second run changes nothing.
+  `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` is a read-only query listing the
+  links recorded under more than one spelling.
+
 - 2026-09-18: **A way into the invite queue** (owner report: there was no control for it on the
   Directory admin screen). The queue shipped two days earlier with no link anywhere, so the only
   route to it was typing the address — which nobody does on a phone, and a phone is where the person

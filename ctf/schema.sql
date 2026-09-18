@@ -563,6 +563,12 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
+  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
+  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
+  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
+  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
+  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
+  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -3238,6 +3244,12 @@ CREATE INDEX IF NOT EXISTS idx_directory_quora_url_history_user
 -- the profile row is deleted and its normalized Quora URL is recorded here. A row with is_overridden =
 -- false is an ACTIVE block: that Quora URL cannot be listed in the directory again (auto-generated from
 -- a SkillsHunt accept, or added by an admin) until an admin lifts the block with a reason (override).
+-- `normalized_url` holds the same canonical form as skills_hunt_submissions.quora_profile_url_normalized
+-- (see the note there): a takedown is matched against the string a nomination was deduped on, so the
+-- two have to be written by the same rules or a suppressed profile can be re-listed under another
+-- spelling. Rows stored before 2026-09-18 were re-keyed by migration 0027; where two spellings of one
+-- link were both active, one was re-keyed and does the blocking and the other is kept as the record
+-- of the request, because the partial unique index below allows only one active row per link.
 CREATE TABLE IF NOT EXISTS directory_suppressed_quora_urls (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   normalized_url TEXT NOT NULL,
