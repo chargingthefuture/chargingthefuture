@@ -7,13 +7,24 @@ import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
-import { ChymeGuestListen } from '@/components/chyme/chyme-guest-listen';
+import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
 // /api/chyme/public/room. `credentials` is present only when the room is live
 // and Stream is configured, so a guest can actually listen.
-type LiveState = { isLive: boolean; participantCount: number; roomName?: string; credentials?: StreamJoinCredentials };
+type LiveState = {
+  isLive: boolean;
+  participantCount: number;
+  roomName?: string;
+  credentials?: StreamJoinCredentials;
+  // The room is live but no guest identity came back — the route's plain reason (Stream rejected
+  // the guest upsert, or Stream is not configured). Shown under the room heading.
+  listenUnavailable?: string;
+  // The live check itself failed (a 429, a 503, no network). Shown instead of the empty state, so
+  // "no rooms" is only ever said when the server actually said so.
+  checkFailed?: string;
+};
 
 // Chyme's brand is green. The signed-out (guest) shell must look like the signed-in app, not a
 // different purple product — so these mirror the deep-green chrome from chyme-shared (page #04160A,
@@ -25,6 +36,90 @@ const SURFACE = '#041a0b'; // card surface — no getter field matches this hex
 const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter field matches
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+
+type PublicRoomPayload = Record<string, unknown> & { ok: true };
+
+function isOkPayload(data: unknown): data is PublicRoomPayload {
+  return typeof data === 'object' && data !== null && (data as { ok?: unknown }).ok === true;
+}
+
+function stringField(data: Record<string, unknown>, key: string): string | undefined {
+  const value = data[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function liveStateFrom(data: PublicRoomPayload): LiveState {
+  return {
+    isLive: data.isLive === true,
+    participantCount: typeof data.participantCount === 'number' ? data.participantCount : 0,
+    roomName: stringField(data, 'roomName'),
+    credentials: data.credentials as StreamJoinCredentials | undefined,
+    listenUnavailable: stringField(data, 'listenUnavailable'),
+  };
+}
+
+// The server's own words when it gave any (`message` on this app's error bodies, `error` on the
+// rate limiter's), then the status so a 429 and a 503 read differently on the page.
+function failedCheck(status: number, data: unknown): LiveState {
+  const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+  const serverMessage = stringField(body, 'message') ?? stringField(body, 'error') ?? 'The server returned an error.';
+  return { isLive: false, participantCount: 0, checkFailed: `${serverMessage} (HTTP ${status})` };
+}
+
+// Four states, each said plainly. Before this, two of them rendered as something else: a failed
+// live check fell through to the initial not-live state and read "No public rooms right now", and
+// a live room with no guest identity matched neither branch and rendered nothing at all. A visitor
+// looking at a blank space under a live room, or at "no rooms" while a member is audibly in the
+// call, has no way to tell what happened — and neither has the person they report it to.
+function ChymePublicRoomList({ live, onRoomGone }: { live: LiveState; onRoomGone: () => void }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+
+  if (live.checkFailed) {
+    return (
+      <>
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
+        <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Couldn&apos;t check whether a room is live</div>
+          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, wordBreak: 'break-word' }}>{live.checkFailed}</div>
+        </div>
+      </>
+    );
+  }
+
+  if (!live.isLive) {
+    return (
+      <>
+        <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
+        <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
+          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div>
+      {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
+      {live.credentials ? (
+        <>
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
+          <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>The room is live — sign in to join it.</div>
+          <GuestNote
+            accent={t.ACCENT}
+            text="Listening in without an account isn't available right now."
+            detail={live.listenUnavailable ?? 'The server sent no reason.'}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl: string; verifyUrl?: string; live: LiveState; onRoomGone: () => void }) {
   const { theme } = useTheme();
@@ -93,24 +188,9 @@ function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl
         </div>
       </div>
 
-      {/* Room list — empty state */}
+      {/* Room list */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {live.isLive && live.credentials ? (
-          <div>
-            {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
-            <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
-          </div>
-        ) : null}
-        {!live.isLive ? (
-          <>
-            <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-            <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
-              <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
-            </div>
-          </>
-        ) : null}
+        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} />
       </div>
 
       {/* Locked bottom bar. The Join Free / Finish verifying button that sat beside this was the
@@ -144,18 +224,13 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   const loadLive = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await fetch('/api/chyme/public/room', signal ? { signal } : undefined);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data?.ok) {
-        setLive({
-          isLive: !!data.isLive,
-          participantCount: data.participantCount ?? 0,
-          roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
-          credentials: data.credentials,
-        });
-      }
-    } catch {
-      // Ignore — guest just sees the not-live view.
+      const data: unknown = await res.json().catch(() => null);
+      // Say that the check failed, with the server's own words when it gave any. Treating this as
+      // "not live" read as "No public rooms right now" while a member was in the call.
+      setLive(res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data));
+    } catch (error) {
+      if (signal?.aborted) return;
+      setLive({ isLive: false, participantCount: 0, checkFailed: error instanceof Error ? error.message : 'The request did not complete.' });
     }
   }, []);
 

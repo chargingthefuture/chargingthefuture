@@ -168,6 +168,13 @@ page.
 In step 5 the page does **not** settle on "Couldn't connect to the live room" under a heading saying
 you are listening live: the listener retries, then re-reads the room and falls back to the "No public
 rooms right now" empty state once the room has ended.
+
+"No public rooms right now" appears **only** when the server said the room is not live. If the live
+check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads
+"Couldn't check whether a room is live" with the server's message and the HTTP status. If the room
+is live but the server could not mint a guest identity (Stream rejected it, or Stream is not
+configured), the room heading still shows, with "The room is live — sign in to join it." and a note
+carrying the reason — never a blank space under the invitation card.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
