@@ -198,7 +198,8 @@ the same way the signed-in room shows its connection error — so the failure ca
 opening browser developer tools. One wording to know: "role 'chyme_listener' is not allowed to
 perform action JoinCall" means the guest role is set but the `default` call type does not grant it
 `join-call` — a Stream config fix, per `ctf/docs/plugins/chyme/guest-listener-stream-role.md`:
-the dashboard on a desktop, or the "Stream — Grant Guest Listener Join" workflow from a phone.
+run the "Stream — Guest Listener Setup" workflow with mode apply (its weekly check run exists so
+this state is caught before a member reports it).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

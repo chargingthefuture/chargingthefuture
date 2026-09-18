@@ -141,19 +141,22 @@ Current status:
 
 ## Change Log
 
-- 2026-09-18: **The guest-listener Stream grant can be applied from a phone.** The evening's root
-  cause was a Stream dashboard step left undone — the `chyme_listener` role had no `join-call` on
-  the `default` call type — and the dashboard does not work at phone width, which is the only
-  screen the owner has. New manual workflow **"Stream — Grant Guest Listener Join"**
-  (`.github/workflows/stream-grant-guest-listener.yml`, script
-  `ctf/scripts/stream-grant-guest-listener.mjs`) reads the Stream key pair and
-  `CHYME_GUEST_STREAM_ROLE` from Infisical and sets that role on the call type to the runbook's
-  target state through Stream's Video API: `join-call` and `read-call` present, the three publish
-  capabilities absent, everything else untouched. Dry run unless **apply** is ticked; prints the
-  capability list before, after, and as read back — never a key or secret. Members are unaffected:
-  only the named role changes, and only guests carry it. Takes effect on the next page load. No
-  app code, schema, route, or contract change; runbook and workflow index updated.
-
+- 2026-09-18: **The guest-listener Stream setup is owned by code, with a weekly drift check.** The
+  evening's root cause was a Stream dashboard step left undone — the `chyme_listener` role had no
+  `join-call` on the `default` call type — and a dashboard step cannot be tested, diffed, or re-run;
+  the dashboard also does not work at phone width, which is the only screen the owner has. New
+  workflow **"Stream — Guest Listener Setup"** (`.github/workflows/stream-guest-listener-setup.yml`,
+  script `ctf/scripts/stream-guest-listener-setup.mjs`) reads the Stream key pairs and
+  `CHYME_GUEST_STREAM_ROLE` from Infisical and brings the app to the runbook's target state through
+  Stream's APIs: the role exists (Chat API, `listRoles` / `createRole`); on the call type it has
+  `join-call` and `read-call`, not the three publish capabilities, everything else untouched (Video
+  API, read → update → read back). Three modes: **plan** prints the state and what would change;
+  **apply** writes and verifies; **check** — run weekly, Tuesdays 05:52 UTC, production — goes red
+  on drift so a half-done setup is caught before a member reports it. Members are unaffected: only
+  the named role changes, and only guests carry it. Takes effect on the next page load. Never prints
+  a secret; the api key is scrubbed from Stream error text. Quota note
+  `ctf/docs/quota-impact/2026-09-18-stream-guest-listener-setup.md`. No app code, schema, route, or
+  contract change; runbook, test script CH-8 and the workflow index updated.
 - 2026-09-18: **Root cause of the signed-out listen failure recorded: the guest role lacked
   `join-call`.** With the reason line shipped the same evening, the public page read Stream's own
   refusal — the `chyme_listener` role "is not allowed to perform action JoinCall in scope
