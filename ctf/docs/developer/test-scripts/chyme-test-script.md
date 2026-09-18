@@ -154,7 +154,13 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
 cannot be heard." — nothing is connected yet and nothing plays. After the tap you see "Connecting to
 the live room…", then "Listening live · N members in the room", and you hear the room, joined muted
-with no speak control. Under that line an **On Stage** section shows the same avatar tiles the member
+with no speak control. Under that line sits one muted line, "No sound? Take the phone off Silent (the
+switch or the Action button), turn the volume up, then tap here." — tapping it retries playback.
+When the phone browser refused to start the audio on its own (its autoplay rule), a green **Tap to
+hear the room** button appears above that line; one tap starts the sound and the button goes away.
+A phone in Silent mode with no microphone in use is muted by the switch itself, which no page can
+override; the tap asks the browser to treat the page as media playback, and the line names the
+switch. Under those, an **On Stage** section shows the same avatar tiles the member
 room shows — every member in the call by handle with the speaking ring and mic badge, and your own
 tile as "You (listening)" with the headphones badge — and under the stage a read-only **Room Chat**
 panel with the members' messages, refreshed every ten seconds, and one **Sign in to chat** link;

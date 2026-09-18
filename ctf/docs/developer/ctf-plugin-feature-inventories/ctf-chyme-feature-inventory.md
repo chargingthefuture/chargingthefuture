@@ -142,6 +142,18 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **The signed-out listener can recover sound: a "Tap to hear the room" button when the
+  browser blocked playback, and the Silent switch named on screen.** Owner report on the day: the
+  tap-to-listen page joined, showed the stage and the chat, and stayed silent. Two causes, both on
+  the phone. (1) The audio tracks arrive seconds after the tap and the Stream SDK starts each with
+  `play()` outside any gesture; when the browser refuses (its autoplay rule) the SDK records the
+  element as blocked. The guest view now reads the SDK's blocked signal (`useIsAutoplayBlocked`) and
+  shows one green button whose tap calls `call.resumeAudio()`, which the rule allows. (2) A page
+  that only plays and never records is treated like a ringtone on iPhone, so the Silent switch mutes
+  it; members never hit this because their microphone capture ignores the switch. The tap now sets
+  the page's audio session type to `playback` (the Audio Session API, iPhone Safari 17+), and a muted
+  line under the player names the switch and the volume, and retries on tap. Test script CH-7 names
+  both. No schema, route, or contract change.
 - 2026-09-18: **The signed-out page shows who is on stage, reads the room chat, and drops the locked
   "Start a Room" bar.** Three owner reports from the signed-out phone, the same night as the
   tap-to-listen fix. (1) The member in the room saw the guest on stage, but the guest's own page
