@@ -4,6 +4,7 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 // Directory owns the takedown list. This is the sanctioned crossing point; SkillsHunt only asks
 // whether a Quora URL is on it (rule 112 plugin isolation).
 import { isQuoraUrlSuppressed } from 'lib/shared/directory-interface';
+import { canonicalizeQuoraUrl } from 'lib/shared/quora-url';
 import {
   SKILLS_HUNT_DEFAULT_PAGE,
   SKILLS_HUNT_DEFAULT_PAGE_SIZE,
@@ -232,27 +233,16 @@ function containsUnsafeText(value: string): boolean {
   return lowered.includes('<script') || /<[^>]+>/.test(value);
 }
 
+// The nomination's identity. The rules live in lib/shared/quora-url.ts, which Directory's takedown
+// list calls too — a URL suppressed there has to match the string a nomination was deduped on, and
+// two copies of the same rules drifted apart is exactly how that stops being true. This wrapper adds
+// only the throw: SkillsHunt refuses a bad URL at submission time, where Directory tolerates one.
 function normalizeQuoraProfileUrl(value: string): string {
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(value.trim());
-  } catch {
+  const canonical = canonicalizeQuoraUrl(value);
+  if (!canonical) {
     throw new Error('skills_hunt_invalid_quora_url');
   }
-
-  const hostname = parsedUrl.hostname.toLowerCase();
-  if (!hostname.endsWith('quora.com')) {
-    throw new Error('skills_hunt_invalid_quora_url');
-  }
-
-  const pathname = parsedUrl.pathname.replace(/\/+$/, '');
-  if (pathname.length < 2 || !pathname.includes('/')) {
-    throw new Error('skills_hunt_invalid_quora_url');
-  }
-
-  parsedUrl.hash = '';
-  parsedUrl.search = '';
-  return parsedUrl.toString();
+  return canonical;
 }
 
 // Per-round duplicate key. Identity is intentionally the normalized Quora profile

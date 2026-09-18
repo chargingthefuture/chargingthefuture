@@ -276,6 +276,34 @@ Result: web ☐
 
 ---
 
+### SH-6c — The same person written another way is still the same person
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** an active submission exists for a Quora URL, as in SH-6.
+
+**Steps:**
+1. Nominate the same person again in the same round, but write the URL differently each time: drop
+   the `www.`, add a trailing slash, change the casing of the name, paste the share link with
+   `?ch=…` on the end, or use a language subdomain such as `es.quora.com`.
+2. Try a nomination whose URL is on a look-alike domain, e.g. `https://evil-quora.com/profile/Name`.
+3. As an admin, accept one nomination for that person, then have a second scout nominate the same
+   person with a differently-written URL and accept that too. Compare the points each scout received.
+
+**Expected:** Step 1: every spelling is recognized as the person already nominated and refused with
+the duplicate message — before 2026-09-18 each spelling counted as a different person. Step 2:
+refused as an invalid Quora URL; only quora.com and its subdomains are accepted, and a host merely
+*ending* in "quora.com" is not one. Step 3: only the first accepted nomination for that person earns
+the first-match bonus; the second scout gets the match points without it. A round that already had
+nominations before this fix can still let a same-skills re-nomination through the database's own
+duplicate index (the stored signature was built from the old spelling) — the nomination still goes
+through moderation, and `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` says
+whether any round is affected.
+
+Result: web ☐
+
+---
+
 ### SH-6b — Admins are exempt from the submission rate limit
 
 **Role:** admin · **Surfaces:** web
