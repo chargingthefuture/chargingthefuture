@@ -131,14 +131,42 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: unlock
-    command: unlock.admin.submission.url.edit
+    command: unlock.admin.submission.create
     commandVersion: 1.0.0
+    purpose: moderation_manual_verification_entry
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - unlock_verification_submissions
+      - unlock_spam_quora_urls
+      - directory_quora_url_history
+      - unlock_audit_log
+    targetContext:
+      adminUserId: user_identifier
+      targetUserId: user_identifier
+      submissionId: submission_identifier
+      quoraProfileUrlNormalized: normalized_url
+      reviewStatus: review_status
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
+    command: unlock.admin.submission.url.edit
+    commandVersion: 1.1.0
     purpose: moderation_data_correction
     policyDecision:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
       - unlock_verification_submissions
+      - directory_quora_url_history
       - unlock_audit_log
     targetContext:
       adminUserId: user_identifier

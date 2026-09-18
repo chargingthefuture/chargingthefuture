@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
-import { recordQuoraUrlChangeStandalone } from 'lib/shared/directory-interface';
+import { recordQuoraUrlChangeStandalone, type QuoraUrlChangeSource } from 'lib/shared/directory-interface';
 import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
 import type {
   CreateUnlockSubmissionInput,
@@ -42,6 +42,8 @@ type UnlockSubmissionRow = {
   incentive_granted_at: Date | null;
   reward_withheld_at: Date | null;
   reward_revoked_at: Date | null;
+  url_set_by_admin_user_id: string | null;
+  url_set_by_admin_at: Date | null;
   // Only present on the admin queue list (a per-URL COUNT). Undefined elsewhere.
   shared_url_account_count?: string;
   // Only present on the admin queue list: how many times this member changed their Quora URL.
@@ -98,6 +100,8 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     incentiveGrantedAt: row.incentive_granted_at ? row.incentive_granted_at.toISOString() : null,
     rewardWithheldAt: row.reward_withheld_at ? row.reward_withheld_at.toISOString() : null,
     rewardRevokedAt: row.reward_revoked_at ? row.reward_revoked_at.toISOString() : null,
+    urlSetByAdminUserId: row.url_set_by_admin_user_id ?? null,
+    urlSetByAdminAt: row.url_set_by_admin_at ? row.url_set_by_admin_at.toISOString() : null,
     ...(row.shared_url_account_count !== undefined
       ? { sharedUrlAccountCount: Number(row.shared_url_account_count) }
       : {}),
@@ -222,18 +226,54 @@ export async function getUnlockStatusForUser(userId: string): Promise<UnlockStat
   };
 }
 
+// The URL this member's submission holds before a write, so the change can be recorded in the shared
+// Quora URL history (the baseline of the trail the Unlock admin reviews). Both fields are null when
+// there is no submission yet, which is the ordinary first-time case.
+async function readStoredQuoraUrl(userId: string): Promise<{ url: string | null; normalized: string | null }> {
+  const previous = await queryDb<{ quora_profile_url: string | null; quora_profile_url_normalized: string | null }>(
+    `SELECT quora_profile_url, quora_profile_url_normalized FROM unlock_verification_submissions WHERE user_id = $1`,
+    [userId],
+  );
+  return {
+    url: previous.rows[0]?.quora_profile_url ?? null,
+    normalized: previous.rows[0]?.quora_profile_url_normalized ?? null,
+  };
+}
+
+// Append a URL change to the shared history, unless nothing actually changed. Best-effort in every
+// caller: the history is an audit trail, so losing an entry must never turn a write the member (or an
+// admin) has already made into a failed request.
+async function appendQuoraUrlHistory(input: {
+  userId: string;
+  previousUrl: string | null;
+  previousUrlNormalized: string | null;
+  newUrl: string;
+  newUrlNormalized: string;
+  changedByUserId: string;
+  source: QuoraUrlChangeSource;
+  op: string;
+}): Promise<void> {
+  if (input.newUrlNormalized === input.previousUrlNormalized) {
+    return;
+  }
+  try {
+    await recordQuoraUrlChangeStandalone({
+      userId: input.userId,
+      previousUrl: input.previousUrl,
+      newUrl: input.newUrl,
+      changedByUserId: input.changedByUserId,
+      source: input.source,
+    });
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: input.op, extra: { userId: input.userId } });
+  }
+}
+
 export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissionInput): Promise<UnlockSubmission> {
   const runtimeConfig = await getUnlockRuntimeConfig();
   const submissionWindowHours = runtimeConfig.submissionWindowHours;
 
-  // The URL this member's submission held before this onboarding write, so the change can be recorded
-  // in the shared Quora URL history (the baseline of the trail the Unlock admin reviews).
-  const previous = await queryDb<{ quora_profile_url: string | null; quora_profile_url_normalized: string | null }>(
-    `SELECT quora_profile_url, quora_profile_url_normalized FROM unlock_verification_submissions WHERE user_id = $1`,
-    [input.userId],
-  );
-  const previousUrl = previous.rows[0]?.quora_profile_url ?? null;
-  const previousUrlNormalized = previous.rows[0]?.quora_profile_url_normalized ?? null;
+  const previousStored = await readStoredQuoraUrl(input.userId);
 
   // A URL an admin has already marked spam is auto-marked spam on submission — even from a new account —
   // so a known-bad Quora profile never re-enters the review queue. Everything else starts pending. The
@@ -243,6 +283,12 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
   const initialReviewStatus = denylisted ? 'spam' : 'pending';
   const initialAccessTier = denylisted ? 'locked_support_only' : 'pending_readonly';
 
+  // Who is putting this URL here. Null for the member's own submission; an admin id when an admin is
+  // entering it for a member who could not produce one. Both paths write the same columns, so without
+  // this stamp the row would read as if the member had typed it, and the approval decision turns on
+  // exactly that difference.
+  const adminUserId = input.addedByAdminUserId ?? null;
+
   const result = await queryDb<UnlockSubmissionRow>(
     `INSERT INTO unlock_verification_submissions (
        user_id,
@@ -250,7 +296,9 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        quora_profile_url_normalized,
        review_status,
        access_tier,
-       unlock_window_expires_at
+       unlock_window_expires_at,
+       url_set_by_admin_user_id,
+       url_set_by_admin_at
      )
      VALUES (
        $1,
@@ -258,12 +306,18 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        $3,
        $5,
        $6,
-       NOW() + (($4::text || ' hours')::interval)
+       NOW() + (($4::text || ' hours')::interval),
+       $7,
+       CASE WHEN $7::text IS NULL THEN NULL ELSE NOW() END
      )
      ON CONFLICT (user_id) DO UPDATE
      SET
        quora_profile_url = EXCLUDED.quora_profile_url,
        quora_profile_url_normalized = EXCLUDED.quora_profile_url_normalized,
+       -- Follows the URL: a member submitting their own over an admin-entered one clears the stamp,
+       -- an admin re-entering one sets it again. It says where the stored URL came from, nothing more.
+       url_set_by_admin_user_id = EXCLUDED.url_set_by_admin_user_id,
+       url_set_by_admin_at = EXCLUDED.url_set_by_admin_at,
        review_status = EXCLUDED.review_status,
        access_tier = EXCLUDED.access_tier,
        unlock_window_expires_at = NOW() + (($4::text || ' hours')::interval),
@@ -295,6 +349,8 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        incentive_granted_at,
        reward_withheld_at,
        reward_revoked_at,
+       url_set_by_admin_user_id,
+       url_set_by_admin_at,
        created_at,
        updated_at`,
     [
@@ -304,25 +360,22 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
       String(submissionWindowHours),
       initialReviewStatus,
       initialAccessTier,
+      adminUserId,
     ],
   );
 
-  // Record the captured URL in the shared Quora URL history when it is the first submission or a real
-  // change (normalized differs). Best-effort: the history is an audit trail, so a failure here must
-  // never break onboarding.
-  if (input.quoraProfileUrlNormalized !== previousUrlNormalized) {
-    try {
-      await recordQuoraUrlChangeStandalone({
-        userId: input.userId,
-        previousUrl,
-        newUrl: input.quoraProfileUrl,
-        changedByUserId: input.userId,
-        source: 'unlock_onboarding',
-      });
-    } catch (error) {
-      reportError(error, { area: 'unlock', op: 'record_quora_url_history', extra: { userId: input.userId } });
-    }
-  }
+  // The trail names whoever actually typed it, so an admin entry is never filed under the member's own
+  // id, and a first submission is recorded as the baseline of the trail.
+  await appendQuoraUrlHistory({
+    userId: input.userId,
+    previousUrl: previousStored.url,
+    previousUrlNormalized: previousStored.normalized,
+    newUrl: input.quoraProfileUrl,
+    newUrlNormalized: input.quoraProfileUrlNormalized,
+    changedByUserId: adminUserId ?? input.userId,
+    source: adminUserId ? 'unlock_admin' : 'unlock_onboarding',
+    op: 'record_quora_url_history',
+  });
 
   return mapUnlockSubmission(result.rows[0]);
 }
@@ -363,6 +416,8 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        s.incentive_granted_at,
        s.reward_withheld_at,
        s.reward_revoked_at,
+       s.url_set_by_admin_user_id,
+       s.url_set_by_admin_at,
        s.created_at,
        s.updated_at,
        (SELECT COUNT(*)
@@ -404,6 +459,8 @@ export async function listApprovedUnincentivizedSubmissions(limit = 100): Promis
        incentive_granted_at,
        reward_withheld_at,
        reward_revoked_at,
+       url_set_by_admin_user_id,
+       url_set_by_admin_at,
        created_at,
        updated_at
      FROM unlock_verification_submissions
@@ -448,6 +505,8 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
        incentive_granted_at,
        reward_withheld_at,
        reward_revoked_at,
+       url_set_by_admin_user_id,
+       url_set_by_admin_at,
        created_at,
        updated_at`,
     [input.reviewStatus, accessTier, input.actorUserId, input.reviewNote ?? null, input.submissionId],
@@ -488,16 +547,35 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
 // Admin correction path: overwrite the stored Quora profile URL (and its normalized form) for a
 // single submission, e.g. when a member submitted a link with a typo. Does not touch review status,
 // access tier, or the verification window. Returns the updated submission, or null if no row matched.
+// An admin correcting the Quora URL on an existing submission, or entering one for a member whose row
+// already exists. The admin's id is required, not optional: this path is reachable only from the admin
+// surface, and a row that does not say an admin set the URL would read as the member's own claim.
+//
+// The previous URL is read in the same call so the change can be appended to the shared Quora URL
+// history — the trail an admin reviews when deciding whether somebody is gaming the social proof.
+// Before this, an admin edit changed the stored URL and left no trace in that history at all, which
+// made the trail quietly wrong rather than merely incomplete.
 export async function updateUnlockSubmissionQuoraUrl(
   submissionId: number,
   quoraProfileUrl: string,
   quoraProfileUrlNormalized: string,
+  adminUserId: string,
 ): Promise<UnlockSubmission | null> {
+  const previous = await queryDb<{ user_id: string; quora_profile_url: string; quora_profile_url_normalized: string }>(
+    `SELECT user_id, quora_profile_url, quora_profile_url_normalized
+       FROM unlock_verification_submissions
+      WHERE id = $1`,
+    [submissionId],
+  );
+  const previousRow = previous.rows[0] ?? null;
+
   const result = await queryDb<UnlockSubmissionRow>(
     `UPDATE unlock_verification_submissions
      SET
        quora_profile_url = $2,
        quora_profile_url_normalized = $3,
+       url_set_by_admin_user_id = $4,
+       url_set_by_admin_at = NOW(),
        updated_at = NOW()
      WHERE id = $1
      RETURNING
@@ -515,13 +593,28 @@ export async function updateUnlockSubmissionQuoraUrl(
        incentive_granted_at,
        reward_withheld_at,
        reward_revoked_at,
+       url_set_by_admin_user_id,
+       url_set_by_admin_at,
        created_at,
        updated_at`,
-    [submissionId, quoraProfileUrl, quoraProfileUrlNormalized],
+    [submissionId, quoraProfileUrl, quoraProfileUrlNormalized, adminUserId],
   );
 
   if (result.rowCount === 0) {
     return null;
+  }
+
+  if (previousRow) {
+    await appendQuoraUrlHistory({
+      userId: previousRow.user_id,
+      previousUrl: previousRow.quora_profile_url,
+      previousUrlNormalized: previousRow.quora_profile_url_normalized,
+      newUrl: quoraProfileUrl,
+      newUrlNormalized: quoraProfileUrlNormalized,
+      changedByUserId: adminUserId,
+      source: 'unlock_admin',
+      op: 'record_quora_url_history_admin_edit',
+    });
   }
 
   return mapUnlockSubmission(result.rows[0]);
@@ -545,11 +638,31 @@ export async function getUnlockSubmissionById(submissionId: number): Promise<Unl
     `SELECT
        id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
        unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
-       incentive_granted_at, reward_withheld_at, reward_revoked_at, created_at, updated_at
+       incentive_granted_at, reward_withheld_at, reward_revoked_at,
+       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at
      FROM unlock_verification_submissions
      WHERE id = $1
      LIMIT 1`,
     [submissionId],
+  );
+
+  return result.rows[0] ? mapUnlockSubmission(result.rows[0]) : null;
+}
+
+// This member's submission, if they have one. Read by the admin "enter a URL for this member" path,
+// which refuses when a row already exists so that adding a missing URL can never quietly overwrite one
+// the member (or another admin) already gave — changing an existing URL is the edit path on the card.
+export async function getUnlockSubmissionByUserId(userId: string): Promise<UnlockSubmission | null> {
+  const result = await queryDb<UnlockSubmissionRow>(
+    `SELECT
+       id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
+       unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
+       incentive_granted_at, reward_withheld_at, reward_revoked_at,
+       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at
+     FROM unlock_verification_submissions
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId],
   );
 
   return result.rows[0] ? mapUnlockSubmission(result.rows[0]) : null;
@@ -621,7 +734,8 @@ export async function revokeUnlockSubmissionReward(
      RETURNING
        id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
        unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
-       incentive_granted_at, reward_withheld_at, reward_revoked_at, created_at, updated_at`,
+       incentive_granted_at, reward_withheld_at, reward_revoked_at,
+       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at`,
     [input.submissionId, input.actorUserId, input.reviewNote ?? null],
   );
 

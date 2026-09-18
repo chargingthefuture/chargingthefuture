@@ -44,7 +44,10 @@ This plugin must:
 3. Show review state and next-step status text.
 4. **Ask for help without leaving the app.** A member who cannot produce a Quora profile URL presses
    "Ask for help in the Commons" on the Unlock screen. That records the request and admits them to the
-   Commons, where they can ask in the chat and get an answer. Before this the help pointed out to the
+   Commons, where they can ask in the chat and get an answer. The same box asks, optionally, for
+   anything that helps an admin find them on Quora — the name on their account, a link to something
+   they posted, an email — so a member who cannot produce a profile URL still leaves something an admin
+   can look up and approve by hand. It is never a gate: the button works with the box empty. Before this the help pointed out to the
    network's Quora space — which asked a person who cannot find their way around Quora to go find their
    way around Quora, and sent them off the app with no way back.
 
@@ -156,6 +159,18 @@ This plugin must:
    says how many are still hidden. Switching tab or typing a search starts the list back at ten. The
    one case that opens itself is a roster the auth provider would not give us: an error nobody can
    see is worse than a long panel, so the panel opens and prints the reason.
+5a. **Add a Quora URL for a member who never gave one.** Every row on the **No Quora URL** tab that
+   still has somebody behind it carries an "Add Quora URL" control: an admin who has looked the member
+   up by hand — usually from what the member typed into the help box, shown on the same row as
+   `Told us: …` — pastes the profile they found and saves. It creates the same pending submission the
+   member would have created and sends it to the review queue, where the ordinary approve / reject
+   decision is still made; it approves nobody by itself. The row records which admin entered it, the
+   queue card says "Entered by an admin — not submitted by the member", and the change is appended to
+   the member's Quora URL history under that admin's id. Before this, the only place to put a URL was
+   the Edit control on a queue card, and a member with no submission has no card — so the people who
+   needed a manual approval were the ones nobody could approve. A member who already has a URL is not
+   offered this: changing one is the Edit control, so an "add" can never quietly overwrite what the
+   member gave.
 6. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
@@ -170,6 +185,7 @@ This plugin must:
 2. `unlock.admin.submission.list`
 3. `unlock.admin.submission.review`
 4. `unlock.admin.submission.url.edit`
+4a. `unlock.admin.submission.create`
 5. `unlock.incentive.approval.credit-grant`
 6. `unlock.admin.rewards.reconcile`
 7. `unlock.admin.submission.revoke`
@@ -184,14 +200,15 @@ This plugin must:
 User routes:
 
 - `POST /api/unlock/submission`
-- `POST /api/unlock/help-request` — any signed-in member (`requireUnlockUserAccess`, i.e. `any_authenticated`, deliberately: the whole point is that this member has no access tier yet) + CSRF (`x-ctf-csrf: '1'` + same-origin). Records the caller in `unlock_help_requests`; no body, and the member id comes from the session, so it can only ever open the Commons to the person who pressed the button. Returns `{ ok: true }`; idempotent (pressing twice keeps the first timestamp). Grants nothing beyond the Commons — approved-only surfaces stay closed and the verification banner follows them there. Audited as `unlock.help.request`.
+- `POST /api/unlock/help-request` — any signed-in member (`requireUnlockUserAccess`, i.e. `any_authenticated`, deliberately: the whole point is that this member has no access tier yet) + CSRF (`x-ctf-csrf: '1'` + same-origin). Records the caller in `unlock_help_requests`. Optional body `{ quoraHint?: string }` — whatever the member can say about their Quora account when they cannot give the URL (a name, a link to something they posted, an email), trimmed and capped at 300 characters, stored in `unlock_help_requests.quora_hint`. The body may be absent or empty and the request still succeeds; the member id always comes from the session, so it can only ever open the Commons to the person who pressed the button. Returns `{ ok: true }`; idempotent (pressing twice keeps the first timestamp, and a later press carrying a hint stores it — a later press with an empty box does not erase the stored one). Grants nothing beyond the Commons — approved-only surfaces stay closed and the verification banner follows them there. Audited as `unlock.help.request` with `metadata.hintGiven` (a boolean; the hint text itself is not copied into the audit log).
 
 Admin routes:
 
 - `GET /api/unlock/admin/submissions` — admin-session-gated queue list. Each row now also carries `quoraUrlChangeCount` (how many times the member changed their Quora URL, from `directory_quora_url_history`) alongside the existing `sharedUrlAccountCount`, so a member who changed their social-proof URL is visible at a glance.
-- `GET /api/unlock/admin/quora-history?userId=<id>` — admin-session-gated (`requireUnlockAdminAccess`). Returns the member's full Quora URL change history (`listQuoraUrlHistory`), newest first: each entry is `{ id, userId, previousUrl, newUrl, changedByUserId, source, createdAtIso }` where `source` is `unlock_onboarding | directory_self | directory_admin`. Read-only (no CSRF). Lets a reviewer see whether a member changed or tried to remove their Quora URL (an empty submission keeps the previous one) and manually revoke via the existing revoke route if they are gaming the low-bar proof — a change is not itself proof of anything (Quora sometimes deletes accounts). Audited as `unlock.admin.quora.history.read`.
+- `GET /api/unlock/admin/quora-history?userId=<id>` — admin-session-gated (`requireUnlockAdminAccess`). Returns the member's full Quora URL change history (`listQuoraUrlHistory`), newest first: each entry is `{ id, userId, previousUrl, newUrl, changedByUserId, source, createdAtIso }` where `source` is `unlock_onboarding | unlock_admin | directory_self | directory_admin | quora_deletion_survey` (`unlock_admin` is an admin entering or correcting the URL from the Unlock admin surface, as distinct from the member's own first submission). Read-only (no CSRF). Lets a reviewer see whether a member changed or tried to remove their Quora URL (an empty submission keeps the previous one) and manually revoke via the existing revoke route if they are gaming the low-bar proof — a change is not itself proof of anything (Quora sometimes deletes accounts). Audited as `unlock.admin.quora.history.read`.
 - `POST /api/unlock/admin/submissions/:submissionId/review`
-- `PATCH /api/unlock/admin/submissions/:submissionId` — admin-session-gated (`requireUnlockAdminAccess`). Edits a submission's Quora profile URL (e.g. fixing a typo). Body `{ quoraProfileUrl }`; the URL is re-validated and re-normalized with the same `normalizeQuoraProfileUrl` shared with the member submit path, so the stored normalized form stays canonical. Returns `{ ok: true, submission }`; 400 on missing/invalid URL, 404 if no submission matches. Does not change review status, access tier, or the verification window. Audited as `unlock.admin.submission.url.edit`. Client sends `x-ctf-csrf: '1'`, matching the review route.
+- `POST /api/unlock/admin/submissions` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). An admin enters a Quora profile URL **for a member who never submitted one**. Body `{ userId, quoraProfileUrl }`; the URL runs through the same `normalizeQuoraProfileUrl` as the member submit path, so duplicate detection and the spam denylist work on it identically. Creates the same pending submission the member would have created — it approves nobody; the ordinary review happens on the queue card afterwards. The row is stamped `url_set_by_admin_user_id` / `url_set_by_admin_at`, and the change is appended to `directory_quora_url_history` under the admin's id with source `unlock_admin`. Returns `{ ok: true, submission }` (201); 400 on a missing/invalid URL or userId, 409 when the member already has a submission (changing an existing URL is the PATCH below), 503 on a database failure. Audited as `unlock.admin.submission.create`, including the 409 as a `deny` with reason `submission_exists`. Called from the Unlock admin's sign-ups panel ("Add Quora URL" on a row in the **No Quora URL** tab).
+- `PATCH /api/unlock/admin/submissions/:submissionId` — admin-session-gated (`requireUnlockAdminAccess`). Edits a submission's Quora profile URL (fixing a typo, or putting in a profile an admin found). Body `{ quoraProfileUrl }`; the URL is re-validated and re-normalized with the same `normalizeQuoraProfileUrl` shared with the member submit path, so the stored normalized form stays canonical. Returns `{ ok: true, submission }`; 400 on missing/invalid URL, 404 if no submission matches. Does not change review status, access tier, or the verification window. Stamps `url_set_by_admin_user_id` / `url_set_by_admin_at` and appends the change to `directory_quora_url_history` as `unlock_admin` (before 2026-09-18 an admin edit changed the stored URL and left no trace in that history at all). Audited as `unlock.admin.submission.url.edit`. Client sends `x-ctf-csrf: '1'`, matching the review route.
 - `POST /api/unlock/admin/reconcile-rewards` — admin-session-gated (`requireUnlockAdminAccess`, no `CRON_SECRET`). Runs the same idempotent reward drain as the cron and returns `{ scanned, granted, alreadyGranted, withheld, failed }`. Lets an admin grant any approved-but-uncredited reward on demand from the Unlock admin screen (the "Retry pending rewards" button), independent of the GitHub cron. Audited as `unlock.admin.rewards.reconcile`.
 - `POST /api/unlock/admin/submissions/:submissionId/revoke` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Duplicate-identity determination "loser" path: claws a granted reward back (best-effort `burnCredits`, key `unlock-revoke-submission-<id>`) and sets the submission to `rejected` + `locked_support_only` with `reward_revoked_at`, so reconcile never re-grants it. Body `{ reviewNote? }`. Returns `{ ok, submission, creditsReclaimed, reclaimAmount }`; idempotent (a second call on an already-revoked submission is a no-op). Audited as `unlock.admin.submission.revoke` (+ `service-credits.governance.burn.unlock.revoke` when credits were reclaimed).
 - `POST /api/unlock/admin/submissions/:submissionId/grant-reward` — admin-session-gated + CSRF. Duplicate-identity determination "winner" path: clears the hold and grants the reward to the chosen account through the shared guard. Returns 409 `unlock_reward_still_held` (with `holderUserId`) if another account still holds the identity's reward (revoke that one first); 409 if the submission is not approved; otherwise `{ ok, submission }`. Idempotent if the reward already landed. Audited as `unlock.admin.reward.grant` (+ `service-credits.governance.mint.grant.unlock.determination` on a fresh grant).
@@ -232,7 +249,13 @@ Admin page:
 ### 4.1 Domain Entities
 
 1. `unlock_runtime_config`
-2. `unlock_verification_submissions`
+2. `unlock_verification_submissions` — one row per member, keyed on `user_id`. Beyond the URL, review
+   status, access tier, window, and reward stamps, it carries `url_set_by_admin_user_id` /
+   `url_set_by_admin_at`: null when the member submitted the stored URL themselves, otherwise the admin
+   who entered it for them or corrected it, and when. It follows the URL rather than the row's history
+   — a member submitting their own URL over an admin-entered one clears it — because it answers "where
+   did the URL in front of me come from", which is what an approval turns on. The durable trail of
+   every change is `directory_quora_url_history`.
 3. `unlock_audit_log`
 4. `unlock_spam_quora_urls` — persistent spam denylist of normalized Quora profile URLs. Keyed on
    `quora_profile_url_normalized` (primary key); also stores `quora_profile_url` (last-seen original, for
@@ -250,9 +273,15 @@ Admin page:
    row would count for nothing).
 
 6. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
-   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at`. It is what admits a
-   member with no submission to the Commons, and it doubles as the count of how many people could not
-   get through the Quora step on their own. Registered `del` in the account deletion registry.
+   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at` and `quora_hint`
+   (nullable free text, capped at 300 characters by the writer). It is what admits a member with no
+   submission to the Commons, and it doubles as the count of how many people could not get through the
+   Quora step on their own. `quora_hint` holds whatever the member could say about their Quora account
+   when they could not give the URL — the name on it, a link to something they posted, the email they
+   joined with. Deliberately not validated into a URL shape: a member who could produce a well-formed
+   URL would have used the submission field instead, so rejecting a hint for its shape would reject the
+   only people the column exists for. Read by the admin sign-ups panel, which is where a manual
+   approval is decided. Registered `del` in the account deletion registry.
 
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
@@ -357,6 +386,48 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-09-18: **An admin can enter a Quora URL for a member who never gave one, and every URL now says
+  who put it there (owner request).** The owner reported doing the lookup by hand and having nowhere to
+  record the result: the Edit control sits on a review-queue card, and a member with no submission has
+  no card, so the people who needed a manual approval were the only ones who could not be given one.
+  New admin route `POST /api/unlock/admin/submissions` (`{ userId, quoraProfileUrl }`, admin-gated +
+  CSRF, audited `unlock.admin.submission.create`, 409 with a `deny` audit row when the member already
+  has a submission) creates the same **pending** submission the member would have created — it approves
+  nobody, so the ordinary review still decides. Driven from an "Add Quora URL" control on each row of
+  the sign-ups panel's **No Quora URL** tab (`unlock-signup-add-url.tsx`), beside the `Told us: …` line
+  the member left when they asked for help. Provenance: new columns
+  `unlock_verification_submissions.url_set_by_admin_user_id` / `url_set_by_admin_at` (migration
+  `0026_unlock_submission_url_set_by_admin.sql`), set by both the create and the edit path, cleared when
+  the member submits their own URL over the top; the queue card shows "Entered by an admin on <date> —
+  not submitted by the member". Both paths also append to `directory_quora_url_history` with the admin
+  as `changed_by_user_id` and a new source `unlock_admin` ("entered by an admin here in Unlock" in the
+  history panel) — the edit path wrote nothing to that history before today, so an admin correction left
+  the trail quietly wrong rather than merely incomplete. `updateUnlockSubmissionQuoraUrl` now requires
+  the admin's id; `unlock.admin.submission.url.edit` moves to 1.1.0 in the command, access-policy, and
+  audit contracts. Not changed: the member's own status screen still reads "under review" without saying
+  a URL was entered for them.
+
+- 2026-09-18: **The "ask for help" step now keeps whatever the member can say about their Quora
+  account (owner report).** A member who could not produce a Quora profile URL pressed "Can't find
+  your Quora profile URL?", which opened the Commons and wrote a row holding a user id and a
+  timestamp — so the admin sign-ups panel showed them as "No Quora URL" with nothing to look them up
+  by. The people most in need of a manual approval were the ones who left nothing to approve on. The
+  help box on the Unlock screen (`unlock-quora-help.tsx`) now carries an optional free-text field
+  above the button ("Anything that helps me find you on Quora"), sent as `{ quoraHint }` to
+  `POST /api/unlock/help-request` and stored in the new `unlock_help_requests.quora_hint` column
+  (migration `0025_unlock_help_request_quora_hint.sql`; trimmed, capped at 300 characters by
+  `normalizeUnlockQuoraHint` in the client-safe `lib/unlock/quora-hint.ts`). No validation of the
+  shape — the field exists for people who cannot produce a URL, so rejecting what they type for not
+  looking like one would defeat it. The Unlock admin's sign-ups panel reads the hints
+  (`listQuoraHints` in `lib/unlock/signups.ts`, best-effort: a failure leaves the hints blank rather
+  than taking the panel down), shows one as `Told us: …` on the account row, and includes it in the
+  panel's search so a name the member gave is findable. The audit row records only whether a hint was
+  given, not its text. The column is removed with the rest of the row on account deletion (the
+  registry's wording is updated to say so). Considered and rejected: asking for the Quora URL as a
+  required field on the sign-up form itself — sign-up is Clerk's hosted Account Portal, which carries
+  no custom fields, and a required URL would stop the person who cannot produce one from opening an
+  account at all, which is the opposite of what the gap needs.
 
 - 2026-08-24: **The spam denylist panel opens on demand instead of always being open (owner report).**
   The panel sat at the bottom of the admin shell fully open every visit: a paragraph of explanation
