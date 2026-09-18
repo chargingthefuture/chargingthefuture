@@ -19,6 +19,7 @@ import './stream-chat-panel.css';
 import { acquireStreamChatClient, releaseStreamChatClient } from '../../lib/shared/stream-chat-connection';
 import { describeSendBlock, describeStreamSendFailure, streamChatDebugContext } from '../../lib/shared/stream-chat-send-state';
 import { reportError } from '../../lib/observability/report';
+import { streamFailureMessage } from '../../lib/shared/stream-error-text';
 
 // How far ahead the "Remind me about this" action schedules its nudge (30 minutes).
 const REMINDER_DELAY_MS = 30 * 60 * 1000;
@@ -467,9 +468,17 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
           setLoading(false);
         });
       })
-      .catch(() => {
+      .catch((connectError: unknown) => {
+        // Connecting and watching is where a bad token, a missing channel type, or a member who is
+        // not in the channel shows up. Record it with the channel and show Stream's reason, the same
+        // way a failed send is handled further down.
+        reportError(connectError, {
+          area: 'chat',
+          op: 'connect_and_watch',
+          extra: { streamChannelId, channelType, streamUserId },
+        });
         if (!isMounted) return;
-        setError('Failed to connect to chat.');
+        setError(streamFailureMessage('Failed to connect to chat', connectError));
         setLoading(false);
       });
     return () => {

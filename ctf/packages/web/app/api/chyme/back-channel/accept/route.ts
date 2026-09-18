@@ -5,6 +5,7 @@ import { createChymeBackChannelCredentials } from 'lib/chyme/stream';
 import { chymeHandle } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
+import { streamFailureMessage } from 'lib/shared/stream-error-text';
 import { requireChymeAccess, ensureMutationCsrf } from '../../_lib';
 import { backChannelErrorResponse, readJsonField } from '../_shared';
 
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     }
     reportError(error, { area: 'chyme', op: 'back_channel_accept', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
-      { ok: false, code: CHYME_ERROR_CODE.internalError, message: 'Unable to accept Back Channel.' },
+      { ok: false, code: CHYME_ERROR_CODE.internalError, message: streamFailureMessage('Unable to accept Back Channel', error) },
       { status: 500 },
     );
   }

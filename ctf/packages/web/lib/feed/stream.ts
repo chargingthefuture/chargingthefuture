@@ -2,6 +2,10 @@ import { StreamChat } from 'stream-chat';
 import type { EventTypes } from 'stream-chat';
 import type { MembershipEventType } from './types';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { reportError } from 'lib/observability/report';
+import { streamChannelSetupFailure } from 'lib/shared/stream-error-text';
+
+const FEED_MEMBERSHIP_EVENTS_CHANNEL_ID = 'ctf-feed-membership-events';
 
 export type FeedStreamCredentials = {
   streamApiKey: string;
@@ -44,14 +48,12 @@ export async function getFeedStreamCredentials(
   try {
     await channel.create();
   } catch (createErr) {
-    // Log the error from channel.create()
-    console.error('[getFeedStreamCredentials] channel.create() failed:', createErr);
+    // A failed create usually means the channel already exists, and watching it is then the answer.
+    reportError(createErr, { area: 'feed', op: 'channel_create', extra: { streamChannelId: channelId } });
     try {
       await channel.watch();
     } catch (watchErr) {
-      // Log both errors for debugging
-      console.error('[getFeedStreamCredentials] channel.watch() also failed after create() error:', watchErr, 'Original create() error:', createErr);
-      throw watchErr;
+      throw new Error(streamChannelSetupFailure(channelId, createErr, watchErr));
     }
   }
   await channel.addMembers([streamUserId]);
@@ -78,7 +80,7 @@ export async function emitFeedMembershipEventToStream(input: {
 
   // Server-side client: no user WebSocket is opened, so there is no disconnectUser() teardown to run.
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  const channel = streamClient.channel('messaging', 'ctf-feed-membership-events', {
+  const channel = streamClient.channel('messaging', FEED_MEMBERSHIP_EVENTS_CHANNEL_ID, {
     created_by_id: `feed-${input.actorId}`,
     name: 'CTF Feed Membership Events',
   });
@@ -86,14 +88,12 @@ export async function emitFeedMembershipEventToStream(input: {
   try {
     await channel.create();
   } catch (createErr) {
-    // Log the error from channel.create()
-    console.error('[emitFeedMembershipEventToStream] channel.create() failed:', createErr);
+    // A failed create usually means the channel already exists, and watching it is then the answer.
+    reportError(createErr, { area: 'feed', op: 'membership_event_channel_create' });
     try {
       await channel.watch();
     } catch (watchErr) {
-      // Log both errors for debugging
-      console.error('[emitFeedMembershipEventToStream] channel.watch() also failed after create() error:', watchErr, 'Original create() error:', createErr);
-      throw watchErr;
+      throw new Error(streamChannelSetupFailure(FEED_MEMBERSHIP_EVENTS_CHANNEL_ID, createErr, watchErr));
     }
   }
 

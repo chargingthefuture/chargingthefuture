@@ -185,6 +185,8 @@ Result: web ☐
 **Expected:**
 - Step 3: The chat tab shows "Chat opens once a driver accepts this request." — no input field.
 - Step 5: A text chat input is available. Sending a message works. There is no video call button or video room.
+- If the chat cannot be set up, the message reads "Could not set up the chat channel: <Stream's reason>"
+  (since 2026-09-18; scrubbed and capped, never the raw exception text).
 
 Result: web ☐
 
@@ -422,7 +424,8 @@ TrustTransport trip message; access to the Stream dashboard for the app behind `
 **Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
 `trust-transport-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This
 runs via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If
-Stream is down at delete time, the deletion still succeeds and the failure is logged for retry.
+Stream is down at delete time, the deletion still succeeds and the failure is logged for retry — since
+2026-09-18 with Stream's own reason (Sentry op `stream_delete_user`, area `trust-transport`).
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

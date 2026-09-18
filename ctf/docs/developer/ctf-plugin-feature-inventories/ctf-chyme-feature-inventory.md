@@ -141,6 +141,22 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **Every Stream failure in Chyme says what failed and why.** Owner directive, the night
+  before a live event: every Stream connection must work and every failure must be diagnosable from
+  the phone that hit it. Server side (`lib/chyme/stream.ts`): a Back Channel token that Stream refuses
+  now throws with Stream's reason instead of returning null, so the accept and join routes answer
+  "Unable to accept Back Channel: <reason>" rather than "Stream service is not configured" (null is
+  reserved for Stream being unconfigured); the create-then-watch channel setup names both failures
+  when both fail; the message fan-out and the account-deletion cleanup record the reason before
+  swallowing it; the room join route answers "Unable to join Chyme call: <reason>". Client side: the
+  web and native Back Channel panels show Stream's reason under "Could not connect to the call", and
+  the native audio room reports a failed join to Sentry as the web room already did. The reason text
+  comes from the new shared helper `lib/shared/stream-error-text.ts` (keeps Stream's message,
+  redacts an `api_key` value, caps at 300 characters); the public room route now uses it too. Same
+  pass covered Beacon, Foundation, LightHouse, SocketRelay, TrustTransport, Feed, Contributor Access,
+  and the shared web and native chat panels (a failed connect is reported and its reason shown). No
+  schema or contract change; route error messages gain a reason. Quota note:
+  `ctf/docs/quota-impact/2026-09-18-stream-error-verbosity.md`.
 - 2026-09-18: **The guest-listener Stream setup is owned by code, with a weekly drift check.** The
   evening's root cause was a Stream dashboard step left undone — the `chyme_listener` role had no
   `join-call` on the `default` call type — and a dashboard step cannot be tested, diffed, or re-run;

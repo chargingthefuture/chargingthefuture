@@ -49,6 +49,8 @@ export const ChymeBackChannelCall: React.FC<{
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  // Stream's own reason for a failed join, shown under the status line.
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -69,8 +71,9 @@ export const ChymeBackChannelCall: React.FC<{
         setCall(activeCall);
         setStatus('joined');
       } catch (caught) {
-        reportError(caught, { area: 'chyme', op: 'back_channel_join' });
+        reportError(caught, { area: 'chyme', op: 'back_channel_join', extra: { callId: credentials.streamCallId } });
         if (canceled) return;
+        setErrorDetail(caught instanceof Error ? caught.message : String(caught));
         setStatus('error');
       }
     })();
@@ -94,7 +97,7 @@ export const ChymeBackChannelCall: React.FC<{
         {status !== 'joined' || !client || !call ? (
           <View style={styles.center}>
             {status === 'error' ? (
-              <Text style={styles.errorText}>Could not connect to the call.</Text>
+              <Text style={styles.errorText}>Could not connect to the call: {errorDetail ?? 'no reason was given.'}</Text>
             ) : (
               <>
                 <ActivityIndicator size="large" color={accent} />

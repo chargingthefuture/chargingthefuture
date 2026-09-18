@@ -13,6 +13,7 @@ import {
 } from 'stream-chat-react-native';
 import { View, ActivityIndicator, Text, Pressable } from 'react-native';
 import { StreamChatSearch } from './StreamChatSearch';
+import { reportError } from '../../observability/report';
 
 export interface StreamChatViewProps {
   streamApiKey: string;
@@ -67,9 +68,17 @@ export const StreamChatView: React.FC<StreamChatViewProps> = ({
           setLoading(false);
         });
       })
-      .catch(() => {
+      .catch((connectError: unknown) => {
+        // Connecting and watching is where a bad token, a missing channel type, or a member who is
+        // not in the channel shows up. Record it with the channel and show Stream's reason.
+        reportError(connectError, {
+          area: 'chat',
+          op: 'connect_and_watch',
+          extra: { streamChannelId, channelType, streamUserId },
+        });
         if (!isMounted) return;
-        setError('Failed to connect to chat.');
+        const reason = connectError instanceof Error ? connectError.message : String(connectError);
+        setError(`Failed to connect to chat: ${reason || 'Stream gave no reason.'}`);
         setLoading(false);
       });
     return () => {

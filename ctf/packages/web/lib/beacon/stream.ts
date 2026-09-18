@@ -46,7 +46,10 @@ export async function deleteBeaconStreamData(userId: string): Promise<boolean> {
       hard_delete: true,
     });
     return true;
-  } catch {
+  } catch (error) {
+    // Still best-effort (the deletion goes on), but the reason is recorded: without it the account
+    // cleanup could not tell "Stream unconfigured" from "Stream refused the delete".
+    reportError(error, { area: 'beacon', op: 'stream_delete_user', extra: { streamUserId: beaconStreamUserId(userId) } });
     return false;
   }
 }

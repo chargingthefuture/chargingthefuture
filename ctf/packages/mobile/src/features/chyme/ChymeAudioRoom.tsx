@@ -36,6 +36,7 @@ import { ChymeTipButton } from './ChymeTipModal';
 import { useChymeBackChannel, type MobileBackChannelController } from './useChymeBackChannel';
 import { ChymeBackChannelInviteSheet } from './ChymeBackChannelInviteSheet';
 import { ChymeBackChannelCall } from './ChymeBackChannelCall';
+import { reportError } from '../../observability/report';
 
 // Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
 // the active theme; both StyleSheets are memoized on the tokens/accent. Each component in
@@ -136,6 +137,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
         setCall(activeCall);
         setStatus('joined');
       } catch (error) {
+        reportError(error, { area: 'chyme', op: 'audio_room_join', extra: { callType: CALL_TYPE, callId: toCallId(joinInfo.streamChannelId) } });
         if (canceled) return;
         // Surface the real Stream error verbatim so a failed join is diagnosable
         // without a repro.
