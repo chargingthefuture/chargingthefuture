@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -8,13 +8,21 @@ import {
   ParticipantsAudio,
   useCallStateHooks,
   type Call,
+  type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
-import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
+import {
+  CHYME_CALL_TYPE,
+  toCallIdForChyme,
+  isWebRtcAvailable,
+  isPublishingAudio,
+  ChymeSpeakerAvatar,
+  ChymeSpeakerStatusBadge,
+} from './chyme-audio-room';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 
 // A first join can fail for reasons that clear on their own: the guest Stream identity was minted
@@ -284,17 +292,72 @@ function GuestAudioSink({ accent, participantCount }: { accent: string; particip
   const participants = useParticipants();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
-  // Show the authoritative server-side count (the same number the room list shows). The Stream client
-  // participant list counts every connected identity — including the guest's own ephemeral session and
-  // any guest sessions Stream has not yet timed out — which over-counts and is inconsistent with the
-  // rest of the UI. The Stream list is still used below, but only to play each participant's audio.
+  // One tile per identity, the local session preferred, exactly as the member room collapses its
+  // list: a member with a lingering extra Stream session would otherwise appear twice.
+  const uniqueParticipants = useMemo(() => {
+    const byUser = new Map<string, StreamVideoParticipant>();
+    for (const participant of participants) {
+      const existing = byUser.get(participant.userId);
+      if (!existing || (participant.isLocalParticipant && !existing.isLocalParticipant)) {
+        byUser.set(participant.userId, participant);
+      }
+    }
+    return Array.from(byUser.values());
+  }, [participants]);
+  // The server-side count (members with fresh presence) is what the room list shows; the stage
+  // below shows everyone Stream has in the call, the listener included, which is what the members
+  // in the room see on their own stage. Both are shown so neither number surprises.
   const count = participantCount;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
-      <Radio size={16} style={{ color: accent }} />
-      Listening live · {count} {count === 1 ? 'person' : 'people'} on stage
-      {/* Headless audio sink — plays every participant's audio track. */}
-      <ParticipantsAudio participants={participants} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
+        <Radio size={16} style={{ color: accent }} />
+        Listening live · {count} {count === 1 ? 'member' : 'members'} in the room
+        {/* Headless audio sink — plays every participant's audio track. */}
+        <ParticipantsAudio participants={participants} />
+      </div>
+      <GuestStage participants={uniqueParticipants} />
+    </div>
+  );
+}
+
+// The same tiles the member room draws (avatar ring, headphones badge for a listener, status pill),
+// without the member-only actions: a guest cannot tip, raise a hand, or open a Back Channel.
+function GuestStage({ participants }: { participants: StreamVideoParticipant[] }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>
+        On Stage · {participants.length} {participants.length === 1 ? 'Participant' : 'Participants'}
+      </div>
+      {participants.length === 0 ? (
+        <div style={{ color: t.FAINT, fontSize: 14 }}>No participants yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+          {participants.map((participant) => {
+            const isGuest = participant.userId.startsWith('chyme-guest-');
+            const audioActive = !isGuest && isPublishingAudio(participant);
+            const name = participant.name || participant.userId;
+            return (
+              <div key={participant.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 100 }}>
+                <ChymeSpeakerAvatar
+                  name={name}
+                  speaking={participant.isSpeaking}
+                  isSelf={Boolean(participant.isLocalParticipant)}
+                  isGuest={isGuest}
+                  audioActive={audioActive}
+                  handRaised={false}
+                />
+                <div style={{ fontSize: 12, fontWeight: 600, color: t.TEXT, textAlign: 'center' }}>
+                  {participant.isLocalParticipant ? 'You (listening)' : name}
+                </div>
+                <ChymeSpeakerStatusBadge isGuest={isGuest} audioActive={audioActive} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

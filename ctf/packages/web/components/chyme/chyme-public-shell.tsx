@@ -1,6 +1,6 @@
 'use client';
 
-import { Radio, Lock, LogIn, UserPlus } from 'lucide-react';
+import { Radio, LogIn, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
@@ -8,6 +8,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
+import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
@@ -71,7 +72,7 @@ function failedCheck(status: number, data: unknown): LiveState {
 // a live room with no guest identity matched neither branch and rendered nothing at all. A visitor
 // looking at a blank space under a live room, or at "no rooms" while a member is audibly in the
 // call, has no way to tell what happened — and neither has the person they report it to.
-function ChymePublicRoomList({ live, onRoomGone }: { live: LiveState; onRoomGone: () => void }) {
+function ChymePublicRoomList({ live, onRoomGone, signInUrl }: { live: LiveState; onRoomGone: () => void; signInUrl: string }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -106,6 +107,11 @@ function ChymePublicRoomList({ live, onRoomGone }: { live: LiveState; onRoomGone
         <>
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
           <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
+          {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
+              follow what members are saying and signs in to write. */}
+          <div style={{ marginTop: 16 }}>
+            <ChymeGuestChat signInUrl={signInUrl} />
+          </div>
         </>
       ) : (
         <>
@@ -190,18 +196,13 @@ function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl
 
       {/* Room list */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} />
+        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} />
       </div>
 
-      {/* Locked bottom bar. The Join Free / Finish verifying button that sat beside this was the
-          page's third copy of the same action and is gone (owner directive, 2026-09-17); the
-          invitation card carries it. What is left is not a sign-in control — it is the statement
-          that hosting a room needs an account, which is why it is grayed and does nothing. */}
-      <div style={{ padding: '10px 12px', borderTop: `1px solid ${t.BORDER}`, background: SURFACE, display: 'flex', gap: 8, flexShrink: 0 }}>
-        <div style={{ flex: 1, padding: '10px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, color: t.MUTED, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'not-allowed', opacity: 0.6 }}>
-          <Lock size={12} /> Start a Room
-        </div>
-      </div>
+      {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement
+          that hosting needs an account; the owner removed it — a control that does nothing is
+          noise to a visitor who is not signed in, and the invitation card already says what signing
+          in gets you. */}
     </div>
   );
 }

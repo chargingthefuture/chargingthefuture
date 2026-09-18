@@ -51,6 +51,7 @@ Chyme plugin routes:
 - `POST /api/chyme/hand` — persists the caller's raise/lower hand on their presence row (`{ raised: boolean }`); returns `{ ok, room }` with refreshed participants. The raised hand stays visible to everyone until lowered, the member leaves, or their presence goes stale. Audit command `chyme.hand`. CSRF-guarded.
 - `POST /api/chyme/leave` — drops the member's presence row on exit (which also clears any raised hand). CSRF-guarded.
 - `GET /api/chyme/public/room` — **public, unauthenticated.** Returns the one default room's live status (`isLive`, `participantCount`) and, only when it is live and Stream is configured, an ephemeral guest listen-only Stream identity (`credentials`). When the room is live but no guest identity could be minted (Stream rejected the guest upsert, or Stream is not configured), the response is still `ok` and `isLive: true`, with `listenUnavailable` carrying the plain reason instead of `credentials`; only a failed database read returns 503. Lets a signed-out visitor listen ("free to listen, sign in to speak"). Guests are listen-only: the client joins muted with no speak controls, and when `CHYME_GUEST_STREAM_ROLE` is set the guest Stream user is created with that restricted role so Stream blocks publish server-side (the owner removes `send-audio`/`send-video`/`screenshare` from that role on the `default` call type — see `ctf/docs/plugins/chyme/guest-listener-stream-role.md`). Until that env var + Stream role are configured, listen-only is enforced on the client only.
+- `GET /api/chyme/public/messages` — **public, unauthenticated, read-only** (owner directive, 2026-09-18: a signed-out visitor can read the room chat and signs in to write). Returns the one default room's recent messages (`ok`, `isLive`, `messages`; optional `?limit` clamped to 1–100, default 50) only while the room is live; when nobody is in the call it answers `isLive: false` with an empty list. Per-IP rate limit like the room route (the page polls every ten seconds). A failed database read returns 503 with the reason. There is no POST: writing still needs a signed-in, approved member via `POST /api/chyme/messages`.
 - `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
 
 Back Channel routes (free 1:1 audio sidebar between two members in the same live room, spec #1746). All under `/api/chyme/back-channel/`; all require `requireChymeAccess` (signed-in + approved_full); all mutations CSRF-guarded:
@@ -141,6 +142,19 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **The signed-out page shows who is on stage, reads the room chat, and drops the locked
+  "Start a Room" bar.** Three owner reports from the signed-out phone, the same night as the
+  tap-to-listen fix. (1) The member in the room saw the guest on stage, but the guest's own page
+  showed no avatars; `ChymeSpeakerAvatar` and `ChymeSpeakerStatusBadge` are now exported from the
+  member room and the guest view draws the same "On Stage · N" tiles from the same Stream participant
+  list (the guest's own tile reads "You (listening)"; no tip, hand, or Back Channel actions). The
+  "Listening live" line now says "N members in the room" from the server count, since the stage count
+  includes the listener. (2) A visitor can read the room chat and signs in to write: new read-only
+  route `GET /api/chyme/public/messages` (above) and `ChymeGuestChat` under the stage, polling every
+  ten seconds, with one "Sign in to chat" link; a failed read shows the route's reason and status.
+  (3) The grayed, locked "Start a Room" bottom bar is gone from the signed-out view — a control that
+  does nothing is noise to a visitor. Test script CH-7 names all three. No schema or contract change;
+  one new public read route.
 - 2026-09-18: **The signed-out listener taps before the join, so the phone plays the room.** Owner
   report from two phones the same night: with the guest grants applied, the signed-out iPhone joined
   and appeared on stage as "Guest listener", and the member in the room saw it there, but the guest
