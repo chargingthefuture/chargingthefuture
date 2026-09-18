@@ -7,6 +7,7 @@ import {
   StreamCall,
   ParticipantsAudio,
   useCallStateHooks,
+  useCall,
   type Call,
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
@@ -228,10 +229,24 @@ export function ChymeGuestListen({
   );
 }
 
-// Inside the tap handler, before anything asynchronous: resuming an audio context is the widely used
-// way to make a phone browser treat the page as allowed to play sound from here on. Nothing is
-// played through it; it is closed at once. Best-effort, and the join goes ahead either way.
+// Inside the tap handler, before anything asynchronous. Two things, both best-effort, and the join
+// goes ahead either way:
+//  1. The page's audio session is set to "playback" (the Audio Session API, iPhone Safari 17+). A
+//     page that only plays and never records is otherwise treated like a ringtone on iPhone: the
+//     Silent switch mutes it. Members never hit this because their microphone capture puts the
+//     session in play-and-record, which ignores the switch. A listener has no capture, so this is
+//     the one way to say "this is media, play it".
+//  2. An audio context is resumed, the widely used way to make a phone browser treat the page as
+//     allowed to play sound from here on. Nothing is played through it; it is closed at once.
 function unlockAudioPlayback(): void {
+  const audioSession = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+  if (audioSession) {
+    try {
+      audioSession.type = 'playback';
+    } catch {
+      // no-trace: the browser knows the API but not this value; the join goes ahead without it.
+    }
+  }
   const Ctx =
     typeof window !== 'undefined'
       ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
@@ -316,7 +331,47 @@ function GuestAudioSink({ accent, participantCount }: { accent: string; particip
         {/* Headless audio sink — plays every participant's audio track. */}
         <ParticipantsAudio participants={participants} />
       </div>
+      <GuestHearingAid accent={accent} />
       <GuestStage participants={uniqueParticipants} />
+    </div>
+  );
+}
+
+// The audio tracks arrive seconds after the tap, and the SDK starts each one with play() outside
+// any gesture. When the phone browser refuses that (its autoplay rule), the SDK records the element
+// as blocked and this shows one button whose tap retries them all, which the rule allows. Below it,
+// always, the one line that explains the other silent case: the phone's Silent switch, which the
+// SDK cannot see and no code can override on a page that never records.
+function GuestHearingAid({ accent }: { accent: string }) {
+  const call = useCall();
+  const { useIsAutoplayBlocked } = useCallStateHooks();
+  const blocked = useIsAutoplayBlocked();
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  const retry = () => {
+    unlockAudioPlayback();
+    void call?.resumeAudio().catch((error: unknown) => {
+      reportError(error, { area: 'chyme', op: 'guest_listen_resume_audio' });
+    });
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {blocked ? (
+        <button
+          type="button"
+          onClick={retry}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Tap to hear the room
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={retry}
+        style={{ background: 'transparent', border: 'none', padding: 0, textAlign: 'left', color: t.MUTED, fontSize: 11, lineHeight: 1.5, cursor: 'pointer' }}
+      >
+        No sound? Take the phone off Silent (the switch or the Action button), turn the volume up, then tap here.
+      </button>
     </div>
   );
 }
