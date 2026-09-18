@@ -194,7 +194,9 @@ export function ChymeGuestListen({
   );
 }
 
-function GuestNote({ accent, text, detail }: { accent: string; text: string; detail?: string | null }) {
+// Exported so the public shell can show the same note when the room is live but no guest identity
+// could be minted — one look for "you are not hearing this room, and here is why".
+export function GuestNote({ accent, text, detail }: { accent: string; text: string; detail?: string | null }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
