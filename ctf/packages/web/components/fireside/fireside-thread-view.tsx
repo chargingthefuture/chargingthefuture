@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
+import { FiresideCommentEditor } from "./fireside-comment-editor";
 import {
   FIRESIDE_REACTION_KINDS,
   FIRESIDE_REACTION_LABELS,
@@ -23,10 +24,73 @@ type ThreadComment = {
   authorName: string;
   body: string;
   createdAt: string;
+  /** When the author last rewrote it, or null if they never did. Drives the "edited" mark. */
+  editedAt: string | null;
   reactions: Record<string, number>;
   viewerReactions: string[];
   isOwn: boolean;
 };
+
+// A comment's words, or the box its author is rewriting them in.
+//
+// The "edited" mark is the whole reason the mark exists: a rewritten comment keeps its id, its
+// replies and its reactions, so without it a reader has no way to tell that what they are reading
+// is not what was answered. The Commons marks a rewritten reply the same way.
+function CommentBody({
+  comment,
+  t,
+  editing,
+  busy,
+  onSaveEdit,
+  onCancelEdit,
+}: {
+  comment: ThreadComment;
+  t: PluginShellTokens;
+  editing: boolean;
+  busy: boolean;
+  onSaveEdit: (commentId: string, body: string) => void;
+  onCancelEdit: () => void;
+}) {
+  if (editing) {
+    return (
+      <FiresideCommentEditor
+        t={t}
+        initialBody={comment.body}
+        busy={busy}
+        onSave={(body) => onSaveEdit(comment.id, body)}
+        onCancel={onCancelEdit}
+      />
+    );
+  }
+  return (
+    <>
+      <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{comment.body}</div>
+      {comment.editedAt && <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 4 }}>Edited</div>}
+    </>
+  );
+}
+
+// The author's way to fix their own words in place. Shown only on their own comments; what they may
+// actually change, and what it costs a blog-export approval, is decided on the server.
+function EditButton({
+  comment,
+  t,
+  busy,
+  onEdit,
+}: {
+  comment: ThreadComment;
+  t: PluginShellTokens;
+  busy: boolean;
+  onEdit: (commentId: string) => void;
+}) {
+  if (!comment.isOwn) return null;
+  return (
+    <button type="button" disabled={busy} onClick={() => onEdit(comment.id)}
+      style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}>
+      Edit
+    </button>
+  );
+}
 
 // Agree and disagree.
 //
@@ -175,18 +239,27 @@ function ThreadComments({
   isAdmin,
   t,
   busy,
+  editingId,
   onReact,
   onReply,
   onRemove,
+  onEdit,
+  onSaveEdit,
+  onCancelEdit,
 }: {
   comments: ThreadComment[];
   loading: boolean;
   isAdmin: boolean;
   t: PluginShellTokens;
   busy: boolean;
+  /** Which comment the author has open for rewriting, if any. */
+  editingId: string | null;
   onReact: (commentId: string, kind: string) => void;
   onReply: (commentId: string) => void;
   onRemove: (commentId: string) => void;
+  onEdit: (commentId: string) => void;
+  onSaveEdit: (commentId: string, body: string) => void;
+  onCancelEdit: () => void;
 }) {
   if (loading) return <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>;
 
@@ -201,7 +274,8 @@ function ThreadComments({
         <div key={comment.id} style={{ marginBottom: 16 }}>
           <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
             <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
-            <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{comment.body}</div>
+            <CommentBody comment={comment} t={t} editing={editingId === comment.id} busy={busy}
+              onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />
             <Votes comment={comment} t={t} onReact={onReact} busy={busy} />
             <Reactions comment={comment} t={t} onReact={onReact} busy={busy} />
             <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
@@ -209,6 +283,9 @@ function ThreadComments({
                 style={{ background: "transparent", border: "none", color: t.SUBTLE, fontSize: 13, cursor: "pointer", padding: 0 }}>
                 Reply
               </button>
+              {editingId !== comment.id && (
+                <EditButton comment={comment} t={t} busy={busy} onEdit={onEdit} />
+              )}
               {isAdmin && !comment.isOwn && (
                 <button type="button" disabled={busy} onClick={() => onRemove(comment.id)}
                   style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, cursor: busy ? "default" : "pointer", padding: 0 }}>
@@ -220,9 +297,15 @@ function ThreadComments({
           {comments.filter((reply) => reply.parentCommentId === comment.id).map((reply) => (
             <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
               <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
-              <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{reply.body}</div>
+              <CommentBody comment={reply} t={t} editing={editingId === reply.id} busy={busy}
+                onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />
               <Votes comment={reply} t={t} onReact={onReact} busy={busy} />
               <Reactions comment={reply} t={t} onReact={onReact} busy={busy} />
+              {editingId !== reply.id && (
+                <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                  <EditButton comment={reply} t={t} busy={busy} onEdit={onEdit} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -293,6 +376,9 @@ export function FiresideThreadView({
   const [notice, setNotice] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  // Which of the member's own comments is open for rewriting. One at a time, so an unsaved draft is
+  // never left behind on a comment that has scrolled away.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -339,6 +425,37 @@ export function FiresideThreadView({
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not post that.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * The author rewrites their own comment, in place.
+   *
+   * The comment keeps its id, so the replies under it and the reactions on it stay where they are.
+   * Fixing a typo used to mean taking the comment down and writing it again, which loses all of
+   * that (owner report, 2026-09-17).
+   */
+  async function saveEdit(commentId: string, body: string) {
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/fireside/comments/${commentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ body }),
+      });
+      const data = (await res.json()) as { message?: string; notice?: string | null };
+      if (!res.ok) throw new Error(data.message ?? "Could not save that change.");
+      // An approval an admin gave to the old wording does not carry over, and the author is told so
+      // here rather than finding the switch moved later.
+      if (data.notice) setNotice(data.notice);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save that change.");
     } finally {
       setBusy(false);
     }
@@ -442,9 +559,13 @@ export function FiresideThreadView({
         isAdmin={isAdmin}
         t={t}
         busy={busy}
+        editingId={editingId}
         onReact={(id, kind) => void react(id, kind)}
         onReply={setReplyTo}
         onRemove={(id) => void moderate(id)}
+        onEdit={(id) => { setNotice(null); setEditingId(id); }}
+        onSaveEdit={(id, body) => void saveEdit(id, body)}
+        onCancelEdit={() => setEditingId(null)}
       />
 
       {!thread?.isClosed && (

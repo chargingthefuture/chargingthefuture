@@ -7324,6 +7324,11 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   export_reviewed_by TEXT,
   export_reviewed_at TIMESTAMPTZ,
   export_refusal_reason TEXT,
+  -- When the author last rewrote this comment, or NULL if they never did. An author fixing their own
+  -- words keeps the row: its id, the replies under it, and the reactions on it all survive, which
+  -- taking it down and writing it again does not. The thread shows an "edited" mark from this, so
+  -- words that changed after they were posted never read as the originals.
+  edited_at TIMESTAMPTZ,
   -- What the author wrote, kept for the author alone once they take the comment down. `body` still
   -- empties on withdrawal, so the words leave the conversation for everybody else; this is the copy
   -- the person who wrote them can still see on their own screen. Taking a comment down cannot be
@@ -7350,6 +7355,7 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);

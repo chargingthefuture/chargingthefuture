@@ -8,6 +8,7 @@ import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { FIRESIDE_BLOG_BASE } from "@/lib/fireside/constants";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
+import { FiresideCommentEditor } from "./fireside-comment-editor";
 import { Pager } from "./fireside-pager";
 import { FiresideThreadView } from "./fireside-thread-view";
 
@@ -23,6 +24,8 @@ type OwnComment = {
   id: string;
   body: string;
   createdAt: string;
+  /** When they last rewrote it, or null if they never did. Shown as an "edited" mark. */
+  editedAt: string | null;
   postTitle: string;
   postSlug: string;
   postRepo: string;
@@ -192,6 +195,10 @@ function CommentRow({
   onWithdraw,
   onToggleExport,
   onOpenThread,
+  onEdit,
+  onSaveEdit,
+  onCancelEdit,
+  editing,
   busyId,
 }: {
   comment: OwnComment;
@@ -199,6 +206,11 @@ function CommentRow({
   onWithdraw: (id: string) => void;
   onToggleExport: (id: string, next: boolean) => void;
   onOpenThread: (comment: OwnComment) => void;
+  onEdit: (id: string) => void;
+  onSaveEdit: (id: string, body: string) => void;
+  onCancelEdit: () => void;
+  /** True while this row is the one being rewritten. */
+  editing: boolean;
   busyId: string | null;
 }) {
   const busy = busyId === comment.id;
@@ -214,12 +226,35 @@ function CommentRow({
           {STATE_LABEL[comment.state]}
         </span>
       </div>
-      <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-        {comment.body || <WithdrawnBody comment={comment} t={t} />}
-      </div>
-      {editable && (
+      {editing ? (
+        <FiresideCommentEditor
+          t={t}
+          initialBody={comment.body}
+          busy={busy}
+          onSave={(body) => onSaveEdit(comment.id, body)}
+          onCancel={onCancelEdit}
+        />
+      ) : (
+        <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
+          {comment.body || <WithdrawnBody comment={comment} t={t} />}
+        </div>
+      )}
+      {/* Marked as edited, so words that changed after they were posted never read as the
+          originals — the same mark a rewritten Commons reply carries. */}
+      {!editing && comment.editedAt && comment.body && (
+        <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 6 }}>Edited</div>
+      )}
+      {editable && !editing && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
           <ExportRequestRow comment={comment} t={t} busy={busy} onToggleExport={onToggleExport} />
+          <button
+            type="button"
+            onClick={() => onEdit(comment.id)}
+            disabled={busy}
+            style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}
+          >
+            Edit
+          </button>
           <button
             type="button"
             onClick={() => onWithdraw(comment.id)}
@@ -251,6 +286,12 @@ export function FiresideShell({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Which comment is open for rewriting. One at a time, so an unsaved draft is never left behind on
+  // a row the member has scrolled away from.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // What the server said after a change the member should be told about — so far, that rewriting a
+  // comment an admin had approved for the blog sends it back to be read again.
+  const [notice, setNotice] = useState<string | null>(null);
   const [openPost, setOpenPost] = useState<{ repo: string; slug: string; title: string } | null>(
     initialPost,
   );
@@ -284,15 +325,19 @@ export function FiresideShell({
   async function send(id: string, init: RequestInit, failure: string) {
     setBusyId(id);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/fireside/comments/${id}`, {
         ...init,
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
       });
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? failure);
-      }
+      // Whether it worked is `res.ok`, never whether a body parsed: a change that saved must not
+      // read as a failure because something in front of the app answered with a page instead.
+      const body = (await res.json().catch(() => ({}))) as { message?: string; notice?: string | null };
+      if (!res.ok) throw new Error(body.message ?? failure);
+      // Said at the moment it happens rather than left to be found later on the row.
+      if (body.notice) setNotice(body.notice);
+      setEditingId(null);
       await load(page);
     } catch (e) {
       setError(e instanceof Error ? e.message : failure);
@@ -346,6 +391,11 @@ export function FiresideShell({
           {error}
         </div>
       )}
+      {notice && (
+        <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", fontSize: 15, color: "#F59E0B", lineHeight: 1.6 }}>
+          {notice}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ fontSize: 15, color: t.SUBTLE }}>Loading…</div>
@@ -380,6 +430,11 @@ export function FiresideShell({
                 setCameFromPost(false);
                 setOpenPost({ repo: row.postRepo, slug: row.postSlug, title: row.postTitle });
               }}
+              editing={editingId === comment.id}
+              onEdit={(id) => { setNotice(null); setEditingId(id); }}
+              onCancelEdit={() => setEditingId(null)}
+              onSaveEdit={(id, body) =>
+                void send(id, { method: "PATCH", body: JSON.stringify({ body }) }, "Could not save that change.")}
             />
           ))}
           <Pager page={page} lastPage={lastPage} t={t} onPage={(next) => void load(next)} />

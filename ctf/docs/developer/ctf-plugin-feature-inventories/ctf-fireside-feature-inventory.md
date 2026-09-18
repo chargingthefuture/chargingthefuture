@@ -66,6 +66,15 @@ the project controls rather than on a platform that has erased five of its accou
    you wrote, shown struck through on your screen and nowhere else — the moment somebody most needs
    to read what they wrote is just after they have destroyed it, when they are checking that they
    meant that one.
+9a. **Fix your own words in place.** An author can rewrite their own comment at any time, with no
+   window to beat and no admin involved, and the comment is marked as edited afterwards so changed
+   words never read as the originals. The comment keeps its id, so the replies under it and the
+   reactions on it stay where they are — before this the only way to correct a typo was to take the
+   comment down and write it again, which loses all of that (owner report, 2026-09-17). The same
+   policy the Commons has for a reply on an announcement. Three things it will not do: bring back a
+   comment an admin removed, bring back one the author took down, or change anything in a
+   conversation an admin has closed. If an admin had already approved the comment for the blog, the
+   new wording goes back to the queue to be read again, and the author is told so on screen.
 10. **Ask for a comment to be published with the post.** Off unless the author turns it on. Turning
    it on asks; it does not publish. An admin reads the request before anything is copied into the
    blog's own build, where it is searchable and captured by the Internet Archive and where nobody,
@@ -125,7 +134,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/threads?repo=&slug=` | GET | **Public, no account** | The conversation under one post. A signed-in reader also gets their own held comments. |
 | `/api/fireside/comments` | POST | Signed-in member | Write a comment. Answers with whether it is public yet and the held notice when it is not. |
 | `/api/fireside/comments/[commentId]` | DELETE | Author | Withdraw your own comment. |
-| `/api/fireside/comments/[commentId]` | PATCH | Author | Turn the blog-export permission on or off. |
+| `/api/fireside/comments/[commentId]` | PATCH | Author | Two things, by what the body carries: `body` rewrites the comment in place, `exportToBlog` turns the blog-export request on or off. |
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
 | `/api/fireside/admin/comments?q=` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. `q` searches the bodies. |
@@ -147,7 +156,7 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
-| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the whole table instead. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `edited_at`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `edited_at` is null until the author rewrites the comment and is what the "edited" mark is drawn from; the earlier wording is not kept anywhere, so there is no version history to read, export or delete. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the whole table instead. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. `kind` is one of the three reactions or one of the two votes, constrained in the database. A `downvote` row is stored and is never returned as a count: `FIRESIDE_COUNTED_KINDS` in `lib/fireside/constants.ts` has no such member, and every count is built from that list rather than from whatever the table happens to hold. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
 
@@ -169,6 +178,13 @@ faults in two weeks came from a rule written in two places that disagreed.
 - Every mutation carries the CSRF header and an origin check.
 - Author-scoped updates match on `author_user_id` in the statement, never on a client-supplied id
   alone.
+- **Editing is the Commons policy, and it is not a way around anybody else's decision.** The author,
+  any time, with the new words checked exactly as the first ones were, so an edit cannot post what a
+  fresh comment would have been refused for. It is refused on a comment an admin removed, on one the
+  author took down, and in a closed conversation. A rewrite of a comment an admin had approved for
+  the blog sends that approval back to the queue: the approval was given to the words, not to the
+  row, and without this a rewrite would be a way to put any text at all into a permanently archived
+  build under somebody's yes to something else.
 - Deletion: same rights as the Commons, from the same account screen. Comments and reactions are
   deleted outright; threads and audit rows are retained and the deletion contract says why.
 - A comment already exported into the blog build cannot be recalled from a web archive. Two separate
@@ -227,20 +243,50 @@ member active only in Fireside is seen by being read, which is what the plugin i
 2. The app's half of the export is built and the blog's half is not. `/api/fireside/export` answers
    with the comments both keys have cleared, and nothing in `wiki-site` reads it yet, so no comment
    has actually been copied into a build. The reader belongs there alongside the widget.
-3. The author's record counts only what happened in Fireside. An account being a problem in several
+3. The blog-side widget does not show the "edited" mark yet. It lives in the `wiki-site`
+   repository and renders from `/api/fireside/threads`, which now returns `editedAt` on every
+   comment; until that widget reads it, a reader on the blog sees rewritten words with nothing
+   saying they changed, while a reader in the app sees the mark.
+4. In the thread, an author's own comment that an admin removed still shows an Edit control. The
+   public comment shape carries no moderation state — deliberately, since it is returned on an
+   unauthenticated route — so the screen cannot tell before asking. Pressing it returns the refusal
+   saying an admin took the comment down and that putting it back is theirs to do, which is honest
+   but is a question the screen should not have had to ask. The member's own comments list, which
+   does know each row's state, offers Edit only where it will work.
+5. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
-4. A reply notification does not arrive late. A held reply notifies nobody, and approving its
+6. A reply notification does not arrive late. A held reply notifies nobody, and approving its
    author later makes the reply appear without telling the person it answered. Catching that up
    means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-5. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
+7. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
-6. The member's own comment list pages without putting the page in the address bar. The admin lists
+8. The member's own comment list pages without putting the page in the address bar. The admin lists
    all do; the member one predates them and should follow.
 
 ## Change Log
+
+- 2026-09-18: **An author can rewrite their own comment** (owner report: correcting a typo meant
+  removing the comment and posting it again). Taking a comment down and rewriting it loses the
+  replies under it, the reactions on it and its place in the conversation, all to change one word,
+  and the removal is permanent — so the correction cost more than the mistake. Fireside now carries
+  the edit the Commons has had since it shipped: the author, any time, no window, the new words
+  checked the way the first ones were, and an "edited" mark afterwards so changed words never read
+  as the originals. The row keeps its id, so nothing under it moves. `PATCH
+  /api/fireside/comments/[commentId]` takes a `body` alongside the export switch it already took;
+  the rule about who may edit what is `refuseEdit` in `lib/fireside/visibility.ts` and nothing
+  re-derives it. It refuses a comment an admin removed, one the author took down, and any comment
+  in a closed conversation — each of those is somebody else's decision, and an edit is not the way
+  to reverse it. New column `edited_at` on `fireside_comments`, migration
+  `0025_fireside_comment_edit.sql`; no earlier wording is stored, so there is no version history to
+  read or to delete. One knock-on worth naming: rewriting a comment an admin had already approved
+  for the blog returns the request to the queue, because an admin approves words rather than a row,
+  and a permanently archived build is not somewhere to discover that afterwards. The author is told
+  that on screen at the moment it happens. The controls are on the member's own comment list and on
+  the comment itself in the thread; the admin list marks an edited comment too, because a list that
+  hides it is a list somebody moderates blind.
 
 - 2026-09-17: **A signed-out visitor gets a real Fireside page** (owner report: the page was
   unenticing and described the feature wrongly). Fireside had no entry in the public visitor

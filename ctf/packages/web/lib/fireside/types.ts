@@ -60,6 +60,11 @@ export type FiresideComment = {
   body: string;
   createdAt: string;
   /**
+   * When the author last rewrote it, or null if they never did. The thread shows an "edited" mark
+   * from this, so words that changed after they were posted do not read as the originals.
+   */
+  editedAt: string | null;
+  /**
    * How many people left each countable kind. There is no `downvote` key, by construction — see
    * FiresideCountedKind. Nothing reads these to decide order; the thread is oldest first.
    */

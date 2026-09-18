@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ensureMutationCsrf, requireFiresideAuthor } from 'lib/fireside/_lib';
-import { FIRESIDE_ERROR_CODE } from 'lib/fireside/constants';
+import {
+  FIRESIDE_EDIT_REQUEUE_NOTICE,
+  FIRESIDE_ERROR_CODE,
+  FIRESIDE_MAX_COMMENT_LENGTH,
+  FIRESIDE_MIN_COMMENT_LENGTH,
+} from 'lib/fireside/constants';
 import { setExportPreference } from 'lib/fireside/export-review';
-import { insertFiresideAudit, withdrawOwnComment } from 'lib/fireside/repository';
+import {
+  editOwnComment,
+  insertFiresideAudit,
+  withdrawOwnComment,
+  type EditRefusalReason,
+} from 'lib/fireside/repository';
 import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type RouteProps = { params: Promise<{ commentId: string }> };
@@ -33,7 +43,109 @@ function refuseExportChange(outcome: 'already_refused' | 'not_found'): NextRespo
   );
 }
 
-const patchSchema = z.object({ exportToBlog: z.boolean() });
+// One route, two things an author does to their own comment: rewrite the words, or change whether
+// they are asking for it to go on the blog. A union rather than one loose object, so a request that
+// carries neither is refused instead of quietly doing nothing.
+const patchSchema = z.union([
+  z.object({ exportToBlog: z.boolean() }),
+  z.object({ body: z.string().min(1).max(FIRESIDE_MAX_COMMENT_LENGTH + 1) }),
+]);
+
+// Every refusal names the thing the author would change (rule 137). Three of them are somebody
+// else's decision that an edit does not get to reverse, and each says whose it is and what is still
+// possible, because a sentence that only says no leaves a person guessing at a comment box.
+const EDIT_REFUSAL: Record<EditRefusalReason, { message: string; status: number; code: string }> = {
+  body_too_short: {
+    message: `Write at least ${FIRESIDE_MIN_COMMENT_LENGTH} characters.`,
+    status: 400,
+    code: FIRESIDE_ERROR_CODE.invalidPayload,
+  },
+  body_too_long: {
+    message: `That is longer than ${FIRESIDE_MAX_COMMENT_LENGTH} characters. Shorten it, or say the rest in a reply.`,
+    status: 400,
+    code: FIRESIDE_ERROR_CODE.invalidPayload,
+  },
+  removed_by_admin: {
+    message: 'An admin took this comment down, so it cannot be rewritten. Putting it back is theirs to do.',
+    status: 403,
+    code: FIRESIDE_ERROR_CODE.forbidden,
+  },
+  withdrawn: {
+    message: 'You took this comment down, and that cannot be undone. Write a new comment instead.',
+    status: 403,
+    code: FIRESIDE_ERROR_CODE.forbidden,
+  },
+  thread_closed: {
+    message: 'This conversation is closed, so comments in it can no longer be changed. You can still take yours down.',
+    status: 409,
+    code: FIRESIDE_ERROR_CODE.threadClosed,
+  },
+};
+
+/**
+ * The author rewrites their own comment.
+ *
+ * The same edit the Commons has: the author, any time, with no window to beat, and the new words
+ * checked the way the first ones were. The row keeps its id, so the replies under it and the
+ * reactions on it stay where they are — which taking the comment down and writing it again does
+ * not, and that was the only way to fix a typo before this (owner report, 2026-09-17).
+ */
+async function editComment(
+  actorId: string,
+  commentId: string,
+  body: string,
+  audience: 'operator' | 'member',
+): Promise<NextResponse> {
+  try {
+    const outcome = await editOwnComment(actorId, commentId, body);
+    if (outcome.status === 'not_found') {
+      return NextResponse.json(
+        { ok: false, code: FIRESIDE_ERROR_CODE.notFound, message: 'No comment of yours with that id.' },
+        { status: 404 },
+      );
+    }
+    if (outcome.status === 'refused') {
+      const refusal = EDIT_REFUSAL[outcome.reason];
+      return NextResponse.json(
+        { ok: false, code: refusal.code, reason: outcome.reason, message: refusal.message },
+        { status: refusal.status },
+      );
+    }
+
+    await insertFiresideAudit({
+      actorId,
+      command: 'fireside.comment.edit',
+      policyStatus: 'allow',
+      reason: 'author_edit',
+      targetType: 'comment',
+      targetId: commentId,
+      result: outcome.exportRequeued ? 'edited_export_requeued' : 'edited',
+    });
+
+    // Said now rather than discovered later: an author who had an approval and no longer has one is
+    // owed the reason at the moment it changes.
+    return NextResponse.json(
+      {
+        ok: true,
+        commentId,
+        editedAt: outcome.editedAt,
+        exportRequeued: outcome.exportRequeued,
+        notice: outcome.exportRequeued ? FIRESIDE_EDIT_REQUEUE_NOTICE : null,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    return failureResponse({
+      summary: 'Unable to save that change',
+      error,
+      code: FIRESIDE_ERROR_CODE.persistenceUnavailable,
+      area: 'fireside',
+      op: 'comment_edit',
+      status: 503,
+      audience,
+    });
+  }
+}
 
 /**
  * The author takes their own comment down. Always available, approved or not, and it is the same
@@ -80,10 +192,13 @@ export async function DELETE(request: Request, { params }: RouteProps) {
 }
 
 /**
- * The author asks for this comment to be copied into the blog's own published build, where it
- * becomes searchable and is captured by the Internet Archive — or takes the ask back.
+ * What the author does to their own comment, short of taking it down: rewrite the words, or ask for
+ * it to be copied into the blog's own published build — where it becomes searchable and is captured
+ * by the Internet Archive — or take that ask back.
  *
- * Off unless the author turns it on. The words are theirs, so permanence is their call, and a web
+ * A body rewrites; see editComment above for the edit policy, which is the Commons one.
+ *
+ * The export ask is off unless the author turns it on. The words are theirs, so permanence is their call, and a web
  * capture cannot be withdrawn afterwards by anybody, this project included.
  *
  * Turning it on queues the request rather than granting it: an admin has to agree as well, because
@@ -112,9 +227,18 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const parsed = patchSchema.safeParse(raw);
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'Send exportToBlog as true or false.' },
+      {
+        ok: false,
+        code: FIRESIDE_ERROR_CODE.invalidPayload,
+        message: 'Send body as the new text of the comment, or exportToBlog as true or false.',
+      },
       { status: 400 },
     );
+  }
+
+  const audience = gate.auth.isAdmin ? 'operator' : 'member';
+  if ('body' in parsed.data) {
+    return editComment(gate.auth.userId, commentId, parsed.data.body, audience);
   }
 
   try {
