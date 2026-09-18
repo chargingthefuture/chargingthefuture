@@ -42,6 +42,26 @@ API level. Verify by joining the live room as a guest and confirming the guest c
 when driving the Stream client directly. To roll back, unset `CHYME_GUEST_STREAM_ROLE` — guests revert
 to the default role and client-only enforcement.
 
+## How a missing grant shows up (seen in production, 2026-09-17)
+
+If `CHYME_GUEST_STREAM_ROLE` is set but step 2 above was not completed — the role exists, the
+`default` call type does not grant it `join-call` — every signed-out listener is locked out. The
+guest identity is minted fine (the role exists, so the upsert succeeds), so the public page shows
+the room as live, and then the join is refused. The page reads:
+
+> Couldn't connect to the live room. Try refreshing.
+> Stream error code 17: JoinCall failed with error: "User 'chyme-guest-…' with role
+> 'chyme_listener' is not allowed to perform action JoinCall in scope 'video:default'"
+
+Members are unaffected, which is why it can go unnoticed: a host in the room sees a normal live
+room while no visitor can hear it. Two ways out, either one restores listening:
+
+- **Finish step 2** in the Stream dashboard (production app → Video & Audio → the `default` call
+  type → role `chyme_listener` → allow `join-call` and `read-call`). This is the intended end
+  state: guests can hear, and still cannot publish.
+- **Unset `CHYME_GUEST_STREAM_ROLE`** in Infisical. Guests go back to the default role and
+  client-only enforcement, as under "Turn it on" above.
+
 ## Notes
 
 - The role name in the env var must exactly match the role configured in Stream; a mismatch means
