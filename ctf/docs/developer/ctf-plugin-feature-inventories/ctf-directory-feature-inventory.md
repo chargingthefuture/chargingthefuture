@@ -238,7 +238,7 @@ Seeded content:
   this plugin and by SkillsHunt — they key the same form on purpose, and were previously two copies
   kept in step by a comment. Canonical form: `https://www.quora.com` + the lowercased path with
   trailing slashes removed; any Quora path is still accepted, since a profile may carry a link to a
-  post. Migration `0027_canonical_quora_urls_directory_skills_hunt.sql` re-keys
+  post. Migration `0028_canonical_quora_urls_directory_skills_hunt.sql` re-keys
   `directory_suppressed_quora_urls.normalized_url` and both `directory_quora_url_history` normalized
   columns. Where two spellings of one link were both active on the takedown list, the partial unique
   index allows one active row, so one is re-keyed and does the blocking and the other is kept as the

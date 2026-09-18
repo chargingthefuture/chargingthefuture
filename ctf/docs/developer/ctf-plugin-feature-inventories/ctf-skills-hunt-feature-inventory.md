@@ -287,35 +287,7 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
   is what makes a suppressed URL match the string a nomination was deduped on. 14 unit tests cover
   the spellings, the look-alike hosts and a post link (any Quora path is still accepted here —
   unlike Unlock, a nominee may be identified by something they posted). Migration
-  `0027_canonical_quora_urls_directory_skills_hunt.sql` re-keys
-  `skills_hunt_submissions.quora_profile_url_normalized` (no uniqueness on that column, so rows
-  collapsing onto one person is the point) and the Directory columns; verified on a local Postgres,
-  where three differently-spelled nominations go from one each to one person with three, and a
-  second run changes nothing. **Known residual:** `signature_hash` on rows written before today was
-  computed from the old string, so within a round that already has rows, a re-nomination of the same
-  person with the same skills under a different spelling is not blocked by the unique index — the
-  scoring reads, including the first-match bonus, are fixed by the re-key, and the nomination still
-  goes through moderation. Recomputing those hashes needs the app's own hashing rule (the skill list
-  is sorted with `localeCompare`, which SQL cannot reproduce faithfully), so it is a script, not a
-  migration; not done here. `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` lists
-  any round where this actually happened. Android: SkillsHunt has no Android surface (rule 105).
-
-- 2026-09-18: **One person written two ways counted as two nominations (owner request, after the
-  same defect was found in Unlock).** A nomination's identity is its normalized Quora URL, and
-  `normalizeQuoraProfileUrl` — a private copy of Directory's, kept in step by a comment — stripped
-  the query and hash and then returned the URL otherwise as the scout typed it. So
-  `https://www.quora.com/profile/Mary-T-I-1`, the same without `www.`, with a trailing slash, from a
-  language subdomain (`es.quora.com`) or in different casing were different people to this plugin:
-  the per-round duplicate guard did not fire, and the first-match bonus (+5 to the first scout with
-  an accepted nomination for a URL in that round) could be paid to several scouts for one person.
-  Both copies also accepted any host *ending* in `quora.com`, so `evil-quora.com` passed as Quora.
-  The rules now live once, in `lib/shared/quora-url.ts` (`canonicalizeQuoraUrl`), returning
-  `https://www.quora.com` + the lowercased path with trailing slashes removed, with the host check
-  narrowed to quora.com and its subdomains; Directory's takedown list calls the same function, which
-  is what makes a suppressed URL match the string a nomination was deduped on. 14 unit tests cover
-  the spellings, the look-alike hosts and a post link (any Quora path is still accepted here —
-  unlike Unlock, a nominee may be identified by something they posted). Migration
-  `0027_canonical_quora_urls_directory_skills_hunt.sql` re-keys
+  `0028_canonical_quora_urls_directory_skills_hunt.sql` re-keys
   `skills_hunt_submissions.quora_profile_url_normalized` (no uniqueness on that column, so rows
   collapsing onto one person is the point) and the Directory columns; verified on a local Postgres,
   where three differently-spelled nominations go from one each to one person with three, and a

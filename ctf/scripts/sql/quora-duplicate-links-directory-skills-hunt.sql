@@ -1,7 +1,7 @@
 -- Where one Quora link was stored under more than one spelling, in Directory and SkillsHunt.
 --
 -- Written for the owner to paste into the Neon dashboard. Read-only: it changes nothing. Safe before
--- or after 0027_canonical_quora_urls_directory_skills_hunt.sql, because it canonicalizes inside the
+-- or after 0028_canonical_quora_urls_directory_skills_hunt.sql, because it canonicalizes inside the
 -- query — which is how it finds pairs the stored columns still spell differently.
 --
 -- Background: until 2026-09-18 both plugins stored a "normalized" Quora URL that still carried

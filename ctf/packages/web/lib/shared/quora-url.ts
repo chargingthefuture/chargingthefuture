@@ -33,7 +33,7 @@
 // stricter, and the two must stay separate — they key different tables.
 //
 // Changing the canonical form re-keys stored values, so the columns holding them are rewritten by
-// ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+// ctf/db/migrations/post/0028_canonical_quora_urls_directory_skills_hunt.sql.
 
 // Accepts the bare domain and any subdomain of it, and nothing else — `endsWith('quora.com')` would
 // also accept `evil-quora.com`, which is a different site entirely.
