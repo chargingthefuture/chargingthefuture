@@ -3,6 +3,7 @@
 import type { UnlockSignupAccount } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
+import { UnlockSignupAddUrl } from './unlock-signup-add-url';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
@@ -50,6 +51,14 @@ function screenViewLine(account: UnlockSignupAccount): string | null {
     : `Opened the Unlock screen ${account.unlockScreenViews} times`;
 }
 
+// What they told us when they pressed "ask for help" instead of giving a URL. Shown as written, and
+// labeled so a reviewer knows it came from the member rather than from Quora. For an account with no
+// submission this is the only identifying thing on file, so it sits above the timing lines.
+function helpHintLine(account: UnlockSignupAccount): string | null {
+  if (!account.quoraHint) return null;
+  return `Told us: ${account.quoraHint}`;
+}
+
 // Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
 // data, so the row would otherwise read as "never gave a Quora URL" with nothing to explain it.
 function departureLine(account: UnlockSignupAccount): string | null {
@@ -80,10 +89,12 @@ export function UnlockSignupRow({
   account,
   busy,
   onToggleExcluded,
+  onAddUrl,
 }: {
   account: UnlockSignupAccount;
   busy: boolean;
   onToggleExcluded: (userId: string, excluded: boolean) => void;
+  onAddUrl: (userId: string, url: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
@@ -102,10 +113,18 @@ export function UnlockSignupRow({
 
       <DetailLine text={handle ? `@${handle}` : null} />
       <DetailLine text={account.email} breakAll />
+      <DetailLine text={helpHintLine(account)} breakAll />
       <DetailLine text={timingLine(account)} />
       <DetailLine text={screenViewLine(account)} />
       <DetailLine text={departureLine(account)} />
       <DetailLine text={account.excludedNote ? `Note: ${account.excludedNote}` : null} />
+
+      {/* Only where there is nothing on file and somebody left to approve: a member who deleted their
+          data is gone, and one who already has a URL is changed from the Edit control on their queue
+          card, so that an "add" can never quietly overwrite what they gave. */}
+      {!account.hasSubmission && !account.deletedTheirData ? (
+        <UnlockSignupAddUrl userId={account.userId} busy={busy} onAdd={onAddUrl} />
+      ) : null}
 
       <button
         type="button"

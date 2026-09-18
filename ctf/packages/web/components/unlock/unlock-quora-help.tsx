@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { HelpCircle, Loader2 } from "lucide-react";
 import { failureText } from "lib/errors/client-failure";
+import { UNLOCK_QUORA_HINT_MAX_LENGTH as QUORA_HINT_MAX_LENGTH } from "lib/unlock/quora-hint";
 import { useTheme } from "@/hooks/useTheme";
 import { getUnlockTokens } from "./unlock-shared";
 
@@ -16,11 +17,18 @@ import { getUnlockTokens } from "./unlock-shared";
 // Commons to a member with no submission — see lib/unlock/help-requests.ts) and takes them straight
 // there, where they can ask in the chat and get an answer. The verification prompt follows them, so
 // the Quora URL is still asked for; it is just no longer the only thing they can do.
+//
+// The box above the button is the second half of that. Somebody who cannot produce a profile URL can
+// almost always say the name on their Quora account, or paste a link to something they posted, and
+// that is enough for an admin to find them and approve them by hand. Before it existed, pressing the
+// button recorded a user id and a date, so the people who most needed a manual approval were the only
+// ones with nothing on file to approve. Optional, and never a gate: the button works with it empty.
 export function UnlockQuoraHelp({ alreadyVerified = false }: { alreadyVerified?: boolean }) {
   const { theme } = useTheme();
   const tok = getUnlockTokens(theme);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState("");
 
   // An approved member already has the Commons and everything else. Offering to "open the Commons"
   // for them is at best noise on a screen that just told them they are done, and the button would
@@ -37,6 +45,7 @@ export function UnlockQuoraHelp({ alreadyVerified = false }: { alreadyVerified?:
       const res = await fetch("/api/unlock/help-request", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ quoraHint: hint.trim() }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -75,6 +84,36 @@ export function UnlockQuoraHelp({ alreadyVerified = false }: { alreadyVerified?:
       <div style={{ fontSize: 13, color: tok.MUTED, lineHeight: 1.6, marginBottom: 10 }}>
         You don’t have to work it out alone. Open the Commons and ask — real people are in there, and
         I’ll help you find your profile link. You can come back and finish this whenever you’re ready.
+      </div>
+      <label
+        htmlFor="unlock-quora-hint"
+        style={{ display: "block", fontSize: 13, fontWeight: 700, color: tok.TITLE, marginBottom: 6 }}
+      >
+        Anything that helps me find you on Quora (optional)
+      </label>
+      <input
+        id="unlock-quora-hint"
+        value={hint}
+        onChange={(event) => setHint(event.target.value)}
+        maxLength={QUORA_HINT_MAX_LENGTH}
+        placeholder="The name on your Quora account, or a link to anything you posted"
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          padding: "10px 12px",
+          marginBottom: 6,
+          borderRadius: 10,
+          background: tok.INPUT_BG,
+          border: `1px solid ${hint ? `${tok.ACCENT}80` : tok.BORDER_SOLID}`,
+          color: tok.TITLE,
+          fontSize: 14,
+          fontFamily: "inherit",
+          outline: "none",
+        }}
+      />
+      <div style={{ fontSize: 12, color: tok.MUTED, lineHeight: 1.6, marginBottom: 12 }}>
+        It doesn’t have to be a link. A name or an email is enough for me to look you up and approve
+        you by hand.
       </div>
       <button
         type="button"
