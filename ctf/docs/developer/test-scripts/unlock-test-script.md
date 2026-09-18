@@ -290,6 +290,24 @@ are unchanged. A missing/invalid URL is rejected (400); no matching submission r
 as `unlock.admin.submission.url.edit`.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A4c · One profile written two ways is one person
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** two test member accounts, neither verified. Pick any real Quora profile.
+**Steps:**
+1. On the first account, submit the profile as the share link Quora's app gives you — the one with
+   `?ch=…&oid=…&share=…` on the end.
+2. On the second account, submit the same profile written differently: drop the `www.`, or lowercase
+   the name in the link, or add `/answers` on the end.
+3. As an admin, open `/admin/unlock` and look at both cards.
+4. Read the `Normalized:` line on each card.
+5. Approve the first account, then approve the second.
+**Expected:** Step 3: both cards carry a "Shared by 2" pill — the two spellings are one identity, not
+two. Step 4: both read the same normalized URL, `https://www.quora.com/profile/<name in lowercase>`,
+whatever was typed. Step 5: the first approval grants the verification reward; the second is **held**
+(`reward_withheld_at`) for a determination rather than minting a second reward for one person, and the
+card says so. Before 2026-09-18 both were treated as separate people and both rewards were minted.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A5 · Duplicate-identity determination — grant winner, revoke loser
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Precondition:** two accounts that submitted the **same** normalized Quora URL.
