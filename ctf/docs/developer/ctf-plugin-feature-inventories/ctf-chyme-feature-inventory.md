@@ -161,6 +161,24 @@ Current status:
   shipped copy is unchanged — the detail line is added under it. No schema, route, or contract
   change; the public endpoint is read as it already existed. Test script CH-7 gains the
   room-ends-while-connecting step and CH-8 records the visible reason.
+- 2026-09-17: **The signed-out view asks once instead of three times, and drops the search and tag
+  controls that filtered nothing.** Owner report: the same Sign In / Join pair sat in the green
+  header, on the invitation card, and in the bottom bar — one page putting the same request in front
+  of a visitor three times before they had read what the room is. The invitation card keeps it,
+  because it is the only one of the three that says what signing in gets you ("Listen in for free.
+  Sign in to speak, react, or host your own room."). The header is now the back control and the
+  title; the bottom bar keeps only the grayed, locked **Start a Room**, which is not a sign-in
+  control but the statement that hosting needs an account. The `verifyUrl` variant collapses the same
+  way: a member part-way through Unlock sees one **Finish verifying** link, on the card. Second part
+  of the same report: the search box and the Healing / Economy / Housing / Legal / Skills tags are
+  gone. There is one public room — the main room, since the Weavers room is private and never
+  appears here — so both controls offered to narrow a list of one, and neither did anything if
+  tried: the input was `readOnly` and the tags were plain spans with no click handler. They belong
+  back on this page when it lists more than one room, and at that point they need real search and
+  filter behavior rather than to be un-hidden, because none is built. `chyme-public-shell.tsx` only,
+  which is the signed-out surface — the signed-in shell and the Android room list are untouched. No
+  schema, route, or contract change. Test script CH-7 now counts the sign-in affordances and checks
+  that the search box and tags are absent.
 
 - 2026-09-15: **The disclaimer says endorsement, not recommendation.** Owner directive. A recommendation is a soft opinion a reader is free to weigh, and disclaiming one concedes that this project was offering an opinion in the first place. What a reader takes from a published schedule under this project's name is that the project stands behind the people on it, and that is the thing being denied. The short form on all three Chyme surfaces — signed out, signed in, and the Android room list — swaps the one word; the long form on the TI Radio guide also spells out that this project does not vouch for a host or for what gets said in their room. One string in `@ctf/shared`, so the four surfaces changed together, and the constant has been named `HOSTING_NOT_ENDORSEMENT` since it was written, so the copy now agrees with the code. The manual test script checks the new wording. Copy only — no schema, route, or contract change.
 
