@@ -280,7 +280,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
   re-derives it. It refuses a comment an admin removed, one the author took down, and any comment
   in a closed conversation — each of those is somebody else's decision, and an edit is not the way
   to reverse it. New column `edited_at` on `fireside_comments`, migration
-  `0025_fireside_comment_edit.sql`; no earlier wording is stored, so there is no version history to
+  `0028_fireside_comment_edit.sql`; no earlier wording is stored, so there is no version history to
   read or to delete. One knock-on worth naming: rewriting a comment an admin had already approved
   for the blog returns the request to the queue, because an admin approves words rather than a row,
   and a permanently archived build is not somewhere to discover that afterwards. The author is told
