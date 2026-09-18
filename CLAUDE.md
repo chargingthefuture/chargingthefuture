@@ -215,6 +215,7 @@ read directly (verified against `secrets.*` references in `.github/workflows/`):
 | GitHub Actions — backups (Formance) | `BACKUP_REPO`, `FORMANCE_DATABASE_URL`, `FORMANCE_RESTORE_TARGET_DATABASE_URL` |
 | GitHub Actions — app/cron calls | `CRON_SECRET`, `SERVICE_CREDITS_INTERNAL_TOKEN`, `ACCOUNT_DELETE_SECRET` |
 | GitHub Actions — other services | `EXPO_TOKEN`, `GITLEAKS_LICENSE`, `NTFY_TOPIC` |
+| GitHub Actions — Stream fallback (read only when Infisical set nothing; `stream-guest-listener-setup.yml`) | `STREAM_API_KEY`, `STREAM_API_SECRET`, `STREAM_API_KEY_STAGING`, `STREAM_API_SECRET_STAGING` |
 
 Some of these (e.g. `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, the database URLs) are deliberate
 cross-store duplicates of Infisical values — GitHub Actions is a genuinely separate store, which
