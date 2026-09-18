@@ -141,6 +141,26 @@ Current status:
 
 ## Change Log
 
+- 2026-09-17: **A signed-out listener no longer dead-ends on "Couldn't connect to the live room."**
+  Owner report: the public Chyme page showed the room name, said "You're listening live", and under
+  it sat a connect failure whose only advice was to refresh. Three things were wrong with that box
+  and all three are fixed in `chyme-guest-listen.tsx` and `chyme-public-shell.tsx`. First, one failed
+  attempt ended the visit — there was no retry, so a guest identity that had not propagated yet, an
+  SFU mid-reconnect, or a network blip during page load was permanent. The join now runs up to three
+  attempts with a widening gap. Second, the room can genuinely have ended: "live" is computed from a
+  member's presence row, which stays fresh for up to 45 seconds after their Stream connection is
+  gone, so the server hands out a guest token for a call that is no longer there. On the last failed
+  attempt the listener re-reads `GET /api/chyme/public/room`; when that says the room has ended it
+  tells the shell, which re-reads the room and falls back to the "No public rooms right now" empty
+  state instead of leaving a failure under a heading claiming the visitor is listening. That case is
+  expected, so it is no longer reported to Sentry as a fault. Third, the reason was thrown away. The
+  signed-in room has shown its verbatim Stream error since it was built; the guest path showed a
+  fixed sentence, which left a report sent from a phone with nothing in it but that sentence. The
+  reason now renders as a second line under the existing text, and the Sentry report carries the call
+  type and call id alongside the guest Stream id, matching what the member room already sends. The
+  shipped copy is unchanged — the detail line is added under it. No schema, route, or contract
+  change; the public endpoint is read as it already existed. Test script CH-7 gains the
+  room-ends-while-connecting step and CH-8 records the visible reason.
 - 2026-09-17: **The signed-out view asks once instead of three times, and drops the search and tag
   controls that filtered nothing.** Owner report: the same Sign In / Join pair sat in the green
   header, on the invitation card, and in the bottom bar — one page putting the same request in front
