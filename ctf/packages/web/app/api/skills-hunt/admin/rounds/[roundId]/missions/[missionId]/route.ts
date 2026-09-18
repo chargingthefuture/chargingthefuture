@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
-import { archiveMission, getMissionById, updateMission, type MissionUpdateInput } from 'lib/skills-hunt/missions';
+import { archiveMission, getMissionById, updateMission, validateMissionUpdateInput, type MissionUpdateInput } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
@@ -75,6 +75,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
       return NextResponse.json(
         { ok: false, code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Mission not found.' },
         { status: 404 },
+      );
+    }
+    // Checked against the row as it will be, not the fields alone: switching a mission to the
+    // named-skill goal without also naming the skill would store a goal that counts nothing.
+    const invalid = validateMissionUpdateInput(scoped, body);
+    if (invalid) {
+      return NextResponse.json(
+        { ok: false, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, message: `Unable to update mission: ${invalid}` },
+        { status: 400 },
       );
     }
     const mission = await withDbTransaction((client) => updateMission(client, gate.auth.userId, missionId, body));

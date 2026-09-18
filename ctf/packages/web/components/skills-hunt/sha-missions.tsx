@@ -1,11 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { SkillsHuntMission, SkillsHuntMissionGoalType } from "lib/skills-hunt/types";
+import type { SkillsHuntMission } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 import { AdminNumberField } from "./sha-number-field";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
+import { MissionEditForm } from "./sha-mission-edit";
+import {
+  MISSION_GOAL_LABELS,
+  MissionGoalFields,
+  missionGoalError,
+  missionGoalMetadata,
+  type MissionGoalFieldsValue,
+} from "./sha-mission-goal-fields";
 
 const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
   width: "100%", padding: "9px 12px", borderRadius: 8, background: t.INPUT_BG,
@@ -14,28 +22,16 @@ const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
 const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5 });
 const row: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 };
 
-const GOAL_TYPES: SkillsHuntMissionGoalType[] = [
-  "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds",
-];
-
 function Labeled({ id, text, children }: { id: string; text: string; children: React.ReactNode }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   return <div><label style={labelStyle(t)} htmlFor={id}>{text}</label>{children}</div>;
 }
 
-function missionValidationError(title: string, goalTarget: number, isSector: boolean, sectorName: string): string | null {
+function missionValidationError(title: string, goalTarget: number, goal: MissionGoalFieldsValue): string | null {
   if (!title.trim()) return "Title is required.";
   if (!Number.isFinite(goalTarget) || goalTarget < 1) return "Goal target must be at least 1.";
-  if (isSector && !sectorName.trim()) return "Sector name is required for this goal type.";
-  return null;
-}
-
-function missionGoalMetadata(isSector: boolean, sectorName: string, sectorId: string): Record<string, unknown> {
-  if (!isSector) return {};
-  const base: Record<string, unknown> = { sectorName: sectorName.trim() };
-  if (sectorId.trim()) base.sectorId = sectorId.trim();
-  return base;
+  return missionGoalError(goal);
 }
 
 // Shared error-shaping for the mission calls, kept out of the handlers so each stays within the
@@ -62,9 +58,26 @@ function activateRequest(status: "active" | "archived"): RequestInit {
   };
 }
 
-function MissionRow({ mission, onSetStatus }: {
+// The sector or skill a goal is about, so the list says what a mission counts without opening it.
+// Before this the row showed only the raw goal-type name, which is how a mission titled for one
+// trade sat in the list looking unremarkable while counting every nomination the scout had.
+function goalSubject(mission: SkillsHuntMission): string {
+  const metadata = mission.goalMetadata;
+  const skill = metadata.skillName;
+  if (mission.goalType === "count_skill_matches" && typeof skill === "string" && skill.trim()) {
+    return skill.trim();
+  }
+  const sector = metadata.sectorName;
+  if (mission.goalType === "count_skills_in_sector" && typeof sector === "string" && sector.trim()) {
+    return sector.trim();
+  }
+  return "";
+}
+
+function MissionRow({ mission, onSetStatus, onEdit }: {
   mission: SkillsHuntMission;
   onSetStatus: (id: string, status: "active" | "archived") => void;
+  onEdit: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -82,11 +95,17 @@ function MissionRow({ mission, onSetStatus }: {
           )}
         </div>
         <div style={{ fontSize: 11, color: t.MUTED }}>
-          {mission.goalType} · target {mission.goalTarget} · +{mission.bonusPoints} pts
+          {MISSION_GOAL_LABELS[mission.goalType] ?? mission.goalType}
+          {goalSubject(mission) && ` — ${goalSubject(mission)}`}
+          {` · target ${mission.goalTarget} · +${mission.bonusPoints} pts`}
           {mission.status !== "active" && ` · ${mission.status}`}
           {mission.autoCreated && mission.sourceSector && ` · from ${mission.sourceSector} gap`}
         </div>
       </div>
+      <button type="button" onClick={() => onEdit(mission.id)}
+        style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+        Edit
+      </button>
       <button type="button" onClick={() => onSetStatus(mission.id, isArchived ? "active" : "archived")}
         style={{ padding: "4px 10px", borderRadius: 6, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: isArchived ? t.ACCENT : t.SUBTLE, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
         {isArchived ? "Activate" : "Archive"}
@@ -100,29 +119,28 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
   const t = getSkillsHuntAdminTokens(theme);
   const field = fieldStyle(t);
   const [title, setTitle] = useState("");
-  const [goalType, setGoalType] = useState<SkillsHuntMissionGoalType>("count_total_accepted");
+  const [goal, setGoal] = useState<MissionGoalFieldsValue>({
+    goalType: "count_total_accepted", sectorName: "", sectorId: "", skillName: "", skillId: "",
+  });
   const [goalTarget, setGoalTarget] = useState(1);
   const [bonusPoints, setBonusPoints] = useState(0);
   const [description, setDescription] = useState("");
   const [colorHex, setColorHex] = useState("");
-  const [sectorName, setSectorName] = useState("");
-  const [sectorId, setSectorId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     setError(null);
-    const isSector = goalType === "count_skills_in_sector";
-    const validationError = missionValidationError(title, goalTarget, isSector, sectorName);
+    const validationError = missionValidationError(title, goalTarget, goal);
     if (validationError) return setError(validationError);
-    const goalMetadata = missionGoalMetadata(isSector, sectorName, sectorId);
+    const goalMetadata = missionGoalMetadata(goal);
     setSaving(true);
     try {
       const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({
-          title: title.trim(), goalType, goalTarget, bonusPoints,
+          title: title.trim(), goalType: goal.goalType, goalTarget, bonusPoints,
           description: description.trim() || null, colorHex: colorHex.trim() || null, goalMetadata,
         }),
       });
@@ -142,18 +160,12 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
       <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>New mission</div>
       <div style={{ display: "grid", gap: 12 }}>
         <Labeled id="shm-title" text="Title"><input id="shm-title" style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Find 5 rare skills" /></Labeled>
+        <MissionGoalFields idPrefix="shm" value={goal} onChange={setGoal} />
         <div style={row}>
-          <Labeled id="shm-goal" text="Goal type"><select id="shm-goal" style={field} value={goalType} onChange={(e) => setGoalType(e.target.value as SkillsHuntMissionGoalType)}>{GOAL_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}</select></Labeled>
           <AdminNumberField id="shm-target" label="Goal target" min={1} value={goalTarget} onChange={setGoalTarget} />
           <AdminNumberField id="shm-bonus" label="Bonus points" min={0} value={bonusPoints} onChange={setBonusPoints} />
           <Labeled id="shm-color" text="Color (optional)"><input id="shm-color" style={field} value={colorHex} onChange={(e) => setColorHex(e.target.value)} placeholder="#FBBF24" /></Labeled>
         </div>
-        {goalType === "count_skills_in_sector" && (
-          <div style={row}>
-            <Labeled id="shm-sector-name" text="Sector name"><input id="shm-sector-name" style={field} value={sectorName} onChange={(e) => setSectorName(e.target.value)} placeholder="e.g. Healthcare" /></Labeled>
-            <Labeled id="shm-sector-id" text="Sector id (optional)"><input id="shm-sector-id" style={field} value={sectorId} onChange={(e) => setSectorId(e.target.value)} /></Labeled>
-          </div>
-        )}
         <Labeled id="shm-desc" text="Description (optional)"><textarea id="shm-desc" style={{ ...field, minHeight: 60, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} /></Labeled>
         {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
         <div style={{ display: "flex", gap: 10 }}>
@@ -178,6 +190,9 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [recomputing, setRecomputing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!roundId) return;
@@ -223,6 +238,32 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
     }
   }
 
+  // Settles every scout's counts in the round from the current accepted nominations. Needed after a
+  // goal is corrected, because progress is otherwise only recomputed when a nomination is reviewed —
+  // so a re-pointed mission keeps showing its old number until the next acceptance happens by.
+  async function recomputeProgress() {
+    if (!roundId) return;
+    setNotice(null);
+    setError(null);
+    setRecomputing(true);
+    try {
+      const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/missions/recompute`, {
+        method: "POST",
+        headers: { "x-ctf-csrf": "1" },
+      });
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res, "Unable to recompute mission progress."));
+      }
+      const body = (await res.json()) as { scoutsRecomputed?: number };
+      const count = body.scoutsRecomputed ?? 0;
+      setNotice(`Recomputed mission progress for ${count} scout${count === 1 ? "" : "s"} in this round.`);
+    } catch (e) {
+      setError(errorText(e, "Unable to recompute mission progress."));
+    } finally {
+      setRecomputing(false);
+    }
+  }
+
   if (!roundId) {
     return <div style={{ color: t.SUBTLE, fontSize: 13 }}>Select a round above to manage its missions.</div>;
   }
@@ -233,13 +274,18 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
       {open
         ? <MissionForm roundId={roundId} onCreated={() => { setOpen(false); void refresh(); }} onCancel={() => setOpen(false)} />
         : (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="button" onClick={() => setOpen(true)}
               style={{ padding: "9px 16px", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
               + New mission
             </button>
+            <button type="button" onClick={() => void recomputeProgress()} disabled={recomputing}
+              style={{ padding: "9px 16px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: recomputing ? "not-allowed" : "pointer", opacity: recomputing ? 0.6 : 1 }}>
+              {recomputing ? "Recomputing…" : "Recompute progress"}
+            </button>
           </div>
         )}
+      {notice && <div style={{ marginBottom: 12, color: t.ACCENT, fontSize: 13 }}>{notice}</div>}
       {error && <div style={{ marginBottom: 12, color: "#EF4444", fontSize: 13 }}>{error}</div>}
       {loading ? (
         <div style={{ color: t.MUTED, fontSize: 13 }}>Loading missions…</div>
@@ -247,7 +293,19 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
         <div style={{ color: t.MUTED, fontSize: 13 }}>No missions for this round yet.</div>
       ) : (
         <div style={{ borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER_STRONG}`, overflow: "hidden" }}>
-          {missions.map((m) => <MissionRow key={m.id} mission={m} onSetStatus={setStatus} />)}
+          {missions.map((m) => (
+            <div key={m.id}>
+              <MissionRow mission={m} onSetStatus={setStatus} onEdit={(id) => setEditingId(editingId === id ? null : id)} />
+              {editingId === m.id && (
+                <MissionEditForm
+                  roundId={roundId}
+                  mission={m}
+                  onSaved={() => { setEditingId(null); void refresh(); }}
+                  onCancel={() => setEditingId(null)}
+                />
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -217,6 +217,50 @@ export async function recomputeMissionProgressForUser(
   return { newlyCompleted };
 }
 
+// Recomputes every scout's progress for one round, and returns how many scouts were touched.
+//
+// Progress is otherwise only recomputed when a nomination is reviewed (see the note at the top of
+// this file), which is correct while a mission's goal never changes. It does not hold when an admin
+// corrects a mission: re-pointing "Find a mechanic" from count_total_accepted to the mechanic skill
+// leaves every stored progress row at the old, wrong count until somebody's next nomination happens
+// to be accepted in that round. A member would keep reading "82/1 complete" after the fix. This is
+// the admin's way to settle the round's counts immediately, in the same spirit as the manual
+// leaderboard rebuild.
+//
+// completed_at is deliberately not cleared by a recompute: the upsert below only ever sets it when a
+// mission is newly complete. A scout who genuinely earned a mission keeps it even if an admin later
+// narrows the goal.
+export async function recomputeMissionProgressForRound(
+  client: PoolClient,
+  roundId: string,
+): Promise<{ scoutsRecomputed: number }> {
+  // Scouts with an accepted nomination in the round, plus anyone already carrying a progress row
+  // for one of its missions. The second half matters: a scout whose nominations were all later
+  // rejected or removed has no accepted rows left, and reading only the first half would leave
+  // their counts frozen at whatever they were.
+  const scouts = await client.query<{ user_id: string }>(
+    `
+      SELECT DISTINCT submitter_user_id AS user_id
+        FROM skills_hunt_submissions
+       WHERE round_id = $1::uuid
+         AND status = 'accepted'
+         AND deleted_at IS NULL
+      UNION
+      SELECT DISTINCT p.user_id
+        FROM skills_hunt_mission_progress p
+        JOIN skills_hunt_missions m ON m.id = p.mission_id
+       WHERE m.round_id = $1::uuid
+    `,
+    [roundId],
+  );
+
+  for (const scout of scouts.rows) {
+    await recomputeMissionProgressForUser(client, roundId, scout.user_id);
+  }
+
+  return { scoutsRecomputed: scouts.rowCount ?? 0 };
+}
+
 type AcceptedSubmissionRow = {
   skills: unknown;
   score_breakdown: Record<string, unknown>;
@@ -285,7 +329,7 @@ async function processMissionProgress(
   return null;
 }
 
-type AcceptedSubmissionForMission = {
+export type AcceptedSubmissionForMission = {
   skills: string[];
   rareSkillBonus: number;
   // Lowercased taxonomy sector names this submission's skills belong to; filled by the
@@ -340,7 +384,9 @@ function collectSectorsForSkills(
   return matched;
 }
 
-function computeProgressForMission(
+// Exported for the unit tests: this is the whole of what a mission counts, and it is the piece that
+// decides whether a member reads "complete". Everything around it is I/O.
+export function computeProgressForMission(
   mission: SkillsHuntMission,
   acceptedSubmissions: AcceptedSubmissionForMission[],
 ): number {
@@ -358,6 +404,20 @@ function computeProgressForMission(
       }
       // A submission counts when any of its skills belongs to the sector in the taxonomy.
       return acceptedSubmissions.filter((s) => s.matchedSectors.has(sectorName)).length;
+    }
+    case 'count_skill_matches': {
+      const skillName = typeof mission.goalMetadata.skillName === 'string'
+        ? (mission.goalMetadata.skillName as string).trim().toLowerCase()
+        : null;
+      if (!skillName) {
+        return 0;
+      }
+      // Only the taxonomy skills picked on the nomination count. Free-text proposed skills are
+      // deliberately excluded: they are whatever the scout typed, so counting them would let a
+      // mission be completed by wording rather than by finding the person it asks for.
+      return acceptedSubmissions.filter(
+        (s) => s.skills.some((skill) => skill.trim().toLowerCase() === skillName),
+      ).length;
     }
     default:
       return 0;
@@ -539,7 +599,7 @@ function validateDescription(input: MissionCreateInput): string | null {
 
 function validateGoalType(input: MissionCreateInput): string | null {
   const validGoalTypes: SkillsHuntMissionGoalType[] = [
-    'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds',
+    'count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_skill_matches',
   ];
   if (!validGoalTypes.includes(input.goalType)) return 'invalid goalType';
   return null;
@@ -558,11 +618,47 @@ function validateSectorMetadata(input: MissionCreateInput): string | null {
   return null;
 }
 
+// A skill mission with no skill named would count nothing and sit at 0 forever, which is the
+// quieter half of the failure this goal type was added for: the loud half was a mission that
+// counted everything. Refuse it at the door rather than storing a goal that cannot be met.
+function validateSkillMetadata(input: MissionCreateInput): string | null {
+  if (input.goalType === 'count_skill_matches') {
+    const skill = input.goalMetadata?.skillName;
+    if (typeof skill !== 'string' || skill.trim().length === 0) return 'goalMetadata.skillName required for count_skill_matches';
+    if (skill.trim().length > 200) return 'goalMetadata.skillName max 200 chars';
+  }
+  return null;
+}
+
 function validateBonusPoints(input: MissionCreateInput): string | null {
   if (input.bonusPoints != null && (!Number.isInteger(input.bonusPoints) || input.bonusPoints < 0)) {
     return 'bonusPoints must be non-negative integer';
   }
   return null;
+}
+
+// An update is partial, so a field left out means "leave it alone" — which makes the goal type and
+// its metadata impossible to check in isolation: switching an existing mission to
+// count_skill_matches without also sending a skillName would store a goal that counts nothing, and
+// sending a skillName alone is fine when the mission is already a skill mission. So the checks run
+// against the row as it WILL be, merging the supplied fields over the stored ones. This is the path
+// the admin edit control uses to re-point a mission whose goal type was wrong.
+export function validateMissionUpdateInput(
+  existing: SkillsHuntMission,
+  input: MissionUpdateInput,
+): string | null {
+  return validateMissionCreateInput({
+    roundId: existing.roundId,
+    title: input.title ?? existing.title,
+    description: input.description !== undefined ? input.description : existing.description,
+    goalType: input.goalType ?? existing.goalType,
+    goalTarget: input.goalTarget ?? existing.goalTarget,
+    goalMetadata: input.goalMetadata ?? existing.goalMetadata,
+    bonusPoints: input.bonusPoints ?? existing.bonusPoints,
+    colorHex: input.colorHex !== undefined ? input.colorHex : existing.colorHex,
+    status: input.status ?? existing.status,
+    displayOrder: input.displayOrder ?? existing.displayOrder,
+  });
 }
 
 export function validateMissionCreateInput(input: MissionCreateInput): string | null {
@@ -575,6 +671,7 @@ export function validateMissionCreateInput(input: MissionCreateInput): string | 
     validateGoalType,
     validateGoalTarget,
     validateSectorMetadata,
+    validateSkillMetadata,
     validateBonusPoints,
   ];
   for (const check of checks) {
