@@ -41,9 +41,10 @@ const requireFromWeb = createRequire(new URL('../packages/web/package.json', imp
 const { StreamChat } = requireFromWeb('stream-chat');
 
 const VIDEO_API = 'https://video.stream-io-api.com';
-// Call-type endpoints live under /api/v2/video/ on that host, the same prefix the app's Beacon
-// code uses for calls (ctf/packages/web/lib/beacon/stream.ts). The bare /video/call_types path
-// answers 404 "Not Found" (workflow run 6, 2026-09-18).
+// Call-type endpoints are /api/v2/video/calltypes/{name} on that host, spelled without an
+// underscore: that is the path Stream's own Node SDK (@stream-io/node-sdk 0.8.6, getCallType /
+// updateCallType) sends. Both /video/call_types and /api/v2/video/call_types answer 404
+// "Not Found" (workflow runs 6 and 7, 2026-09-18).
 const CALL_TYPE = process.env.STREAM_CALL_TYPE?.trim() || 'default';
 
 // What a listener needs, and what a listener must not have. Mirrors the runbook.
@@ -152,7 +153,7 @@ async function ensureRole(chat, role, mode) {
 // --- The call-type grants (Video API) -----------------------------------------------------------
 
 async function readGrants(auth, role) {
-  const callType = await videoRequest(auth, 'GET', `/api/v2/video/call_types/${encodeURIComponent(CALL_TYPE)}`);
+  const callType = await videoRequest(auth, 'GET', `/api/v2/video/calltypes/${encodeURIComponent(CALL_TYPE)}`);
   const grants = callType?.grants ?? {};
   return Array.isArray(grants[role]) ? [...grants[role]] : [];
 }
@@ -178,7 +179,7 @@ async function ensureGrants(auth, role, mode, roleJustCreated) {
   let lastError = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      await videoRequest(auth, 'PUT', `/api/v2/video/call_types/${encodeURIComponent(CALL_TYPE)}`, { grants: { [role]: after } });
+      await videoRequest(auth, 'PUT', `/api/v2/video/calltypes/${encodeURIComponent(CALL_TYPE)}`, { grants: { [role]: after } });
       lastError = null;
       break;
     } catch (error) {
