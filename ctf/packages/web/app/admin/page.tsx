@@ -30,6 +30,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
   { href: '/admin/directory', name: 'Directory' },
+  // Everybody listed in the Directory who does not have an invite post on the blog yet, with
+  // their skills, and a control that copies the list as plain text. It had no row here, which
+  // left it reachable only by typing the address.
+  { href: '/admin/directory/invite-queue', name: 'Directory: Invite Queue' },
   // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
   // announcements area below, which is an authoring tool for the owner's own announcements — this
   // one carries a different power, over someone else's words.
@@ -63,6 +67,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // coded by what they say. The survey records only what was removed, so the two answer different
   // questions and are read together.
   { href: '/admin/quora-live-census', name: 'Quora Live Account Census' },
+  // One post a day for the Skills Economy space, written in advance so a short-lived account can
+  // say one whole thing in the minutes it has. The ask rotates between the three Peace Battle 2
+  // actions and nothing repeats until the pool is exhausted.
+  { href: '/admin/quora-message-of-the-day', name: 'Quora Message of the Day' },
   { href: '/admin/safety', name: 'Safety Reports' },
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
