@@ -38,7 +38,7 @@ import { reportError } from 'lib/observability/report';
 // link. Verification needs the profile itself, so this one is stricter. Do not merge them.
 //
 // Changing the canonical form re-keys stored values, so the columns holding them are rewritten by
-// ctf/db/migrations/post/0027_unlock_canonical_quora_profile_urls.sql. A new caller comparing a
+// ctf/db/migrations/post/0028_unlock_canonical_quora_profile_urls.sql. A new caller comparing a
 // freshly canonicalized URL against a stored one must be sure that migration has run.
 
 const QUORA_PROFILE_HOSTS = new Set(['quora.com', 'www.quora.com']);

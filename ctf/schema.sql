@@ -1494,7 +1494,7 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   -- comparing this column (the "Shared by N" count, the one-reward-per-identity guard, and the spam
   -- denylist below), so a row written in any other spelling makes one person look like two. Rows
   -- stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_unlock_canonical_quora_profile_urls.sql.
+  -- ctf/db/migrations/post/0028_unlock_canonical_quora_profile_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   review_status TEXT NOT NULL CHECK (review_status IN ('pending', 'approved', 'rejected', 'spam', 'duplicate')),
   unlock_window_expires_at TIMESTAMPTZ NOT NULL,

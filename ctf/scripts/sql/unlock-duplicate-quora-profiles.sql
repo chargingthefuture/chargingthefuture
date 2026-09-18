@@ -2,7 +2,7 @@
 --
 -- Written for the owner to paste into the Neon dashboard. Read-only: it changes nothing, grants
 -- nothing and revokes nothing. Safe to run before or after the canonical-URL migration
--- (0027_unlock_canonical_quora_profile_urls.sql), because it canonicalizes in the query itself —
+-- (0028_unlock_canonical_quora_profile_urls.sql), because it canonicalizes in the query itself —
 -- which is how it can find duplicates that the stored column still spells differently.
 --
 -- Why it is needed: until 2026-09-18 a stored "normalized" URL kept whatever scheme, www, casing and

@@ -338,7 +338,7 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    `https://www.quora.com/profile/mary-t-i-1/answers` were three different identities to this plugin.
    One profile signed up three times, the queue showed no "Shared by" pill on any of them, and the
    verification reward was granted more than once for one person. The canonical form in control 3
-   closes it, and `ctf/db/migrations/post/0027_unlock_canonical_quora_profile_urls.sql` re-keys the
+   closes it, and `ctf/db/migrations/post/0028_unlock_canonical_quora_profile_urls.sql` re-keys the
    rows stored before the fix (submissions, and the spam denylist — whose two spellings of one
    profile merge, adding their flag counts). The migration re-keys only: duplicates it brings to
    light appear as "Shared by N" for a human to decide on, and a reward already granted to a
@@ -421,7 +421,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   more than once for one person. `lib/unlock/quora-url.ts` now returns
   `https://www.quora.com/profile/<lowercased slug>`, taking only the first path segment after
   `/profile/`, with a unit test per spelling. Migration
-  `0027_unlock_canonical_quora_profile_urls.sql` re-keys the rows already stored (a fixed function
+  `0028_unlock_canonical_quora_profile_urls.sql` re-keys the rows already stored (a fixed function
   reading unfixed rows would keep the same blindness for everyone who signed up before today);
   denylist rows that collapse onto one profile merge, adding their flag counts and keeping the
   earliest first flag and the latest last flag. Verified against a local Postgres: the reported
