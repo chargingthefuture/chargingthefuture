@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -8,13 +8,21 @@ import {
   ParticipantsAudio,
   useCallStateHooks,
   type Call,
+  type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
-import { CHYME_CALL_TYPE, toCallIdForChyme, isWebRtcAvailable } from './chyme-audio-room';
+import {
+  CHYME_CALL_TYPE,
+  toCallIdForChyme,
+  isWebRtcAvailable,
+  isPublishingAudio,
+  ChymeSpeakerAvatar,
+  ChymeSpeakerStatusBadge,
+} from './chyme-audio-room';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 
 // A first join can fail for reasons that clear on their own: the guest Stream identity was minted
@@ -91,18 +99,31 @@ export function ChymeGuestListen({
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
+  // 'idle' until the visitor taps: a phone browser (iOS Safari above all) refuses to play sound
+  // that a page starts on its own, so a join that ran on page load put the guest on stage with
+  // every audio track muted by the browser. Members never hit this because they tap Join. The tap
+  // is the browser's permission to play, and everything after it (the join, the audio elements the
+  // SDK adds as people speak) inherits it.
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'joined' | 'error' | 'unsupported'>('idle');
+  // Set once by the tap; the join effect below keys on it rather than on `status`, whose later
+  // changes must not tear the call down as soon as it joined.
+  const [armed, setArmed] = useState(false);
   // The verbatim reason the join failed. The member room already shows its Stream error this way;
   // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
   // to go on but "try refreshing".
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
+  // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
+  // connect. Detect it up front and show a clear message rather than a raw error or a misleading
+  // "try refreshing". Expected environment state, so it is not reported to Sentry.
   useEffect(() => {
-    // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
-    // connect. Detect it up front and show a clear message rather than a raw error or a misleading
-    // "try refreshing". Expected environment state, so it is not reported to Sentry.
     if (!isWebRtcAvailable()) {
       setStatus('unsupported');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!armed) {
       return;
     }
 
@@ -162,7 +183,7 @@ export function ChymeGuestListen({
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
     };
-  }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
+  }, [armed, credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
@@ -175,6 +196,19 @@ export function ChymeGuestListen({
       <GuestNote
         accent={accent}
         text="Live audio needs WebRTC, which this browser has turned off — on iPhone or iPad this usually means Safari Lockdown Mode. Turn it off for this site (address bar → aA → Website Settings) or use another browser to listen."
+      />
+    );
+  }
+  if (status === 'idle') {
+    return (
+      <ListenButton
+        accent={accent}
+        participantCount={participantCount}
+        onTap={() => {
+          unlockAudioPlayback();
+          setStatus('connecting');
+          setArmed(true);
+        }}
       />
     );
   }
@@ -191,6 +225,47 @@ export function ChymeGuestListen({
         <GuestAudioSink accent={accent} participantCount={participantCount} />
       </StreamCall>
     </StreamVideo>
+  );
+}
+
+// Inside the tap handler, before anything asynchronous: resuming an audio context is the widely used
+// way to make a phone browser treat the page as allowed to play sound from here on. Nothing is
+// played through it; it is closed at once. Best-effort, and the join goes ahead either way.
+function unlockAudioPlayback(): void {
+  const Ctx =
+    typeof window !== 'undefined'
+      ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+      : undefined;
+  if (!Ctx) {
+    return;
+  }
+  try {
+    const ctx = new Ctx();
+    void ctx.resume().then(() => ctx.close()).catch(() => undefined);
+  } catch {
+    // no-trace: an audio context is a courtesy to the browser's autoplay rule, not a requirement.
+  }
+}
+
+function ListenButton({ accent, participantCount, onTap }: { accent: string; participantCount: number; onTap: () => void }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
+    >
+      <Radio size={16} style={{ color: accent, flexShrink: 0, marginTop: 2 }} />
+      <div>
+        <div style={{ fontWeight: 600 }}>
+          Tap to listen · {participantCount} {participantCount === 1 ? 'person' : 'people'} on stage
+        </div>
+        <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Phones only play sound after a tap. You will hear the room and cannot be heard.
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -217,17 +292,72 @@ function GuestAudioSink({ accent, participantCount }: { accent: string; particip
   const participants = useParticipants();
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
-  // Show the authoritative server-side count (the same number the room list shows). The Stream client
-  // participant list counts every connected identity — including the guest's own ephemeral session and
-  // any guest sessions Stream has not yet timed out — which over-counts and is inconsistent with the
-  // rest of the UI. The Stream list is still used below, but only to play each participant's audio.
+  // One tile per identity, the local session preferred, exactly as the member room collapses its
+  // list: a member with a lingering extra Stream session would otherwise appear twice.
+  const uniqueParticipants = useMemo(() => {
+    const byUser = new Map<string, StreamVideoParticipant>();
+    for (const participant of participants) {
+      const existing = byUser.get(participant.userId);
+      if (!existing || (participant.isLocalParticipant && !existing.isLocalParticipant)) {
+        byUser.set(participant.userId, participant);
+      }
+    }
+    return Array.from(byUser.values());
+  }, [participants]);
+  // The server-side count (members with fresh presence) is what the room list shows; the stage
+  // below shows everyone Stream has in the call, the listener included, which is what the members
+  // in the room see on their own stage. Both are shown so neither number surprises.
   const count = participantCount;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
-      <Radio size={16} style={{ color: accent }} />
-      Listening live · {count} {count === 1 ? 'person' : 'people'} on stage
-      {/* Headless audio sink — plays every participant's audio track. */}
-      <ParticipantsAudio participants={participants} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
+        <Radio size={16} style={{ color: accent }} />
+        Listening live · {count} {count === 1 ? 'member' : 'members'} in the room
+        {/* Headless audio sink — plays every participant's audio track. */}
+        <ParticipantsAudio participants={participants} />
+      </div>
+      <GuestStage participants={uniqueParticipants} />
+    </div>
+  );
+}
+
+// The same tiles the member room draws (avatar ring, headphones badge for a listener, status pill),
+// without the member-only actions: a guest cannot tip, raise a hand, or open a Back Channel.
+function GuestStage({ participants }: { participants: StreamVideoParticipant[] }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>
+        On Stage · {participants.length} {participants.length === 1 ? 'Participant' : 'Participants'}
+      </div>
+      {participants.length === 0 ? (
+        <div style={{ color: t.FAINT, fontSize: 14 }}>No participants yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+          {participants.map((participant) => {
+            const isGuest = participant.userId.startsWith('chyme-guest-');
+            const audioActive = !isGuest && isPublishingAudio(participant);
+            const name = participant.name || participant.userId;
+            return (
+              <div key={participant.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 100 }}>
+                <ChymeSpeakerAvatar
+                  name={name}
+                  speaking={participant.isSpeaking}
+                  isSelf={Boolean(participant.isLocalParticipant)}
+                  isGuest={isGuest}
+                  audioActive={audioActive}
+                  handRaised={false}
+                />
+                <div style={{ fontSize: 12, fontWeight: 600, color: t.TEXT, textAlign: 'center' }}>
+                  {participant.isLocalParticipant ? 'You (listening)' : name}
+                </div>
+                <ChymeSpeakerStatusBadge isGuest={isGuest} audioActive={audioActive} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

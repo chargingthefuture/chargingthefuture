@@ -144,13 +144,24 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 **Precondition:** the room is live (a signed-in member is in the call).
 **Steps:**
 1. Sign out. Open the Chyme plugin route.
-2. Listen to the live room; look for any speak control.
+2. Tap **Tap to listen** under the room heading, then listen to the live room; look for any speak
+   control.
 3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
 4. Count the sign-in and join buttons on the whole page, top to bottom.
 5. Have the last signed-in member leave the call, then reload the signed-out page within the next
    45 seconds (inside the presence window, so the server still reports the room as live).
-**Expected:** You see the public view and can listen to the live room, joined muted with no speak
-control. The view shows marketing/empty-state content only — no private or per-user data, and the
+**Expected:** Before the tap the room heading shows and under it a single **Tap to listen** button
+with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
+cannot be heard." — nothing is connected yet and nothing plays. After the tap you see "Connecting to
+the live room…", then "Listening live · N members in the room", and you hear the room, joined muted
+with no speak control. Under that line an **On Stage** section shows the same avatar tiles the member
+room shows — every member in the call by handle with the speaking ring and mic badge, and your own
+tile as "You (listening)" with the headphones badge — and under the stage a read-only **Room Chat**
+panel with the members' messages, refreshed every ten seconds, and one **Sign in to chat** link;
+there is no composer. If the chat cannot load, the panel reads "Couldn't load the room chat." with
+the server's message and the HTTP status.
+(Since 2026-09-18: the join used to run on page load, which put the guest on stage with the audio
+blocked by the phone's autoplay rule — the member in the room saw a listener who heard nothing.) The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. When the room is not live, there is no listen audio. The public
 view is one phone-width layout at every window size — never a two-column desktop version. The page
 itself scrolls: the green header stays pinned at the top while the content moves under it, and
@@ -160,8 +171,12 @@ screenful.
 In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
 to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
 link when the visitor has an account part-way through Unlock). The green header carries the back
-control and the title only, with no sign-in or join button. The bottom bar carries only the grayed,
-locked **Start a Room**, which does nothing on purpose — hosting needs an account. There is **no
+control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
+grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
+Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room;
+pressing it spins the icon, re-reads the room (live state, count) and the chat, and a listener
+already in the call stays connected — the installed app on Android has no browser reload, so this is
+the only way a visitor there re-checks the room. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
 page.
 

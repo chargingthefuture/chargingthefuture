@@ -43,7 +43,7 @@ function toCallId(raw: string): string {
   return toCallIdForChyme(raw);
 }
 
-function isPublishingAudio(participant: StreamVideoParticipant): boolean {
+export function isPublishingAudio(participant: StreamVideoParticipant): boolean {
   return participant.publishedTracks.includes(SfuModels.TrackType.AUDIO);
 }
 
@@ -407,10 +407,12 @@ function ChymeAudioRoomLive({
   );
 }
 
+// Exported (with the status badge below) so the signed-out listener's page draws the same stage
+// tiles as the member room, from the same Stream participant list.
 // The circular avatar with its mic/headphones badge and the raised-hand marker. `audioActive` is
 // `!isGuest && publishingAudio` computed by the tile — a guest never counts as publishing, so inside
 // the member (`!isGuest`) branches `audioActive` is exactly `publishingAudio`.
-function ChymeSpeakerAvatar({
+export function ChymeSpeakerAvatar({
   name,
   speaking,
   isSelf,
@@ -476,7 +478,7 @@ function ChymeSpeakerAvatar({
 }
 
 // The pill under the name: "listening" for a guest, otherwise "speaking"/"muted" by audio state.
-function ChymeSpeakerStatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
+export function ChymeSpeakerStatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (

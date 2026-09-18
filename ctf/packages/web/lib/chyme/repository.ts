@@ -354,6 +354,30 @@ export async function getPublicRoomLiveState(): Promise<{
   });
 }
 
+// The main room's recent chat for a signed-out visitor (owner directive, 2026-09-18: a visitor can
+// read the room chat and signs in to write). Read-only and identity-free: nothing is upserted, and a
+// room that no member has ever opened yields an empty list rather than being created here.
+export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymeMessage[]> {
+  return withDbTransaction(async (client) => {
+    const room = await getMainRoomReadOnly(client);
+    if (!room) {
+      return [];
+    }
+    const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
+    const result = await client.query<MessageRow>(
+      `
+        SELECT id, user_id, username, avatar_url, text, sent_at
+        FROM chyme_messages
+        WHERE room_id = $1
+        ORDER BY sent_at DESC
+        LIMIT $2
+      `,
+      [room.id, boundedLimit],
+    );
+    return result.rows.reverse().map(mapMessage);
+  });
+}
+
 export async function listRoomMessages(
   identity: IdentityInput,
   limit = CHYME_DEFAULT_MESSAGES_LIMIT,
