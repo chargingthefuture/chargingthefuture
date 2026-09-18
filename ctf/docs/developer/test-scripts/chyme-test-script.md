@@ -195,7 +195,9 @@ use another browser. **Chat still loads and works.** The guest listen path shows
 audio room connect normally. When the guest listener does fail for a real reason (not Lockdown Mode),
 the note carries the underlying reason as a second line under "Couldn't connect to the live room",
 the same way the signed-in room shows its connection error — so the failure can be reported without
-opening browser developer tools.
+opening browser developer tools. One wording to know: "role 'chyme_listener' is not allowed to
+perform action JoinCall" means the guest role is set but the `default` call type does not grant it
+`join-call` — a Stream dashboard fix, per `ctf/docs/plugins/chyme/guest-listener-stream-role.md`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

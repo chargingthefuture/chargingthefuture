@@ -141,6 +141,15 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **Root cause of the signed-out listen failure recorded: the guest role lacked
+  `join-call`.** With the reason line shipped the same evening, the public page read Stream's own
+  refusal — the `chyme_listener` role "is not allowed to perform action JoinCall in scope
+  'video:default'". `CHYME_GUEST_STREAM_ROLE` had been set and the role created, but the `default`
+  call type never got the grant, so every guest since then was minted and then refused while
+  members in the room saw nothing wrong. Config, not code: the runbook
+  `ctf/docs/plugins/chyme/guest-listener-stream-role.md` gains a section with the exact wording and
+  the two ways out (grant `join-call` in the Stream dashboard, or unset the env var). Test script
+  CH-8 names the wording. No code, schema, route, or contract change.
 - 2026-09-18: **The signed-out page says which of four states it is in, instead of "No public rooms
   right now" for two of them.** Owner report, the same evening as the two fixes above: signed in on
   one device and in the room, the signed-out view showed nothing live. Two silent paths could produce
