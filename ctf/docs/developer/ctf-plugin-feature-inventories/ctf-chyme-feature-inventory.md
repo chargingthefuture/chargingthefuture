@@ -50,7 +50,7 @@ Chyme plugin routes:
 - `POST /api/chyme/heartbeat` — presence keepalive; refreshes the member's `last_seen_at` while in the call. CSRF-guarded.
 - `POST /api/chyme/hand` — persists the caller's raise/lower hand on their presence row (`{ raised: boolean }`); returns `{ ok, room }` with refreshed participants. The raised hand stays visible to everyone until lowered, the member leaves, or their presence goes stale. Audit command `chyme.hand`. CSRF-guarded.
 - `POST /api/chyme/leave` — drops the member's presence row on exit (which also clears any raised hand). CSRF-guarded.
-- `GET /api/chyme/public/room` — **public, unauthenticated.** Returns the one default room's live status (`isLive`, `participantCount`) and, only when it is live and Stream is configured, an ephemeral guest listen-only Stream identity (`credentials`). Lets a signed-out visitor listen ("free to listen, sign in to speak"). Guests are listen-only: the client joins muted with no speak controls, and when `CHYME_GUEST_STREAM_ROLE` is set the guest Stream user is created with that restricted role so Stream blocks publish server-side (the owner removes `send-audio`/`send-video`/`screenshare` from that role on the `default` call type — see `ctf/docs/plugins/chyme/guest-listener-stream-role.md`). Until that env var + Stream role are configured, listen-only is enforced on the client only.
+- `GET /api/chyme/public/room` — **public, unauthenticated.** Returns the one default room's live status (`isLive`, `participantCount`) and, only when it is live and Stream is configured, an ephemeral guest listen-only Stream identity (`credentials`). When the room is live but no guest identity could be minted (Stream rejected the guest upsert, or Stream is not configured), the response is still `ok` and `isLive: true`, with `listenUnavailable` carrying the plain reason instead of `credentials`; only a failed database read returns 503. Lets a signed-out visitor listen ("free to listen, sign in to speak"). Guests are listen-only: the client joins muted with no speak controls, and when `CHYME_GUEST_STREAM_ROLE` is set the guest Stream user is created with that restricted role so Stream blocks publish server-side (the owner removes `send-audio`/`send-video`/`screenshare` from that role on the `default` call type — see `ctf/docs/plugins/chyme/guest-listener-stream-role.md`). Until that env var + Stream role are configured, listen-only is enforced on the client only.
 - `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
 
 Back Channel routes (free 1:1 audio sidebar between two members in the same live room, spec #1746). All under `/api/chyme/back-channel/`; all require `requireChymeAccess` (signed-in + approved_full); all mutations CSRF-guarded:
@@ -140,6 +140,35 @@ Current status:
 8. Resolved in code (2026-07-20): the Android live audio room now **keeps the call alive when the app is backgrounded**. Previously, once the member navigated away without closing (or locked the screen), Android suspended the JS process, which both cut the presence heartbeat/room-poll timers (dropping the member after the 45s presence window) and could tear the audio down. The Stream Video SDK's documented Android foreground service is now enabled: `@notifee/react-native` is installed, `androidKeepCallAlive: true` is set on the `@stream-io/video-react-native-sdk` Expo config plugin (writes the `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MICROPHONE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` / `POST_NOTIFICATIONS` permissions and the service declaration at prebuild), and `StreamVideoRN.updateConfig({ foregroundService: { android: { channel, notificationTexts } } })` runs once at app startup in `App.tsx` to register the keep-alive channel. With the service running the OS keeps the process alive while in a call, so the audio continues and the presence heartbeat + room poll keep firing — the member stays in the roster. **Verification limit (release gate):** this is the documented config, verified only by typecheck/lint/lockfile here. Whether audio actually continues and the member stays in the roster when backgrounded can be confirmed only on a real device from an EAS dev/production build (not Expo Go) — that on-device check is a required release gate before this is considered proven. iOS is unchanged (its background audio mode was already handled by the config plugin).
 
 ## Change Log
+
+- 2026-09-18: **Root cause of the signed-out listen failure recorded: the guest role lacked
+  `join-call`.** With the reason line shipped the same evening, the public page read Stream's own
+  refusal — the `chyme_listener` role "is not allowed to perform action JoinCall in scope
+  'video:default'". `CHYME_GUEST_STREAM_ROLE` had been set and the role created, but the `default`
+  call type never got the grant, so every guest since then was minted and then refused while
+  members in the room saw nothing wrong. Config, not code: the runbook
+  `ctf/docs/plugins/chyme/guest-listener-stream-role.md` gains a section with the exact wording and
+  the two ways out (grant `join-call` in the Stream dashboard, or unset the env var). Test script
+  CH-8 names the wording. No code, schema, route, or contract change.
+- 2026-09-18: **The signed-out page says which of four states it is in, instead of "No public rooms
+  right now" for two of them.** Owner report, the same evening as the two fixes above: signed in on
+  one device and in the room, the signed-out view showed nothing live. Two silent paths could produce
+  that. First, the public route wrapped the live-state read and the guest-identity mint in one catch,
+  so a Stream-side failure minting the guest (a role name Stream does not know, a Stream outage) came
+  back as a 503 — and the shell treated any non-ok response as "not live" and showed the empty
+  state while a member was audibly in the call. Second, a live room with no `credentials` (Stream
+  not configured) matched neither render branch and drew nothing at all under the invitation card.
+  `GET /api/chyme/public/room` now reads the live state first and returns 503 only when that read
+  fails; when the room is live and the mint fails it still answers `ok` / `isLive: true` and puts
+  the plain reason in a new optional `listenUnavailable` field, reported to Sentry under
+  `public_room_guest_credentials`. The shell's room list is its own component,
+  `ChymePublicRoomList`, with four states: the live check failed (says so, with the server's message
+  and HTTP status, never "no rooms"); not live (the shipped empty state, unchanged); live and
+  listening (unchanged); live but no guest identity (the room heading, "The room is live — sign in
+  to join it.", and the reason underneath in the same note style the listener uses). `GuestNote` is
+  exported from `chyme-guest-listen.tsx` for that last state. The route's response gains one
+  optional field and no existing field changes; there is no contract file for this route and no
+  other consumer. Test script CH-7 gains the two new states.
 
 - 2026-09-17: **A signed-out listener no longer dead-ends on "Couldn't connect to the live room."**
   Owner report: the public Chyme page showed the room name, said "You're listening live", and under

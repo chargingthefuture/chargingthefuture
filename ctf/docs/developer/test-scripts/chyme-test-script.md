@@ -168,6 +168,13 @@ page.
 In step 5 the page does **not** settle on "Couldn't connect to the live room" under a heading saying
 you are listening live: the listener retries, then re-reads the room and falls back to the "No public
 rooms right now" empty state once the room has ended.
+
+"No public rooms right now" appears **only** when the server said the room is not live. If the live
+check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads
+"Couldn't check whether a room is live" with the server's message and the HTTP status. If the room
+is live but the server could not mint a guest identity (Stream rejected it, or Stream is not
+configured), the room heading still shows, with "The room is live — sign in to join it." and a note
+carrying the reason — never a blank space under the invitation card.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -188,7 +195,9 @@ use another browser. **Chat still loads and works.** The guest listen path shows
 audio room connect normally. When the guest listener does fail for a real reason (not Lockdown Mode),
 the note carries the underlying reason as a second line under "Couldn't connect to the live room",
 the same way the signed-in room shows its connection error — so the failure can be reported without
-opening browser developer tools.
+opening browser developer tools. One wording to know: "role 'chyme_listener' is not allowed to
+perform action JoinCall" means the guest role is set but the `default` call type does not grant it
+`join-call` — a Stream dashboard fix, per `ctf/docs/plugins/chyme/guest-listener-stream-role.md`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
