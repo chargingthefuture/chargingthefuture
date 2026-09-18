@@ -260,7 +260,10 @@ LightHouse match message; access to the Stream dashboard for the app behind `STR
 **Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
 `lighthouse-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
 via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
-is down at delete time, the deletion still succeeds and the failure is logged for retry.
+is down at delete time, the deletion still succeeds and the failure is logged for retry — since
+2026-09-18 with Stream's own reason (Sentry op `stream_delete_user`, area `lighthouse`). A match chat
+that cannot be set up answers "Could not set up the chat channel: <Stream's reason>" (scrubbed and
+capped) instead of the raw exception text.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---

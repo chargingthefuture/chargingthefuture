@@ -277,7 +277,9 @@ Access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 deleted — the Stream copy no longer lingers, on any deletion path (service route directly; full-account
 / internal / Clerk webhook via the orchestrator's external-cleanup hook). The audit line records
 `streamCleared: yes`. If Stream is down at delete time, the deletion still succeeds and the failure is
-logged for retry/backfill — the account is still deleted.
+logged for retry/backfill — the account is still deleted. Since 2026-09-18 that log line carries
+Stream's own reason (Sentry op `stream_delete_user`, area `chyme`), so "unconfigured" and "refused"
+are distinguishable in the record.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -298,6 +300,11 @@ Two test members in the same room are needed for most of these.
 bottom sheet on Android) reading "wants a Back Channel" with Accept/Decline — B is never cold-rung
 into a live call. On Accept, both A and B land in the live 1:1 audio call (floating panel on web,
 full-screen on Android) and can hear each other. The Back Channel action never shows on your own tile.
+If the call cannot connect, the panel reads "Could not connect to the call: <Stream's reason>" (web
+and Android, since 2026-09-18) rather than a bare sentence; and if the accept or join route itself
+fails, its message reads "Unable to accept Back Channel: <reason>" / "Unable to join Back Channel:
+<reason>". "Stream service is not configured" now appears only when Stream credentials are absent,
+never for a Stream refusal.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-13 · Decline sends nothing back
