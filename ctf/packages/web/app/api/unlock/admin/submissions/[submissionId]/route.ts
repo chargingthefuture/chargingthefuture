@@ -51,9 +51,14 @@ async function parseEditUrlBody(request: Request): Promise<ParsedEditUrlBody> {
   return { ok: true, rawUrl: body.quoraProfileUrl, normalizedUrl };
 }
 
-// Admin correction of a submission's Quora profile URL (e.g. fixing a typo a member submitted).
-// Re-runs the same validation and normalization as the member submission path so the stored
-// normalized URL stays canonical. Does not change review status or the verification window.
+// Admin correction of a submission's Quora profile URL (e.g. fixing a typo a member submitted, or
+// putting in the profile an admin found for a member who could not produce one). Re-runs the same
+// validation and normalization as the member submission path so the stored normalized URL stays
+// canonical. Does not change review status or the verification window.
+//
+// The row is stamped with the admin who set it (`url_set_by_admin_user_id`) and the change is appended
+// to the shared Quora URL history as `unlock_admin`, so neither the queue card nor the trail can read
+// as though the member supplied this URL themselves.
 export async function PATCH(request: Request, { params }: RouteParams) {
   const csrfDeny = ensureUnlockMutationCsrf(request);
   if (csrfDeny) {
@@ -81,7 +86,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const { rawUrl, normalizedUrl } = parsedBody;
 
   try {
-    const submission = await updateUnlockSubmissionQuoraUrl(submissionId, rawUrl, normalizedUrl);
+    const submission = await updateUnlockSubmissionQuoraUrl(submissionId, rawUrl, normalizedUrl, gate.auth.userId);
 
     if (!submission) {
       return unlockErrorResponse('Unlock submission not found.', 404);

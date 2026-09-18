@@ -3,6 +3,7 @@
 import type { UnlockSignupAccount } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
+import { UnlockSignupAddUrl } from './unlock-signup-add-url';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
@@ -88,10 +89,12 @@ export function UnlockSignupRow({
   account,
   busy,
   onToggleExcluded,
+  onAddUrl,
 }: {
   account: UnlockSignupAccount;
   busy: boolean;
   onToggleExcluded: (userId: string, excluded: boolean) => void;
+  onAddUrl: (userId: string, url: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
@@ -115,6 +118,13 @@ export function UnlockSignupRow({
       <DetailLine text={screenViewLine(account)} />
       <DetailLine text={departureLine(account)} />
       <DetailLine text={account.excludedNote ? `Note: ${account.excludedNote}` : null} />
+
+      {/* Only where there is nothing on file and somebody left to approve: a member who deleted their
+          data is gone, and one who already has a URL is changed from the Edit control on their queue
+          card, so that an "add" can never quietly overwrite what they gave. */}
+      {!account.hasSubmission && !account.deletedTheirData ? (
+        <UnlockSignupAddUrl userId={account.userId} busy={busy} onAdd={onAddUrl} />
+      ) : null}
 
       <button
         type="button"

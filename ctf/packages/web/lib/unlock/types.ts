@@ -24,6 +24,14 @@ export type UnlockSubmission = {
   // clawed the reward back (the "loser" of a determination, or a perp).
   rewardWithheldAt: string | null;
   rewardRevokedAt: string | null;
+  // Who put the URL that is stored right now. Null when the member submitted it themselves; otherwise
+  // the admin who entered it for a member who could not produce one, or who corrected a wrong one.
+  // Cleared when the member submits their own URL over the top, because it describes the current URL,
+  // not the row's whole history — that trail is directory_quora_url_history. A reviewer needs the
+  // difference in front of them: "this person proved they are real" and "an admin found this profile
+  // for them" are not the same claim.
+  urlSetByAdminUserId: string | null;
+  urlSetByAdminAt: string | null;
   // How many accounts (including this one) have claimed the same normalized Quora URL. Only populated
   // by the admin queue list; 1 means no duplicate. Undefined where not computed.
   sharedUrlAccountCount?: number;
@@ -61,6 +69,10 @@ export type CreateUnlockSubmissionInput = {
   userId: string;
   quoraProfileUrl: string;
   quoraProfileUrlNormalized: string;
+  // Set only when an admin is entering this URL on the member's behalf — the member could not produce
+  // one, asked for help, and an admin looked them up by hand. Absent on the member's own submission,
+  // which is what clears the stamp if they later submit their own URL over an admin-entered one.
+  addedByAdminUserId?: string;
 };
 
 export type ReviewUnlockSubmissionInput = {

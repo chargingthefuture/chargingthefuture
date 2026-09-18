@@ -1494,6 +1494,10 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   -- reward an admin clawed back (the "loser" of a determination, or a perp).
   reward_withheld_at TIMESTAMPTZ,
   reward_revoked_at TIMESTAMPTZ,
+  -- Null when the member submitted the stored URL themselves; otherwise the admin who entered or
+  -- corrected it for them, and when. See the guarded ALTERs further down for the full note.
+  url_set_by_admin_user_id TEXT,
+  url_set_by_admin_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1658,6 +1662,14 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS incentive_granted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Who put the URL that is stored right now: null when the member submitted it themselves, otherwise
+-- the admin who entered or corrected it on their behalf. An admin can add a URL for a member who
+-- could not produce one (they asked for help and left a name instead), and can fix one that is wrong;
+-- either way the row must not read as if the member typed it, because an approval decision is made on
+-- that difference. Cleared the moment the member submits their own URL over the top.
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_at TIMESTAMPTZ;
 -- Duplicate CREATE TABLE blocks for unlock_audit_log and unlock_runtime_config
 -- were removed here; the canonical definitions are above (unlock_audit_log
 -- keeps its richer column set). The ALTER ... ADD COLUMN reconciliation for

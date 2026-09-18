@@ -202,9 +202,48 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
-    command: unlock.admin.submission.url.edit
+    command: unlock.admin.submission.create
     version: 1.0.0
-    description: Admin correction of a submission's Quora profile URL (e.g. fixing a typo). Re-validates and re-normalizes the URL with the same rules as the member submit path. Does not change review status, access tier, or the verification window.
+    description: >-
+      An admin enters a Quora profile URL for a member who never submitted one — the member asked for
+      help, left whatever they could say about their Quora account, and the admin looked them up by
+      hand. Creates the same pending submission the member would have created, so the ordinary review
+      still decides; it approves nobody. The row records the admin who entered it, and the change is
+      appended to the shared Quora URL history under that admin's id with source `unlock_admin`, so it
+      can never read as the member's own claim. Refused when the member already has a submission —
+      changing an existing URL is unlock.admin.submission.url.edit.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      quoraProfileUrl:
+        type: string
+        required: true
+    outputSchema:
+      submissionId:
+        type: integer
+      reviewStatus:
+        type: string
+      quoraProfileUrlNormalized:
+        type: string
+    dataAccess:
+      - unlock_verification_submissions
+      - unlock_spam_quora_urls
+      - directory_quora_url_history
+      - unlock_audit_log
+    purpose: moderation_manual_verification_entry
+    retentionClass: audit_long_lived
+    idempotency: false
+
+  - pluginId: unlock
+    command: unlock.admin.submission.url.edit
+    version: 1.1.0
+    description: >-
+      Admin correction of a submission's Quora profile URL (fixing a typo, or putting in the profile an
+      admin found for a member who could not produce one). Re-validates and re-normalizes the URL with
+      the same rules as the member submit path. Does not change review status, access tier, or the
+      verification window. Records the admin who set the URL on the row, and appends the change to the
+      shared Quora URL history under that admin's id with source `unlock_admin`.
     inputSchema:
       submissionId:
         type: integer
@@ -221,6 +260,7 @@ contracts:
         type: string
     dataAccess:
       - unlock_verification_submissions
+      - directory_quora_url_history
       - unlock_audit_log
     purpose: moderation_data_correction
     retentionClass: audit_long_lived

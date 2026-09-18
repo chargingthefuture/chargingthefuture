@@ -286,8 +286,39 @@ and is idempotent — a second retry never grants a second reward (the reconcile
 2. Save a corrected Quora profile URL.
 **Expected:** The URL is re-validated and re-normalized with the same rules as the member submit
 path; the stored normalized form updates. Review status, access tier, and the verification window
-are unchanged. A missing/invalid URL is rejected (400); no matching submission returns 404. Audited
-as `unlock.admin.submission.url.edit`.
+are unchanged. A missing/invalid URL is rejected (400); no matching submission returns 404. The card
+then reads "Entered by an admin on <date> — not submitted by the member", and pressing **URL history**
+shows the change with "entered by an admin here in Unlock" as its source and your id as who changed it
+(before 2026-09-18 an admin edit left no history entry at all). Audited as
+`unlock.admin.submission.url.edit`.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A4b · Add a Quora URL for a member who never gave one
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a member who signed up, pressed "ask for help", and has no submission. UNLOCK-A8e
+puts one there.
+**Steps:**
+1. Open `/admin/unlock`, open the **Sign-ups** panel, and go to the **No Quora URL** tab. Find that
+   member and read the `Told us: …` line on their row.
+2. Press **Add Quora URL** on the row. Read the note under the input, paste a Quora profile URL, and
+   press **Save URL**.
+3. Watch the row and the panel's counts.
+4. Scroll to the review queue below and find the member's new card. Read the line under the URL.
+5. Press **URL history** on that card.
+6. Approve the card as you would any other submission.
+7. Press **Add Quora URL** again for a member who already has one — or, if the control is gone from
+   their row, confirm that is why.
+8. Try saving something that is not a Quora profile URL.
+**Expected:** Step 2: the note says the URL is saved as entered by you, not the member, and that it
+goes to the queue as pending. Step 3: the row leaves "No Quora URL" and the counts move — "Gave a
+Quora URL" up by one. Step 4: a normal pending card, with the line "Entered by an admin on <date> —
+not submitted by the member" under the URL, so no reviewer can mistake it for the member's own claim.
+Step 5: the history shows the change with "entered by an admin here in Unlock" as its source and your
+id as who changed it. Step 6: approval, reward, and duplicate handling behave exactly as for a member's
+own submission — nothing about this row is approved by adding it. Step 7: a member who already has a URL
+is never offered the control; changing one is the Edit control on their queue card (UNLOCK-A4), and the
+route refuses a second add with a message pointing there. Step 8: rejected with the same message the
+member's own submission gets. Audited as `unlock.admin.submission.create` — the refusal too, as a deny.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A5 · Duplicate-identity determination — grant winner, revoke loser

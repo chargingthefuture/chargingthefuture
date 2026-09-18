@@ -81,6 +81,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const counts = useMemo(() => summarize(accounts), [accounts]);
   const query = search.trim().toLowerCase();
@@ -123,6 +124,49 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
       router.refresh();
     } catch (caught) {
       setError(failureText(caught, { area: 'unlock', op: 'exclude_account', fallback: 'Network error. Try again.' }));
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  // Enter the Quora URL an admin found for a member who never gave one. Creates the same pending
+  // submission the member would have created — it approves nobody, so the row then goes through the
+  // ordinary review on the queue below. The server stamps it as admin-entered.
+  async function addUrl(userId: string, url: string) {
+    setBusyUserId(userId);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/unlock/admin/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ userId, quoraProfileUrl: url }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; code?: string; submission?: { reviewStatus?: string } }
+        | null;
+      if (!res.ok) {
+        setError(data?.message ?? data?.code ?? `Could not add that URL (${res.status}).`);
+        return;
+      }
+      // Move the row out of "No Quora URL" straight away, so the list matches what was just done
+      // without waiting on the server round trip that follows.
+      setAccounts((prev) =>
+        prev.map((account) =>
+          account.userId === userId
+            ? {
+                ...account,
+                hasSubmission: true,
+                reviewStatus: 'pending',
+                submittedAt: new Date().toISOString(),
+              }
+            : account,
+        ),
+      );
+      setNotice('URL added and sent to the review queue as pending — approve or reject it there.');
+      router.refresh();
+    } catch (caught) {
+      setError(failureText(caught, { area: 'unlock', op: 'add_quora_url', fallback: 'Network error. Try again.' }));
     } finally {
       setBusyUserId(null);
     }
@@ -171,6 +215,10 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                 <div role="alert" style={{ fontSize: 12, color: '#EF4444', marginBottom: 10 }}>{error}</div>
               ) : null}
 
+              {notice ? (
+                <div role="status" style={{ fontSize: 12, color: t.ACCENT, marginBottom: 10 }}>{notice}</div>
+              ) : null}
+
               {shown.length === 0 ? (
                 <div style={{ fontSize: 12, color: t.MUTED }}>
                   {query ? 'No sign-up matches that search.' : 'Nothing to show on this tab.'}
@@ -183,6 +231,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                       account={account}
                       busy={busyUserId === account.userId}
                       onToggleExcluded={(userId, excluded) => void toggleExcluded(userId, excluded)}
+                      onAddUrl={(userId, url) => void addUrl(userId, url)}
                     />
                   ))}
                 </div>
