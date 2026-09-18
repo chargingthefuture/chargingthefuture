@@ -62,3 +62,9 @@
   prints the live state without writing.
 - Rollback strategy: delete the workflow file; the script is inert without it. Stream keeps
   whatever state was last applied, which is the documented target state.
+
+## Change Log
+
+- 2026-09-18 (follow-up): the response-body parse in the script carries a `no-trace:` marker on
+  its catch, for the Error Verbosity Gate. Comment only — no change to what the script calls or how
+  often, so every estimate above stands.
