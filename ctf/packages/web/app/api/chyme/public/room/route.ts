@@ -16,27 +16,24 @@ import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 // per-process per-IP rate limit below (lib/security/rate-limit.ts) — a shared-store limit remains
 // the next step if guest minutes become material; see also the documented limitation in
 // ctf/docs/quota-impact/2026-06-19-chyme-guest-listen.md.
+
+// The Stream error, trimmed for the page. Stream's messages name the failing call and its reason
+// ("UpdateUsers failed with error: ...") and carry no secret; the cap keeps a runaway message from
+// becoming the whole screen.
+function describeGuestCredentialError(error: unknown): string {
+  const text = error instanceof Error ? error.message : String(error);
+  return text.length > 300 ? `${text.slice(0, 300)}…` : text;
+}
+
 export async function GET(request: Request) {
   const limited = enforcePublicReadRateLimit(request, 'chyme-public-room');
   if (limited) {
     return limited;
   }
 
+  let state: Awaited<ReturnType<typeof getPublicRoomLiveState>>;
   try {
-    const state = await getPublicRoomLiveState();
-
-    // Only hand out a guest listen token when there is actually a live call to join — no point
-    // connecting a guest (and incurring Stream participant-minutes) to a silent room.
-    const credentials = state.callActive ? await createChymeGuestListenCredentials() : null;
-
-    return NextResponse.json({
-      ok: true,
-      roomName: state.roomName,
-      isLive: state.callActive,
-      participantCount: state.participantCount,
-      // Present only when the room is live and Stream is configured.
-      credentials: credentials ?? undefined,
-    });
+    state = await getPublicRoomLiveState();
   } catch (error) {
     reportError(error, { area: 'chyme', op: 'public_room' });
     return NextResponse.json(
@@ -44,4 +41,37 @@ export async function GET(request: Request) {
       { status: 503 },
     );
   }
+
+  if (!state.callActive) {
+    return NextResponse.json({ ok: true, roomName: state.roomName, isLive: false, participantCount: 0 });
+  }
+
+  // The room is live. Minting the guest identity is a separate, Stream-side step, and a failure
+  // there is reported as exactly that — never as "no room". Before this split, one catch covered
+  // both, so a rejected guest upsert (a role name Stream does not know, a Stream outage) came back
+  // as a 503 and the page showed "No public rooms right now" while a member was audibly in the
+  // call. The visitor could not tell, and neither could the person they reported it to.
+  let credentials: Awaited<ReturnType<typeof createChymeGuestListenCredentials>> = null;
+  let listenUnavailable: string | undefined;
+  try {
+    credentials = await createChymeGuestListenCredentials();
+    if (!credentials) {
+      listenUnavailable = 'Stream is not configured for this environment.';
+    }
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'public_room_guest_credentials' });
+    listenUnavailable = describeGuestCredentialError(error);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    roomName: state.roomName,
+    isLive: true,
+    participantCount: state.participantCount,
+    // Present only when Stream is configured and the guest identity was minted.
+    credentials: credentials ?? undefined,
+    // Present only when the room is live but the visitor cannot be given a way to listen: the
+    // plain reason, for the page to show under the room heading.
+    listenUnavailable,
+  });
 }
