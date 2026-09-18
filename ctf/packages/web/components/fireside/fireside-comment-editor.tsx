@@ -30,9 +30,32 @@ export function FiresideCommentEditor({
 }) {
   const [draft, setDraft] = useState(initialBody);
   const trimmed = draft.trim();
-  // Nothing to save when the box is empty or the words are the ones already there.
-  const unchanged = trimmed.length === 0 || trimmed === initialBody.trim();
+  // Nothing to save when the box is empty, when the words are the ones already there, or when there
+  // are more of them than a comment may hold. Worked out once: the same answer drives whether Save
+  // does anything and how it looks.
+  const blocked =
+    busy || trimmed.length === 0 || trimmed === initialBody.trim() || trimmed.length > FIRESIDE_MAX_COMMENT_LENGTH;
   const tooLong = trimmed.length > FIRESIDE_MAX_COMMENT_LENGTH;
+  const saveStyle = {
+    background: t.ACCENT,
+    color: "#000",
+    border: "none",
+    borderRadius: 8,
+    padding: "7px 14px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: blocked ? "default" : "pointer",
+    opacity: blocked ? 0.5 : 1,
+  } as const;
+  const cancelStyle = {
+    background: "transparent",
+    border: "none",
+    color: t.SUBTLE,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: busy ? "default" : "pointer",
+    padding: 0,
+  } as const;
 
   return (
     <div>
@@ -60,38 +83,10 @@ export function FiresideCommentEditor({
         </div>
       )}
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
-        <button
-          type="button"
-          disabled={busy || unchanged || tooLong}
-          onClick={() => onSave(trimmed)}
-          style={{
-            background: t.ACCENT,
-            color: "#000",
-            border: "none",
-            borderRadius: 8,
-            padding: "7px 14px",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: busy || unchanged || tooLong ? "default" : "pointer",
-            opacity: busy || unchanged || tooLong ? 0.5 : 1,
-          }}
-        >
+        <button type="button" disabled={blocked} onClick={() => onSave(trimmed)} style={saveStyle}>
           {busy ? "Saving…" : "Save"}
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={onCancel}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: t.SUBTLE,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: busy ? "default" : "pointer",
-            padding: 0,
-          }}
-        >
+        <button type="button" disabled={busy} onClick={onCancel} style={cancelStyle}>
           Cancel
         </button>
       </div>

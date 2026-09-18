@@ -189,6 +189,47 @@ function WithdrawnBody({ comment, t }: { comment: OwnComment; t: PluginShellToke
   );
 }
 
+// What the author can still do to a comment of theirs: ask for it to go on the blog, rewrite it, or
+// take it down. Its own component so CommentRow stays inside the complexity budget (rule 116).
+function RowActions({
+  comment,
+  t,
+  busy,
+  onToggleExport,
+  onEdit,
+  onWithdraw,
+}: {
+  comment: OwnComment;
+  t: PluginShellTokens;
+  busy: boolean;
+  onToggleExport: (id: string, next: boolean) => void;
+  onEdit: (id: string) => void;
+  onWithdraw: (id: string) => void;
+}) {
+  const cursor = busy ? "default" : "pointer";
+  return (
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+      <ExportRequestRow comment={comment} t={t} busy={busy} onToggleExport={onToggleExport} />
+      <button
+        type="button"
+        onClick={() => onEdit(comment.id)}
+        disabled={busy}
+        style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor, padding: 0 }}
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        onClick={() => onWithdraw(comment.id)}
+        disabled={busy}
+        style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, fontWeight: 600, cursor, padding: 0 }}
+      >
+        Take it down
+      </button>
+    </div>
+  );
+}
+
 function CommentRow({
   comment,
   t,
@@ -245,25 +286,14 @@ function CommentRow({
         <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 6 }}>Edited</div>
       )}
       {editable && !editing && (
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
-          <ExportRequestRow comment={comment} t={t} busy={busy} onToggleExport={onToggleExport} />
-          <button
-            type="button"
-            onClick={() => onEdit(comment.id)}
-            disabled={busy}
-            style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onWithdraw(comment.id)}
-            disabled={busy}
-            style={{ background: "transparent", border: "none", color: "#F87171", fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}
-          >
-            Take it down
-          </button>
-        </div>
+        <RowActions
+          comment={comment}
+          t={t}
+          busy={busy}
+          onToggleExport={onToggleExport}
+          onEdit={onEdit}
+          onWithdraw={onWithdraw}
+        />
       )}
     </div>
   );

@@ -351,6 +351,31 @@ function ThreadState({
   );
 }
 
+/**
+ * Send one write and read the answer.
+ *
+ * Module-level rather than inside the view, so the screen's own function stays inside the rule-116
+ * length budget. Whether it worked is `res.ok` and never whether a body parsed — a change that
+ * saved must not read as a failure because something in front of the app answered with a page — and
+ * a refusal is raised with the sentence the server wrote, which is the one that names what to do
+ * about it (rule 137).
+ */
+async function sendWrite(
+  url: string,
+  method: "POST" | "PATCH",
+  body: unknown,
+  failure: string,
+): Promise<{ message?: string; notice?: string | null }> {
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as { message?: string; notice?: string | null };
+  if (!res.ok) throw new Error(data.message ?? failure);
+  return data;
+}
+
 export function FiresideThreadView({
   postRepo,
   postSlug,
@@ -411,13 +436,12 @@ export function FiresideThreadView({
     setError(null);
     setNotice(null);
     try {
-      const res = await fetch("/api/fireside/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ postRepo, postSlug, postTitle, parentCommentId: replyTo, body: draft }),
-      });
-      const data = (await res.json()) as { message?: string; notice?: string | null };
-      if (!res.ok) throw new Error(data.message ?? "Could not post that.");
+      const data = await sendWrite(
+        "/api/fireside/comments",
+        "POST",
+        { postRepo, postSlug, postTitle, parentCommentId: replyTo, body: draft },
+        "Could not post that.",
+      );
       setDraft("");
       setReplyTo(null);
       // The held notice is shown at the moment of posting, never left to be discovered.
@@ -442,13 +466,8 @@ export function FiresideThreadView({
     setError(null);
     setNotice(null);
     try {
-      const res = await fetch(`/api/fireside/comments/${commentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ body }),
-      });
-      const data = (await res.json()) as { message?: string; notice?: string | null };
-      if (!res.ok) throw new Error(data.message ?? "Could not save that change.");
+      const failure = "Could not save that change.";
+      const data = await sendWrite(`/api/fireside/comments/${commentId}`, "PATCH", { body }, failure);
       // An approval an admin gave to the old wording does not carry over, and the author is told so
       // here rather than finding the switch moved later.
       if (data.notice) setNotice(data.notice);
@@ -464,15 +483,8 @@ export function FiresideThreadView({
   async function react(commentId: string, kind: string) {
     setBusy(true);
     try {
-      const res = await fetch(`/api/fireside/comments/${commentId}/reactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ kind }),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not record that reaction.");
-      }
+      const failure = "Could not record that reaction.";
+      await sendWrite(`/api/fireside/comments/${commentId}/reactions`, "POST", { kind }, failure);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not record that reaction.");
@@ -486,15 +498,9 @@ export function FiresideThreadView({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/fireside/admin/threads/${thread.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ isClosed: next, reason: "Set from the thread view." }),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not change whether this conversation is open.");
-      }
+      const failure = "Could not change whether this conversation is open.";
+      const payload = { isClosed: next, reason: "Set from the thread view." };
+      await sendWrite(`/api/fireside/admin/threads/${thread.id}`, "POST", payload, failure);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not change whether this conversation is open.");
@@ -506,15 +512,9 @@ export function FiresideThreadView({
   async function moderate(commentId: string) {
     setBusy(true);
     try {
-      const res = await fetch(`/api/fireside/admin/comments/${commentId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify({ action: "remove", reason: "Removed from the thread view." }),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not remove that comment.");
-      }
+      const failure = "Could not remove that comment.";
+      const payload = { action: "remove", reason: "Removed from the thread view." };
+      await sendWrite(`/api/fireside/admin/comments/${commentId}`, "POST", payload, failure);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not remove that comment.");

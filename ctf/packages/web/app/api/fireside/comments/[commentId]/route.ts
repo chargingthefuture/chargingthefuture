@@ -83,6 +83,44 @@ const EDIT_REFUSAL: Record<EditRefusalReason, { message: string; status: number;
 };
 
 /**
+ * Read and check what the PATCH carries. Split out of the handler so that function stays inside the
+ * complexity budget (rule 116), and so the two ways a request can be malformed sit together rather
+ * than at the top of a handler that is about something else.
+ */
+async function readPatchInput(
+  request: Request,
+): Promise<{ ok: true; data: z.infer<typeof patchSchema> } | { ok: false; response: NextResponse }> {
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch (error) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
+        { status: 400 },
+      ),
+    };
+  }
+
+  const parsed = patchSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          ok: false,
+          code: FIRESIDE_ERROR_CODE.invalidPayload,
+          message: 'Send body as the new text of the comment, or exportToBlog as true or false.',
+        },
+        { status: 400 },
+      ),
+    };
+  }
+  return { ok: true, data: parsed.data };
+}
+
+/**
  * The author rewrites their own comment.
  *
  * The same edit the Commons has: the author, any time, with no window to beat, and the new words
@@ -192,6 +230,50 @@ export async function DELETE(request: Request, { params }: RouteProps) {
 }
 
 /**
+ * The author turns their blog-export request on, or takes it back. The write itself, and the rule
+ * that a refusal cannot be re-queued, are in lib/fireside/export-review.ts.
+ */
+async function setExport(
+  actorId: string,
+  commentId: string,
+  exportToBlog: boolean,
+  audience: 'operator' | 'member',
+): Promise<NextResponse> {
+  try {
+    const outcome = await setExportPreference(actorId, commentId, exportToBlog);
+    if (outcome !== 'saved') return refuseExportChange(outcome);
+
+    await insertFiresideAudit({
+      actorId,
+      command: 'fireside.comment.set_export',
+      policyStatus: 'allow',
+      reason: 'author_choice',
+      targetType: 'comment',
+      targetId: commentId,
+      result: exportToBlog ? 'export_requested' : 'export_withdrawn',
+    });
+    return NextResponse.json(
+      {
+        ok: true,
+        exportToBlog,
+        exportReview: exportToBlog ? 'pending' : 'not_requested',
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    return failureResponse({
+      summary: 'Unable to change that setting',
+      error,
+      code: FIRESIDE_ERROR_CODE.persistenceUnavailable,
+      area: 'fireside',
+      op: 'comment_set_export',
+      status: 503,
+      audience,
+    });
+  }
+}
+
+/**
  * What the author does to their own comment, short of taking it down: rewrite the words, or ask for
  * it to be copied into the blog's own published build — where it becomes searchable and is captured
  * by the Internet Archive — or take that ask back.
@@ -214,63 +296,12 @@ export async function PATCH(request: Request, { params }: RouteProps) {
 
   const { commentId } = await params;
 
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch (error) {
-    return NextResponse.json(
-      { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'Invalid JSON body.', reason: failureReason(error) },
-      { status: 400 },
-    );
-  }
-
-  const parsed = patchSchema.safeParse(raw);
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        ok: false,
-        code: FIRESIDE_ERROR_CODE.invalidPayload,
-        message: 'Send body as the new text of the comment, or exportToBlog as true or false.',
-      },
-      { status: 400 },
-    );
-  }
+  const parsed = await readPatchInput(request);
+  if (!parsed.ok) return parsed.response;
 
   const audience = gate.auth.isAdmin ? 'operator' : 'member';
   if ('body' in parsed.data) {
     return editComment(gate.auth.userId, commentId, parsed.data.body, audience);
   }
-
-  try {
-    const outcome = await setExportPreference(gate.auth.userId, commentId, parsed.data.exportToBlog);
-    if (outcome !== 'saved') return refuseExportChange(outcome);
-
-    await insertFiresideAudit({
-      actorId: gate.auth.userId,
-      command: 'fireside.comment.set_export',
-      policyStatus: 'allow',
-      reason: 'author_choice',
-      targetType: 'comment',
-      targetId: commentId,
-      result: parsed.data.exportToBlog ? 'export_requested' : 'export_withdrawn',
-    });
-    return NextResponse.json(
-      {
-        ok: true,
-        exportToBlog: parsed.data.exportToBlog,
-        exportReview: parsed.data.exportToBlog ? 'pending' : 'not_requested',
-      },
-      { status: 200 },
-    );
-  } catch (error) {
-    return failureResponse({
-      summary: 'Unable to change that setting',
-      error,
-      code: FIRESIDE_ERROR_CODE.persistenceUnavailable,
-      area: 'fireside',
-      op: 'comment_set_export',
-      status: 503,
-      audience: gate.auth.isAdmin ? 'operator' : 'member',
-    });
-  }
+  return setExport(gate.auth.userId, commentId, parsed.data.exportToBlog, audience);
 }
