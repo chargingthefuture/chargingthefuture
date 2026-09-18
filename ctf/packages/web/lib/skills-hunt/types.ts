@@ -190,10 +190,16 @@ export type SkillsHuntReputationProfile = {
 //   count_total_accepted     -> {} (no extra config)
 //   count_skills_in_sector   -> { sectorId: string, sectorName: string }
 //   count_rare_skill_finds   -> {} (uses round's rare_skills_lookup)
+//   count_skill_matches      -> { skillName: string, skillId?: string }
 export type SkillsHuntMissionGoalType =
   | 'count_total_accepted'
   | 'count_skills_in_sector'
-  | 'count_rare_skill_finds';
+  | 'count_rare_skill_finds'
+  // One named skill, rather than a whole sector. Added 2026-09-17: a mission titled for a single
+  // trade ("Find a mechanic") had no goal type that could express it, so it was created as
+  // count_total_accepted — which counts every accepted nomination the scout has, whatever the
+  // skill. It read "82/1 complete" for a scout who had nominated no mechanic at all.
+  | 'count_skill_matches';
 
 // No draft state (owner directive 2026-08-27): missions are created active and the only
 // lifecycle action on the admin surface is Archive. The round they belong to already carries

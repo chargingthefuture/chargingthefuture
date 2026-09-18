@@ -690,7 +690,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_missions (
   round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT NULL,
-  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds')),
+  goal_type TEXT NOT NULL CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_skill_matches')),
   goal_target INTEGER NOT NULL CHECK (goal_target > 0),
   goal_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0),
@@ -813,7 +813,13 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_mission_progress_mission ON skills_hu
 -- needed no migration: it was a computed figure, never a column.
 DELETE FROM skills_hunt_missions WHERE goal_type = 'count_distinct_sectors';
 ALTER TABLE IF EXISTS skills_hunt_missions DROP CONSTRAINT IF EXISTS skills_hunt_missions_goal_type_check;
-ALTER TABLE IF EXISTS skills_hunt_missions ADD CONSTRAINT skills_hunt_missions_goal_type_check CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds'));
+ALTER TABLE IF EXISTS skills_hunt_missions ADD CONSTRAINT skills_hunt_missions_goal_type_check CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_skill_matches'));
+-- 'count_skill_matches' counts accepted nominations carrying one named taxonomy skill (owner report
+-- 2026-09-17). Until it existed, a mission about a single trade had no goal type that could say so:
+-- "Find a mechanic" was stored as count_total_accepted, which counts every accepted nomination the
+-- scout has whatever the skill, and read "82/1 complete" for a scout who had nominated no mechanic.
+-- goal_metadata carries { skillName, skillId? }; the skill name is matched case-insensitively
+-- against the nomination's picked taxonomy skills.
 -- Missions have no draft state (owner directive 2026-08-27: "no drafts are needed"). A mission lives
 -- inside a round that already carries its own draft/active lifecycle, so a second gate inside it
 -- gated nothing — and because the admin surface has no mission edit control, a mission created as

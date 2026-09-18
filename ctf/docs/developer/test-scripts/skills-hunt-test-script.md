@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title |
 
 ---
 
@@ -344,7 +344,7 @@ Result: web ☐
 2. Observe the mission list.
 3. Each mission should show a title, progress bar, and a "Scout Now" or equivalent CTA.
 
-**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown.
+**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown. Read each count against what the mission's title promises: a mission named for one trade should show the nominations carrying that skill, not the scout's whole accepted total. A count far larger than a small target ("82/1 complete") is the signature of a mission pointed at the wrong goal — correct it with SH-A10c rather than reading it as a display fault.
 
 Result: web ☐
 
@@ -801,7 +801,49 @@ Result:
 
 **Expected:** Mission is created and listed, and its row shows no status word (the label appears only when a mission is not active). Navigate to the member-facing Missions tab (`/apps/skills-hunt` → Missions) — the new mission appears immediately, with a progress bar at 0% and the configured color.
 
-**Why there is no status picker:** missions have no draft state (owner directive 2026-08-27). The round already carries its own draft/active lifecycle, and since there is no mission edit control, a mission created as draft could only ever be archived — never shown to members.
+**Why there is no status picker:** missions have no draft state (owner directive 2026-08-27). The round already carries its own draft/active lifecycle, and a mission created as draft could only ever be archived — never shown to members.
+
+Result: web ☐
+
+---
+
+### SH-A10b — Missions: a mission can ask for one named skill
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** An active round. At least two accepted nominations by the same scout, only one of which carries the taxonomy skill you are about to name.
+
+**Steps:**
+1. On the admin Missions tab, press **+ New mission**. Read the Goal type list: each option is a sentence saying what it counts, not a bare identifier, and the identifier it stores is shown underneath.
+2. Choose **Accepted nominations carrying one named skill**. A Skill name box appears. Leave it empty and press Create mission.
+3. Fill in the Skill name with the exact taxonomy skill one of the accepted nominations carries. Set Goal target to 1. Create.
+4. Read the new row in the admin list.
+5. Open the member Missions tab.
+
+**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's whole accepted total.
+
+**Why this exists:** until 2026-09-17 there was no goal type about a single trade, so a mission titled "Find a mechanic" was stored as "every accepted nomination, whatever the skill" and read "82/1 complete" for a scout who had nominated no mechanic (owner report).
+
+Result: web ☐
+
+---
+
+### SH-A10c — Missions: re-point a wrongly-typed mission, then recompute
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** The round from SH-A10b, plus a mission created with goal type **Every accepted nomination, whatever the skill** and a target of 1, titled for a single trade (e.g. "Find a mechanic"). At least one accepted nomination exists, so that mission reads complete.
+
+**Steps:**
+1. On the member Missions tab, note the number the mission shows — it is the scout's whole accepted total over a target of 1, and reads Complete.
+2. On the admin Missions tab, press **Edit** on that row.
+3. Change Goal type to **Accepted nominations carrying one named skill**, clear the Skill name, and press Save mission.
+4. Put the correct skill in and save.
+5. Re-check the member Missions tab **without** pressing anything else.
+6. Back on the admin Missions tab, press **Recompute progress**.
+7. Re-check the member Missions tab.
+
+**Expected:** Step 3 is refused with a sentence naming the skill rule (the same rule as SH-A10b, checked here against the merged row rather than the fields sent). Step 4 saves, and the admin row now names the skill. **Step 5 still shows the old number** — this is the point of the case: changing a goal does not move a stored count, because progress is only recomputed when a nomination is reviewed. Step 6 reports how many scouts were recomputed. Step 7 shows the corrected count. A mission a scout had genuinely completed earlier stays marked complete — a recompute never clears an earned completion.
 
 Result: web ☐
 
