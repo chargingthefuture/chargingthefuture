@@ -141,6 +141,45 @@ Current status:
 
 ## Change Log
 
+- 2026-09-17: **A signed-out listener no longer dead-ends on "Couldn't connect to the live room."**
+  Owner report: the public Chyme page showed the room name, said "You're listening live", and under
+  it sat a connect failure whose only advice was to refresh. Three things were wrong with that box
+  and all three are fixed in `chyme-guest-listen.tsx` and `chyme-public-shell.tsx`. First, one failed
+  attempt ended the visit — there was no retry, so a guest identity that had not propagated yet, an
+  SFU mid-reconnect, or a network blip during page load was permanent. The join now runs up to three
+  attempts with a widening gap. Second, the room can genuinely have ended: "live" is computed from a
+  member's presence row, which stays fresh for up to 45 seconds after their Stream connection is
+  gone, so the server hands out a guest token for a call that is no longer there. On the last failed
+  attempt the listener re-reads `GET /api/chyme/public/room`; when that says the room has ended it
+  tells the shell, which re-reads the room and falls back to the "No public rooms right now" empty
+  state instead of leaving a failure under a heading claiming the visitor is listening. That case is
+  expected, so it is no longer reported to Sentry as a fault. Third, the reason was thrown away. The
+  signed-in room has shown its verbatim Stream error since it was built; the guest path showed a
+  fixed sentence, which left a report sent from a phone with nothing in it but that sentence. The
+  reason now renders as a second line under the existing text, and the Sentry report carries the call
+  type and call id alongside the guest Stream id, matching what the member room already sends. The
+  shipped copy is unchanged — the detail line is added under it. No schema, route, or contract
+  change; the public endpoint is read as it already existed. Test script CH-7 gains the
+  room-ends-while-connecting step and CH-8 records the visible reason.
+- 2026-09-17: **The signed-out view asks once instead of three times, and drops the search and tag
+  controls that filtered nothing.** Owner report: the same Sign In / Join pair sat in the green
+  header, on the invitation card, and in the bottom bar — one page putting the same request in front
+  of a visitor three times before they had read what the room is. The invitation card keeps it,
+  because it is the only one of the three that says what signing in gets you ("Listen in for free.
+  Sign in to speak, react, or host your own room."). The header is now the back control and the
+  title; the bottom bar keeps only the grayed, locked **Start a Room**, which is not a sign-in
+  control but the statement that hosting needs an account. The `verifyUrl` variant collapses the same
+  way: a member part-way through Unlock sees one **Finish verifying** link, on the card. Second part
+  of the same report: the search box and the Healing / Economy / Housing / Legal / Skills tags are
+  gone. There is one public room — the main room, since the Weavers room is private and never
+  appears here — so both controls offered to narrow a list of one, and neither did anything if
+  tried: the input was `readOnly` and the tags were plain spans with no click handler. They belong
+  back on this page when it lists more than one room, and at that point they need real search and
+  filter behavior rather than to be un-hidden, because none is built. `chyme-public-shell.tsx` only,
+  which is the signed-out surface — the signed-in shell and the Android room list are untouched. No
+  schema, route, or contract change. Test script CH-7 now counts the sign-in affordances and checks
+  that the search box and tags are absent.
+
 - 2026-09-15: **The disclaimer says endorsement, not recommendation.** Owner directive. A recommendation is a soft opinion a reader is free to weigh, and disclaiming one concedes that this project was offering an opinion in the first place. What a reader takes from a published schedule under this project's name is that the project stands behind the people on it, and that is the thing being denied. The short form on all three Chyme surfaces — signed out, signed in, and the Android room list — swaps the one word; the long form on the TI Radio guide also spells out that this project does not vouch for a host or for what gets said in their room. One string in `@ctf/shared`, so the four surfaces changed together, and the constant has been named `HOSTING_NOT_ENDORSEMENT` since it was written, so the copy now agrees with the code. The manual test script checks the new wording. Copy only — no schema, route, or contract change.
 
 - 2026-09-14: **Both the signed-out and signed-in room surfaces say a host is not endorsed.** Chyme's public shell is readable without an account, so a visitor can land on a live host having seen nothing about how they got there — and with TI Radio now publishing a schedule of who is hosting when, more people arrive that way than before. Two placements, and the first draft got one of them wrong in a way worth recording: the statement was put inside the signed-out shell's `live.isLive` branch, where it rendered **only to somebody already listening**, who is the one person least in need of telling. A visitor arriving from the TI Radio schedule usually reaches the page *before* the room goes live, reads "Listen in for free", and saw nothing. It now sits on the always-visible invitation card, so it is on screen in both states. The signed-in shell (`chyme-shell.tsx`) had nothing at all — a member reads the same public schedule and the same question applies — so it carries the statement in a line under the rooms rail, rather than on a card inside it, because the rail is a horizontal scroller of fixed-width cards that a sentence does not fit. **The Android room list carries it too** (Chyme is on the keep-list, rule 105), under the room list so it reads as a note about what the list is rather than a warning about the room above it. That moved the string out of the web package: it now lives in `@ctf/shared` (`packages/shared/src/copy/hosting-disclaimer.ts`), which mobile and web both already import. Retyping it into the mobile package would have created a second wording free to drift, which is the exact failure the single string exists to prevent, so the string crosses the package boundary instead of the text being copied. All four surfaces — Chyme signed out, Chyme signed in, Chyme on Android, and the TI Radio guide — now read from that one file. Not a safety claim, on purpose. Copy only — no schema, route, or contract change, and nothing about who may listen or speak has moved.

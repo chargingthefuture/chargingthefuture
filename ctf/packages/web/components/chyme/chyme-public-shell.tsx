@@ -1,7 +1,7 @@
 'use client';
 
-import { Radio, Lock, LogIn, UserPlus, Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Radio, Lock, LogIn, UserPlus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -26,7 +26,7 @@ const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter fiel
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; verifyUrl?: string; live: LiveState }) {
+function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl: string; verifyUrl?: string; live: LiveState; onRoomGone: () => void }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
@@ -43,34 +43,19 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
           <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>Chyme</div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>Live audio for survivors</div>
         </div>
-        {verifyUrl ? (
-          <a href={verifyUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 11, textDecoration: 'none' }}>
-            Finish verifying
-          </a>
-        ) : (
-          <>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', fontWeight: 600, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-              <LogIn size={11} /> Sign In
-            </a>
-            <a href={signInUrl} style={{ padding: '5px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#fff', fontWeight: 700, fontSize: 11, textDecoration: 'none' }}>
-              Join
-            </a>
-          </>
-        )}
+        {/* No sign-in or join action here (owner directive, 2026-09-17). The same pair of buttons
+            sat in the header, on the invitation card, and in the bottom bar — one page asking three
+            times. The invitation card is the one that keeps it: it is the only one of the three that
+            says what signing in gets you. The header is a title bar and the back control. */}
       </div>
 
-      {/* Search */}
-      <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.BORDER}`, background: SURFACE, flexShrink: 0 }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: t.MUTED }} />
-          <input placeholder="Search rooms…" style={{ width: '100%', padding: '8px 10px 8px 30px', background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.MUTED, outline: 'none', boxSizing: 'border-box' }} readOnly />
-        </div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto' }}>
-          {['All', 'Healing', 'Economy', 'Housing', 'Legal', 'Skills'].map((tag) => (
-            <span key={tag} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 12, border: `1px solid ${tag === 'All' ? t.ACCENT + '50' : t.BORDER}`, color: tag === 'All' ? t.ACCENT : t.MUTED, background: tag === 'All' ? `${t.ACCENT}10` : 'transparent', whiteSpace: 'nowrap', cursor: 'pointer' }}>{tag}</span>
-          ))}
-        </div>
-      </div>
+      {/* The room search box and the Healing / Economy / Housing / Legal / Skills tags were here
+          (removed by owner directive, 2026-09-17). There is one public room — the main room; the
+          Weavers room is private and never appears here — so both controls offered to narrow a list
+          of one. Neither worked either: the input was `readOnly` and the tags were plain spans with
+          no click handler, so a visitor who tried them got nothing back and no explanation. They
+          belong on this page again when it lists more than one room, and at that point they need
+          real behavior rather than to be un-hidden — searching and filtering are not built. */}
 
       {/* Invitation card */}
       <div style={{ margin: '10px 12px 0', borderRadius: 14, border: `1px solid ${t.ACCENT}30`, background: `${t.ACCENT}06`, padding: '14px', flexShrink: 0 }}>
@@ -114,7 +99,7 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
           <div>
             {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
             <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} />
+            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           </div>
         ) : null}
         {!live.isLive ? (
@@ -128,14 +113,14 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
         ) : null}
       </div>
 
-      {/* Locked bottom bar */}
+      {/* Locked bottom bar. The Join Free / Finish verifying button that sat beside this was the
+          page's third copy of the same action and is gone (owner directive, 2026-09-17); the
+          invitation card carries it. What is left is not a sign-in control — it is the statement
+          that hosting a room needs an account, which is why it is grayed and does nothing. */}
       <div style={{ padding: '10px 12px', borderTop: `1px solid ${t.BORDER}`, background: SURFACE, display: 'flex', gap: 8, flexShrink: 0 }}>
         <div style={{ flex: 1, padding: '10px', borderRadius: 9, background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, color: t.MUTED, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'not-allowed', opacity: 0.6 }}>
           <Lock size={12} /> Start a Room
         </div>
-        <a href={verifyUrl ?? signInUrl} style={{ flex: 1, padding: '10px', borderRadius: 9, background: `linear-gradient(90deg,${t.ACCENT},${ACCENT_CYAN})`, border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
-          {verifyUrl ? 'Finish verifying' : <><UserPlus size={13} /> Join Free →</>}
-        </a>
       </div>
     </div>
   );
@@ -156,27 +141,36 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // simply sees the not-live view.
   const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
 
+  const loadLive = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch('/api/chyme/public/room', signal ? { signal } : undefined);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.ok) {
+        setLive({
+          isLive: !!data.isLive,
+          participantCount: data.participantCount ?? 0,
+          roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
+          credentials: data.credentials,
+        });
+      }
+    } catch {
+      // Ignore — guest just sees the not-live view.
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch('/api/chyme/public/room', { signal: controller.signal });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data?.ok) {
-          setLive({
-            isLive: !!data.isLive,
-            participantCount: data.participantCount ?? 0,
-            roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
-            credentials: data.credentials,
-          });
-        }
-      } catch {
-        // Ignore — guest just sees the not-live view.
-      }
-    })();
+    void loadLive(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [loadLive]);
+
+  // The listener could not join and a fresh read said the room had ended. Re-read the room so the
+  // page falls back to the honest "no public rooms right now" state instead of leaving a dead error
+  // box under a heading telling the visitor they are listening live.
+  const handleRoomGone = useCallback(() => {
+    void loadLive();
+  }, [loadLive]);
 
   // One layout at every width (mobile-first, owner decision 2026-07-20): the desktop two-column
   // branch this file used to carry was hidden by CSS at every width, so it never rendered.
@@ -184,7 +178,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // layout below manages its own flex column.
   return (
     <div className="ctf-self-responsive">
-      <ChymePublicView signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} />
+      <ChymePublicView signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} onRoomGone={handleRoomGone} />
     </div>
   );
 }
