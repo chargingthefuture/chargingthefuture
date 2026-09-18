@@ -62,8 +62,11 @@ export function accountsForTab(accounts: UnlockSignupAccount[], tab: SignupTab):
   return accounts;
 }
 
+// The hint is searched alongside the account's own identifiers: for a member who never gave a URL it
+// is often the only place their Quora name appears, so leaving it out would mean searching for the
+// name they told us and finding nothing.
 export function matchesSearch(account: UnlockSignupAccount, query: string): boolean {
-  return [account.name, account.username, account.email, account.userId].some(
+  return [account.name, account.username, account.email, account.userId, account.quoraHint].some(
     (field) => field != null && field.toLowerCase().includes(query),
   );
 }

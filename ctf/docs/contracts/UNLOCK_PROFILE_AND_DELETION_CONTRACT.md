@@ -71,8 +71,12 @@ Retention summary:
    exists, so the row would count for nothing and there is no abuse-prevention reason to keep it. The
    row grants and revokes nothing — it changes only what the admin sign-up numbers count.
 6. `unlock_help_requests` holds one row per member who pressed "ask for help" on the Unlock screen
-   rather than submitting a Quora URL. It is keyed on `user_id` and is hard-deleted with the member's
-   other data (registered `del` in the account deletion registry). While the member is here it is what
+   rather than submitting a Quora URL, together with `quora_hint` — whatever they said about their
+   Quora account when they could not give the URL (a name, a link to something they posted, an email).
+   The hint is member-supplied free text about a person, so it is treated as their data throughout: it
+   is shown only to admins on the Unlock sign-ups panel, never copied into the audit log, and goes with
+   the row. The row is keyed on `user_id` and is hard-deleted with the member's other data (registered
+   `del` in the account deletion registry). While the member is here it is what
    admits them to the Commons without a submission; once they are gone there is nobody to admit, and
    the aggregate signal it carries — how many people could not get through the Quora step alone — is
    not worth retaining a departed member's identifier for.

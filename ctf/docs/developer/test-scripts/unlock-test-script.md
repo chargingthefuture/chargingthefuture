@@ -286,8 +286,39 @@ and is idempotent — a second retry never grants a second reward (the reconcile
 2. Save a corrected Quora profile URL.
 **Expected:** The URL is re-validated and re-normalized with the same rules as the member submit
 path; the stored normalized form updates. Review status, access tier, and the verification window
-are unchanged. A missing/invalid URL is rejected (400); no matching submission returns 404. Audited
-as `unlock.admin.submission.url.edit`.
+are unchanged. A missing/invalid URL is rejected (400); no matching submission returns 404. The card
+then reads "Entered by an admin on <date> — not submitted by the member", and pressing **URL history**
+shows the change with "entered by an admin here in Unlock" as its source and your id as who changed it
+(before 2026-09-18 an admin edit left no history entry at all). Audited as
+`unlock.admin.submission.url.edit`.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A4b · Add a Quora URL for a member who never gave one
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a member who signed up, pressed "ask for help", and has no submission. UNLOCK-A8e
+puts one there.
+**Steps:**
+1. Open `/admin/unlock`, open the **Sign-ups** panel, and go to the **No Quora URL** tab. Find that
+   member and read the `Told us: …` line on their row.
+2. Press **Add Quora URL** on the row. Read the note under the input, paste a Quora profile URL, and
+   press **Save URL**.
+3. Watch the row and the panel's counts.
+4. Scroll to the review queue below and find the member's new card. Read the line under the URL.
+5. Press **URL history** on that card.
+6. Approve the card as you would any other submission.
+7. Press **Add Quora URL** again for a member who already has one — or, if the control is gone from
+   their row, confirm that is why.
+8. Try saving something that is not a Quora profile URL.
+**Expected:** Step 2: the note says the URL is saved as entered by you, not the member, and that it
+goes to the queue as pending. Step 3: the row leaves "No Quora URL" and the counts move — "Gave a
+Quora URL" up by one. Step 4: a normal pending card, with the line "Entered by an admin on <date> —
+not submitted by the member" under the URL, so no reviewer can mistake it for the member's own claim.
+Step 5: the history shows the change with "entered by an admin here in Unlock" as its source and your
+id as who changed it. Step 6: approval, reward, and duplicate handling behave exactly as for a member's
+own submission — nothing about this row is approved by adding it. Step 7: a member who already has a URL
+is never offered the control; changing one is the Edit control on their queue card (UNLOCK-A4), and the
+route refuses a second add with a message pointing there. Step 8: rejected with the same message the
+member's own submission gets. Audited as `unlock.admin.submission.create` — the refusal too, as a deny.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A5 · Duplicate-identity determination — grant winner, revoke loser
@@ -377,6 +408,31 @@ because the member Unlock screen is on the keep-list. Nothing here grants any ap
 open a plugin and you still get its public landing page.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-A8e · What you tell us when you cannot give a URL reaches the admin
+**Role:** member (not yet verified, no submission), then admin / reviewer · **Surfaces:** web + mobile-responsive
+**Precondition:** a signed-in test account with no Quora URL submitted, and a separate admin account.
+**Steps:**
+1. As the member, land on the Unlock screen and find "Can't find your Quora profile URL?".
+2. Read the field above the button, labeled "Anything that helps me find you on Quora (optional)", and
+   the line under it.
+3. Leave it empty and press **Ask for help in the Commons**. Confirm you reach the Commons.
+4. Go back to the Unlock screen, type a plain name into the field — not a link — and press the button
+   again.
+5. As the admin, open `/admin/unlock`, open the **Sign-ups** panel, and find that member on the
+   **No Quora URL** tab.
+6. Type part of what the member typed into the panel's search box.
+7. As the member, press the button once more with the field empty, then look at the admin row again.
+**Expected:** Step 2: the field is plainly optional and the line under it says a name or an email is
+enough — it never demands a link. Step 3: an empty field is not an error; the request still opens the
+Commons, exactly as before this field existed. Step 4: a plain name is accepted — nothing rejects it
+for not looking like a URL. Step 5: the row now carries a `Told us: <what they typed>` line above the
+sign-up date, so the admin has something to look them up by and can approve them by hand; the row still
+reads "No Quora URL", because they have not submitted one. Step 6: the search finds them by what they
+typed, not only by their name, handle, or email. Step 7: the stored line is unchanged — pressing the
+button again with an empty box never erases what they already told us. Deleting the account removes
+this line with the rest of their data (see UNLOCK-A2c for the deletion walk).
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A8a · Asking for help works while your submission is waiting on review
 **Role:** member with a **pending** submission · **Surfaces:** web + mobile-responsive, android
 **Precondition:** a test account that submitted a Quora URL and has not been reviewed yet. This is the
@@ -446,7 +502,8 @@ The counter and the list agree with each other. Their earlier support-only acces
    then open the **Left** tab.
 4. On any row, click **Mark as demo / test**, then watch the four numbers.
 5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
-6. Type part of a name, handle, or email into the search box.
+6. Type part of a name, handle, email, or something a member told us when they asked for help, into
+   the search box.
 7. Clear the search, then press **Show 10 more** at the bottom of the list until it disappears, and
    press the panel header again to close it.
 8. Compare the "Members" number against the sign-up total in the auth provider's own dashboard, minus
@@ -455,7 +512,9 @@ The counter and the list agree with each other. Their earlier support-only acces
 URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
 are not in the review queue below, because there is nothing to review. Each row shows a name or handle,
 the email, the sign-up date, whether they have signed in since, and how many times they opened the
-Unlock screen. The breakdown line above splits the same group into how many never signed in again after
+Unlock screen; a member who pressed "ask for help" and typed something into the optional box also shows
+a `Told us: …` line, which is the only identifying thing on file for someone who never gave a URL
+(UNLOCK-A8e walks that end to end). The breakdown line above splits the same group into how many never signed in again after
 sign-up day and how many came back and still did not submit, with the typical number of Unlock-screen
 loads — the two groups need different answers, and the view count is the firmer signal because a
 sign-in date only moves on a fresh sign-in. On **Left**, every row says when

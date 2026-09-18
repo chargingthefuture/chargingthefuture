@@ -127,6 +127,27 @@ async function countUnlockScreenViews(): Promise<Map<string, number>> {
   }
 }
 
+// What each member who pressed "ask for help" could tell us about their Quora account, for the ones
+// who gave anything. An admin reading the sign-ups panel can look them up by name or by a link to
+// something they posted and approve them by hand, instead of seeing "No Quora URL" with nothing to
+// act on.
+//
+// Best-effort, like the view counts: a failure here leaves every hint null rather than taking the
+// panel down, since the rest of the reading still stands without it.
+async function listQuoraHints(): Promise<Map<string, string>> {
+  try {
+    const result = await queryDb<{ user_id: string; quora_hint: string }>(
+      `SELECT user_id, quora_hint
+         FROM unlock_help_requests
+        WHERE quora_hint IS NOT NULL AND btrim(quora_hint) <> ''`,
+    );
+    return new Map(result.rows.map((row) => [row.user_id, row.quora_hint]));
+  } catch (error) {
+    console.error('[unlock] help-request hints unavailable; showing none', error);
+    return new Map();
+  }
+}
+
 // Which of those accounts have a Quora URL on file, and what happened to it.
 async function listSubmissionFacts(): Promise<Map<string, SubmissionFact>> {
   const result = await queryDb<{ user_id: string; review_status: UnlockReviewStatus; created_at: Date }>(
@@ -183,17 +204,20 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
   let excludedUserIds: Map<string, string | null>;
   let deletedDates: Map<string, string>;
   let screenViews: Map<string, number>;
+  let quoraHints: Map<string, string>;
   try {
-    const [facts, excluded, deleted, views] = await Promise.all([
+    const [facts, excluded, deleted, views, hints] = await Promise.all([
       listSubmissionFacts(),
       listUnlockExcludedAccounts(),
       listDeletedAccountDates(),
       countUnlockScreenViews(),
+      listQuoraHints(),
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
     deletedDates = deleted;
     screenViews = views;
+    quoraHints = hints;
   } catch (error) {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
@@ -210,6 +234,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
       reviewStatus: submission?.reviewStatus ?? null,
       submittedAt: submission?.submittedAt ?? null,
       unlockScreenViews: screenViews.get(account.userId) ?? 0,
+      quoraHint: quoraHints.get(account.userId) ?? null,
     };
   });
 
