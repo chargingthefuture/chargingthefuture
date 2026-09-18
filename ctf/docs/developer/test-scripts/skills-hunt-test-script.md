@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination |
 
 ---
 
@@ -130,7 +130,7 @@ Result: web ☐
 3. Also confirm the **keyword skill search** (web and android): type part of a skill name in the "Search skills by keyword…" box above the sector accordion. The accordion is replaced by a flat, cross-sector list of matching skills; selecting one adds it just like the accordion. Clear the search (✕) to restore the accordion. A no-match query shows the "add it as a free-text skill" hint.
 4. Submit.
 
-**Expected:** Submission succeeds. A confirmation message or pending status appears. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city. The keyword search behaves the same on web and android (flat filtered results replace the accordion while a query is present).
+**Expected:** Submission succeeds. A confirmation message or pending status appears, and **no red banner** — in particular nothing reading "Unable to create submission". Then reload the page and open My Finds again: the nomination is still there. Reloading is the part that matters, because it is the only step that proves a row was written rather than a message shown. On 2026-09-13 the submission INSERT named 18 columns and supplied 19 values, so Postgres refused every nomination and nothing was ever written. The submission shows up in the My Finds tab / "My Finds" section with status "pending". When this submission is later accepted (SH-A3) the generated Directory profile carries the same country/state/city. The keyword search behaves the same on web and android (flat filtered results replace the accordion while a query is present).
 
 Result: web ☐
 

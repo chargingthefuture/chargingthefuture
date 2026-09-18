@@ -432,6 +432,21 @@ jobs:
       - name: Fail on a plugin with no registry seed row
         run: node ctf/scripts/check-plugin-registry-seed.mjs
 
+  insert-column-arity-gate:
+    name: Insert Column Arity Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # SQL written as a string is not read by the typechecker, the linter, or the build, so an
+      # INSERT whose column list and VALUES list disagree ships green and fails for the first
+      # member who presses Submit. SkillsHunt shipped that way: 18 columns, 19 values, and every
+      # nomination in production answered "INSERT has more expressions than target columns".
+      - name: Fail on an INSERT whose columns and values disagree
+        run: node ctf/scripts/check-insert-column-arity.mjs
+
   orphan-route-gate:
     name: Orphan Route Gate
     runs-on: ubuntu-latest
