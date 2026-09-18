@@ -390,8 +390,15 @@ nomination, so it carries a Quora URL. Note its Quora URL.
    with that Quora URL — confirm it is rejected (409 `DIRECTORY_QUORA_URL_SUPPRESSED`).
 5. In the panel, click **"Allow again"** on that entry; confirm a reason is required. Enter one and
    confirm. Now repeat step 4(b) — the profile can be created again.
+5a. Before lifting it, try step 4 again with the **same** URL written differently each time: drop
+   the `www.`, add a trailing slash, change the casing of the name, paste the share link with `?ch=…`
+   on the end, or use a language subdomain such as `es.quora.com`. Each must still be blocked — the
+   takedown is matched on a canonical form, not on the exact characters recorded (fixed 2026-09-18;
+   before that, dropping `www.` was enough to get a taken-down profile re-listed). Also confirm an
+   unrelated Quora profile is still **not** blocked.
 **Expected:** The takedown deletes the profile and blocks its Quora URL from being listed (auto-gen
-from a SkillsHunt accept, or admin/member add) until an admin lifts it. The block is enforced
+from a SkillsHunt accept, or admin/member add) until an admin lifts it, whichever way that URL is
+written. The block is enforced
 regardless of SkillsHunt state. A regular delete (DIR-A3) does **not** block re-adding. Takedown and
 override each require a reason and record an audit line. On android this case is **blocked** — the RN
 admin screen has delete only.
