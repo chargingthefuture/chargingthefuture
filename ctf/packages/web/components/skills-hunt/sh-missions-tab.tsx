@@ -4,17 +4,7 @@ import { Target, Lock, CheckCircle } from "lucide-react";
 import { type SkillsHuntMissionWithProgress, type Tab } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
-
-function missionView(mission: SkillsHuntMissionWithProgress) {
-  const progressCount = mission.progress?.progressCount ?? 0;
-  return {
-    isLocked: mission.status === "locked",
-    color: mission.colorHex ?? "#FBBF24",
-    progressCount,
-    pct: Math.min(100, (progressCount / Math.max(1, mission.goalTarget)) * 100),
-    isComplete: mission.progress?.completedAtIso != null,
-  };
-}
+import { missionView } from 'lib/skills-hunt/mission-view';
 
 function MissionTitleRow({ title, isLocked, isComplete }: { title: string; isLocked: boolean; isComplete: boolean }) {
   const { theme } = useTheme();
@@ -41,7 +31,7 @@ function ScoutButton({ isLocked, color, onScout }: { isLocked: boolean; color: s
 function MissionCard({ mission, onScout }: { mission: SkillsHuntMissionWithProgress; onScout: () => void }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const { isLocked, color, progressCount, pct, isComplete } = missionView(mission);
+  const { isLocked, color, displayCount, pct, isComplete } = missionView(mission);
   return (
     <div style={{ padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${isLocked ? t.BORDER : color + "35"}`, opacity: isLocked ? 0.6 : 1 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
@@ -49,7 +39,7 @@ function MissionCard({ mission, onScout }: { mission: SkillsHuntMissionWithProgr
           <MissionTitleRow title={mission.title} isLocked={isLocked} isComplete={isComplete} />
           {mission.description && <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 10, lineHeight: 1.5 }}>{mission.description}</div>}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: t.MUTED }}>
-            <span>{progressCount}/{mission.goalTarget} complete</span>
+            <span>{displayCount}/{mission.goalTarget} complete</span>
             {mission.bonusPoints > 0 && <span style={{ color, fontWeight: 700 }}>+{mission.bonusPoints} pts</span>}
           </div>
           <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
