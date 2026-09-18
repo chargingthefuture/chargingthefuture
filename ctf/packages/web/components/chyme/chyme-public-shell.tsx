@@ -1,7 +1,7 @@
 'use client';
 
 import { Radio, Lock, LogIn, UserPlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -26,7 +26,7 @@ const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter fiel
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; verifyUrl?: string; live: LiveState }) {
+function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl: string; verifyUrl?: string; live: LiveState; onRoomGone: () => void }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
@@ -99,7 +99,7 @@ function ChymePublicView({ signInUrl, verifyUrl, live }: { signInUrl: string; ve
           <div>
             {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
             <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} />
+            <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           </div>
         ) : null}
         {!live.isLive ? (
@@ -141,27 +141,36 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // simply sees the not-live view.
   const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
 
+  const loadLive = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const res = await fetch('/api/chyme/public/room', signal ? { signal } : undefined);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.ok) {
+        setLive({
+          isLive: !!data.isLive,
+          participantCount: data.participantCount ?? 0,
+          roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
+          credentials: data.credentials,
+        });
+      }
+    } catch {
+      // Ignore — guest just sees the not-live view.
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch('/api/chyme/public/room', { signal: controller.signal });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data?.ok) {
-          setLive({
-            isLive: !!data.isLive,
-            participantCount: data.participantCount ?? 0,
-            roomName: typeof data.roomName === 'string' ? data.roomName : undefined,
-            credentials: data.credentials,
-          });
-        }
-      } catch {
-        // Ignore — guest just sees the not-live view.
-      }
-    })();
+    void loadLive(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [loadLive]);
+
+  // The listener could not join and a fresh read said the room had ended. Re-read the room so the
+  // page falls back to the honest "no public rooms right now" state instead of leaving a dead error
+  // box under a heading telling the visitor they are listening live.
+  const handleRoomGone = useCallback(() => {
+    void loadLive();
+  }, [loadLive]);
 
   // One layout at every width (mobile-first, owner decision 2026-07-20): the desktop two-column
   // branch this file used to carry was hidden by CSS at every width, so it never rendered.
@@ -169,7 +178,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // layout below manages its own flex column.
   return (
     <div className="ctf-self-responsive">
-      <ChymePublicView signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} />
+      <ChymePublicView signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} onRoomGone={handleRoomGone} />
     </div>
   );
 }
