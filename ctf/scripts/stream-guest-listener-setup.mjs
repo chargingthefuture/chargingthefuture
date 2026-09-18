@@ -95,7 +95,7 @@ async function videoRequest({ apiKey, token }, method, path, body) {
   try {
     json = JSON.parse(text);
   } catch {
-    // Not JSON — the raw text is the message.
+    // no-trace: the body was not JSON, so the raw text below is the message; nothing is lost.
   }
   if (!res.ok) {
     throw new Error(`${method} ${path} → HTTP ${res.status}: ${scrub(json?.message ?? text.slice(0, 300))}`);
