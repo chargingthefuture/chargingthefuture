@@ -144,13 +144,18 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 **Precondition:** the room is live (a signed-in member is in the call).
 **Steps:**
 1. Sign out. Open the Chyme plugin route.
-2. Listen to the live room; look for any speak control.
+2. Tap **Tap to listen** under the room heading, then listen to the live room; look for any speak
+   control.
 3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
 4. Count the sign-in and join buttons on the whole page, top to bottom.
 5. Have the last signed-in member leave the call, then reload the signed-out page within the next
    45 seconds (inside the presence window, so the server still reports the room as live).
-**Expected:** You see the public view and can listen to the live room, joined muted with no speak
-control. The view shows marketing/empty-state content only — no private or per-user data, and the
+**Expected:** Before the tap the room heading shows and under it a single **Tap to listen** button
+with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
+cannot be heard." — nothing is connected yet and nothing plays. After the tap you see "Connecting to
+the live room…", then "Listening live", and you hear the room, joined muted with no speak control.
+(Since 2026-09-18: the join used to run on page load, which put the guest on stage with the audio
+blocked by the phone's autoplay rule — the member in the room saw a listener who heard nothing.) The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. When the room is not live, there is no listen audio. The public
 view is one phone-width layout at every window size — never a two-column desktop version. The page
 itself scrolls: the green header stays pinned at the top while the content moves under it, and

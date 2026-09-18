@@ -91,18 +91,31 @@ export function ChymeGuestListen({
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
+  // 'idle' until the visitor taps: a phone browser (iOS Safari above all) refuses to play sound
+  // that a page starts on its own, so a join that ran on page load put the guest on stage with
+  // every audio track muted by the browser. Members never hit this because they tap Join. The tap
+  // is the browser's permission to play, and everything after it (the join, the audio elements the
+  // SDK adds as people speak) inherits it.
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'joined' | 'error' | 'unsupported'>('idle');
+  // Set once by the tap; the join effect below keys on it rather than on `status`, whose later
+  // changes must not tear the call down as soon as it joined.
+  const [armed, setArmed] = useState(false);
   // The verbatim reason the join failed. The member room already shows its Stream error this way;
   // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
   // to go on but "try refreshing".
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
+  // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
+  // connect. Detect it up front and show a clear message rather than a raw error or a misleading
+  // "try refreshing". Expected environment state, so it is not reported to Sentry.
   useEffect(() => {
-    // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
-    // connect. Detect it up front and show a clear message rather than a raw error or a misleading
-    // "try refreshing". Expected environment state, so it is not reported to Sentry.
     if (!isWebRtcAvailable()) {
       setStatus('unsupported');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!armed) {
       return;
     }
 
@@ -162,7 +175,7 @@ export function ChymeGuestListen({
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
     };
-  }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
+  }, [armed, credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
@@ -175,6 +188,19 @@ export function ChymeGuestListen({
       <GuestNote
         accent={accent}
         text="Live audio needs WebRTC, which this browser has turned off — on iPhone or iPad this usually means Safari Lockdown Mode. Turn it off for this site (address bar → aA → Website Settings) or use another browser to listen."
+      />
+    );
+  }
+  if (status === 'idle') {
+    return (
+      <ListenButton
+        accent={accent}
+        participantCount={participantCount}
+        onTap={() => {
+          unlockAudioPlayback();
+          setStatus('connecting');
+          setArmed(true);
+        }}
       />
     );
   }
@@ -191,6 +217,47 @@ export function ChymeGuestListen({
         <GuestAudioSink accent={accent} participantCount={participantCount} />
       </StreamCall>
     </StreamVideo>
+  );
+}
+
+// Inside the tap handler, before anything asynchronous: resuming an audio context is the widely used
+// way to make a phone browser treat the page as allowed to play sound from here on. Nothing is
+// played through it; it is closed at once. Best-effort, and the join goes ahead either way.
+function unlockAudioPlayback(): void {
+  const Ctx =
+    typeof window !== 'undefined'
+      ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
+      : undefined;
+  if (!Ctx) {
+    return;
+  }
+  try {
+    const ctx = new Ctx();
+    void ctx.resume().then(() => ctx.close()).catch(() => undefined);
+  } catch {
+    // no-trace: an audio context is a courtesy to the browser's autoplay rule, not a requirement.
+  }
+}
+
+function ListenButton({ accent, participantCount, onTap }: { accent: string; participantCount: number; onTap: () => void }) {
+  const { theme } = useTheme();
+  const t = getChymeTokens(theme);
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, width: '100%', padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
+    >
+      <Radio size={16} style={{ color: accent, flexShrink: 0, marginTop: 2 }} />
+      <div>
+        <div style={{ fontWeight: 600 }}>
+          Tap to listen · {participantCount} {participantCount === 1 ? 'person' : 'people'} on stage
+        </div>
+        <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
+          Phones only play sound after a tap. You will hear the room and cannot be heard.
+        </div>
+      </div>
+    </button>
   );
 }
 

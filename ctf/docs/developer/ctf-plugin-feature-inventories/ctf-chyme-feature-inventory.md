@@ -141,6 +141,17 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **The signed-out listener taps before the join, so the phone plays the room.** Owner
+  report from two phones the same night: with the guest grants applied, the signed-out iPhone joined
+  and appeared on stage as "Guest listener", and the member in the room saw it there, but the guest
+  heard nothing and got no prompt. The guest page joined on page load, and a phone browser (iOS
+  Safari above all) refuses to play sound a page starts on its own; the SDK's audio elements were
+  added muted by the browser. Members never hit this because they tap Join. The guest component now
+  starts in an idle state with one **Tap to listen** button under the room heading (on-stage count,
+  and the line "Phones only play sound after a tap. You will hear the room and cannot be heard."); the
+  tap resumes an audio context as the browser's permission to play, then runs the same connect and
+  join as before. Test script CH-7 step 2 and its expected text name the button. No schema, route,
+  or contract change.
 - 2026-09-18: **Every Stream failure in Chyme says what failed and why.** Owner directive, the night
   before a live event: every Stream connection must work and every failure must be diagnosable from
   the phone that hit it. Server side (`lib/chyme/stream.ts`): a Back Channel token that Stream refuses
