@@ -22,6 +22,12 @@ name: Stream — Guest Listener Setup
 # then apply. Takes effect on the next page load — Stream checks the role at join time — so no
 # redeploy is needed.
 #
+# Secrets come from Infisical, the single source of truth. When Infisical cannot be reached (every
+# Infisical-backed workflow has failed with "Application not found" since 2026-09-10), the run falls
+# back to the GitHub Actions secrets STREAM_API_KEY / STREAM_API_SECRET (and the staging pair) if
+# they are set, and the log says which source it used — never a value. The role can be given as the
+# "role" input for the same reason. Rule 123 allows GitHub Actions as a deliberate second store.
+#
 # Runbook: ctf/docs/plugins/chyme/guest-listener-stream-role.md
 
 on:
@@ -43,6 +49,10 @@ on:
           - staging
           - both
         default: production
+      role:
+        description: "Guest role name — leave empty to use CHYME_GUEST_STREAM_ROLE from Infisical; set it (chyme_listener) when Infisical is unreachable"
+        type: string
+        default: ""
   schedule:
     # Weekly drift check, Tuesdays 05:52 UTC — an unused, off-the-hour minute (rule 119). A red run
     # means the production Stream app has drifted from the target state; run with mode "apply".
@@ -68,9 +78,11 @@ jobs:
           pnpm install
 
       # Inject the production environment's secrets (env-slug "prod"), which is where the *_STAGING
-      # Stream pair and CHYME_GUEST_STREAM_ROLE live too. If Infisical is unreachable this step fails
-      # the job, by design.
+      # Stream pair and CHYME_GUEST_STREAM_ROLE live too. Infisical is the source of truth; when it
+      # cannot be reached this step is allowed to fail so the fallback below can run.
       - name: Inject secrets from Infisical
+        id: infisical
+        continue-on-error: true
         uses: Infisical/secrets-action@v1.0.16
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
@@ -82,8 +94,37 @@ jobs:
           recursive: true
 
       # On the schedule there are no inputs: check production. A manual run uses what was picked.
+      # Each Stream value is taken from Infisical when it set one, else from the GitHub Actions
+      # secret of the same name; the log names the source, never the value.
       - name: Run the setup
         env:
           MODE: ${{ inputs.mode || 'check' }}
           TARGET: ${{ inputs.target || 'production' }}
-        run: node ctf/scripts/stream-guest-listener-setup.mjs "--mode=$MODE" "--target=$TARGET"
+          INPUT_ROLE: ${{ inputs.role }}
+          INFISICAL_OUTCOME: ${{ steps.infisical.outcome }}
+          FALLBACK_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+          FALLBACK_STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
+          FALLBACK_STREAM_API_KEY_STAGING: ${{ secrets.STREAM_API_KEY_STAGING }}
+          FALLBACK_STREAM_API_SECRET_STAGING: ${{ secrets.STREAM_API_SECRET_STAGING }}
+        run: |
+          echo "Infisical step outcome: $INFISICAL_OUTCOME"
+          for name in STREAM_API_KEY STREAM_API_SECRET STREAM_API_KEY_STAGING STREAM_API_SECRET_STAGING; do
+            fallback_var="FALLBACK_$name"
+            if [ -n "${!name:-}" ]; then
+              echo "$name: from Infisical"
+            elif [ -n "${!fallback_var:-}" ]; then
+              export "$name=${!fallback_var}"
+              echo "$name: from GitHub Actions secrets (fallback)"
+            else
+              echo "$name: not set in either store"
+            fi
+          done
+          if [ -n "$INPUT_ROLE" ]; then
+            export STREAM_GUEST_ROLE="$INPUT_ROLE"
+            echo "role: from the workflow input"
+          elif [ -n "${CHYME_GUEST_STREAM_ROLE:-}" ]; then
+            echo "role: from Infisical"
+          else
+            echo "role: not set — give it as the workflow input while Infisical is unreachable"
+          fi
+          node ctf/scripts/stream-guest-listener-setup.mjs "--mode=$MODE" "--target=$TARGET"
