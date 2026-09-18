@@ -19,3 +19,7 @@ export {
   // Read back so the same closure is not recorded twice if someone answers the survey again.
   listRemovedQuoraAccountMarkers,
 } from 'lib/directory/repository';
+
+// The set of things that can change a member's Quora URL. Unlock names one when it records a change,
+// so its own helper can be typed without reaching into lib/directory directly.
+export type { QuoraUrlChangeSource } from 'lib/directory/repository';

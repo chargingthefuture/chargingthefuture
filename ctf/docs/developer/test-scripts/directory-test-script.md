@@ -213,6 +213,11 @@ value (never emptied/invalid) and a note appears: "Your Quora profile URL can't 
 previous link was kept." In step 4 the new valid URL saves and replaces the old one. A member creating a
 first profile with no valid Quora URL is rejected with "A valid Quora profile URL is required." Each real
 change is recorded in the Quora URL history (visible to admins in the Unlock queue — see UNL test script).
+A member's own edit here is recorded with source `directory_self`; the history also carries entries from
+elsewhere, including `unlock_admin` when an admin entered or corrected the URL from the Unlock admin
+surface for a member who could not produce one (2026-09-18). Nothing in this plugin changes because of
+that source — it is listed so a tester reading the history panel is not surprised by an entry that this
+script's steps did not create.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-5 · Read announcements
