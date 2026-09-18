@@ -44,6 +44,15 @@ listen-only too), or both.
 It takes effect on the next page load — Stream checks the role at join time — so no redeploy is
 needed. The script never prints a secret, and scrubs the api key from any Stream error text.
 
+**If Infisical is unreachable.** Every Infisical-backed workflow has failed with
+"Application not found" since 2026-09-10 — the self-hosted instance on Railway is not answering (tracked in the ci-health issue #2030).
+The workflow then falls back to the GitHub Actions secrets `STREAM_API_KEY` and
+`STREAM_API_SECRET` (repository Settings → Secrets and variables → Actions; copy the values from
+the Stream dashboard's API keys page, which does work on a phone), and takes the role name from the
+**role** input — set it to `chyme_listener`. The log says which store each value came from. Rule
+123 allows GitHub Actions as a deliberate second store; Infisical stays the source of truth, and
+the fallback is only read when Infisical set nothing.
+
 **The dashboard is the fallback, not the record.** If the workflow cannot run, the same two steps
 by hand are: create the role (Roles & Permissions), then Video & Audio → Call types → `default` →
 Permissions → the role's column → allow Join Call and Read Call, leave the three publish
