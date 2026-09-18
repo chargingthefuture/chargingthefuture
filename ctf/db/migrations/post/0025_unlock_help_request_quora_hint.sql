@@ -1,0 +1,16 @@
+-- Unlock: keep whatever a member can tell us about their Quora account when they cannot give the URL.
+--
+-- The Unlock screen asks for a Quora profile URL and nothing else. A member who cannot produce one
+-- presses "Can't find your Quora profile URL?", which opens the Commons so they have somebody to ask
+-- and records a bare row in unlock_help_requests. That row carries a user id and a timestamp, so the
+-- admin sign-ups panel showed the person as "No Quora URL" with no way to look them up: the people
+-- most in need of a manual approval were exactly the people who left nothing to approve on.
+--
+-- quora_hint is that missing thing, in free text: the name on their Quora account, a link to anything
+-- they have posted, the email they joined Quora with — whatever they have. It is deliberately not
+-- validated into a URL shape. A member who could produce a valid URL would have used the field above
+-- it, so rejecting a hint for its shape rejects the only people this column exists for.
+--
+-- Nullable, no backfill: the rows already in the table were written before there was anything to ask
+-- for, and a hint is optional for every row written after it.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;

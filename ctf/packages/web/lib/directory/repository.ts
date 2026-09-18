@@ -710,6 +710,10 @@ export async function getOwnProfile(userId: string): Promise<DirectoryProfile | 
 export type QuoraUrlChangeSource =
   | 'directory_self'
   | 'directory_admin'
+  // An admin entered or corrected the URL from the Unlock admin surface, for a member who could not
+  // produce one themselves. Kept apart from 'unlock_onboarding' (the member's own first submission)
+  // so the trail says which of the two happened.
+  | 'unlock_admin'
   | 'unlock_onboarding'
   | 'quora_deletion_survey';
 

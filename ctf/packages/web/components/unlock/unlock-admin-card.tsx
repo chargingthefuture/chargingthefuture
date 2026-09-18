@@ -194,6 +194,23 @@ function CardUrlEditor({ s, editor }: { s: UnlockSubmission; editor: UnlockEdito
   );
 }
 
+// Said only when an admin put the stored URL there: this member did not supply it, somebody looked
+// them up and entered what they found. A reviewer deciding on the row needs that in front of them —
+// "they proved they are real" and "we found a profile that looks like them" are different claims, and
+// the card would otherwise read as the first one.
+function CardAdminEnteredNote({ s }: { s: UnlockSubmission }) {
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
+  if (!s.urlSetByAdminUserId) return null;
+  const on = s.urlSetByAdminAt ? new Date(s.urlSetByAdminAt) : null;
+  const when = on && !Number.isNaN(on.getTime()) ? ` on ${on.toLocaleDateString()}` : '';
+  return (
+    <div style={{ fontSize: 11, fontWeight: 600, color: t.ACCENT, marginBottom: 8 }}>
+      Entered by an admin{when} — not submitted by the member.
+    </div>
+  );
+}
+
 function CardHeader({ s, editor, history }: { s: UnlockSubmission; editor: UnlockEditorState; history: UnlockHistoryState }) {
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
@@ -206,6 +223,7 @@ function CardHeader({ s, editor, history }: { s: UnlockSubmission; editor: Unloc
           {s.quoraProfileUrl}
         </a>
       </div>
+      <CardAdminEnteredNote s={s} />
       {/* Action pills and buttons wrap onto as many rows as they need, below the URL. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => editor.start(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>

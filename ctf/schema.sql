@@ -1500,6 +1500,10 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   -- reward an admin clawed back (the "loser" of a determination, or a perp).
   reward_withheld_at TIMESTAMPTZ,
   reward_revoked_at TIMESTAMPTZ,
+  -- Null when the member submitted the stored URL themselves; otherwise the admin who entered or
+  -- corrected it for them, and when. See the guarded ALTERs further down for the full note.
+  url_set_by_admin_user_id TEXT,
+  url_set_by_admin_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1608,9 +1612,16 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_
 -- through the Quora step on their own, which is the number that says whether that step is working.
 CREATE TABLE IF NOT EXISTS unlock_help_requests (
   user_id TEXT PRIMARY KEY,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  quora_hint TEXT
 );
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Whatever the member could give about their Quora account when they could not give the URL itself:
+-- the name on the account, a link to something they posted, the email they joined Quora with. Free
+-- text on purpose — the point is to take whatever they have rather than reject it for shape. An admin
+-- reads it in the sign-ups panel and looks them up by hand, which is the only thing that was missing
+-- for a member who pressed "ask for help" and left nothing behind to approve.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
@@ -1657,6 +1668,14 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS r
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS incentive_granted_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Who put the URL that is stored right now: null when the member submitted it themselves, otherwise
+-- the admin who entered or corrected it on their behalf. An admin can add a URL for a member who
+-- could not produce one (they asked for help and left a name instead), and can fix one that is wrong;
+-- either way the row must not read as if the member typed it, because an approval decision is made on
+-- that difference. Cleared the moment the member submits their own URL over the top.
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_at TIMESTAMPTZ;
 -- Duplicate CREATE TABLE blocks for unlock_audit_log and unlock_runtime_config
 -- were removed here; the canonical definitions are above (unlock_audit_log
 -- keeps its richer column set). The ALTER ... ADD COLUMN reconciliation for
