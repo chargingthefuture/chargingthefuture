@@ -445,12 +445,16 @@ there is drift, not an expected gap.
 **Precondition:** At least two active profiles with a Quora address, one carrying a skill that is not
 the Advocacy placeholder and one carrying only that placeholder.
 **Steps:**
-1. Open `/admin/directory/invite-queue` as the admin, on a phone-width viewport.
+1. As the admin, open `/admin/directory`, scroll to the bottom, and press **Invite queue**. Then go
+   back to `/admin` and check the list there for the same destination.
 2. Read the counts line and the rows.
 3. Look for your own listing, and for anybody who already has an invite post on the blog.
 4. Press **Copy the whole queue**, then paste into any text field.
 5. Sign in as an approved member who is not an admin and open the same address.
 **Expected:**
+- Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and
+  Audit log rows at the foot of the list. Before these existed the page could only be reached by
+  typing the address, which is not something anybody does on a phone.
 - Step 2: rows render with name, Quora address, skills, and a plain-language label — "Write about the
   skill", "General invitation", or "Nothing recorded yet". The counts line adds up to the number of
   rows shown.
