@@ -35,7 +35,8 @@ WITH already_written AS (
     'farah-brunache',   -- the owner
     'janie-spears-7',   -- an-invitation-to-janie.md
     'j-h-b-7',          -- an-invitation-to-jhb.md
-    'steph-wo-1'        -- an-invitation-to-steph-wo.md
+    'steph-wo-1',       -- an-invitation-to-steph-wo.md
+    'none-ya-970'       -- an-invitation-to-christy.md
   ]) AS handle
 ),
 listed_skills AS (
