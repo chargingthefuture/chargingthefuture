@@ -172,7 +172,11 @@ In step 4 you find **exactly one** place to sign in or join — the invitation c
 to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
 link when the visitor has an account part-way through Unlock). The green header carries the back
 control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
-grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). There is **no
+grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
+Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room;
+pressing it spins the icon, re-reads the room (live state, count) and the chat, and a listener
+already in the call stays connected — the installed app on Android has no browser reload, so this is
+the only way a visitor there re-checks the room. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
 page.
 

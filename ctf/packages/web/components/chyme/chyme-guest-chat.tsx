@@ -39,7 +39,8 @@ async function readPublicChat(): Promise<ChatState> {
 // The room chat for a signed-out visitor: the same messages members see, read-only, with one way
 // in — sign in to write (owner directive, 2026-09-18). Rendered only while the room is live, under
 // the stage, in the member panel's look so the two views read as one product.
-export function ChymeGuestChat({ signInUrl }: { signInUrl: string }) {
+// `refreshKey` is bumped by the page's refresh button; a change re-reads at once and restarts the poll.
+export function ChymeGuestChat({ signInUrl, refreshKey = 0 }: { signInUrl: string; refreshKey?: number }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const [state, setState] = useState<ChatState>({ kind: 'loading' });
@@ -62,7 +63,7 @@ export function ChymeGuestChat({ signInUrl }: { signInUrl: string }) {
       canceled = true;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [refreshKey]);
 
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

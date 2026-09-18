@@ -1,6 +1,6 @@
 'use client';
 
-import { Radio, LogIn, UserPlus } from 'lucide-react';
+import { Radio, LogIn, UserPlus, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
@@ -72,31 +72,25 @@ function failedCheck(status: number, data: unknown): LiveState {
 // a live room with no guest identity matched neither branch and rendered nothing at all. A visitor
 // looking at a blank space under a live room, or at "no rooms" while a member is audibly in the
 // call, has no way to tell what happened — and neither has the person they report it to.
-function ChymePublicRoomList({ live, onRoomGone, signInUrl }: { live: LiveState; onRoomGone: () => void; signInUrl: string }) {
+function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live: LiveState; onRoomGone: () => void; signInUrl: string; refreshKey: number }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
   if (live.checkFailed) {
     return (
-      <>
-        <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-        <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Couldn&apos;t check whether a room is live</div>
-          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, wordBreak: 'break-word' }}>{live.checkFailed}</div>
-        </div>
-      </>
+      <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>Couldn&apos;t check whether a room is live</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, wordBreak: 'break-word' }}>{live.checkFailed}</div>
+      </div>
     );
   }
 
   if (!live.isLive) {
     return (
-      <>
-        <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-        <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
-          <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
-        </div>
-      </>
+      <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
+      </div>
     );
   }
 
@@ -110,7 +104,7 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl }: { live: LiveState;
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
               follow what members are saying and signs in to write. */}
           <div style={{ marginTop: 16 }}>
-            <ChymeGuestChat signInUrl={signInUrl} />
+            <ChymeGuestChat signInUrl={signInUrl} refreshKey={refreshKey} />
           </div>
         </>
       ) : (
@@ -127,7 +121,23 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl }: { live: LiveState;
   );
 }
 
-function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl: string; verifyUrl?: string; live: LiveState; onRoomGone: () => void }) {
+function ChymePublicView({
+  signInUrl,
+  verifyUrl,
+  live,
+  onRoomGone,
+  onRefresh,
+  refreshing,
+  refreshKey,
+}: {
+  signInUrl: string;
+  verifyUrl?: string;
+  live: LiveState;
+  onRoomGone: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+  refreshKey: number;
+}) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
@@ -194,9 +204,25 @@ function ChymePublicView({ signInUrl, verifyUrl, live, onRoomGone }: { signInUrl
         </div>
       </div>
 
-      {/* Room list */}
+      {/* Room list. The label row carries the same refresh control the signed-in page has beside
+          Join Room (owner directive, 2026-09-18: the two screens should match, and the installed app
+          on Android has no browser reload). It re-reads the room and the chat; a listener already
+          in the call keeps their connection. */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label="Refresh the room and chat"
+            title="Refresh the room and chat"
+            style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
+          >
+            <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
+          </button>
+        </div>
+        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} />
       </div>
 
       {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement
@@ -221,6 +247,9 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // signed-out visitor can actually listen. Any error is ignored — the guest
   // simply sees the not-live view.
   const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
+  const [refreshing, setRefreshing] = useState(false);
+  // Bumped by the refresh button; the chat panel re-reads when it changes.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const loadLive = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -228,7 +257,12 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
       const data: unknown = await res.json().catch(() => null);
       // Say that the check failed, with the server's own words when it gave any. Treating this as
       // "not live" read as "No public rooms right now" while a member was in the call.
-      setLive(res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data));
+      setLive((prev) => {
+        const next = res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data);
+        // A re-read while the room is still live keeps the guest identity already in use: a fresh
+        // one would swap the listener's credentials under the joined call and reconnect it.
+        return next.isLive && next.credentials && prev.credentials ? { ...next, credentials: prev.credentials } : next;
+      });
     } catch (error) {
       if (signal?.aborted) return;
       setLive({ isLive: false, participantCount: 0, checkFailed: error instanceof Error ? error.message : 'The request did not complete.' });
@@ -248,13 +282,34 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
     void loadLive();
   }, [loadLive]);
 
+  // The refresh button: re-read the room, then tell the chat panel to re-read too. `refreshing`
+  // drives the spinning icon so the press is visible even when nothing changed.
+  const handleRefresh = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await loadLive();
+      setRefreshKey((n) => n + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadLive, refreshing]);
+
   // One layout at every width (mobile-first, owner decision 2026-07-20): the desktop two-column
   // branch this file used to carry was hidden by CSS at every width, so it never rendered.
   // `ctf-self-responsive` opts this wrapper out of the small-screen un-row fallback so the phone
   // layout below manages its own flex column.
   return (
     <div className="ctf-self-responsive">
-      <ChymePublicView signInUrl={signInUrl} verifyUrl={verifyUrl} live={live} onRoomGone={handleRoomGone} />
+      <ChymePublicView
+        signInUrl={signInUrl}
+        verifyUrl={verifyUrl}
+        live={live}
+        onRoomGone={handleRoomGone}
+        onRefresh={() => void handleRefresh()}
+        refreshing={refreshing}
+        refreshKey={refreshKey}
+      />
     </div>
   );
 }

@@ -153,8 +153,11 @@ Current status:
   route `GET /api/chyme/public/messages` (above) and `ChymeGuestChat` under the stage, polling every
   ten seconds, with one "Sign in to chat" link; a failed read shows the route's reason and status.
   (3) The grayed, locked "Start a Room" bottom bar is gone from the signed-out view — a control that
-  does nothing is noise to a visitor. Test script CH-7 names all three. No schema or contract change;
-  one new public read route.
+  does nothing is noise to a visitor. (4) The "Live Rooms" label row carries the same refresh button
+  the signed-in page has beside Join Room (owner directive: the two screens should match, and the
+  installed app on Android has no browser reload); it re-reads the room and the chat, and a listener
+  already in the call keeps their guest identity and connection. Test script CH-7 names all four. No
+  schema or contract change; one new public read route.
 - 2026-09-18: **The signed-out listener taps before the join, so the phone plays the room.** Owner
   report from two phones the same night: with the guest grants applied, the signed-out iPhone joined
   and appeared on stage as "Guest listener", and the member in the room saw it there, but the guest
