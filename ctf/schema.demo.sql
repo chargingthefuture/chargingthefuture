@@ -1479,6 +1479,14 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   id SERIAL,
   quora_profile_url TEXT NOT NULL,
+  -- Canonical matching key, not free text: exactly what normalizeQuoraProfileUrl
+  -- (packages/web/lib/unlock/quora-url.ts) returns, which is
+  -- https://www.quora.com/profile/<lowercased slug> — scheme, www, slug casing, a trailing slash, a
+  -- sub-page and the query string all pinned or dropped. Every duplicate defense in Unlock decides by
+  -- comparing this column (the "Shared by N" count, the one-reward-per-identity guard, and the spam
+  -- denylist below), so a row written in any other spelling makes one person look like two. Rows
+  -- stored before 2026-09-18 were re-keyed by
+  -- ctf/db/migrations/post/0028_unlock_canonical_quora_profile_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   review_status TEXT NOT NULL CHECK (review_status IN ('pending', 'approved', 'rejected', 'spam', 'duplicate')),
   unlock_window_expires_at TIMESTAMPTZ NOT NULL,
@@ -1562,6 +1570,9 @@ CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
 -- submission time and never re-enters the review queue. A later approve/reject of the same URL removes
 -- it here, so a mistaken spam mark is fully reversible.
 CREATE TABLE IF NOT EXISTS unlock_spam_quora_urls (
+  -- Same canonical form as unlock_verification_submissions.quora_profile_url_normalized above; here it
+  -- is the primary key, so migration 0027 had to merge two denylisted spellings of one profile rather
+  -- than re-key them into a collision.
   quora_profile_url_normalized TEXT PRIMARY KEY,
   quora_profile_url TEXT NOT NULL,
   flagged_by_user_id TEXT,
