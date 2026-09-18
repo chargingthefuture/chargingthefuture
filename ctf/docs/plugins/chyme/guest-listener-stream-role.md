@@ -12,22 +12,43 @@ and the variable is set — making it safe to deploy in any order, then switch o
 
 Members are unaffected: only the anonymous guest identity (`chyme-guest-…`) gets the restricted role.
 
-## What to configure in the Stream app
+## What to configure in the Stream app — run the workflow
 
-Do this in the **production** Stream app (the one behind `STREAM_API_KEY` / `STREAM_API_SECRET`) and,
-if you record demos, the **demo** app (`STREAM_API_KEY_STAGING` / `STREAM_API_SECRET_STAGING`) too —
-otherwise demo guests stay client-only.
+The Stream side is owned by code: `ctf/scripts/stream-guest-listener-setup.mjs`, run by the
+**"Stream — Guest Listener Setup"** workflow (`.github/workflows/stream-guest-listener-setup.yml`).
+It reads the Stream key pairs and `CHYME_GUEST_STREAM_ROLE` from Infisical and brings the app to the
+target state through Stream's APIs:
 
-1. **Create a role** named `chyme_listener` (Stream dashboard → Roles & Permissions, or the RBAC API).
-2. **Edit the `default` Video call type's grants** for `chyme_listener` so it can join and hear the
-   room but cannot publish:
-   - **Keep** (so the guest can connect and receive audio): `join-call`, `read-call`,
-     `create-call` is **not** needed, `send-event` optional, plus the default
-     connect/subscribe capabilities.
-   - **Remove** (so the guest cannot speak): `send-audio`, `send-video`, `screenshare`
-     (and any `start-*` broadcast/record capabilities).
-3. Leave the member roles (`user` / `admin` / host) on the `default` call type unchanged — members
-   must still publish audio.
+1. The role named by `CHYME_GUEST_STREAM_ROLE` exists in the app (roles are app-wide, shared by Chat
+   and Video).
+2. On the `default` Video call type, that role has `join-call` and `read-call`, does **not** have
+   `send-audio`, `send-video` or `screenshare`, and keeps anything else it already had.
+
+Members are unaffected: only that role changes, and only guests carry it. Member roles on the
+`default` call type are never touched.
+
+**From the browser (works on a phone):** Actions tab → "Stream — Guest Listener Setup" → Run
+workflow.
+
+- **plan** (the default) reads everything and prints the state and what apply would change. Writes
+  nothing. Run this first.
+- **apply** writes what is missing and reads it back; the run goes red if the read-back is still
+  short.
+- **check** is what the weekly schedule runs (Tuesdays 05:52 UTC, production): the same read as
+  plan, but the run goes red when anything has drifted from the target state — so a half-done or
+  undone setup is caught before a member reports it.
+
+"target" picks the Stream app: production (default), staging (the demo app, so demo guests are
+listen-only too), or both.
+
+It takes effect on the next page load — Stream checks the role at join time — so no redeploy is
+needed. The script never prints a secret, and scrubs the api key from any Stream error text.
+
+**The dashboard is the fallback, not the record.** If the workflow cannot run, the same two steps
+by hand are: create the role (Roles & Permissions), then Video & Audio → Call types → `default` →
+Permissions → the role's column → allow Join Call and Read Call, leave the three publish
+capabilities off. The dashboard does not work at phone width. Whatever was done by hand, run the
+workflow in **check** mode afterwards to confirm the state.
 
 ## Turn it on
 
@@ -56,15 +77,16 @@ the room as live, and then the join is refused. The page reads:
 Members are unaffected, which is why it can go unnoticed: a host in the room sees a normal live
 room while no visitor can hear it. Two ways out, either one restores listening:
 
-- **Finish step 2** in the Stream dashboard (production app → Video & Audio → the `default` call
-  type → role `chyme_listener` → allow `join-call` and `read-call`). This is the intended end
-  state: guests can hear, and still cannot publish.
+- **Run "Stream — Guest Listener Setup" with mode apply** (above). This is the intended end state:
+  guests can hear, and still cannot publish. The weekly check run exists so this cannot go
+  unnoticed again.
 - **Unset `CHYME_GUEST_STREAM_ROLE`** in Infisical. Guests go back to the default role and
   client-only enforcement, as under "Turn it on" above.
 
 ## Notes
 
-- The role name in the env var must exactly match the role configured in Stream; a mismatch means
-  Stream falls back to default behavior (or rejects the upsert), so keep them in sync.
+- The role name in the env var is the one the workflow creates and grants, so the two cannot drift
+  apart as long as the workflow is what sets Stream up. If the name in Infisical is changed, run the
+  workflow again: it creates and grants the new name (the old role is left in place, unused).
 - This does not change member moderation. The broader "request to speak / host grant" flow for
   members is still unbuilt (tracked in the Chyme inventory Gaps).
