@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab |
 
 ---
 
@@ -344,7 +344,9 @@ Result: web ☐
 2. Observe the mission list.
 3. Each mission should show a title, progress bar, and a "Scout Now" or equivalent CTA.
 
-**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown. Read each count against what the mission's title promises: a mission named for one trade should show the nominations carrying that skill, not the scout's whole accepted total. A count far larger than a small target ("82/1 complete") is the signature of a mission pointed at the wrong goal — correct it with SH-A10c rather than reading it as a display fault.
+**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown. **A count never reads past its target** (owner decision 2026-09-18): a mission whose stored count is 82 against a target of 1 shows "1/1 complete", matching the bar, which has always stopped at full width. The stored count is untouched — only what a member reads is capped.
+
+So a mis-pointed mission no longer announces itself here. Check it on the **admin** Missions tab instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with its sector or skill beside it; a mission named for one trade that reads "every accepted nomination" is the one to correct with SH-A10c.
 
 Result: web ☐
 
@@ -844,6 +846,8 @@ Result: web ☐
 7. Re-check the member Missions tab.
 
 **Expected:** Step 3 is refused with a sentence naming the skill rule (the same rule as SH-A10b, checked here against the merged row rather than the fields sent). Step 4 saves, and the admin row now names the skill. **Step 5 still shows the old number** — this is the point of the case: changing a goal does not move a stored count, because progress is only recomputed when a nomination is reviewed. Step 6 reports how many scouts were recomputed. Step 7 shows the corrected count. A mission a scout had genuinely completed earlier stays marked complete — a recompute never clears an earned completion.
+
+**Note on step 1:** since 2026-09-18 the member card caps its count at the target, so an over-counting mission reads "1/1 complete" rather than "82/1". Pick the mission to correct from the admin row's goal description, not from the member card.
 
 Result: web ☐
 
