@@ -169,7 +169,10 @@ async function seedUnlock(c) {
          access_tier = EXCLUDED.access_tier,
          review_status = EXCLUDED.review_status,
          updated_at = NOW()`,
-      [uid, `https://quora.com/profile/demo-${uid}`, `quora.com/profile/demo-${uid}`, ADMIN],
+      // The normalized column has to hold exactly what normalizeQuoraProfileUrl produces
+      // (https://www.quora.com/profile/<lowercased slug>), or demo data is the one place where a
+      // duplicate profile would not be detected — which is the opposite of what a demo should show.
+      [uid, `https://quora.com/profile/demo-${uid}`, `https://www.quora.com/profile/demo-${String(uid).toLowerCase()}`, ADMIN],
     );
   }
   console.log(`  ✓ unlock (approved_full for ${realOwners.length} real demo account${realOwners.length > 1 ? 's' : ''})`);

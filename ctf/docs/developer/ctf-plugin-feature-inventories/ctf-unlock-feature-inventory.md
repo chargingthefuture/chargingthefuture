@@ -305,7 +305,14 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 
 1. Server-side auth gates for all routes.
 2. Admin-only moderation and queue access.
-3. Input normalization and strict Quora URL shape validation.
+3. Input normalization and strict Quora URL shape validation. `normalizeQuoraProfileUrl`
+   (`lib/unlock/quora-url.ts`) accepts only `quora.com` / `www.quora.com` with a `/profile/<slug>`
+   path and returns one canonical string per profile: `https://www.quora.com/profile/<lowercased
+   slug>`. Scheme, `www.`, slug casing, a trailing slash, a sub-page (`/answers`), and the query and
+   hash (the share link Quora's app produces carries `?ch=…&oid=…&share=…`) are all pinned or
+   dropped, because every duplicate guard in this plugin decides by comparing those strings —
+   see control 9 below. The member's URL as typed is kept in `quora_profile_url` and is what the
+   admin card links to.
 4. Auditable moderation and reward grant traces.
 5. Plugin remains hidden from end-user plugin registry navigation.
 6. **Unlock is the single source of truth for full app access (hard cutover, 2026-06-09).** The old v2 `isApproved` flag — which came from an `x-ctf-user-approved` header the middleware never set, so it defaulted to true for everyone — has been removed entirely from the request identity, the bearer-token identity, and the access decision. The central gate `evaluatePluginAccess` now resolves the Unlock tier via `getUnlockAccessTier` (Unleash flag, then DB tier with lazy expiry) and enforces a single `minUnlockTier` option:
@@ -324,6 +331,20 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    than widening it.
 7. Admins always pass the tier check.
 8. **Chyme is no longer granted to not-yet-unlocked members.** Chyme requires `approved_full`; degraded members are pointed at the Hub general channel and the Unlock flow instead. Chyme's anonymous public visitor shell (for signed-out browsing) is unchanged.
+8a. **A profile written two ways used to count as two people (fixed 2026-09-18, owner report).**
+   Every guard in control 9 and in the spam denylist compares the stored normalized URL, and the
+   normalizer kept whatever scheme, `www.`, slug casing and trailing path the member typed — so
+   `https://www.quora.com/profile/Mary-T-I-1`, `https://quora.com/profile/Mary-T-I-1` and
+   `https://www.quora.com/profile/mary-t-i-1/answers` were three different identities to this plugin.
+   One profile signed up three times, the queue showed no "Shared by" pill on any of them, and the
+   verification reward was granted more than once for one person. The canonical form in control 3
+   closes it, and `ctf/db/migrations/post/0028_unlock_canonical_quora_profile_urls.sql` re-keys the
+   rows stored before the fix (submissions, and the spam denylist — whose two spellings of one
+   profile merge, adding their flag counts). The migration re-keys only: duplicates it brings to
+   light appear as "Shared by N" for a human to decide on, and a reward already granted to a
+   duplicate is revoked from the card as usual. `ctf/scripts/sql/unlock-duplicate-quora-profiles.sql`
+   lists the affected profiles and which accounts hold a reward.
+
 9. **Duplicate-identity guard (one Quora profile, one reward).** A normalized Quora URL earns the verification reward on a single account. The shared reward grant (`grantUnlockRewardForSubmission`, used by the approval handler, the hourly reconcile, and the admin determination) checks `getUnlockRewardHolderForUrl` before minting: if another non-revoked account already holds the identity's reward, the reward is **held** (`reward_withheld_at`) for an admin determination rather than auto-minting a second reward for the same person. The admin then awards the chosen account (`grant-reward`) and/or revokes the others (`revoke`, which burns the credits back and locks the account). This blocks both honest cross-account reuse and a perp who pastes a victim's Quora URL onto an impersonation account. The reward verbs are admin-gated + CSRF-guarded and fully audited.
 10. **A `spam` decision is a whole-app block, not just a tier drop (2026-07-30).** `rejected` and `spam` both drop the Unlock tier to `locked_support_only`, which by itself still lets a member into the Commons/Hub support surface and every `any_authenticated` route. To make `spam` mean "removed from the app", the review handler (`POST /api/unlock/admin/submissions/[submissionId]/review`) additionally places a platform-wide (`all`-scope) `account_restrictions` record with reason `unlock:spam`. The central auth gate (`evaluatePluginAccess`) denies every `support_only` and `approved_full` route for an `all`-scope restriction (reason `account_restricted`), so a spammed member is shut out of the Commons and all plugins — only their own status and account/data-deletion (`any_authenticated`) routes stay reachable, preserving the right to be forgotten. A subsequent `approved` or `rejected` decision lifts the restriction **only** when the stored reason is the `unlock:spam` marker, so it never clears an unrelated admin restriction; this makes a mistaken spam mark fully reversible. The restriction upsert and its audit row are written by `restrictAccount` / `unrestrictAccount` (tables `account_restrictions`, `account_restrictions_audit`).
 
@@ -387,6 +408,34 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-09-18: **One Quora profile could sign up three times without anything noticing (owner
+  report).** The owner sent a queue card for an approved, rewarded account and said that URL had
+  signed up three times — with no "Shared by" pill on the card. `normalizeQuoraProfileUrl` stripped
+  the query and hash and lowercased the host for its check, then returned the URL otherwise as typed,
+  so `https://www.quora.com/profile/Mary-T-I-1`, `https://quora.com/profile/Mary-T-I-1`,
+  `http://…`, a trailing slash, `/answers`, and a lowercased slug were six different stored strings
+  for one profile. All three duplicate defenses compare those strings — the "Shared by N" count on
+  the queue card, `getUnlockRewardHolderForUrl` (which withholds the reward when another account
+  already holds this identity's), and the `unlock_spam_quora_urls` denylist — so each of them missed
+  a member who pasted the same profile a different way, and the verification reward could be minted
+  more than once for one person. `lib/unlock/quora-url.ts` now returns
+  `https://www.quora.com/profile/<lowercased slug>`, taking only the first path segment after
+  `/profile/`, with a unit test per spelling. Migration
+  `0028_unlock_canonical_quora_profile_urls.sql` re-keys the rows already stored (a fixed function
+  reading unfixed rows would keep the same blindness for everyone who signed up before today);
+  denylist rows that collapse onto one profile merge, adding their flag counts and keeping the
+  earliest first flag and the latest last flag. Verified against a local Postgres: the reported
+  three-account case goes from three rows counted as one each to one profile counted as three, and a
+  second run of the migration changes nothing. The migration approves, rejects, grants and revokes
+  nothing — duplicates surface as "Shared by N" for a human, and
+  `ctf/scripts/sql/unlock-duplicate-quora-profiles.sql` (read-only, for the Neon dashboard) lists
+  every profile with more than one account and which of them hold a reward. The demo seed's
+  normalized value was written in a third format again (`quora.com/profile/demo-…`, no scheme) and
+  now matches what the function produces. Not changed here: the Directory and SkillsHunt normalizers
+  (`lib/directory/quora-url.ts`, `lib/skills-hunt/repository.ts`) have the same weakness on their own
+  keys. They accept any `quora.com` path, so their canonical form is not this one and re-keying their
+  columns needs its own backfill; that is a separate change, with its own shared rule in
+  `lib/shared/quora-url.ts` — see those plugins' change logs.
 - 2026-09-18: **An admin can enter a Quora URL for a member who never gave one, and every URL now says
   who put it there (owner request).** The owner reported doing the lookup by hand and having nowhere to
   record the result: the Edit control sits on a review-queue card, and a member with no submission has
