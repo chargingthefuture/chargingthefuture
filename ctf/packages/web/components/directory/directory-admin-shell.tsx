@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
+import Link from "next/link";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { DirectoryAuditPanel } from './directory-audit-panel';
 import { BackChevronButton } from "@/lib/nav/back-history";
@@ -37,6 +38,8 @@ import {
   Ban,
   ShieldOff,
   RotateCcw,
+  MailPlus,
+  ChevronRight,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
@@ -910,6 +913,39 @@ function ProfileListContent({
   );
 }
 
+// The invite queue, which lives on its own page because it is a different job from moderating a
+// profile: it is the list of everybody here who has no invite post on the blog yet, with their
+// skills, and a control that copies the whole thing as plain text.
+//
+// It is a row here rather than only on the admin directory landing because this is the screen
+// somebody is already on when they think about who has not been written about yet. Without it the
+// page was reachable only by typing the address (owner report).
+function InviteQueueLink() {
+  return (
+    <Link
+      href="/admin/directory/invite-queue"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        margin: "16px",
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: "#0D0F14",
+        color: TEXT,
+        textDecoration: "none",
+      }}
+    >
+      <MailPlus size={15} color={COMMUNITY} />
+      <span style={{ fontSize: 13, fontWeight: 700 }}>Invite queue</span>
+      <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, color: SUBTLE }}>
+        Open <ChevronRight size={14} />
+      </span>
+    </Link>
+  );
+}
+
 function ProfileListView(props: ProfileListViewProps) {
   const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, profiles, page, pageCount, onPageChange, saving, onEdit, onTakedown, onDelete } = props;
   return (
@@ -953,6 +989,7 @@ function ProfileListView(props: ProfileListViewProps) {
           onDelete={onDelete}
         />
         <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} />
+        <InviteQueueLink />
         <SuppressionPanel />
         <DirectoryAuditPanel />
       </div>
