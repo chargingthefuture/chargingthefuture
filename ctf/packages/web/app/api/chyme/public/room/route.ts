@@ -4,6 +4,7 @@ import { getPublicRoomLiveState } from 'lib/chyme/repository';
 import { createChymeGuestListenCredentials } from 'lib/chyme/stream';
 import { reportError } from 'lib/observability/report';
 import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
+import { describeStreamError } from 'lib/shared/stream-error-text';
 
 // Public, unauthenticated view of the one default Chyme room so a signed-out visitor can listen in.
 // Chyme's promise is "free to listen, sign in to speak", so this route returns whether the room is
@@ -17,12 +18,10 @@ import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 // the next step if guest minutes become material; see also the documented limitation in
 // ctf/docs/quota-impact/2026-06-19-chyme-guest-listen.md.
 
-// The Stream error, trimmed for the page. Stream's messages name the failing call and its reason
-// ("UpdateUsers failed with error: ...") and carry no secret; the cap keeps a runaway message from
-// becoming the whole screen.
+// The Stream error, trimmed for the page: lib/shared/stream-error-text keeps Stream's own reason,
+// redacts an api_key value, and caps the length.
 function describeGuestCredentialError(error: unknown): string {
-  const text = error instanceof Error ? error.message : String(error);
-  return text.length > 300 ? `${text.slice(0, 300)}…` : text;
+  return describeStreamError(error);
 }
 
 export async function GET(request: Request) {

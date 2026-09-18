@@ -29,7 +29,10 @@ export async function deleteSocketRelayStreamData(userId: string): Promise<boole
       hard_delete: true,
     });
     return true;
-  } catch {
+  } catch (error) {
+    // Still best-effort (the deletion goes on), but the reason is recorded: without it the account
+    // cleanup could not tell "Stream unconfigured" from "Stream refused the delete".
+    reportError(error, { area: 'socket-relay', op: 'stream_delete_user', extra: { streamUserId: toStreamUserId(userId) } });
     return false;
   }
 }

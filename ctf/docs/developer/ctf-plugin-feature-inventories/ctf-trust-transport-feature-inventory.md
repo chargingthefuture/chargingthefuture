@@ -313,6 +313,11 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-09-18: **Stream failures say what failed and why (cross-plugin pass).** The trip chat route's
+  error message is now "Could not set up the chat channel: <Stream's reason>" built by the shared
+  helper `lib/shared/stream-error-text.ts` (Stream's message kept, `api_key` redacted, capped) instead
+  of the raw exception text; the channel create-then-watch setup names both failures when both fail;
+  the account-deletion Stream cleanup records why it failed. No schema, route, or contract change.
 - 2026-08-06: **Split settlements — the booking form now writes an accepted-currencies set (owner
   report from SocketRelay: a split ServiceCredits + USD arrangement forced a zero into the form).**
   New `trust_transport_request_accepted_currencies` join table (`request_id`, `currency_code` FK →

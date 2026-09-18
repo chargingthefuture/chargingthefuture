@@ -4,6 +4,7 @@ import { createStreamJoinCredentials } from 'lib/chyme/stream';
 import { chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
+import { streamFailureMessage } from 'lib/shared/stream-error-text';
 import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 export async function POST(request: Request) {
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         code: CHYME_ERROR_CODE.internalError,
-        message: 'Unable to join Chyme call.',
+        message: streamFailureMessage('Unable to join Chyme call', error),
       },
       { status: 500 },
     );

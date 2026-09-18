@@ -1,6 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
+import { streamChannelSetupFailure, streamFailureMessage } from 'lib/shared/stream-error-text';
 
 export const CHYME_STREAM_CHANNEL_ID = 'chyme-main-room';
 
@@ -38,13 +39,29 @@ async function ensureChannel(
 
   try {
     await channel.create();
-  } catch {
-    // no-trace: a failed create means the channel already exists, so watching it is the answer.
-    await channel.watch();
+  } catch (createError) {
+    // A failed create usually means the channel already exists, and watching it is then the answer.
+    // The create error is kept so that, when the watch fails too, the thrown reason names both
+    // failures instead of only the second one.
+    try {
+      await channel.watch();
+    } catch (watchError) {
+      throw new Error(streamChannelSetupFailure(channelId, createError, watchError));
+    }
   }
 
   await channel.addMembers([streamUserId]);
   return channel;
+}
+
+// The server-side client holds no socket, so disconnecting is bookkeeping; a failure there must
+// never replace the credentials being returned from the surrounding `finally`, only be recorded.
+async function disconnectQuietly(streamClient: StreamChat, op: string): Promise<void> {
+  try {
+    await streamClient.disconnectUser();
+  } catch (error) {
+    reportError(error, { area: 'chyme', op });
+  }
 }
 
 export async function createStreamJoinCredentials(
@@ -69,7 +86,7 @@ export async function createStreamJoinCredentials(
       streamToken: streamClient.createToken(streamUserId),
     };
   } finally {
-    await streamClient.disconnectUser();
+    await disconnectQuietly(streamClient, 'join_credentials_disconnect');
   }
 }
 
@@ -114,7 +131,7 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
       streamToken: streamClient.createToken(guestUserId, expiresAt),
     };
   } finally {
-    await streamClient.disconnectUser();
+    await disconnectQuietly(streamClient, 'guest_credentials_disconnect');
   }
 }
 
@@ -122,8 +139,10 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
 // member's existing Chyme Stream identity (`chyme-<userId>`) so no extra user is created, but the call
 // itself is a distinct 1:1 Video call (id `back-channel-<callId>`, the `default` call type, audio-only)
 // separate from the main room. Both members mint their own token against the same call id and join it.
-// Best-effort/degrade-to-null exactly like the room join path: present-but-bad credentials return null
-// so the route can surface "stream unavailable" instead of throwing.
+// Returns null only when Stream is not configured, so the route can answer "not configured". When
+// Stream is configured but rejects the call, this throws with Stream's reason: a rejected token used to
+// come back as null too, and the member then read "Stream service is not configured" for an outage,
+// an expired key, or a bad user id alike, which sent the owner looking at the wrong thing.
 export async function createChymeBackChannelCredentials(input: {
   userId: string;
   name: string;
@@ -144,10 +163,10 @@ export async function createChymeBackChannelCredentials(input: {
       streamCallId: `back-channel-${input.callId}`,
     };
   } catch (error) {
-    reportError(error, { area: 'chyme', op: 'back_channel_token' });
-    return null;
+    reportError(error, { area: 'chyme', op: 'back_channel_token', extra: { callId: input.callId } });
+    throw new Error(streamFailureMessage('Stream rejected the Back Channel token', error));
   } finally {
-    await streamClient.disconnectUser().catch(() => {});
+    await disconnectQuietly(streamClient, 'back_channel_token_disconnect');
   }
 }
 
@@ -175,11 +194,18 @@ export async function sendChymeStreamMessage(input: {
       });
 
       return result.message?.id ?? null;
-    } catch {
+    } catch (error) {
+      // The message is already stored in Postgres; the Stream copy is a fan-out. A failed fan-out is
+      // recorded with the channel it was meant for, then swallowed so the member's send still succeeds.
+      reportError(error, {
+        area: 'chyme',
+        op: 'stream_fanout_send',
+        extra: { streamChannelId: input.channelId ?? CHYME_STREAM_CHANNEL_ID, streamUserId },
+      });
       return null;
     }
   } finally {
-    await streamClient.disconnectUser();
+    await disconnectQuietly(streamClient, 'fanout_send_disconnect');
   }
 }
 
@@ -202,9 +228,10 @@ export async function deleteChymeStreamData(userId: string): Promise<boolean> {
       hard_delete: true,
     });
     return true;
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'chyme', op: 'stream_delete_user', extra: { streamUserId: toStreamUserId(userId) } });
     return false;
   } finally {
-    await streamClient.disconnectUser();
+    await disconnectQuietly(streamClient, 'delete_user_disconnect');
   }
 }

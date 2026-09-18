@@ -1,6 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
+import { streamChannelSetupFailure } from 'lib/shared/stream-error-text';
 import { getContributorAccessConfig, listChannelMembershipTargets } from './repository';
 import {
   GATED_STREAM_CHANNEL_ID,
@@ -45,12 +46,12 @@ async function createOrWatchGatedChannel(streamClient: StreamChat) {
   try {
     await channel.create();
   } catch (createErr) {
-    console.error('[gated-channel] channel.create() failed:', createErr);
+    // A failed create usually means the channel already exists, and watching it is then the answer.
+    reportError(createErr, { area: 'contributor-access', op: 'gated_channel_create', extra: { streamChannelId: GATED_STREAM_CHANNEL_ID } });
     try {
       await channel.watch();
     } catch (watchErr) {
-      console.error('[gated-channel] channel.watch() also failed after create() error:', watchErr, 'Original create() error:', createErr);
-      throw watchErr;
+      throw new Error(streamChannelSetupFailure(GATED_STREAM_CHANNEL_ID, createErr, watchErr));
     }
   }
   return channel;

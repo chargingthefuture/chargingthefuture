@@ -4,6 +4,7 @@ import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { listMatches } from 'lib/lighthouse/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { reportError } from 'lib/observability/report';
+import { streamFailureMessage } from 'lib/shared/stream-error-text';
 
 export async function POST(_request: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params;
@@ -55,9 +56,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
     // Single canonical key: `streamChannelId` is the real Stream channel id. Web and mobile both
     // read this one key.
     return NextResponse.json({ ok: true, streamChannelId, ...credentials });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (e: any) {
+  } catch (e) {
     reportError(e, { area: 'lighthouse', op: 'matches_matchid_chat' });
-    return NextResponse.json({ ok: false, message: e.message || 'Error creating chat channel' }, { status: 500 });
+    return NextResponse.json({ ok: false, message: streamFailureMessage('Could not set up the chat channel', e) }, { status: 500 });
   }
 }

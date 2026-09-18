@@ -13,6 +13,7 @@ import {
 import { Mic, MicOff, PhoneOff, Info } from 'lucide-react';
 import { PRIMARY, initials, chymeHandle, type CurrentUser } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
+import { describeStreamError } from 'lib/shared/stream-error-text';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import type { ChymeBackChannelJoinCredentials } from 'lib/chyme/types';
 
@@ -45,6 +46,9 @@ export function ChymeBackChannelPanel({
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  // Stream's own reason for a failed join, shown under the status line so the failure is diagnosable
+  // from the phone that hit it.
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -70,6 +74,7 @@ export function ChymeBackChannelPanel({
       } catch (error) {
         if (canceled) return;
         reportError(error, { area: 'chyme', op: 'back_channel_join_stream', extra: { callId: credentials.streamCallId } });
+        setErrorDetail(describeStreamError(error));
         setStatus('error');
       }
     })();
@@ -115,7 +120,7 @@ export function ChymeBackChannelPanel({
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: PRIMARY }}>Back Channel</div>
         <div style={{ fontSize: 12, color: status === 'error' ? '#f87171' : '#9ca3af' }}>
-          {status === 'error' ? 'Could not connect to the call.' : 'Connecting…'}
+          {status === 'error' ? `Could not connect to the call: ${errorDetail ?? 'no reason was given.'}` : 'Connecting…'}
         </div>
         <button type="button" onClick={onHangUp} style={hangUpStyle}>
           <PhoneOff size={14} /> {status === 'error' ? 'Close' : 'Cancel'}

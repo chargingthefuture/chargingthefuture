@@ -1,6 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
+import { streamChannelSetupFailure } from 'lib/shared/stream-error-text';
 
 export type FoundationStreamParticipantCredentials = {
   streamApiKey: string;
@@ -29,7 +30,10 @@ export async function deleteFoundationStreamData(userId: string): Promise<boolea
       hard_delete: true,
     });
     return true;
-  } catch {
+  } catch (error) {
+    // Still best-effort (the deletion goes on), but the reason is recorded: without it the account
+    // cleanup could not tell "Stream unconfigured" from "Stream refused the delete".
+    reportError(error, { area: 'foundation', op: 'stream_delete_user', extra: { streamUserId: toStreamUserId(userId) } });
     return false;
   }
 }
@@ -105,9 +109,14 @@ export async function ensureFoundationStreamChannel(input: {
 
       try {
         await channel.create();
-      } catch {
-        // no-trace: a failed create means the channel already exists, so watching it is the answer.
-        await channel.watch();
+      } catch (createError) {
+        // A failed create usually means the channel already exists, and watching it is then the answer.
+        // When the watch fails too, the thrown reason names both failures instead of only the second.
+        try {
+          await channel.watch();
+        } catch (watchError) {
+          throw new Error(streamChannelSetupFailure(streamChannelId, createError, watchError));
+        }
       }
 
       await channel.addMembers([survivorStreamUserId, providerStreamUserId]);
@@ -192,7 +201,10 @@ export async function sendFoundationStreamMessage(input: {
       });
 
       return result.message?.id ?? null;
-    } catch {
+    } catch (error) {
+      // The message is already stored in Postgres; the Stream copy is a fan-out. Recorded with its
+      // channel, then swallowed so the member's send still succeeds.
+      reportError(error, { area: 'foundation', op: 'stream_fanout_send', extra: { streamChannelId: input.streamChannelId, streamUserId } });
       return null;
     }
   } finally {
