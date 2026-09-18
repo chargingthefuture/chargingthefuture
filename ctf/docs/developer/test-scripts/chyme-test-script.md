@@ -147,6 +147,8 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 2. Listen to the live room; look for any speak control.
 3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
 4. Count the sign-in and join buttons on the whole page, top to bottom.
+5. Have the last signed-in member leave the call, then reload the signed-out page within the next
+   45 seconds (inside the presence window, so the server still reports the room as live).
 **Expected:** You see the public view and can listen to the live room, joined muted with no speak
 control. The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. When the room is not live, there is no listen audio. The public
@@ -162,6 +164,10 @@ control and the title only, with no sign-in or join button. The bottom bar carri
 locked **Start a Room**, which does nothing on purpose — hosting needs an account. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
 page.
+
+In step 5 the page does **not** settle on "Couldn't connect to the live room" under a heading saying
+you are listening live: the listener retries, then re-reads the room and falls back to the "No public
+rooms right now" empty state once the room has ended.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -179,7 +185,10 @@ clear message that live audio isn't available because the browser has WebRTC tur
 Lockdown Mode, and tells you how to turn it off for the site (address bar → aA → Website Settings) or
 use another browser. **Chat still loads and works.** The guest listen path shows the same explanation
 (not a misleading "try refreshing"). Turning Lockdown Mode off for the site and reloading lets the
-audio room connect normally.
+audio room connect normally. When the guest listener does fail for a real reason (not Lockdown Mode),
+the note carries the underlying reason as a second line under "Couldn't connect to the live room",
+the same way the signed-in room shows its connection error — so the failure can be reported without
+opening browser developer tools.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
