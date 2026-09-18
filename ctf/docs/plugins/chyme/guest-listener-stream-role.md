@@ -29,6 +29,18 @@ otherwise demo guests stay client-only.
 3. Leave the member roles (`user` / `admin` / host) on the `default` call type unchanged — members
    must still publish audio.
 
+## Doing step 2 without a desktop (GitHub Action)
+
+The Stream dashboard does not work at phone width, and the owner works from a phone. The grant can
+be applied from the browser instead: **Actions tab → "Stream — Grant Guest Listener Join" → Run
+workflow.** Leave **apply** unticked the first time — the log prints the role's capabilities on the
+`default` call type before and after, and changes nothing. Run it again with **apply** ticked to
+write. It sets the role named by `CHYME_GUEST_STREAM_ROLE` to: `join-call` and `read-call` present,
+`send-audio` / `send-video` / `screenshare` absent, anything else it already had untouched. Members
+are not affected — only that role changes, and only guests carry it. It takes effect on the next
+page load; no redeploy. The script is `ctf/scripts/stream-grant-guest-listener.mjs`, and it never
+prints a key or secret.
+
 ## Turn it on
 
 Set the secret in Infisical (the single source of truth), `production` environment:
@@ -56,9 +68,10 @@ the room as live, and then the join is refused. The page reads:
 Members are unaffected, which is why it can go unnoticed: a host in the room sees a normal live
 room while no visitor can hear it. Two ways out, either one restores listening:
 
-- **Finish step 2** in the Stream dashboard (production app → Video & Audio → the `default` call
-  type → role `chyme_listener` → allow `join-call` and `read-call`). This is the intended end
-  state: guests can hear, and still cannot publish.
+- **Finish step 2** — in the Stream dashboard (production app → Video & Audio → the `default` call
+  type → role `chyme_listener` → allow `join-call` and `read-call`), or from a phone with the
+  "Stream — Grant Guest Listener Join" workflow above. This is the intended end state: guests can
+  hear, and still cannot publish.
 - **Unset `CHYME_GUEST_STREAM_ROLE`** in Infisical. Guests go back to the default role and
   client-only enforcement, as under "Turn it on" above.
 

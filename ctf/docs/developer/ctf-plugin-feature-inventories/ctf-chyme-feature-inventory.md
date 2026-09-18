@@ -141,6 +141,19 @@ Current status:
 
 ## Change Log
 
+- 2026-09-18: **The guest-listener Stream grant can be applied from a phone.** The evening's root
+  cause was a Stream dashboard step left undone — the `chyme_listener` role had no `join-call` on
+  the `default` call type — and the dashboard does not work at phone width, which is the only
+  screen the owner has. New manual workflow **"Stream — Grant Guest Listener Join"**
+  (`.github/workflows/stream-grant-guest-listener.yml`, script
+  `ctf/scripts/stream-grant-guest-listener.mjs`) reads the Stream key pair and
+  `CHYME_GUEST_STREAM_ROLE` from Infisical and sets that role on the call type to the runbook's
+  target state through Stream's Video API: `join-call` and `read-call` present, the three publish
+  capabilities absent, everything else untouched. Dry run unless **apply** is ticked; prints the
+  capability list before, after, and as read back — never a key or secret. Members are unaffected:
+  only the named role changes, and only guests carry it. Takes effect on the next page load. No
+  app code, schema, route, or contract change; runbook and workflow index updated.
+
 - 2026-09-18: **Root cause of the signed-out listen failure recorded: the guest role lacked
   `join-call`.** With the reason line shipped the same evening, the public page read Stream's own
   refusal — the `chyme_listener` role "is not allowed to perform action JoinCall in scope
