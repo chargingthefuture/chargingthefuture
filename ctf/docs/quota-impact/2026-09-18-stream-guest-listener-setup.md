@@ -12,7 +12,7 @@
 ## Stream Surfaces Affected
 
 - Configuration only: the Chat API roles endpoint (`GET /roles`, and `POST /roles` once, if the role
-  is missing) and the Video API call-type endpoint (`GET /video/call_types/default`, and one `PUT`
+  is missing) and the Video API call-type endpoint (`GET /api/v2/video/call_types/default`, and one `PUT`
   when grants are applied). No chat, feed, video session, or moderation traffic.
 - Member surfaces are unchanged. Guests already consumed participant-minutes when listening (see
   `2026-06-19-chyme-guest-listen.md`); this change makes that listening work again when the guest
