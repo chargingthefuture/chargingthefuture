@@ -377,6 +377,31 @@ because the member Unlock screen is on the keep-list. Nothing here grants any ap
 open a plugin and you still get its public landing page.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-A8e · What you tell us when you cannot give a URL reaches the admin
+**Role:** member (not yet verified, no submission), then admin / reviewer · **Surfaces:** web + mobile-responsive
+**Precondition:** a signed-in test account with no Quora URL submitted, and a separate admin account.
+**Steps:**
+1. As the member, land on the Unlock screen and find "Can't find your Quora profile URL?".
+2. Read the field above the button, labeled "Anything that helps me find you on Quora (optional)", and
+   the line under it.
+3. Leave it empty and press **Ask for help in the Commons**. Confirm you reach the Commons.
+4. Go back to the Unlock screen, type a plain name into the field — not a link — and press the button
+   again.
+5. As the admin, open `/admin/unlock`, open the **Sign-ups** panel, and find that member on the
+   **No Quora URL** tab.
+6. Type part of what the member typed into the panel's search box.
+7. As the member, press the button once more with the field empty, then look at the admin row again.
+**Expected:** Step 2: the field is plainly optional and the line under it says a name or an email is
+enough — it never demands a link. Step 3: an empty field is not an error; the request still opens the
+Commons, exactly as before this field existed. Step 4: a plain name is accepted — nothing rejects it
+for not looking like a URL. Step 5: the row now carries a `Told us: <what they typed>` line above the
+sign-up date, so the admin has something to look them up by and can approve them by hand; the row still
+reads "No Quora URL", because they have not submitted one. Step 6: the search finds them by what they
+typed, not only by their name, handle, or email. Step 7: the stored line is unchanged — pressing the
+button again with an empty box never erases what they already told us. Deleting the account removes
+this line with the rest of their data (see UNLOCK-A2c for the deletion walk).
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A8a · Asking for help works while your submission is waiting on review
 **Role:** member with a **pending** submission · **Surfaces:** web + mobile-responsive, android
 **Precondition:** a test account that submitted a Quora URL and has not been reviewed yet. This is the
@@ -446,7 +471,8 @@ The counter and the list agree with each other. Their earlier support-only acces
    then open the **Left** tab.
 4. On any row, click **Mark as demo / test**, then watch the four numbers.
 5. Open the **Demo / test** tab, find that row, and click **Count this account again**.
-6. Type part of a name, handle, or email into the search box.
+6. Type part of a name, handle, email, or something a member told us when they asked for help, into
+   the search box.
 7. Clear the search, then press **Show 10 more** at the bottom of the list until it disappears, and
    press the panel header again to close it.
 8. Compare the "Members" number against the sign-up total in the auth provider's own dashboard, minus
@@ -455,7 +481,9 @@ The counter and the list agree with each other. Their earlier support-only acces
 URL = Members. Step 3: on **No Quora URL**, every person listed signed up and has no submission — they
 are not in the review queue below, because there is nothing to review. Each row shows a name or handle,
 the email, the sign-up date, whether they have signed in since, and how many times they opened the
-Unlock screen. The breakdown line above splits the same group into how many never signed in again after
+Unlock screen; a member who pressed "ask for help" and typed something into the optional box also shows
+a `Told us: …` line, which is the only identifying thing on file for someone who never gave a URL
+(UNLOCK-A8e walks that end to end). The breakdown line above splits the same group into how many never signed in again after
 sign-up day and how many came back and still did not submit, with the typical number of Unlock-screen
 loads — the two groups need different answers, and the view count is the firmer signal because a
 sign-in date only moves on a fresh sign-in. On **Left**, every row says when

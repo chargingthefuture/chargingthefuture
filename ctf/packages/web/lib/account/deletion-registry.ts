@@ -569,7 +569,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // Counter-only marker: it says "leave this account out of the admin sign-up numbers" and grants
       // nothing. Once the account is gone the row counts for nothing, so it goes with the rest.
       del('unlock_excluded_accounts', 'user_id', 'The admin marker that left your account out of the sign-up counts.'),
-      del('unlock_help_requests', 'user_id', 'Your request for help finding your Quora profile URL.'),
+      del(
+        'unlock_help_requests',
+        'user_id',
+        'Your request for help finding your Quora profile URL, and anything you told us there about your Quora account.',
+      ),
       // unlock_runtime_config is global.
     ],
   },

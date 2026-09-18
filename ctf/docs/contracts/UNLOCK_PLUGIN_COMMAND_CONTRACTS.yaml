@@ -30,13 +30,24 @@ contracts:
 
   - pluginId: unlock
     command: unlock.help.request
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       A signed-in member with no submission asks for help instead of giving a Quora URL. Records the
       request, which is what admits them to the Commons (support-only) so there is somebody to ask.
-      Self-scoped — the member id comes from the session, never the request body. Grants nothing
-      beyond the Commons; approved-only surfaces stay closed and the verification prompt follows them.
-    inputSchema: {}
+      May also carry whatever the member can say about their Quora account when they cannot give the
+      URL — the name on it, a link to something they posted, an email — stored as the help request's
+      hint so an admin can look them up and approve them by hand. Self-scoped — the member id comes
+      from the session, never the request body. Grants nothing beyond the Commons; approved-only
+      surfaces stay closed and the verification prompt follows them.
+    inputSchema:
+      quoraHint:
+        type: string
+        required: false
+        maxLength: 300
+        description: >-
+          Free text, optional. Not validated as a URL: a member who could produce a well-formed
+          profile URL would have used the submission command instead. Trimmed; an empty value is
+          treated as nothing given and never erases a hint already stored.
     outputSchema:
       ok:
         type: boolean

@@ -140,6 +140,12 @@ export type UnlockSignupAccount = {
   // a live session can come back repeatedly without the dates changing. 1 means they saw the ask once
   // and left; several means they came back to it and still could not finish.
   unlockScreenViews: number;
+  // What this member typed into the "anything that helps me find you on Quora" box when they pressed
+  // "ask for help" — a name, a link to something they posted, an email. Null when they never pressed
+  // the button or left the box empty. Free text, shown to the admin as written: it is the only thing
+  // on file for a member who could not produce a profile URL, and it is what an approval by hand is
+  // made from.
+  quoraHint: string | null;
 };
 
 // The sign-up reading on the Unlock admin page. `available: false` means the roster could not be read

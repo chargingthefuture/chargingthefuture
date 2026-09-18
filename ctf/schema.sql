@@ -1602,9 +1602,16 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_
 -- through the Quora step on their own, which is the number that says whether that step is working.
 CREATE TABLE IF NOT EXISTS unlock_help_requests (
   user_id TEXT PRIMARY KEY,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  quora_hint TEXT
 );
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Whatever the member could give about their Quora account when they could not give the URL itself:
+-- the name on the account, a link to something they posted, the email they joined Quora with. Free
+-- text on purpose — the point is to take whatever they have rather than reject it for shape. An admin
+-- reads it in the sign-ups panel and looks them up by hand, which is the only thing that was missing
+-- for a member who pressed "ask for help" and left nothing behind to approve.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the

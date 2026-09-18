@@ -44,7 +44,10 @@ This plugin must:
 3. Show review state and next-step status text.
 4. **Ask for help without leaving the app.** A member who cannot produce a Quora profile URL presses
    "Ask for help in the Commons" on the Unlock screen. That records the request and admits them to the
-   Commons, where they can ask in the chat and get an answer. Before this the help pointed out to the
+   Commons, where they can ask in the chat and get an answer. The same box asks, optionally, for
+   anything that helps an admin find them on Quora — the name on their account, a link to something
+   they posted, an email — so a member who cannot produce a profile URL still leaves something an admin
+   can look up and approve by hand. It is never a gate: the button works with the box empty. Before this the help pointed out to the
    network's Quora space — which asked a person who cannot find their way around Quora to go find their
    way around Quora, and sent them off the app with no way back.
 
@@ -184,7 +187,7 @@ This plugin must:
 User routes:
 
 - `POST /api/unlock/submission`
-- `POST /api/unlock/help-request` — any signed-in member (`requireUnlockUserAccess`, i.e. `any_authenticated`, deliberately: the whole point is that this member has no access tier yet) + CSRF (`x-ctf-csrf: '1'` + same-origin). Records the caller in `unlock_help_requests`; no body, and the member id comes from the session, so it can only ever open the Commons to the person who pressed the button. Returns `{ ok: true }`; idempotent (pressing twice keeps the first timestamp). Grants nothing beyond the Commons — approved-only surfaces stay closed and the verification banner follows them there. Audited as `unlock.help.request`.
+- `POST /api/unlock/help-request` — any signed-in member (`requireUnlockUserAccess`, i.e. `any_authenticated`, deliberately: the whole point is that this member has no access tier yet) + CSRF (`x-ctf-csrf: '1'` + same-origin). Records the caller in `unlock_help_requests`. Optional body `{ quoraHint?: string }` — whatever the member can say about their Quora account when they cannot give the URL (a name, a link to something they posted, an email), trimmed and capped at 300 characters, stored in `unlock_help_requests.quora_hint`. The body may be absent or empty and the request still succeeds; the member id always comes from the session, so it can only ever open the Commons to the person who pressed the button. Returns `{ ok: true }`; idempotent (pressing twice keeps the first timestamp, and a later press carrying a hint stores it — a later press with an empty box does not erase the stored one). Grants nothing beyond the Commons — approved-only surfaces stay closed and the verification banner follows them there. Audited as `unlock.help.request` with `metadata.hintGiven` (a boolean; the hint text itself is not copied into the audit log).
 
 Admin routes:
 
@@ -250,9 +253,15 @@ Admin page:
    row would count for nothing).
 
 6. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
-   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at`. It is what admits a
-   member with no submission to the Commons, and it doubles as the count of how many people could not
-   get through the Quora step on their own. Registered `del` in the account deletion registry.
+   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at` and `quora_hint`
+   (nullable free text, capped at 300 characters by the writer). It is what admits a member with no
+   submission to the Commons, and it doubles as the count of how many people could not get through the
+   Quora step on their own. `quora_hint` holds whatever the member could say about their Quora account
+   when they could not give the URL — the name on it, a link to something they posted, the email they
+   joined with. Deliberately not validated into a URL shape: a member who could produce a well-formed
+   URL would have used the submission field instead, so rejecting a hint for its shape would reject the
+   only people the column exists for. Read by the admin sign-ups panel, which is where a manual
+   approval is decided. Registered `del` in the account deletion registry.
 
 Multi-currency (issue #120): `unlock_runtime_config` carries `incentive_currency` (FK → `currencies.code`),
 naming the currency of `incentive_amount`. It defaults to ServiceCredits (code `SC`) — the approval
@@ -357,6 +366,27 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-09-18: **The "ask for help" step now keeps whatever the member can say about their Quora
+  account (owner report).** A member who could not produce a Quora profile URL pressed "Can't find
+  your Quora profile URL?", which opened the Commons and wrote a row holding a user id and a
+  timestamp — so the admin sign-ups panel showed them as "No Quora URL" with nothing to look them up
+  by. The people most in need of a manual approval were the ones who left nothing to approve on. The
+  help box on the Unlock screen (`unlock-quora-help.tsx`) now carries an optional free-text field
+  above the button ("Anything that helps me find you on Quora"), sent as `{ quoraHint }` to
+  `POST /api/unlock/help-request` and stored in the new `unlock_help_requests.quora_hint` column
+  (migration `0025_unlock_help_request_quora_hint.sql`; trimmed, capped at 300 characters by
+  `normalizeUnlockQuoraHint` in the client-safe `lib/unlock/quora-hint.ts`). No validation of the
+  shape — the field exists for people who cannot produce a URL, so rejecting what they type for not
+  looking like one would defeat it. The Unlock admin's sign-ups panel reads the hints
+  (`listQuoraHints` in `lib/unlock/signups.ts`, best-effort: a failure leaves the hints blank rather
+  than taking the panel down), shows one as `Told us: …` on the account row, and includes it in the
+  panel's search so a name the member gave is findable. The audit row records only whether a hint was
+  given, not its text. The column is removed with the rest of the row on account deletion (the
+  registry's wording is updated to say so). Considered and rejected: asking for the Quora URL as a
+  required field on the sign-up form itself — sign-up is Clerk's hosted Account Portal, which carries
+  no custom fields, and a required URL would stop the person who cannot produce one from opening an
+  account at all, which is the opposite of what the gap needs.
 
 - 2026-08-24: **The spam denylist panel opens on demand instead of always being open (owner report).**
   The panel sat at the bottom of the admin shell fully open every visit: a paragraph of explanation

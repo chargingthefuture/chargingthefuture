@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { normalizeUnlockQuoraHint } from './quora-hint';
 
 // Who may reach the Commons without having verified yet.
 //
@@ -19,14 +20,20 @@ import { queryDb } from 'lib/db/postgres';
 // in front of them; it is just no longer the only thing they can do. Members who have a submission are
 // unaffected — their stored access tier decides, exactly as before.
 
-// Record that this member asked for help. Idempotent: asking twice keeps the first timestamp, so the
-// row stays a record of when they first got stuck.
-export async function recordUnlockHelpRequest(userId: string): Promise<void> {
+// Record that this member asked for help, with whatever they could tell us about their Quora account.
+//
+// Idempotent on the timestamp: asking twice keeps the first one, so the row stays a record of when they
+// first got stuck. The hint is the exception — a member who comes back and finally has a name or a link
+// to give must not have it dropped because there is already a row, so a non-empty hint overwrites. A
+// second press with an empty box leaves the stored hint alone rather than erasing it.
+export async function recordUnlockHelpRequest(userId: string, quoraHint?: string | null): Promise<void> {
+  const hint = normalizeUnlockQuoraHint(quoraHint);
   await queryDb(
-    `INSERT INTO unlock_help_requests (user_id, requested_at)
-     VALUES ($1, NOW())
-     ON CONFLICT (user_id) DO NOTHING`,
-    [userId],
+    `INSERT INTO unlock_help_requests (user_id, requested_at, quora_hint)
+     VALUES ($1, NOW(), $2)
+     ON CONFLICT (user_id) DO UPDATE
+       SET quora_hint = COALESCE(EXCLUDED.quora_hint, unlock_help_requests.quora_hint)`,
+    [userId, hint],
   );
 }
 

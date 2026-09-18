@@ -50,6 +50,14 @@ function screenViewLine(account: UnlockSignupAccount): string | null {
     : `Opened the Unlock screen ${account.unlockScreenViews} times`;
 }
 
+// What they told us when they pressed "ask for help" instead of giving a URL. Shown as written, and
+// labeled so a reviewer knows it came from the member rather than from Quora. For an account with no
+// submission this is the only identifying thing on file, so it sits above the timing lines.
+function helpHintLine(account: UnlockSignupAccount): string | null {
+  if (!account.quoraHint) return null;
+  return `Told us: ${account.quoraHint}`;
+}
+
 // Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
 // data, so the row would otherwise read as "never gave a Quora URL" with nothing to explain it.
 function departureLine(account: UnlockSignupAccount): string | null {
@@ -102,6 +110,7 @@ export function UnlockSignupRow({
 
       <DetailLine text={handle ? `@${handle}` : null} />
       <DetailLine text={account.email} breakAll />
+      <DetailLine text={helpHintLine(account)} breakAll />
       <DetailLine text={timingLine(account)} />
       <DetailLine text={screenViewLine(account)} />
       <DetailLine text={departureLine(account)} />
