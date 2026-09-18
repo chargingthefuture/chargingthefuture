@@ -1894,7 +1894,7 @@ export async function createSubmission(
             url_validation_checked_at
           )
         VALUES
-          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $13::jsonb, $9::jsonb, $10, $14, $15, $16, 'pending', 0, '{}'::jsonb, $11, $12::timestamptz)
+          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $12::jsonb, $9, $13, $14, $15, 'pending', 0, '{}'::jsonb, $10, $11::timestamptz)
         RETURNING
           id,
           round_id,
