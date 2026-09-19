@@ -3,6 +3,9 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import {
   CHYME_ERROR_CODE,
+  CHYME_GUEST_COOKIE_MAX_AGE_SECONDS,
+  CHYME_GUEST_COOKIE_NAME,
+  CHYME_GUEST_COOKIE_PATH,
   chymeRoomKeyForScope,
   type ChymeRoomScope,
 } from 'lib/chyme/constants';
@@ -155,4 +158,58 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   }
 
   return null;
+}
+
+// Admin-only gate for the Chyme admin routes (the Stream usage screen). Read-only today.
+export async function requireChymeAdminAccess(): Promise<ChymeApiGate> {
+  const authDecision = await evaluatePluginAccess({ requireUsername: false, requiredRoles: ['admin'] });
+  if (!authDecision.allowed) {
+    return {
+      allowed: false,
+      response: NextResponse.json(authDecision, { status: authDecision.status }),
+    };
+  }
+  return {
+    allowed: true,
+    auth: authDecision,
+    identity: { userId: authDecision.userId, username: authDecision.username, avatarUrl: null },
+  };
+}
+
+// --- The signed-out listener's identity cookie ---
+//
+// One random id per browser, httpOnly and scoped to the public Chyme routes, so the same browser
+// reuses one Stream guest user across page loads. Only a UUID shape is accepted back; anything
+// else is treated as absent and replaced.
+
+const GUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+export function readGuestIdCookie(request: Request): string | null {
+  const header = request.headers.get('cookie');
+  if (!header) {
+    return null;
+  }
+  for (const part of header.split(';')) {
+    const [rawName, ...rest] = part.split('=');
+    if (rawName?.trim() !== CHYME_GUEST_COOKIE_NAME) {
+      continue;
+    }
+    const value = rest.join('=').trim();
+    return GUEST_ID_RE.test(value) ? value : null;
+  }
+  return null;
+}
+
+// The cookie the listen route sets when the browser had none (or an unusable one). Secure in
+// production; a local http:// dev server would otherwise never receive it back.
+export function setGuestIdCookie(response: NextResponse, guestId: string): void {
+  response.cookies.set({
+    name: CHYME_GUEST_COOKIE_NAME,
+    value: guestId,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: CHYME_GUEST_COOKIE_PATH,
+    maxAge: CHYME_GUEST_COOKIE_MAX_AGE_SECONDS,
+  });
 }

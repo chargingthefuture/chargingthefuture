@@ -11,6 +11,9 @@ import {
   type ChymeErrorCode,
 } from './constants';
 import type { ChymeBackChannelState } from './types';
+import { STREAM_VIDEO_SURFACE } from 'lib/stream-quota/constants';
+import { resolveChymeQuotaPolicy } from 'lib/stream-quota/policy';
+import { readStreamVideoQuotaBand, recordStreamVideoUsage } from 'lib/stream-quota/usage';
 
 // Back Channel — a free, casual 1:1 audio call between two members who are BOTH currently in the same
 // live Chyme room (spec #1746). Everything here is deliberately minimal and private:
@@ -127,6 +130,17 @@ export async function inviteBackChannel(
 
   return withDbTransaction(async (client) => {
     await reapStale(client);
+
+    // A Back Channel is a second Stream Video call per pair, the first optional consumer the quota
+    // policy pauses (Orange band and above). The tile action is hidden by then; this is the check
+    // behind it for a client that missed the room's latest quota state.
+    const policy = resolveChymeQuotaPolicy(await readStreamVideoQuotaBand(client));
+    if (!policy.backChannelAllowed) {
+      throw new BackChannelError(
+        CHYME_ERROR_CODE.backChannelPaused,
+        'Back Channel calls are paused until next month because live audio is close to its monthly limit.',
+      );
+    }
 
     const roomId = await getMainRoomId(client);
     if (!roomId) {
@@ -320,19 +334,32 @@ export async function leaveBackChannel(userId: string, callId: string): Promise<
 // Keep a live call alive. Called on an interval by both apps while the call screen/panel is open.
 export async function heartbeatBackChannel(userId: string, callId: string): Promise<void> {
   await withDbTransaction(async (client) => {
-    const updated = await client.query(
+    // Both parties beat the same row, so the gaps between beats add up to the call's wall time
+    // once; a 1:1 call is two participants, so the meter is credited twice the gap. Capped at the
+    // reap window, like the room heartbeat, so a call that went quiet is not credited for the gap.
+    const updated = await client.query<{ credited_seconds: string | null }>(
       `
-        UPDATE chyme_back_channel_calls
+        UPDATE chyme_back_channel_calls AS current
         SET last_heartbeat_at = NOW()
         WHERE id = $1
           AND (initiator_user_id = $2 OR recipient_user_id = $2)
           AND status = 'active'
+        RETURNING (
+          SELECT CASE
+            WHEN NOW() - previous.last_heartbeat_at <= ($3 || ' seconds')::interval
+              THEN FLOOR(EXTRACT(EPOCH FROM (NOW() - previous.last_heartbeat_at)))::text
+            ELSE '0'
+          END
+          FROM chyme_back_channel_calls AS previous
+          WHERE previous.id = $1
+        ) AS credited_seconds
       `,
-      [callId, userId],
+      [callId, userId, String(CHYME_BACK_CHANNEL_CALL_TTL_SECONDS)],
     );
     if ((updated.rowCount ?? 0) === 0) {
       throw new BackChannelError(CHYME_ERROR_CODE.backChannelNotFound, 'This Back Channel is no longer active.');
     }
+    await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeBackChannel, 2 * Number(updated.rows[0]?.credited_seconds ?? 0));
   });
 }
 

@@ -53,6 +53,20 @@ import type {
   ChymeRoomResponse,
 } from './types';
 import { withDbTransaction } from 'lib/db/postgres';
+import { STREAM_VIDEO_SURFACE, chymeRoomSurface } from 'lib/stream-quota/constants';
+import { resolveChymeQuotaPolicy, type ChymeQuotaPolicy } from 'lib/stream-quota/policy';
+import { readStreamVideoQuotaBand, recordStreamVideoUsage } from 'lib/stream-quota/usage';
+
+// Thrown by markRoomCallJoined when the room already holds as many members as the cap in force
+// allows. The join route answers 409 with the message; the client shows it in place of the stage.
+export class ChymeRoomFullError extends Error {
+  readonly capacity: { current: number; max: number };
+  constructor(current: number, max: number) {
+    super(`This room is full right now (${max} of ${max} people). Try again in a minute.`);
+    this.name = 'ChymeRoomFullError';
+    this.capacity = { current, max };
+  }
+}
 
 type IdentityInput = {
   userId: string;
@@ -258,8 +272,13 @@ async function ensureServiceProfile(client: PoolClient, identity: IdentityInput)
   );
 }
 
-async function upsertMember(client: PoolClient, roomId: string, identity: IdentityInput): Promise<void> {
-  await client.query(
+// Upsert the member's presence row and return how many seconds of connected time this heartbeat
+// stands for: the gap since the previous last_seen_at, capped at the presence window. A gap longer
+// than the window means the member was not counted as present across it (they dropped out and came
+// back), so it credits nothing rather than the whole absence. The sub-select in RETURNING reads the
+// row as it was before this statement ran, which is the previous last_seen_at.
+async function upsertMember(client: PoolClient, roomId: string, identity: IdentityInput): Promise<number> {
+  const result = await client.query<{ credited_seconds: string | null }>(
     `
       INSERT INTO chyme_room_members (
         room_id,
@@ -276,9 +295,47 @@ async function upsertMember(client: PoolClient, roomId: string, identity: Identi
         username = EXCLUDED.username,
         avatar_url = EXCLUDED.avatar_url,
         last_seen_at = NOW()
+      RETURNING (
+        SELECT CASE
+          WHEN NOW() - previous.last_seen_at <= ($5 || ' seconds')::interval
+            THEN FLOOR(EXTRACT(EPOCH FROM (NOW() - previous.last_seen_at)))::text
+          ELSE '0'
+        END
+        FROM chyme_room_members AS previous
+        WHERE previous.room_id = $1 AND previous.user_id = $2
+      ) AS credited_seconds
     `,
-    [roomId, identity.userId, identity.username, identity.avatarUrl],
+    [roomId, identity.userId, identity.username, identity.avatarUrl, String(CHYME_PRESENCE_TTL_SECONDS)],
   );
+  return Number(result.rows[0]?.credited_seconds ?? 0);
+}
+
+// The quota band → policy for this request. Read once per route call; the band is a one-row sum.
+async function readQuotaPolicy(client: PoolClient): Promise<ChymeQuotaPolicy> {
+  return resolveChymeQuotaPolicy(await readStreamVideoQuotaBand(client));
+}
+
+export async function getChymeQuotaPolicy(): Promise<ChymeQuotaPolicy> {
+  return withDbTransaction((client) => readQuotaPolicy(client));
+}
+
+function toRoomResponse(room: RoomRow, participants: ChymeParticipant[], policy: ChymeQuotaPolicy): ChymeRoomResponse {
+  return {
+    roomId: room.id,
+    roomName: room.room_name,
+    roomKey: room.room_key,
+    // "Live" reflects whether anyone is actually in the call right now (fresh presence),
+    // not a stored flag that nothing turns off.
+    callActive: participants.length > 0,
+    participants,
+    capacity: { current: participants.length, max: policy.memberCap },
+    quota: {
+      band: policy.band,
+      notice: policy.memberNotice,
+      guestListenAllowed: policy.guestListenAllowed,
+      backChannelAllowed: policy.backChannelAllowed,
+    },
+  };
 }
 
 async function listRoomParticipants(client: PoolClient, roomId: string): Promise<ChymeParticipant[]> {
@@ -315,42 +372,160 @@ export async function getRoomState(
     await ensureServiceProfile(client, identity);
     // Viewing the room does NOT make you a participant — only joining the call does (see
     // markRoomCallJoined). Otherwise merely opening Chyme would list you on stage forever.
-    const participants = await listRoomParticipants(client, room.id);
+    const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
 
-    return {
-      roomId: room.id,
-      roomName: room.room_name,
-      roomKey: room.room_key,
-      // "Live" reflects whether anyone is actually in the call right now (fresh presence),
-      // not a stored flag that nothing turns off.
-      callActive: participants.length > 0,
-      participants,
-    };
+    return toRoomResponse(room, participants, policy);
   });
 }
 
 // Public, no-identity view of the one default room's live state. Used by the signed-out guest path
 // so a visitor can see whether the room is live and listen in. Unlike getRoomState it does NOT create
 // a service profile or otherwise touch the viewer — a guest is not a member.
-export async function getPublicRoomLiveState(): Promise<{
+export type ChymePublicRoomLiveState = {
   roomName: string;
   roomKey: string;
   callActive: boolean;
   participantCount: number;
-}> {
+  // Signed-out listeners currently inside the presence window.
+  guestCount: number;
+  policy: ChymeQuotaPolicy;
+};
+
+export async function getPublicRoomLiveState(): Promise<ChymePublicRoomLiveState> {
   return withDbTransaction(async (client) => {
-    const room = await getMainRoomReadOnly(client);
+    const [room, policy] = await Promise.all([getMainRoomReadOnly(client), readQuotaPolicy(client)]);
     if (!room) {
       // Room not created yet (no member has ever opened Chyme): nothing to listen to.
-      return { roomName: CHYME_MAIN_ROOM_NAME, roomKey: CHYME_MAIN_ROOM_KEY, callActive: false, participantCount: 0 };
+      return { roomName: CHYME_MAIN_ROOM_NAME, roomKey: CHYME_MAIN_ROOM_KEY, callActive: false, participantCount: 0, guestCount: 0, policy };
     }
-    const participants = await listRoomParticipants(client, room.id);
+    const [participants, guestCount] = await Promise.all([listRoomParticipants(client, room.id), countFreshGuests(client)]);
     return {
       roomName: room.room_name,
       roomKey: room.room_key,
       callActive: participants.length > 0,
       participantCount: participants.length,
+      guestCount,
+      policy,
     };
+  });
+}
+
+// --- Signed-out listeners (the public main room) ---
+//
+// A guest is one browser holding one random id in an httpOnly cookie. The roster below is what the
+// guest listener cap counts and what the minute meter credits; it carries no personal data.
+
+async function countFreshGuests(client: PoolClient, excludingGuestId?: string): Promise<number> {
+  const result = await client.query<{ count: string }>(
+    `
+      SELECT COUNT(*)::text AS count
+      FROM chyme_guest_listeners
+      WHERE last_seen_at > NOW() - ($1 || ' seconds')::interval
+        AND ($2::text IS NULL OR guest_id <> $2)
+    `,
+    [String(CHYME_PRESENCE_TTL_SECONDS), excludingGuestId ?? null],
+  );
+  return Number(result.rows[0]?.count ?? 0);
+}
+
+// Rows outside the window are dead weight; drop them on the writes so the table stays the size of
+// the audience rather than growing with every visitor who ever tapped.
+async function pruneExpiredGuests(client: PoolClient): Promise<void> {
+  await client.query(
+    `DELETE FROM chyme_guest_listeners WHERE last_seen_at < NOW() - ($1 || ' seconds')::interval * 4`,
+    [String(CHYME_PRESENCE_TTL_SECONDS)],
+  );
+}
+
+// Thrown by admitGuestListener when the guest cannot listen right now; the public listen route
+// answers with the code and the message so the page can say which it was.
+export class ChymeGuestListenError extends Error {
+  readonly kind: 'paused' | 'full' | 'not_live';
+  constructor(kind: 'paused' | 'full' | 'not_live', message: string) {
+    super(message);
+    this.name = 'ChymeGuestListenError';
+    this.kind = kind;
+  }
+}
+
+// Let one guest into the listener roster, or say why not. Runs the room-live check, the quota
+// policy, and the guest cap in one transaction so two guests tapping at once cannot both take the
+// last spot: the roster count and the insert see the same snapshot behind the room row lock.
+export async function admitGuestListener(guestId: string): Promise<ChymePublicRoomLiveState> {
+  return withDbTransaction(async (client) => {
+    const room = await getMainRoomReadOnly(client);
+    if (!room) {
+      throw new ChymeGuestListenError('not_live', 'No public room is live right now.');
+    }
+    await client.query(`SELECT id FROM chyme_rooms WHERE id = $1 FOR UPDATE`, [room.id]);
+    const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
+    if (participants.length === 0) {
+      throw new ChymeGuestListenError('not_live', 'No public room is live right now.');
+    }
+    if (!policy.guestListenAllowed) {
+      throw new ChymeGuestListenError('paused', policy.guestPausedReason ?? 'Listening without an account is paused right now.');
+    }
+    await pruneExpiredGuests(client);
+    const others = await countFreshGuests(client, guestId);
+    if (others >= policy.guestCap) {
+      throw new ChymeGuestListenError(
+        'full',
+        `Every listening spot is taken right now (${policy.guestCap} people are listening without an account). Try again in a minute, or sign in to join the room.`,
+      );
+    }
+    await client.query(
+      `
+        INSERT INTO chyme_guest_listeners (guest_id, joined_at, last_seen_at)
+        VALUES ($1, NOW(), NOW())
+        ON CONFLICT (guest_id) DO UPDATE SET last_seen_at = NOW()
+      `,
+      [guestId],
+    );
+    return {
+      roomName: room.room_name,
+      roomKey: room.room_key,
+      callActive: true,
+      participantCount: participants.length,
+      guestCount: others + 1,
+      policy,
+    };
+  });
+}
+
+// Guest heartbeat: refresh the guest's last_seen_at and credit the gap to the minute meter, the same
+// way a member's heartbeat does. A guest with no row (the roster was pruned, or they never tapped)
+// is re-admitted through admitGuestListener by the route, not here; this only touches an existing row.
+// Returns false when there was no row to touch.
+export async function touchGuestPresence(guestId: string): Promise<boolean> {
+  return withDbTransaction(async (client) => {
+    const result = await client.query<{ credited_seconds: string | null }>(
+      `
+        UPDATE chyme_guest_listeners AS current
+        SET last_seen_at = NOW()
+        WHERE guest_id = $1
+        RETURNING (
+          SELECT CASE
+            WHEN NOW() - previous.last_seen_at <= ($2 || ' seconds')::interval
+              THEN FLOOR(EXTRACT(EPOCH FROM (NOW() - previous.last_seen_at)))::text
+            ELSE '0'
+          END
+          FROM chyme_guest_listeners AS previous
+          WHERE previous.guest_id = $1
+        ) AS credited_seconds
+      `,
+      [guestId, String(CHYME_PRESENCE_TTL_SECONDS)],
+    );
+    if ((result.rowCount ?? 0) === 0) {
+      return false;
+    }
+    await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeGuest, Number(result.rows[0]?.credited_seconds ?? 0));
+    return true;
+  });
+}
+
+export async function removeGuestListener(guestId: string): Promise<void> {
+  await withDbTransaction(async (client) => {
+    await client.query(`DELETE FROM chyme_guest_listeners WHERE guest_id = $1`, [guestId]);
   });
 }
 
@@ -489,24 +664,29 @@ export async function deleteRoomMessage(
   });
 }
 
+// Mark the member as in the call. The cap is checked here, under a lock on the room row, so two
+// members joining in the same instant cannot both take the last spot; a member already inside the
+// presence window is never turned away by their own row (a rejoin after a dropped connection).
+// Throws ChymeRoomFullError when the room is at the cap the quota policy sets.
 export async function markRoomCallJoined(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
+    await client.query(`SELECT id FROM chyme_rooms WHERE id = $1 FOR UPDATE`, [room.id]);
+    const [present, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
+    const alreadyIn = present.some((participant) => participant.userId === identity.userId);
+    if (!alreadyIn && present.length >= policy.memberCap) {
+      throw new ChymeRoomFullError(present.length, policy.memberCap);
+    }
     await ensureServiceProfile(client, identity);
-    await upsertMember(client, room.id, identity);
+    const credited = await upsertMember(client, room.id, identity);
+    await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);
     const activeRoom = await setRoomCallActive(client, room.id, true);
     const participants = await listRoomParticipants(client, room.id);
 
-    return {
-      roomId: activeRoom.id,
-      roomName: activeRoom.room_name,
-      roomKey: activeRoom.room_key,
-      callActive: participants.length > 0,
-      participants,
-    };
+    return toRoomResponse(activeRoom, participants, policy);
   });
 }
 
@@ -518,7 +698,10 @@ export async function touchRoomPresence(
 ): Promise<void> {
   await withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
-    await upsertMember(client, room.id, identity);
+    const credited = await upsertMember(client, room.id, identity);
+    // Each heartbeat is one participant's connected time since the last one; this is the minute
+    // meter's only input for members, so it is written here and nowhere else on the member path.
+    await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);
   });
 }
 
@@ -534,23 +717,29 @@ export async function setRoomMemberHandRaised(
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
-    await client.query(
+    // The bump to last_seen_at counts as a heartbeat, so the gap it closes is credited to the meter
+    // the same way — otherwise the seconds between the last heartbeat and the toggle would be lost.
+    const bumped = await client.query<{ credited_seconds: string | null }>(
       `
-        UPDATE chyme_room_members
+        UPDATE chyme_room_members AS current
         SET hand_raised = $3, last_seen_at = NOW()
         WHERE room_id = $1 AND user_id = $2
+        RETURNING (
+          SELECT CASE
+            WHEN NOW() - previous.last_seen_at <= ($4 || ' seconds')::interval
+              THEN FLOOR(EXTRACT(EPOCH FROM (NOW() - previous.last_seen_at)))::text
+            ELSE '0'
+          END
+          FROM chyme_room_members AS previous
+          WHERE previous.room_id = $1 AND previous.user_id = $2
+        ) AS credited_seconds
       `,
-      [room.id, identity.userId, raised],
+      [room.id, identity.userId, raised, String(CHYME_PRESENCE_TTL_SECONDS)],
     );
-    const participants = await listRoomParticipants(client, room.id);
+    await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), Number(bumped.rows[0]?.credited_seconds ?? 0));
+    const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
 
-    return {
-      roomId: room.id,
-      roomName: room.room_name,
-      roomKey: room.room_key,
-      callActive: participants.length > 0,
-      participants,
-    };
+    return toRoomResponse(room, participants, policy);
   });
 }
 
@@ -567,6 +756,13 @@ export async function leaveRoom(
       `DELETE FROM chyme_room_members WHERE room_id = $1 AND user_id = $2`,
       [room.id, identity.userId],
     );
+    // The stored flag used to be set on the first join and never cleared. Nothing reads it for
+    // "live" (fresh presence is), but a column that only ever goes one way misleads whoever reads
+    // the table next; clear it when the last fresh member leaves.
+    const remaining = await listRoomParticipants(client, room.id);
+    if (remaining.length === 0) {
+      await setRoomCallActive(client, room.id, false);
+    }
   });
 }
 

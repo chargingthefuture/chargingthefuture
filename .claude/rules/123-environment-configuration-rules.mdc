@@ -207,6 +207,22 @@ in Expo Go regardless of this env var.
 - **Never commit or log the value.** It holds personal contact info; do not print it in logs,
   errors, or job summaries.
 
+### Chyme: Stream Video minute budget and room caps (2026-09-19)
+
+Four optional keys drive the Stream Video minute meter and the room caps (`ctf/packages/web/lib/
+stream-quota/`). **Every one has a default; none has to exist in Infisical for the app to run.**
+They are read at call time, so a change takes effect on the next request after Render syncs.
+
+| Key | Default | What it does |
+|---|---|---|
+| `STREAM_VIDEO_MINUTES_BUDGET` | `333000` | The month's Video participant-minute ceiling (the Maker tier's, rule 110). The meter's percent and band are computed against it: Yellow at 70%, Orange at 85%, Red at 95%. Set it low to force a band without a deploy. |
+| `CHYME_MAX_PARTICIPANTS` | `50` | How many members may be in one Chyme room at once. `POST /api/chyme/join` answers 409 at the cap. |
+| `CHYME_MAX_GUEST_LISTENERS` | `100` | How many signed-out listeners may be in the public room at once; 0 from the Orange band up regardless. |
+| `CHYME_RED_BAND_MAX_PARTICIPANTS` | `10` | The room cap once the meter reads Red (never above `CHYME_MAX_PARTICIPANTS`). |
+
+The values in force show on `/admin/chyme`. A non-numeric or non-positive value falls back to the
+default rather than to zero, so a typo cannot close the room.
+
 ### PeerProgramming plugin: single standing, always-open Cohort 1 mode
 
 `PEER_PROGRAMMING_SINGLE_OPEN_COHORT` switches the PeerProgramming plugin between two cohort models.

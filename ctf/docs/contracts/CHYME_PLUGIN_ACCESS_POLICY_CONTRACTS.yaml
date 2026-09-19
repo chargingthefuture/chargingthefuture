@@ -194,3 +194,132 @@ policies:
       - actor_not_profile_owner
       - deletion_scope_invalid
       - cross_workspace_access
+
+  # Public listener path (2026-09-19). No account: the actor is a browser holding a random guest id
+  # in an httpOnly cookie. The only gates are the room being live, the Stream quota policy not having
+  # guests paused, the guest cap, the same-origin CSRF header on the writes, and the per-IP brake.
+  - pluginId: chyme
+    command: chyme.public.room.read
+    version: 1.0.0
+    requiredRoles:
+      - anonymous
+    attributePolicies:
+      tenancy: public
+      approvalGate: none
+      rateLimit: per_ip_30_per_minute
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_public_listen
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - rate_limit_exceeded
+
+  - pluginId: chyme
+    command: chyme.public.listen
+    version: 1.0.0
+    requiredRoles:
+      - anonymous
+    attributePolicies:
+      tenancy: public
+      approvalGate: none
+      csrfSameOriginRequired: true
+      rateLimit: per_ip_30_per_minute
+      guestCap: CHYME_MAX_GUEST_LISTENERS
+      quotaPolicy: paused_from_orange_band
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_public_listen
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - room_not_live
+      - guest_listen_paused_by_quota_policy
+      - guest_cap_reached
+      - csrf_header_missing_or_cross_origin
+      - rate_limit_exceeded
+
+  - pluginId: chyme
+    command: chyme.public.heartbeat
+    version: 1.0.0
+    requiredRoles:
+      - anonymous
+    attributePolicies:
+      tenancy: public
+      approvalGate: none
+      csrfSameOriginRequired: true
+      rateLimit: per_ip_30_per_minute
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_public_listen
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - guest_identity_cookie_missing
+      - csrf_header_missing_or_cross_origin
+      - rate_limit_exceeded
+
+  - pluginId: chyme
+    command: chyme.public.leave
+    version: 1.0.0
+    requiredRoles:
+      - anonymous
+    attributePolicies:
+      tenancy: public
+      approvalGate: none
+      csrfSameOriginRequired: true
+      rateLimit: per_ip_30_per_minute
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_public_listen
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - csrf_header_missing_or_cross_origin
+      - rate_limit_exceeded
+
+  # The Stream Video minute meter. Admin-only, read-only; carries the quota numbers rule 110 keeps
+  # off member surfaces.
+  - pluginId: chyme
+    command: chyme.admin.stream-usage.read
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access

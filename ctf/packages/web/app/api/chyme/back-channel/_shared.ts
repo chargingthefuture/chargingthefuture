@@ -15,6 +15,7 @@ export function backChannelErrorStatus(code: ChymeErrorCode): number {
     case CHYME_ERROR_CODE.backChannelInvalidState:
       return 409;
     case CHYME_ERROR_CODE.streamUnavailable:
+    case CHYME_ERROR_CODE.backChannelPaused:
       return 503;
     default:
       return 500;

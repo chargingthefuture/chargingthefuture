@@ -459,6 +459,34 @@ CREATE INDEX IF NOT EXISTS idx_chyme_bc_room ON chyme_back_channel_calls(room_id
 CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_bc_live_pair
   ON chyme_back_channel_calls(initiator_user_id, recipient_user_id)
   WHERE status IN ('inviting', 'active');
+-- Signed-out listeners in the public main room (2026-09-19). One row per browser: the guest id is
+-- a random value the server sets in an httpOnly cookie on the first tap-to-listen, so the same
+-- browser reuses one Stream identity instead of minting a new user on every page load. Rows carry
+-- no personal data. A guest counts as listening only while last_seen_at is inside the presence
+-- window (the listener page heartbeats every 35s); the count is what the guest listener cap reads.
+CREATE TABLE IF NOT EXISTS chyme_guest_listeners (
+  guest_id TEXT PRIMARY KEY,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_guest_listeners ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS chyme_guest_listeners ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_guest_listeners_last_seen ON chyme_guest_listeners(last_seen_at);
+-- Stream Video participant-seconds, one row per UTC day per surface (2026-09-19). Written from the
+-- presence heartbeats (members, guests, Back Channel calls): each heartbeat credits the seconds
+-- since the previous one, capped at the presence window, so a participant who dropped out is not
+-- credited for the gap. It is the app's own estimate of the Maker-tier "participant minutes"
+-- meter; Stream's dashboard stays the bill of record. Read by the Chyme admin usage screen and by
+-- the quota policy that pauses guest listening and Back Channel above the Orange threshold.
+CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
+  usage_date DATE NOT NULL,
+  surface TEXT NOT NULL,
+  participant_seconds BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (usage_date, surface)
+);
+ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;

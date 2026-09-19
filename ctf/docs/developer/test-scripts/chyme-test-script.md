@@ -152,9 +152,16 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
    45 seconds (inside the presence window, so the server still reports the room as live).
 **Expected:** Before the tap the room heading shows and under it a single **Tap to listen** button
 with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
-cannot be heard." — nothing is connected yet and nothing plays. After the tap you see "Connecting to
-the live room…", then "Listening live · N members in the room", and you hear the room, joined muted
-with no speak control. Under that line sits one muted line, "No sound? Take the phone off Silent (the
+cannot be heard." — nothing is connected yet, nothing plays, and (since 2026-09-19) nothing has been
+created on Stream: the page load only reads whether the room is live. The tap posts to
+`/api/chyme/public/listen`, which takes a listening spot, sets the browser's `ctf_chyme_guest` cookie
+on the first tap, and mints the browser's one guest identity (`chyme-guest-<id>`, the same id on
+every later visit from this browser). Then you see "Connecting to the live room…", then
+"Listening live · N members in the room", and you hear the room, joined muted with no speak control.
+While listening the page posts a heartbeat every 35 seconds (visible tab only); closing the page
+posts a leave so the spot frees at once. If the tap is refused — every guest spot taken, guests
+paused by the quota policy, the room ended, or Stream refused — the note says the server's own
+reason with the HTTP status and a **Try again** button, never a blank space. Under that line sits one muted line, "No sound? Take the phone off Silent (the
 switch or the Action button), turn the volume up, then tap here." — tapping it retries playback.
 When the phone browser refused to start the audio on its own (its autoplay rule), a green **Tap to
 hear the room** button appears above that line; one tap starts the sound and the button goes away.
@@ -193,9 +200,10 @@ rooms right now" empty state once the room has ended.
 "No public rooms right now" appears **only** when the server said the room is not live. If the live
 check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads
 "Couldn't check whether a room is live" with the server's message and the HTTP status. If the room
-is live but the server could not mint a guest identity (Stream rejected it, or Stream is not
-configured), the room heading still shows, with "The room is live — sign in to join it." and a note
-carrying the reason — never a blank space under the invitation card.
+is live but guest listening is paused by the Stream quota policy (Orange band and above), the room
+heading still shows, with "The room is live — sign in to join it." and a note carrying the reason —
+never a blank space under the invitation card. A Stream refusal (not configured, or the guest
+upsert rejected) surfaces on the tap instead, in the same note with a Try again button.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -442,6 +450,59 @@ browser and is hidden on Android.
 
 ---
 
+### CH-20 · Room cap, quota notice, and the paused actions
+**Role:** member and admin · **Surfaces:** all
+**Precondition:** the admin can set environment values on a test deployment (the caps have defaults
+and read from `CHYME_MAX_PARTICIPANTS`, `CHYME_MAX_GUEST_LISTENERS`, `CHYME_RED_BAND_MAX_PARTICIPANTS`,
+`STREAM_VIDEO_MINUTES_BUDGET`). Two member accounts.
+**Steps:**
+1. Open the room as a member and read the line under the room name.
+2. Set `CHYME_MAX_PARTICIPANTS=1`. Join the room as member A. As member B, press **Join Room**
+   (web) or tap the room card (android).
+3. As member A, leave; as member B, join again.
+4. Set `STREAM_VIDEO_MINUTES_BUDGET` low enough that the month-to-date minutes on `/admin/chyme`
+   read between 70% and 85% (Yellow). Reload the room as a member on web and android.
+5. Lower it again until the meter reads between 85% and 95% (Orange). Reload; as a signed-out
+   visitor open the public page; as a member look for the Back Channel action on another member's
+   tile and, in the app, try an invite anyway.
+6. Lower it until the meter reads 95% or more (Red) with `CHYME_RED_BAND_MAX_PARTICIPANTS=2`.
+   Reload the room.
+**Expected:** Step 1 reads "N of M participants · Signed in as @you" (M is the cap in force; 50 by
+default). Step 2: member B is refused with "This room is full right now (1 of 1 people). Try again
+in a minute." — on web as the error banner with the Join button back, on android as the join alert
+— and no Stream call was made for B. Step 3: B gets in (the spot freed on A's explicit leave, not
+45 seconds later). Step 4: a yellow notice under the room header on web, and under the room card on
+android, reading that live audio is getting close to its monthly limit and what pauses if it gets
+closer; nothing is paused; the notice carries no percentages or minute counts. Step 5: the notice
+says listening without an account and Back Channel calls are paused until next month; the public
+page shows "The room is live — sign in to join it." with the paused reason and no Tap to listen
+button; the Back Channel tile action is gone, and a forced invite is answered 503 with the paused
+reason. Step 6: the notice turns red and names the cap ("the room holds 2 people at a time"); the
+header reads "N of 2"; a third member is refused as in step 2. On every step the same server line
+appears on web and android — neither platform has its own wording.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+### CH-21 · The Join pill follows the live connection (web)
+**Role:** member · **Surfaces:** web (mobile-responsive)
+**Precondition:** a phone browser, joined to the room.
+**Steps:**
+1. Join the room. Read the pill on the Join row.
+2. Turn on Airplane Mode for ten seconds, then turn it off; watch the pill and the line under the
+   stage.
+3. Lock the phone for two minutes; unlock it and return to the tab.
+**Expected:** Step 1: "✓ Joined" (green). Step 2: within a few seconds the pill turns amber and reads
+"Reconnecting…" with the same line under the stage ("Reconnecting to the live room… the room cannot
+hear you until this clears"); once the network is back it returns to "✓ Joined" on its own. Step 3:
+on return the pill reads either "✓ Joined" (the SDK reconnected) or red "Connection lost — leave and
+rejoin" with the red line under the stage; it never sits on a green "✓ Joined" while the SDK reports
+the call offline. Before 2026-09-19 the pill was set once on join and never changed, so a locked
+phone read "Joined" after the call had dropped.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ### Account deletion clears the back-channel call log
 
 **Expected:** Deleting the account removes every back-channel call row the member appeared on —
@@ -453,8 +514,8 @@ registry entries.
 
 ## Admin walkthrough
 
-Chyme has no plugin-specific admin UI in this build. Room/chat/join access is gated by the shared
-"approved user or admin" eligibility rule, so the only admin-relevant check is access enforcement.
+Chyme has one admin surface: the Live Audio Usage screen (`/admin/chyme`, since 2026-09-19).
+Room/chat/join access is gated by the shared "approved user or admin" eligibility rule.
 
 ### CH-A1 · Access gate (approved-user or admin only)
 **Role:** admin and non-approved member · **Surfaces:** web
@@ -465,6 +526,28 @@ Chyme has no plugin-specific admin UI in this build. Room/chat/join access is ga
 **Expected:** Unauthenticated is denied (401). A non-approved, non-admin member is denied (403) with a
 readable message. An approved member or an admin reaches the room. No moderation or speaker-grant
 controls exist yet (every joiner may speak — see Known gaps).
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+### CH-A2 · Live Audio Usage screen
+**Role:** admin · **Surfaces:** web (mobile-responsive)
+**Precondition:** at least one member has been in the room today (so the meter has a row).
+**Steps:**
+1. Open `/admin` and tap **Chyme: Live Audio Usage**. Read the screen.
+2. Tap **Copy as text**, then paste into a note.
+3. As a non-admin member, open `/admin/chyme` directly and call `GET /api/chyme/admin/stream-usage`.
+4. Sit one member in the room for five minutes, then tap **Refresh**.
+**Expected:** Step 1: the month-to-date participant-minutes against the budget (333,000 by default),
+the percent and the band with its color, today's minutes, the straight-line projection to month end,
+"Right now" (the main room live or not, members, signed-out listeners, the caps in force, whether
+guest listening and Back Channel are open or paused, and the exact notice members see when there is
+one), the split by surface (main room, Weavers room, signed-out listeners, Back Channel), the last
+seven days, and the settings with their environment names. A line says one person in the room all
+day costs 1,440 minutes — about 13% of the budget over a month. Step 2: the pasted text carries all
+of that in plain lines, readable without the screen. Step 3: the page redirects to `/apps/chyme`;
+the route answers 403. Step 4: the main room's surface and today's minutes grew by about five
+(the count is credited from the 35-second heartbeats, so it lags by up to one interval).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -482,19 +565,22 @@ parity: both web and android poll room state and render it (CH-5, #1599).
 
 ## Known gaps — do not file these as bugs
 
-Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit one
-of these, it is already tracked, not a new bug:
+Carried from the inventory's "Gaps and Known Technical Debt" section (rewritten 2026-09-19). If you
+hit one of these, it is already tracked, not a new bug:
 
-- Full-account delete is request-first; the final completion still depends on the broader
-  account-deletion workflow.
-- No Chyme-specific admin or moderation tools in this build (out of MVP scope).
-- Speaker-vs-listener moderation (request-to-speak) is not built on either platform — every joiner
-  may speak.
-- Multi-room is unbuilt: one hardcoded shared room only. No create-room, room list, scheduling,
-  search, reactions, or speaker/audience promotion routes exist.
-- Account/data deletion has no in-app entry point after the Chyme buttons were removed; the deletion
-  endpoints still work but a designed account-settings surface to call them is not built.
-- Guest listen-only is enforced on the server only when `CHYME_GUEST_STREAM_ROLE` and the matching
-  Stream role are configured; until then it is client-only enforcement.
+- Full-account delete is request-first; the final completion depends on the shared
+  account-deletion orchestrator, which is the account area's.
+- No moderation controls (mute, remove, speaker grant) — a product decision the owner has not made;
+  every joiner may speak. The only admin surface is the Live Audio Usage screen.
+- Multi-room is unbuilt: one open room plus the private Weavers room. No create-room, room list,
+  scheduling, search, reactions, or speaker/audience promotion routes exist (roadmap, not a defect).
+- The minute meter is an estimate credited from heartbeats (good to one interval per participant
+  per session) and covers only the Chyme surfaces; the Stream dashboard is the bill of record.
+- A member whose Stream connection dropped still holds a room spot until their 45-second presence
+  window lapses.
+- The per-IP rate limiter on the public routes is per process (resets on deploy); the guest cap,
+  which bounds Stream cost, is in Postgres and shared.
+- Web presence needs a foreground tab: no browser holds a live call in a locked or backgrounded
+  page. The pill says so now; the Android app's foreground service is the answer for a long sit.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

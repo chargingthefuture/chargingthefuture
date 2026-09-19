@@ -80,17 +80,58 @@ async function isRoomStillLive(): Promise<boolean> {
   }
 }
 
-// Signed-out listener. Connects an ephemeral guest Stream identity to the SAME call members are in
-// and plays its audio — receive-only. The guest never publishes: camera and microphone are disabled
-// and there is no unmute/raise-hand control, so this is listen-only on the client. Speaking requires
-// signing in.
+// The listener's presence keepalive, on the member's cadence (35s inside the 45s window). The
+// server credits the minute meter from it and the guest cap counts it. Sends the same-origin
+// header the route requires; the guest id rides in the httpOnly cookie the listen route set.
+const GUEST_HEARTBEAT_MS = 35_000;
+
+function postGuestHeartbeat(): void {
+  void fetch('/api/chyme/public/heartbeat', { method: 'POST', headers: { 'x-ctf-csrf': '1' } }).catch(() => {
+    // no-trace: best-effort keepalive; the next beat reconciles, and a missed one costs a window.
+  });
+}
+
+function postGuestLeave(): void {
+  void fetch('/api/chyme/public/leave', { method: 'POST', headers: { 'x-ctf-csrf': '1' }, keepalive: true }).catch(() => {
+    // no-trace: best-effort; the presence window lapses the listener anyway.
+  });
+}
+
+// Ask the server for listen credentials. This is the tap: it takes one of the guest listening spots
+// and mints the browser's one Stream guest identity (the cookie the response sets). The server
+// answers with a plain reason when the visitor cannot listen right now — the room is not live,
+// guests are paused by the quota policy, every spot is taken, or Stream refused — and that reason
+// is what the page shows.
+export class GuestListenRefused extends Error {
+  readonly roomGone: boolean;
+  constructor(message: string, roomGone: boolean) {
+    super(message);
+    this.name = 'GuestListenRefused';
+    this.roomGone = roomGone;
+  }
+}
+
+export async function requestGuestListenCredentials(): Promise<StreamJoinCredentials> {
+  const res = await fetch('/api/chyme/public/listen', { method: 'POST', headers: { 'x-ctf-csrf': '1' } });
+  const data: unknown = await res.json().catch(() => null);
+  const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+  if (res.ok && body.ok === true && typeof body.credentials === 'object' && body.credentials !== null) {
+    return body.credentials as StreamJoinCredentials;
+  }
+  const message =
+    typeof body.message === 'string' ? body.message : typeof body.error === 'string' ? body.error : 'The server returned an error.';
+  throw new GuestListenRefused(`${message} (HTTP ${res.status})`, body.isLive === false);
+}
+
+// Signed-out listener. On the tap, asks the server for the browser's guest Stream identity and
+// connects it to the SAME call members are in, playing its audio — receive-only. The guest never
+// publishes: camera and microphone are disabled and there is no unmute/raise-hand control, so this
+// is listen-only on the client. Speaking requires signing in.
 export function ChymeGuestListen({
-  credentials,
   participantCount,
   accent = '#22C55E',
   onRoomGone,
 }: {
-  credentials: StreamJoinCredentials;
   participantCount: number;
   accent?: string;
   // Called when the join failed and a fresh read of the public room says the room is no longer
@@ -100,6 +141,8 @@ export function ChymeGuestListen({
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
+  // Minted on the tap (see requestGuestListenCredentials); the join effect keys on it.
+  const [credentials, setCredentials] = useState<StreamJoinCredentials | null>(null);
   // 'idle' until the visitor taps: a phone browser (iOS Safari above all) refuses to play sound
   // that a page starts on its own, so a join that ran on page load put the guest on stage with
   // every audio track muted by the browser. Members never hit this because they tap Join. The tap
@@ -123,8 +166,38 @@ export function ChymeGuestListen({
     }
   }, []);
 
+  // The tap → credentials step. Runs once per arm; a refusal lands in the error state with the
+  // server's own words, or drops back to the not-live view when the server said the room ended.
   useEffect(() => {
-    if (!armed) {
+    if (!armed || credentials) {
+      return;
+    }
+    let canceled = false;
+    void (async () => {
+      try {
+        const minted = await requestGuestListenCredentials();
+        if (!canceled) {
+          setCredentials(minted);
+        }
+      } catch (error) {
+        if (canceled) {
+          return;
+        }
+        if (error instanceof GuestListenRefused && error.roomGone) {
+          onRoomGone?.();
+          return;
+        }
+        setErrorDetail(describeError(error));
+        setStatus('error');
+      }
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [armed, credentials, onRoomGone]);
+
+  useEffect(() => {
+    if (!armed || !credentials) {
       return;
     }
 
@@ -183,8 +256,30 @@ export function ChymeGuestListen({
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
+      // Free the listening spot at once rather than at the end of the presence window.
+      postGuestLeave();
     };
-  }, [armed, credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamChannelId, onRoomGone]);
+  }, [armed, credentials, onRoomGone]);
+
+  // While listening, keep the guest on the roster and the minute meter fed. A tab in the
+  // background stops beating, like the member heartbeat, and beats once more when it returns.
+  useEffect(() => {
+    if (status !== 'joined') return;
+    const beat = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      postGuestHeartbeat();
+    };
+    beat();
+    const intervalId = window.setInterval(beat, GUEST_HEARTBEAT_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') beat();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [status]);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
@@ -214,7 +309,24 @@ export function ChymeGuestListen({
     );
   }
   if (status === 'error') {
-    return <GuestNote accent={accent} text="Couldn't connect to the live room. Try refreshing." detail={errorDetail} />;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <GuestNote accent={accent} text="Couldn't connect to the live room." detail={errorDetail} />
+        <button
+          type="button"
+          onClick={() => {
+            unlockAudioPlayback();
+            setErrorDetail(null);
+            setCredentials(null);
+            setStatus('connecting');
+            setArmed(true);
+          }}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Try again
+        </button>
+      </div>
+    );
   }
   if (status !== 'joined' || !client || !call) {
     return <GuestNote accent={accent} text="Connecting to the live room…" />;

@@ -77,8 +77,8 @@ contracts:
 
   - pluginId: chyme
     command: chyme.call.join
-    version: 1.0.0
-    description: Provision Stream token and channel membership for Chyme room join flow.
+    version: 1.1.0
+    description: Provision Stream token and channel membership for Chyme room join flow. Refused (409 CHYME_ROOM_FULL) when the room already holds as many members as the Stream quota policy's cap allows; checked before the Stream mint and again under a lock on the room row. Credits the presence gap to the Stream Video minute meter.
     inputSchema: {}
     outputSchema:
       ok:
@@ -99,6 +99,7 @@ contracts:
       - chyme_rooms
       - chyme_service_profiles
       - chyme_room_members
+      - stream_video_usage_daily
       - stream_channel_metadata
       - stream_user_token_metadata
     purpose: social_audio_call_join
@@ -235,6 +236,113 @@ contracts:
     dataAccess:
       - chyme_back_channel_calls
     purpose: social_audio_back_channel_leave
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.public.room.read
+    version: 1.0.0
+    description: Public, unauthenticated, read-only. Whether the one default room is live, how many members and signed-out listeners are in it, and whether listening without an account is open under the Stream quota policy. Touches nothing on Stream (since 2026-09-19 the guest identity is minted on the tap, by chyme.public.listen).
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      isLive:
+        type: boolean
+      participantCount:
+        type: number
+      guestCount:
+        type: number
+      guestListenAllowed:
+        type: boolean
+      listenUnavailable:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_guest_listeners
+      - stream_video_usage_daily
+    purpose: social_audio_public_listen
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.public.listen
+    version: 1.0.0
+    description: Public, unauthenticated; the visitor's tap. Admits one signed-out listener under the guest cap and the Stream quota policy (one transaction, room row locked), sets or reads the browser's random guest-id cookie, and mints that browser's one listen-only Stream identity (chyme-guest-<id>, one-hour token, restricted role when CHYME_GUEST_STREAM_ROLE is set). Refuses with the plain reason when the room is not live, guests are paused, every spot is taken, or Stream refused. Same-origin CSRF header required; per-IP rate limited.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      isLive:
+        type: boolean
+      participantCount:
+        type: number
+      guestCount:
+        type: number
+      credentials:
+        type: object
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_guest_listeners
+      - stream_video_usage_daily
+      - stream_user_token_metadata
+    purpose: social_audio_public_listen
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.public.heartbeat
+    version: 1.0.0
+    description: Public, unauthenticated. The signed-out listener's presence keepalive (every 35s while listening), identified by the guest-id cookie. Refreshes the roster row and credits the gap since the previous beat to the Stream Video minute meter. Same-origin CSRF header required; per-IP rate limited.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_guest_listeners
+      - stream_video_usage_daily
+    purpose: social_audio_public_listen
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.public.leave
+    version: 1.0.0
+    description: Public, unauthenticated. Drops the signed-out listener's roster row so the spot frees at once; the cookie stays. Same-origin CSRF header required; per-IP rate limited.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_guest_listeners
+    purpose: social_audio_public_listen
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.stream-usage.read
+    version: 1.0.0
+    description: Admin-only, read-only. The Stream Video minute meter (month-to-date participant-minutes against STREAM_VIDEO_MINUTES_BUDGET, band, projection, per-surface and per-day rows), the quota policy in force, the main room's live state, and the four settings. Feeds the Live Audio Usage screen at /admin/chyme.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      usage:
+        type: object
+      policy:
+        type: object
+      room:
+        type: object
+      config:
+        type: object
+    dataAccess:
+      - stream_video_usage_daily
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_guest_listeners
+    purpose: stream_quota_observability
     retentionClass: derived_short_lived
     idempotency: true
 

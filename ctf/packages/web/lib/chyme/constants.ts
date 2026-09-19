@@ -33,6 +33,13 @@ export const CHYME_MAX_TIP_AMOUNT = 10000;
 // once their last_seen_at falls outside it (so a hard disconnect boots them automatically).
 export const CHYME_PRESENCE_TTL_SECONDS = 45;
 
+// The signed-out listener's identity cookie. A random id, httpOnly, scoped to the public Chyme
+// routes, so one browser reuses one Stream guest user across page loads instead of minting a new
+// one each time (each fresh Stream user is a candidate monthly-active user on the Chat meter).
+export const CHYME_GUEST_COOKIE_NAME = 'ctf_chyme_guest';
+export const CHYME_GUEST_COOKIE_PATH = '/api/chyme/public';
+export const CHYME_GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
 // A Back Channel invite only counts while both members are still in the room. An accepted call is
 // separately kept alive by its own heartbeat (below) — leaving the room does not end a live call.
 // A pending invite that is not accepted within this window lapses server-side.
@@ -47,6 +54,13 @@ export const CHYME_ERROR_CODE = {
   persistenceUnavailable: 'CHYME_PERSISTENCE_UNAVAILABLE',
   internalError: 'CHYME_INTERNAL_ERROR',
   csrfDenied: 'CHYME_CSRF_DENIED',
+  // The room already holds as many members as the current cap allows (see lib/stream-quota).
+  roomFull: 'CHYME_ROOM_FULL',
+  // Guest listening is paused by the Stream quota policy, or every guest spot is taken.
+  guestListenPaused: 'CHYME_GUEST_LISTEN_PAUSED',
+  guestListenFull: 'CHYME_GUEST_LISTEN_FULL',
+  // The public listen/heartbeat/leave routes need the guest cookie the listen route set.
+  guestIdentityMissing: 'CHYME_GUEST_IDENTITY_MISSING',
   // Single-message delete (author-only)
   messageNotFound: 'CHYME_MESSAGE_NOT_FOUND',
   notMessageOwner: 'CHYME_NOT_MESSAGE_OWNER',
@@ -55,6 +69,8 @@ export const CHYME_ERROR_CODE = {
   backChannelNotInRoom: 'CHYME_BACK_CHANNEL_NOT_IN_ROOM',
   backChannelNotFound: 'CHYME_BACK_CHANNEL_NOT_FOUND',
   backChannelInvalidState: 'CHYME_BACK_CHANNEL_INVALID_STATE',
+  // Back Channel calls are paused by the Stream quota policy (Orange band and above).
+  backChannelPaused: 'CHYME_BACK_CHANNEL_PAUSED',
 } as const;
 
 export type ChymeErrorCode = (typeof CHYME_ERROR_CODE)[keyof typeof CHYME_ERROR_CODE];

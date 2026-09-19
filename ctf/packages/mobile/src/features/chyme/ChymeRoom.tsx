@@ -33,7 +33,7 @@ import {
 import type { ChymeJoinResponse } from './ChymeApi';
 import { ChymeLoading } from './chyme-loading';
 import { ChymeEmpty } from './chyme-empty';
-import { ChymeRoomList } from './chyme-room-list';
+import { ChymeRoomList, type RoomSummary } from './chyme-room-list';
 import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeChatView } from './chyme-chat-view';
 import type { ChatMessage } from './chyme-chat-view';
@@ -43,6 +43,22 @@ import { interFamily } from '../../components/ui';
 type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
 
 type RoomPayload = Awaited<ReturnType<typeof getChymeRoom>>;
+
+// The room list's view of the room: the count, the cap in force, and the quota notice the server
+// sends while the Stream Video month is getting tight. `capacity`/`quota` are optional here so an
+// older server answer (without them) still renders.
+function toRoomSummary(room: RoomPayload): RoomSummary {
+  return {
+    roomId: room.roomId,
+    roomName: room.roomName,
+    roomKey: room.roomKey,
+    callActive: room.callActive,
+    participantCount: room.participants.length,
+    capacityMax: room.capacity?.max,
+    quotaNotice: room.quota?.notice ?? null,
+    quotaBand: room.quota?.band,
+  };
+}
 type MessagePayload = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
 
 export const ChymeRoom: React.FC = () => {
@@ -223,13 +239,7 @@ export const ChymeRoom: React.FC = () => {
   return (
     <View style={styles.roomListContainer}>
       <ChymeRoomList
-        room={{
-          roomId: room.roomId,
-          roomName: room.roomName,
-          roomKey: room.roomKey,
-          callActive: room.callActive,
-          participantCount: room.participants.length,
-        }}
+        room={toRoomSummary(room)}
         tab={tab}
         onTabChange={setTab}
         onJoinRoom={handleJoinRoom}

@@ -6,6 +6,7 @@ import {
   StreamVideoClient,
   StreamCall,
   ParticipantsAudio,
+  CallingState,
   useCall,
   useCallStateHooks,
   SfuModels,
@@ -62,6 +63,16 @@ export function isWebRtcAvailable(): boolean {
 
 type ChymeRoomScope = 'main' | 'contributors';
 
+// What the member's live connection is doing right now, reported up to the shell so the Join pill
+// says the truth. Before 2026-09-19 the pill read "✓ Joined" from the join request succeeding once
+// and never changed: a phone that locked, switched apps, or lost the network still read "Joined"
+// after the call had dropped, and a member holding the room open around the clock had no way to
+// tell from the screen that nobody could hear the room any more.
+//   'joined'        the SDK reports the call joined and media flowing
+//   'reconnecting'  the SDK lost the connection and is trying to get it back
+//   'lost'          the SDK gave up (offline, or reconnect failed) — the member has to rejoin
+export type ChymeConnectionState = 'joined' | 'reconnecting' | 'lost';
+
 // The room-scope query appended to the presence/hand endpoints so they act on the right room. The
 // private contributors room passes `?room=contributors`; the main room passes nothing.
 function roomScopeQuery(roomScope: ChymeRoomScope): string {
@@ -82,9 +93,14 @@ type ChymeAudioRoomProps = {
   // Which room this call is for. The private "contributors" room is an audio+chat MVP: Back Channel
   // 1:1 calls (which are scoped to the main room's presence) are disabled there for now.
   roomScope: ChymeRoomScope;
+  // From the room's quota state: false while the Stream quota policy has Back Channel paused
+  // (Orange band and above), which hides the tile action before a member taps it.
+  backChannelAllowed: boolean;
+  // The live connection state, for the shell's Join pill (see ChymeConnectionState).
+  onConnectionChange?: (state: ChymeConnectionState) => void;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope, backChannelAllowed, onConnectionChange }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
@@ -93,7 +109,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
   const t = getChymeTokens(theme);
   // Back Channel is a main-room feature only for now (its invites are scoped to the main room's
   // presence). In the private room it is disabled, so the polling is off and no UI is rendered.
-  const backChannelEnabled = roomScope === 'main';
+  const backChannelEnabled = roomScope === 'main' && backChannelAllowed;
   const backChannel = useBackChannel(currentUser, backChannelEnabled);
 
   // Closest a browser gets to the native Android background service: while joined and the tab is
@@ -260,11 +276,56 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
             backChannel={backChannel}
             roomScope={roomScope}
             backChannelEnabled={backChannelEnabled}
+            onConnectionChange={onConnectionChange}
           />
         </StreamCall>
       </StreamVideo>
       {backChannelLayer}
     </>
+  );
+}
+
+// The SDK's calling state folded to the three states the shell shows. RECONNECTING and MIGRATING
+// are the SDK trying; OFFLINE and RECONNECTING_FAILED are it having given up.
+function toConnectionState(callingState: CallingState): ChymeConnectionState {
+  switch (callingState) {
+    case CallingState.RECONNECTING:
+    case CallingState.MIGRATING:
+      return 'reconnecting';
+    case CallingState.OFFLINE:
+    case CallingState.RECONNECTING_FAILED:
+    case CallingState.LEFT:
+      return 'lost';
+    default:
+      return 'joined';
+  }
+}
+
+// The one line under the stage while the connection is not what the pill says it should be, so a
+// member looking at the screen sees the same thing the shell's pill says.
+function ChymeConnectionNotice({ state }: { state: ChymeConnectionState }) {
+  if (state === 'joined') {
+    return null;
+  }
+  const lost = state === 'lost';
+  return (
+    <div
+      role="status"
+      style={{
+        marginBottom: 14,
+        padding: '10px 14px',
+        borderRadius: 10,
+        fontSize: 13,
+        lineHeight: 1.5,
+        background: lost ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
+        border: `1px solid ${lost ? 'rgba(239,68,68,0.35)' : 'rgba(234,179,8,0.35)'}`,
+        color: lost ? '#FCA5A5' : '#FDE68A',
+      }}
+    >
+      {lost
+        ? 'The live connection dropped. Nobody can hear the room from this screen until you leave and join again.'
+        : 'Reconnecting to the live room… the room cannot hear you until this clears.'}
+    </div>
   );
 }
 
@@ -318,6 +379,7 @@ function ChymeAudioRoomLive({
   backChannel,
   roomScope,
   backChannelEnabled,
+  onConnectionChange,
 }: {
   showChat: boolean;
   chatPanel: ReactNode;
@@ -327,10 +389,16 @@ function ChymeAudioRoomLive({
   backChannel: BackChannelController;
   roomScope: ChymeRoomScope;
   backChannelEnabled: boolean;
+  onConnectionChange?: (state: ChymeConnectionState) => void;
 }) {
-  const { useParticipants } = useCallStateHooks();
+  const { useParticipants, useCallCallingState } = useCallStateHooks();
   const participants = useParticipants();
+  const callingState = useCallCallingState();
   const call = useCall();
+  const connection = toConnectionState(callingState);
+  useEffect(() => {
+    onConnectionChange?.(connection);
+  }, [connection, onConnectionChange]);
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   // Hand-raise is tracked locally so the toggle is reliable for the person pressing it: their own
@@ -371,6 +439,7 @@ function ChymeAudioRoomLive({
 
   const stage = (
     <>
+      <ChymeConnectionNotice state={connection} />
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>
         On Stage · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'Participant' : 'Participants'}
       </div>

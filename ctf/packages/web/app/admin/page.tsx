@@ -25,6 +25,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic', name: 'AI Assistant' },
   { href: '/admin/beacon', name: 'Beacon' },
   { href: '/admin/bug-reports', name: 'Bug Reports' },
+  // The Stream Video minute meter: how much of the month's live-audio allowance the Chyme rooms
+  // have used, the band it puts the room under, and what the policy is pausing because of it.
+  { href: '/admin/chyme', name: 'Chyme: Live Audio Usage' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
   { href: '/admin/contributor-access', name: 'Contributor Access' },
