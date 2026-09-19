@@ -45,6 +45,8 @@ import {
   CHYME_MAX_MESSAGE_LENGTH,
   CHYME_PRESENCE_TTL_SECONDS,
   chymeRoomNameForKey,
+  isChymeSpeakMode,
+  type ChymeSpeakMode,
 } from './constants';
 import type {
   ChymeDeletionResponse,
@@ -68,17 +70,27 @@ export class ChymeRoomFullError extends Error {
   }
 }
 
-type IdentityInput = {
+export type IdentityInput = {
   userId: string;
   username: string | null;
   avatarUrl: string | null;
 };
 
-type RoomRow = {
+// Thrown when an admin removed this member from the room (chyme_room_removals, not lifted). The
+// join and heartbeat routes answer 403 with the message; the apps show it in place of the stage.
+export class ChymeRemovedError extends Error {
+  constructor() {
+    super('An admin removed you from this room. You can come back once an admin lets you back in.');
+    this.name = 'ChymeRemovedError';
+  }
+}
+
+export type RoomRow = {
   id: string;
   room_key: string;
   room_name: string;
   call_active: boolean;
+  speak_mode: string;
 };
 
 type ParticipantRow = {
@@ -218,7 +230,7 @@ async function enqueueServiceCreditsDeletionReclaim(
 // turns every read into row-write traffic. Returns null if the room has never been created.
 async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> {
   const result = await client.query<RoomRow>(
-    `SELECT id, room_key, room_name, call_active FROM chyme_rooms WHERE room_key = $1 LIMIT 1`,
+    `SELECT id, room_key, room_name, call_active, speak_mode FROM chyme_rooms WHERE room_key = $1 LIMIT 1`,
     [CHYME_MAIN_ROOM_KEY],
   );
   return result.rows[0] ?? null;
@@ -227,14 +239,14 @@ async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> 
 // Upsert a Chyme room row by key and return it. Defaults to the open main room; the private
 // contributors room passes CHYME_CONTRIBUTORS_ROOM_KEY. The room name is resolved from the known-key
 // map, never from caller input, so an arbitrary key can never set an arbitrary display name.
-async function ensureRoom(client: PoolClient, roomKey: string = CHYME_MAIN_ROOM_KEY): Promise<RoomRow> {
+export async function ensureRoom(client: PoolClient, roomKey: string = CHYME_MAIN_ROOM_KEY): Promise<RoomRow> {
   const inserted = await client.query<RoomRow>(
     `
       INSERT INTO chyme_rooms (room_key, room_name, call_active)
       VALUES ($1, $2, false)
       ON CONFLICT (room_key)
       DO UPDATE SET room_name = EXCLUDED.room_name
-      RETURNING id, room_key, room_name, call_active
+      RETURNING id, room_key, room_name, call_active, speak_mode
     `,
     [roomKey, chymeRoomNameForKey(roomKey)],
   );
@@ -252,7 +264,7 @@ async function setRoomCallActive(
       UPDATE chyme_rooms
       SET call_active = $2, updated_at = NOW()
       WHERE id = $1
-      RETURNING id, room_key, room_name, call_active
+      RETURNING id, room_key, room_name, call_active, speak_mode
     `,
     [roomId, callActive],
   );
@@ -311,7 +323,7 @@ async function upsertMember(client: PoolClient, roomId: string, identity: Identi
 }
 
 // The quota band → policy for this request. Read once per route call; the band is a one-row sum.
-async function readQuotaPolicy(client: PoolClient): Promise<ChymeQuotaPolicy> {
+export async function readQuotaPolicy(client: PoolClient): Promise<ChymeQuotaPolicy> {
   return resolveChymeQuotaPolicy(await readStreamVideoQuotaBand(client));
 }
 
@@ -319,7 +331,21 @@ export async function getChymeQuotaPolicy(): Promise<ChymeQuotaPolicy> {
   return withDbTransaction((client) => readQuotaPolicy(client));
 }
 
-function toRoomResponse(room: RoomRow, participants: ChymeParticipant[], policy: ChymeQuotaPolicy): ChymeRoomResponse {
+// Who is reading: whether they may moderate, and their own role in this room. An admin is always
+// a speaker; a member's role is their presence row's, 'listener' until they join.
+export type RoomViewer = { userId: string; isAdmin: boolean };
+
+export function roomSpeakMode(room: RoomRow): ChymeSpeakMode {
+  return isChymeSpeakMode(room.speak_mode) ? room.speak_mode : 'open';
+}
+
+export function toRoomResponse(
+  room: RoomRow,
+  participants: ChymeParticipant[],
+  policy: ChymeQuotaPolicy,
+  viewer: RoomViewer,
+): ChymeRoomResponse {
+  const own = participants.find((participant) => participant.userId === viewer.userId);
   return {
     roomId: room.id,
     roomName: room.room_name,
@@ -335,10 +361,25 @@ function toRoomResponse(room: RoomRow, participants: ChymeParticipant[], policy:
       guestListenAllowed: policy.guestListenAllowed,
       backChannelAllowed: policy.backChannelAllowed,
     },
+    speakMode: roomSpeakMode(room),
+    viewer: { isAdmin: viewer.isAdmin, role: viewer.isAdmin ? 'speaker' : (own?.role ?? 'listener') },
   };
 }
 
-async function listRoomParticipants(client: PoolClient, roomId: string): Promise<ChymeParticipant[]> {
+// Throws ChymeRemovedError when an admin removed this member from the room and nobody has let them
+// back in. Checked on join and on every heartbeat, so a removed member's client cannot keep a
+// presence row alive after the removal.
+export async function assertNotRemoved(client: PoolClient, roomId: string, userId: string): Promise<void> {
+  const result = await client.query<{ id: string }>(
+    `SELECT id FROM chyme_room_removals WHERE room_id = $1 AND user_id = $2 AND lifted_at IS NULL LIMIT 1`,
+    [roomId, userId],
+  );
+  if ((result.rowCount ?? 0) > 0) {
+    throw new ChymeRemovedError();
+  }
+}
+
+export async function listRoomParticipants(client: PoolClient, roomId: string): Promise<ChymeParticipant[]> {
   // Only members seen within the presence window count as "in the call". A member who left
   // (row deleted) or disconnected (heartbeat stopped, last_seen_at goes stale) drops off
   // automatically — there is no realtime socket, so freshness is how presence expires.
@@ -366,6 +407,7 @@ async function listRoomParticipants(client: PoolClient, roomId: string): Promise
 export async function getRoomState(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
+  viewerIsAdmin: boolean = false,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
@@ -374,7 +416,7 @@ export async function getRoomState(
     // markRoomCallJoined). Otherwise merely opening Chyme would list you on stage forever.
     const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
 
-    return toRoomResponse(room, participants, policy);
+    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
   });
 }
 
@@ -671,10 +713,12 @@ export async function deleteRoomMessage(
 export async function markRoomCallJoined(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
+  viewerIsAdmin: boolean = false,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
     await client.query(`SELECT id FROM chyme_rooms WHERE id = $1 FOR UPDATE`, [room.id]);
+    await assertNotRemoved(client, room.id, identity.userId);
     const [present, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
     const alreadyIn = present.some((participant) => participant.userId === identity.userId);
     if (!alreadyIn && present.length >= policy.memberCap) {
@@ -683,10 +727,15 @@ export async function markRoomCallJoined(
     await ensureServiceProfile(client, identity);
     const credited = await upsertMember(client, room.id, identity);
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);
+    // In hand-raise mode a joiner listens until an admin lets them speak; an admin joins speaking.
+    // In open mode the role column is not read, and a fresh row's 'listener' is left as it is.
+    if (viewerIsAdmin) {
+      await client.query(`UPDATE chyme_room_members SET role = 'speaker' WHERE room_id = $1 AND user_id = $2`, [room.id, identity.userId]);
+    }
     const activeRoom = await setRoomCallActive(client, room.id, true);
     const participants = await listRoomParticipants(client, room.id);
 
-    return toRoomResponse(activeRoom, participants, policy);
+    return toRoomResponse(activeRoom, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
   });
 }
 
@@ -698,6 +747,7 @@ export async function touchRoomPresence(
 ): Promise<void> {
   await withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
+    await assertNotRemoved(client, room.id, identity.userId);
     const credited = await upsertMember(client, room.id, identity);
     // Each heartbeat is one participant's connected time since the last one; this is the minute
     // meter's only input for members, so it is written here and nowhere else on the member path.
@@ -714,6 +764,7 @@ export async function setRoomMemberHandRaised(
   identity: IdentityInput,
   raised: boolean,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
+  viewerIsAdmin: boolean = false,
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
@@ -739,7 +790,7 @@ export async function setRoomMemberHandRaised(
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), Number(bumped.rows[0]?.credited_seconds ?? 0));
     const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
 
-    return toRoomResponse(room, participants, policy);
+    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
   });
 }
 

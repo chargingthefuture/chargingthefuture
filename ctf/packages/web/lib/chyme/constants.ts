@@ -61,6 +61,10 @@ export const CHYME_ERROR_CODE = {
   guestListenFull: 'CHYME_GUEST_LISTEN_FULL',
   // The public listen/heartbeat/leave routes need the guest cookie the listen route set.
   guestIdentityMissing: 'CHYME_GUEST_IDENTITY_MISSING',
+  // An admin removed this member from the room; join and heartbeat refuse until it is lifted.
+  removedFromRoom: 'CHYME_REMOVED_FROM_ROOM',
+  // The member the admin action names is not in the room right now.
+  memberNotInRoom: 'CHYME_MEMBER_NOT_IN_ROOM',
   // Single-message delete (author-only)
   messageNotFound: 'CHYME_MESSAGE_NOT_FOUND',
   notMessageOwner: 'CHYME_NOT_MESSAGE_OWNER',
@@ -74,3 +78,12 @@ export const CHYME_ERROR_CODE = {
 } as const;
 
 export type ChymeErrorCode = (typeof CHYME_ERROR_CODE)[keyof typeof CHYME_ERROR_CODE];
+
+// How a room decides who may speak (owner decision, 2026-09-19). 'open' is the room as it shipped:
+// every joiner may unmute. 'hand_raise' is the moderated room: a joiner listens until an admin lets
+// them speak; the role rides on their presence row (`chyme_room_members.role`).
+export type ChymeSpeakMode = 'open' | 'hand_raise';
+export const CHYME_SPEAK_MODES: readonly ChymeSpeakMode[] = ['open', 'hand_raise'];
+export function isChymeSpeakMode(value: unknown): value is ChymeSpeakMode {
+  return value === 'open' || value === 'hand_raise';
+}

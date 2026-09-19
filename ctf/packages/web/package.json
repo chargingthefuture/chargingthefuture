@@ -27,6 +27,7 @@
     "@openfeature/server-sdk": "1.21.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@sentry/nextjs": "^10.21.0",
+    "@stream-io/node-sdk": "^0.8.6",
     "@stream-io/video-react-sdk": "^1.19.0",
     "decimal.js": "^10.6.0",
     "fflate": "^0.8.3",

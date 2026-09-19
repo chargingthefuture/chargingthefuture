@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
-import { touchRoomPresence } from 'lib/chyme/repository';
+import { ChymeRemovedError, touchRoomPresence } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
 import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
@@ -22,6 +22,9 @@ export async function POST(request: Request) {
     await touchRoomPresence(gate.identity, gate.roomKey);
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    if (error instanceof ChymeRemovedError) {
+      return NextResponse.json({ ok: false, code: CHYME_ERROR_CODE.removedFromRoom, message: error.message }, { status: 403 });
+    }
     reportError(error, { area: 'chyme', op: 'call_heartbeat', extra: { userId: gate.auth.userId } });
     return NextResponse.json(
       { ok: false, code: CHYME_ERROR_CODE.internalError, message: 'Unable to refresh Chyme presence.' },

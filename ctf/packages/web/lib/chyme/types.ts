@@ -46,6 +46,13 @@ export type ChymeQuotaState = {
   backChannelAllowed: boolean;
 };
 
+// Who is reading the room, worked out on the server so neither app guesses: whether they may
+// moderate, and their own role in this room (meaningful in hand-raise mode).
+export type ChymeViewerState = {
+  isAdmin: boolean;
+  role: ChymeRole;
+};
+
 export type ChymeRoomResponse = {
   roomId: string;
   roomName: string;
@@ -54,6 +61,22 @@ export type ChymeRoomResponse = {
   participants: ChymeParticipant[];
   capacity: ChymeRoomCapacity;
   quota: ChymeQuotaState;
+  // 'open' (every joiner may speak) or 'hand_raise' (a joiner listens until an admin lets them
+  // speak). See CHYME_SPEAK_MODES.
+  speakMode: 'open' | 'hand_raise';
+  viewer: ChymeViewerState;
+};
+
+// One removed member, as the Chyme admin screen lists them.
+export type ChymeRoomRemoval = {
+  id: string;
+  roomKey: string;
+  roomName: string;
+  userId: string;
+  username: string | null;
+  removedBy: string;
+  reason: string | null;
+  removedAtIso: string;
 };
 
 export type ChymeMessagesResponse = {
@@ -128,6 +151,11 @@ export type ChymeAuditEvent = {
     | 'chyme.back-channel.decline'
     | 'chyme.back-channel.join'
     | 'chyme.back-channel.leave'
+    | 'chyme.admin.mute'
+    | 'chyme.admin.remove'
+    | 'chyme.admin.lift-removal'
+    | 'chyme.admin.role'
+    | 'chyme.admin.speak-mode'
     | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;

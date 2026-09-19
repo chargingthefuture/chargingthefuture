@@ -36,6 +36,7 @@ import { ChymeTipButton } from './ChymeTipModal';
 import { useChymeBackChannel, type MobileBackChannelController } from './useChymeBackChannel';
 import { ChymeBackChannelInviteSheet } from './ChymeBackChannelInviteSheet';
 import { ChymeBackChannelCall } from './ChymeBackChannelCall';
+import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, OPEN_MODERATION, type MobileModerationContext } from './ChymeModeration';
 import { reportError } from '../../observability/report';
 
 // Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
@@ -102,6 +103,9 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   // Drives the persistent raised-hand indicator for everyone except the local member (who is driven
   // by their own instant local toggle). Starts empty until the first poll lands.
   const [raisedHandUserIds, setRaisedHandUserIds] = useState<ReadonlySet<string>>(() => new Set());
+  // Speak mode, who is viewing, and every member's role, from the same room poll. Starts as an
+  // open room with no moderation rights until the first poll lands.
+  const [moderation, setModeration] = useState<MobileModerationContext>(OPEN_MODERATION);
   // Back Channel (spec #1746): free 1:1 audio with another member in this room. Polls only while joined.
   const backChannel = useChymeBackChannel(status === 'joined');
 
@@ -210,6 +214,11 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
           setRaisedHandUserIds(
             new Set((payload.participants ?? []).filter((p) => p.handRaised).map((p) => p.userId)),
           );
+          setModeration({
+            speakMode: payload.speakMode ?? 'open',
+            viewer: payload.viewer ?? OPEN_MODERATION.viewer,
+            memberRoles: new Map((payload.participants ?? []).map((p) => [p.userId, p.role] as const)),
+          });
         })
         .catch(() => {
           /* best-effort: a transient poll failure is ignored; the next tick retries */
@@ -255,6 +264,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
             onLeave={onLeave}
             raisedHandUserIds={raisedHandUserIds}
             backChannel={backChannel}
+            moderation={moderation}
           />
         </StreamCall>
       </StreamVideo>
@@ -305,7 +315,8 @@ const ChymeAudioRoomLive: React.FC<{
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
   backChannel: MobileBackChannelController;
-}> = ({ onOpenChat, onLeave, raisedHandUserIds, backChannel }) => {
+  moderation: MobileModerationContext;
+}> = ({ onOpenChat, onLeave, raisedHandUserIds, backChannel, moderation }) => {
   const { styles, tokens } = useRoomStyles();
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
@@ -363,13 +374,17 @@ const ChymeAudioRoomLive: React.FC<{
                 localHandRaised={handRaised}
                 raisedHandUserIds={raisedHandUserIds}
                 backChannel={backChannel}
+                moderation={moderation}
               />
             ))}
           </View>
         )}
       </View>
 
-      <ChymeAudioControls onOpenChat={onOpenChat} onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} />
+      {moderation.speakMode === 'hand_raise' ? (
+        <Text style={styles.handRaiseNotice}>Hand-raise mode: everyone listens until an admin lets them speak. Raise your hand to ask.</Text>
+      ) : null}
+      <ChymeAudioControls onOpenChat={onOpenChat} onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={moderation} />
     </View>
   );
 }
@@ -461,7 +476,8 @@ const ChymeSpeakerTile: React.FC<{
   localHandRaised: boolean;
   raisedHandUserIds: ReadonlySet<string>;
   backChannel: MobileBackChannelController;
-}> = ({ participant, localHandRaised, raisedHandUserIds, backChannel }) => {
+  moderation: MobileModerationContext;
+}> = ({ participant, localHandRaised, raisedHandUserIds, backChannel, moderation }) => {
   const { tileStyles } = useRoomStyles();
   const { isSelf, speaking, publishingAudio, name, isGuest, clerkUserId, handRaised } =
     computeSpeakerTileState(participant, localHandRaised, raisedHandUserIds);
@@ -489,6 +505,9 @@ const ChymeSpeakerTile: React.FC<{
           <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
           <ChymeBackChannelTileButton recipientUserId={clerkUserId} backChannel={backChannel} />
         </View>
+      ) : null}
+      {!isSelf && !isGuest && moderation.viewer.isAdmin ? (
+        <ChymeModeratorActions clerkUserId={clerkUserId} name={name} moderation={moderation} />
       ) : null}
     </View>
   );
@@ -575,36 +594,51 @@ function makeBackChannelButtonStyles(accent: string) {
   });
 }
 
+// A member listening in hand-raise mode cannot speak: the microphone control is replaced by the
+// notice, and the microphone is turned off the moment the role says listener, so the change takes
+// effect without waiting for a tap. Matches the web room.
+function isListeningOnly(moderation: MobileModerationContext): boolean {
+  return moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
+}
+
+const ChymeMicControl: React.FC<{ moderation: MobileModerationContext }> = ({ moderation }) => {
+  const { styles, accent, tokens } = useRoomStyles();
+  const { useMicrophoneState } = useCallStateHooks();
+  const { microphone, isMute } = useMicrophoneState();
+  const listening = isListeningOnly(moderation);
+  useEffect(() => {
+    if (!listening) return;
+    void microphone.disable().catch(() => {
+      /* no-trace: already off, or no microphone; the server-side role holds either way */
+    });
+  }, [listening, microphone]);
+
+  if (listening) {
+    return <ChymeListeningNotice labelColor={tokens.textSecondary} />;
+  }
+  return (
+    <TouchableOpacity style={styles.controlBtn} onPress={() => void microphone.toggle()}>
+      <View style={[styles.controlCircle, isMute ? styles.controlCircleMuted : styles.controlCircleActive]}>
+        {isMute ? <MicOff size={24} color="#F87171" strokeWidth={2} /> : <Mic size={24} color={accent} strokeWidth={2} />}
+      </View>
+      <Text style={[styles.controlLabel, isMute && styles.controlLabelMuted]}>{isMute ? 'Unmute' : 'Mute'}</Text>
+    </TouchableOpacity>
+  );
+};
+
 const ChymeAudioControls: React.FC<{
   onOpenChat: () => void;
   onLeave: () => void;
   handRaised: boolean;
   onToggleHand: () => void;
-}> = ({ onOpenChat, onLeave, handRaised, onToggleHand }) => {
-  const { styles, accent, tokens } = useRoomStyles();
-  const { useMicrophoneState } = useCallStateHooks();
-  const { microphone, isMute } = useMicrophoneState();
+  moderation: MobileModerationContext;
+}> = ({ onOpenChat, onLeave, handRaised, onToggleHand, moderation }) => {
+  const { styles, tokens } = useRoomStyles();
 
   return (
     <View style={styles.controls}>
       <View style={styles.controlRow}>
-        <TouchableOpacity style={styles.controlBtn} onPress={() => void microphone.toggle()}>
-          <View
-            style={[
-              styles.controlCircle,
-              isMute ? styles.controlCircleMuted : styles.controlCircleActive,
-            ]}
-          >
-            {isMute ? (
-              <MicOff size={24} color="#F87171" strokeWidth={2} />
-            ) : (
-              <Mic size={24} color={accent} strokeWidth={2} />
-            )}
-          </View>
-          <Text style={[styles.controlLabel, isMute && styles.controlLabelMuted]}>
-            {isMute ? 'Unmute' : 'Mute'}
-          </Text>
-        </TouchableOpacity>
+        <ChymeMicControl moderation={moderation} />
 
         <TouchableOpacity style={styles.controlBtn} onPress={onToggleHand}>
           <View
@@ -626,6 +660,8 @@ const ChymeAudioControls: React.FC<{
           </View>
           <Text style={styles.controlLabel}>Chat</Text>
         </TouchableOpacity>
+
+        {moderation.viewer.isAdmin ? <ChymeSpeakModeToggle moderation={moderation} labelColor={tokens.textSecondary} /> : null}
       </View>
 
       <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
@@ -773,6 +809,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
   controlLabel: { fontSize: 11, color: t.textSecondary, fontFamily: interFamily('400') },
   controlLabelMuted: { color: '#F87171' },
   controlLabelHand: { color: '#FDE047' },
+  handRaiseNotice: { marginHorizontal: 16, marginBottom: 8, padding: 10, borderRadius: 10, fontSize: 12, lineHeight: 18, color: '#FDE68A', backgroundColor: 'rgba(234,179,8,0.10)', borderWidth: 1, borderColor: 'rgba(234,179,8,0.3)', fontFamily: interFamily('400') },
   leaveBtn: {
     width: '100%',
     paddingVertical: 13,
