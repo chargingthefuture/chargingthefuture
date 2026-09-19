@@ -9,6 +9,7 @@ import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
 import type { ChymeConnectionState } from './chyme-audio-room';
+import { chymeParticipantLine } from 'lib/chyme/capacity-line';
 
 // The live audio room pulls in the Stream Video SDK, which is browser-only, so
 // it is loaded on the client and never server-rendered.
@@ -106,7 +107,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>
             <div style={{ fontSize: 13, color: '#16A34A' }}>
-              {room.participants.length} of {room.capacity.max} participants · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
+              {chymeParticipantLine(room.participants.length, room.capacity.max)} · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
             </div>
           </div>
           <button
