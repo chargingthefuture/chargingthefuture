@@ -150,8 +150,9 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 4. Count the sign-in and join buttons on the whole page, top to bottom.
 5. Have the last signed-in member leave the call, then reload the signed-out page within the next
    45 seconds (inside the presence window, so the server still reports the room as live).
-**Expected:** Before the tap the room heading shows and under it a single **Tap to listen** button
-with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
+**Expected:** Before the tap the room heading shows, under it the line "The room is live. Tap below
+to listen; sign in to speak." (never "You're listening live" before the tap), and a single **Tap to
+listen** button with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
 cannot be heard." — nothing is connected yet, nothing plays, and (since 2026-09-19) nothing has been
 created on Stream: the page load only reads whether the room is live. The tap posts to
 `/api/chyme/public/listen`, which takes a listening spot, sets the browser's `ctf_chyme_guest` cookie
@@ -467,8 +468,10 @@ and read from `CHYME_MAX_PARTICIPANTS`, `CHYME_MAX_GUEST_LISTENERS`, `CHYME_RED_
    tile and, in the app, try an invite anyway.
 6. Lower it until the meter reads 95% or more (Red) with `CHYME_RED_BAND_MAX_PARTICIPANTS=2`.
    Reload the room.
-**Expected:** Step 1 reads "N of M participants · Signed in as @you" (M is the cap in force; 50 by
-default). Step 2: member B is refused with "This room is full right now (1 of 1 people). Try again
+**Expected:** Step 1 reads the plain count — "1 participant · Signed in as @you" — with no cap
+named; the cap appears only from 80% of it ("40 of 50 participants · nearly full") and at it
+("50 of 50 participants · full"), on web and on the Android room card alike (M is the cap in
+force; 50 by default). Step 2: member B is refused with "This room is full right now (1 of 1 people). Try again
 in a minute." — on web as the error banner with the Join button back, on android as the join alert
 — and no Stream call was made for B. Step 3: B gets in (the spot freed on A's explicit leave, not
 45 seconds later). Step 4: a yellow notice under the room header on web, and under the room card on

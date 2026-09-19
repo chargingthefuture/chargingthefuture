@@ -100,7 +100,9 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
       {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
       {live.guestListenAllowed ? (
         <>
-          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
+          {/* Said before the tap, so it cannot claim the visitor is already listening (owner report,
+              2026-09-19); the listener component says "Listening live" itself once the sound is on. */}
+          <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>The room is live. Tap below to listen; sign in to speak.</div>
           <ChymeGuestListen participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
               follow what members are saying and signs in to write. */}
