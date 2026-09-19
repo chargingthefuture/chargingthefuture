@@ -39,17 +39,14 @@ const VOCABULARY = [
   // "console" reads as developer jargon for a screen; say "dashboard". The negative lookahead skips
   // the code identifiers console.log / console.error / console.info so quoting real code never trips.
   { re: /\bconsole\b(?!\.\w)/i, use: 'dashboard' },
-  // Owner directive, 2026-08-28, widened 2026-09-13. One tic: the sentence that arrives after the
-  // facts to announce which of them was the important one. Enumerating the wordings did not hold —
-  // "whole point" was banned, then "whole argument", then "point of the thing", and the next reply
-  // reached for "whole offer" and passed straight through. So the construction is matched rather
-  // than the nouns: anything of the form "that is the whole <word>" trips, whatever word follows.
-  //
-  // A negated form is left alone on purpose. "That is not the whole story" says the account is
-  // incomplete, which is a fact about the account; the intervening "not" keeps it from matching.
-  { re: /\b(?:that|this|which|it)(?:'s|\u2019s| is| was) the whole \w+/i, use: 'state the point itself and stop — no sentence whose only job is to label what came before it' },
-  // The same habit without the demonstrative in front: "precision is the whole point of this post".
-  { re: /\bwhole (?:point|argument|ask|offer|deal|case|idea|reason)\b/i, use: 'say the thing plainly, without announcing that it is the important one' },
+  // Owner directive, 2026-08-28, widened 2026-09-13 and again 2026-09-19. One tic: the sentence
+  // that arrives after the facts to announce which of them was the important one. Enumerating the
+  // wordings did not hold — "whole point" was banned, then "whole argument", then "point of the
+  // thing", and the next reply reached for "whole offer". Matching the construction did not hold
+  // either: the same word came back in an adjacent frame ("for the whole of that chain") and passed
+  // straight through. So the word itself is out, in every frame, negated or not. Entire, all of,
+  // end to end, or nothing, cover every honest use of it.
+  { re: /\bwhole\b/i, use: 'entire, all of, end to end — or drop it and state the thing plainly' },
   // Owner directive, 2026-08-29. Same habit, a different set of words: the closing sentence that
   // announces which fact was the important one.
   { re: /\bpoint of the thing\b/i, use: 'end on the fact itself, with no sentence explaining that it mattered' },

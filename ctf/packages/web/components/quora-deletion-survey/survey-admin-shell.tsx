@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ClipboardList, Download, RefreshCw } from 'lucide-react';
+import { ClipboardList, Download } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -78,10 +78,6 @@ export function QuoraSurveyAdminShell() {
         </p>
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
-          <button type="button" onClick={() => void load()} style={buttonStyle(t)}>
-            <RefreshCw size={15} aria-hidden="true" />
-            Refresh
-          </button>
           <a href="/api/quora-deletion-survey/admin/export" style={buttonStyle(t)}>
             <Download size={15} aria-hidden="true" />
             Download CSV

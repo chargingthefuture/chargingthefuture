@@ -57,7 +57,7 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - punch list → list
 - stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
-- a sentence of the form "that is the whole ‹anything›" → state the point itself and stop
+- whole → entire, all of, end to end, or drop it (the word itself, in every frame — owner directive, 2026-09-19)
 - point of the thing → end on the fact itself, with no sentence explaining that it mattered
 
 Both are one habit, banned 2026-08-28 and 2026-08-29 and widened 2026-09-13: the sentence that
@@ -73,8 +73,10 @@ passed through the hook untouched. So the hook now matches "that/this/which/it i
 ("precision is the whole ‹word› of this post"). Do not go looking for a noun that slips past;
 there is nothing to find, and the sentence was doing no work in the first place.
 
-A negated form is deliberately left alone. Saying an account is not the whole story states
-something about the account rather than ranking what came before it, and the hook does not match it.
+Widened again 2026-09-19: the word itself is banned, in every frame. The construction match was
+being sidestepped by the same word one frame over ("for the whole of that chain"), so the hook now
+matches the word wherever it appears, negated forms included. Entire, all of, and end to end cover
+every honest use; most uses were carrying nothing and are best dropped.
 
 When the hook blocks a reply, restate **once and briefly** in plain, factual language — none of the
 terms above, no jargon, no first-person feeling words — then stop. Do not re-send the blocked
