@@ -122,11 +122,13 @@ pull-to-refresh, so without a control on the screen the only way back to current
 the app and open it again. That is what prompted this: a Quora URL was added from the Unlock
 sign-ups list, the queue was opened to approve it, and the submission was not there.
 
-The control is not built per shell. `MobileScreenHeader` renders it for any path under `/admin`, and
-`app/admin/layout.tsx` mounts the `AdminRefreshProvider` that drives it
-(`components/shared/admin-refresh.tsx`). So a new admin surface that uses the shared header gets one
-with no work. A shell that builds its own top bar — Directory Admin does — places
-`<AdminRefreshControl accent={…} />` next to its `MobileTopActions` cluster by hand.
+The control is not built per shell. `MobileScreenHeader` renders `<AdminRefreshControl />`
+unconditionally, and it gates itself: it draws nothing unless `AdminRefreshProvider` is above it,
+which only `app/admin/layout.tsx` mounts (`components/shared/admin-refresh.tsx`). So a new admin
+surface that uses the shared header gets a control with no work, a member screen using the same
+header gets none, and there is no path test to keep in step with the routes. A shell that builds its
+own top bar — Directory Admin does — places `<AdminRefreshControl accent={…} />` next to its
+`MobileTopActions` cluster by hand.
 
 The refresh does two things, and both are needed because admin screens are split roughly evenly
 between the two ways of loading data:

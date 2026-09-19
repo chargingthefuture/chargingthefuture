@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import { useSmartBack } from '@/lib/nav/back-history';
 import { AdminRefreshControl } from './admin-refresh';
 import { MobileTopActions } from './mobile-top-actions';
@@ -39,13 +38,6 @@ export function MobileScreenHeader({
   // exists; otherwise fall back to the shared one-level-up destination (resolveBackTarget via
   // useSmartBack) so a deep-linked or freshly-opened screen still has a sensible way back.
   const back = useSmartBack(backHref);
-
-  // Admin screens carry a refresh control, and they carry it here rather than in each shell so a
-  // new admin surface cannot ship without one (owner directive, 2026-09-19). The control renders
-  // nothing unless AdminRefreshProvider is above it, which only /admin/layout.tsx supplies, so the
-  // path test and the provider have to agree before anything appears.
-  const pathname = usePathname();
-  const isAdminScreen = pathname === '/admin' || (pathname?.startsWith('/admin/') ?? false);
 
   // Derive translucent tints from the accent hex (#RRGGBB + alpha suffix). Fall back to neutral
   // surface tokens when no accent is supplied.
@@ -146,7 +138,12 @@ export function MobileScreenHeader({
           mid-cluster and strand a lone avatar on the second row. marginLeft:auto right-aligns them
           while they share the title's row; once wrapped it is inert (they already fill the row). */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexShrink: 0 }}>
-        {isAdminScreen ? <AdminRefreshControl accent={accent} /> : null}
+        {/* Admin screens carry a refresh control, and they carry it here rather than in each shell
+            so a new admin surface cannot ship without one (owner directive, 2026-09-19). It is
+            rendered unconditionally because it gates itself: it draws nothing unless
+            AdminRefreshProvider is above it, and only app/admin/layout.tsx mounts that. So a member
+            screen using this header gets no button, with no path test to keep in step. */}
+        <AdminRefreshControl accent={accent} />
         {actions}
         <MobileTopActions />
       </div>
