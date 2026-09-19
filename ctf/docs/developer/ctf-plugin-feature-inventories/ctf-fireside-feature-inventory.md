@@ -213,7 +213,8 @@ faults in two weeks came from a rule written in two places that disagreed.
   thirteen route files. Phone-width, paged. Listed in the apps launcher at nav rank 260 — the row is in
   the `ctf_plugin_registry` seed in `schema.sql` and in migration `0016`, which is what the launcher
   actually reads. The admin screen has a row in the admin directory, with a "new to review" dot
-  while an export request is waiting.
+  while an export request is waiting — counted by the queue's own function, so the dot and the
+  screen it leads to always agree.
 - The signed-out visitor view at `/apps/fireside`: shipped, as
   `components/fireside/fireside-public-shell.tsx`, registered in the public visitor registry. It
   sends the visitor to the blog first, because the conversation is already open to them, and asks
@@ -265,19 +266,35 @@ member active only in Fireside is seen by being read, which is what the plugin i
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
-7. The "new to review" dot on the admin landing tile can still light up for a request the export
-   queue does not show. The queue drops a request whose author is not approved in Unlock — an
-   unapproved member's words are not public in the app yet, so there is nothing to decide about
-   publishing them further — and the dot is one SQL count in `lib/admin/area-attention.ts`, a shared
-   map of plain queries with no way to ask Unlock anything. Adding one means either teaching that
-   map to call a function or writing the approval rule into a second place in SQL, and this
-   repository has already paid for a rule written in two places. The queue's own count and paging no
-   longer have the fault (2026-09-19), so what is left is a dot that occasionally leads to a screen
-   saying the queue is empty, rather than a number that contradicts the list under it.
 
 ## Change Log
 
-- 2026-09-19: **A read of the whole plugin, end to end, and what it turned up.** Owner request: close
+- 2026-09-19: **The admin landing's "new to review" dot now counts what the queue shows.** Owner
+  request, and it closes the gap recorded earlier the same day rather than leaving it. The dot was
+  its own SQL count in `lib/admin/area-attention.ts` with the three column conditions on the row —
+  the author asked, no admin has answered, the comment is still in the conversation — and no way to
+  ask the fourth, which is that the author is approved in Unlock. So it lit up for a request the
+  screen then dropped, and an admin who followed it read that the queue was empty. A signal that
+  points at an empty screen teaches somebody to stop trusting it, which is worth less than no
+  signal.
+
+  The two ways to fix it were to write the approval rule into a second place in SQL or to let that
+  shared map hold something other than SQL. The first is the fault this plugin already carries four
+  incidents from, so it is the second: `AttentionQuery` gains a `{ count }` shape — a function
+  taking the same last-seen timestamp — and Fireside's entry is now the queue's own
+  `countPendingExportRequests`. Every other area's plain SQL string is untouched and still runs the
+  way it did.
+
+  Both halves of "what is in this queue" are written once as a result. The column conditions are
+  `PENDING_REQUEST_WHERE`, interpolated by the count and the list; the Unlock half is
+  `keepApprovedAuthors`, which both go through. The dot, the number above the list and the list
+  itself are one answer asked three times.
+
+  The `{ count }` shape is for a queue whose actionable set depends on something outside its own
+  table, where the plugin already holds the function that decides. It is not an invitation to move
+  the other areas off SQL, and the note in that file says so.
+
+- 2026-09-19: **A read of the entire plugin, end to end, and what it turned up.** Owner request: close
   any gaps. Six things, no schema change and no new route.
 
   **The public thread read was telling shared caches to keep an answer that is different for every
@@ -335,9 +352,10 @@ member active only in Fireside is seen by being read, which is what the plugin i
   which costs nothing and reads no worse than a reply to a comment that has scrolled away; a thread
   is still created lazily from whatever repo and slug a member's first comment names, which is how
   the blog widget works and is not a thing to change without changing that too; and the admin
-  landing's "new to review" dot is recorded as gap 7 rather than fixed, because the only ways to fix
-  it are to teach a shared map of plain SQL queries to call a function or to write the Unlock
-  approval rule into a second place, and this repository has already paid for that.
+  landing's "new to review" dot was recorded as a gap rather than fixed, because the only ways to
+  fix it were to teach a shared map of plain SQL queries to call a function or to write the Unlock
+  approval rule into a second place, and this repository has already paid for that. The owner asked
+  for it anyway the same day, so the first of those is what happened — see the entry above.
 
 - 2026-09-18: **An author can rewrite their own comment** (owner report: correcting a typo meant
   removing the comment and posting it again). Taking a comment down and rewriting it loses the

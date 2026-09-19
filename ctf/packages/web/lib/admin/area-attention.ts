@@ -1,4 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
+// The Fireside export queue decides what is in it partly outside its own table, so this file asks
+// the queue rather than describing it. See the `{ count }` note on AttentionQuery below.
+import { countPendingExportRequests } from 'lib/fireside/export-review';
 import { reportError } from 'lib/observability/report';
 
 // Powers the "new to review" dot on the admin landing tiles. For each admin area that has a real
@@ -19,7 +22,19 @@ import { reportError } from 'lib/observability/report';
 // A query written as `{ sql, scopedToAdmin: true }` also gets $2 = this admin's user id. Use it where
 // the queue belongs to one admin rather than to all of them — Mutual Time surveys, for example, are
 // each created by one admin, and another admin's survey is not theirs to be told about.
-type AttentionQuery = string | { sql: string; scopedToAdmin: true };
+//
+// A query written as `{ count }` is a function instead of SQL, and takes the same last-seen
+// timestamp. Use it where what counts as actionable cannot be said in SQL from here — where the
+// answer depends on something outside the queue's own table, and the plugin already has the
+// function that decides. Fireside's export queue is the case that asked for it: a request is only
+// in that queue if its author is approved in Unlock, which this file cannot ask, so its dot lit up
+// for requests the screen then did not list. Writing that rule into SQL here would be the same rule
+// in two places, which this repository has already paid for; calling the plugin's own function is
+// the same rule in one.
+type AttentionQuery =
+  | string
+  | { sql: string; scopedToAdmin: true }
+  | { count: (since: Date | null) => Promise<number> };
 
 const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   unlock: [
@@ -63,15 +78,15 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
        WHERE is_resolved = FALSE AND ($1::timestamptz IS NULL OR created_at > $1)`,
   ],
   // The blog-export queue: a comment whose author asked for it to be copied into the blog's
-  // published build, still waiting on an admin. The three conditions are the queue's own, so the
-  // dot never points at a screen that then shows nothing. Compared on `updated_at` rather than
-  // `created_at` because that is the column the request itself moves, and the queue already reads
-  // it as the time the author asked.
-  fireside: [
-    `SELECT COUNT(*)::int AS n FROM fireside_comments
-       WHERE export_review = 'pending' AND export_to_blog = TRUE AND status = 'visible'
-         AND ($1::timestamptz IS NULL OR updated_at > $1)`,
-  ],
+  // published build, still waiting on an admin.
+  //
+  // The queue's own function rather than a copy of its SQL. Three of the conditions are columns on
+  // the row and were written out here; the fourth is that the author is approved in Unlock, which
+  // this file has no way to ask — so the dot counted requests the screen dropped, and pointed at a
+  // screen saying the queue was empty. Compared on `updated_at` rather than `created_at` because
+  // that is the column the request itself moves, and the queue already reads it as the time the
+  // author asked.
+  fireside: [{ count: countPendingExportRequests }],
   'what-works': [
     `SELECT COUNT(*)::int AS n FROM what_works_products
        WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
@@ -131,6 +146,24 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   ],
 };
 
+/**
+ * How many actionable items one query found. The three shapes answer the same question — a number —
+ * so the caller below counts them the same way whichever one it was given.
+ */
+async function runAttentionQuery(
+  query: AttentionQuery,
+  since: Date | null,
+  userId: string,
+): Promise<number> {
+  if (typeof query === 'string') {
+    const result = await queryDb<{ n: number }>(query, [since]);
+    return result.rows[0]?.n ?? 0;
+  }
+  if ('count' in query) return query.count(since);
+  const result = await queryDb<{ n: number }>(query.sql, [since, userId]);
+  return result.rows[0]?.n ?? 0;
+}
+
 // True when this area has a "new to review" signal (so marking it seen is meaningful).
 export function isAdminAttentionArea(areaSlug: string): boolean {
   return Object.prototype.hasOwnProperty.call(ATTENTION_QUERIES, areaSlug);
@@ -160,13 +193,9 @@ export async function getAdminAreaAttention(userId: string): Promise<Record<stri
       const since = seen.get(slug) ?? null;
       try {
         const counts = await Promise.all(
-          ATTENTION_QUERIES[slug].map((query) =>
-            typeof query === 'string'
-              ? queryDb<{ n: number }>(query, [since])
-              : queryDb<{ n: number }>(query.sql, [since, userId]),
-          ),
+          ATTENTION_QUERIES[slug].map((query) => runAttentionQuery(query, since, userId)),
         );
-        attention[slug] = counts.some((result) => (result.rows[0]?.n ?? 0) > 0);
+        attention[slug] = counts.some((count) => count > 0);
       } catch (error) {
         reportError(error, { area: 'admin-attention', op: `count_${slug}` });
         attention[slug] = false;
