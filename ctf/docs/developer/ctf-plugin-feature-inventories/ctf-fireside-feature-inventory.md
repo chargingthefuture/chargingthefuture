@@ -223,6 +223,12 @@ faults in two weeks came from a rule written in two places that disagreed.
   conversation under each post for any reader, with no account, and hands off to the app to write.
   `/api/fireside/threads` answers it cross-origin (read-only, no credentials accepted, so a
   cross-origin caller always gets the signed-out view).
+- The blog's half of the export: shipped, also in `wiki-site` — `scripts/src/sync-fireside-exports.ts`
+  reads `/api/fireside/export` and writes a generated, committed `fireside-exports.ts` that the
+  build bundles. Committed on purpose: a comment fetched into the page after it loads is not in the
+  published build and so is not in what a web archive captures, which is the thing the author was
+  asked to agree to. The section renders the build's copy first and the live read over it, so a
+  reader with no JavaScript or a blocked app domain still sees the published conversation.
 - Android: out of scope, web-only per rule 105. Recorded in `ctf/config/plugin-parity-contracts.json`
   with `requiresMobileSurface: false` — the native app carries only Clerk, Chyme, bug reporting and
   settings, and a conversation that lives under a blog post is not one of those.
@@ -249,25 +255,67 @@ member active only in Fireside is seen by being read, which is what the plugin i
    same-origin with CSRF and origin checks, and a credentialed cross-origin form would break
    silently for anybody whose browser blocks third-party cookies. The button hands off to the app
    instead, which is where approval, moderation and deletion already live.
-2. The app's half of the export is built and the blog's half is not. `/api/fireside/export` answers
-   with the comments both keys have cleared, and nothing in `wiki-site` reads it yet, so no comment
-   has actually been copied into a build. The reader belongs there alongside the widget.
-3. The blog-side widget does not show the "edited" mark yet. It lives in the `wiki-site`
-   repository and renders from `/api/fireside/threads`, which now returns `editedAt` on every
-   comment; until that widget reads it, a reader on the blog sees rewritten words with nothing
-   saying they changed, while a reader in the app sees the mark.
-4. The author's record counts only what happened in Fireside. An account being a problem in several
-   parts of the app at once is not visible from this screen, and deciding to delete an account on one
-   plugin's tally alone would miss that.
-5. A reply notification does not arrive late. A held reply notifies nobody, and approving its
-   author later makes the reply appear without telling the person it answered. Catching that up
-   means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-6. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
+2. The author's record now carries one cross-plugin fact and not a cross-plugin tally. A platform
+   restriction on the account shows on the export queue (2026-09-19), which is the app's own record
+   of an account somebody has already acted on. What is still not there is a count of what the
+   account did in each other plugin — that needs every plugin to expose a comparable tally, and
+   `account_restrictions` only says that somebody already acted, not what the account did to earn it.
+3. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
+4. The catch-up when somebody is approved is capped at 50 replies. A member approved after writing a
+   great deal has the rest go untold rather than queued for later — a hundred notifications landing
+   at once is its own harm, and the cap is a ceiling on that rather than a promise the remainder
+   arrives. Nothing is lost from the conversation; only the notice about it.
 
 ## Change Log
+
+- 2026-09-19: **A held reply tells the person it answered, once its author is approved. And the
+  export queue can see an account the app has already acted on.** Owner request: work the recorded
+  gaps. Two of the remaining ones, plus a record correction.
+
+  **The notice that never arrived.** Nothing an unapproved member writes is publicly visible, so a
+  reply of theirs notified nobody when they wrote it — telling somebody about a reply they would
+  open and not find is worse than telling them nothing, which is the rule the write-time notice
+  checks. The cost was that the notice never came at all: the member was approved later, the reply
+  appeared, and the person it answered was never told. Their conversation quietly grew a reply while
+  they were not looking, and the only way to find it was to go back to the post.
+
+  Approval is the one moment that can be caught, and Unlock is the only code that knows it happened.
+  So there is a new platform-owned crossing point, `lib/shared/unlock-approval-interface.ts`, in the
+  same shape as `unlock-interface.ts` and for the opposite direction: the Unlock review route calls
+  it and learns nothing about which plugins have work to do, and the plugins are reached through the
+  one file `check-plugin-boundaries.mjs` permits to import them. Fireside's side is
+  `announceHeldReplies`, which emits the same `fireside.reply` notice with the reply's own id as its
+  reference — so `notifySafe` dedupes it and a re-reviewed account pings nobody twice. Only replies
+  to somebody else's comment, only where that comment is still in the conversation, capped at 50 and
+  recorded as a gap. Best-effort throughout and the decision is already committed before it runs: an
+  admin approving somebody must never see that fail because a notification did. The run writes its
+  own audit row, because it happened to somebody else's account.
+
+  **The record beside an export request was one plugin's tally.** It exists so an admin can answer
+  the account rather than the comment, and every number on it came from Fireside — so an account
+  being a problem in several parts of the app at once did not appear here at all, and deleting an
+  account on this screen's numbers would have missed it. `account_restrictions` is the app's single
+  record of an account somebody has already acted on, wherever they acted, so the row now carries
+  it: the scope in plain words, the reason if there is one, and a line saying the decision was made
+  outside Fireside. It flags the row the same way a removal here does.
+
+  Read with a new `getAnyAccountRestriction` rather than the existing status function, and the two
+  are kept apart on purpose. The existing one answers "may this member do the thing they are
+  attempting" and returns not-restricted when the stored scope does not cover that action; an admin
+  needs the opposite, because somebody restricted from trading is not blocked from writing and is
+  still an account that has been acted on. Reported, never enforced — this screen decides whether to
+  publish words, not whether to allow an action.
+
+  **A correction to the record.** This inventory said the blog's half of the export did not exist.
+  It does: `wiki-site` carries `sync-fireside-exports.ts`, the generated `fireside-exports.ts`, and
+  the conversation section renders the build's copy first and the live read over it. That was
+  written before this repository could see the other one, and it was wrong. The blog's "edited" mark
+  was a real gap and is fixed there, in `wiki-site` PR #256, along with the same orphaned-reply
+  fault this app had.
+
 
 - 2026-09-19: **The admin landing's "new to review" dot now counts what the queue shows.** Owner
   request, and it closes the gap recorded earlier the same day rather than leaving it. The dot was

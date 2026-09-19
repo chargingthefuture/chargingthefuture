@@ -768,3 +768,58 @@ Result: web ☐
 - A page past the end lands on the last page with its comments on it, not on an empty screen.
 
 Result: web ☐
+
+### FS-26 — Somebody is told about a reply that was held until its author was approved
+
+**Role:** member (approved), member (unapproved), admin · **Surfaces:** web
+**Precondition:** An approved member A with a live comment under a post. A signed-in member B who is
+**not** approved. An admin who can review Unlock submissions.
+
+**Steps:**
+1. As member B, open A's conversation and reply to A's comment. Note the held notice.
+2. As member A, check your notifications. Then read the thread signed out.
+3. As the admin, approve member B in Unlock.
+4. As member A, check your notifications again and open the one that arrived.
+5. As the admin, review member B's submission again and approve it a second time. Check A's
+   notifications once more.
+6. Repeat this case end to end with B replying to **their own** comment instead of A's.
+7. Repeat with A's comment removed by an admin before B is approved.
+
+**Expected:**
+- After step 1 nothing reaches member A. A notification about a reply they would open and not find
+  is worse than none, and B's reply is visible to nobody but B.
+- Signed out, B's reply is not in the thread.
+- After step 3, member A has one notification saying somebody replied to their comment on the blog.
+  It names no content and no person — it can land on a lock screen.
+- Opening it goes to that conversation, with B's reply now in it.
+- The second approval in step 5 sends **nothing**. A is not told twice about the same reply.
+- Replying to yourself tells nobody, before or after approval.
+- A reply under a comment an admin removed tells nobody when its author is approved: the recipient
+  would open a thread where their own comment is no longer in the conversation.
+- The Unlock audit log has an `unlock.admin.submission.approval_catch_up` row recording how many
+  notices went out, and the approval itself succeeded either way.
+
+Result: web ☐
+
+### FS-27 — The export queue shows an account the app has already acted on
+
+**Role:** admin · **Surfaces:** web
+**Precondition:** An approved member with a live comment and a pending blog-export request on it.
+
+**Steps:**
+1. Open `/admin/fireside` → the export queue and read the row's author line.
+2. Restrict that member's account from trading, from wherever the app does that.
+3. Reload the queue and read the row again.
+4. Lift the restriction and reload once more.
+
+**Expected:**
+- Before the restriction the author line is the four Fireside counts and nothing else, and the row
+  is not flagged unless this account has removals or refusals here.
+- After it, the row is flagged and says the account is already restricted from sending or receiving
+  value, with the reason if one was recorded, and that the decision was made outside Fireside.
+- The scope reads in plain words, not as the stored value.
+- A restriction on trading does not stop the member writing, and the queue still lists their
+  request — this line reports, it does not gate.
+- Lifting the restriction removes the line, and the row is flagged again only by its own history.
+
+Result: web ☐

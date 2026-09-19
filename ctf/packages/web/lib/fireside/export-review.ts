@@ -9,6 +9,9 @@
 // that decides. Nothing here re-derives it.
 
 import { queryDb } from 'lib/db/postgres';
+// Platform code, not another plugin: account_restrictions is the app's single record of an account
+// somebody has already acted on, wherever they acted.
+import { getAnyAccountRestriction } from 'lib/auth/account-restrictions';
 // Through the platform interface, never lib/unlock directly — plugins stay isolated (rule 112).
 import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
 import type {
@@ -80,11 +83,35 @@ export function exportReviewAfterEdit(current: ExportReview): ExportReview {
 }
 
 /**
- * What one account has done here, counted in a single query.
+ * The platform's restriction on this account as the author record carries it, or null.
+ *
+ * Its own function so getAuthorRecord stays inside the complexity budget (rule 116), and because
+ * narrowing the platform's shape to this one is a separate thought from counting comments.
+ */
+async function readAccountRestriction(userId: string): Promise<FiresideAuthorRecord['accountRestriction']> {
+  const restriction = await getAnyAccountRestriction(userId);
+  if (!restriction.isRestricted || !restriction.scope) return null;
+  return {
+    scope: restriction.scope,
+    reason: restriction.reason ?? null,
+    restrictedAt: restriction.restrictedAt ?? null,
+  };
+}
+
+/**
+ * What one account has done here, counted in a single query, plus the one fact about it that is not
+ * from here at all.
  *
  * The reason this exists is that moderating item by item is a losing race against somebody who is
  * doing it deliberately. Seeing that an account has had four comments removed and two exports
  * refused turns a string of small decisions into one decision about the account.
+ *
+ * The counts were Fireside's own, which left the decision half-informed: an account being a problem
+ * in several parts of the app at once did not show up here at all, and deleting an account on one
+ * plugin's tally would have missed it. `account_restrictions` is the platform's single record of an
+ * account somebody has already acted on, whatever the plugin, so it is what this carries — read
+ * with the reporting function rather than the gating one, because a member restricted from trading
+ * is not blocked from writing and is still an account that has been acted on.
  */
 export async function getAuthorRecord(userId: string): Promise<FiresideAuthorRecord> {
   const result = await queryDb<{
@@ -107,6 +134,7 @@ export async function getAuthorRecord(userId: string): Promise<FiresideAuthorRec
     removed: Number(row?.removed ?? '0'),
     exportsRefused: Number(row?.exports_refused ?? '0'),
     exportsApproved: Number(row?.exports_approved ?? '0'),
+    accountRestriction: await readAccountRestriction(userId),
   };
 }
 

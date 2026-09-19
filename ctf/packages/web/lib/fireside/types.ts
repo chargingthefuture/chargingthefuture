@@ -148,6 +148,23 @@ export type FiresideAuthorRecord = {
   removed: number;
   exportsRefused: number;
   exportsApproved: number;
+  /**
+   * Whether the platform already restricts this account, and why — the one fact on this record that
+   * is not about Fireside.
+   *
+   * The counts above are this plugin's own tally, and an account being a problem in several parts of
+   * the app at once was invisible from this screen. `account_restrictions` is the platform's single
+   * record of an account somebody has already acted on, whatever the plugin, so it is the honest
+   * cross-plugin signal to carry here. Null when there is none.
+   *
+   * It is reported, never enforced: a restriction on trading does not stop anybody writing, and this
+   * screen is deciding whether to publish words rather than whether to allow an action.
+   */
+  accountRestriction: {
+    scope: 'all' | 'trading' | 'contact';
+    reason: string | null;
+    restrictedAt: string | null;
+  } | null;
 };
 
 /**
