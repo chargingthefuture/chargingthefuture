@@ -190,12 +190,16 @@ function UpcomingList({ upcoming, error, styles, accent }: { upcoming: ChymeUpco
   );
 }
 
-// "N participants" or, when the server sent the cap in force, "N of M participants".
+// The plain count, with the cap named only once it matters — from 80% of it ("40 of 50
+// participants · nearly full") and at it ("· full"). "1 of 50" all day read as a claim that the
+// room is capped at 50 or ought to hold 50 (owner report, 2026-09-19). Mirrors the web room's
+// chymeParticipantLine.
 function participantLine(room: RoomSummary): string {
-  if (room.capacityMax) {
-    return `${room.participantCount} of ${room.capacityMax} participants`;
-  }
-  return `${room.participantCount} participant${room.participantCount !== 1 ? 's' : ''}`;
+  const count = room.participantCount;
+  const max = room.capacityMax ?? 0;
+  if (max > 0 && count >= max) return `${count} of ${max} participants · full`;
+  if (max > 0 && count >= Math.ceil(max * 0.8)) return `${count} of ${max} participants · nearly full`;
+  return `${count} participant${count !== 1 ? 's' : ''}`;
 }
 
 // The one live room's card, plus the same quota line the web room shows under its header — only
