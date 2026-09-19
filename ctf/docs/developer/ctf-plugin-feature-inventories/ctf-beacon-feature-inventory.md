@@ -138,9 +138,15 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ### Webhook
 - `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
-  acts on two of them. On `call.session_participant_joined` it starts the public HLS feed and the
+  acts on three of them. On `call.session_participant_joined` it starts the public HLS feed and the
   recording for the matching `live` event, which is what carries a phone-only RTMP broadcast. On
-  `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. Every other
+  `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. On
+  `call.session_participant_left` — for **any** call, not only Beacon's, since this is the one URL
+  Stream sends every call event to — it credits the participant's `duration_seconds` to the app's
+  Stream Video minute meter (`stream_video_usage_daily`, via `lib/stream-quota/webhook-usage.ts`)
+  under the surface the call id names: `beacon-*` → Beacon publishers, `pp-*` → PeerProgramming,
+  `foundation-call-*` → Foundation, anything else → "other"; Chyme rooms and Back Channel calls
+  are skipped because their presence heartbeats already feed the meter (2026-09-19). Every other
   event is acknowledged without acting so Stream stops retrying.
 
 ## Data Model and Storage Contracts

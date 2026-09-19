@@ -246,9 +246,13 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
    the app had no participant-minute signal and the Stream dashboard was the only source of truth.
    `stream_video_usage_daily` is credited from every presence heartbeat (members, guests, Back
    Channel), summarized by `lib/stream-quota/usage.ts`, shown on `/admin/chyme`, and acted on by
-   `lib/stream-quota/policy.ts`. What remains true: it is an estimate (good to one heartbeat interval
-   per participant per session) and it meters only the Chyme surfaces; Beacon, Foundation, and
-   PeerProgramming video are not credited. Stream's dashboard stays the bill of record.
+   `lib/stream-quota/policy.ts`. Since the same day every other Stream Video call is credited too
+   (owner decision: the app's meter is the only one read): Beacon publishers, PeerProgramming cohort
+   calls, and Foundation calls are credited from Stream's `call.session_participant_left` webhook
+   (`lib/stream-quota/webhook-usage.ts`, handled by the Beacon webhook route, which is the one URL
+   Stream sends every call event to), exact per participant. What remains true: the Chyme lines are
+   estimates good to one heartbeat interval per participant per session, and Beacon's HLS viewers
+   never join a call so they are not participant-minutes. Stream's dashboard stays the bill of record.
 4. **Closed (2026-09-19) — no room cap, no guest cap, no quota-driven degradation.** Rule 110's
    bands existed as prose only. The room cap, the guest cap, the Orange-band pauses (guests, Back
    Channel), the Red-band cap, and the member notices are all in force (User Features 12, Security 9).
@@ -293,6 +297,15 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-19: **The minute meter covers every Stream Video call.** Owner decision: the app's meter
+  is the only one read; the Stream dashboard is not. Beacon publishers, PeerProgramming cohort
+  calls, and Foundation calls are now credited to `stream_video_usage_daily` from Stream's
+  `call.session_participant_left` event (`duration_seconds`, one participant's time in the call),
+  through the Beacon webhook route — the one URL Stream sends every call event to — and
+  `lib/stream-quota/webhook-usage.ts`, which maps the call id to a surface and skips Chyme and Back
+  Channel (their heartbeats already feed the meter). `/admin/chyme` labels the new lines. Unit
+  tests cover the mapping and the payload read. No schema or contract change; quota note
+  `2026-09-19-stream-video-meter-all-calls.md`.
 - 2026-09-19: **The cap is an advisory, and the signed-out page stops saying "listening" before the
   tap.** Two owner reports from the phone. (1) "1 of 50 participants" under the room name all day
   read as a claim — that the room is capped at 50, or that 50 people ought to be there. The line is

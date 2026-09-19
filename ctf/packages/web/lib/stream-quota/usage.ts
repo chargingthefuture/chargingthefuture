@@ -15,9 +15,10 @@ import {
 // seconds since the previous heartbeat into one row per UTC day per surface.
 //
 // What this is and is not: it is the app's own estimate, good to within one heartbeat interval per
-// participant per session, and it counts only the surfaces that call it (the Chyme rooms, guests,
-// and Back Channel). Beacon, Foundation, and PeerProgramming video are not metered here yet. The
-// Stream dashboard is the bill of record; this is the number the app can act on.
+// participant per session for the Chyme surfaces (rooms, guests, Back Channel), and exact per
+// participant for every other call (Beacon, Foundation, PeerProgramming), which are credited from
+// Stream's participant-left webhook as people leave (see webhook-usage.ts). The Stream dashboard is
+// the bill of record; this is the number the app can act on.
 
 export type StreamVideoUsageSurface = {
   surface: string;
