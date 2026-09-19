@@ -357,6 +357,72 @@ export async function findCommentAuthorUserId(commentId: string): Promise<string
   return result.rows[0]?.author_user_id ?? null;
 }
 
+/**
+ * One reply of this member's that nobody was told about, because they were not approved when they
+ * wrote it.
+ *
+ * Carries the parent's author id, which the caller hands to the notification system — it addresses
+ * a member without displaying anything about them — and the post, so the notification can deep-link
+ * to the conversation the reply is in.
+ */
+export type ReplyAwaitingNotice = {
+  commentId: string;
+  parentAuthorUserId: string;
+  postRepo: string;
+  postSlug: string;
+  postTitle: string;
+};
+
+/**
+ * The replies this member wrote that never told anybody, for the moment Unlock approves them.
+ *
+ * Nothing an unapproved member writes is publicly visible, so a reply of theirs notified nobody at
+ * the time: telling somebody about a reply they would open and not find is worse than telling them
+ * nothing. Approval makes all of it appear at once, and until now the person who was answered was
+ * never told — their conversation simply grew a reply while they were not looking.
+ *
+ * Only replies to somebody else's comment, and only where that comment is still in the conversation:
+ * a reply under a comment an admin removed opens a thread the recipient can no longer see properly,
+ * and nobody is told they answered themselves.
+ *
+ * Bounded. A member approved after writing a great deal is the case this exists for, and a hundred
+ * notifications landing at once is its own harm; the cap is a ceiling on that rather than a promise
+ * that the rest arrive later.
+ */
+export async function listRepliesAwaitingNotice(
+  userId: string,
+  limit = 50,
+): Promise<ReplyAwaitingNotice[]> {
+  const result = await queryDb<{
+    comment_id: string;
+    parent_author_user_id: string;
+    post_repo: string;
+    post_slug: string;
+    post_title: string;
+  }>(
+    `SELECT c.id::text AS comment_id,
+            parent.author_user_id AS parent_author_user_id,
+            t.post_repo, t.post_slug, t.post_title
+       FROM fireside_comments c
+       JOIN fireside_comments parent ON parent.id = c.parent_comment_id
+       JOIN fireside_threads t ON t.id = c.thread_id
+      WHERE c.author_user_id = $1
+        AND c.status = 'visible'
+        AND parent.status = 'visible'
+        AND parent.author_user_id <> $1
+      ORDER BY c.created_at ASC
+      LIMIT $2`,
+    [userId, limit],
+  );
+  return result.rows.map((row) => ({
+    commentId: row.comment_id,
+    parentAuthorUserId: row.parent_author_user_id,
+    postRepo: row.post_repo,
+    postSlug: row.post_slug,
+    postTitle: row.post_title,
+  }));
+}
+
 /** The author's own comments, in one list, each labeled with what is happening to it. */
 export async function listOwnComments(userId: string, limit = 50, offset = 0): Promise<FiresideOwnComment[]> {
   const result = await queryDb<CommentRow & { withdrawn_body: string | null }>(

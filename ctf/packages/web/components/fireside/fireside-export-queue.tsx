@@ -19,6 +19,18 @@ type AuthorRecord = {
   removed: number;
   exportsRefused: number;
   exportsApproved: number;
+  /**
+   * A platform-wide restriction on this account, or null. The only thing on this row that is not
+   * about Fireside, and the reason it is here: an account being a problem in several parts of the
+   * app at once was invisible from this screen.
+   */
+  accountRestriction: { scope: string; reason: string | null; restrictedAt: string | null } | null;
+};
+
+const RESTRICTION_SCOPE_LABEL: Record<string, string> = {
+  all: "from the app entirely",
+  trading: "from sending or receiving value",
+  contact: "from starting contact with other members",
 };
 
 type ExportRequest = {
@@ -32,9 +44,28 @@ type ExportRequest = {
   authorRecord: AuthorRecord;
 };
 
-/** Worth a second look when this account has been declined or taken down here before. */
+/**
+ * Worth a second look when this account has been declined or taken down here before — or when the
+ * app has already restricted it somewhere else, which is the same question asked by somebody who
+ * was not looking at Fireside.
+ */
 function hasHistory(record: AuthorRecord): boolean {
-  return record.removed > 0 || record.exportsRefused > 0;
+  return record.removed > 0 || record.exportsRefused > 0 || record.accountRestriction != null;
+}
+
+// The one line on the author record that is not a Fireside count: the app's own record of an
+// account somebody has already acted on, wherever they acted. Without it this screen was deciding
+// on one plugin's tally alone. Its own component so AuthorLine stays inside the complexity budget
+// (rule 116).
+function RestrictionLine({ restriction }: { restriction: AuthorRecord["accountRestriction"] }) {
+  if (!restriction) return null;
+  const scope = RESTRICTION_SCOPE_LABEL[restriction.scope] ?? "elsewhere in the app";
+  return (
+    <div style={{ marginTop: 6 }}>
+      This account is already restricted {scope}
+      {restriction.reason ? `: ${restriction.reason}` : "."} That decision was made outside Fireside.
+    </div>
+  );
 }
 
 function AuthorLine({ record, t }: { record: AuthorRecord; t: PluginShellTokens }) {
@@ -55,10 +86,11 @@ function AuthorLine({ record, t }: { record: AuthorRecord; t: PluginShellTokens 
       {record.comments} comment{record.comments === 1 ? "" : "s"} here · {record.removed} removed ·{" "}
       {record.exportsRefused} export{record.exportsRefused === 1 ? "" : "s"} declined ·{" "}
       {record.exportsApproved} approved
+      <RestrictionLine restriction={record.accountRestriction} />
       {flagged && (
         <div style={{ marginTop: 6 }}>
-          This account has been declined or taken down here before. Consider whether the account
-          belongs here at all rather than deciding this one comment.
+          This account has been declined or taken down before, here or elsewhere. Consider whether
+          the account belongs here at all rather than deciding this one comment.
         </div>
       )}
     </div>

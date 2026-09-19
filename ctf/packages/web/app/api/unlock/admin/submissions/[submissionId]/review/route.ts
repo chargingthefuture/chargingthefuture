@@ -10,6 +10,9 @@ import {
   UNLOCK_RESTRICTION_REASONS,
   UNLOCK_SPAM_RESTRICTION_REASON,
 } from 'lib/unlock/spam-denylist';
+// Through the platform interface, never a plugin directly — this route must not learn which
+// plugins have catch-up work when somebody is approved (rule 112).
+import { runUnlockApprovalCatchUp } from 'lib/shared/unlock-approval-interface';
 import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput, UnlockSubmission } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
@@ -111,6 +114,44 @@ async function grantApprovalRewardBestEffort(
   return false;
 }
 
+/**
+ * Let the plugins settle what this approval makes them owe somebody.
+ *
+ * Approval here is retroactive: everything the member has already written becomes visible at once.
+ * Some of it was held silently — a Fireside reply that told nobody because it was not public yet —
+ * and the plugin holding it has no way to learn the moment that changed. This is that moment.
+ *
+ * Through the platform interface, so this route never learns which plugins have work to do (rule
+ * 112). Best-effort inside it, and the decision is already committed by the time this runs: an
+ * admin approving somebody must not see that fail because a notification did. Split out of POST so
+ * that handler stays inside the complexity budget (rule 116).
+ */
+async function catchUpPluginsOnApproval(input: {
+  reviewStatus: string;
+  actorUserId: string;
+  targetUserId: string;
+  submissionId: number;
+  requestId: string;
+}): Promise<void> {
+  if (input.reviewStatus !== 'approved') {
+    return;
+  }
+
+  const catchUp = await runUnlockApprovalCatchUp(input.targetUserId);
+
+  // Recorded because it happened to somebody else's account, and because a notice nobody can see a
+  // record of is not a thing anybody can check afterwards.
+  await insertUnlockAudit({
+    actorUserId: input.actorUserId,
+    command: 'unlock.admin.submission.approval_catch_up',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetUserId: input.targetUserId,
+    requestId: input.requestId,
+    metadata: { submissionId: input.submissionId, ...catchUp },
+  });
+}
+
 export async function POST(request: Request, { params }: RouteParams) {
   const csrfDeny = ensureUnlockMutationCsrf(request);
   if (csrfDeny) {
@@ -167,6 +208,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     await syncUnlockAccountRestriction(submission.userId, body.reviewStatus, gate.auth.userId);
+
+    await catchUpPluginsOnApproval({
+      reviewStatus: body.reviewStatus,
+      actorUserId: gate.auth.userId,
+      targetUserId: submission.userId,
+      submissionId,
+      requestId,
+    });
 
     const rewardWithheld = await grantApprovalRewardBestEffort(submission, gate.auth.userId, submissionId, body.reviewStatus);
 

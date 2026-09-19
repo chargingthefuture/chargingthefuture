@@ -56,6 +56,39 @@ export async function getAccountRestrictionStatus(
   };
 }
 
+/**
+ * Whether this account is restricted at all, whatever the scope, for a screen that is reporting
+ * rather than gating.
+ *
+ * Deliberately separate from getAccountRestrictionStatus above, which answers "may this member do
+ * the thing they are attempting" and so returns not-restricted when the stored scope does not cover
+ * that action. An admin looking at an account needs the opposite: a member restricted from trading
+ * is not blocked from writing, and is still an account somebody has already acted on.
+ *
+ * Never use this to gate an action. The scope is the rule for that, and it is the function above.
+ */
+export async function getAnyAccountRestriction(userId: string): Promise<AccountRestrictionStatus> {
+  const result = await queryDb<RestrictionRow>(
+    `SELECT is_restricted, restriction_scope, restricted_at, restriction_reason
+     FROM account_restrictions
+     WHERE user_id = $1
+     LIMIT 1`,
+    [userId],
+  );
+
+  const row = result.rows[0];
+  if (!row || !row.is_restricted) {
+    return { isRestricted: false };
+  }
+
+  return {
+    isRestricted: true,
+    scope: row.restriction_scope,
+    restrictedAt: row.restricted_at ? row.restricted_at.toISOString() : null,
+    reason: row.restriction_reason,
+  };
+}
+
 async function insertAccountRestrictionAudit(
   actorId: string,
   action: 'restrict' | 'unrestrict',

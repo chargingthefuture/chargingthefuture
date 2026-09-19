@@ -324,6 +324,23 @@ commands:
                     type: integer
                   exportsApproved:
                     type: integer
+                  accountRestriction:
+                    type: [object, 'null']
+                    description: >-
+                      A platform-wide restriction already on this account, or null. The only field
+                      on this record that is not a Fireside count: the counts are this plugin's own
+                      tally, and an account being a problem in several parts of the app at once did
+                      not appear on this screen at all. Reported, never enforced — read with the
+                      scope-agnostic reader, because a member restricted from trading is not blocked
+                      from writing and is still an account somebody has acted on.
+                    properties:
+                      scope:
+                        type: string
+                        enum: [all, trading, contact]
+                      reason:
+                        type: [string, 'null']
+                      restrictedAt:
+                        type: [string, 'null']
         page:
           type: integer
         lastPage:
@@ -334,6 +351,7 @@ commands:
       - fireside_comments (select)
       - fireside_threads (select)
       - unlock_verification_submissions (select, access_tier only)
+      - account_restrictions (select)
     purpose: The pending blog-export requests an admin works, oldest first, each carrying the author's own record here so a repeated offender is answered as an account rather than item by item
     retentionClass: community_content
   - pluginId: fireside
