@@ -7,7 +7,7 @@ import {
   pluginPageMinUnlockTier,
 } from 'lib/plugins/repository';
 import { getPublicVisitorShell } from '@/components/plugins/public-visitor-registry';
-import { ReviewsWidget } from '@/components/reviews/reviews-widget';
+import { InvitesStrip } from '@/components/invites/invites-strip';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
@@ -170,14 +170,14 @@ function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlug
     // row (PublicShellBackLink), so no wrapping frame is needed here.
     return (
       <>
+        {/* The blog's invite cards, first on every public (signed-out) plugin page. */}
+        <InvitesStrip />
         <PublicVisitorShell
           pluginSlug={selectedPlugin.slug}
           pluginName={selectedPlugin.name}
           signInUrl={signInUrl}
           verifyUrl={verifyUrl}
         />
-        {/* Corner reviews widget — shown on every public (signed-out) plugin page. */}
-        <ReviewsWidget />
       </>
     );
   }
