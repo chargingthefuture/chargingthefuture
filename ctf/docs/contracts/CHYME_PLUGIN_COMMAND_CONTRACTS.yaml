@@ -346,6 +346,165 @@ contracts:
     retentionClass: derived_short_lived
     idempotency: true
 
+  # Moderation (owner decision, 2026-09-19). Admin-only; every command writes a durable row in
+  # chyme_admin_audit_trail and applies the change in the Stream call (lib/chyme/stream-moderation.ts).
+  # The database row is the record of the decision; a Stream failure is reported in the answer
+  # (streamNotice), never turned into a failed action.
+  - pluginId: chyme
+    command: chyme.admin.mute
+    version: 1.0.0
+    description: Turn a member's microphone off in the room's Stream call. Nothing stored beyond the audit row.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      streamApplied:
+        type: boolean
+      streamNotice:
+        type: string
+    dataAccess:
+      - chyme_admin_audit_trail
+      - stream_call_metadata
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.remove
+    version: 1.0.0
+    description: Remove a member from the room and keep them out — presence row deleted, a chyme_room_removals row kept until lifted (join and heartbeat answer 403 CHYME_REMOVED_FROM_ROOM), and the member blocked from the Stream call.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      reason:
+        type: string
+        required: false
+        maxLength: 300
+    outputSchema:
+      ok:
+        type: boolean
+      username:
+        type: string
+      streamApplied:
+        type: boolean
+      streamNotice:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_room_removals
+      - chyme_admin_audit_trail
+      - stream_call_metadata
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.lift-removal
+    version: 1.0.0
+    description: Let a removed member back in — the removal row is lifted (kept as the record) and the member unblocked from the Stream call. 409 when there was no live removal.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      streamApplied:
+        type: boolean
+      streamNotice:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_removals
+      - chyme_admin_audit_trail
+      - stream_call_metadata
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.role
+    version: 1.0.0
+    description: Hand-raise mode — let a present member speak, or move them back to listening (which also mutes them in the call). Sets chyme_room_members.role and, when CHYME_GUEST_STREAM_ROLE is configured, the member's role on the Stream call. 409 when the member is not in the room.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      role:
+        type: string
+        required: true
+        enum: [speaker, listener]
+    outputSchema:
+      ok:
+        type: boolean
+      username:
+        type: string
+      role:
+        type: string
+      streamApplied:
+        type: boolean
+      streamNotice:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_admin_audit_trail
+      - stream_call_metadata
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.speak-mode
+    version: 1.0.0
+    description: Switch the room between open mic (every joiner may speak; the default) and hand-raise mode (a joiner listens until an admin lets them speak). Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call.
+    inputSchema:
+      mode:
+        type: string
+        required: true
+        enum: [open, hand_raise]
+    outputSchema:
+      ok:
+        type: boolean
+      mode:
+        type: string
+      demoted:
+        type: number
+      streamApplied:
+        type: boolean
+      streamNotice:
+        type: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_admin_audit_trail
+      - stream_call_metadata
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.removals.read
+    version: 1.0.0
+    description: Admin-only, read-only. Every member currently removed from a Chyme room, newest first, for the Chyme admin screen.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      removals:
+        type: array
+    dataAccess:
+      - chyme_room_removals
+      - chyme_rooms
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
   - pluginId: chyme
     command: chyme.profile.delete.service
     version: 1.0.0

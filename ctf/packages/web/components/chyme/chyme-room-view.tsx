@@ -9,6 +9,7 @@ import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
 import type { ChymeConnectionState } from './chyme-audio-room';
+import type { ChymeModerationContext } from './chyme-moderation';
 import { chymeParticipantLine } from 'lib/chyme/capacity-line';
 
 // The live audio room pulls in the Stream Video SDK, which is browser-only, so
@@ -76,6 +77,18 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
     [room.participants],
   );
 
+  // Speak mode, who is viewing, and every member's role, for the moderation controls and the
+  // listener's microphone notice. Refreshed with every room poll.
+  const moderation = useMemo<ChymeModerationContext>(
+    () => ({
+      roomScope: props.roomScope,
+      speakMode: room.speakMode,
+      viewer: room.viewer,
+      memberRoles: new Map(room.participants.map((p) => [p.userId, p.role] as const)),
+    }),
+    [props.roomScope, room.speakMode, room.viewer, room.participants],
+  );
+
   const chatPanel = (
     <ChymeChatPanel
       messages={props.messages}
@@ -120,6 +133,11 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
       </div>
 
       <ChymeQuotaNotice notice={room.quota.notice} band={room.quota.band} />
+      {room.speakMode === 'hand_raise' ? (
+        <div role="status" style={{ margin: '12px 24px 0', padding: '8px 14px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.3)', color: '#FDE68A' }}>
+          Hand-raise mode: everyone listens until an admin lets them speak. Raise your hand to ask.
+        </div>
+      ) : null}
 
       {inCall && joinInfo ? (
         <ChymeAudioRoom
@@ -133,6 +151,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           roomScope={props.roomScope}
           backChannelAllowed={room.quota.backChannelAllowed}
           onConnectionChange={props.onConnectionChange}
+          moderation={moderation}
         />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

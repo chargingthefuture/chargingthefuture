@@ -185,8 +185,13 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('chyme_back_channel_calls', 'initiator_user_id', 'Back-channel calls you started.'),
       del('chyme_back_channel_calls', 'recipient_user_id', 'Back-channel calls you received.'),
       del('chyme_room_members', 'user_id', 'Your room membership.'),
+      // A removal row keeps a member out of a room until an admin lets them back in. A deleted
+      // account cannot come back, so the row has nothing left to enforce; the admin's action itself
+      // stays on the retained audit trail below, which names the member by id, not by row.
+      del('chyme_room_removals', 'user_id', 'Rooms an admin removed you from.'),
       soft('chyme_service_profiles', 'user_id', 'deleted_at', 'Your Chyme service profile.'),
       retain('chyme_deletion_events', 'Deletion accountability trail.'),
+      retain('chyme_admin_audit_trail', 'Admin moderation accountability trail (mute, remove, let back in, role, speak mode).'),
     ],
   },
   {

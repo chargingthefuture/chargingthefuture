@@ -21,6 +21,7 @@ import { ChymeTipButton } from './chyme-tip-dialog';
 import { useBackChannel, type BackChannelController } from './chyme-back-channel';
 import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
+import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, type ChymeModerationContext } from './chyme-moderation';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
@@ -98,9 +99,11 @@ type ChymeAudioRoomProps = {
   backChannelAllowed: boolean;
   // The live connection state, for the shell's Join pill (see ChymeConnectionState).
   onConnectionChange?: (state: ChymeConnectionState) => void;
+  // Speak mode, who is viewing, and every member's role — the moderation controls read these.
+  moderation: ChymeModerationContext;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope, backChannelAllowed, onConnectionChange }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope, backChannelAllowed, onConnectionChange, moderation }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
@@ -277,6 +280,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
             roomScope={roomScope}
             backChannelEnabled={backChannelEnabled}
             onConnectionChange={onConnectionChange}
+            moderation={moderation}
           />
         </StreamCall>
       </StreamVideo>
@@ -380,6 +384,7 @@ function ChymeAudioRoomLive({
   roomScope,
   backChannelEnabled,
   onConnectionChange,
+  moderation,
 }: {
   showChat: boolean;
   chatPanel: ReactNode;
@@ -390,6 +395,7 @@ function ChymeAudioRoomLive({
   roomScope: ChymeRoomScope;
   backChannelEnabled: boolean;
   onConnectionChange?: (state: ChymeConnectionState) => void;
+  moderation: ChymeModerationContext;
 }) {
   const { useParticipants, useCallCallingState } = useCallStateHooks();
   const participants = useParticipants();
@@ -455,6 +461,7 @@ function ChymeAudioRoomLive({
               raisedHandUserIds={raisedHandUserIds}
               backChannel={backChannel}
               backChannelEnabled={backChannelEnabled}
+              moderation={moderation}
             />
           ))}
         </div>
@@ -471,7 +478,7 @@ function ChymeAudioRoomLive({
       isMobile={true}
       onLeave={onLeave}
       stage={stage}
-      controls={<ChymeAudioControls onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} />}
+      controls={<ChymeAudioControls onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={moderation} />}
     />
   );
 }
@@ -594,12 +601,14 @@ function ChymeSpeakerTile({
   raisedHandUserIds,
   backChannel,
   backChannelEnabled,
+  moderation,
 }: {
   participant: StreamVideoParticipant;
   localHandRaised?: boolean;
   raisedHandUserIds: ReadonlySet<string>;
   backChannel: BackChannelController;
   backChannelEnabled: boolean;
+  moderation: ChymeModerationContext;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -634,14 +643,38 @@ function ChymeSpeakerTile({
       <div style={{ fontSize: 12, fontWeight: 600, color: t.TEXT, textAlign: 'center' }}>{name}</div>
       <ChymeSpeakerStatusBadge isGuest={isGuest} audioActive={audioActive} />
       {showActions ? (
-        <ChymeSpeakerActions
+        <ChymeTileActions
           clerkUserId={clerkUserId}
           name={name}
           backChannel={backChannel}
           backChannelEnabled={backChannelEnabled}
+          moderation={moderation}
         />
       ) : null}
     </div>
+  );
+}
+
+// The member actions under another member's tile (Tip, Back Channel) and, for an admin, the
+// moderation actions under those.
+function ChymeTileActions({
+  clerkUserId,
+  name,
+  backChannel,
+  backChannelEnabled,
+  moderation,
+}: {
+  clerkUserId: string;
+  name: string;
+  backChannel: BackChannelController;
+  backChannelEnabled: boolean;
+  moderation: ChymeModerationContext;
+}) {
+  return (
+    <>
+      <ChymeSpeakerActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} />
+      {moderation.viewer.isAdmin ? <ChymeModeratorActions clerkUserId={clerkUserId} name={name} moderation={moderation} /> : null}
+    </>
   );
 }
 
@@ -649,13 +682,25 @@ function ChymeAudioControls({
   onLeave,
   handRaised,
   onToggleHand,
+  moderation,
 }: {
   onLeave: () => void;
   handRaised: boolean;
   onToggleHand: () => void;
+  moderation: ChymeModerationContext;
 }) {
   const { useMicrophoneState } = useCallStateHooks();
   const { microphone, isMute } = useMicrophoneState();
+  // In hand-raise mode a listener cannot speak: the microphone control is replaced by the notice,
+  // and the microphone is turned off the moment the role says listener (an admin moved them back,
+  // or the room switched modes), so the change takes effect without waiting for a tap.
+  const listening = moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
+  useEffect(() => {
+    if (!listening) return;
+    void microphone.disable().catch(() => {
+      /* no-trace: already off, or no microphone; the server-side role holds either way */
+    });
+  }, [listening, microphone]);
 
   return (
     <ChymeControls
@@ -665,6 +710,8 @@ function ChymeAudioControls({
       onToggleHand={onToggleHand}
       joinReady
       onLeave={onLeave}
+      micControl={listening ? <ChymeListeningNotice /> : undefined}
+      extra={moderation.viewer.isAdmin ? <ChymeSpeakModeToggle moderation={moderation} /> : undefined}
     />
   );
 }

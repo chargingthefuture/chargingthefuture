@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const room = await setRoomMemberHandRaised(gate.identity, body.raised, gate.roomKey);
+    const room = await setRoomMemberHandRaised(gate.identity, body.raised, gate.roomKey, gate.auth.isAdmin);
 
     logChymeAudit({
       pluginId: 'chyme',

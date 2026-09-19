@@ -7,12 +7,15 @@ export function chymeHandle(username: string | null, userId: string): string {
 type ChymeParticipant = {
   userId: string;
   username: string | null;
-  role: 'speaker' | 'listener';
+  role: ChymeRole;
   // Server-persisted raised hand. Rides on the member's presence row (set by POST /api/chyme/hand),
   // so it stays true until the member lowers their hand or leaves — unlike a transient Stream
   // reaction. The audio room polls GET /api/chyme/room to show every other member's raised hand.
   handRaised: boolean;
 };
+
+export type ChymeRole = 'speaker' | 'listener';
+export type ChymeSpeakMode = 'open' | 'hand_raise';
 
 type ChymeRoomResponse = {
   roomId: string;
@@ -20,6 +23,10 @@ type ChymeRoomResponse = {
   roomKey: string;
   callActive: boolean;
   participants: ChymeParticipant[];
+  // 'open' (every joiner may speak) or 'hand_raise' (a joiner listens until an admin lets them
+  // speak). Who is reading, worked out on the server: whether they may moderate, and their own role.
+  speakMode?: ChymeSpeakMode;
+  viewer?: { isAdmin: boolean; role: ChymeRole };
   // How full the room is against the cap in force (the cap moves with the Stream quota band).
   capacity: { current: number; max: number };
   // What the Stream quota policy says right now: a member-facing line (null when nothing to say)
@@ -229,6 +236,37 @@ export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
 
 export async function deleteFullAccount(): Promise<ChymeDeletionResponse> {
   return authedFetchJson('/api/account/full-account', { method: 'DELETE' });
+}
+
+// --- Moderation (owner decision, 2026-09-19): admin-only, mirrors the web room's controls ---
+//
+// Each answer carries `streamApplied`; when Stream did not apply the change in the call the server
+// says so in `streamNotice`, and the app shows it — the admin's decision stands in this app either way.
+
+export type ChymeModerationResponse = { ok: true; streamApplied: boolean; streamNotice?: string };
+
+function postModeration(path: string, body: Record<string, unknown>): Promise<ChymeModerationResponse> {
+  return authedFetchJson<ChymeModerationResponse>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function postChymeAdminMute(userId: string): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/mute', { userId });
+}
+
+export function postChymeAdminRemove(userId: string): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/remove', { userId });
+}
+
+export function postChymeAdminRole(userId: string, role: ChymeRole): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/role', { userId, role });
+}
+
+export function postChymeAdminSpeakMode(mode: ChymeSpeakMode): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/speak-mode', { mode });
 }
 
 // --- Scheduled rooms, MVP (owner decision, 2026-09-19): what is coming up on the TI Radio guide ---

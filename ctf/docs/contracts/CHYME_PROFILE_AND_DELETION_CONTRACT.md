@@ -58,6 +58,14 @@ Chyme handle contract decision:
   - Contains personal data? minimal (`user_id`, scope, service_name, timestamp)
   - Retention period: retained as compliance/audit evidence
   - Legal/compliance note: should be part of deletion accountability trail
+- Table/entity: `chyme_room_removals` (2026-09-19)
+  - Contains personal data? yes (`user_id`, `username`, the removing admin's id, optional reason)
+  - Retention period: until the member's account deletion; a lifted row otherwise stays as the record
+  - Legal/compliance note: moderation record; the admin's action is also on `chyme_admin_audit_trail`
+- Table/entity: `chyme_admin_audit_trail` (2026-09-19)
+  - Contains personal data? minimal (admin `actor_id`, `target_id` of the member acted on, command, reason)
+  - Retention period: retained as the moderation accountability trail
+  - Legal/compliance note: names the member by id only; never surfaced outside the admin screen
 
 ## 5) Service-Scoped Deletion Contract
 
@@ -77,6 +85,7 @@ When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
   - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
 - Retain for compliance/fraud/finance:
   - `chyme_deletion_events` service-scope record
+  - `chyme_admin_audit_trail` (the admin's moderation actions, naming the member by id only)
 - Never touch (must remain):
   - canonical account identity and non-Chyme services
   - shared room metadata (`chyme_rooms`)
@@ -88,7 +97,9 @@ When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
 When user requests full account deletion (`DELETE /api/account/full-account`):
 
 - Additional records removed vs service-scoped deletion:
-  - currently none immediately; request is recorded and downstream reclaim dependency is queued
+  - `chyme_room_removals` rows for the member (deletion registry, account scope): a deleted account
+    cannot come back, so a removal has nothing left to enforce
+  - otherwise none immediately; request is recorded and downstream reclaim dependency is queued
   - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted (`deleteChymeStreamData`) via the shared account-deletion orchestrator's external-cleanup hook (`lib/account/external-cleanup-registry.ts`), run best-effort after the registry-driven Postgres delete. Because the hook lives in the orchestrator, it also runs on the internal-delete route and the Clerk webhook, not just this route.
 - Cross-service dependencies:
   - requires global account deletion orchestrator across all plugin domains
@@ -141,6 +152,8 @@ If user returns to Chyme after service-scoped deletion:
     - `chyme_room_members`
     - `chyme_service_profiles`
     - `chyme_deletion_events`
+    - `chyme_room_removals`
+    - `chyme_admin_audit_trail`
     - `chyme_rooms`
 - Backfill required? (yes/no):
   - no (new tables)
