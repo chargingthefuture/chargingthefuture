@@ -600,7 +600,9 @@ controls exist yet (every joiner may speak — see Known gaps).
 the percent and the band with its color, today's minutes, the straight-line projection to month end,
 "Right now" (the main room live or not, members, signed-out listeners, the caps in force, whether
 guest listening and Back Channel are open or paused, and the exact notice members see when there is
-one), the split by surface (main room, Weavers room, signed-out listeners, Back Channel), the last
+one), the split by surface (Chyme main room, Chyme Weavers room, Chyme signed-out listeners, Chyme
+Back Channel calls, Beacon broadcasts, PeerProgramming cohort calls, Foundation calls — the Chyme
+lines from heartbeats, the rest from Stream's participant-left events as people leave a call), the last
 seven days, and the settings with their environment names. A line says one person in the room all
 day costs 1,440 minutes — about 13% of the budget over a month. Step 2: the pasted text carries all
 of that in plain lines, readable without the screen. Step 3: the page redirects to `/apps/chyme`;

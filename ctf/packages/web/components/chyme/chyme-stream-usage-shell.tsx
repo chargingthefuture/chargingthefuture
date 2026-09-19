@@ -45,11 +45,18 @@ const BAND_COLOR: Record<ChymeQuotaPolicy['band'], string> = {
 // so the number the owner asked about on 2026-09-19 is on the screen rather than worked out again.
 const ONE_PERSON_ALL_DAY_MINUTES = 24 * 60;
 
+// The Chyme lines are credited from presence heartbeats; the other three from Stream's
+// participant-left webhook (lib/stream-quota/webhook-usage.ts), which carries each participant's
+// time in the call once they leave.
 function surfaceLabel(surface: string): string {
-  if (surface === 'chyme:chyme-main-room') return 'Main room (members)';
-  if (surface === 'chyme:chyme-contributors-room') return 'Weavers room (members)';
-  if (surface === 'chyme:guest') return 'Signed-out listeners';
-  if (surface === 'chyme:back-channel') return 'Back Channel calls';
+  if (surface === 'chyme:chyme-main-room') return 'Chyme main room (members)';
+  if (surface === 'chyme:chyme-contributors-room') return 'Chyme Weavers room (members)';
+  if (surface === 'chyme:guest') return 'Chyme signed-out listeners';
+  if (surface === 'chyme:back-channel') return 'Chyme Back Channel calls';
+  if (surface === 'beacon') return 'Beacon broadcasts (publishers)';
+  if (surface === 'peer-programming') return 'PeerProgramming cohort calls';
+  if (surface === 'foundation') return 'Foundation calls';
+  if (surface === 'other') return 'Other calls';
   return surface;
 }
 
@@ -334,9 +341,10 @@ export function ChymeStreamUsageShell() {
       <MobileScreenHeader title="Live audio usage" accent={t.ACCENT} icon={<Gauge size={18} color={t.ACCENT} />} backHref="/admin" />
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
-          How much of the month&apos;s Stream Video allowance the Chyme rooms have used, counted from the
-          presence heartbeats. The Stream dashboard is the bill of record; this is the number the app
-          acts on.
+          How much of the month&apos;s Stream Video allowance the app has used: the Chyme rooms from
+          their presence heartbeats, and Beacon, PeerProgramming, and Foundation calls from Stream&apos;s
+          participant-left events as people leave a call. The Stream dashboard is the bill of record;
+          this is the number the app acts on.
         </p>
 
         <UsageActions loading={loading} canCopy={payload !== null} copied={copied} onRefresh={() => void load()} onCopy={() => void onCopy()} t={t} />
