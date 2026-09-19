@@ -37,7 +37,8 @@ WITH already_written AS (
     'j-h-b-7',          -- an-invitation-to-jhb.md
     'steph-wo-1',       -- an-invitation-to-steph-wo.md
     'none-ya-970',      -- an-invitation-to-christy.md
-    'espada-18'         -- an-invitation-to-espada.md
+    'espada-18',        -- an-invitation-to-espada.md
+    'syah-neal-adoretm' -- an-invitation-to-syah.md
   ]) AS handle
 ),
 listed_skills AS (
