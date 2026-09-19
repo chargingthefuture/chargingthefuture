@@ -5,7 +5,6 @@ import styles from './admin-landing.module.css';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getAdminAreaAttention } from 'lib/admin/area-attention';
 import { AdminAreaGrid, type AdminAreaTile } from './admin-area-grid';
-import { AdminRefreshButton } from './admin-refresh-button';
 
 // The area's stable slug is the last segment of its href (e.g. /admin/bug-reports → 'bug-reports'),
 // which is the key the attention signal and the seen-marker are keyed on.
@@ -143,7 +142,6 @@ export default async function AdminPage() {
         title="Admin"
         accent="#6366F1"
         icon={<ShieldCheck size={18} color="#6366F1" />}
-        actions={<AdminRefreshButton />}
       />
       {/* No in-page title card here: the header above already names the screen and carries the icon
           and back control. Repeating it cost a screen of phone height for no new information (owner

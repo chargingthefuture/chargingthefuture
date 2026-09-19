@@ -42,6 +42,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { AdminRefreshControl } from "@/components/shared/admin-refresh";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
@@ -962,6 +963,10 @@ function ProfileListView(props: ProfileListViewProps) {
           </div>
           <PluginUserShellButton href="/apps/directory" accent={COLOR} />
           <Bell size={18} color={SUBTLE} />
+          {/* This shell builds its own top bar rather than using MobileScreenHeader, so the admin
+              refresh control has to be placed by hand here. Profiles are loaded client-side, so
+              without it the only way to see a new one was to close the app and open it again. */}
+          <AdminRefreshControl accent={COLOR} />
           <MobileTopActions />
         </div>
         <div style={{ position: "relative", marginBottom: 8 }}>

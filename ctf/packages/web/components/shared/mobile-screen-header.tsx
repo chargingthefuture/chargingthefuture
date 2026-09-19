@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useSmartBack } from '@/lib/nav/back-history';
+import { AdminRefreshControl } from './admin-refresh';
 import { MobileTopActions } from './mobile-top-actions';
 
 // A uniform on-brand top bar for screens that do not build their own — chiefly the admin shells,
@@ -137,6 +138,12 @@ export function MobileScreenHeader({
           mid-cluster and strand a lone avatar on the second row. marginLeft:auto right-aligns them
           while they share the title's row; once wrapped it is inert (they already fill the row). */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto', flexShrink: 0 }}>
+        {/* Admin screens carry a refresh control, and they carry it here rather than in each shell
+            so a new admin surface cannot ship without one (owner directive, 2026-09-19). It is
+            rendered unconditionally because it gates itself: it draws nothing unless
+            AdminRefreshProvider is above it, and only app/admin/layout.tsx mounts that. So a member
+            screen using this header gets no button, with no path test to keep in step. */}
+        <AdminRefreshControl accent={accent} />
         {actions}
         <MobileTopActions />
       </div>

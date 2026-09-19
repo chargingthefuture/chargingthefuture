@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { readerIdentity } from 'lib/fireside/_lib';
+import { firesideReadHeaders, readerIdentity } from 'lib/fireside/_lib';
 import { FIRESIDE_ERROR_CODE } from 'lib/fireside/constants';
 import { listThreadComments } from 'lib/fireside/repository';
 import { failureResponse } from 'lib/errors/failure';
@@ -28,20 +28,16 @@ const querySchema = z.object({
  * the signed-in reader's own held comments only appear on the app's own pages. Writing stays
  * same-origin and keeps its CSRF and origin checks.
  */
-const PUBLIC_READ_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  // No Access-Control-Allow-Credentials: a cross-origin caller gets the signed-out view, never a
-  // reader's own held comments, whatever cookies their browser holds for this app.
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  // A conversation changes slowly and the blog is a static site; a short shared cache keeps a
-  // popular post from asking the database on every visit.
-  'Cache-Control': 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
-} as const;
+/**
+ * What a cache may do with this is `firesideReadHeaders` in lib/fireside/_lib.ts, and it turns on
+ * whether the reader is signed in. The answer to a signed-in member carries their own held and
+ * removed comments, which nobody else may see, and this URL names only the post — so a shared cache
+ * holding that body would hand it to the next reader of the same post.
+ */
 
 /** Answers the browser's preflight so a cross-origin read from the blog is allowed to proceed. */
 export function OPTIONS() {
-  return new Response(null, { status: 204, headers: PUBLIC_READ_HEADERS });
+  return new Response(null, { status: 204, headers: firesideReadHeaders(false) });
 }
 
 export async function GET(request: Request) {
@@ -53,7 +49,7 @@ export async function GET(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'A post repo and slug are both required.' },
-      { status: 400, headers: PUBLIC_READ_HEADERS },
+      { status: 400, headers: firesideReadHeaders(false) },
     );
   }
 
@@ -71,7 +67,7 @@ export async function GET(request: Request) {
         comments,
         viewer: { isSignedIn: reader.userId != null },
       },
-      { status: 200, headers: PUBLIC_READ_HEADERS },
+      { status: 200, headers: firesideReadHeaders(reader.userId != null) },
     );
   } catch (error) {
     return failureResponse({
