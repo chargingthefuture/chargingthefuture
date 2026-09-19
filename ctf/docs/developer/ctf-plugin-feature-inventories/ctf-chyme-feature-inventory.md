@@ -57,7 +57,19 @@ Lifecycle/governance references applied:
     credited from it) and posts `POST /api/chyme/public/leave` on close. A refusal shows the
     server's own reason with a "Try again" control.
 
-15. **Hand-raise mode, the member's side (owner decision, 2026-09-19).** A room is in open mic
+15. **Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19).**
+    Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
+    — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
+    by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
+    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
+    room list on the signed-out page (both re-read on the page's refresh control). Android: the
+    Upcoming tab of the room list, which used to be a placeholder sentence. Read through the guide's
+    own public route `GET /api/ti-radio/guide` (client-side; no server import, per the plugin
+    boundary), so a signed-out visitor sees the same list. Empty state says nothing is scheduled and
+    that any approved member can book a slot; a failed read shows the route's reason. This is the
+    whole of scheduled rooms for now: no room creation, no room per slot, no search — the rest of
+    the multi-room design waits for usage.
+16. **Hand-raise mode, the member's side (owner decision, 2026-09-19).** A room is in open mic
     (every joiner may speak — the room as it shipped) or hand-raise mode. In hand-raise mode a
     joiner listens: the microphone control is replaced by "Listening — raise your hand to ask to
     speak", the microphone is turned off the moment the room says so, and a notice under the room
@@ -65,7 +77,7 @@ Lifecycle/governance references applied:
     on the next room poll (within 15s); when an admin moves them back to listening it is gone again
     and their microphone is off. Web and Android. The mode and the member's own role ride on every
     room read (`speakMode`, `viewer`).
-16. **Removed from a room (member's side, 2026-09-19).** A member an admin removed is dropped from
+17. **Removed from a room (member's side, 2026-09-19).** A member an admin removed is dropped from
     the call and the count at once, and a later Join answers "An admin removed you from this room.
     You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
@@ -290,7 +302,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 2. **Closed (2026-09-19) — admin tooling and moderation.** The Live Audio Usage screen
    (`/admin/chyme`) and, the same day on the owner's decision, moderation controls: mute, remove
    (kept out until let back in), speaker-vs-listener grant in hand-raise mode, and the speak-mode
-   switch, on web and Android (Admin Features 3–4, User Features 15–16). What remains true: the
+   switch, on web and Android (Admin Features 3–4, User Features 16–17). What remains true: the
    call-side enforcement of hand-raise mode needs `CHYME_GUEST_STREAM_ROLE` (already configured for
    guests) — without it the apps enforce the mode alone; and a Stream outage during an action is
    reported to the admin, not retried.
@@ -315,12 +327,12 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 7. **Closed (2026-09-19) — `chyme_rooms.call_active` only ever went true.** `leaveRoom` now clears
    it when the last fresh member leaves. Nothing reads it for "live" (fresh presence is), so this is
    hygiene for whoever reads the table next, not a behavior change.
-8. **Product decision, not debt — multi-room platform.** The MVP runs one open room plus the private
-   Weavers room; the `Chyme.tsx` design's room directory, room creation, upcoming/scheduled rooms,
-   search, reactions, and speaker/audience promotion are the accepted design target and are not
-   built. There are no create-room, list-rooms, scheduling, search, reaction, or promotion routes.
-   The plugin registry reflects this as `implemented_shell`. Building it is a roadmap item the owner
-   sequences, not a defect.
+8. **Owner decision (2026-09-19) — multi-room platform, scheduled rooms only.** The MVP runs one
+   open room plus the private Weavers room, and now shows what is scheduled (User Features 15) by
+   reading the TI Radio guide. The rest of the `Chyme.tsx` design — room directory, room creation,
+   a room per slot, search, reactions — is deferred by the owner until usage justifies it. There are
+   no create-room, list-rooms, search, or reaction routes. The plugin registry reflects this as
+   `implemented_shell`.
 9. **Closed by design (2026-09-19) — no in-app deletion entry point inside Chyme.** The Chyme
    buttons were removed on 2026-06-01 on purpose; the account area's Account & Data screen is the one
    place a member deletes a service or the whole account, and `DELETE /api/account/chyme-profile`
@@ -358,6 +370,16 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   `ChymeApi.ts`. Contracts: five commands plus the removals read, access policies, audit events.
   Quota note `ctf/docs/quota-impact/2026-09-19-chyme-moderation-stream-controls.md`. Test script
   CH-23 and CH-A3. Gaps item 2 closed.
+- 2026-09-19: **Scheduled rooms, MVP: Chyme shows what is coming up on the TI Radio guide.** Owner
+  decision the same day, answering the multi-room question: the schedule only, everything else
+  later, no usage to justify more. `components/chyme/chyme-upcoming.tsx` reads
+  `GET /api/ti-radio/guide` client-side (the plugin boundary forbids a server import), keeps the
+  booked slots that have not ended, soonest first, capped at five, and prints them in the reader's
+  timezone with an "On air now" mark; mounted under the rooms rail on the member view and under the
+  room list on the signed-out page. Android: the room list's Upcoming tab (`chyme-room-list.tsx`,
+  `getChymeUpcoming` in `ChymeApi.ts`) replaces its placeholder sentence with the same list. Unit
+  tests cover the slot pick and the day/time label. No schema, route, or contract change; the TI
+  Radio inventory's "Chyme does not read this schedule" gap is closed. Test script CH-22 added.
 - 2026-09-19: **Stream Video minute meter, room and guest caps, quota-driven pauses, one guest
   identity per browser, and a Join pill that follows the connection.** Owner question on the day:
   does holding the main room open around the clock, alone, burn too much of the Stream quota? The
