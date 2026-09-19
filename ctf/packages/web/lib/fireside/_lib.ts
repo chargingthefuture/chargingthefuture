@@ -49,6 +49,34 @@ export async function requireFiresideAdmin() {
   return { allowed: true as const, auth: decision };
 }
 
+/**
+ * The headers on the one public read of member-written content, and what a cache may do with it.
+ *
+ * The route answers everybody, so it is cross-origin readable and worth keeping in a shared cache
+ * for a minute — the blog is a static site and a popular post would otherwise ask the database on
+ * every visit. But it answers a signed-in member with their own comments that nobody else may see:
+ * the ones held while they wait for approval, and the ones an admin took down. That body must never
+ * be stored anywhere it can be handed to somebody else, and the URL carries only the post, so "the
+ * next request for this URL" is any reader of that post.
+ *
+ * So the shared cache applies to the signed-out answer alone, and `Vary: Cookie` keeps even that
+ * one from being served to a signed-in member — who would otherwise read the conversation with
+ * their own held comment missing from it and conclude it had been thrown away.
+ */
+export function firesideReadHeaders(isSignedIn: boolean): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    // No Access-Control-Allow-Credentials: a cross-origin caller gets the signed-out view, never a
+    // reader's own held comments, whatever cookies their browser holds for this app.
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Cache-Control': isSignedIn
+      ? 'private, no-store'
+      : 'public, max-age=30, s-maxage=60, stale-while-revalidate=300',
+    Vary: 'Cookie',
+  };
+}
+
 export function ensureMutationCsrf(request: Request): NextResponse | null {
   if (request.method === 'GET' || request.method === 'HEAD') return null;
 

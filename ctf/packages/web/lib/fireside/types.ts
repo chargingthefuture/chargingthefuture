@@ -77,11 +77,29 @@ export type FiresideComment = {
   viewerReactions: FiresideAnyReactionKind[];
   /** True when the viewer wrote it, so their own screen can label its state. */
   isOwn: boolean;
+  /**
+   * What is happening to this comment, for the person who wrote it: live, held until they are
+   * approved, or taken down by an admin.
+   *
+   * Null on every comment the viewer did not write, and null for a signed-out reader — so nothing
+   * about anybody else's moderation state is on this shape, which is returned on a public route.
+   * It exists because the thread showed a member their own held comment looking exactly like a live
+   * one, and offered an Edit control on one an admin had removed that the server then refused. Both
+   * are the screen not knowing something only the author is allowed to know.
+   */
+  viewerState: FiresideCommentState | null;
 };
+
+/**
+ * What the author of a comment is told about it. The same four words `commentStateForAuthor` in
+ * ./visibility.ts returns; spelled here so the shapes in this file do not have to import from a
+ * module that already imports this one.
+ */
+export type FiresideCommentState = 'live' | 'held_for_approval' | 'removed' | 'withdrawn';
 
 /** The author's own view of a comment, including ones nobody else can see yet. */
 export type FiresideOwnComment = FiresideComment & {
-  state: 'live' | 'held_for_approval' | 'removed' | 'withdrawn';
+  state: FiresideCommentState;
   exportToBlog: boolean;
   exportReview: ExportReview;
   /** What an admin said when they declined it, shown to the author as written. */

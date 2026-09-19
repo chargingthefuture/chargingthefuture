@@ -29,7 +29,46 @@ type ThreadComment = {
   reactions: Record<string, number>;
   viewerReactions: string[];
   isOwn: boolean;
+  /**
+   * What is happening to this comment, for the person who wrote it. Null on everybody else's, so
+   * the screen knows the state of its own reader's comments and nothing about anybody else's.
+   */
+  viewerState: "live" | "held_for_approval" | "removed" | "withdrawn" | null;
 };
+
+// What a member is told about their own comment where it sits in the conversation.
+//
+// Said here as well as on their own comments list, because this is the screen they are on when they
+// write: a held comment that looks exactly like a live one tells somebody their words are public
+// when they are not, and a removed one with nothing beside it reads as though it is still in the
+// conversation everybody else is having. Nothing is shown on anybody else's comment — the server
+// sends no state for those.
+//
+// The three colors are the ones the member's own comments list already labels these states with, so
+// one state does not read as two different things on two screens.
+const VIEWER_STATE_NOTE: Record<
+  NonNullable<ThreadComment["viewerState"]>,
+  { text: string; color: string } | null
+> = {
+  live: null,
+  held_for_approval: {
+    text: "Only you can see this. It appears to everybody once your account is approved.",
+    color: "#F59E0B",
+  },
+  removed: {
+    text: "An admin took this down. Only you can see it, and putting it back is theirs to do.",
+    color: "#F87171",
+  },
+  withdrawn: { text: "You took this down.", color: "#94A3B8" },
+};
+
+function ViewerStateNote({ comment }: { comment: ThreadComment }) {
+  const note = comment.viewerState ? VIEWER_STATE_NOTE[comment.viewerState] : null;
+  if (!note) return null;
+  return (
+    <div style={{ fontSize: 13, color: note.color, lineHeight: 1.6, marginTop: 6 }}>{note.text}</div>
+  );
+}
 
 // A comment's words, or the box its author is rewriting them in.
 //
@@ -72,6 +111,12 @@ function CommentBody({
 
 // The author's way to fix their own words in place. Shown only on their own comments; what they may
 // actually change, and what it costs a blog-export approval, is decided on the server.
+//
+// Not offered on a comment an admin removed or the author took down. The server refuses both, with
+// a sentence saying whose decision it was — but it is a question the screen should not have had to
+// ask, and a control that always fails is worse than no control. The member's own comments list has
+// worked this way since it shipped; the thread could not, until the comment shape carried the state
+// its own author is allowed to see.
 function EditButton({
   comment,
   t,
@@ -84,6 +129,7 @@ function EditButton({
   onEdit: (commentId: string) => void;
 }) {
   if (!comment.isOwn) return null;
+  if (comment.viewerState === "removed" || comment.viewerState === "withdrawn") return null;
   return (
     <button type="button" disabled={busy} onClick={() => onEdit(comment.id)}
       style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0 }}>
@@ -263,7 +309,18 @@ function ThreadComments({
 }) {
   if (loading) return <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div>;
 
-  const top = comments.filter((comment) => comment.parentCommentId == null);
+  // A reply whose parent is not on this screen still gets read.
+  //
+  // The comment it answers can be gone in two ways: its author took it down, which drops it from
+  // the conversation entirely, or an admin removed it, which leaves it visible to its own author
+  // and to nobody else. The reply itself is untouched by either — it is still there, still public,
+  // and the route still returns it. Filing it only under a parent that is not in the list rendered
+  // it nowhere, so one comment being taken out quietly took every answer to it out as well, and the
+  // people who wrote those answers saw their own words vanish from the thread.
+  const present = new Set(comments.map((comment) => comment.id));
+  const isOrphan = (comment: ThreadComment) =>
+    comment.parentCommentId != null && !present.has(comment.parentCommentId);
+  const top = comments.filter((comment) => comment.parentCommentId == null || isOrphan(comment));
   if (top.length === 0) {
     return <div style={{ fontSize: 13, color: t.SUBTLE, padding: "16px 0" }}>Nothing here yet. Say the first thing.</div>;
   }
@@ -274,8 +331,14 @@ function ThreadComments({
         <div key={comment.id} style={{ marginBottom: 16 }}>
           <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
             <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
+            {isOrphan(comment) && (
+              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.6 }}>
+                Answering a comment that is no longer shown here.
+              </div>
+            )}
             <CommentBody comment={comment} t={t} editing={editingId === comment.id} busy={busy}
               onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />
+            <ViewerStateNote comment={comment} />
             <Votes comment={comment} t={t} onReact={onReact} busy={busy} />
             <Reactions comment={comment} t={t} onReact={onReact} busy={busy} />
             <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
@@ -299,6 +362,7 @@ function ThreadComments({
               <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
               <CommentBody comment={reply} t={t} editing={editingId === reply.id} busy={busy}
                 onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />
+              <ViewerStateNote comment={reply} />
               <Votes comment={reply} t={t} onReact={onReact} busy={busy} />
               <Reactions comment={reply} t={t} onReact={onReact} busy={busy} />
               {editingId !== reply.id && (

@@ -545,6 +545,15 @@ definitions:
           type: string
       isOwn:
         type: boolean
+      viewerState:
+        type: [string, 'null']
+        enum: [live, held_for_approval, removed, withdrawn, null]
+        description: >-
+          What is happening to this comment, for the person who wrote it. Null on every comment the
+          caller did not write, and null for a signed-out reader — so no moderation state about
+          anybody else travels on this shape, which is returned on a public route. It is what lets
+          the thread tell a member that their own comment is held rather than live, and stop
+          offering an Edit control on one an admin removed, which the server then refuses.
   OwnComment:
     type: object
     description: The author's own view, including comments nobody else can see yet.
