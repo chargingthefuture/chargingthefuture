@@ -8,6 +8,7 @@ import {
 import { startBeaconBroadcastEgress, verifyBeaconWebhookSignature } from 'lib/beacon/stream';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { recordParticipantLeftUsage } from 'lib/stream-quota/webhook-usage';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,12 +99,17 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
 
-// Stream Video webhook. Verifies the signature, then acts on two events:
+// Stream Video webhook. Verifies the signature, then acts on three events:
 //
 //   - `call.session_participant_joined` — a publisher is now on the call, so start the public HLS
 //     feed and the recording. This is what carries a phone-only RTMP broadcast, which otherwise
 //     starts neither.
 //   - `call.recording_ready` — store the recording URL and post the replay to the Commons.
+//   - `call.session_participant_left` — for ANY call, not only Beacon's: this is the one URL Stream
+//     sends every call event to, and the event carries how long the participant was in the session,
+//     which is one participant's minutes. Credited to the Stream Video minute meter by the surface
+//     the call id names (lib/stream-quota/webhook-usage.ts); Chyme and Back Channel are skipped
+//     because their heartbeats already feed the meter (2026-09-19).
 //
 // Every other event is acknowledged without acting so Stream stops retrying.
 //
@@ -144,6 +150,10 @@ export async function POST(request: Request) {
     }
     if (type === 'call.recording_ready') {
       return await handleRecordingReady(payload);
+    }
+    if (type === 'call.session_participant_left') {
+      const credited = await recordParticipantLeftUsage(payload);
+      return NextResponse.json({ ok: true, handled: credited }, { status: 200 });
     }
     // Acknowledge every other lifecycle event so Stream stops retrying.
     return NextResponse.json({ ok: true, handled: false }, { status: 200 });

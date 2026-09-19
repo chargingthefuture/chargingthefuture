@@ -50,10 +50,11 @@ These are hard limits and must be treated as non-burstable ceilings in feature d
 
 ## Observability and Alerting
 - The Video meter exists as of 2026-09-19: `stream_video_usage_daily` is credited from the Chyme
-  presence heartbeats, summarized by `ctf/packages/web/lib/stream-quota/usage.ts`, shown on
-  `/admin/chyme`, and acted on by `lib/stream-quota/policy.ts` (the bands above, in force for the
-  Chyme rooms). Other Video consumers (Beacon, Foundation, PeerProgramming) can credit the same
-  table with `recordStreamVideoUsage`; they do not yet. The Stream dashboard is the bill of record.
+  presence heartbeats and, for every other call (Beacon, Foundation, PeerProgramming), from
+  Stream's `call.session_participant_left` webhook (`lib/stream-quota/webhook-usage.ts`, received
+  by the Beacon webhook route); summarized by `ctf/packages/web/lib/stream-quota/usage.ts`, shown
+  on `/admin/chyme`, and acted on by `lib/stream-quota/policy.ts` (the bands above, in force for
+  the Chyme rooms). The Stream dashboard is the bill of record.
 - Emit usage metrics and alerts at threshold transitions (70/85/95/100).
 - Track feature-level contribution to quota consumption.
 - Keep monthly usage dashboards for product and engineering planning.
