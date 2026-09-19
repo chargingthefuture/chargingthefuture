@@ -122,12 +122,58 @@ type ExportRequestRow = {
 };
 
 /**
+ * The three column conditions that make a row a request nobody has decided yet.
+ *
+ * Written once and interpolated, rather than typed out beside each query that needs it, because
+ * every screen and signal about this queue has to be looking at the same set. `$1` is a timestamp
+ * to look for changes after, or null for every request in the queue.
+ */
+const PENDING_REQUEST_WHERE = `c.export_review = 'pending'
+        AND c.export_to_blog = TRUE
+        AND c.status = 'visible'
+        AND ($1::timestamptz IS NULL OR c.updated_at > $1)`;
+
+/**
+ * Of a set of pending rows, the ones that are actually in the queue: the author has to be approved
+ * in Unlock.
+ *
+ * An unapproved author's words are not publicly visible in the app yet, so there is nothing to
+ * decide about publishing them further; their request waits and arrives when Unlock approves them.
+ *
+ * This is the half of the rule that cannot be said in SQL — approval is Unlock's to answer, through
+ * the platform interface — and it is the half that everything asking about this queue kept getting
+ * wrong in a different way. So it is one function, and both the screen and the admin landing's dot
+ * go through it.
+ */
+async function keepApprovedAuthors<T extends { author_user_id: string }>(rows: T[]): Promise<T[]> {
+  if (rows.length === 0) return [];
+  const approved = await listUnlockedUserIds(rows.map((row) => row.author_user_id));
+  return rows.filter((row) => approved.has(row.author_user_id));
+}
+
+/**
+ * How many requests are waiting, counting only what the queue would actually show, and optionally
+ * only those that changed after a moment.
+ *
+ * The admin landing's "new to review" dot reads this. It used to be its own SQL count in
+ * `lib/admin/area-attention.ts` with the three column conditions and no way to ask Unlock anything,
+ * so it lit up for a request the queue then did not list and sent an admin to a screen saying there
+ * was nothing there. A signal that points at an empty screen teaches an admin to stop trusting it,
+ * and then it is worth less than no signal at all.
+ */
+export async function countPendingExportRequests(since: Date | null): Promise<number> {
+  const result = await queryDb<{ author_user_id: string }>(
+    `SELECT c.author_user_id
+       FROM fireside_comments c
+      WHERE ${PENDING_REQUEST_WHERE}`,
+    [since],
+  );
+  return (await keepApprovedAuthors(result.rows)).length;
+}
+
+/**
  * The queue an admin works: comments whose authors have asked for them to go into the blog build,
  * oldest first so nobody's request sits behind a newer one.
- *
- * Only comments from approved authors appear. An unapproved author's words are not publicly visible
- * in the app yet, so there is nothing to decide about publishing them further; their request waits
- * and arrives here when Unlock approves them.
  *
  * Counting and paging happen on the same filtered list, in one function, because they did not
  * before and could not agree. The count was plain SQL with the three column conditions, and the
@@ -136,7 +182,7 @@ type ExportRequestRow = {
  * empty screen, and the page after it was empty too, because LIMIT and OFFSET had been spent on
  * rows that were then thrown away.
  *
- * The scan is the whole pending set rather than one page of it. That set is what an admin has not
+ * The scan is all of the pending set rather than one page of it. That set is what an admin has not
  * decided yet, which is small by definition; the alternative is asking Unlock about one page at a
  * time and still not knowing how many pages there are.
  */
@@ -155,14 +201,12 @@ export async function readPendingExportQueue(input: { page: number; pageSize: nu
             to_char(c.updated_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS requested_at
        FROM fireside_comments c
        JOIN fireside_threads t ON t.id = c.thread_id
-      WHERE c.export_review = 'pending' AND c.export_to_blog = TRUE AND c.status = 'visible'
+      WHERE ${PENDING_REQUEST_WHERE}
       ORDER BY c.created_at ASC`,
+    [null],
   );
 
-  const approved = result.rows.length
-    ? await listUnlockedUserIds(result.rows.map((row) => row.author_user_id))
-    : new Set<string>();
-  const waiting = result.rows.filter((row) => approved.has(row.author_user_id));
+  const waiting = await keepApprovedAuthors(result.rows);
 
   const total = waiting.length;
   // An out-of-range page clamps to the last one rather than showing nothing, so a bookmarked page
