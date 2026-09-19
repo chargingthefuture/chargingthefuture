@@ -214,3 +214,154 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Moderation (2026-09-19). Written durably to chyme_admin_audit_trail by recordChymeAdminAudit.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.mute
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+        tenancyCheck: pass_or_fail
+    dataClassesAccessed:
+      - chyme_room_metadata
+      - participant_roster_metadata
+      - moderation_record
+    targetContext:
+      workspaceId: workspace_identifier
+      roomKey: room_key
+      targetType: member_or_room
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.remove
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+        tenancyCheck: pass_or_fail
+    dataClassesAccessed:
+      - chyme_room_metadata
+      - participant_roster_metadata
+      - moderation_record
+    targetContext:
+      workspaceId: workspace_identifier
+      roomKey: room_key
+      targetType: member_or_room
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.lift-removal
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+        tenancyCheck: pass_or_fail
+    dataClassesAccessed:
+      - chyme_room_metadata
+      - participant_roster_metadata
+      - moderation_record
+    targetContext:
+      workspaceId: workspace_identifier
+      roomKey: room_key
+      targetType: member_or_room
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.role
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+        tenancyCheck: pass_or_fail
+    dataClassesAccessed:
+      - chyme_room_metadata
+      - participant_roster_metadata
+      - moderation_record
+    targetContext:
+      workspaceId: workspace_identifier
+      roomKey: room_key
+      targetType: member_or_room
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.speak-mode
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+        tenancyCheck: pass_or_fail
+    dataClassesAccessed:
+      - chyme_room_metadata
+      - participant_roster_metadata
+      - moderation_record
+    targetContext:
+      workspaceId: workspace_identifier
+      roomKey: room_key
+      targetType: member_or_room
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

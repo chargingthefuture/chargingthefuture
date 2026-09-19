@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
@@ -28,6 +28,8 @@ export function ChymeControls({
   onToggleHand,
   joinReady,
   onLeave,
+  micControl,
+  extra,
 }: {
   muted: boolean;
   onToggleMute: () => void;
@@ -35,6 +37,10 @@ export function ChymeControls({
   onToggleHand: () => void;
   joinReady: boolean;
   onLeave: () => void;
+  // Replaces the Mute/Unmute button — a member listening in hand-raise mode sees a notice instead.
+  micControl?: ReactNode;
+  // Rendered after the hand control — the admin's speak-mode switch.
+  extra?: ReactNode;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -45,14 +51,17 @@ export function ChymeControls({
 
   return (
     <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap' }}>
-      <button onClick={onToggleMute} style={muteStyle}>
-        {muted ? <MicOff size={16} /> : <Mic size={16} />}
-        {muted ? 'Unmute' : 'Mute'}
-      </button>
+      {micControl ?? (
+        <button onClick={onToggleMute} style={muteStyle}>
+          {muted ? <MicOff size={16} /> : <Mic size={16} />}
+          {muted ? 'Unmute' : 'Mute'}
+        </button>
+      )}
       <button onClick={onToggleHand} style={handStyle}>
         <Hand size={16} />
         {handRaised ? 'Lower Hand' : 'Raise Hand'}
       </button>
+      {extra}
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 12, color: t.FAINT, display: 'flex', alignItems: 'center', gap: 6 }}>
         <Volume2 size={14} /> Audio

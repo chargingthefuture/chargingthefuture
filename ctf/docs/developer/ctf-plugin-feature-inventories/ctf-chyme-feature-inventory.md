@@ -57,6 +57,20 @@ Lifecycle/governance references applied:
     credited from it) and posts `POST /api/chyme/public/leave` on close. A refusal shows the
     server's own reason with a "Try again" control.
 
+15. **Hand-raise mode, the member's side (owner decision, 2026-09-19).** A room is in open mic
+    (every joiner may speak — the room as it shipped) or hand-raise mode. In hand-raise mode a
+    joiner listens: the microphone control is replaced by "Listening — raise your hand to ask to
+    speak", the microphone is turned off the moment the room says so, and a notice under the room
+    header says what the mode means. When an admin lets them speak the microphone control returns
+    on the next room poll (within 15s); when an admin moves them back to listening it is gone again
+    and their microphone is off. Web and Android. The mode and the member's own role ride on every
+    room read (`speakMode`, `viewer`).
+16. **Removed from a room (member's side, 2026-09-19).** A member an admin removed is dropped from
+    the call and the count at once, and a later Join answers "An admin removed you from this room.
+    You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
+    answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
+    Chyme admin screen.
+
 ## Admin Features
 
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
@@ -69,8 +83,22 @@ Lifecycle/governance references applied:
    count is the app's own estimate from the presence heartbeats; the Stream dashboard is the bill
    of record.
 2. Eligibility gate must enforce shared access approval model (`approved user` or `admin`) for room/chat/join routes.
-3. No moderation controls (mute, remove, speaker grant) exist. That is a product decision still
-   open with the owner, not a build gap — see "Gaps and Known Technical Debt".
+3. **Moderation controls (owner decision, 2026-09-19), web and Android.** An admin in the room
+   sees, under every other member's tile: **Mute** (turns their microphone off in the call), **Remove**
+   (drops them from the call and keeps them out until an admin lets them back in — a confirm first),
+   and in hand-raise mode **Let speak** / **Listening** (their role). In the control row an admin sees
+   the **speak-mode switch**: Open mic ↔ Hand-raise mode. Switching to hand-raise turns everyone
+   present except the acting admin into a listener and mutes them; switching back lets everyone
+   unmute. Every action is recorded in `chyme_admin_audit_trail` and applied in the Stream call
+   through the server SDK (`lib/chyme/stream-moderation.ts`); when Stream did not apply it (an
+   outage, a call that ended) the answer says so in `streamNotice` and the control shows the line —
+   the decision stands in this app either way. Hand-raise mode is enforced server-side on the call
+   only when `CHYME_GUEST_STREAM_ROLE` is set (the listen-only role the owner configured for
+   guests doubles as the listener role); unset, the apps enforce it alone, as guest listen-only
+   was before the role existed.
+4. **Removed members, on the Live Audio Usage screen (`/admin/chyme`).** Every live removal across
+   both rooms, newest first, with the reason and one control, **Let back in**, which lifts the
+   removal (the row stays as the record) and unblocks the member from the call.
 
 ## API Surface and Route Map (Target)
 
@@ -79,13 +107,15 @@ Lifecycle/governance references applied:
 Chyme plugin routes:
 
 - `GET /api/chyme/room` — the room, its fresh participants, `capacity` (`{ current, max }` against
-  the cap in force), and `quota` (`{ band, notice, guestListenAllowed, backChannelAllowed }` from
-  the Stream quota policy). Polled every 15s by both apps while a room is shown.
+  the cap in force), `quota` (`{ band, notice, guestListenAllowed, backChannelAllowed }` from
+  the Stream quota policy), `speakMode` (`'open' | 'hand_raise'`), and `viewer`
+  (`{ isAdmin, role }` — worked out on the server; an admin is always a speaker). Polled every 15s
+  by both apps while a room is shown.
 - `GET /api/chyme/messages` — read bounded room history. Optional `?limit` is clamped to the `chyme.messages.list` contract bounds (minimum 1, maximum 100) at the route layer; a missing or non-numeric value falls back to the default (100).
 - `POST /api/chyme/messages` — send a chat message. CSRF-guarded (`x-ctf-csrf: '1'` + same-origin).
 - `DELETE /api/chyme/messages/[messageId]` — delete the caller's OWN room chat message. Author-only: the repository (`deleteRoomMessage`) checks ownership and deletes only when `user_id` matches; a message that is not the caller's returns **403** (`CHYME_NOT_MESSAGE_OWNER`), an unknown/already-gone id returns **404** (`CHYME_MESSAGE_NOT_FOUND`), a malformed (non-UUID) id returns **400**. Room-scoped via `?room=` like the sibling message routes. Audit `chyme.message.delete`. CSRF-guarded. There is no in-place edit — the client's **Edit** loads the message text into the composer and calls this delete, so a corrected message is a fresh row with a new id/timestamp (matching the Commons home chat).
-- `POST /api/chyme/join` — load/bootstrap the room and mint Stream join credentials; marks the member joined. CSRF-guarded. **409** (`CHYME_ROOM_FULL`, with `capacity`) when the room already holds as many members as the quota policy's cap allows — checked before the Stream mint (a turned-away member costs no Stream call) and again under a lock on the room row inside `markRoomCallJoined`, so two members racing for the last spot cannot both take it. A member already inside the presence window is never turned away by their own row. Audited as a deny with reason `room_full`.
-- `POST /api/chyme/heartbeat` — presence keepalive; refreshes the member's `last_seen_at` while in the call and credits the seconds since the previous heartbeat (capped at the 45s window) to the Stream Video minute meter (`stream_video_usage_daily`, surface `chyme:<roomKey>`). CSRF-guarded.
+- `POST /api/chyme/join` — load/bootstrap the room and mint Stream join credentials; marks the member joined (an admin as a speaker; in hand-raise mode a member as a listener). CSRF-guarded. **403** `CHYME_REMOVED_FROM_ROOM` while an admin's removal stands. **409** (`CHYME_ROOM_FULL`, with `capacity`) when the room already holds as many members as the quota policy's cap allows — checked before the Stream mint (a turned-away member costs no Stream call) and again under a lock on the room row inside `markRoomCallJoined`, so two members racing for the last spot cannot both take it. A member already inside the presence window is never turned away by their own row. Audited as a deny with reason `room_full`.
+- `POST /api/chyme/heartbeat` — presence keepalive (403 `CHYME_REMOVED_FROM_ROOM` while a removal stands, so a still-open page cannot keep a removed member present); refreshes the member's `last_seen_at` while in the call and credits the seconds since the previous heartbeat (capped at the 45s window) to the Stream Video minute meter (`stream_video_usage_daily`, surface `chyme:<roomKey>`). CSRF-guarded.
 - `POST /api/chyme/hand` — persists the caller's raise/lower hand on their presence row (`{ raised: boolean }`); returns `{ ok, room }` with refreshed participants. The raised hand stays visible to everyone until lowered, the member leaves, or their presence goes stale. Audit command `chyme.hand`. CSRF-guarded.
 - `POST /api/chyme/leave` — drops the member's presence row on exit (which also clears any raised hand). CSRF-guarded.
 - `GET /api/chyme/public/room` — **public, unauthenticated, read-only.** Returns the one default room's live status (`isLive`, `participantCount`, `guestCount`) and, when live, `guestListenAllowed` — false, with `listenUnavailable` carrying the plain reason, while the Stream quota policy has guest listening paused (Orange band and above). Since 2026-09-19 this route touches nothing on Stream: the guest identity is minted by the listen route below on the visitor's tap, so a page load is no longer a Stream user. Only a failed database read returns 503, with the reason. Per-IP rate limit (30 a minute).
@@ -95,8 +125,18 @@ Chyme plugin routes:
 - `GET /api/chyme/public/messages` — **public, unauthenticated, read-only** (owner directive, 2026-09-18: a signed-out visitor can read the room chat and signs in to write). Returns the one default room's recent messages (`ok`, `isLive`, `messages`; optional `?limit` clamped to 1–100, default 50) only while the room is live; when nobody is in the call it answers `isLive: false` with an empty list. Per-IP rate limit like the room route (the page polls every ten seconds). A failed database read returns 503 with the reason. There is no POST: writing still needs a signed-in, approved member via `POST /api/chyme/messages`.
 - `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
 
-Admin route (2026-09-19):
+Admin routes (2026-09-19). All `requireChymeAdminAccess` (`requiredRoles: ['admin']`); the mutations
+take the same-origin `x-ctf-csrf: '1'` header and accept `?room=contributors`; every mutation writes a
+row in `chyme_admin_audit_trail` (`recordChymeAdminAudit`) whatever the outcome, and answers
+`{ ok, streamApplied, streamNotice? }` — `streamNotice` carries Stream's own reason when the call
+side did not apply (the decision is recorded and enforced by this app either way):
 
+- `POST /api/chyme/admin/mute` ← `{ userId }` — turn the member's microphone off in the call. Nothing stored beyond the audit row. Audit `chyme.admin.mute`.
+- `POST /api/chyme/admin/remove` ← `{ userId, reason? }` — remove the member from the room and keep them out: presence row deleted, a `chyme_room_removals` row inserted (or its reason refreshed), the member blocked from the Stream call. Audit `chyme.admin.remove`.
+- `POST /api/chyme/admin/lift-removal` ← `{ userId }` — let a removed member back in: the removal row is lifted (kept as the record) and the member unblocked from the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when there was no live removal. Audit `chyme.admin.lift-removal`.
+- `POST /api/chyme/admin/role` ← `{ userId, role: 'speaker' | 'listener' }` — hand-raise mode: let a present member speak, or move them back to listening (which also mutes them). Sets `chyme_room_members.role` and, when `CHYME_GUEST_STREAM_ROLE` is set, the member's role on the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when they are not present. Audit `chyme.admin.role`.
+- `POST /api/chyme/admin/speak-mode` ← `{ mode: 'open' | 'hand_raise' }` — switch the room's mode. Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call (`demoted` in the answer). Audit `chyme.admin.speak-mode`.
+- `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
 - `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface and per-day rows), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
 
 Back Channel routes (free 1:1 audio sidebar between two members in the same live room, spec #1746). All under `/api/chyme/back-channel/`; all require `requireChymeAccess` (signed-in + approved_full); all mutations CSRF-guarded:
@@ -127,11 +167,15 @@ Current command-contract note:
 Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, aligned to route assumptions and schema-drift checks.
 
 1. `chyme_rooms`
-   - Shared room metadata (`call_active`), one row per room keyed by unique `room_key`. **Two rooms exist:** the open `chyme-main-room` and the private `chyme-contributors-room` (the Weavers room). Both are created at runtime via `ensureRoom(roomKey)` upsert (no schema change — the table already supported multiple rooms; `chyme_room_members`, `chyme_messages`, and `chyme_back_channel_calls` all key off `room_id`). Deletion (`markServiceDeletion`) removes the member's messages and presence rows across **all** rooms (keyed on `user_id`), so the private room is covered.
+   - Shared room metadata (`call_active`, and since 2026-09-19 `speak_mode TEXT NOT NULL DEFAULT 'open'`
+     — `open` or `hand_raise`, written only by `POST /api/chyme/admin/speak-mode`), one row per room
+     keyed by unique `room_key`. **Two rooms exist:** the open `chyme-main-room` and the private `chyme-contributors-room` (the Weavers room). Both are created at runtime via `ensureRoom(roomKey)` upsert (no schema change — the table already supported multiple rooms; `chyme_room_members`, `chyme_messages`, and `chyme_back_channel_calls` all key off `room_id`). Deletion (`markServiceDeletion`) removes the member's messages and presence rows across **all** rooms (keyed on `user_id`), so the private room is covered.
 2. `chyme_service_profiles`
    - Plugin extension lifecycle per user (`active|deleted`, timestamps).
 3. `chyme_room_members`
-   - Membership roster keyed by `(room_id, user_id)`, role enum (`speaker|listener`), last-seen updates, and `hand_raised BOOLEAN NOT NULL DEFAULT FALSE` (persistent raise/lower hand state, set by `POST /api/chyme/hand`, cleared on leave/row deletion). The member is identified by the raw `username` (no separate `display_name` column); the app renders it as `@username`, falling back to `user-<first 8 of user_id>` when the username is null.
+   - Membership roster keyed by `(room_id, user_id)`, role enum (`speaker|listener` — read only in
+     hand-raise mode: an admin joins as a speaker, a member as a listener until an admin lets them
+     speak; ignored in open mode), last-seen updates, and `hand_raised BOOLEAN NOT NULL DEFAULT FALSE` (persistent raise/lower hand state, set by `POST /api/chyme/hand`, cleared on leave/row deletion). The member is identified by the raw `username` (no separate `display_name` column); the app renders it as `@username`, falling back to `user-<first 8 of user_id>` when the username is null.
 4. `chyme_messages`
    - Message history with DB-level text constraint (`1..1000` chars). The author is identified by the raw `username` (no separate `display_name` column); the app renders it as `@username`, falling back to `user-<first 8 of user_id>` when the username is null.
 5. `chyme_deletion_events`
@@ -158,6 +202,18 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
       and for the band that drives the quota policy. Named for what it measures rather than for
       Chyme because Beacon, Foundation, and PeerProgramming video could credit it the same way; today
       only the Chyme surfaces do. The Stream dashboard is the bill of record. Same migration as above.
+11. `chyme_room_removals` (2026-09-19)
+    - A member an admin removed from a room: `id`, `room_id` (→ `chyme_rooms`, cascade), `user_id`,
+      `username`, `removed_by`, `reason` (≤300), `removed_at`, `lifted_at`, `lifted_by`. Partial unique
+      index on `(room_id, user_id) WHERE lifted_at IS NULL` — one live removal per member per room;
+      lifted rows stay as the record. Join and heartbeat refuse while a live row exists. Migration
+      `ctf/db/migrations/post/0030_chyme_moderation.sql` (also adds `chyme_rooms.speak_mode`).
+12. `chyme_admin_audit_trail` (2026-09-19)
+    - Every Chyme admin action (mute, remove, let back in, role, speak mode), in the shape every other
+      plugin's durable admin trail uses: `actor_id`, `command`, `policy_status`, `reason`,
+      `target_type`, `target_id`, `result`, `error_category`, `metadata`, `created_at`; indexed on
+      `(created_at DESC, actor_id, command)`. Written by `recordChymeAdminAudit`
+      (`lib/chyme/admin-audit.ts`), which never throws. Same migration.
 8. `chyme_back_channel_calls`
    - Back Channel 1:1 call lifecycle (spec #1746). One row per call, keyed by `id`, referencing `chyme_rooms(id)` (`ON DELETE CASCADE`). Columns: `initiator_user_id`, `recipient_user_id`, `initiator_username`, `recipient_username`, `status` (`inviting|active|declined|ended|lapsed`), `stream_call_id`, `created_at`, `answered_at`, `ended_at`, `ended_by_user_id`, `last_heartbeat_at`. A CHECK forbids self-calls; a partial unique index (`status IN ('inviting','active')`) allows only one live call per initiator→recipient direction. Indexed by recipient+status, initiator+status, and room. Holds no chat/history — a row exists only to run one call and is removed on the member's Chyme service deletion (and account deletion). Never surfaced as Trust evidence or in any public feed (rule 132).
 
@@ -183,6 +239,12 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
     browser to one Stream guest user (`chyme-guest-<id>`) and one roster row and nothing else; it is
     never read on a member route and never joined to a member identity. A visitor clearing cookies
     gets a fresh id and a fresh Stream user, which is the pre-2026-09-19 behavior for every load.
+11. **Moderation is admin-only and recorded (2026-09-19).** The six `/api/chyme/admin/*` routes run
+    `requireChymeAdminAccess` (`requiredRoles: ['admin']`), the mutations take the same-origin CSRF
+    header, and every mutation writes `chyme_admin_audit_trail` whatever the outcome. A removal
+    keeps a member out of one room only (per-room rows) and is lifted only by an admin; the reason,
+    if given, is stored with it and shown on the admin screen. Nothing here is surfaced as Trust
+    evidence or on any public feed (rule 132).
 8. **Back Channel (spec #1746)** is consent-gated and private: an invite must be accepted (no cold ringing); declining returns only `{ ok: true }` and sends the initiator nothing. It is block-aware — a `member_blocks` row in either direction hides the tile action and makes `invite` return `403`, using the shared `isBlockedBetween` check. It is room-bound — an invite is only valid while both members are freshly present, and lapses server-side otherwise. It carries **no ServiceCredits** (a required Foundation note on every call surface points paid consultations to Foundation). Participation is never exposed as Trust evidence, in activity feeds, or on any public surface (rule 132 sensitive-participation exclusion), and no call history is retained. A member's `chyme_back_channel_calls` rows are deleted on Chyme service deletion and account deletion.
 
 ## Web and Android Delivery Status
@@ -194,6 +256,10 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 5. Android pixel pass: `ChymeRoom.tsx` (and sub-components `chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-chat-view`, plus the live `ChymeAudioRoom.tsx`) is aligned to `design/.../survivor-hub/MobileChyme.tsx`, `MobileChymeEmpty.tsx`, `MobileChymeLoading.tsx`. A canonical `api.ts` entry-point was added. All data is bound to real `/api/chyme/*` endpoints. The static in-room stage (`chyme-active-room.tsx`) was replaced by the live `ChymeAudioRoom.tsx` (Stream Video) on 2026-06-08. The public state (`MobileChymePublic.tsx`) is not applicable — Chyme is auth-only per the #102 visibility decision. Delivered 2026-05-31; live audio added 2026-06-08.
 7. **Back Channel** (spec #1746) is delivered on **web and Android in the same change** (Chyme is on the native keep-list, rule 105). Web: a "Back Channel" action on each other member's participant tile (next to Tip), an incoming-invite toast, and a floating active-call mini-panel that keeps the room usable behind it (`components/chyme/chyme-back-channel*.tsx`, driven by the `useBackChannel` poll hook). Android: the same tile action, a bottom-sheet incoming invite (`ChymeBackChannelInviteSheet.tsx`), and a full-screen active call (`ChymeBackChannelCall.tsx`, driven by `useChymeBackChannel`) that reuses the Chyme Android foreground service so a backgrounded call keeps playing. Both platforms mint a Stream Video 1:1 audio call (`default` call type, audio-only) via `createChymeBackChannelCredentials`. **On-device verification (real EAS build, not Expo Go) that a backgrounded Back Channel keeps audio is a required release gate** — see the Android app test script (step AN-BC) and the Chyme test-script Back Channel section.
 
+9. **Moderation controls (2026-09-19)** are delivered on **web and Android in the same change**:
+   the tile actions (Mute, Remove, Let speak / Listening), the speak-mode switch, the listener's
+   microphone notice, and the hand-raise notice under the room. Web-only by nature: the Removed
+   members section on the admin screen.
 8. **Stream quota meter, caps, and notices (2026-09-19)** are delivered on **web and Android in the
    same change** for the member-facing parts (the "N of M" count, the quota notice under the room,
    the room-full refusal on join, the Back Channel pause) — Chyme is on the keep-list. Web-only by
@@ -221,11 +287,13 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
    on the shared account-deletion orchestrator (`lib/account/deletion-orchestrator.ts`), which is
    the account area's, not Chyme's. Chyme's part (its own tables, the Stream copy via
    `deleteChymeStreamData`, the Back Channel rows) is complete.
-2. **Closed in part (2026-09-19); the rest is a product decision.** Admin tooling: the Live Audio
-   Usage screen (`/admin/chyme`) is the first Chyme admin surface. Moderation controls (mute a
-   member, remove a member, speaker-vs-listener grant) are not built because the owner has not
-   decided the room should have a moderator; Chyme is open social audio where every joiner may
-   speak. Building them is a design decision to take with the owner, not a gap to close by default.
+2. **Closed (2026-09-19) — admin tooling and moderation.** The Live Audio Usage screen
+   (`/admin/chyme`) and, the same day on the owner's decision, moderation controls: mute, remove
+   (kept out until let back in), speaker-vs-listener grant in hand-raise mode, and the speak-mode
+   switch, on web and Android (Admin Features 3–4, User Features 15–16). What remains true: the
+   call-side enforcement of hand-raise mode needs `CHYME_GUEST_STREAM_ROLE` (already configured for
+   guests) — without it the apps enforce the mode alone; and a Stream outage during an action is
+   reported to the admin, not retried.
 3. **Closed (2026-09-19) — no app-level minute metering.** The 2026-06-01 quota note recorded that
    the app had no participant-minute signal and the Stream dashboard was the only source of truth.
    `stream_video_usage_daily` is credited from every presence heartbeat (members, guests, Back
@@ -277,6 +345,19 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-19: **Moderation controls: mute, remove, let back in, and hand-raise mode with speaker
+  grant.** Owner decision the same day, answering the open question of whether the room should have
+  a moderator. Server: `chyme_rooms.speak_mode`, `chyme_room_removals`, `chyme_admin_audit_trail`
+  (migration `0030`); `lib/chyme/moderation.ts` (the database half), `lib/chyme/stream-moderation.ts`
+  (the call half, on `@stream-io/node-sdk` — new dependency — mute, block, unblock, member role),
+  `lib/chyme/admin-audit.ts` (durable trail); six routes under `/api/chyme/admin/`; the room read
+  carries `speakMode` and `viewer`; join and heartbeat answer 403 while a removal stands, and an admin
+  joins as a speaker. Web: `chyme-moderation.tsx` (tile actions, speak-mode switch, listener notice),
+  `chyme-controls.tsx` takes a microphone-control override and an extra slot, the admin screen gains
+  Removed members. Android: `ChymeModeration.tsx` and the same wiring in `ChymeAudioRoom.tsx`,
+  `ChymeApi.ts`. Contracts: five commands plus the removals read, access policies, audit events.
+  Quota note `ctf/docs/quota-impact/2026-09-19-chyme-moderation-stream-controls.md`. Test script
+  CH-23 and CH-A3. Gaps item 2 closed.
 - 2026-09-19: **Stream Video minute meter, room and guest caps, quota-driven pauses, one guest
   identity per browser, and a Join pill that follows the connection.** Owner question on the day:
   does holding the main room open around the clock, alone, burn too much of the Stream quota? The

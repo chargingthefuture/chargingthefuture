@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { createStreamJoinCredentials } from 'lib/chyme/stream';
-import { ChymeRoomFullError, chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
+import { ChymeRemovedError, ChymeRoomFullError, chymeHandle, getRoomState, markRoomCallJoined } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
 import { streamFailureMessage } from 'lib/shared/stream-error-text';
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const room = await getRoomState(gate.identity, gate.roomKey);
+    const room = await getRoomState(gate.identity, gate.roomKey, gate.auth.isAdmin);
 
     // The cap in force (it moves with the Stream quota band). Checked before the Stream mint so a
     // turned-away member costs no Stream call, and again under a lock inside markRoomCallJoined so
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const activeRoom = await markRoomCallJoined(gate.identity, gate.roomKey);
+    const activeRoom = await markRoomCallJoined(gate.identity, gate.roomKey, gate.auth.isAdmin);
 
     logChymeAudit({
       pluginId: 'chyme',
@@ -91,6 +91,19 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof ChymeRoomFullError) {
       return roomFullResponse(gate.auth.userId, null, gate.roomKey, error.capacity);
+    }
+    if (error instanceof ChymeRemovedError) {
+      logChymeAudit({
+        pluginId: 'chyme',
+        command: 'chyme.call.join',
+        actorId: gate.auth.userId,
+        status: 'deny',
+        reason: 'removed_from_room',
+        target: { roomKey: gate.roomKey },
+        result: 'failure',
+        errorCategory: 'forbidden',
+      });
+      return NextResponse.json({ ok: false, code: CHYME_ERROR_CODE.removedFromRoom, message: error.message }, { status: 403 });
     }
     reportError(error, { area: 'chyme', op: 'call_join', extra: { userId: gate.auth.userId } });
     logChymeAudit({

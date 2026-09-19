@@ -8,6 +8,8 @@ import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import type { StreamVideoUsageSummary } from 'lib/stream-quota/usage';
 import type { ChymeQuotaPolicy } from 'lib/stream-quota/policy';
+import type { ChymeRoomRemoval } from 'lib/chyme/types';
+import { requestJson } from './chyme-shared';
 
 // The Stream Video minute meter, for the owner.
 //
@@ -209,6 +211,82 @@ function SettingsSection({ payload, t }: { payload: UsagePayload; t: Tokens }) {
   );
 }
 
+// Members an admin removed from a room, with the one control that lets them back in. Read from
+// /api/chyme/admin/removals; "Let back in" posts to /api/chyme/admin/lift-removal for the row's
+// room and re-reads the list.
+function RemovedMembersSection({ t }: { t: Tokens }) {
+  const [rows, setRows] = useState<ChymeRoomRemoval[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const payload = await requestJson<{ ok: true; removals: ChymeRoomRemoval[] }>('/api/chyme/admin/removals');
+      setRows(payload.removals);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The removed-members list did not load.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const letBackIn = useCallback(
+    async (row: ChymeRoomRemoval) => {
+      setBusyId(row.id);
+      try {
+        const scope = row.roomKey === 'chyme-contributors-room' ? '?room=contributors' : '';
+        const result = await requestJson<{ ok: true; streamNotice?: string }>(`/api/chyme/admin/lift-removal${scope}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ userId: row.userId }),
+        });
+        setError(result.streamNotice ?? null);
+        await load();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : 'The action did not complete.');
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [load],
+  );
+
+  return (
+    <Section t={t}>
+      <SectionTitle t={t}>Removed members</SectionTitle>
+      {error ? <p role="alert" style={{ fontSize: 13, color: '#FDE68A', margin: '0 0 8px' }}>{error}</p> : null}
+      {rows === null && !error ? <div style={{ fontSize: 13, color: t.SUBTLE }}>Loading…</div> : null}
+      {rows && rows.length === 0 ? <div style={{ fontSize: 13, color: t.SUBTLE }}>Nobody is removed from a room right now.</div> : null}
+      {rows && rows.length > 0 ? (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {rows.map((row) => (
+            <li key={row.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, lineHeight: 1.5 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600 }}>{row.username ? `@${row.username}` : `user-${row.userId.slice(0, 8)}`}</div>
+                <div style={{ color: t.SUBTLE, fontSize: 12 }}>
+                  {row.roomName} · removed {new Date(row.removedAtIso).toLocaleString('en-US')}
+                  {row.reason ? ` · ${row.reason}` : ''}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === row.id}
+                onClick={() => void letBackIn(row)}
+                style={{ padding: '8px 12px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: busyId === row.id ? 'wait' : 'pointer', flexShrink: 0 }}
+              >
+                Let back in
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Section>
+  );
+}
+
 function UsageActions({ loading, canCopy, copied, onRefresh, onCopy, t }: { loading: boolean; canCopy: boolean; copied: boolean; onRefresh: () => void; onCopy: () => void; t: Tokens }) {
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -286,6 +364,8 @@ export function ChymeStreamUsageShell() {
             <SettingsSection payload={payload} t={t} />
           </>
         )}
+
+        <RemovedMembersSection t={t} />
       </div>
     </div>
   );

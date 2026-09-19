@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const room = await getRoomState(gate.identity, gate.roomKey);
+    const room = await getRoomState(gate.identity, gate.roomKey, gate.auth.isAdmin);
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.room.state.fetch',

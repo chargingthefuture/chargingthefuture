@@ -502,6 +502,50 @@ CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
 );
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Moderation (2026-09-19, owner decision): a room has a speak mode, a removed-members list, and
+-- an admin audit trail. In 'open' mode every joiner may speak (the room as shipped); in
+-- 'hand_raise' mode a joiner listens until an admin lets them speak.
+ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS speak_mode TEXT NOT NULL DEFAULT 'open';
+-- A member an admin removed from a room. The row keeps them out (the join and heartbeat routes
+-- refuse while lifted_at is null) until an admin lets them back in from the Chyme admin screen.
+CREATE TABLE IF NOT EXISTS chyme_room_removals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username TEXT NULL,
+  removed_by TEXT NOT NULL,
+  reason TEXT NULL,
+  removed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lifted_at TIMESTAMPTZ NULL,
+  lifted_by TEXT NULL
+);
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS lifted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS lifted_by TEXT;
+-- One live removal per member per room; lifted rows stay as the record and free the slot.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_room_removals_active
+  ON chyme_room_removals(room_id, user_id) WHERE lifted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_chyme_room_removals_user ON chyme_room_removals(user_id);
+-- Every admin action in Chyme is recorded (owner directive 2026-08-28): the same shape every other
+-- plugin's durable trail uses.
+CREATE TABLE IF NOT EXISTS chyme_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS idx_chyme_admin_audit_trail_lookup
+  ON chyme_admin_audit_trail (created_at DESC, actor_id, command);
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;

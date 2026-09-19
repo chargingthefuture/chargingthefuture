@@ -323,3 +323,162 @@ policies:
       - actor_not_authenticated
       - actor_not_admin
       - cross_workspace_access
+
+  # Moderation (owner decision, 2026-09-19): admin-only, durable audit row on every action.
+  - pluginId: chyme
+    command: chyme.admin.mute
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access
+
+  - pluginId: chyme
+    command: chyme.admin.remove
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access
+
+  - pluginId: chyme
+    command: chyme.admin.lift-removal
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access
+      - no_live_removal
+
+  - pluginId: chyme
+    command: chyme.admin.role
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access
+      - member_not_in_room
+
+  - pluginId: chyme
+    command: chyme.admin.speak-mode
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access
+
+  - pluginId: chyme
+    command: chyme.admin.removals.read
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: false
+      roomScope: main_or_contributors
+    consentRequirements:
+      scopes:
+        - chyme_room_access
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - cross_workspace_access

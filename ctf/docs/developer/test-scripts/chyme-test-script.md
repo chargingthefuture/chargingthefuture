@@ -503,6 +503,38 @@ phone read "Joined" after the call had dropped.
 
 ---
 
+### CH-23 · Moderation: mute, remove, let back in, hand-raise mode
+**Role:** admin and two members · **Surfaces:** all
+**Precondition:** the admin and members A and B in the main room (any mix of web and android).
+**Steps:**
+1. As the admin, look under A's tile and at the control row. As A, look under the admin's tile.
+2. As the admin, tap **Mute** under A while A is unmuted.
+3. As the admin, tap the control-row switch from **Open mic** to **Hand-raise mode**. Watch A's and
+   B's screens.
+4. As A, tap **Raise Hand**. As the admin, tap **Let speak** under A; then, later, **Listening**.
+5. As the admin, tap **Remove** under B and confirm. As B, press Join again. Open `/admin/chyme`
+   as the admin, find B under **Removed members**, tap **Let back in**; as B, press Join again.
+6. Switch the room back to **Open mic**. As A, look at the control row.
+7. As the admin, with Stream unreachable (or after the call has ended), tap **Mute** under A.
+**Expected:** Step 1: the admin sees Mute and Remove under every other member's tile and the speak-mode
+switch reading "Open mic" in the control row; A sees neither under anybody's tile and no switch.
+Step 2: A's microphone goes off within a second (their own Mute button flips to Unmute); in open
+mode A can unmute again. Step 3: A and B both hear nothing from each other, their microphone control
+is replaced by "Listening — raise your hand to ask to speak", and a notice under the room header
+(web) or above the controls (android) explains the mode; the admin keeps speaking; the admin's tiles
+for A and B now read **Let speak**. Step 4: within one room poll (15s) A's microphone control
+returns and A can unmute; after **Listening** A's microphone is off again and the notice is back.
+Step 5: B drops from the call and from the count at once; B's Join answers "An admin removed you
+from this room. You can come back once an admin lets you back in." in place of the stage (web
+error banner; android alert); the admin screen lists B with the room and time; after **Let back
+in** B's Join works. Step 6: everyone's microphone control is back and A can unmute. Step 7: the
+action is recorded and the control shows one amber line beginning "Recorded, but Stream did not
+apply it in the call:" with Stream's reason — never a silent failure and never a 500. Every step
+writes a row in `chyme_admin_audit_trail`.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ### Account deletion clears the back-channel call log
 
 **Expected:** Deleting the account removes every back-channel call row the member appeared on —
@@ -552,6 +584,21 @@ the route answers 403. Step 4: the main room's surface and today's minutes grew 
 
 ---
 
+### CH-A3 · Removed members on the Live Audio Usage screen
+**Role:** admin · **Surfaces:** web (mobile-responsive)
+**Precondition:** at least one member removed from a room (CH-23 step 5).
+**Steps:**
+1. Open `/admin/chyme` and scroll to **Removed members**.
+2. Tap **Let back in** on a row.
+3. As a non-admin, call `GET /api/chyme/admin/removals` and `POST /api/chyme/admin/lift-removal`.
+**Expected:** Step 1: each removed member by handle, the room, when, and the reason if one was given;
+"Nobody is removed from a room right now." when the list is empty. Step 2: the row disappears and
+the member can join again; if Stream did not unblock them the amber line says so and the row is
+still gone (the app's own record is lifted). Step 3: 403 for both.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For CH-1, CH-2, CH-4, and CH-6, the android app and the mobile-responsive web layout must behave the
@@ -570,8 +617,9 @@ hit one of these, it is already tracked, not a new bug:
 
 - Full-account delete is request-first; the final completion depends on the shared
   account-deletion orchestrator, which is the account area's.
-- No moderation controls (mute, remove, speaker grant) — a product decision the owner has not made;
-  every joiner may speak. The only admin surface is the Live Audio Usage screen.
+- Hand-raise mode is enforced in the Stream call only when `CHYME_GUEST_STREAM_ROLE` is set (it is,
+  as of 2026-09-18); without it the apps enforce the mode alone. A Stream outage during a
+  moderation action is reported to the admin in the control, not retried.
 - Multi-room is unbuilt: one open room plus the private Weavers room. No create-room, room list,
   scheduling, search, reactions, or speaker/audience promotion routes exist (roadmap, not a defect).
 - The minute meter is an estimate credited from heartbeats (good to one interval per participant
