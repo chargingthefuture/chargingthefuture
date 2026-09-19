@@ -33,7 +33,10 @@ Lifecycle/governance references applied:
 
 12. **Room capacity and the Stream quota notice (2026-09-19).** Every room read carries `capacity`
     (`current` / `max`) and `quota` (the band, a member-facing `notice`, and whether guest
-    listening and Back Channel are open). The room header reads "N of M participants" and, from
+    listening and Back Channel are open). The room header reads the plain count ("3 participants")
+    and names the cap only once it matters — from 80% of it ("40 of 50 participants · nearly
+    full") and at it ("50 of 50 participants · full"; owner report 2026-09-19: "1 of 50" all day
+    read as a claim about the room) — and, from
     the Yellow band up, a plain notice under it says what is getting tight and what pauses (web
     and Android). A member joining a room that is at its cap gets "This room is full right now (M
     of M people). Try again in a minute." in place of the stage (web) or as the join alert
@@ -243,9 +246,13 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
    the app had no participant-minute signal and the Stream dashboard was the only source of truth.
    `stream_video_usage_daily` is credited from every presence heartbeat (members, guests, Back
    Channel), summarized by `lib/stream-quota/usage.ts`, shown on `/admin/chyme`, and acted on by
-   `lib/stream-quota/policy.ts`. What remains true: it is an estimate (good to one heartbeat interval
-   per participant per session) and it meters only the Chyme surfaces; Beacon, Foundation, and
-   PeerProgramming video are not credited. Stream's dashboard stays the bill of record.
+   `lib/stream-quota/policy.ts`. Since the same day every other Stream Video call is credited too
+   (owner decision: the app's meter is the only one read): Beacon publishers, PeerProgramming cohort
+   calls, and Foundation calls are credited from Stream's `call.session_participant_left` webhook
+   (`lib/stream-quota/webhook-usage.ts`, handled by the Beacon webhook route, which is the one URL
+   Stream sends every call event to), exact per participant. What remains true: the Chyme lines are
+   estimates good to one heartbeat interval per participant per session, and Beacon's HLS viewers
+   never join a call so they are not participant-minutes. Stream's dashboard stays the bill of record.
 4. **Closed (2026-09-19) — no room cap, no guest cap, no quota-driven degradation.** Rule 110's
    bands existed as prose only. The room cap, the guest cap, the Orange-band pauses (guests, Back
    Channel), the Red-band cap, and the member notices are all in force (User Features 12, Security 9).
@@ -290,6 +297,25 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-19: **The minute meter covers every Stream Video call.** Owner decision: the app's meter
+  is the only one read; the Stream dashboard is not. Beacon publishers, PeerProgramming cohort
+  calls, and Foundation calls are now credited to `stream_video_usage_daily` from Stream's
+  `call.session_participant_left` event (`duration_seconds`, one participant's time in the call),
+  through the Beacon webhook route — the one URL Stream sends every call event to — and
+  `lib/stream-quota/webhook-usage.ts`, which maps the call id to a surface and skips Chyme and Back
+  Channel (their heartbeats already feed the meter). `/admin/chyme` labels the new lines. Unit
+  tests cover the mapping and the payload read. No schema or contract change; quota note
+  `2026-09-19-stream-video-meter-all-calls.md`.
+- 2026-09-19: **The cap is an advisory, and the signed-out page stops saying "listening" before the
+  tap.** Two owner reports from the phone. (1) "1 of 50 participants" under the room name all day
+  read as a claim — that the room is capped at 50, or that 50 people ought to be there. The line is
+  now the plain count and names the cap only from 80% of it ("40 of 50 participants · nearly full")
+  and at it ("· full"), on web (`lib/chyme/capacity-line.ts`, with unit tests) and Android
+  (`chyme-room-list.tsx`). The refusal at the cap is unchanged. (2) The signed-out page said
+  "You're listening live — sign in to speak" above the Tap to listen button, before any sound was
+  on; it now reads "The room is live. Tap below to listen; sign in to speak." and the listener
+  component says "Listening live" itself once joined. Test script CH-7 and CH-20 updated. No
+  schema, route, or contract change.
 - 2026-09-19: **Scheduled rooms, MVP: Chyme shows what is coming up on the TI Radio guide.** Owner
   decision the same day, answering the multi-room question: the schedule only, everything else
   later, no usage to justify more. `components/chyme/chyme-upcoming.tsx` reads

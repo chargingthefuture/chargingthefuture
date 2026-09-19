@@ -247,6 +247,13 @@ viewer drift here rather than filing separate bugs.
 
 ---
 
+## Meter check (2026-09-19)
+
+After a publisher leaves a Beacon call, `/admin/chyme` (Live Audio Usage) shows the minutes under
+"Beacon broadcasts (publishers)" within a minute — credited from Stream's
+`call.session_participant_left` event through this plugin's webhook route. Viewers on the public
+HLS feed never join the call and never appear there.
+
 ## Known gaps — do not file these as bugs
 
 Carried from the inventory's "Gaps and Known Technical Debt" section at authoring time. If you hit
