@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
+import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
@@ -89,7 +90,7 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
     return (
       <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
-        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. Sign in to start one or get notified.</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide below says when the next one is.</div>
       </div>
     );
   }
@@ -223,6 +224,11 @@ function ChymePublicView({
           </button>
         </div>
         <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} />
+        {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
+            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat. */}
+        <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
+          <ChymeUpcoming refreshKey={refreshKey} compact />
+        </div>
       </div>
 
       {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement

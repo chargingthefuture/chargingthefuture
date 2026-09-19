@@ -300,3 +300,7 @@ that the top of the page is off screen.
   user has no other signal that anything opened.
 
 Result: web ☐
+
+> _2026-09-19: Chyme now reads this guide and shows the next booked slots on its member view, its
+> signed-out page, and the Android Upcoming tab (Chyme test script CH-22). Booking, releasing, and
+> removing here are unchanged; a slot released here disappears from Chyme on its next read._

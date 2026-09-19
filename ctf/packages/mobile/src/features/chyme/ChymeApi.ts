@@ -230,3 +230,78 @@ export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
 export async function deleteFullAccount(): Promise<ChymeDeletionResponse> {
   return authedFetchJson('/api/account/full-account', { method: 'DELETE' });
 }
+
+// --- Scheduled rooms, MVP (owner decision, 2026-09-19): what is coming up on the TI Radio guide ---
+//
+// Chyme reads the guide's own public route (GET /api/ti-radio/guide — open to signed-out visitors,
+// so the bearer token is not required, only passed along) and shows the next booked slots on the
+// Upcoming tab. No room creation, no room per slot: the guide says when, this room is where.
+
+export type ChymeUpcomingSlot = {
+  slotStartIso: string;
+  slotEndIso: string;
+  isOnAir: boolean;
+  title: string;
+  hostUsername: string;
+};
+
+type GuideSlotPayload = {
+  slotStartIso?: unknown;
+  slotEndIso?: unknown;
+  isOnAir?: unknown;
+  booking?: { title?: unknown; hostUsername?: unknown } | null;
+};
+
+const UPCOMING_LIMIT = 5;
+
+// One guide entry as an upcoming slot, or null when it is open, malformed, or already over.
+function toUpcomingSlot(raw: unknown, nowMs: number): ChymeUpcomingSlot | null {
+  const slot = (typeof raw === 'object' && raw !== null ? raw : {}) as GuideSlotPayload;
+  const booking = slot.booking;
+  if (typeof slot.slotStartIso !== 'string' || typeof slot.slotEndIso !== 'string' || !booking) return null;
+  if (typeof booking.title !== 'string' || typeof booking.hostUsername !== 'string') return null;
+  if (Date.parse(slot.slotEndIso) <= nowMs) return null;
+  return {
+    slotStartIso: slot.slotStartIso,
+    slotEndIso: slot.slotEndIso,
+    isOnAir: slot.isOnAir === true,
+    title: booking.title,
+    hostUsername: booking.hostUsername,
+  };
+}
+
+// Booked slots that have not ended yet, soonest first, capped. A malformed entry is skipped rather
+// than taking the list down. Mirrors the web room's pickUpcoming.
+export function pickUpcomingSlots(slots: unknown[], now: Date, limit: number = UPCOMING_LIMIT): ChymeUpcomingSlot[] {
+  const nowMs = now.getTime();
+  const picked: ChymeUpcomingSlot[] = [];
+  for (const raw of slots) {
+    const slot = toUpcomingSlot(raw, nowMs);
+    if (!slot) continue;
+    picked.push(slot);
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}
+
+export async function getChymeUpcoming(): Promise<ChymeUpcomingSlot[]> {
+  const payload = await authedFetchJson<{ ok: true; guide?: { slots?: unknown[] } }>('/api/ti-radio/guide');
+  return pickUpcomingSlots(payload.guide?.slots ?? [], new Date());
+}
+
+// "Today · 2:00 PM – 3:30 PM", in the phone's own timezone. The guide prints the same way.
+export function formatUpcomingWhen(startIso: string, endIso: string, now: Date = new Date()): string {
+  const start = new Date(startIso);
+  const time = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dayOf = (d: Date) => d.toLocaleDateString('en-CA');
+  const today = dayOf(now);
+  const tomorrow = dayOf(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+  const startDay = dayOf(start);
+  const day =
+    startDay === today
+      ? 'Today'
+      : startDay === tomorrow
+        ? 'Tomorrow'
+        : start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${day} · ${time(start)} – ${time(new Date(endIso))}`;
+}
