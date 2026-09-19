@@ -53,6 +53,23 @@ policies:
     consentRequirements: []
     notes: Author-only. Scoped by author_user_id in the update, never by a client-supplied id alone.
   - pluginId: fireside
+    command: fireside.comment.edit
+    version: 1.0.0
+    requiredRoles: [member]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    consentRequirements: []
+    notes: >-
+      Author-only, scoped by author_user_id in both statements, and the same policy the Commons uses
+      for an announcement reply: any time, no window, and the new words checked the way the first
+      ones were so an edit is never a way past what a fresh comment would have been refused for. The
+      comment is marked as edited afterwards, so changed words never read as the originals. Three
+      refusals, each of them somebody else's decision an author does not get to reverse through an
+      edit: a comment an admin removed, a comment the author took down, and a conversation an admin
+      closed. Approval in Unlock is deliberately not one of them — a held comment is the one most
+      likely to need fixing and nobody else can see it. Rewriting a comment an admin had approved
+      for the blog returns that request to the queue, because the approval was given to the words.
+  - pluginId: fireside
     command: fireside.comment.set_export
     version: 1.0.0
     requiredRoles: [member]

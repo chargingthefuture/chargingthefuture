@@ -99,6 +99,44 @@ commands:
     purpose: The author takes their own comment down. `body` empties and the row is kept so replies keep their parent; the words are copied to `withdrawn_body`, which only that author's own read returns. Cannot be undone, so the screen asks first.
     retentionClass: community_content
   - pluginId: fireside
+    command: fireside.comment.edit
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [commentId, body]
+      properties:
+        commentId:
+          type: string
+        body:
+          type: string
+          minLength: 2
+          maxLength: 4000
+    outputSchema:
+      type: object
+      properties:
+        commentId:
+          type: string
+        editedAt:
+          type: string
+        exportRequeued:
+          type: boolean
+        notice:
+          type: [string, 'null']
+    dataAccess:
+      - fireside_comments (select, update)
+      - fireside_threads (select, is_closed only)
+      - fireside_audit_events (insert)
+    purpose: >-
+      The author rewrites their own comment, in place and with no window to beat — the same edit the
+      Commons gives an announcement reply. The row keeps its id, so the replies under it and the
+      reactions on it survive; taking a comment down and writing it again loses all of them, and it
+      was the only way to fix a typo before this. The new words are checked exactly as the first
+      ones were, so an edit is never a way to post what a fresh comment would have been refused for.
+      Refused on a comment an admin removed, on one the author took down, and in a closed
+      conversation. Rewriting a comment an admin had approved for the blog sends that approval back
+      to the queue: the approval was given to the words, not to the row.
+    retentionClass: community_content
+  - pluginId: fireside
     command: fireside.comment.set_export
     version: 1.0.0
     inputSchema:
@@ -496,47 +534,9 @@ definitions:
         type: string
       createdAt:
         type: string
-      reactions:
-        type: object
-      viewerReactions:
-        type: array
-        items:
-          type: string
-      isOwn:
-        type: boolean
-  OwnComment:
-    type: object
-    description: The author's own view, including comments nobody else can see yet.
-    allOf:
-      - $ref: '#/definitions/PublicComment'
-      - type: object
-        properties:
-          state:
-            type: string
-            enum: [live, held_for_approval, removed, withdrawn]
-          exportToBlog:
-            type: boolean
-          postRepo:
-            type: string
-          postSlug:
-            type: string
-          postTitle:
-            type: string
-definitions:
-  PublicComment:
-    type: object
-    description: What a public reader receives. A display name, never a user id or an email.
-    properties:
-      id:
-        type: string
-      parentCommentId:
+      editedAt:
         type: [string, 'null']
-      authorName:
-        type: string
-      body:
-        type: string
-      createdAt:
-        type: string
+        description: When the author last rewrote it, or null if they never did. The "edited" mark beside a comment is drawn from this, so words that changed after they were posted never read as the originals.
       reactions:
         type: object
       viewerReactions:

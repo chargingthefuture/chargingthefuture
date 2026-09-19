@@ -43,6 +43,29 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: fireside
+    command: comment.edit
+    commandVersion: 1.0.0
+    purpose: author_correction
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    result: edited_or_edited_export_requeued
+    dataClassesAccessed:
+      - comment_body
+    targetContext:
+      commentId: comment_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      The author rewriting their own words. Recorded because the comment keeps its id: a reply under
+      it was written in answer to something that may no longer be there, and the row is how anybody
+      later can tell the words changed and when. The earlier wording is not kept, here or anywhere —
+      an edit replaces it, the same as in the Commons. The result says whether the rewrite also sent
+      an admin's blog-export approval back to the queue.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: fireside
     command: comment.set_export
     commandVersion: 1.0.0
     purpose: publication_consent

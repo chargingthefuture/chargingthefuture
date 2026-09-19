@@ -39,6 +39,43 @@ export function isVisibleToAuthor(input: { authorUserId: string; viewerUserId: s
   return input.viewerUserId != null && input.viewerUserId === input.authorUserId;
 }
 
+/** Why an author may not rewrite a comment of theirs. Null means they may. */
+export type EditRefusal = 'removed_by_admin' | 'withdrawn' | 'thread_closed';
+
+/**
+ * Whether the author may rewrite their own comment, and why not when they may not.
+ *
+ * The same policy the Commons has had since it shipped, which is where it was asked for: the
+ * author, any time, with no window to beat, and the new words checked the way the first ones were
+ * so an edit is never a way to post something a fresh comment would have been refused for. The row
+ * keeps its id, so the replies under it and the reactions on it survive — taking a comment down and
+ * writing it again loses all of that, and it was the only way to fix a typo until now.
+ *
+ * Three refusals, and each one is somebody else's decision the author does not get to reverse:
+ *
+ *   removed_by_admin — an admin took it down. Editing it would be a way back into the conversation
+ *     that goes around them, and putting it back is theirs to do.
+ *   withdrawn — the author took it down themselves. The words left the conversation and that cannot
+ *     be undone; writing something new is a new comment.
+ *   thread_closed — an admin closed the conversation. Closing is about what happens next, so
+ *     nothing already written is touched or hidden — but it does mean the talking is done, and a
+ *     rewrite is how somebody would carry on talking in a room that was closed. The stricter
+ *     reading wins here; taking the comment down is still available.
+ *
+ * Whether the author is approved in Unlock is deliberately not one of them. A held comment is the
+ * one somebody is most likely to want to fix, it is visible to nobody but them while they wait, and
+ * approval is about the person rather than about any comment of theirs.
+ */
+export function refuseEdit(input: {
+  status: FiresideCommentStatus;
+  threadIsClosed: boolean;
+}): EditRefusal | null {
+  if (input.status === 'removed') return 'removed_by_admin';
+  if (input.status === 'withdrawn') return 'withdrawn';
+  if (input.threadIsClosed) return 'thread_closed';
+  return null;
+}
+
 export type CommentState = 'live' | 'held_for_approval' | 'removed' | 'withdrawn';
 
 /** What to tell the author about their own comment. One word for the screen to render from. */

@@ -7,7 +7,7 @@ the reactions they left.
 
 | Table | Personal data it holds |
 |---|---|
-| `fireside_comments` | `author_user_id`, `author_username` (the name printed beside the comment, written at creation), `body`, `withdrawn_body` (the author's own copy of a comment they took down — returned only on `/api/fireside/mine`, never by the public thread read or the blog export feed) |
+| `fireside_comments` | `author_user_id`, `author_username` (the name printed beside the comment, written at creation), `body`, `edited_at` (when the author last rewrote it, which is the "edited" mark and nothing more — the earlier wording is not kept), `withdrawn_body` (the author's own copy of a comment they took down — returned only on `/api/fireside/mine`, never by the public thread read or the blog export feed) |
 | `fireside_reactions` | `reactor_user_id` |
 | `fireside_threads` | Nothing personal — a post reference and a title |
 | `fireside_audit_events` | `actor_id` on each recorded write |
@@ -39,6 +39,21 @@ This is a deliberate narrowing of what withdrawal destroys, decided 2026-09-14 o
 taking a comment down cannot be undone, so the moment somebody most needs to read what they wrote
 is just after they have destroyed it, when they are checking whether they meant that one. What
 withdrawal means to everybody else is unchanged.
+
+## Rewriting a comment
+
+The author can rewrite their own comment at any time, the same way the Commons lets somebody rewrite
+an announcement reply. The row keeps its id, so the replies under it and the reactions on it survive
+— which taking it down and writing it again does not.
+
+**No earlier wording is kept.** The new text replaces `body` outright: there is no version history
+in this plugin, no copy of the previous words in another column, and nothing about them in the audit
+row, which records that a comment was edited and when. So an edit is not a second copy of anything a
+member wrote, and deletion has nothing extra to reach. `edited_at` is the mark that a comment is not
+what it first said; it carries no text.
+
+One thing an edit does move: a comment an admin had already approved for the blog goes back to
+waiting. The approval was given to the words, and the words changed.
 
 ## The one thing deletion cannot reach
 

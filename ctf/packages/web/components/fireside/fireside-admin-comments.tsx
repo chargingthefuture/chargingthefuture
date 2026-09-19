@@ -20,6 +20,8 @@ type AdminComment = {
   body: string;
   authorName: string;
   createdAt: string;
+  /** When its author last rewrote it, or null if they never did. */
+  editedAt: string | null;
   postRepo: string;
   postSlug: string;
   postTitle: string;
@@ -66,6 +68,11 @@ function Row({
       <div style={{ fontSize: 15, color: t.TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
         {comment.body || <em style={{ color: t.SUBTLE }}>The author took this down. Nothing to moderate.</em>}
       </div>
+      {/* An admin list hides nothing (rule 131). A comment whose author rewrote it is not the
+          comment that was replied to, and moderating it without knowing that is moderating blind. */}
+      {comment.editedAt && comment.body && (
+        <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 6 }}>Edited by its author</div>
+      )}
       {comment.state === "removed" && (
         <button type="button" disabled={busy} onClick={() => onModerate(comment.id, "restore")}
           style={{ background: "transparent", border: "none", color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: busy ? "default" : "pointer", padding: 0, marginTop: 12 }}>

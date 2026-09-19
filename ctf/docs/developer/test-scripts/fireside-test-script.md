@@ -19,7 +19,9 @@ admin.
    account is approved.
 3. Sign out and read the same post again. That comment is not there.
 4. Approve that member in Unlock. Read the post signed out again: the comment is now there.
-5. As its author, take it down. Signed out, it is gone again.
+5. As its author, rewrite that comment and save it. The new words are there, marked as edited, and
+   any reply under it is still attached.
+6. As its author, take it down. Signed out, it is gone again.
 
 ---
 
@@ -613,5 +615,48 @@ Result: web ☐
 - The header back control returns to `/apps`.
 - Everything is in the plugin's warm orange accent and readable at phone width, with nothing cut off
   and no sideways scroll.
+
+Result: web ☐
+
+---
+
+### FS-21 — Fixing your own words in place
+
+**Role:** member, admin · **Surfaces:** web
+**Precondition:** A member with a comment that has a reply underneath it and at least one reaction on
+it. An admin available. A second member's comment in the same thread.
+
+**Steps:**
+1. As the author, open your own comment in the thread and press Edit. Change the words and save.
+2. Read the same thread signed out.
+3. Open the Fireside screen, find the same comment in your own list, and edit it from there too.
+4. Try to save an empty box, and try to save without changing anything.
+5. Try to edit the other member's comment.
+6. Ask an admin to remove one of your comments, then try to edit it. Ask them to close the
+   conversation, then try to edit another one.
+7. Take a comment down yourself, then try to edit it.
+8. Ask for a comment to go on the blog, have an admin approve it, then rewrite it.
+
+**Expected:**
+- The new words save and appear at once. The comment is marked **Edited** — in the thread, on your
+  own comments screen, and on the admin list of every comment.
+- The reply under it is still attached and the reaction on it is still counted. Nothing moved: the
+  thread is still oldest first.
+- Signed out, the conversation shows the new words and the edited mark. The old wording is nowhere —
+  there is no history to open, by design.
+- Both screens edit the same comment and show the same result afterwards.
+- Save does nothing while the box is empty or the words are unchanged. Over 4,000 characters says so
+  and names the limit.
+- There is no Edit control on somebody else's comment. Calling
+  `PATCH /api/fireside/comments/<their id>` with a `body` answers 404 — a comment that is not yours
+  is answered as though it is not there.
+- A comment an admin removed refuses the edit and says putting it back is theirs to do. In a closed
+  conversation the edit is refused with a line saying so, and taking the comment down still works.
+- A comment you took down refuses the edit and says to write a new one instead; it cannot be undone.
+- Rewriting an approved export saves the words **and** returns the request to the queue. The screen
+  says an admin had approved the earlier wording and it goes back for another read, the comment's
+  state reads as waiting again, and it is back on the admin's export queue with the new text.
+- The audit log has a `fireside.comment.edit` row for each save, and the row for the last one says
+  the export was requeued.
 
 Result: web ☐

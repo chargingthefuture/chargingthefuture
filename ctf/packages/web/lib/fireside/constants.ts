@@ -97,6 +97,12 @@ export const FIRESIDE_ERROR_CODE = {
 export const FIRESIDE_HELD_NOTICE =
   'Saved. It stays private until your account is approved — that means a person reads what you wrote, which is the same look the app already does before anyone is verified. Once you are approved, everything you have written here appears at once.';
 
+// Shown to an author who rewrites a comment an admin had already approved for the blog. The
+// approval was given to the words, not to the row, so changing them sends it back to the queue —
+// and the author is told at the moment it happens rather than finding the switch moved later.
+export const FIRESIDE_EDIT_REQUEUE_NOTICE =
+  'Saved. An admin had approved the earlier wording for the blog, so this goes back for another read before anything is copied out. It stays here in the conversation either way.';
+
 // Shown beside a comment whose author has asked for it to go into the blog's published build. Said
 // at the moment of asking, so nobody believes their words are already on their way out of the app.
 export const FIRESIDE_EXPORT_PENDING_NOTICE =

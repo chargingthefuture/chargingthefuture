@@ -28,7 +28,8 @@ import type {
   FiresidePostRef,
   FiresideThread,
 } from './types';
-import { commentStateForAuthor, isPubliclyVisible } from './visibility';
+import { exportReviewAfterEdit } from './export-review';
+import { commentStateForAuthor, isPubliclyVisible, refuseEdit, type EditRefusal } from './visibility';
 
 export async function insertFiresideAudit(input: {
   actorId: string;
@@ -135,6 +136,7 @@ type CommentRow = {
   export_review: ExportReview;
   export_refusal_reason: string | null;
   created_at: string;
+  edited_at: string | null;
   post_repo: string;
   post_slug: string;
   post_title: string;
@@ -201,6 +203,7 @@ const COMMENT_COLUMNS = `
          c.export_review,
          c.export_refusal_reason,
          to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS created_at,
+         to_char(c.edited_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS edited_at,
          t.post_repo, t.post_slug, t.post_title`;
 
 const COMMENT_FROM = `
@@ -230,6 +233,8 @@ function toComment(
     authorName: row.author_username?.trim() || 'A member',
     body: row.body,
     createdAt: row.created_at,
+    // Null until the author rewrites it, so the "edited" mark beside a comment means what it says.
+    editedAt: row.edited_at,
     reactions,
     viewerReactions,
     isOwn: viewerUserId != null && viewerUserId === row.author_user_id,
@@ -501,6 +506,79 @@ export async function withdrawOwnComment(userId: string, commentId: string): Pro
     [commentId, userId],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+/** Why an edit was refused, in a word the route turns into a sentence. */
+export type EditRefusalReason = EditRefusal | 'body_too_short' | 'body_too_long';
+
+export type EditCommentOutcome =
+  | { status: 'edited'; editedAt: string; exportRequeued: boolean }
+  | { status: 'refused'; reason: EditRefusalReason }
+  | { status: 'not_found' };
+
+/**
+ * The author rewrites their own comment, in place.
+ *
+ * The same edit the Commons has had since it shipped, and it is here because the only way to fix a
+ * typo was to take the comment down and write it again (owner report, 2026-09-17) — which loses the
+ * replies under it, the reactions on it, and its place in the conversation, all to change one word.
+ * The row keeps its id, so none of that moves.
+ *
+ * Author-only, and scoped by `author_user_id` in both statements rather than by a client-supplied id
+ * alone: a comment that is not the caller's own is answered as though it is not there, which is what
+ * every other author-scoped write here does.
+ *
+ * The new words are checked exactly as the first ones were, so an edit is never a way to post
+ * something a fresh comment would have been refused for. What the author may edit at all is
+ * refuseEdit in ./visibility.ts, and what an edit does to a pending blog export is
+ * exportReviewAfterEdit in ./export-review.ts; neither rule is re-derived here.
+ */
+export async function editOwnComment(
+  userId: string,
+  commentId: string,
+  bodyInput: string,
+): Promise<EditCommentOutcome> {
+  const bodyProblem = describeCommentBody(bodyInput);
+  if (bodyProblem === 'body_too_short' || bodyProblem === 'body_too_long') {
+    return { status: 'refused', reason: bodyProblem };
+  }
+
+  const current = await queryDb<{ status: FiresideCommentStatus; export_review: ExportReview; is_closed: boolean }>(
+    `SELECT c.status, c.export_review, t.is_closed
+       FROM fireside_comments c
+       JOIN fireside_threads t ON t.id = c.thread_id
+      WHERE c.id = $1::uuid AND c.author_user_id = $2
+      LIMIT 1`,
+    [commentId, userId],
+  );
+  const row = current.rows[0];
+  if (!row) return { status: 'not_found' };
+
+  const refusal = refuseEdit({ status: row.status, threadIsClosed: row.is_closed });
+  if (refusal) return { status: 'refused', reason: refusal };
+
+  // An admin approved words, not a row. If the text changes under an approval, the approval goes
+  // back in the queue to be read again — otherwise a rewrite is a way to put anything at all into
+  // the blog's permanently archived build under a yes somebody gave to something else.
+  const nextReview = exportReviewAfterEdit(row.export_review);
+  const exportRequeued = nextReview !== row.export_review;
+
+  const updated = await queryDb<{ edited_at: string }>(
+    `UPDATE fireside_comments
+        SET body = $3,
+            edited_at = NOW(),
+            export_review = $4,
+            export_reviewed_by = CASE WHEN $5 THEN NULL ELSE export_reviewed_by END,
+            export_reviewed_at = CASE WHEN $5 THEN NULL ELSE export_reviewed_at END,
+            updated_at = NOW()
+      WHERE id = $1::uuid AND author_user_id = $2 AND status = 'visible'
+      RETURNING to_char(edited_at, 'YYYY-MM-DD"T"HH24:MI:SSZ') AS edited_at`,
+    [commentId, userId, bodyInput.trim(), nextReview, exportRequeued],
+  );
+  const editedAt = updated.rows[0]?.edited_at;
+  if (!editedAt) return { status: 'not_found' };
+
+  return { status: 'edited', editedAt, exportRequeued };
 }
 
 /** The other vote, for a kind that is one — pressing one clears the other. Null for a reaction. */

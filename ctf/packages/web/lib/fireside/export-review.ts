@@ -63,6 +63,23 @@ export async function setExportPreference(
 }
 
 /**
+ * Where a blog-export request stands once the author rewrites the comment it belongs to.
+ *
+ * An admin approves words, not a row. If the text changes afterwards, the thing they agreed to copy
+ * onto a permanently archived page no longer exists, so the approval goes back to 'pending' and is
+ * read again — otherwise a rewrite is a way to put anything at all into the build under an approval
+ * somebody gave to something else.
+ *
+ * A refusal survives an edit, the same way it survives the author switching their own request off
+ * and on again: a refusal that a rewrite can clear is not a refusal. Everything else is unchanged —
+ * a pending request stays in the queue the admin has not reached yet, and a comment nobody asked to
+ * export is not asking now.
+ */
+export function exportReviewAfterEdit(current: ExportReview): ExportReview {
+  return current === 'approved' ? 'pending' : current;
+}
+
+/**
  * What one account has done here, counted in a single query.
  *
  * The reason this exists is that moderating item by item is a losing race against somebody who is
