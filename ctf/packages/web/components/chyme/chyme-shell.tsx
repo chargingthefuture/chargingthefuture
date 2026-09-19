@@ -5,6 +5,7 @@ import { Lock, Radio, Smartphone } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell, type ChymeRoomScope } from '@/components/chyme/chyme-live-shell';
+import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
@@ -190,6 +191,10 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
       >
         {HOSTING_NOT_ENDORSEMENT_SHORT}
       </div>
+
+      {/* Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19 —
+          the schedule only; room creation and the rest of the multi-room design wait for usage). */}
+      <ChymeUpcoming />
 
       {/* Every opened room stays mounted; only the active one is displayed. display:none keeps the
           hidden room's audio call alive, which is what stops a room switch from disconnecting. */}

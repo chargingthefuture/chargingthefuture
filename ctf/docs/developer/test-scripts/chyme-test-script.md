@@ -503,6 +503,29 @@ phone read "Joined" after the call had dropped.
 
 ---
 
+### CH-22 · Coming up on TI Radio (scheduled rooms MVP)
+**Role:** member and signed-out visitor · **Surfaces:** all
+**Precondition:** at least one booked slot on the TI Radio guide (`/ti-radio`) in the next seven
+days, and one slot booked for the current 90 minutes if the "On air now" mark is to be checked.
+**Steps:**
+1. As a member, open Chyme and read under the rooms rail.
+2. Sign out and open the Chyme route; read under the room list.
+3. In the Android app, open Chyme and tap the **Upcoming** tab.
+4. Release every booked slot on the guide, then refresh each of the three screens.
+5. Open the app with the network off (or point it at a stopped server) and read the same places.
+**Expected:** Steps 1–3 show "Coming up on TI Radio": the next booked slots (at most five) that have
+not ended, soonest first, each as "Today · 2:00 PM – 3:30 PM" (or "Tomorrow", or "Mon, Sep 21") in
+the phone's own timezone, the discussion title, and "Hosted by @handle"; the slot happening right
+now sits first with an "On air now" mark and the accent border; a "Full guide →" link opens
+`/ti-radio` on web. All three read the same route (`GET /api/ti-radio/guide`), so the three lists
+agree. Step 4: each screen reads "Nothing is scheduled this week" and says any approved member can
+book a slot — never an empty box. Step 5: "Couldn't read the TI Radio guide" with the reason, never
+"nothing scheduled" when the read failed. Nothing here creates a room or joins one: the guide says
+when, and the main room is where.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ### Account deletion clears the back-channel call log
 
 **Expected:** Deleting the account removes every back-channel call row the member appeared on —
@@ -572,8 +595,9 @@ hit one of these, it is already tracked, not a new bug:
   account-deletion orchestrator, which is the account area's.
 - No moderation controls (mute, remove, speaker grant) — a product decision the owner has not made;
   every joiner may speak. The only admin surface is the Live Audio Usage screen.
-- Multi-room is unbuilt: one open room plus the private Weavers room. No create-room, room list,
-  scheduling, search, reactions, or speaker/audience promotion routes exist (roadmap, not a defect).
+- Multi-room is deferred by the owner (2026-09-19) beyond the schedule: Chyme shows what is coming
+  up on the TI Radio guide (CH-22), but there is no room creation, no room per slot, no search, and
+  no reactions.
 - The minute meter is an estimate credited from heartbeats (good to one interval per participant
   per session) and covers only the Chyme surfaces; the Stream dashboard is the bill of record.
 - A member whose Stream connection dropped still holds a room spot until their 45-second presence
