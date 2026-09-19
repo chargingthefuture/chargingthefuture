@@ -57,6 +57,19 @@ Lifecycle/governance references applied:
     credited from it) and posts `POST /api/chyme/public/leave` on close. A refusal shows the
     server's own reason with a "Try again" control.
 
+15. **Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19).**
+    Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
+    — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
+    by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
+    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
+    room list on the signed-out page (both re-read on the page's refresh control). Android: the
+    Upcoming tab of the room list, which used to be a placeholder sentence. Read through the guide's
+    own public route `GET /api/ti-radio/guide` (client-side; no server import, per the plugin
+    boundary), so a signed-out visitor sees the same list. Empty state says nothing is scheduled and
+    that any approved member can book a slot; a failed read shows the route's reason. This is the
+    whole of scheduled rooms for now: no room creation, no room per slot, no search — the rest of
+    the multi-room design waits for usage.
+
 ## Admin Features
 
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
@@ -251,12 +264,12 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 7. **Closed (2026-09-19) — `chyme_rooms.call_active` only ever went true.** `leaveRoom` now clears
    it when the last fresh member leaves. Nothing reads it for "live" (fresh presence is), so this is
    hygiene for whoever reads the table next, not a behavior change.
-8. **Product decision, not debt — multi-room platform.** The MVP runs one open room plus the private
-   Weavers room; the `Chyme.tsx` design's room directory, room creation, upcoming/scheduled rooms,
-   search, reactions, and speaker/audience promotion are the accepted design target and are not
-   built. There are no create-room, list-rooms, scheduling, search, reaction, or promotion routes.
-   The plugin registry reflects this as `implemented_shell`. Building it is a roadmap item the owner
-   sequences, not a defect.
+8. **Owner decision (2026-09-19) — multi-room platform, scheduled rooms only.** The MVP runs one
+   open room plus the private Weavers room, and now shows what is scheduled (User Features 15) by
+   reading the TI Radio guide. The rest of the `Chyme.tsx` design — room directory, room creation,
+   a room per slot, search, reactions — is deferred by the owner until usage justifies it. There are
+   no create-room, list-rooms, search, or reaction routes. The plugin registry reflects this as
+   `implemented_shell`.
 9. **Closed by design (2026-09-19) — no in-app deletion entry point inside Chyme.** The Chyme
    buttons were removed on 2026-06-01 on purpose; the account area's Account & Data screen is the one
    place a member deletes a service or the whole account, and `DELETE /api/account/chyme-profile`
@@ -290,6 +303,16 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   Channel (their heartbeats already feed the meter). `/admin/chyme` labels the new lines. Unit
   tests cover the mapping and the payload read. No schema or contract change; quota note
   `2026-09-19-stream-video-meter-all-calls.md`.
+- 2026-09-19: **Scheduled rooms, MVP: Chyme shows what is coming up on the TI Radio guide.** Owner
+  decision the same day, answering the multi-room question: the schedule only, everything else
+  later, no usage to justify more. `components/chyme/chyme-upcoming.tsx` reads
+  `GET /api/ti-radio/guide` client-side (the plugin boundary forbids a server import), keeps the
+  booked slots that have not ended, soonest first, capped at five, and prints them in the reader's
+  timezone with an "On air now" mark; mounted under the rooms rail on the member view and under the
+  room list on the signed-out page. Android: the room list's Upcoming tab (`chyme-room-list.tsx`,
+  `getChymeUpcoming` in `ChymeApi.ts`) replaces its placeholder sentence with the same list. Unit
+  tests cover the slot pick and the day/time label. No schema, route, or contract change; the TI
+  Radio inventory's "Chyme does not read this schedule" gap is closed. Test script CH-22 added.
 - 2026-09-19: **Stream Video minute meter, room and guest caps, quota-driven pauses, one guest
   identity per browser, and a Join pill that follows the connection.** Owner question on the day:
   does holding the main room open around the clock, alone, burn too much of the Stream quota? The

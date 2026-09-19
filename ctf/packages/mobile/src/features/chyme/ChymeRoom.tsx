@@ -29,6 +29,8 @@ import {
   getChymeRoom,
   postChymeJoin,
   postChymeMessage,
+  getChymeUpcoming,
+  type ChymeUpcomingSlot,
 } from './api';
 import type { ChymeJoinResponse } from './ChymeApi';
 import { ChymeLoading } from './chyme-loading';
@@ -75,12 +77,27 @@ export const ChymeRoom: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<'live' | 'upcoming'>('live');
   const [refreshing, setRefreshing] = useState(false);
+  // The Upcoming tab: the next booked slots on the TI Radio guide (scheduled rooms MVP,
+  // 2026-09-19). Read alongside the room; a failed read shows its reason on the tab, never an
+  // empty list pretending nothing is scheduled.
+  const [upcoming, setUpcoming] = useState<ChymeUpcomingSlot[] | null>(null);
+  const [upcomingError, setUpcomingError] = useState<string | null>(null);
+
+  const loadUpcoming = useCallback(async () => {
+    try {
+      setUpcoming(await getChymeUpcoming());
+      setUpcomingError(null);
+    } catch (err) {
+      setUpcomingError(err instanceof Error ? err.message : 'Unable to read the TI Radio guide.');
+    }
+  }, []);
 
   // `background` skips the branded splash so pull-to-refresh keeps the room list visible.
   const loadRoom = useCallback(async (background = false) => {
     if (!background) setViewState('loading');
     try {
       const [roomPayload, msgPayload] = await Promise.all([getChymeRoom(), getChymeMessages()]);
+      void loadUpcoming();
       setRoom(roomPayload);
       setMessages(msgPayload.messages ?? []);
       const hasParticipants = (roomPayload.participants?.length ?? 0) > 0;
@@ -89,7 +106,7 @@ export const ChymeRoom: React.FC = () => {
       setErrorMsg(err instanceof Error ? err.message : 'Unable to load Chyme room.');
       setViewState('error');
     }
-  }, []);
+  }, [loadUpcoming]);
 
   useEffect(() => {
     void loadRoom();
@@ -240,6 +257,8 @@ export const ChymeRoom: React.FC = () => {
     <View style={styles.roomListContainer}>
       <ChymeRoomList
         room={toRoomSummary(room)}
+        upcoming={upcoming}
+        upcomingError={upcomingError}
         tab={tab}
         onTabChange={setTab}
         onJoinRoom={handleJoinRoom}

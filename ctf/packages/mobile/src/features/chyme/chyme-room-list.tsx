@@ -9,7 +9,8 @@
  *   - Multiple room cards (API returns one canonical room only).
  *   - Live listener count (not in room response; participants.length used instead).
  *   - Tags/topics per room (no backend field).
- *   - Upcoming/scheduled rooms (no backend endpoint).
+ *   - Upcoming tab reads the TI Radio guide (GET /api/ti-radio/guide) — the next booked slots,
+ *     scheduled rooms MVP (2026-09-19). Room creation and a room per slot are not built.
  *   - Nations stat (no backend field).
  */
 import React, { useMemo } from 'react';
@@ -23,6 +24,7 @@ import {
 } from 'react-native';
 import { Radio } from 'lucide-react-native';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
+import { formatUpcomingWhen, type ChymeUpcomingSlot } from './api';
 import { type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 
@@ -49,6 +51,10 @@ type Props = {
   accent: string;
   refreshing: boolean;
   onRefresh: () => void;
+  // The Upcoming tab's rows: null while the guide is still being read; the error is the route's
+  // own reason when the read failed.
+  upcoming?: ChymeUpcomingSlot[] | null;
+  upcomingError?: string | null;
 };
 
 export const ChymeRoomList: React.FC<Props> = ({
@@ -61,6 +67,8 @@ export const ChymeRoomList: React.FC<Props> = ({
   accent,
   refreshing,
   onRefresh,
+  upcoming = null,
+  upcomingError = null,
 }) => {
   const styles = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
   return (
@@ -126,12 +134,7 @@ export const ChymeRoomList: React.FC<Props> = ({
         {tab === 'live' ? (
           <LiveRoomCard room={room} onJoinRoom={onJoinRoom} styles={styles} />
         ) : (
-          // Upcoming rooms: no backend endpoint — show informational message only
-          <View style={styles.upcomingPlaceholder}>
-            <Text style={styles.upcomingText}>
-              No upcoming rooms scheduled. Use Start a Room to schedule one.
-            </Text>
-          </View>
+          <UpcomingList upcoming={upcoming} error={upcomingError} styles={styles} accent={accent} />
         )}
         {/* Same statement as both web surfaces, from the one string in @ctf/shared rather than a
             copy typed in here — a second wording would be free to drift, and this is exactly the
@@ -144,6 +147,48 @@ export const ChymeRoomList: React.FC<Props> = ({
 };
 
 type RoomStyles = ReturnType<typeof makeStyles>;
+
+// The Upcoming tab: what is coming up on the TI Radio guide. Four states, each said plainly —
+// still reading, the read failed (with the route's reason), nothing booked this week, or the list.
+function UpcomingList({ upcoming, error, styles, accent }: { upcoming: ChymeUpcomingSlot[] | null; error: string | null; styles: RoomStyles; accent: string }) {
+  if (error) {
+    return (
+      <View style={styles.upcomingPlaceholder}>
+        <Text style={styles.upcomingText}>Couldn&apos;t read the TI Radio guide. {error}</Text>
+      </View>
+    );
+  }
+  if (upcoming === null) {
+    return (
+      <View style={styles.upcomingPlaceholder}>
+        <Text style={styles.upcomingText}>Reading the TI Radio guide…</Text>
+      </View>
+    );
+  }
+  if (upcoming.length === 0) {
+    return (
+      <View style={styles.upcomingPlaceholder}>
+        <Text style={styles.upcomingText}>
+          Nothing is scheduled this week. Any approved member can book a slot on the TI Radio guide on the web and host a discussion here.
+        </Text>
+      </View>
+    );
+  }
+  const now = new Date();
+  return (
+    <View>
+      <Text style={styles.upcomingHeading}>Coming up on TI Radio</Text>
+      {upcoming.map((slot) => (
+        <View key={slot.slotStartIso} style={[styles.upcomingCard, slot.isOnAir && { borderColor: accent }]}>
+          <Text style={[styles.upcomingWhen, slot.isOnAir && { color: accent }]}>{formatUpcomingWhen(slot.slotStartIso, slot.slotEndIso, now)}</Text>
+          {slot.isOnAir ? <Text style={[styles.upcomingOnAir, { color: accent }]}>ON AIR NOW</Text> : null}
+          <Text style={styles.upcomingTitle}>{slot.title}</Text>
+          <Text style={styles.upcomingHost}>Hosted by @{slot.hostUsername}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // "N participants" or, when the server sent the cap in force, "N of M participants".
 function participantLine(room: RoomSummary): string {
@@ -292,6 +337,12 @@ function makeStyles(t: ThemeTokens, accent: string) {
     roomMeta: { flexDirection: 'row', alignItems: 'center' },
     roomMetaText: { fontSize: 12, color: pick(t.isComic, t.textSecondary, '#16A34A'), fontFamily: interFamily('400') },
     upcomingPlaceholder: { paddingVertical: 24, alignItems: 'center' },
+    upcomingHeading: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', color: t.textMuted, marginBottom: 8, fontFamily: interFamily('700') },
+    upcomingCard: { padding: 12, borderRadius: 12, marginBottom: 8, backgroundColor: pick(t.isComic, t.surface, '#041a0b'), borderWidth: 1, borderColor: divider },
+    upcomingWhen: { fontSize: 12, fontWeight: '700', color: t.textPrimary, fontFamily: interFamily('700') },
+    upcomingOnAir: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, marginTop: 2, fontFamily: interFamily('700') },
+    upcomingTitle: { fontSize: 14, fontWeight: '600', color: t.textPrimary, marginTop: 4, fontFamily: interFamily('600') },
+    upcomingHost: { fontSize: 12, color: t.textSecondary, marginTop: 2, fontFamily: interFamily('400') },
     upcomingText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22, fontFamily: interFamily('400') },
     disclaimer: { fontSize: 11, color: t.textSecondary, lineHeight: 17, marginTop: 14, fontFamily: interFamily('400') },
     quotaNotice: { marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: 'rgba(234,179,8,0.12)', borderWidth: 1, borderColor: 'rgba(234,179,8,0.35)' },
