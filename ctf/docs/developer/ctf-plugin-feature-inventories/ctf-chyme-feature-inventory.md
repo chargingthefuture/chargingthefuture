@@ -218,14 +218,17 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
     - A member an admin removed from a room: `id`, `room_id` (→ `chyme_rooms`, cascade), `user_id`,
       `username`, `removed_by`, `reason` (≤300), `removed_at`, `lifted_at`, `lifted_by`. Partial unique
       index on `(room_id, user_id) WHERE lifted_at IS NULL` — one live removal per member per room;
-      lifted rows stay as the record. Join and heartbeat refuse while a live row exists. Migration
-      `ctf/db/migrations/post/0030_chyme_moderation.sql` (also adds `chyme_rooms.speak_mode`).
+      lifted rows stay as the record. Join and heartbeat refuse while a live row exists. Deleted with
+      the member's account (deletion registry: a deleted account cannot come back, so the row has
+      nothing left to enforce). Migration `ctf/db/migrations/post/0030_chyme_moderation.sql` (also
+      adds `chyme_rooms.speak_mode`).
 12. `chyme_admin_audit_trail` (2026-09-19)
     - Every Chyme admin action (mute, remove, let back in, role, speak mode), in the shape every other
       plugin's durable admin trail uses: `actor_id`, `command`, `policy_status`, `reason`,
       `target_type`, `target_id`, `result`, `error_category`, `metadata`, `created_at`; indexed on
       `(created_at DESC, actor_id, command)`. Written by `recordChymeAdminAudit`
-      (`lib/chyme/admin-audit.ts`), which never throws. Same migration.
+      (`lib/chyme/admin-audit.ts`), which never throws. Retained on account deletion (deletion
+      registry), as every plugin's admin trail is. Same migration.
 8. `chyme_back_channel_calls`
    - Back Channel 1:1 call lifecycle (spec #1746). One row per call, keyed by `id`, referencing `chyme_rooms(id)` (`ON DELETE CASCADE`). Columns: `initiator_user_id`, `recipient_user_id`, `initiator_username`, `recipient_username`, `status` (`inviting|active|declined|ended|lapsed`), `stream_call_id`, `created_at`, `answered_at`, `ended_at`, `ended_by_user_id`, `last_heartbeat_at`. A CHECK forbids self-calls; a partial unique index (`status IN ('inviting','active')`) allows only one live call per initiator→recipient direction. Indexed by recipient+status, initiator+status, and room. Holds no chat/history — a row exists only to run one call and is removed on the member's Chyme service deletion (and account deletion). Never surfaced as Trust evidence or in any public feed (rule 132).
 
@@ -369,7 +372,10 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   Removed members. Android: `ChymeModeration.tsx` and the same wiring in `ChymeAudioRoom.tsx`,
   `ChymeApi.ts`. Contracts: five commands plus the removals read, access policies, audit events.
   Quota note `ctf/docs/quota-impact/2026-09-19-chyme-moderation-stream-controls.md`. Test script
-  CH-23 and CH-A3. Gaps item 2 closed.
+  CH-23 and CH-A3. Gaps item 2 closed. Account deletion: `chyme_room_removals` rows are deleted
+  with the member's account and `chyme_admin_audit_trail` is retained (deletion registry and the
+  deletion contract). The SDK's package `postinstall` runs `husky` when it can resolve it, which
+  broke a clean CI install; pnpm `neverBuiltDependencies` skips that script.
 - 2026-09-19: **Scheduled rooms, MVP: Chyme shows what is coming up on the TI Radio guide.** Owner
   decision the same day, answering the multi-room question: the schedule only, everything else
   later, no usage to justify more. `components/chyme/chyme-upcoming.tsx` reads
