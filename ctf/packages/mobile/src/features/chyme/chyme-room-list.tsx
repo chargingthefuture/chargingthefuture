@@ -32,6 +32,11 @@ export type RoomSummary = {
   roomKey: string;
   callActive: boolean;
   participantCount: number;
+  // The cap in force, for "N of M"; the quota notice is the member-facing line the server sends
+  // while the Stream Video month is getting tight (null when there is nothing to say).
+  capacityMax?: number;
+  quotaNotice?: string | null;
+  quotaBand?: 'green' | 'yellow' | 'orange' | 'red';
 };
 
 type Props = {
@@ -119,18 +124,7 @@ export const ChymeRoomList: React.FC<Props> = ({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         {tab === 'live' ? (
-          <TouchableOpacity style={styles.roomCard} onPress={onJoinRoom}>
-            <View style={styles.roomCardHeader}>
-              <View style={styles.liveDot} />
-              <Text style={styles.roomName}>{room.roomName}</Text>
-            </View>
-            {/* Host display name not in room response — omitted */}
-            <View style={styles.roomMeta}>
-              <Text style={styles.roomMetaText}>
-                {room.participantCount} participant{room.participantCount !== 1 ? 's' : ''}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <LiveRoomCard room={room} onJoinRoom={onJoinRoom} styles={styles} />
         ) : (
           // Upcoming rooms: no backend endpoint — show informational message only
           <View style={styles.upcomingPlaceholder}>
@@ -148,6 +142,41 @@ export const ChymeRoomList: React.FC<Props> = ({
     </View>
   );
 };
+
+type RoomStyles = ReturnType<typeof makeStyles>;
+
+// "N participants" or, when the server sent the cap in force, "N of M participants".
+function participantLine(room: RoomSummary): string {
+  if (room.capacityMax) {
+    return `${room.participantCount} of ${room.capacityMax} participants`;
+  }
+  return `${room.participantCount} participant${room.participantCount !== 1 ? 's' : ''}`;
+}
+
+// The one live room's card, plus the same quota line the web room shows under its header — only
+// while the server has something to say (Yellow band and above). Red reads in the warning color.
+function LiveRoomCard({ room, onJoinRoom, styles }: { room: RoomSummary; onJoinRoom: () => void; styles: RoomStyles }) {
+  const red = room.quotaBand === 'red';
+  return (
+    <>
+      <TouchableOpacity style={styles.roomCard} onPress={onJoinRoom}>
+        <View style={styles.roomCardHeader}>
+          <View style={styles.liveDot} />
+          <Text style={styles.roomName}>{room.roomName}</Text>
+        </View>
+        {/* Host display name not in room response — omitted */}
+        <View style={styles.roomMeta}>
+          <Text style={styles.roomMetaText}>{participantLine(room)}</Text>
+        </View>
+      </TouchableOpacity>
+      {room.quotaNotice ? (
+        <View style={[styles.quotaNotice, red && styles.quotaNoticeRed]}>
+          <Text style={[styles.quotaNoticeText, red && styles.quotaNoticeTextRed]}>{room.quotaNotice}</Text>
+        </View>
+      ) : null}
+    </>
+  );
+}
 
 // Pick one of two values by the comic-theme flag. Both branches are side-effect-free
 // literals/token reads, so eager evaluation matches the original inline ternaries exactly.
@@ -265,5 +294,9 @@ function makeStyles(t: ThemeTokens, accent: string) {
     upcomingPlaceholder: { paddingVertical: 24, alignItems: 'center' },
     upcomingText: { fontSize: 14, color: t.textSecondary, textAlign: 'center', lineHeight: 22, fontFamily: interFamily('400') },
     disclaimer: { fontSize: 11, color: t.textSecondary, lineHeight: 17, marginTop: 14, fontFamily: interFamily('400') },
+    quotaNotice: { marginTop: 10, padding: 12, borderRadius: 10, backgroundColor: 'rgba(234,179,8,0.12)', borderWidth: 1, borderColor: 'rgba(234,179,8,0.35)' },
+    quotaNoticeRed: { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.35)' },
+    quotaNoticeText: { fontSize: 13, lineHeight: 19, color: '#FDE68A', fontFamily: interFamily('400') },
+    quotaNoticeTextRed: { color: '#FCA5A5' },
   });
 }

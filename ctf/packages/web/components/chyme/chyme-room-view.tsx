@@ -8,6 +8,7 @@ import { getChymeTokens, chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
+import type { ChymeConnectionState } from './chyme-audio-room';
 
 // The live audio room pulls in the Stream Video SDK, which is browser-only, so
 // it is loaded on the client and never server-rendered.
@@ -32,7 +33,34 @@ export type ChymeRoomViewProps = {
   roomScope: 'main' | 'contributors';
   onEditMessage: (messageId: string, text: string) => void;
   onDeleteMessage: (messageId: string) => void;
+  onConnectionChange?: (state: ChymeConnectionState) => void;
 };
+
+// The member-facing quota line, under the room header. Only while the Stream quota policy has
+// something to say (Yellow band and above); the meter's numbers stay on the admin screen.
+function ChymeQuotaNotice({ notice, band }: { notice: string | null; band: ChymeRoomResponse['quota']['band'] }) {
+  if (!notice) {
+    return null;
+  }
+  const severe = band === 'red';
+  return (
+    <div
+      role="status"
+      style={{
+        margin: '12px 24px 0',
+        padding: '10px 14px',
+        borderRadius: 10,
+        fontSize: 13,
+        lineHeight: 1.5,
+        background: severe ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
+        border: `1px solid ${severe ? 'rgba(239,68,68,0.35)' : 'rgba(234,179,8,0.35)'}`,
+        color: severe ? '#FCA5A5' : '#FDE68A',
+      }}
+    >
+      {notice}
+    </div>
+  );
+}
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
   const { room, currentUser, showChat, onToggleChat, joinInfo, joinReady } = props;
@@ -77,7 +105,9 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
               <Lock size={12} style={{ color: t.FAINT }} />
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>
-            <div style={{ fontSize: 13, color: '#16A34A' }}>{room.participants.length} participants · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}</div>
+            <div style={{ fontSize: 13, color: '#16A34A' }}>
+              {room.participants.length} of {room.capacity.max} participants · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
+            </div>
           </div>
           <button
             onClick={onToggleChat}
@@ -87,6 +117,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           </button>
         </div>
       </div>
+
+      <ChymeQuotaNotice notice={room.quota.notice} band={room.quota.band} />
 
       {inCall && joinInfo ? (
         <ChymeAudioRoom
@@ -98,6 +130,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           onLeave={props.onLeave}
           raisedHandUserIds={raisedHandUserIds}
           roomScope={props.roomScope}
+          backChannelAllowed={room.quota.backChannelAllowed}
+          onConnectionChange={props.onConnectionChange}
         />
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

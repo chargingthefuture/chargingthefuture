@@ -20,6 +20,16 @@ type ChymeRoomResponse = {
   roomKey: string;
   callActive: boolean;
   participants: ChymeParticipant[];
+  // How full the room is against the cap in force (the cap moves with the Stream quota band).
+  capacity: { current: number; max: number };
+  // What the Stream quota policy says right now: a member-facing line (null when nothing to say)
+  // and the two flags for the actions it can pause. No meter numbers here (rule 110).
+  quota: {
+    band: 'green' | 'yellow' | 'orange' | 'red';
+    notice: string | null;
+    guestListenAllowed: boolean;
+    backChannelAllowed: boolean;
+  };
 };
 
 type ChymeMessagesResponse = {

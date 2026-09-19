@@ -3,7 +3,6 @@
 import { Radio, LogIn, UserPlus, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
-import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
@@ -12,15 +11,16 @@ import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
-// /api/chyme/public/room. `credentials` is present only when the room is live
-// and Stream is configured, so a guest can actually listen.
+// /api/chyme/public/room. Whether a guest can listen is the route's `guestListenAllowed`; the
+// listen credentials themselves are minted on the tap (POST /api/chyme/public/listen, inside
+// ChymeGuestListen), so a page load touches nothing on Stream.
 type LiveState = {
   isLive: boolean;
   participantCount: number;
   roomName?: string;
-  credentials?: StreamJoinCredentials;
-  // The room is live but no guest identity came back — the route's plain reason (Stream rejected
-  // the guest upsert, or Stream is not configured). Shown under the room heading.
+  guestListenAllowed?: boolean;
+  // The room is live but guests cannot listen right now — the route's plain reason (the quota
+  // policy has guest listening paused). Shown under the room heading.
   listenUnavailable?: string;
   // The live check itself failed (a 429, a 503, no network). Shown instead of the empty state, so
   // "no rooms" is only ever said when the server actually said so.
@@ -54,7 +54,7 @@ function liveStateFrom(data: PublicRoomPayload): LiveState {
     isLive: data.isLive === true,
     participantCount: typeof data.participantCount === 'number' ? data.participantCount : 0,
     roomName: stringField(data, 'roomName'),
-    credentials: data.credentials as StreamJoinCredentials | undefined,
+    guestListenAllowed: data.guestListenAllowed === true,
     listenUnavailable: stringField(data, 'listenUnavailable'),
   };
 }
@@ -97,10 +97,10 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
   return (
     <div>
       {live.roomName ? <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 2 }}>{live.roomName}</div> : null}
-      {live.credentials ? (
+      {live.guestListenAllowed ? (
         <>
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>You&apos;re listening live — sign in to speak.</div>
-          <ChymeGuestListen credentials={live.credentials} participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
+          <ChymeGuestListen participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
               follow what members are saying and signs in to write. */}
           <div style={{ marginTop: 16 }}>
@@ -242,10 +242,8 @@ function ChymePublicView({
  * mockup's placeholder rooms.
  */
 export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
-  // Fetch the one default public room's live status once on mount. When it is
-  // live and Stream is configured, the API returns join credentials so a
-  // signed-out visitor can actually listen. Any error is ignored — the guest
-  // simply sees the not-live view.
+  // Fetch the one default public room's live status once on mount. The listen credentials are
+  // minted on the visitor's tap, not here, so a page load costs nothing on Stream.
   const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
   const [refreshing, setRefreshing] = useState(false);
   // Bumped by the refresh button; the chat panel re-reads when it changes.
@@ -257,12 +255,9 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
       const data: unknown = await res.json().catch(() => null);
       // Say that the check failed, with the server's own words when it gave any. Treating this as
       // "not live" read as "No public rooms right now" while a member was in the call.
-      setLive((prev) => {
-        const next = res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data);
-        // A re-read while the room is still live keeps the guest identity already in use: a fresh
-        // one would swap the listener's credentials under the joined call and reconnect it.
-        return next.isLive && next.credentials && prev.credentials ? { ...next, credentials: prev.credentials } : next;
-      });
+      // A re-read while the room is still live does not touch the listener: the credentials live
+      // inside ChymeGuestListen, which stays mounted while `guestListenAllowed` holds.
+      setLive(res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data));
     } catch (error) {
       if (signal?.aborted) return;
       setLive({ isLive: false, participantCount: 0, checkFailed: error instanceof Error ? error.message : 'The request did not complete.' });

@@ -105,7 +105,12 @@ export async function createStreamJoinCredentials(
 //
 // The env var gates this so the change is a no-op until the Stream role + call-type grants exist:
 // unset → guests keep the default role (client-only enforcement, unchanged); set → server-enforced.
-export async function createChymeGuestListenCredentials(): Promise<StreamJoinCredentials | null> {
+//
+// The guest id comes from the caller (the public listen route reads it from the browser's httpOnly
+// cookie), so one browser maps to one Stream user across page loads. Before 2026-09-19 every call
+// minted `chyme-guest-<random>`, which made each page load a new Stream user — a candidate
+// monthly-active user on the Chat meter for a visitor who had not even tapped.
+export async function createChymeGuestListenCredentials(guestId: string): Promise<StreamJoinCredentials | null> {
   const streamConfig = await resolveStreamCredentials();
   if (!streamConfig) {
     return null;
@@ -113,7 +118,7 @@ export async function createChymeGuestListenCredentials(): Promise<StreamJoinCre
 
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
-    const guestUserId = `chyme-guest-${crypto.randomUUID()}`;
+    const guestUserId = `chyme-guest-${guestId}`;
     const guestRole = process.env.CHYME_GUEST_STREAM_ROLE?.trim();
     await streamClient.upsertUser({
       id: guestUserId,

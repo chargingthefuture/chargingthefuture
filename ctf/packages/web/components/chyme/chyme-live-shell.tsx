@@ -9,6 +9,7 @@ import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
+import type { ChymeConnectionState } from './chyme-audio-room';
 import { responseFailureText } from 'lib/errors/client-failure';
 import type {
   ChymeJoinResponse,
@@ -31,6 +32,9 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [joinState, setJoinState] = useState<'idle' | 'joining' | 'ready'>('idle');
+  // The live connection as the Stream SDK reports it, for the Join pill. 'joined' until the audio
+  // room says otherwise; reset on leave and on a fresh join.
+  const [connection, setConnection] = useState<ChymeConnectionState>('joined');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(true);
@@ -206,6 +210,7 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
 
   async function handleJoin(): Promise<void> {
     setJoinState('joining');
+    setConnection('joined');
     setError(null);
     try {
       const payload = await requestJson<ChymeJoinResponse>(withRoom('/api/chyme/join'), { method: 'POST' });
@@ -233,6 +238,8 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
     locked,
     messagesEndRef,
     t,
+    connection,
+    setConnection,
     setDraft,
     setShowChat,
     refreshRoomAndMessages,
@@ -310,6 +317,7 @@ type ChymeShellContentProps = {
   roomScope: ChymeRoomScope;
   onEditMessage: (messageId: string, text: string) => void;
   onDeleteMessage: (messageId: string) => void;
+  onConnectionChange: (state: ChymeConnectionState) => void;
 };
 
 // The main content column: error banner, the empty "Join a Room" prompt, or the live room view.
@@ -339,6 +347,7 @@ function ChymeShellContent(props: ChymeShellContentProps) {
           roomScope={props.roomScope}
           onEditMessage={props.onEditMessage}
           onDeleteMessage={props.onDeleteMessage}
+          onConnectionChange={props.onConnectionChange}
         />
       )}
     </div>
@@ -360,6 +369,8 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
     locked,
     messagesEndRef,
     t,
+    connection,
+    setConnection,
     setDraft,
     setShowChat,
     refreshRoomAndMessages,
@@ -387,6 +398,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
         <ChymeSidebar
           loading={loading}
           joinState={joinState}
+          connection={connection}
           onJoin={() => void handleJoin()}
           onRefresh={() => void refreshRoomAndMessages()}
           refreshing={refreshing}
@@ -412,6 +424,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
           roomScope={roomScope}
           onEditMessage={handleEditMessage}
           onDeleteMessage={(id) => void handleDeleteMessage(id)}
+          onConnectionChange={setConnection}
         />
       </div>
     </div>

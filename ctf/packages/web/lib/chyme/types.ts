@@ -29,12 +29,31 @@ export type ChymeMessage = {
   sentAtIso: string;
 };
 
+// How full the room is against the cap in force right now. `max` moves with the Stream quota band
+// (see lib/stream-quota/policy.ts), so a client shows "N of M" from this rather than a constant.
+export type ChymeRoomCapacity = {
+  current: number;
+  max: number;
+};
+
+// What the Stream quota policy says the room may do right now. `notice` is the member-facing line
+// (null when there is nothing to say); the two flags hide the paused actions before a member taps
+// them. The meter's numbers are not here on purpose (rule 110) — the admin usage screen has them.
+export type ChymeQuotaState = {
+  band: 'green' | 'yellow' | 'orange' | 'red';
+  notice: string | null;
+  guestListenAllowed: boolean;
+  backChannelAllowed: boolean;
+};
+
 export type ChymeRoomResponse = {
   roomId: string;
   roomName: string;
   roomKey: string;
   callActive: boolean;
   participants: ChymeParticipant[];
+  capacity: ChymeRoomCapacity;
+  quota: ChymeQuotaState;
 };
 
 export type ChymeMessagesResponse = {
