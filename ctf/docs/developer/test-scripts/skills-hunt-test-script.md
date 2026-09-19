@@ -294,11 +294,12 @@ Result: web ☐
 the duplicate message — before 2026-09-18 each spelling counted as a different person. Step 2:
 refused as an invalid Quora URL; only quora.com and its subdomains are accepted, and a host merely
 *ending* in "quora.com" is not one. Step 3: only the first accepted nomination for that person earns
-the first-match bonus; the second scout gets the match points without it. A round that already had
-nominations before this fix can still let a same-skills re-nomination through the database's own
-duplicate index (the stored signature was built from the old spelling) — the nomination still goes
-through moderation, and `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` says
-whether any round is affected.
+the first-match bonus; the second scout gets the match points without it. This holds for nominations
+made before the fix too: what refuses a duplicate is a read of the stored normalized URL under a lock
+on that URL (not the per-round signature index behind it), and the migration re-keyed that column —
+so an older nomination written in another spelling still blocks a new one. Use
+`ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` to see any person who was nominated
+more than once before the fix.
 
 Result: web ☐
 

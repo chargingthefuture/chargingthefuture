@@ -291,42 +291,17 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
   `skills_hunt_submissions.quora_profile_url_normalized` (no uniqueness on that column, so rows
   collapsing onto one person is the point) and the Directory columns; verified on a local Postgres,
   where three differently-spelled nominations go from one each to one person with three, and a
-  second run changes nothing. **Known residual:** `signature_hash` on rows written before today was
-  computed from the old string, so within a round that already has rows, a re-nomination of the same
-  person with the same skills under a different spelling is not blocked by the unique index — the
-  scoring reads, including the first-match bonus, are fixed by the re-key, and the nomination still
-  goes through moderation. Recomputing those hashes needs the app's own hashing rule (the skill list
-  is sorted with `localeCompare`, which SQL cannot reproduce faithfully), so it is a script, not a
-  migration; not done here. `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` lists
-  any round where this actually happened. Android: SkillsHunt has no Android surface (rule 105).
-
-- 2026-09-18: **One person written two ways counted as two nominations (owner request, after the
-  same defect was found in Unlock).** A nomination's identity is its normalized Quora URL, and
-  `normalizeQuoraProfileUrl` — a private copy of Directory's, kept in step by a comment — stripped
-  the query and hash and then returned the URL otherwise as the scout typed it. So
-  `https://www.quora.com/profile/Mary-T-I-1`, the same without `www.`, with a trailing slash, from a
-  language subdomain (`es.quora.com`) or in different casing were different people to this plugin:
-  the per-round duplicate guard did not fire, and the first-match bonus (+5 to the first scout with
-  an accepted nomination for a URL in that round) could be paid to several scouts for one person.
-  Both copies also accepted any host *ending* in `quora.com`, so `evil-quora.com` passed as Quora.
-  The rules now live once, in `lib/shared/quora-url.ts` (`canonicalizeQuoraUrl`), returning
-  `https://www.quora.com` + the lowercased path with trailing slashes removed, with the host check
-  narrowed to quora.com and its subdomains; Directory's takedown list calls the same function, which
-  is what makes a suppressed URL match the string a nomination was deduped on. 14 unit tests cover
-  the spellings, the look-alike hosts and a post link (any Quora path is still accepted here —
-  unlike Unlock, a nominee may be identified by something they posted). Migration
-  `0027_canonical_quora_urls_directory_skills_hunt.sql` re-keys
-  `skills_hunt_submissions.quora_profile_url_normalized` (no uniqueness on that column, so rows
-  collapsing onto one person is the point) and the Directory columns; verified on a local Postgres,
-  where three differently-spelled nominations go from one each to one person with three, and a
-  second run changes nothing. **Known residual:** `signature_hash` on rows written before today was
-  computed from the old string, so within a round that already has rows, a re-nomination of the same
-  person with the same skills under a different spelling is not blocked by the unique index — the
-  scoring reads, including the first-match bonus, are fixed by the re-key, and the nomination still
-  goes through moderation. Recomputing those hashes needs the app's own hashing rule (the skill list
-  is sorted with `localeCompare`, which SQL cannot reproduce faithfully), so it is a script, not a
-  migration; not done here. `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` lists
-  any round where this actually happened. Android: SkillsHunt has no Android surface (rule 105).
+  second run changes nothing. **Correction to the first version of this entry:** it said a residual
+  remained, because `signature_hash` on rows written before today was computed from the old URL
+  string and the per-round unique index keys on that hash. Reading `createSubmission` settles it:
+  the guard that actually refuses a duplicate is a query on `quora_profile_url_normalized` itself,
+  taken under an advisory lock on that URL, and it blocks any non-rejected, non-deleted nomination of
+  the same person **in any round and whatever the skills**. The `(round_id, signature_hash)` index is
+  a backstop behind it, and both it and the guard exclude rejected and removed rows, so an old hash
+  never decides anything a duplicate reaches. Once the migration has re-keyed the column, every
+  spelling is caught. No hash-recompute script is needed.
+  `ctf/scripts/sql/quora-duplicate-links-directory-skills-hunt.sql` still lists any round where a
+  person was nominated more than once before the fix. Android: SkillsHunt has no Android surface (rule 105).
 
 - 2026-09-18: **A mission's count stops at its target on the member card (web).** Owner decision, settling gap 7, which was opened the day before as a deliberate open call. A mission counting more than it asked for read "82/1 complete" on the Missions tab. The number was true — it was the scout's whole accepted total against a target of 1 — but it reads as a fault in the bar, and the bar beside it had been capped at full width all along, so the text and the bar disagreed. `missionView` moves out of `components/skills-hunt/sh-missions-tab.tsx` into `lib/skills-hunt/mission-view.ts` (pure, no React, so the numbers a member sees are unit-tested) and caps the displayed count at the target. **Only the display changes:** `skills_hunt_mission_progress.progress_count` still stores the real count, so nothing is lost and an admin recompute still reads true figures. Completion is still the stored `completed_at`, never a count-against-target comparison, so narrowing a goal does not take back what a scout earned. The reason this was left uncapped on 2026-09-17 was that an over-count is the signature of a mission pointed at the wrong goal; that signal is not gone, it moved to the admin Missions list, which since the same day names what each mission counts in words with its sector or skill beside it — where the person who can correct it will see it, rather than in front of every member. `lib/skills-hunt/mission-view.test.ts` covers the cap, the under-target and no-progress-row cases, the unchanged bar width, and that completion still comes from the stored time. No schema, route, or contract change. Android: SkillsHunt has no Android surface (rule 105).
 
