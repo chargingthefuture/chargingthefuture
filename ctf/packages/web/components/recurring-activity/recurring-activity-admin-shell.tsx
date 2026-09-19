@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Repeat, Users, Zap } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
-import { RefreshButton } from '@/components/shared/refresh-button';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Admin dark palette (rule 131) with the Recurring Activity accent.
@@ -129,9 +128,6 @@ export function RecurringActivityAdminShell() {
             finding: people in one town really do have several arrangements with each other. Read the
             rows, do not act on the counts.
           </p>
-          {/* The shared control rather than the admin landing's: this shell loads its data client-side,
-              so a server re-render would not re-pull it. */}
-          <RefreshButton onRefresh={() => load(false)} title="Refresh review" color={ACCENT} />
         </div>
 
         {loading ? (

@@ -114,6 +114,36 @@ admin saw "No submissions matching this filter" and had no way to reach the row 
 them. Audited across all 133 admin routes at the time the rule was written; SkillsHunt's submission
 list was the only list at fault.
 
+## Every admin screen has a refresh control (owner directive, 2026-09-19)
+
+An admin screen is read while work is arriving, so the data it drew on open is out of date within
+seconds. The installed web app runs in standalone display mode, which turns off the browser's
+pull-to-refresh, so without a control on the screen the only way back to current data is to close
+the app and open it again. That is what prompted this: a Quora URL was added from the Unlock
+sign-ups list, the queue was opened to approve it, and the submission was not there.
+
+The control is not built per shell. `MobileScreenHeader` renders it for any path under `/admin`, and
+`app/admin/layout.tsx` mounts the `AdminRefreshProvider` that drives it
+(`components/shared/admin-refresh.tsx`). So a new admin surface that uses the shared header gets one
+with no work. A shell that builds its own top bar — Directory Admin does — places
+`<AdminRefreshControl accent={…} />` next to its `MobileTopActions` cluster by hand.
+
+The refresh does two things, and both are needed because admin screens are split roughly evenly
+between the two ways of loading data:
+
+1. `router.refresh()`, which re-runs the server render for a screen that reads in its page component
+   and passes the result down as props.
+2. A key change on a Fragment wrapping the admin subtree, which remounts it so a screen that fetches
+   from a `useEffect` re-runs that fetch. `router.refresh()` does nothing for those on its own — a
+   control that only called it would be a dead button on half the admin screens.
+
+The remount resets in-screen state (open tab, filter chips, typed search). That is the same thing
+closing and reopening the app did, and it is what the control replaces.
+
+Do not add a second refresh button to a shell that already gets one from the shared header. Weekly
+Performance is the one screen with its own: it builds its own top bar and its button re-pulls the
+selected week rather than the whole screen.
+
 ## Every admin action is recorded (critical — owner directive, 2026-08-28)
 
 Every admin action writes a durable audit row, on every surface, from the day the surface ships.

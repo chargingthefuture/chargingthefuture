@@ -244,6 +244,25 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
 
 ## Change log
 
+- 2026-09-19: **Every admin screen now has a refresh control in its top bar.** Owner report: a Quora
+  URL was added from the Unlock sign-ups list, the queue tab was opened to approve it, and the new
+  submission was not there — the screen had been rendered before the row existed and nothing on it
+  re-read the data. The installed web app runs in standalone display mode, which turns off the
+  browser's pull-to-refresh, so the only way back to current data was to close the app and open it
+  again. `components/shared/admin-refresh.tsx` adds a provider mounted by `app/admin/layout.tsx`:
+  the control calls `router.refresh()` for the server-rendered screens (Unlock, Skills Hunt, Service
+  Credits and the rest read their data in the page component) and also changes the key on a Fragment
+  wrapping the admin subtree, which remounts it so the client-fetched screens (Directory, Beacon,
+  Comic, Peer Programming …) re-run their effects — `router.refresh()` alone does nothing for those.
+  The control is rendered from `MobileScreenHeader` for any path under `/admin`, so a new admin
+  surface cannot ship without one; Directory Admin builds its own top bar and carries the control by
+  hand, and Weekly Performance keeps the refresh button it already had. The refresh resets in-screen
+  state (open tab, filter chips, typed search), which is what closing and reopening the app did.
+  The `/admin` landing's own refresh button, added 2026-07-27, was folded into this shared control,
+  and the two screens that had already grown their own whole-screen Refresh in the page body —
+  Recurring Activity Review and the Quora deletion survey admin — dropped theirs so no admin
+  screen shows two. Quora Live Census keeps its Refresh: it re-reads the open run, not the screen.
+
 - 2026-08-02: **Account deletion has never been checked for coverage; 68 tables holding a member's
   id are unclassified.** `check-deletion-registry.mjs` only ever asked "does every table the registry
   names exist in schema.sql?" — never the question that matters to a member: "is every table holding
