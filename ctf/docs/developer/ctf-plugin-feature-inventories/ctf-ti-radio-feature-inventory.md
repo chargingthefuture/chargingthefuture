@@ -180,8 +180,9 @@ only here would be invisible on their own trust card.
 ## Gaps and Known Technical Debt
 
 1. **No RSVP, on purpose.** Saying you will come would change nothing anybody can act on — a host
-   cannot admit or refuse people, and Chyme does not read this schedule — so it would be a number
-   that looks like information and is not. Worth revisiting when there is something for it to feed:
+   cannot admit or refuse people — so it would be a number that looks like information and is not.
+   (Chyme reads this schedule as of 2026-09-19 and shows the next booked slots on its own screens;
+   that changes nothing here, since the read is the guide's public route.) Worth revisiting when there is something for it to feed:
    a reminder, or a host deciding whether to go ahead.
 2. **No reminder or notification.** Nothing tells a host their slot is starting, and nothing tells a
    reader a discussion they were interested in is about to begin. This is the gap that costs most,
@@ -190,7 +191,9 @@ only here would be invisible on their own trust card.
    moment it rolls out of the window; there is no archive and no "what was on last week".
 4. **Nothing joins the room for you.** The page links to Chyme generally, not to a room for that
    slot, because Chyme rooms are not created from here. A host and their listeners find each other in
-   Chyme by being there at the right time.
+   Chyme by being there at the right time. Since 2026-09-19 Chyme shows this guide's next booked
+   slots on its member view, its signed-out page, and the Android Upcoming tab (Chyme inventory,
+   User Features 15), so somebody already in Chyme can see when the next discussion starts.
 5. **No way to edit a booking.** Changing the subject means releasing the slot and taking it again,
    which risks losing it to somebody else in between.
 6. **Removal has no notice to the host.** They find out by looking at the guide.

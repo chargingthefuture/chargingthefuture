@@ -718,26 +718,33 @@ member B, both from approved accounts and both live. An admin available.
 
 Result: web ☐
 
-### FS-24 — The export queue's number is the number of requests in it
+### FS-24 — The queue's number, its list and the dot on the admin landing all agree
 
 **Role:** admin, member (unapproved) · **Surfaces:** web
 
-**Precondition:** An unapproved member with a live comment, and an approved member with one.
+**Precondition:** An unapproved member with a live comment, and an approved member with one. The
+admin has opened `/admin/fireside` at least once, so the Fireside tile starts with no dot.
 
 **Steps:**
 1. As the unapproved member, switch on "Ask for this to be published with the post" for your comment.
-2. As the admin, open the admin landing page and then `/admin/fireside` → the export queue.
-3. As the approved member, switch the same ask on for their comment. Reload the queue.
-4. Approve the first member in Unlock, then reload the queue again.
+2. As the admin, open the admin landing page and look at the Fireside tile. Then open
+   `/admin/fireside` → the export queue.
+3. As the approved member, switch the same ask on for their comment. Reload the admin landing, then
+   the queue.
+4. Decide that request — approve or decline it. Reload the admin landing.
+5. Approve the first member in Unlock, then reload the admin landing and the queue again.
 
 **Expected:**
-- After step 1 the queue shows no request and says so — an unapproved member's words are not public
-  in the app yet, so there is nothing to decide about publishing them further. The count above the
-  list reads zero, not one: the number and the list agree.
-- After step 3 the queue shows exactly one request, from the approved member, and the count reads
-  one. Paging past the end clamps to the last page rather than showing an empty list.
-- After step 4 the queue shows two requests and the count reads two. The first member's request was
-  waiting all along and arrives when Unlock approves them.
+- After step 1 the Fireside tile carries **no** dot, and the queue shows no request and says so. An
+  unapproved member's words are not public in the app yet, so there is nothing to decide about
+  publishing them further. The count above the list reads zero, not one: the number, the list and
+  the dot are one answer. A dot here over an empty queue is the failure this case exists to catch.
+- After step 3 the tile carries a dot, and the queue shows exactly one request from the approved
+  member with the count reading one. Paging past the end clamps to the last page rather than
+  showing an empty list.
+- After step 4 the dot is gone, because nothing is waiting.
+- After step 5 the dot is back, the queue shows the first member's request, and the count reads one.
+  It was waiting all along and arrives when Unlock approves them.
 
 Result: web ☐
 

@@ -13,7 +13,10 @@ export {
   deleteChymeMessage,
   postChymeJoin,
   postChymeTip,
+  getChymeUpcoming,
+  formatUpcomingWhen,
   deleteChymeProfile,
   deleteFullAccount,
   chymeHandle,
 } from './ChymeApi';
+export type { ChymeUpcomingSlot } from './ChymeApi';
