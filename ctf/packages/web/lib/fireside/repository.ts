@@ -225,7 +225,10 @@ function toComment(
   reactions: Record<FiresideCountedKind, number>,
   viewerReactions: FiresideAnyReactionKind[],
   viewerUserId: string | null,
+  /** Whether the row's author is approved in Unlock, for the state only its own author is told. */
+  authorIsApproved = false,
 ): FiresideComment {
+  const isOwn = viewerUserId != null && viewerUserId === row.author_user_id;
   return {
     id: row.id,
     parentCommentId: row.parent_comment_id,
@@ -237,7 +240,11 @@ function toComment(
     editedAt: row.edited_at,
     reactions,
     viewerReactions,
-    isOwn: viewerUserId != null && viewerUserId === row.author_user_id,
+    isOwn,
+    // Only ever about the reader's own comment. A held or removed comment reaches this shape only
+    // for the person who wrote it, and this is the word their screen labels it with; for anybody
+    // else's comment it is null, so no moderation state travels on a public shape.
+    viewerState: isOwn ? commentStateForAuthor({ status: row.status, authorIsApproved }) : null,
   };
 }
 
@@ -266,8 +273,18 @@ export async function listThreadComments(
 
   const { counts, viewer } = await readReactions(readable.map((row) => row.id), viewerUserId);
   const comments = readable.map((row) =>
-    toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], viewerUserId));
-  return { thread, comments };
+    toComment(
+      row,
+      counts.get(row.id) ?? emptyReactionCounts(),
+      viewer.get(row.id) ?? [],
+      viewerUserId,
+      approved.has(row.author_user_id),
+    ));
+  // The count says how many comments are on the screen. `findThread` counts every row that is not
+  // removed, which includes the ones held because their author is not approved yet — so the blog
+  // widget, which renders the number beside the post, was promising a reader comments that the same
+  // call had already declined to give them.
+  return { thread: { ...thread, commentCount: comments.length }, comments };
 }
 
 async function countCommentsToday(userId: string): Promise<number> {
@@ -354,7 +371,7 @@ export async function listOwnComments(userId: string, limit = 50, offset = 0): P
   const { counts, viewer } = await readReactions(result.rows.map((row) => row.id), userId);
 
   return result.rows.map((row) => ({
-    ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], userId),
+    ...toComment(row, counts.get(row.id) ?? emptyReactionCounts(), viewer.get(row.id) ?? [], userId, authorIsApproved),
     state: commentStateForAuthor({ status: row.status, authorIsApproved }),
     exportToBlog: row.export_to_blog,
     exportReview: row.export_review,

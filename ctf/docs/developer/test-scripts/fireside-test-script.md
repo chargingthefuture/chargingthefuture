@@ -650,13 +650,114 @@ it. An admin available. A second member's comment in the same thread.
 - There is no Edit control on somebody else's comment. Calling
   `PATCH /api/fireside/comments/<their id>` with a `body` answers 404 — a comment that is not yours
   is answered as though it is not there.
-- A comment an admin removed refuses the edit and says putting it back is theirs to do. In a closed
-  conversation the edit is refused with a line saying so, and taking the comment down still works.
+- A comment an admin removed carries no Edit control in the thread at all, and the line beside it
+  says an admin took it down and putting it back is theirs to do. From your own comments screen the
+  row carries no Edit either. Calling the route by hand still refuses it with the same sentence.
+  In a closed conversation the edit is refused with a line saying so, and taking the comment down
+  still works.
 - A comment you took down refuses the edit and says to write a new one instead; it cannot be undone.
 - Rewriting an approved export saves the words **and** returns the request to the queue. The screen
   says an admin had approved the earlier wording and it goes back for another read, the comment's
   state reads as waiting again, and it is back on the admin's export queue with the new text.
 - The audit log has a `fireside.comment.edit` row for each save, and the row for the last one says
   the export was requeued.
+
+Result: web ☐
+
+### FS-22 — Your own comment says what state it is in, where you wrote it
+
+**Role:** member (unapproved), member (approved), admin · **Surfaces:** web
+
+**Precondition:** An unapproved member who has written a comment under a post. An approved member
+with a comment in the same conversation. An admin available.
+
+**Steps:**
+1. As the unapproved member, open the conversation you wrote in and read your own comment.
+2. Read the same conversation signed out, in a private window.
+3. Have the admin remove the approved member's comment. As that member, open the conversation again.
+4. As that same member, press Edit on the removed comment, and on a comment of theirs that is live.
+5. As any member, look at the comments other people wrote in the same thread.
+
+**Expected:**
+- The unapproved member's own comment carries a line saying only they can see it and that it appears
+  to everybody once their account is approved. It does not look like a live comment.
+- Signed out, none of that is on the page — the held comment is not there at all, and no line about
+  anybody's state appears on any comment.
+- The removed comment shows its author a line saying an admin took it down, that only they can see
+  it, and that putting it back is the admin's to do.
+- There is no Edit control on the removed comment. There is one on the live comment, and it works.
+- Nothing is shown about the state of anybody else's comment, on any screen, to anybody.
+
+Result: web ☐
+
+### FS-23 — A reply outlives the comment it answers
+
+**Role:** member, admin · **Surfaces:** web (public)
+
+**Precondition:** A conversation with a top-level comment from member A and a reply to it from
+member B, both from approved accounts and both live. An admin available.
+
+**Steps:**
+1. Read the conversation signed out. Note both comments.
+2. As member A, take your own top-level comment down.
+3. Read the conversation signed out again, and as member B.
+4. Put things back: have member A write a new top-level comment and member B reply to it. Now have
+   the admin remove member A's comment instead of A taking it down.
+5. Read the conversation signed out, as member B, and as member A.
+
+**Expected:**
+- After A takes the comment down, the reply from B is still on the page. It carries a line saying it
+  answers a comment that is no longer shown. It has not disappeared, and neither has its reaction
+  count or its own reply controls.
+- Member B sees their own reply in both cases and is told nothing about why A's comment went.
+- After the admin removes A's comment, the reply from B is still on the page for a signed-out reader
+  and for B, again marked as answering a comment that is no longer shown.
+- Member A still sees their own removed comment, labeled, with the reply under it.
+- The count beside the post matches the number of comments actually on the page in every one of
+  these states — it never claims comments a reader cannot see.
+
+Result: web ☐
+
+### FS-24 — The export queue's number is the number of requests in it
+
+**Role:** admin, member (unapproved) · **Surfaces:** web
+
+**Precondition:** An unapproved member with a live comment, and an approved member with one.
+
+**Steps:**
+1. As the unapproved member, switch on "Ask for this to be published with the post" for your comment.
+2. As the admin, open the admin landing page and then `/admin/fireside` → the export queue.
+3. As the approved member, switch the same ask on for their comment. Reload the queue.
+4. Approve the first member in Unlock, then reload the queue again.
+
+**Expected:**
+- After step 1 the queue shows no request and says so — an unapproved member's words are not public
+  in the app yet, so there is nothing to decide about publishing them further. The count above the
+  list reads zero, not one: the number and the list agree.
+- After step 3 the queue shows exactly one request, from the approved member, and the count reads
+  one. Paging past the end clamps to the last page rather than showing an empty list.
+- After step 4 the queue shows two requests and the count reads two. The first member's request was
+  waiting all along and arrives when Unlock approves them.
+
+Result: web ☐
+
+### FS-25 — Your own comments list keeps its page in the address bar
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** A member with more than 20 comments, so the list has at least two pages.
+
+**Steps:**
+1. Open the Fireside screen and press Next.
+2. Read the address bar, then copy the address and open it in a new tab.
+3. Press the browser's back button.
+4. Edit the address by hand to a page number past the end and load it.
+
+**Expected:**
+- Page two shows the next 20 comments and the address carries `?page=2`.
+- The copied address opens on page two directly.
+- Back returns to page one, and the address has no page parameter on it — page one is the default
+  and does not need saying.
+- A page past the end lands on the last page with its comments on it, not on an empty screen.
 
 Result: web ☐

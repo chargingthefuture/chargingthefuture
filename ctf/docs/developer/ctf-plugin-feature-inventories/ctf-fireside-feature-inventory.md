@@ -45,7 +45,9 @@ the project controls rather than on a platform that has erased five of its accou
 5. **Approval is per person, and retroactive.** When somebody is approved, every comment and every
    reaction they have left appears at once. One decision, not one per item.
 6. **You always see your own words.** Held, removed or live, a member sees what they wrote, with a
-   label saying which.
+   label saying which — on their own comments list and in the conversation itself, which is the
+   screen they are on when they write. The label is on their own comments only; nothing is said
+   anywhere about the state of anybody else's.
 7. **Replies, one level deep.** A reply to a comment, and no reply to a reply. Deeper nesting is
    unreadable at phone width, which is the only width this app has. When somebody answers you, you
    are told, and the notification opens that conversation. Nothing arrives for a reply you cannot
@@ -131,7 +133,7 @@ the project controls rather than on a platform that has erased five of its accou
 
 | Route | Method | Who | What |
 |---|---|---|---|
-| `/api/fireside/threads?repo=&slug=` | GET | **Public, no account** | The conversation under one post. A signed-in reader also gets their own held comments. |
+| `/api/fireside/threads?repo=&slug=` | GET | **Public, no account** | The conversation under one post, and the count of what is on it. A signed-in reader also gets their own held comments, and that answer is `private, no-store` — the signed-out one alone is shared-cacheable, and both carry `Vary: Cookie`. |
 | `/api/fireside/comments` | POST | Signed-in member | Write a comment. Answers with whether it is public yet and the held notice when it is not. |
 | `/api/fireside/comments/[commentId]` | DELETE | Author | Withdraw your own comment. |
 | `/api/fireside/comments/[commentId]` | PATCH | Author | Two things, by what the body carries: `body` rewrites the comment in place, `exportToBlog` turns the blog-export request on or off. |
@@ -171,6 +173,12 @@ faults in two weeks came from a rule written in two places that disagreed.
   `FIRESIDE_PLUGIN_AUDIT_CONTRACTS.yaml`, `FIRESIDE_PROFILE_AND_DELETION_CONTRACT.md`.
 - **The public read is the one unauthenticated content route in the app.** It returns a display name
   and never a user id or an email, because everything on that shape is on the open web.
+- **What a cache may keep depends on who asked.** The same route answers a signed-in member with
+  their own held and removed comments, and the URL names only the post — so a shared cache holding
+  that body would hand it to the next reader of that post. The signed-out answer alone is
+  `public, s-maxage=60`; a signed-in answer is `private, no-store`; both send `Vary: Cookie`. One
+  function, `firesideReadHeaders`, and its tests are the guarantee, because a cached body reaching
+  the wrong reader looks like nothing at all from the inside.
 - **Unlock exception, decided 2026-09-13** — the fourth, on the same reasoning as the Knowledge
   Library contribution exception. Recorded in `ctf/config/unlock-tier-exception-allowlist.json` and
   enforced by CI. Writing is a route into verification; reading is not gated at all and therefore is
@@ -247,26 +255,89 @@ member active only in Fireside is seen by being read, which is what the plugin i
    repository and renders from `/api/fireside/threads`, which now returns `editedAt` on every
    comment; until that widget reads it, a reader on the blog sees rewritten words with nothing
    saying they changed, while a reader in the app sees the mark.
-4. In the thread, an author's own comment that an admin removed still shows an Edit control. The
-   public comment shape carries no moderation state — deliberately, since it is returned on an
-   unauthenticated route — so the screen cannot tell before asking. Pressing it returns the refusal
-   saying an admin took the comment down and that putting it back is theirs to do, which is honest
-   but is a question the screen should not have had to ask. The member's own comments list, which
-   does know each row's state, offers Edit only where it will work.
-5. The author's record counts only what happened in Fireside. An account being a problem in several
+4. The author's record counts only what happened in Fireside. An account being a problem in several
    parts of the app at once is not visible from this screen, and deciding to delete an account on one
    plugin's tally alone would miss that.
-6. A reply notification does not arrive late. A held reply notifies nobody, and approving its
+5. A reply notification does not arrive late. A held reply notifies nobody, and approving its
    author later makes the reply appear without telling the person it answered. Catching that up
    means hooking into Unlock approval, which is a cross-plugin change rather than a Fireside one.
-7. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
+6. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
    has no way to search the conversation. A search across every thread for a member is close to the
    browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
    rather than arriving as a side effect of this.
-8. The member's own comment list pages without putting the page in the address bar. The admin lists
-   all do; the member one predates them and should follow.
+7. The "new to review" dot on the admin landing tile can still light up for a request the export
+   queue does not show. The queue drops a request whose author is not approved in Unlock — an
+   unapproved member's words are not public in the app yet, so there is nothing to decide about
+   publishing them further — and the dot is one SQL count in `lib/admin/area-attention.ts`, a shared
+   map of plain queries with no way to ask Unlock anything. Adding one means either teaching that
+   map to call a function or writing the approval rule into a second place in SQL, and this
+   repository has already paid for a rule written in two places. The queue's own count and paging no
+   longer have the fault (2026-09-19), so what is left is a dot that occasionally leads to a screen
+   saying the queue is empty, rather than a number that contradicts the list under it.
 
 ## Change Log
+
+- 2026-09-19: **A read of the whole plugin, end to end, and what it turned up.** Owner request: close
+  any gaps. Six things, no schema change and no new route.
+
+  **The public thread read was telling shared caches to keep an answer that is different for every
+  signed-in reader.** `/api/fireside/threads` went out under `public, max-age=30, s-maxage=60` —
+  written for the signed-out case, where the answer really is the same for everybody. But that route
+  also returns a signed-in member their own comments that nobody else may see: the ones held while
+  they wait for Unlock, and the ones an admin took down. The URL names only the post, so "the next
+  request for this URL" is any reader of that post, and `s-maxage` is an instruction to every shared
+  cache in between to hand them the stored copy. The rule is now `firesideReadHeaders` in
+  `lib/fireside/_lib.ts` and turns on whether the reader is signed in: the signed-out answer keeps
+  the shared cache, a signed-in answer is `private, no-store`, and both carry `Vary: Cookie` so a
+  cache holding the signed-out copy cannot serve it to a member either — who would otherwise read
+  the conversation with their own held comment missing and conclude it had been thrown away. It is
+  in the library rather than in the route file because Next.js refuses an unexpected export from a
+  route, and a rule with no test is the kind that comes back.
+
+  **A reply outlived the comment it answered and was rendered nowhere.** Taking a comment down drops
+  it from the conversation entirely; an admin removing one leaves it visible to its own author and
+  to nobody else. Either way the replies under it are untouched — still there, still public, still
+  returned by the route — and the screen filed each one under a parent that was not in the list, so
+  it drew nothing. One comment being taken out quietly took every answer to it out as well, and the
+  people who wrote those answers watched their own words disappear from the thread. A reply whose
+  parent is not on screen is now shown where the top-level comments are, with a line saying it
+  answers a comment that is no longer shown.
+
+  **A member's own held or removed comment looked exactly like a live one.** The inventory has said
+  since the plugin shipped that somebody always sees their own words "with a label saying which",
+  and on their own comments list they do. In the thread — which is the screen they are on when they
+  write — there was no label at all, so a held comment read as public to the person waiting to be
+  approved. The same missing knowledge is what put an Edit control on a comment an admin had
+  removed, which the server then refused with a sentence about whose decision it was: honest, and a
+  question the screen should not have had to ask. The comment shape now carries `viewerState`,
+  populated from `commentStateForAuthor` and **only** for a row the viewer wrote — null on everybody
+  else's and null for a signed-out reader, so no moderation state about anybody else travels on a
+  shape returned by an unauthenticated route.
+
+  **The export queue counted requests it would never list.** The count was plain SQL with the three
+  column conditions; the list ran the same SQL and then dropped, in TypeScript, every request whose
+  author is not approved. So a request from somebody still waiting on Unlock was counted and never
+  shown — the screen read "1 of 3" over an empty list, and the page after it was empty too, because
+  LIMIT and OFFSET had been spent on rows that were then thrown away. `readPendingExportQueue`
+  replaces both functions: one scan of the pending set, one approval lookup, then the count, the
+  clamp and the page all cut from the same filtered list, so the two cannot disagree again.
+
+  **The count beside a post promised comments the same call had declined to give.** `findThread`
+  counts every row that is not removed, which includes the ones held because their author is not
+  approved. The blog widget renders that number under the post. It is now the number of comments the
+  read actually returned.
+
+  **The member's own comment list now puts its page in the address bar** (recorded gap 8), through
+  the same `useUrlPage` every admin list here has used since it shipped. It was the last Fireside
+  list paging without it.
+
+  What was looked at and left alone: an author may still reply to a comment that was taken down,
+  which costs nothing and reads no worse than a reply to a comment that has scrolled away; a thread
+  is still created lazily from whatever repo and slug a member's first comment names, which is how
+  the blog widget works and is not a thing to change without changing that too; and the admin
+  landing's "new to review" dot is recorded as gap 7 rather than fixed, because the only ways to fix
+  it are to teach a shared map of plain SQL queries to call a function or to write the Unlock
+  approval rule into a second place, and this repository has already paid for that.
 
 - 2026-09-18: **An author can rewrite their own comment** (owner report: correcting a typo meant
   removing the comment and posting it again). Taking a comment down and rewriting it loses the

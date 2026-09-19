@@ -11,6 +11,7 @@ import { getAppAccent } from "@/lib/theme/theme-tokens";
 import { FiresideCommentEditor } from "./fireside-comment-editor";
 import { Pager } from "./fireside-pager";
 import { FiresideThreadView } from "./fireside-thread-view";
+import { useUrlPage } from "./fireside-url-page";
 
 // What a member manages about their own part in Fireside. Reading and writing happen under the blog
 // post itself, which is where the conversation is; this screen is where somebody sees everything
@@ -310,7 +311,10 @@ export function FiresideShell({
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent("fireside", theme), theme);
   const [comments, setComments] = useState<OwnComment[]>([]);
-  const [page, setPage] = useState(1);
+  // The page is in the address bar, so a place in the list can be linked and the back button steps
+  // through the pages actually visited (rule 100). Every admin list here has done this since it
+  // shipped; the member's own list predates them and was the last one paging without it.
+  const [page, setPage] = useUrlPage("page");
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -340,7 +344,9 @@ export function FiresideShell({
       }
       const data = (await res.json()) as { comments: OwnComment[]; page: number; lastPage: number; total: number };
       setComments(data.comments);
-      setPage(data.page);
+      // The route clamps a page past the end and answers with the one it used, so a linked number
+      // that has since gone out of range lands on the last page rather than on nothing.
+      if (data.page !== wanted) setPage(data.page);
       setLastPage(data.lastPage);
       setTotal(data.total);
     } catch (e) {
@@ -348,9 +354,9 @@ export function FiresideShell({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setPage]);
 
-  useEffect(() => { void load(1); }, [load]);
+  useEffect(() => { void load(page); }, [load, page]);
 
   async function send(id: string, init: RequestInit, failure: string) {
     setBusyId(id);
@@ -467,7 +473,7 @@ export function FiresideShell({
                 void send(id, { method: "PATCH", body: JSON.stringify({ body }) }, "Could not save that change.")}
             />
           ))}
-          <Pager page={page} lastPage={lastPage} t={t} onPage={(next) => void load(next)} />
+          <Pager page={page} lastPage={lastPage} t={t} onPage={setPage} />
         </>
       )}
       </>

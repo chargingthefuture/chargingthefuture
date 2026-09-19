@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireFiresideAdmin } from 'lib/fireside/_lib';
 import { FIRESIDE_ERROR_CODE } from 'lib/fireside/constants';
-import { countPendingExportRequests, listPendingExportRequests } from 'lib/fireside/export-review';
+import { readPendingExportQueue } from 'lib/fireside/export-review';
 import { failureResponse } from 'lib/errors/failure';
 
 const PAGE_SIZE = 20;
@@ -23,13 +23,11 @@ export async function GET(request: Request) {
   const page = Number.isFinite(requested) && requested > 0 ? requested : 1;
 
   try {
-    const total = await countPendingExportRequests();
-    // Paged, never an endless list — accessibility rule. An out-of-range page is clamped rather
-    // than showing nothing, so a bookmarked page number after the queue drains still renders.
-    const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const safePage = Math.min(page, lastPage);
-    const requests = await listPendingExportRequests(PAGE_SIZE, (safePage - 1) * PAGE_SIZE);
-    return NextResponse.json({ ok: true, requests, page: safePage, lastPage, total }, { status: 200 });
+    // Paged, never an endless list — accessibility rule. The count, the clamp and the page all come
+    // out of one call, because the count and the list used to be two queries with two different
+    // ideas of what is in the queue.
+    const queue = await readPendingExportQueue({ page, pageSize: PAGE_SIZE });
+    return NextResponse.json({ ok: true, ...queue }, { status: 200 });
   } catch (error) {
     return failureResponse({
       summary: 'Unable to load the blog-export queue',

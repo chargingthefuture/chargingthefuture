@@ -128,8 +128,24 @@ type ExportRequestRow = {
  * Only comments from approved authors appear. An unapproved author's words are not publicly visible
  * in the app yet, so there is nothing to decide about publishing them further; their request waits
  * and arrives here when Unlock approves them.
+ *
+ * Counting and paging happen on the same filtered list, in one function, because they did not
+ * before and could not agree. The count was plain SQL with the three column conditions, and the
+ * list dropped unapproved authors in TypeScript after the database answered — so a request from a
+ * somebody still waiting on Unlock was counted and never shown. The queue read "1 of 3" over an
+ * empty screen, and the page after it was empty too, because LIMIT and OFFSET had been spent on
+ * rows that were then thrown away.
+ *
+ * The scan is the whole pending set rather than one page of it. That set is what an admin has not
+ * decided yet, which is small by definition; the alternative is asking Unlock about one page at a
+ * time and still not knowing how many pages there are.
  */
-export async function listPendingExportRequests(limit = 20, offset = 0): Promise<FiresideExportRequest[]> {
+export async function readPendingExportQueue(input: { page: number; pageSize: number }): Promise<{
+  requests: FiresideExportRequest[];
+  page: number;
+  lastPage: number;
+  total: number;
+}> {
   const result = await queryDb<ExportRequestRow>(
     `SELECT c.id::text AS id,
             c.body,
@@ -140,17 +156,23 @@ export async function listPendingExportRequests(limit = 20, offset = 0): Promise
        FROM fireside_comments c
        JOIN fireside_threads t ON t.id = c.thread_id
       WHERE c.export_review = 'pending' AND c.export_to_blog = TRUE AND c.status = 'visible'
-      ORDER BY c.created_at ASC
-      LIMIT $1 OFFSET $2`,
-    [limit, offset],
+      ORDER BY c.created_at ASC`,
   );
-  if (result.rows.length === 0) return [];
 
-  const approved = await listUnlockedUserIds(result.rows.map((row) => row.author_user_id));
-  const visible = result.rows.filter((row) => approved.has(row.author_user_id));
+  const approved = result.rows.length
+    ? await listUnlockedUserIds(result.rows.map((row) => row.author_user_id))
+    : new Set<string>();
+  const waiting = result.rows.filter((row) => approved.has(row.author_user_id));
 
-  return Promise.all(
-    visible.map(async (row) => ({
+  const total = waiting.length;
+  // An out-of-range page clamps to the last one rather than showing nothing, so a bookmarked page
+  // number still renders after the queue drains.
+  const lastPage = Math.max(1, Math.ceil(total / input.pageSize));
+  const page = Math.min(Math.max(input.page, 1), lastPage);
+  const offset = (page - 1) * input.pageSize;
+
+  const requests = await Promise.all(
+    waiting.slice(offset, offset + input.pageSize).map(async (row) => ({
       commentId: row.id,
       body: row.body,
       authorUserId: row.author_user_id,
@@ -162,14 +184,8 @@ export async function listPendingExportRequests(limit = 20, offset = 0): Promise
       authorRecord: await getAuthorRecord(row.author_user_id),
     })),
   );
-}
 
-export async function countPendingExportRequests(): Promise<number> {
-  const result = await queryDb<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM fireside_comments
-      WHERE export_review = 'pending' AND export_to_blog = TRUE AND status = 'visible'`,
-  );
-  return Number(result.rows[0]?.count ?? '0');
+  return { requests, page, lastPage, total };
 }
 
 /**
