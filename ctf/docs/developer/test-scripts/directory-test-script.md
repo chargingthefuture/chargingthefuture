@@ -136,6 +136,26 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 **Steps:**
 1. Open your own profile; press "Edit my profile".
 2. Change the headline and one other field; leave the rest untouched and save.
+2b. **A skill that belongs to several kinds of work.** In the specializations picker, search for a
+   skill name that exists under more than one occupation or sector (today `Crisis intervention`,
+   which sits under four Health occupations, or `Programming`, which spans two sectors). Read the
+   result, then clear the search and open one of the named areas in the accordion.
+   **Expected:** the result shows as a single chip — one chip per name is correct and is what lets a
+   repeated name be treated as one skill — with a small `counts in <sector>, <sector>` caption
+   beneath it, and one line below the results reading exactly: "The list below groups skills by area
+   if you would like to browse them that way instead." That single sentence is the entire note.
+   **This step is also a copy check, and it fails on wording as much as on behavior.** Nothing here
+   may read as "your pick was ambiguous, go back and choose properly", because that invites a member
+   to **undo** a pick, and the people this picker most has to serve are the ones already inclined to
+   believe they have nothing to offer. Wording that tells anyone to clear, narrow, re-pick or
+   reconsider is a defect to report. Two specifics, both arrived at by revision and both defects if
+   undone: the line must end "browse them that way **instead**", which attaches the alternative to
+   the act of browsing rather than to the counting; and the note must **not** re-open by explaining
+   that some skills belong to more than one kind of work and count in all of them. That explanation
+   is already carried by the per-result caption, and repeating it here raises the multiplicity as
+   something needing explanation, which implies a choice is owed — the nudge itself. Anything longer
+   than the one sentence is a regression. The accordion entries carry no caption, each being already scoped to one sector,
+   and a single-sector skill shows no caption and no note.
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
    as a removable chip at the top. Confirm each **skill name appears only once** in the accordion — a
