@@ -108,9 +108,12 @@ Lifecycle/governance references applied:
    through the server SDK (`lib/chyme/stream-moderation.ts`); when Stream did not apply it (an
    outage, a call that ended) the answer says so in `streamNotice` and the control shows the line —
    the decision stands in this app either way. Hand-raise mode is enforced server-side on the call
-   only when `CHYME_GUEST_STREAM_ROLE` is set (the listen-only role the owner configured for
-   guests doubles as the listener role); unset, the apps enforce it alone, as guest listen-only
-   was before the role existed.
+   only when `CHYME_GUEST_STREAM_ROLE` is set (the listen-only role guests already carry doubles as
+   the listener role); unset, the apps enforce it alone, as guest listen-only was before the role
+   existed. That role and its grants on the `default` call type are owned by code, not by dashboard
+   clicks: the "Stream — Guest Listener Setup" workflow applies them and checks them weekly
+   (`ctf/scripts/stream-guest-listener-setup.mjs`), so a drift that would break hand-raise mode or
+   guest listening goes red on its own.
 4. **Removed members, on the Live Audio Usage screen (`/admin/chyme`).** Every live removal across
    both rooms, newest first, with the reason and one control, **Let back in**, which lifts the
    removal (the row stays as the record) and unblocks the member from the call.
@@ -367,6 +370,17 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-19: **The guest listen-only role carries hand-raise mode too, and the records now say so.**
+  The role named by `CHYME_GUEST_STREAM_ROLE` is given to a member an admin moves to listening, not
+  only to a signed-out guest, so the runbook
+  (`ctf/docs/plugins/chyme/guest-listener-stream-role.md`), the setup script, and the workflow no
+  longer say members are unaffected by it. Nothing about the target state changes: a listening member
+  wants the same grants a guest wants, join and hear but never publish, so the existing "Stream —
+  Guest Listener Setup" workflow already applies and weekly-checks what both need, through Stream's
+  APIs rather than dashboard clicks. What is newly written down is how far a drift reaches — a
+  missing `join-call` grant drops a listening member as well as refusing every guest — and the
+  runbook gains a "What hand-raise mode adds" section. Docs only; no code, schema, route, or
+  contract change.
 - 2026-09-19: **Moderation controls: mute, remove, let back in, and hand-raise mode with speaker
   grant.** Owner decision the same day, answering the open question of whether the room should have
   a moderator. Server: `chyme_rooms.speak_mode`, `chyme_room_removals`, `chyme_admin_audit_trail`

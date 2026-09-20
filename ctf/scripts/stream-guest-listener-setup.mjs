@@ -17,7 +17,10 @@
 //   - on the call type, that role has `join-call` and `read-call`, does not have `send-audio`,
 //     `send-video` or `screenshare`, and keeps anything else it already had (Video API).
 //
-// Members are untouched: only the named role changes, and only guests carry it.
+// No other role changes: the call type's member roles (the `user` role a speaker holds) are never
+// touched. Two kinds of session carry the named role — a signed-out guest, and, since 2026-09-19, a
+// member an admin has moved to listening in hand-raise mode. Both want the same grants, so the
+// target state below serves both.
 //
 // Modes (--mode=…, default plan):
 //   plan   read everything, print the state and what apply would change, exit 0. Writes nothing.
