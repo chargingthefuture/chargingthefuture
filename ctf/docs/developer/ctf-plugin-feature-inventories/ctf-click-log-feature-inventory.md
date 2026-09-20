@@ -136,11 +136,15 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
   report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
   that takes an image without stitching phone screenshots together and losing rows at the seams.
-  The trends screen offers one control, "Save the report as one image", which saves the PNG and
-  leaves the screen where it was. It used to offer a second one that opened the image in the browser
-  for phones; tested on iOS that path stranded the reader on a bare picture with no way back, and
-  saving works on a phone anyway — from the downloads the picture goes to the photo library or into
-  another app (owner report, 2026-08-24).
+  The trends screen offers one control, "Save the report as one image", which leaves the screen
+  where it was. It used to offer a second one that opened the image in the browser for phones;
+  tested on iOS that path stranded the reader on a bare picture with no way back (owner report,
+  2026-08-24). Removing it was not enough: the control that remained was a plain link to the route,
+  which in the installed app on iOS navigates the app's own window to the downloaded file and
+  strands the reader the same way, with force-closing the app as the only way out (owner report,
+  2026-09-20). It now fetches the picture and offers it to the phone's share sheet, or saves it
+  from a blob URL where there is no share sheet, so the screen never moves
+  (`components/shared/save-image-button.tsx`, shared with SkillsHunt's missions picture).
   Built from the same aggregate as the screen, so there is no second data path. The image never
   carries the area coordinates and nothing can ask for them (owner directive, 2026-08-24): an
   exported image is made to be shared publicly, and at small counts an ~11 km cell plus a date can
@@ -314,6 +318,17 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-09-20: **Saving the report image no longer strands the reader (owner report, the second
+  time).** In August the second control — the one that opened the image in the browser — was
+  removed because on iOS it left no way back to the trends screen. The control that remained was
+  still a plain link to the route, and in the installed app it does the same thing: standalone mode
+  has no browser chrome, so following the link navigates the app's own window to the downloaded
+  file, iOS draws its file preview with no back control, and the only way out is to force the app
+  closed. The control now fetches the picture with the signed-in session and hands it to the
+  phone's share sheet, or saves it from a blob URL where there is no share sheet; the trends screen
+  never moves, and a failure shows as a sentence under the button rather than a dead page. The two
+  paths live in `components/shared/save-image-button.tsx`, which SkillsHunt's missions picture uses
+  as well — it had shipped with a copy of the same defect.
 - 2026-08-24: **The trends headline tiles wrap two to a row instead of being crushed onto one line
   (owner report).** The seven tiles were one flex row of `flex: 1` tiles with `minWidth: 0`, so they
   never wrapped: on a phone all seven shared a single line about 40 px wide each, every label was cut

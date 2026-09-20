@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app and checks that pressing the control never navigates away from the dashboard |
 
 ## How to run this
 
@@ -281,21 +281,29 @@ and that an area on a border can land on the wrong side.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A5 · The report saves as one image, and the screen stays put
-**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px) · installed app (iOS, added to the home screen)
+**Precondition:** for the installed-app run, add the site to the iOS home screen and open it from
+that icon, so it runs with no browser chrome. That is the case this step exists for.
 **Steps:**
 1. On the Trends dashboard, press "Save the report as one image".
-2. Look at the screen you are on immediately after pressing it.
-3. Open the saved file and read it top to bottom.
-4. On a phone, from the saved file, save the picture to the photo library or send it to another app.
+2. Look at the screen you are on immediately after pressing it — on the phone, before touching
+   anything in the share sheet.
+3. On the phone, save the picture to the photo library from the sheet; then press the button again
+   and close the sheet without choosing anything.
+4. Open the saved file and read it top to bottom.
 **Expected:** There is one control, not two — no separate link that opens the picture in the
-browser. The file downloads with a name carrying today's date, and the Trends dashboard is still on
-screen and still scrolled where it was; nothing navigated away and no back press is needed. The
-saved picture contains every section of the report and the method statement, ends with the site
-line, and nothing is cut off at the bottom. It carries no area coordinates: where the areas would
-be, it says how many areas were recorded and why they were left out. The area count tile and the
-countries are still there, and every other number matches the screen. On a phone the saved file
-reaches the photo library or another app in the normal way.
-**Result:** web ☐ mobile ☐ — notes:
+browser. On a desktop browser the file downloads with a name carrying today's date. On a phone the
+share sheet opens over the dashboard and the picture goes to the photo library or another app from
+there. **In every case the Trends dashboard is still on screen and still scrolled where it was.**
+Nothing navigates away: no page showing a PNG icon with a file name and an "Open in…" link, no
+screen without a back control, and never a need to force the app closed to get back — that was the
+defect on 2026-09-20, from a plain link to the route. Closing the share sheet without choosing
+anything leaves the dashboard untouched and says nothing. Step 4: the saved picture contains every
+section of the report and the method statement, ends with the site line, and nothing is cut off at
+the bottom. It carries no area coordinates: where the areas would be, it says how many areas were
+recorded and why they were left out. The area count tile and the countries are still there, and
+every other number matches the screen.
+**Result:** web ☐ mobile ☐ installed app ☐ — notes:
 
 ### CL-A7 · The screen is named ClickLog, and an admin can cross to the trends dashboard
 **Role:** member, admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
