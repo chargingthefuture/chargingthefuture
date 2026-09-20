@@ -213,8 +213,12 @@ only here would be invisible on their own trust card.
   because the project runs a Quora space overstated it — the schedule's job is to fill the room in
   this app, and a space elsewhere was at most where some readers came from. The Intent statement,
   the header comments in `lib/ti-radio/constants.ts` and the guide component, the command-contract
-  header, and the table comments in `schema.sql`, `schema.demo.sql` and migration `0017` now say
-  that plainly, and none of them names a Quora space. The naming exception in
+  header, and the table comments in `schema.sql` and `schema.demo.sql` now say that plainly, and
+  none of them names a Quora space. Migration `0017_ti_radio_tables.sql` still carries the old
+  wording in its comment block and was deliberately left alone: it has already run against the
+  live database, and `ctf/db/migrations/README.md` says not to edit an applied migration. It is a
+  record of what ran, like a dated change-log entry; `schema.sql` is the canonical description and
+  that one is correct. The naming exception in
   `ctf/docs/BRAND_VOICE_LEXICON.md` keeps the name TI Radio — it is the owner's name, already
   published, and TI is what the people it is for call themselves — with its Quora-space reason
   withdrawn. Wording only: no schema change (SQL comments only), no route, contract shape, or
