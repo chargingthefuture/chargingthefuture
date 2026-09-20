@@ -175,6 +175,59 @@ function SelectedCountBadge({ count, tokens }: { count: number; tokens: Director
 
 // The row of removable picks — taxonomy skills in the app accent, proposed skills in amber. Renders
 // nothing until there is at least one of either kind.
+// The roles the member's chosen skills already appear under, listed back to them.
+//
+// This is the picker's premise made visible, and it is the half a member cannot work out alone. The
+// accordion and the search show what can be PICKED; nothing showed what the picks ADD UP TO. Somebody
+// who can only name one thing they do reads their own profile as one small line and concludes they
+// have nothing to offer - when that single skill may already sit under half a dozen roles across
+// several sectors. Naming them is not flattery: every role here is one the taxonomy already files
+// that exact skill under.
+//
+// It claims nothing. These are roles the skills appear under, not a job title the member holds - the
+// stored job title is a separate field, set deliberately and never written from here. That
+// distinction is the point rather than a caveat: a member can take every role listed as an option
+// without any of them becoming a label, and a member who wants none of them keeps their own title
+// untouched. Both readings have to work, which is why this states and never assigns.
+function DerivedRoles({ roles, tokens }: { roles: string[]; tokens: DirectoryTokens }) {
+  if (roles.length === 0) return null;
+  return (
+    <div
+      style={{
+        border: `1px solid ${tokens.BORDER_HI}`,
+        borderRadius: 10,
+        padding: "10px 14px",
+        marginBottom: 12,
+        background: "transparent",
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 600, color: tokens.SUBTLE, marginBottom: 6 }}>
+        Roles your skills already appear under
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+        {roles.map((role) => (
+          <span
+            key={role}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 12,
+              fontSize: 12,
+              color: tokens.SUBTLE,
+              border: `1px solid ${tokens.BORDER_HI}`,
+            }}
+          >
+            {role}
+          </span>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: tokens.MUTED, lineHeight: 1.5 }}>
+        These are roles the skills you picked are listed under, not a job title you hold. Your job
+        title is yours to set separately, and nothing here changes it.
+      </div>
+    </div>
+  );
+}
+
 function SelectedSkillChips({ selectedNames, proposedSkills, tokens, onToggleSkill, onRemoveProposed }: {
   selectedNames: SkillEntry[];
   proposedSkills: string[];
@@ -455,6 +508,7 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const selectedIds = useMemo(() => new Set(selectedSkillIds), [selectedSkillIds]);
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
+
   // Toggle a whole name-entry: unpick removes every selected id that shares the name (both parents'
   // onToggleSkill is a functional setState, so N synchronous calls compose correctly); pick adds the
   // first id as the representative. This is what lets the member treat a repeated name as one skill.
@@ -526,6 +580,24 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
     return order.map((name) => ({ name, ids: idsByName.get(name) ?? [] }));
   }, [selectedSkillIds, skillNameById]);
 
+  // Every occupation that carries one of the selected skill NAMES. Matching by name, not by the
+  // stored row id, is deliberate and is the same rule Workforce and the Directory sector filter use:
+  // a member picks a name, and the picker stores an arbitrary one of the rows behind it, so the
+  // stored row's occupation was never their choice. Matching by name is what lets one skill reach
+  // every role it belongs to, across sectors.
+  const derivedRoles = useMemo(() => {
+    if (selectedNames.length === 0) return [];
+    const chosen = new Set(selectedNames.map((entry) => entry.name.trim().toLowerCase()));
+    const jobTitleNameById = new Map(jobTitles.map((j) => [j.id, j.name] as const));
+    const found = new Set<string>();
+    for (const skill of skills) {
+      if (!chosen.has(skill.name.trim().toLowerCase())) continue;
+      const roleName = jobTitleNameById.get(skill.jobTitleId);
+      if (roleName) found.add(roleName);
+    }
+    return [...found].sort((a, b) => a.localeCompare(b));
+  }, [selectedNames, skills, jobTitles]);
+
   const labelStyle = { fontSize: 12, fontWeight: 700, color: tokens.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
 
   return (
@@ -545,6 +617,8 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
         onToggleSkill={onToggleSkill}
         onRemoveProposed={onRemoveProposed}
       />
+
+      <DerivedRoles roles={derivedRoles} tokens={tokens} />
 
       <LoadingNotice loading={loading} tokens={tokens} />
 

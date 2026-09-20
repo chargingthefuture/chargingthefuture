@@ -156,6 +156,19 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    something needing explanation, which implies a choice is owed — the nudge itself. Anything longer
    than the one sentence is a regression. The accordion entries carry no caption, each being already scoped to one sector,
    and a single-sector skill shows no caption and no note.
+2c. **One skill, every role it reaches.** With no skills selected, confirm no roles panel is shown.
+   Then pick a single skill that appears under several occupations (today `Crisis intervention`, under
+   four Health occupations, or any skill spanning two sectors). Read the panel that appears under the
+   selected chips. Then check the profile's job title field.
+   **Expected:** a panel headed "Roles your skills already appear under" lists every occupation that
+   carries that skill name, de-duplicated and sorted, **including occupations in other sectors** — one
+   skill reaches every role it belongs to, which is the point: a member who can name only one thing
+   they do must be able to see that it is not nothing. Every role listed must be one the taxonomy
+   really files that skill under; an invented or inferred role is a defect. **The job title field must
+   be unchanged and unset by this** — the panel states these are roles the skills appear under, not a
+   title the member holds, and must say their job title is theirs to set separately. A member whose
+   skills happen to appear under an occupation they do not claim acquires no label from this panel;
+   that is exactly what it must never do. Removing every skill removes the panel.
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
    as a removable chip at the top. Confirm each **skill name appears only once** in the accordion — a
