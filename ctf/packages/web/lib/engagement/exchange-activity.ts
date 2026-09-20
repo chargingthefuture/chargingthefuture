@@ -66,10 +66,10 @@ export type ExchangeActivityReading = {
 
 export const DAILY_EXCHANGE_TARGET = 384;
 
-// Everything that is weighted, with the weight in force right now, so an admin can read the whole
+// Everything that is weighted, with the weight in force right now, so an admin can read the
 // definition off the screen instead of taking it on trust (owner directive, 2026-09-20). A weight
-// of zero is shown rather than hidden: an event nobody has tuned up yet is still part of the
-// definition, and its absence from the list would be the confusing thing.
+// of zero is shown rather than hidden: an event nobody has tuned up yet still counts as defined,
+// and leaving it out would be the confusing thing.
 export function listWeightedValueEvents(weights: Record<string, unknown>): WeightedValueEvent[] {
   return VALUE_EVENT_SOURCES.map((source) => ({
     key: source.key,

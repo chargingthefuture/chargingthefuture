@@ -51,7 +51,7 @@ export type ValueEventSource = {
   // taught it is credited by their own payout event.
   delivers: boolean;
   // Every table the row SQL touches. A missing one makes the event contribute nothing rather than
-  // failing the whole reading.
+  // failing the reading.
   tables: string[];
   // Rows of (member_id, at, value, ref). `value` is only read by the sum aggregate and `ref` only
   // by the distinct-ref one, so the others select a constant for them.

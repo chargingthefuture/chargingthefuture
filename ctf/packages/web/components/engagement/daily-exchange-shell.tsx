@@ -208,8 +208,7 @@ function WeightsPanel({ events, tokens }: { events: WeightedValueEvent[]; tokens
     >
       <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>What is weighted</div>
       <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
-        The whole definition, in force right now. Both readings use it. Change a weight in
-        Contributor Access and this moves with it.
+        Every weighted event and what it is worth right now. Both readings score from this list.
       </div>
       <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
         {events.map((event) => (
