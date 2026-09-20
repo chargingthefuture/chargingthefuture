@@ -59,6 +59,80 @@ function asPlainText(rows: DirectoryInviteQueueRow[], coverage: DirectorySkillCo
   return coverage ? `${coverageAsPlainText(coverage)}\n\n${queue}` : queue;
 }
 
+type CoverageTokens = {
+  SURFACE: string;
+  BORDER: string;
+  TITLE: string;
+  SUBTLE: string;
+  TEXT: string;
+};
+
+// Its own component so the shell stays under the complexity limit, and because this block is a
+// different thing from the queue: counts about the catalog rather than rows about people.
+function CoverageCard({
+  coverage,
+  tokens,
+}: {
+  coverage: DirectorySkillCoverage;
+  tokens: CoverageTokens;
+}) {
+  const people = coverage.listedPeople === 1 ? 'person' : 'people';
+
+  return (
+    <section
+      aria-label="Skills coverage"
+      style={{
+        borderRadius: 14,
+        background: tokens.SURFACE,
+        border: `1px solid ${tokens.BORDER}`,
+        padding: 14,
+        marginBottom: 14,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Skills coverage</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4 }}>
+        Read {coverage.readAt.slice(0, 10)} (UTC). Copied with the queue.
+      </div>
+      <div style={{ fontSize: 12, color: tokens.TEXT, marginTop: 8, lineHeight: 1.6 }}>
+        {coverage.listedPeople} listed {people} · {coverage.skillsHeld} of {coverage.skillsInCatalog}{' '}
+        skills held · {coverage.skillsWithNobody} with nobody
+      </div>
+      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+        {coverage.sectors.map((sector) => (
+          <CoverageRow key={sector.sector} sector={sector} tokens={tokens} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// A sector nobody covers is dimmed rather than hidden. An empty sector is the thing worth seeing.
+function CoverageRow({
+  sector,
+  tokens,
+}: {
+  sector: DirectorySkillCoverage['sectors'][number];
+  tokens: CoverageTokens;
+}) {
+  return (
+    <li
+      style={{
+        fontSize: 12,
+        color: sector.skillsHeld === 0 ? tokens.SUBTLE : tokens.TEXT,
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '3px 0',
+      }}
+    >
+      <span>{sector.sector}</span>
+      <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+        {sector.skillsHeld} of {sector.skillsInCatalog}
+      </span>
+    </li>
+  );
+}
+
 export function DirectoryInviteQueueShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('directory', theme), theme);
@@ -145,50 +219,7 @@ export function DirectoryInviteQueueShell() {
           </p>
         )}
 
-        {coverage && (
-          <section
-            aria-label="Skills coverage"
-            style={{
-              borderRadius: 14,
-              background: t.SURFACE,
-              border: `1px solid ${t.BORDER}`,
-              padding: 14,
-              marginBottom: 14,
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Skills coverage</div>
-            <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 4 }}>
-              Read {coverage.readAt.slice(0, 10)} (UTC). Copied with the queue.
-            </div>
-            <div style={{ fontSize: 12, color: t.TEXT, marginTop: 8, lineHeight: 1.6 }}>
-              {coverage.listedPeople} listed {coverage.listedPeople === 1 ? 'person' : 'people'} ·{' '}
-              {coverage.skillsHeld} of {coverage.skillsInCatalog} skills held ·{' '}
-              {coverage.skillsWithNobody} with nobody
-            </div>
-            {coverage.sectors.length > 0 && (
-              <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
-                {coverage.sectors.map((sector) => (
-                  <li
-                    key={sector.sector}
-                    style={{
-                      fontSize: 12,
-                      color: sector.skillsHeld === 0 ? t.SUBTLE : t.TEXT,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      padding: '3px 0',
-                    }}
-                  >
-                    <span>{sector.sector}</span>
-                    <span style={{ color: t.SUBTLE, whiteSpace: 'nowrap' }}>
-                      {sector.skillsHeld} of {sector.skillsInCatalog}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+        {coverage && <CoverageCard coverage={coverage} tokens={t} />}
 
         {rows && rows.length > 0 && (
           <>
