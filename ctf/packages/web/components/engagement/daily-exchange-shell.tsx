@@ -30,7 +30,10 @@ function asPlainText(reading: ExchangeActivityReading): string {
     `  target: ${reading.target}`,
     `  today: ${reading.today}`,
     `  best day: ${best}`,
-    `  goal reached: ${reading.daysAtTarget}`,
+    `  typical day, last 30: ${reading.typicalDay}`,
+    `  median day, last year: ${reading.yearMedian}`,
+    `  longest run at or above the target: ${reading.longestRun}`,
+    `  days that ever reached the target: ${reading.daysAtTarget}`,
     '',
     '  last 30 days:',
     ...reading.days.map((day) => `    ${day.day}: ${day.members}`),
@@ -351,7 +354,9 @@ export function DailyExchangeShell() {
             </button>
 
             <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 6 }}>
-              Last 30 days {reading.bestDay ? `· best so far ${reading.bestDay.members} on ${reading.bestDay.day}` : ''}
+              Last 30 days
+              {reading.bestDay ? ` · best so far ${reading.bestDay.members} on ${reading.bestDay.day}` : ''}
+              {reading.daysAtTarget > 0 ? ` · reached the target on ${reading.daysAtTarget} days` : ''}
             </div>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {reading.days.map((day) => (
@@ -364,6 +369,15 @@ export function DailyExchangeShell() {
             <TodayRoster roster={reading.todayRoster} tokens={t} />
 
             <WeightsPanel events={reading.events} tokens={t} />
+
+            <p style={{ fontSize: 12, color: t.TEXT, marginTop: 14, lineHeight: 1.6 }}>
+              The goal is the median day over a year at or above {reading.target}. It reads{' '}
+              {reading.yearMedian} today. A median rather than an average, because an average is
+              satisfied by a dozen enormous days and ten quiet months, which is not an economy
+              anybody could rely on. Typical day is the same measure over the last thirty, so it
+              moves while the year figure is still filling. Longest run counts days in a row at or
+              above {reading.target}, and one quiet day ends it.
+            </p>
 
             <p style={{ fontSize: 11, color: t.SUBTLE, marginTop: 16, lineHeight: 1.6 }}>
               Both readings use one shared definition and one set of weights, so adding a feature

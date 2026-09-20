@@ -58,6 +58,15 @@ export type ExchangeActivityReading = {
   target: number;
   today: number;
   bestDay: ExchangeDay | null;
+  // The middle day of the last thirty, quiet days counted as the zeros they are. This is the live
+  // figure: it moves from the first day anything happens, and half the days sit below it.
+  typicalDay: number;
+  // The middle day of the last year. The goal is this at or above the target, which means most
+  // days in a year cleared it — an average would let a dozen huge days carry ten quiet months.
+  yearMedian: number;
+  // The longest run of consecutive days at or above the target within the last year. One quiet day
+  // ends a run, which is the strictest reading of whether the target is actually being reached.
+  longestRun: number;
   daysAtTarget: number;
   days: ExchangeDay[];
   todayRoster: ExchangeContributor[];
@@ -154,12 +163,38 @@ function fillGaps(rows: ExchangeDay[], days: number): ExchangeDay[] {
   return out;
 }
 
+// The middle value, with quiet days included as zeros. Even counts take the lower of the two
+// middle values rather than averaging them, so the figure is one a day actually had.
+function median(values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor((sorted.length - 1) / 2)] ?? 0;
+}
+
+// The longest stretch of days in a row that reached the target. A single day below it ends the run.
+function longestRunAtTarget(days: ExchangeDay[], target: number): number {
+  let best = 0;
+  let run = 0;
+  for (const day of days) {
+    run = day.members >= target ? run + 1 : 0;
+    if (run > best) {
+      best = run;
+    }
+  }
+  return best;
+}
+
 function emptyReading(window: number): ExchangeActivityReading {
   return {
     readAt: new Date().toISOString(),
     target: DAILY_EXCHANGE_TARGET,
     today: 0,
     bestDay: null,
+    typicalDay: 0,
+    yearMedian: 0,
+    longestRun: 0,
     daysAtTarget: 0,
     days: fillGaps([], window),
     todayRoster: [],
@@ -178,6 +213,9 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
   const config = await getContributorAccessConfig();
   const memberDays = memberDaysSql(sources, config.weights);
 
+  // A year is read even though thirty days are shown, because the year's middle day is the goal and
+  // the longest run is read across it.
+  const YEAR = 365;
   const recent = await queryDb<DayRow>(
     `
       SELECT day::text AS day, COUNT(DISTINCT member_id)::text AS members
@@ -186,7 +224,7 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
        GROUP BY day
        ORDER BY day
     `,
-    [window],
+    [YEAR],
   );
 
   // Read across every day on record, not only the window on screen, so the best day does not fall
@@ -227,10 +265,9 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     `,
   );
 
-  const allDays = fillGaps(
-    recent.rows.map((row) => ({ day: row.day, members: count(row.members) })),
-    window,
-  );
+  const counted = recent.rows.map((row) => ({ day: row.day, members: count(row.members) }));
+  const yearDays = fillGaps(counted, YEAR);
+  const allDays = yearDays.slice(-window);
 
   const bestRow = best.rows[0];
 
@@ -239,6 +276,9 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     target: DAILY_EXCHANGE_TARGET,
     today: allDays[allDays.length - 1]?.members ?? 0,
     bestDay: bestRow ? { day: bestRow.day, members: count(bestRow.members) } : null,
+    typicalDay: median(allDays.map((day) => day.members)),
+    yearMedian: median(yearDays.map((day) => day.members)),
+    longestRun: longestRunAtTarget(yearDays, DAILY_EXCHANGE_TARGET),
     daysAtTarget: count(atTarget.rows[0]?.days_at_target),
     days: allDays,
     todayRoster: roster.rows.map((row) => ({ memberId: row.member_id, score: numeric(row.score) })),
