@@ -497,24 +497,6 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const selectedIds = useMemo(() => new Set(selectedSkillIds), [selectedSkillIds]);
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
-  // Every occupation that carries one of the selected skill NAMES. Matching by name, not by the
-  // stored row id, is deliberate and is the same rule Workforce and the Directory sector filter use:
-  // a member picks a name, and the picker stores an arbitrary one of the rows behind it, so the
-  // stored row's occupation was never their choice. Matching by name is what lets one skill reach
-  // every role it belongs to, across sectors.
-  const derivedRoles = useMemo(() => {
-    if (selectedNames.length === 0) return [];
-    const chosen = new Set(selectedNames.map((entry) => entry.name.trim().toLowerCase()));
-    const jobTitleNameById = new Map(jobTitles.map((j) => [j.id, j.name] as const));
-    const found = new Set<string>();
-    for (const skill of skills) {
-      if (!chosen.has(skill.name.trim().toLowerCase())) continue;
-      const roleName = jobTitleNameById.get(skill.jobTitleId);
-      if (roleName) found.add(roleName);
-    }
-    return [...found].sort((a, b) => a.localeCompare(b));
-  }, [selectedNames, skills, jobTitles]);
-
 
   // Toggle a whole name-entry: unpick removes every selected id that shares the name (both parents'
   // onToggleSkill is a functional setState, so N synchronous calls compose correctly); pick adds the
@@ -586,6 +568,24 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
     }
     return order.map((name) => ({ name, ids: idsByName.get(name) ?? [] }));
   }, [selectedSkillIds, skillNameById]);
+
+  // Every occupation that carries one of the selected skill NAMES. Matching by name, not by the
+  // stored row id, is deliberate and is the same rule Workforce and the Directory sector filter use:
+  // a member picks a name, and the picker stores an arbitrary one of the rows behind it, so the
+  // stored row's occupation was never their choice. Matching by name is what lets one skill reach
+  // every role it belongs to, across sectors.
+  const derivedRoles = useMemo(() => {
+    if (selectedNames.length === 0) return [];
+    const chosen = new Set(selectedNames.map((entry) => entry.name.trim().toLowerCase()));
+    const jobTitleNameById = new Map(jobTitles.map((j) => [j.id, j.name] as const));
+    const found = new Set<string>();
+    for (const skill of skills) {
+      if (!chosen.has(skill.name.trim().toLowerCase())) continue;
+      const roleName = jobTitleNameById.get(skill.jobTitleId);
+      if (roleName) found.add(roleName);
+    }
+    return [...found].sort((a, b) => a.localeCompare(b));
+  }, [selectedNames, skills, jobTitles]);
 
   const labelStyle = { fontSize: 12, fontWeight: 700, color: tokens.MUTED, textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 6, display: "block" };
 
