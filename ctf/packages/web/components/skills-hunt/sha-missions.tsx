@@ -188,8 +188,9 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
 // advertised. It lives here rather than on the member Missions tab (owner decision, 2026-09-20):
 // advertising a round is an admin job, and the member tab is where members read their own progress.
 //
-// The picture is fetched and handed to the share sheet or saved as a file — see
-// components/shared/save-image-button.tsx for why it is never a plain link to the route.
+// The picture is drawn and then shown on this screen, to be pressed and held, shared, or saved
+// from here — see components/shared/save-image-button.tsx for the two earlier attempts that each
+// stranded the owner on a dead page instead.
 function MissionPosterCard({ roundId }: { roundId: string }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -198,7 +199,7 @@ function MissionPosterCard({ roundId }: { roundId: string }) {
     <SaveImageButton
       url={`/api/skills-hunt/admin/rounds/${roundId}/missions/image`}
       filename={`skillshunt-missions-${today}.png`}
-      label="Save these missions as one picture"
+      label="Show these missions as one picture"
       accent={t.ACCENT}
       surface="rgba(255,255,255,0.02)"
       border={t.BORDER_STRONG}
@@ -208,9 +209,10 @@ function MissionPosterCard({ roundId }: { roundId: string }) {
       style={{ marginTop: 0, marginBottom: 16 }}
     >
       Draws every active mission in this round as one tall picture, named for today&apos;s date, so
-      the round can be advertised without stitching screenshots together. On a phone the share sheet
-      opens over this screen — save it to your photos or send it straight to another app. You stay
-      here either way. The picture carries the missions themselves, not anyone&apos;s progress.
+      the round can be advertised without stitching screenshots together. It appears here: on a
+      phone, press and hold it to save it to your photos, or use Share to send it straight to
+      another app. You stay on this screen either way. The picture carries the missions themselves,
+      not anyone&apos;s progress.
     </SaveImageButton>
   );
 }
