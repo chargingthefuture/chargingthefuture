@@ -2466,9 +2466,13 @@ CREATE TABLE IF NOT EXISTS lighthouse_matches (
   host_response TEXT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed')),
   stream_channel_id TEXT NOT NULL DEFAULT 'pending',
+  -- When the stay was marked completed. Set once, on the move to 'completed', and left alone after,
+  -- so a later edit to the row does not move the day the stay happened.
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE IF EXISTS lighthouse_matches ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS lighthouse_blocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4383,6 +4387,9 @@ CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   fulfiller_username TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   close_reason TEXT,
+  -- When the close button was pressed. close_reason records WHETHER it went well; this records
+  -- WHEN, which updated_at cannot, because any later edit to the row moves that.
+  closed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -4394,6 +4401,7 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_username TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
