@@ -358,12 +358,11 @@ export async function findCommentAuthorUserId(commentId: string): Promise<string
 }
 
 /**
- * One reply of this member's that nobody was told about, because they were not approved when they
- * wrote it.
+ * One person this member answered while they were held, and the earliest reply that answered them.
  *
- * Carries the parent's author id, which the caller hands to the notification system — it addresses
- * a member without displaying anything about them — and the post, so the notification can deep-link
- * to the conversation the reply is in.
+ * Carries the recipient's id, which the caller hands to the notification system — it addresses a
+ * member without displaying anything about them — and the post that reply is under, so the notice
+ * can deep-link to the conversation.
  */
 export type ReplyAwaitingNotice = {
   commentId: string;
@@ -374,25 +373,33 @@ export type ReplyAwaitingNotice = {
 };
 
 /**
- * The replies this member wrote that never told anybody, for the moment Unlock approves them.
+ * The people this member answered without anybody being told, for the moment Unlock approves them.
  *
  * Nothing an unapproved member writes is publicly visible, so a reply of theirs notified nobody at
  * the time: telling somebody about a reply they would open and not find is worse than telling them
  * nothing. Approval makes all of it appear at once, and until now the person who was answered was
  * never told — their conversation simply grew a reply while they were not looking.
  *
+ * One row per person, not per reply, which is what makes this safe to run uncapped.
+ *
+ * It was capped at 50 replies when it shipped, because a member approved after writing a great deal
+ * could have landed a pile of notifications at once — and a cap meant the rest were simply never
+ * told. Both problems were the same mistake: counting replies instead of people. The pile-up only
+ * ever happens when many replies answer the SAME person, and collapsing to one notice each removes
+ * it entirely. What is left is one notice per person answered, which is the truthful number however
+ * large it gets: five hundred people each answered once is five hundred people who should each hear
+ * about it, and none of them receives more than one.
+ *
+ * `DISTINCT ON` does the collapsing in the database, so the work is bounded by how many people were
+ * answered rather than by how much was written. The earliest reply to each person is the one kept:
+ * it is the conversation they have been waiting longest to hear about, and being a fixed choice is
+ * what lets a re-run dedupe against the same reference.
+ *
  * Only replies to somebody else's comment, and only where that comment is still in the conversation:
  * a reply under a comment an admin removed opens a thread the recipient can no longer see properly,
  * and nobody is told they answered themselves.
- *
- * Bounded. A member approved after writing a great deal is the case this exists for, and a hundred
- * notifications landing at once is its own harm; the cap is a ceiling on that rather than a promise
- * that the rest arrive later.
  */
-export async function listRepliesAwaitingNotice(
-  userId: string,
-  limit = 50,
-): Promise<ReplyAwaitingNotice[]> {
+export async function listRepliesAwaitingNotice(userId: string): Promise<ReplyAwaitingNotice[]> {
   const result = await queryDb<{
     comment_id: string;
     parent_author_user_id: string;
@@ -400,7 +407,11 @@ export async function listRepliesAwaitingNotice(
     post_slug: string;
     post_title: string;
   }>(
-    `SELECT c.id::text AS comment_id,
+    // DISTINCT ON keeps the first row of each group as ORDER BY presents them, so the leading
+    // ORDER BY column has to be the one being grouped: recipient first, then oldest reply. One row
+    // per person answered, the earliest reply to them, and the post it sits under.
+    `SELECT DISTINCT ON (parent.author_user_id)
+            c.id::text AS comment_id,
             parent.author_user_id AS parent_author_user_id,
             t.post_repo, t.post_slug, t.post_title
        FROM fireside_comments c
@@ -410,9 +421,8 @@ export async function listRepliesAwaitingNotice(
         AND c.status = 'visible'
         AND parent.status = 'visible'
         AND parent.author_user_id <> $1
-      ORDER BY c.created_at ASC
-      LIMIT $2`,
-    [userId, limit],
+      ORDER BY parent.author_user_id, c.created_at ASC`,
+    [userId],
   );
   return result.rows.map((row) => ({
     commentId: row.comment_id,
@@ -538,6 +548,95 @@ export async function searchComments(
     postSlug: row.post_slug,
     postTitle: row.post_title,
   }));
+}
+
+/**
+ * How many matches one member search will look at before it stops.
+ *
+ * A ceiling on the scan rather than a page size. Whether a comment is public depends on its author
+ * being approved in Unlock, which this plugin cannot ask in SQL — it goes through the platform
+ * interface — so the filtering happens after the database answers, and an unbounded match set would
+ * mean an unbounded scan on a member-facing screen.
+ *
+ * When the scan fills, the screen says there are more matches than it is showing and asks for a
+ * narrower search, rather than quietly presenting a slice as though it were everything.
+ */
+export const FIRESIDE_MEMBER_SEARCH_SCAN_LIMIT = 500;
+
+/**
+ * One comment as a member's own search returns it: the words, which post it is under, and nothing
+ * about who else can see it.
+ */
+export type FiresideSearchHit = {
+  commentId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  editedAt: string | null;
+  postRepo: string;
+  postSlug: string;
+  postTitle: string;
+  /** True when the member wrote it, so their own held words can be labeled on their own screen. */
+  isOwn: boolean;
+};
+
+/**
+ * Search the conversation, as a member.
+ *
+ * Deliberately narrower than the admin search above, and not the same function with a different
+ * caller: this one returns only what the person searching is allowed to read. A comment is in the
+ * result when it is publicly visible — its author approved and the comment still in the
+ * conversation — or when the searcher wrote it themselves, which is the same rule the thread read
+ * uses and is read from `visibility.ts` rather than restated here.
+ *
+ * Withdrawn comments are excluded in SQL: their body is emptied on withdrawal, so they cannot match
+ * anything anyway, and the author's own copy lives on a column this select does not carry.
+ *
+ * `websearch_to_tsquery` with the same `english` configuration as the index, for the same two
+ * reasons the admin search uses it: the input is typed by a person, and a configuration that does
+ * not match the index means Postgres silently scans the table instead.
+ *
+ * Returns the filtered page plus whether the scan filled, so the screen can say there is more
+ * rather than showing a slice as though it were the lot.
+ */
+export async function searchVisibleComments(input: {
+  query: string;
+  viewerUserId: string;
+  limit: number;
+  offset: number;
+}): Promise<{ hits: FiresideSearchHit[]; total: number; scanFilled: boolean }> {
+  const result = await queryDb<CommentRow>(
+    `${COMMENT_SELECT}
+      WHERE c.status <> 'withdrawn'
+        AND to_tsvector('english', c.body) @@ websearch_to_tsquery('english', $1)
+      ORDER BY c.created_at DESC
+      LIMIT $2`,
+    [input.query, FIRESIDE_MEMBER_SEARCH_SCAN_LIMIT],
+  );
+  if (result.rows.length === 0) return { hits: [], total: 0, scanFilled: false };
+
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.author_user_id));
+  const readable = result.rows.filter((row) =>
+    isPubliclyVisible({ status: row.status, authorIsApproved: approved.has(row.author_user_id) })
+    || row.author_user_id === input.viewerUserId);
+
+  // Counted and paged from the same filtered list, so the number above the results and the results
+  // under it cannot disagree — which is the fault this plugin has already paid for twice.
+  return {
+    hits: readable.slice(input.offset, input.offset + input.limit).map((row) => ({
+      commentId: row.id,
+      authorName: row.author_username?.trim() || 'A member',
+      body: row.body,
+      createdAt: row.created_at,
+      editedAt: row.edited_at,
+      postRepo: row.post_repo,
+      postSlug: row.post_slug,
+      postTitle: row.post_title,
+      isOwn: row.author_user_id === input.viewerUserId,
+    })),
+    total: readable.length,
+    scanFilled: result.rows.length >= FIRESIDE_MEMBER_SEARCH_SCAN_LIMIT,
+  };
 }
 
 export async function countSearchComments(query: string): Promise<number> {
