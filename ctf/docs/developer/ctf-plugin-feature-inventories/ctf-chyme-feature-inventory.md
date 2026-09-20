@@ -127,7 +127,9 @@ Lifecycle/governance references applied:
 
 Chyme plugin routes:
 
-- `GET /api/chyme/room` — the room, its fresh participants, `capacity` (`{ current, max }` against
+- `GET /api/chyme/room` — the room, its fresh participants, `guestCount` (signed-out listeners in
+  the room right now — always 0 for a room other than the public main room, which is the only one a
+  guest can reach), `capacity` (`{ current, max }` against
   the cap in force), `quota` (`{ band, notice, guestListenAllowed, backChannelAllowed }` from
   the Stream quota policy), `speakMode` (`'open' | 'hand_raise'`), and `viewer`
   (`{ isAdmin, role }` — worked out on the server; an admin is always a speaker). Polled every 15s
@@ -141,7 +143,7 @@ Chyme plugin routes:
 - `POST /api/chyme/leave` — drops the member's presence row on exit (which also clears any raised hand). CSRF-guarded.
 - `GET /api/chyme/public/room` — **public, unauthenticated, read-only.** Returns the one default room's live status (`isLive`, `participantCount`, `guestCount`) and, when live, `guestListenAllowed` — false, with `listenUnavailable` carrying the plain reason, while the Stream quota policy has guest listening paused (Orange band and above). Since 2026-09-19 this route touches nothing on Stream: the guest identity is minted by the listen route below on the visitor's tap, so a page load is no longer a Stream user. Only a failed database read returns 503, with the reason. Per-IP rate limit (30 a minute).
 - `POST /api/chyme/public/listen` — **public, unauthenticated; the tap.** Admits one signed-out listener and returns their listen-only Stream credentials. Requires the same-origin `x-ctf-csrf: '1'` header (it mints a billable identity and takes a spot), per-IP rate limited like the room read. Reads the browser's `ctf_chyme_guest` cookie (httpOnly, `SameSite=Lax`, `Secure` in production, path `/api/chyme/public`, one year) or sets one carrying a fresh random UUID; the Stream user is `chyme-guest-<id>`, so one browser is one Stream user across page loads. Refusals, each with the plain reason in `message`: **409** `CHYME_GUEST_LISTEN_FULL` when every guest spot is taken (`CHYME_MAX_GUEST_LISTENERS`, default 100), **409** with `isLive: false` when the room went quiet between the read and the tap, **503** `CHYME_GUEST_LISTEN_PAUSED` while the quota policy has guests paused, **503** `CHYME_STREAM_UNAVAILABLE` when Stream is not configured or rejected the guest upsert (Stream's own reason, api key redacted). The admission (live check, policy, cap, roster insert) runs in one transaction under a lock on the room row so two taps cannot both take the last spot. Guests are listen-only: the client joins muted with no speak controls, and when `CHYME_GUEST_STREAM_ROLE` is set the guest Stream user is created with that restricted role so Stream blocks publish server-side (the owner removes `send-audio`/`send-video`/`screenshare` from that role on the `default` call type — see `ctf/docs/plugins/chyme/guest-listener-stream-role.md`; the owner has applied it as of 2026-09-18). The guest token expires after one hour.
-- `POST /api/chyme/public/heartbeat` — **public, unauthenticated.** The listener's presence keepalive, every 35s while listening (visible tab only, like the member heartbeat). Identified by the guest cookie: **400** `CHYME_GUEST_IDENTITY_MISSING` without it, **404** with the same code when the guest's roster row is gone (the page then re-admits itself through the listen route). Refreshes `chyme_guest_listeners.last_seen_at` and credits the gap to the minute meter (surface `chyme:guest`). CSRF header required; per-IP rate limited.
+- `POST /api/chyme/public/heartbeat` — **public, unauthenticated.** The listener's presence keepalive, every 35s while listening (visible tab only, like the member heartbeat). Identified by the guest cookie: **400** `CHYME_GUEST_IDENTITY_MISSING` without it, **404** with the same code when the guest's roster row is gone (the page then re-admits itself through the listen route). Refreshes `chyme_guest_listeners.last_seen_at` and credits the gap to the minute meter (surface `chyme:guest`). Answers with the room's current `participantCount` and `guestCount`, which is what keeps the listener's own attendance line right as people arrive and leave — the beat is already a round trip every 35s, so the counts cost no extra request. CSRF header required; per-IP rate limited.
 - `POST /api/chyme/public/leave` — **public, unauthenticated.** Drops the guest's roster row so the spot frees at once rather than at the end of the presence window; the cookie stays so the browser keeps its one Stream identity. Always `ok` when there is no cookie. CSRF header required; per-IP rate limited.
 - `GET /api/chyme/public/messages` — **public, unauthenticated, read-only** (owner directive, 2026-09-18: a signed-out visitor can read the room chat and signs in to write). Returns the one default room's recent messages (`ok`, `isLive`, `messages`; optional `?limit` clamped to 1–100, default 50) only while the room is live; when nobody is in the call it answers `isLive: false` with an empty list. Per-IP rate limit like the room route (the page polls every ten seconds). A failed database read returns 503 with the reason. There is no POST: writing still needs a signed-in, approved member via `POST /api/chyme/messages`.
 - `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
@@ -372,6 +374,26 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
     app's foreground service is the answer for a long sit.
 
 ## Change Log
+
+- 2026-09-20: **The room's count says how many people are in it, not how many of them have
+  accounts.** Owner report: the signed-out page read "Listening live · 1 member in the room" while
+  the reader was in the room too and the stage right under it showed two tiles. The count was the
+  member roster alone, so it under-reported the room by exactly the person reading it, and with a
+  larger audience it would have been wrong by the size of that audience. Members and guests are now
+  counted separately and both are named. The listener's line reads "2 in the room · 1 member,
+  1 guest", falling back to the plain "1 member in the room" when nobody signed out is listening,
+  and to "1 guest listening" when nobody has joined the call yet; the tap-to-listen button ahead of
+  it uses the same line in place of the old on-stage count. Two new helpers in
+  `lib/chyme/capacity-line.ts` hold the wording: `chymeAttendanceLine` for the listener's line, and
+  a third argument on `chymeParticipantLine` so the member room's header names guests after the
+  capacity part ("1 participant · 1 guest listening") rather than folding them into the "N of M" —
+  the cap in that line is the member cap, and guests are capped separately, so adding them together
+  would misstate both. `ChymeRoomResponse` carries `guestCount` (0 for any room other than the
+  public main room, the only one a guest can reach) and the Android room list mirrors the same
+  line. The listener's numbers stay current without a polling loop: the listen answer and every
+  35-second heartbeat now carry the counts, so the line counts this listener from the moment they
+  are admitted instead of waiting for a page refresh. No schema change; `chyme.public.heartbeat`
+  and `chyme.room.read` gained output fields in the command contracts.
 
 - 2026-09-20: **The signed-out page fits one screen: a sideways schedule, a closed room chat, and
   the invitations card floated off the page.** Owner report: Chyme had too much going on, and the

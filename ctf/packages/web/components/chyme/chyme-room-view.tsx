@@ -120,7 +120,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, lineHeight: 1.3, marginBottom: 4 }}>{room.roomName}</div>
             <div style={{ fontSize: 13, color: '#16A34A' }}>
-              {chymeParticipantLine(room.participants.length, room.capacity.max)} · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
+              {chymeParticipantLine(room.participants.length, room.capacity.max, room.guestCount)} · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
             </div>
           </div>
           <button

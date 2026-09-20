@@ -152,13 +152,18 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
    45 seconds (inside the presence window, so the server still reports the room as live).
 **Expected:** Before the tap the room heading shows, under it the line "The room is live. Tap below
 to listen; sign in to speak." (never "You're listening live" before the tap), and a single **Tap to
-listen** button with the on-stage count and the line "Phones only play sound after a tap. You will hear the room and
+listen** button with the attendance line and the line "Phones only play sound after a tap. You will hear the room and
 cannot be heard." — nothing is connected yet, nothing plays, and (since 2026-09-19) nothing has been
 created on Stream: the page load only reads whether the room is live. The tap posts to
 `/api/chyme/public/listen`, which takes a listening spot, sets the browser's `ctf_chyme_guest` cookie
 on the first tap, and mints the browser's one guest identity (`chyme-guest-<id>`, the same id on
 every later visit from this browser). Then you see "Connecting to the live room…", then
-"Listening live · N members in the room", and you hear the room, joined muted with no speak control.
+"Listening live · " followed by the attendance line, and you hear the room, joined muted with no
+speak control. Since 2026-09-20 that line counts you: with one member in the call and you the only
+signed-out listener it reads "Listening live · 2 in the room · 1 member, 1 guest". With nobody
+signed out it is the plain "N members in the room"; with nobody in the call it is "N guests
+listening". Each 35-second heartbeat carries the fresh counts, so the line follows people arriving
+and leaving without a page refresh.
 While listening the page posts a heartbeat every 35 seconds (visible tab only); closing the page
 posts a leave so the spot frees at once. If the tap is refused — every guest spot taken, guests
 paused by the quota policy, the room ended, or Stream refused — the note says the server's own
@@ -481,7 +486,10 @@ and read from `CHYME_MAX_PARTICIPANTS`, `CHYME_MAX_GUEST_LISTENERS`, `CHYME_RED_
 **Expected:** Step 1 reads the plain count — "1 participant · Signed in as @you" — with no cap
 named; the cap appears only from 80% of it ("40 of 50 participants · nearly full") and at it
 ("50 of 50 participants · full"), on web and on the Android room card alike (M is the cap in
-force; 50 by default). Step 2: member B is refused with "This room is full right now (1 of 1 people). Try again
+force; 50 by default). With a signed-out listener on the public page at the same time, the same
+line names them after the capacity part — "1 participant · 1 guest listening" — on web and android
+both; the guest never moves the "N of M" or the full/nearly-full wording, because that cap is the
+member cap and guests are capped separately. Step 2: member B is refused with "This room is full right now (1 of 1 people). Try again
 in a minute." — on web as the error banner with the Join button back, on android as the join alert
 — and no Stream call was made for B. Step 3: B gets in (the spot freed on A's explicit leave, not
 45 seconds later). Step 4: a yellow notice under the room header on web, and under the room card on

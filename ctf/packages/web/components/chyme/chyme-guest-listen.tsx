@@ -15,6 +15,7 @@ import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
+import { chymeAttendanceLine } from 'lib/chyme/capacity-line';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import {
   CHYME_CALL_TYPE,
@@ -85,10 +86,18 @@ async function isRoomStillLive(): Promise<boolean> {
 // header the route requires; the guest id rides in the httpOnly cookie the listen route set.
 const GUEST_HEARTBEAT_MS = 35_000;
 
-function postGuestHeartbeat(): void {
-  void fetch('/api/chyme/public/heartbeat', { method: 'POST', headers: { 'x-ctf-csrf': '1' } }).catch(() => {
-    // no-trace: best-effort keepalive; the next beat reconciles, and a missed one costs a window.
-  });
+function postGuestHeartbeat(onCounts: (counts: GuestRoomCounts) => void): void {
+  void fetch('/api/chyme/public/heartbeat', { method: 'POST', headers: { 'x-ctf-csrf': '1' } })
+    .then(async (res) => {
+      if (!res.ok) return;
+      const data: unknown = await res.json().catch(() => null);
+      const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+      const counts = body.ok === true ? countsFrom(body) : null;
+      if (counts) onCounts(counts);
+    })
+    .catch(() => {
+      // no-trace: best-effort keepalive; the next beat reconciles, and a missed one costs a window.
+    });
 }
 
 function postGuestLeave(): void {
@@ -111,12 +120,28 @@ export class GuestListenRefused extends Error {
   }
 }
 
-export async function requestGuestListenCredentials(): Promise<StreamJoinCredentials> {
+// What the room held at the moment the server answered: members in the call, and signed-out
+// listeners on the roster (this browser included, once it has been admitted).
+export type GuestRoomCounts = {
+  participantCount: number;
+  guestCount: number;
+};
+
+function countsFrom(body: Record<string, unknown>): GuestRoomCounts | null {
+  const participantCount = body.participantCount;
+  const guestCount = body.guestCount;
+  if (typeof participantCount !== 'number' || typeof guestCount !== 'number') {
+    return null;
+  }
+  return { participantCount, guestCount };
+}
+
+export async function requestGuestListenCredentials(): Promise<{ credentials: StreamJoinCredentials; counts: GuestRoomCounts | null }> {
   const res = await fetch('/api/chyme/public/listen', { method: 'POST', headers: { 'x-ctf-csrf': '1' } });
   const data: unknown = await res.json().catch(() => null);
   const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
   if (res.ok && body.ok === true && typeof body.credentials === 'object' && body.credentials !== null) {
-    return body.credentials as StreamJoinCredentials;
+    return { credentials: body.credentials as StreamJoinCredentials, counts: countsFrom(body) };
   }
   const message =
     typeof body.message === 'string' ? body.message : typeof body.error === 'string' ? body.error : 'The server returned an error.';
@@ -129,16 +154,25 @@ export async function requestGuestListenCredentials(): Promise<StreamJoinCredent
 // is listen-only on the client. Speaking requires signing in.
 export function ChymeGuestListen({
   participantCount,
+  guestCount,
   accent = '#22C55E',
   onRoomGone,
 }: {
   participantCount: number;
+  // Signed-out listeners already on the roster when the page read the room. This visitor is not
+  // one of them until they tap; the listen answer and every heartbeat after it carry the number
+  // that includes them.
+  guestCount: number;
   accent?: string;
   // Called when the join failed and a fresh read of the public room says the room is no longer
   // live. The parent then drops back to the honest "no public rooms right now" view instead of
   // leaving a dead error box under a room heading that claims the visitor is listening.
   onRoomGone?: () => void;
 }) {
+  // The room's counts as of the last word from the server: the page's own read to start with, then
+  // the listen answer, then each heartbeat. Held here rather than read from the props so the line
+  // counts this listener from the moment they are admitted instead of waiting for a page refresh.
+  const [counts, setCounts] = useState<GuestRoomCounts>({ participantCount, guestCount });
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   // Minted on the tap (see requestGuestListenCredentials); the join effect keys on it.
@@ -156,6 +190,11 @@ export function ChymeGuestListen({
   // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
   // to go on but "try refreshing".
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+
+  // The parent re-reads the room on its refresh control; take that answer as the newer one.
+  useEffect(() => {
+    setCounts({ participantCount, guestCount });
+  }, [participantCount, guestCount]);
 
   // No WebRTC (Safari Lockdown Mode, some hardened/older browsers) → the Stream Video SDK can't
   // connect. Detect it up front and show a clear message rather than a raw error or a misleading
@@ -177,7 +216,10 @@ export function ChymeGuestListen({
       try {
         const minted = await requestGuestListenCredentials();
         if (!canceled) {
-          setCredentials(minted);
+          setCredentials(minted.credentials);
+          if (minted.counts) {
+            setCounts(minted.counts);
+          }
         }
       } catch (error) {
         if (canceled) {
@@ -267,7 +309,7 @@ export function ChymeGuestListen({
     if (status !== 'joined') return;
     const beat = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      postGuestHeartbeat();
+      postGuestHeartbeat(setCounts);
     };
     beat();
     const intervalId = window.setInterval(beat, GUEST_HEARTBEAT_MS);
@@ -299,7 +341,7 @@ export function ChymeGuestListen({
     return (
       <ListenButton
         accent={accent}
-        participantCount={participantCount}
+        counts={counts}
         onTap={() => {
           unlockAudioPlayback();
           setStatus('connecting');
@@ -335,7 +377,7 @@ export function ChymeGuestListen({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <GuestAudioSink accent={accent} participantCount={participantCount} />
+        <GuestAudioSink accent={accent} counts={counts} />
       </StreamCall>
     </StreamVideo>
   );
@@ -374,7 +416,7 @@ function unlockAudioPlayback(): void {
   }
 }
 
-function ListenButton({ accent, participantCount, onTap }: { accent: string; participantCount: number; onTap: () => void }) {
+function ListenButton({ accent, counts, onTap }: { accent: string; counts: GuestRoomCounts; onTap: () => void }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
@@ -386,7 +428,7 @@ function ListenButton({ accent, participantCount, onTap }: { accent: string; par
       <Radio size={16} style={{ color: accent, flexShrink: 0, marginTop: 2 }} />
       <div>
         <div style={{ fontWeight: 600 }}>
-          Tap to listen · {participantCount} {participantCount === 1 ? 'person' : 'people'} on stage
+          Tap to listen · {chymeAttendanceLine(counts.participantCount, counts.guestCount)}
         </div>
         <div style={{ marginTop: 6, fontSize: 11, color: t.MUTED, lineHeight: 1.5 }}>
           Phones only play sound after a tap. You will hear the room and cannot be heard.
@@ -414,7 +456,7 @@ export function GuestNote({ accent, text, detail }: { accent: string; text: stri
   );
 }
 
-function GuestAudioSink({ accent, participantCount }: { accent: string; participantCount: number }) {
+function GuestAudioSink({ accent, counts }: { accent: string; counts: GuestRoomCounts }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
   const { theme } = useTheme();
@@ -431,15 +473,17 @@ function GuestAudioSink({ accent, participantCount }: { accent: string; particip
     }
     return Array.from(byUser.values());
   }, [participants]);
-  // The server-side count (members with fresh presence) is what the room list shows; the stage
-  // below shows everyone Stream has in the call, the listener included, which is what the members
-  // in the room see on their own stage. Both are shown so neither number surprises.
-  const count = participantCount;
+  // The server-side counts — members with fresh presence, and signed-out listeners on the guest
+  // roster — are what the room itself holds; the stage below shows everyone Stream has in the call,
+  // which is what the members in the room see on their own stage. Both are shown so neither number
+  // surprises. The line names members and guests separately because they are different things: a
+  // member can speak, a guest can only listen, and one merged number would hide which is which.
+  const attendance = chymeAttendanceLine(counts.participantCount, counts.guestCount);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}14`, border: `1px solid ${accent}35`, color: t.TITLE, fontSize: 13, fontWeight: 600 }}>
         <Radio size={16} style={{ color: accent }} />
-        Listening live · {count} {count === 1 ? 'member' : 'members'} in the room
+        Listening live · {attendance}
         {/* Headless audio sink — plays every participant's audio track. */}
         <ParticipantsAudio participants={participants} />
       </div>

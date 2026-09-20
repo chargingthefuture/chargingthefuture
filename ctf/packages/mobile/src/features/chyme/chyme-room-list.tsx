@@ -7,7 +7,8 @@
  * sharp corners per ComicChyme.tsx.
  * Omissions from mockup (no backing API field):
  *   - Multiple room cards (API returns one canonical room only).
- *   - Live listener count (not in room response; participants.length used instead).
+ *   - Live listener count: members come from participants.length; signed-out listeners come
+ *     from the response's guestCount and are named beside them.
  *   - Tags/topics per room (no backend field).
  *   - Upcoming tab reads the TI Radio guide (GET /api/ti-radio/guide) — the next booked slots,
  *     scheduled rooms MVP (2026-09-19). Room creation and a room per slot are not built.
@@ -34,6 +35,9 @@ export type RoomSummary = {
   roomKey: string;
   callActive: boolean;
   participantCount: number;
+  // Signed-out listeners in the room right now, named after the participant count so a member
+  // reading "1 participant" while three people listen is not told the room is smaller than it is.
+  guestCount?: number;
   // The cap in force, for "N of M"; the quota notice is the member-facing line the server sends
   // while the Stream Video month is getting tight (null when there is nothing to say).
   capacityMax?: number;
@@ -197,9 +201,17 @@ function UpcomingList({ upcoming, error, styles, accent }: { upcoming: ChymeUpco
 function participantLine(room: RoomSummary): string {
   const count = room.participantCount;
   const max = room.capacityMax ?? 0;
-  if (max > 0 && count >= max) return `${count} of ${max} participants · full`;
-  if (max > 0 && count >= Math.ceil(max * 0.8)) return `${count} of ${max} participants · nearly full`;
-  return `${count} participant${count !== 1 ? 's' : ''}`;
+  const guests = room.guestCount ?? 0;
+  const members =
+    max > 0 && count >= max
+      ? `${count} of ${max} participants · full`
+      : max > 0 && count >= Math.ceil(max * 0.8)
+        ? `${count} of ${max} participants · nearly full`
+        : `${count} participant${count !== 1 ? 's' : ''}`;
+  // Guests sit outside the member cap, so they are a second number rather than part of the
+  // "N of M" — same shape as the web room's line.
+  if (guests <= 0) return members;
+  return `${members} · ${guests} guest${guests !== 1 ? 's' : ''} listening`;
 }
 
 // The one live room's card, plus the same quota line the web room shows under its header — only

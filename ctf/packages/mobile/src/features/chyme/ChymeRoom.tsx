@@ -56,6 +56,7 @@ function toRoomSummary(room: RoomPayload): RoomSummary {
     roomKey: room.roomKey,
     callActive: room.callActive,
     participantCount: room.participants.length,
+    guestCount: room.guestCount ?? 0,
     capacityMax: room.capacity?.max,
     quotaNotice: room.quota?.notice ?? null,
     quotaBand: room.quota?.band,
