@@ -386,6 +386,39 @@ export const TAXONOMY_CHANGES = [
   { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Client advocacy' },
   { id: 91, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient communication' },
   { id: 92, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Domestic violence advocacy' },
+
+  // Changes 93-99 (owner-approved 2026-09-20): fill out Public Safety & Justice > Police Officers.
+  // A read of the live sector for the domestic-violence-advocacy placement turned up the gap: its six
+  // occupations are Corrections Officers, Firefighters, Forensic Staff, Judges, Lawyers and Police
+  // Officers, and every one of them carries two or three skills except Police Officers, which carries
+  // exactly one - "Evidence handling and reporting". So a member whose policing work is patrol,
+  // investigation, custody or public order has nothing to pick, and the occupation shows almost empty
+  // to anyone browsing it. Workforce matches holders by skill name, so a nearly skill-less occupation
+  // also matches almost nobody and the community's policing capacity reads as near zero.
+  //
+  // SCOPE, and it is a hard line (owner directive, 2026-09-20): police are not social workers, and no
+  // skill under this occupation may frame them as such. Deliberately NOT added, each considered and
+  // rejected on that directive: community liaison, community policing and outreach, crisis
+  // intervention, de-escalation and mental-health response, welfare checks, victim support. Several of
+  // those labels already live under Health > Social Workers and Mental Health Counselors, which is
+  // where that work belongs and where a member doing it should be found. The seven below are the
+  // operational craft of the job and nothing else.
+  //
+  // All seven target the pre-existing Police Officers row, so each carries occupationExisting: true.
+  // No new occupation, so the plural-twin guard has nothing to check here. None of the seven names
+  // exists anywhere else in the live taxonomy as far as the sector reads available at authoring time
+  // show; that matters beyond tidiness, because the Directory's sector filter resolves a member
+  // through the stored row's parent while its picker de-duplicates search results by name across
+  // sectors - so a name shared between two sectors can file a member under the wrong one (live today
+  // for "Programming" and "Plumber"). Keeping these names unique to this sector keeps them out of
+  // that. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 93, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Patrol and incident response' },
+  { id: 94, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Criminal investigation' },
+  { id: 95, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Arrest and custody procedures' },
+  { id: 96, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Search and seizure procedures' },
+  { id: 97, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Traffic enforcement and collision investigation' },
+  { id: 98, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Public order and crowd management' },
+  { id: 99, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Interview and statement taking' },
 ];
 
 // ---------------------------------------------------------------------------
