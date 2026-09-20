@@ -1446,48 +1446,80 @@ export async function listDirectoryAnnouncements(publicOnly = true): Promise<Dir
   return result.rows.map(mapAnnouncement);
 }
 
+/**
+ * Remove the Directory listing a member claimed, and stop it coming back on its own.
+ *
+ * One rule, whichever way the member leaves (owner directive, 2026-09-20): deleting their Directory
+ * data or their entire account deletes the listing, and its Quora address goes on the suppression
+ * list. Nothing re-creates it after that — an accepted SkillsHunt nomination of the same address
+ * included — until somebody explicitly asks for it back and an admin lifts the block.
+ *
+ * This is the same disposition `takedownAdminProfile` already applies, and deliberately so: a person
+ * who leaves and a person who asks to be taken down want the same thing, so they should not produce
+ * two different states. What is NOT the same is an admin deleting a profile they created, which stays
+ * an ordinary delete and is suppressed only when the admin uses the takedown control and says why.
+ *
+ * Runs on a caller-owned client so it commits or rolls back with the rest of the member's deletion.
+ * Returns the deleted profile's id, or null when the member had claimed nothing.
+ */
+/**
+ * Recorded against the suppression a member's own removal creates, so an admin reading the
+ * "Taken-down Quora URLs" panel can tell it from one an admin entered by hand with a reason.
+ */
+export const DIRECTORY_MEMBER_DELETION_REASON = 'The member deleted their Directory data or their account.';
+
+export async function removeClaimedDirectoryProfile(
+  client: PoolClient,
+  userId: string,
+  reason: string,
+): Promise<string | null> {
+  const existing = await client.query<{ id: string; profile_url: string | null }>(
+    'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+    [userId],
+  );
+
+  if (existing.rows.length === 0) {
+    return null;
+  }
+
+  const profileId = existing.rows[0].id;
+  const profileUrl = existing.rows[0].profile_url;
+
+  // Record the skills as removed before they go: otherwise a trainer could clear the credential they
+  // claimed a cohort on and leave no trace. Written while the profile row still exists, matching the
+  // order the other delete paths use.
+  const previousSkillIds = await readProfileSkillIds(client, profileId);
+  await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
+  await client.query('DELETE FROM directory_profile_tags WHERE profile_id = $1', [profileId]);
+  await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
+  await recordProfileSkillAudit(client, profileId, previousSkillIds, [], 'profile_deleted', userId);
+  await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
+
+  // A listing with no Quora address has nothing to suppress — the block is keyed on that address, and
+  // it is what a re-nomination would arrive carrying.
+  const normalized = normalizeQuoraProfileUrl(profileUrl);
+  if (normalized) {
+    // An address already carrying an active block keeps the block it has; this removal still stands.
+    await client.query(
+      `
+        INSERT INTO directory_suppressed_quora_urls
+          (normalized_url, original_url, reason, removed_profile_id, created_by_user_id)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (normalized_url) WHERE (is_overridden = false) DO NOTHING
+      `,
+      [normalized, profileUrl, reason, profileId, userId],
+    );
+  }
+
+  return profileId;
+}
+
 export async function deleteOwnDirectoryProfile(userId: string): Promise<{ requestedAtIso: string }> {
   return withDbTransaction(async (client) => {
-    const existing = await client.query<{ id: string }>(
-      'SELECT id FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
-      [userId],
-    );
-
-    if (existing.rows.length > 0) {
-      const profileId = existing.rows[0].id;
-
-      await client.query(
-        `
-          UPDATE directory_profiles
-          SET
-            claimed_by_user_id = NULL,
-            first_name = 'Deleted profile',
-            last_name = NULL,
-            headline = NULL,
-            bio = NULL,
-            profile_url = NULL,
-            venmo_address = NULL,
-            monero_address = NULL,
-            bitcoin_address = NULL,
-            service_credits_address = NULL,
-            city = NULL,
-            state = NULL,
-            country = NULL,
-            is_active = false,
-            updated_at = NOW()
-          WHERE id = $1
-        `,
-        [profileId],
-      );
-
-      // Deleting your own profile takes your skills with it. Record them as removed before they go:
-      // otherwise a trainer could clear the credential they claimed a cohort on and leave no trace.
-      const previousSkillIds = await readProfileSkillIds(client, profileId);
-      await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
-      await client.query('DELETE FROM directory_profile_tags WHERE profile_id = $1', [profileId]);
-      await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
-      await recordProfileSkillAudit(client, profileId, previousSkillIds, [], 'profile_deleted', userId);
-    }
+    // The listing goes, and its Quora address is blocked from being re-listed. It used to be blanked
+    // and deactivated instead, which left a "Deleted profile" row standing and let an accepted
+    // SkillsHunt nomination put the same person straight back.
+    await removeClaimedDirectoryProfile(client, userId, DIRECTORY_MEMBER_DELETION_REASON);
 
     // Tombstone the extension row: keep the user_id-keyed marker (service_deleted_at)
     // so rejoin can recreate clean defaults, but wipe every contact/payment field the

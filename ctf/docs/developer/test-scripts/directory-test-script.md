@@ -329,6 +329,33 @@ explanation: earned by steadily delivering real help; automatic; permanent; no a
 to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-11 · Leaving removes the listing and blocks it from being re-listed
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a member holding a claimed profile that carries a Quora address and some skills.
+Note the address.
+**Steps:**
+1. As that member, delete your Directory data from Account & Data (service scope). Confirm the screen
+   says the listing is removed and the address blocked unless you ask for it back.
+2. As another member, browse and search `/apps/directory`. The listing is gone — not blanked, not a
+   "Deleted profile" row. Open its old address directly: gone.
+3. On `/admin/directory`, open the **Taken-down Quora URLs** panel. The address is listed, with a
+   reason naming a member deletion rather than an admin's own words.
+4. Accept a fresh SkillsHunt nomination of that same Quora address. No directory profile is created.
+5. As an admin, try to create a profile with that address. Rejected
+   (409 `DIRECTORY_QUORA_URL_SUPPRESSED`).
+6. Click **Allow again** on the panel entry, give a reason, then repeat step 5. It works now.
+7. Repeat steps 1 to 4 with full-account deletion instead of service-scope. Same outcome.
+8. Separately, as an admin, delete a profile **you** created (DIR-A3). It is deleted and its address
+   is **not** on the panel — an admin's own delete suppresses nothing.
+**Expected:** Leaving and asking to be taken down land in the same state, because they are the same
+request. The listing is deleted with its skills, tags and proposed skills, and the address is blocked
+until somebody explicitly asks. Before 2026-09-20 neither member path did this: the service delete
+blanked the row and left it active, the account delete stamped it and left it rendering, and either
+way an accepted nomination of the same address put the person back with no one noticing. Step 8 is the
+line that must not move — an admin deleting their own creation is an ordinary delete, and the block is
+recorded only through the takedown control with a reason.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Admin walkthrough

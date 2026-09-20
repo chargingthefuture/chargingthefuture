@@ -215,11 +215,18 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'directory',
     name: 'Directory',
-    dataSummary: 'Your directory profile and its change history.',
+    dataSummary:
+      'Your directory listing and its change history. The listing is removed, and its Quora address is blocked from being listed again unless you ask for it back.',
     serviceScopeSupported: true,
     tables: [
       del('directory_profile_change_events', 'actor_id', 'History of changes you made to directory profiles.'),
-      soft('directory_profiles', 'claimed_by_user_id', 'deleted_at', 'The directory profile you claimed.'),
+      // The listing is removed outright, and its Quora address is blocked from being re-listed
+      // (owner directive, 2026-09-20). Both happen in `runInTransactionSteps` in the orchestrator,
+      // which runs just before this plan: the address has to be read before the row goes, which a
+      // generated one-statement plan cannot do. By the time this delete runs the row is already gone,
+      // so it matches nothing — it stays here because this registry is the statement of record for
+      // what happens to the table, and "deleted" is what happens.
+      del('directory_profiles', 'claimed_by_user_id', 'The directory listing you claimed.'),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
       // Burn-down batch 4: admin content and abuse-prevention trails, retained.
