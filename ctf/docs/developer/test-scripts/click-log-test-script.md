@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app and checks that pressing the control never navigates away from the dashboard |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app and checks that the picture appears on the dashboard and that nothing ever navigates away from it |
 
 ## How to run this
 
@@ -280,29 +280,34 @@ the image carry the note explaining that the country is worked out from the area
 and that an area on a border can land on the wrong side.
 **Result:** web ☐ mobile ☐ — notes:
 
-### CL-A5 · The report saves as one image, and the screen stays put
+### CL-A5 · The report appears as one image on the screen, and the screen never moves
 **Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px) · installed app (iOS, added to the home screen)
 **Precondition:** for the installed-app run, add the site to the iOS home screen and open it from
 that icon, so it runs with no browser chrome. That is the case this step exists for.
 **Steps:**
-1. On the Trends dashboard, press "Save the report as one image".
-2. Look at the screen you are on immediately after pressing it — on the phone, before touching
-   anything in the share sheet.
-3. On the phone, save the picture to the photo library from the sheet; then press the button again
-   and close the sheet without choosing anything.
-4. Open the saved file and read it top to bottom.
-**Expected:** There is one control, not two — no separate link that opens the picture in the
-browser. On a desktop browser the file downloads with a name carrying today's date. On a phone the
-share sheet opens over the dashboard and the picture goes to the photo library or another app from
-there. **In every case the Trends dashboard is still on screen and still scrolled where it was.**
-Nothing navigates away: no page showing a PNG icon with a file name and an "Open in…" link, no
-screen without a back control, and never a need to force the app closed to get back — that was the
-defect on 2026-09-20, from a plain link to the route. Closing the share sheet without choosing
-anything leaves the dashboard untouched and says nothing. Step 4: the saved picture contains every
-section of the report and the method statement, ends with the site line, and nothing is cut off at
-the bottom. It carries no area coordinates: where the areas would be, it says how many areas were
-recorded and why they were left out. The area count tile and the countries are still there, and
-every other number matches the screen.
+1. On the Trends dashboard, press "Show the report as one image".
+2. Watch what happens while it is drawing, and look at where you are when it finishes.
+3. On the phone, press and hold the picture and save it to your photos.
+4. Press **Share**, then close the share sheet without choosing anything. Press it again and send
+   the picture to another app.
+5. On a computer, press **Save the file**, then open the saved file and read it top to bottom.
+6. Press **Done**.
+**Expected:** Step 2 — the button reads "Drawing the picture…" while it works, and when it finishes
+the picture is **on the Trends dashboard**, under the button, scaled to the width of the card.
+**The dashboard never moves.** Nothing navigates: no page showing a PNG icon with a file name and
+an "Open in…" link, no "Safari can't open the page" with a WebKitBlobResource error, no screen
+without a back control, and never a need to force the app closed — those were the two defects on
+2026-09-20, from a plain link to the route and then from a share-then-blob handoff. Step 3 — the
+picture reaches the photo library from press-and-hold alone. Step 4 — the sheet opens (it is its
+own press, so it is never refused), closing it says nothing and leaves the picture on screen, and
+sending it works. Step 5 — the file saves with a name carrying today's date and opens normally.
+Step 6 — the picture is put away and the button is back.
+The picture itself contains every section of the report and the method statement, ends with the
+site line, and nothing is cut off at the bottom. It carries no area coordinates: where the areas
+would be, it says how many areas were recorded and why they were left out. The area count tile and
+the countries are still there, and every other number matches the screen.
+**If it fails:** a sentence in red under the button, with the dashboard still there. Never a blank
+page and never a dead file view.
 **Result:** web ☐ mobile ☐ installed app ☐ — notes:
 
 ### CL-A7 · The screen is named ClickLog, and an admin can cross to the trends dashboard

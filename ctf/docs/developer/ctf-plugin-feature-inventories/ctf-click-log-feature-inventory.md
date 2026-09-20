@@ -136,15 +136,15 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
   report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
   that takes an image without stitching phone screenshots together and losing rows at the seams.
-  The trends screen offers one control, "Save the report as one image", which leaves the screen
-  where it was. It used to offer a second one that opened the image in the browser for phones;
-  tested on iOS that path stranded the reader on a bare picture with no way back (owner report,
-  2026-08-24). Removing it was not enough: the control that remained was a plain link to the route,
-  which in the installed app on iOS navigates the app's own window to the downloaded file and
-  strands the reader the same way, with force-closing the app as the only way out (owner report,
-  2026-09-20). It now fetches the picture and offers it to the phone's share sheet, or saves it
-  from a blob URL where there is no share sheet, so the screen never moves
-  (`components/shared/save-image-button.tsx`, shared with SkillsHunt's missions picture).
+  The trends screen offers one control, "Show the report as one image", which draws the picture and
+  shows it on the screen it was asked for from — press and hold it to save it to a phone's photo
+  library, Share it, or save it as a file. Nothing navigates, so the screen never moves. Three
+  attempts got here and the two failures are recorded in `components/shared/save-image-button.tsx`
+  (shared with SkillsHunt's missions picture), because each looked obviously right: a plain link to
+  the route strands the reader on iOS's file preview with no back control, and fetching it and then
+  handing it to the share sheet fails too — drawing the picture takes long enough that Safari
+  expires the press's activation and refuses the sheet, and the blob-URL fallback both navigates and
+  reads a URL the code had already revoked ("WebKitBlobResource error 1").
   Built from the same aggregate as the screen, so there is no second data path. The image never
   carries the area coordinates and nothing can ask for them (owner directive, 2026-08-24): an
   exported image is made to be shared publicly, and at small counts an ~11 km cell plus a date can
@@ -318,6 +318,18 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-09-20 (third attempt the same day, owner report): **the picture is shown on the screen
+  instead of being handed off.** The second attempt fetched it and offered it to the phone's share
+  sheet, falling back to a blob-URL download. Both halves broke on the owner's phone: drawing the
+  picture server-side takes a second or two, so by the time `navigator.share` was called Safari had
+  expired the transient activation from the press and refused it, and the fallback then clicked an
+  anchor at a `blob:` URL — which navigates in standalone mode — that the next line had already
+  revoked, giving "Safari can't open the page … WebKitBlobResource error 1" and another dead page.
+  Nothing is handed off the back of the fetching press any more. The picture appears on the screen
+  it was asked for from, with press-and-hold (the iOS way into the photo library), a Share button
+  that is its own press so the activation is fresh, and a Save the file button whose blob URL is
+  revoked a minute later rather than on the next line. The control is now "Show the report as one
+  image".
 - 2026-09-20: **Saving the report image no longer strands the reader (owner report, the second
   time).** In August the second control — the one that opened the image in the browser — was
   removed because on iOS it left no way back to the trends screen. The control that remained was
