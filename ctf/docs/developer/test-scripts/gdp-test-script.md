@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself |
 
 ---
 
@@ -328,6 +328,38 @@ Result: web ☐
 ## Admin walkthrough
 
 The GDP admin was retired 2026-07-11 (weekly publications, currency-rate management). There is no live admin UI for this plugin. The cases below verify the retirement is complete and that the built-in weights require no admin action.
+
+### GDP-15 — Share the page as a picture of itself
+
+**Role:** member · **Surfaces:** web · web (mobile-responsive, ~390px) · installed app (iOS, added to the home screen)
+
+**Precondition:** A published report, so the page has figures on it. For the installed-app run, add
+the site to the iOS home screen and open it from that icon, so it runs with no browser chrome —
+that is the case this step exists for.
+
+**Steps:**
+1. Open the GDP page and scroll to the bottom. Press **Show this page as one picture**.
+2. Look at where you are when it finishes, and read the controls under the picture.
+3. Compare the picture against the page above it, block by block.
+4. Read the bottom of the picture.
+5. Press **Share**, close the sheet without choosing anything, then press Share again and save the
+   picture or send it somewhere. Then press **Done**.
+
+**Expected:** Step 2 — **the GDP page is still on screen, scrolled where it was.** Nothing
+navigates: no file preview, no "Safari can't open the page", no screen without a back control, and
+never a need to force the app closed. Under the picture there are two controls, Share and Done.
+Step 3 — the picture is **the page**, one to one: the same headline figure, the same chips, the
+same sector and country blocks, in the same order and the same colors. Two things are missing on
+purpose and nothing else is: the app's own top bar (back arrow, Live chip, refresh) and the share
+control itself. Step 4 — under the page content the picture carries
+`https://app.chargingthefuture.com/apps/gross-domestic-product` and a line saying the figures are
+as they stood when the picture was taken. Step 5 — the sheet opens every time, closing it says
+nothing and leaves the picture on screen, and Done puts the picture away.
+
+**If the capture fails:** a sentence in red under the button, with the page still there. Never a
+blank page and never a half-drawn picture presented as finished.
+
+**Result:** web ☐ mobile ☐ installed app ☐ — notes:
 
 ### GDP-A1 — Admin sees no GDP admin navigation entry
 

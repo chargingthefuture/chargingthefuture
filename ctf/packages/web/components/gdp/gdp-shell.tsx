@@ -21,6 +21,10 @@ import { GdpLoading } from "./gdp-loading";
 import { GdpDashboard } from "./gdp-dashboard";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { SharePicture } from "@/components/shared/share-picture";
+import { captureScreen } from "lib/share/capture-screen";
+
+const GDP_DEEP_LINK = "https://app.chargingthefuture.com/apps/gross-domestic-product";
 
 function EmptyReport({ t }: { t: GdpTokens }) {
   return (
@@ -188,6 +192,23 @@ export default function GdpShell() {
   // the initial-load effects already abort on unmount, and this gives the refresh path the same cleanup
   // and stops two rapid refreshes from racing.
   const refreshControllerRef = useRef<AbortController | null>(null);
+  const reportRef = useRef<HTMLDivElement | null>(null);
+
+  // The capture runs on its own press, with the node already on screen, so nothing is awaited
+  // between the press and the picture beyond the draw itself.
+  const captureReport = useCallback(async () => {
+    const node = reportRef.current;
+    if (!node) throw new Error("The page is not ready to be pictured yet.");
+    return await captureScreen(node, {
+      background: t.BG,
+      footer: {
+        line: GDP_DEEP_LINK,
+        note: "Skills Economy (SE) — figures as they stood when this picture was taken.",
+        accent: t.ACCENT,
+        muted: t.MUTED,
+      },
+    });
+  }, [t.BG, t.ACCENT, t.MUTED]);
   const handleRefresh = useCallback(async () => {
     refreshControllerRef.current?.abort();
     const controller = new AbortController();
@@ -209,7 +230,7 @@ export default function GdpShell() {
 
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
+        <div data-capture-hide="" style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />
             <Globe size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
@@ -220,7 +241,32 @@ export default function GdpShell() {
             <MobileTopActions />
           </div>
         </div>
-        <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
+        {/* The picture is a capture of exactly this node: the report as a member reads it, with
+            the app's own header left out (it carries a back arrow and a refresh control, which
+            mean nothing in a picture) and the share control itself left out. Nothing here is
+            per-member and nothing is private, so the picture is the screen, one to one. */}
+        <div ref={reportRef}>
+          <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
+          <div style={{ padding: "0 16px 24px" }}>
+            <SharePicture
+              capture={captureReport}
+              filename={`skills-economy-gdp-${new Date().toISOString().slice(0, 10)}.png`}
+              label="Show this page as one picture"
+              busyLabel="Taking the picture…"
+              accent={t.ACCENT}
+              surface={t.SURFACE}
+              border={t.BORDER}
+              muted={t.MUTED}
+              area="gdp"
+              op="share_screen_picture"
+              style={{ marginTop: 8 }}
+            >
+              Takes a picture of this page as it stands, with the link to it underneath, to post
+              where people will see it. It is the page itself, not a separate design, so what
+              somebody is shown is what they find when they open it.
+            </SharePicture>
+          </div>
+        </div>
       </div>
     );
 }

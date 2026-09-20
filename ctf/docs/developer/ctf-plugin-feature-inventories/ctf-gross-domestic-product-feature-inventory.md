@@ -82,7 +82,14 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
    flagged an estimate **and** is above 0 — a 0 index has nothing rolled together to estimate, so the
    chip is hidden rather than reading as doubt about the zero.
 
-### 1.6 Value Waiting to Happen (projected figure)
+### 1.6 Share this page as one picture
+
+1. **"Show this page as one picture" (2026-09-20).** A control under the report takes a picture of the page as it stands and shows it right there, with Share under it. It is a **capture of the screen**, not a second drawing of it (owner directive): nothing here is per-member and nothing is private, so the picture is the page one to one, and a reader who opens the app finds exactly what they were shown.
+2. The app's own header is left out of the picture — it carries a back arrow and a refresh control, which mean nothing in a picture — and so is the share control itself. Everything else is in.
+3. The picture carries `https://app.chargingthefuture.com/apps/gross-domestic-product` under it, plus a line saying the figures are as they stood when the picture was taken. The deep link goes on the page itself, never the homepage.
+4. Built on the shared `SharePicture` and `lib/share/capture-screen.ts` — see `.claude/rules/130-link-sharing-and-copy-url-rules.mdc`. Nothing navigates: pressing it never leaves the page.
+
+### 1.7 Value Waiting to Happen (projected figure)
 
 1. A panel under the headline figure showing what the posts already on the board would add **if every
    one of them closed successfully** — a separate number from the Community Value Index above it.
@@ -358,6 +365,15 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 ---
 
 ## 10) Change Log
+
+- 2026-09-20: **The page can be shared as a picture of itself (owner request).** A control under
+  the report captures the page and shows the picture on the page, with Share under it. It is a
+  capture rather than a drawn copy: the two shareable pictures before this one were separate
+  designs of their screens, which drift, are tedious to keep in step, and teach a reader nothing
+  about the app they are being invited into. GDP has little on it and nothing private, so it is
+  one to one — the app header and the control itself are the only things left out. The picture
+  carries the page's own deep link underneath. New shared capture (`lib/share/capture-screen.ts`,
+  html2canvas-pro) that any screen can reuse; the pattern is written down in rule 130.
 
 - 2026-08-29: **The SocketRelay lines in both value figures now say "requests", not "favors"**
   (owner report, dashboard screenshot: the "Value waiting to happen" card read "SocketRelay favors

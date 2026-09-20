@@ -55,16 +55,28 @@ counterpart of `ShareLink` and is built the same way: one control, used everywhe
 means scrolling, several screenshots and a stitch that loses rows at the seams and leaves the
 phone's own clock and battery in the middle of something meant to be seen in public.
 
-### The shape, which three attempts arrived at
+### The shape
 
-1. **Draw it on the server and answer with the PNG.** A route builds the image from the same
-   aggregate the screen reads, so the two can never say different things. Admin-gate it where the
-   screen is admin-only, and write an audit row.
-2. **Fetch it, then show it on the screen that asked for it.** The control puts the picture in the
-   panel under the button. It never navigates.
-3. **Share is the control.** `navigator.share({ files })` on its own press, so the browser's
+1. **Capture the screen — do not design a second one.** `captureScreen`
+   (`lib/share/capture-screen.ts`) redraws the live node into a canvas. The picture *is* the
+   screen, so there is nothing to keep in step and a reader who opens the app finds what they were
+   shown (owner directive, 2026-09-20: *"I don't want to design a new set of screens. Tedious for
+   me to manage. And then the user is not learning the app."*). Pass the node holding the content,
+   not the outermost element, and mark anything that should stay out with `data-capture-hide` —
+   the app header, the share control itself, anything private on that screen.
+2. **Give it the deep link.** The capture takes a `footer` and draws it under the screen, into
+   html2canvas's clone rather than the live DOM, so a picture that travels alone says where to go.
+   Use the real deep link (`https://app.chargingthefuture.com/apps/<slug>`), not the homepage.
+3. **Show it on the screen that asked for it.** The control puts the picture in the panel under
+   the button. It never navigates.
+4. **Share is the control.** `navigator.share({ files })` on its own press, so the browser's
    transient activation is fresh. Press-and-hold (or right-click) is named in the note beside it and
    needs no code.
+
+**Drawing it server-side is the older way and is being retired.** Two screens still do it — the
+ClickLog trend report and the SkillsHunt missions picture — because their route also decides what
+to leave out. `SharePicture` takes either source (`capture` or `url`), but a new screen uses
+`capture`.
 
 ### Never, each one having shipped and failed
 
@@ -80,14 +92,20 @@ phone's own clock and battery in the middle of something meant to be seen in pub
   "WebKitBlobResource error 1" on a dead page.
 - **Never a "Save the file" button.** Removed 2026-09-20 by owner directive: on a phone it does not
   do what its label says, and Share covers every case. Do not add it back.
+- **Never a second design of a screen you could photograph.** A drawn copy drifts from the screen,
+  is tedious to keep in step, and teaches a reader nothing about the app they are being invited
+  into. Capture the screen instead, and where something must not travel, hide that element rather
+  than redrawing the page without it.
 
 ### For agents
 
-Asked for a picture of a screen? Render it with `SharePicture`, pass it the route, the filename, the
-screen's accent and surface tokens, and a note saying what the picture carries. Do not write a new
+Asked for a picture of a screen? Render it with `SharePicture`, pass it a `capture` that calls
+`captureScreen` on the node holding the content, the filename, the screen's accent and surface
+tokens, and a note saying what the picture carries. Do not write a new
 download control, and do not put a bare `<img>` behind your own buttons — extend `SharePicture` if
-something is missing. Worked examples: the SkillsHunt admin Missions tab
-(`components/skills-hunt/sha-missions.tsx`) and the ClickLog trends dashboard
+something is missing. Worked example of a capture: the GDP screen (`components/gdp/gdp-shell.tsx`). Worked examples of
+the older drawn kind, kept because their route decides what to leave out: the SkillsHunt admin
+Missions tab (`components/skills-hunt/sha-missions.tsx`) and the ClickLog trends dashboard
 (`components/click-log/click-log-trend-image-link.tsx`).
 
 ## For agents

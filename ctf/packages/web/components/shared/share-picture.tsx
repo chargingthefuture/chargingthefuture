@@ -79,18 +79,22 @@ function browserCanShareFile(ready: Ready | null): boolean {
 
 // Fetch the picture and put it where an <img> and a share sheet can both read it. Throws with the
 // route's own sentence when the route refused, so the caller only has to catch.
-async function drawPicture(url: string, filename: string): Promise<Ready> {
+function readyFrom(blob: Blob, filename: string): Ready {
+  return {
+    objectUrl: URL.createObjectURL(blob),
+    file: new File([blob], filename, { type: blob.type || "image/png" }),
+  };
+}
+
+// A route that answers with the picture, already drawn on the server.
+async function fetchPicture(url: string): Promise<Blob> {
   const res = await fetch(url);
   if (!res.ok) {
     // Rule 137: the route's own sentence goes on screen; this one is only the fallback for a body
     // that carries nothing.
     throw new Error(await failureMessage(res, `The picture could not be drawn (${res.status}).`));
   }
-  const blob = await res.blob();
-  return {
-    objectUrl: URL.createObjectURL(blob),
-    file: new File([blob], filename, { type: blob.type || "image/png" }),
-  };
+  return await res.blob();
 }
 
 // Every blob URL this control hands out, revoked together when the screen goes away, so none of
@@ -210,6 +214,7 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
 
 export function SharePicture({
   url,
+  capture,
   filename,
   label,
   busyLabel = "Drawing the picture…",
@@ -222,8 +227,15 @@ export function SharePicture({
   children,
   style,
 }: {
-  /** Same-origin route that answers with the image. The signed-in session authorizes it. */
-  url: string;
+  /**
+   * Where the picture comes from, one of two ways. `capture` takes a picture of the live screen
+   * and is the way to build (owner directive, 2026-09-20): it is the screen, so there is no second
+   * design to keep in step and a reader who opens the app finds what they were shown. `url` is a
+   * same-origin route that answers with an image drawn on the server, which two screens still use;
+   * the signed-in session authorizes it. Pass exactly one.
+   */
+  url?: string;
+  capture?: () => Promise<Blob>;
   /** What the saved or shared file is called. */
   filename: string;
   label: string;
@@ -252,7 +264,8 @@ export function SharePicture({
     setShareNote(null);
     setBusy(true);
     try {
-      const drawn = await drawPicture(url, filename);
+      const blob = capture ? await capture() : await fetchPicture(url ?? "");
+      const drawn = readyFrom(blob, filename);
       trackObjectUrl(drawn.objectUrl);
       setReady(drawn);
     } catch (caught) {
@@ -261,7 +274,7 @@ export function SharePicture({
     } finally {
       setBusy(false);
     }
-  }, [url, filename, area, op, trackObjectUrl]);
+  }, [url, capture, filename, area, op, trackObjectUrl]);
 
   // Its own press, so the activation Safari wants is fresh — the picture is already in hand and
   // nothing is awaited before the sheet is asked for.
@@ -285,6 +298,9 @@ export function SharePicture({
 
   return (
     <div
+      // Kept out of any capture of this screen: the control is how the picture was asked for, not
+      // part of what the picture is of.
+      data-capture-hide=""
       style={{
         marginTop: 20,
         padding: "14px 16px",
