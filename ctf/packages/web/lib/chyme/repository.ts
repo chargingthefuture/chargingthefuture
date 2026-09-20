@@ -344,6 +344,7 @@ export function toRoomResponse(
   participants: ChymeParticipant[],
   policy: ChymeQuotaPolicy,
   viewer: RoomViewer,
+  guestCount: number = 0,
 ): ChymeRoomResponse {
   const own = participants.find((participant) => participant.userId === viewer.userId);
   return {
@@ -354,6 +355,7 @@ export function toRoomResponse(
     // not a stored flag that nothing turns off.
     callActive: participants.length > 0,
     participants,
+    guestCount,
     capacity: { current: participants.length, max: policy.memberCap },
     quota: {
       band: policy.band,
@@ -414,9 +416,13 @@ export async function getRoomState(
     await ensureServiceProfile(client, identity);
     // Viewing the room does NOT make you a participant — only joining the call does (see
     // markRoomCallJoined). Otherwise merely opening Chyme would list you on stage forever.
-    const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
+    const [participants, policy, guestCount] = await Promise.all([
+      listRoomParticipants(client, room.id),
+      readQuotaPolicy(client),
+      countGuestsInRoom(client, room.room_key),
+    ]);
 
-    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
+    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin }, guestCount);
   });
 }
 
@@ -456,6 +462,13 @@ export async function getPublicRoomLiveState(): Promise<ChymePublicRoomLiveState
 //
 // A guest is one browser holding one random id in an httpOnly cookie. The roster below is what the
 // guest listener cap counts and what the minute meter credits; it carries no personal data.
+
+// The guest roster is not per room: a signed-out listener can only ever reach the public main room,
+// so every other room key has no guests by construction and is answered without a query.
+async function countGuestsInRoom(client: PoolClient, roomKey: string): Promise<number> {
+  if (roomKey !== CHYME_MAIN_ROOM_KEY) return 0;
+  return countFreshGuests(client);
+}
 
 async function countFreshGuests(client: PoolClient, excludingGuestId?: string): Promise<number> {
   const result = await client.query<{ count: string }>(
@@ -538,7 +551,16 @@ export async function admitGuestListener(guestId: string): Promise<ChymePublicRo
 // way a member's heartbeat does. A guest with no row (the roster was pruned, or they never tapped)
 // is re-admitted through admitGuestListener by the route, not here; this only touches an existing row.
 // Returns false when there was no row to touch.
-export async function touchGuestPresence(guestId: string): Promise<boolean> {
+// The keepalive answers with the room's counts as the beat saw them: the listener's line names
+// both numbers, and the heartbeat is already a round trip every 35 seconds, so reading them here
+// keeps that line current without a second request or a polling loop of its own. `null` means
+// there was no roster row to touch — the caller re-admits through the listen route.
+export type ChymeGuestPresenceBeat = {
+  participantCount: number;
+  guestCount: number;
+};
+
+export async function touchGuestPresence(guestId: string): Promise<ChymeGuestPresenceBeat | null> {
   return withDbTransaction(async (client) => {
     const result = await client.query<{ credited_seconds: string | null }>(
       `
@@ -558,10 +580,15 @@ export async function touchGuestPresence(guestId: string): Promise<boolean> {
       [guestId, String(CHYME_PRESENCE_TTL_SECONDS)],
     );
     if ((result.rowCount ?? 0) === 0) {
-      return false;
+      return null;
     }
     await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeGuest, Number(result.rows[0]?.credited_seconds ?? 0));
-    return true;
+    const room = await getMainRoomReadOnly(client);
+    if (!room) {
+      return { participantCount: 0, guestCount: 0 };
+    }
+    const [participants, guestCount] = await Promise.all([listRoomParticipants(client, room.id), countFreshGuests(client)]);
+    return { participantCount: participants.length, guestCount };
   });
 }
 
@@ -734,8 +761,9 @@ export async function markRoomCallJoined(
     }
     const activeRoom = await setRoomCallActive(client, room.id, true);
     const participants = await listRoomParticipants(client, room.id);
+    const guestCount = await countGuestsInRoom(client, activeRoom.room_key);
 
-    return toRoomResponse(activeRoom, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
+    return toRoomResponse(activeRoom, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin }, guestCount);
   });
 }
 
@@ -788,9 +816,13 @@ export async function setRoomMemberHandRaised(
       [room.id, identity.userId, raised, String(CHYME_PRESENCE_TTL_SECONDS)],
     );
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), Number(bumped.rows[0]?.credited_seconds ?? 0));
-    const [participants, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
+    const [participants, policy, guestCount] = await Promise.all([
+      listRoomParticipants(client, room.id),
+      readQuotaPolicy(client),
+      countGuestsInRoom(client, room.room_key),
+    ]);
 
-    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin });
+    return toRoomResponse(room, participants, policy, { userId: identity.userId, isAdmin: viewerIsAdmin }, guestCount);
   });
 }
 

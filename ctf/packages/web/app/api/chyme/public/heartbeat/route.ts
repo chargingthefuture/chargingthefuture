@@ -10,9 +10,12 @@ import { ensureMutationCsrf, readGuestIdCookie } from '../../_lib';
 //
 // The listener page calls this every 35s while it is in the call, the same cadence as a member's
 // heartbeat, so the guest keeps counting as listening (the guest cap reads that count) and the
-// minute meter is credited for the time. The guest is identified by the cookie the listen route
-// set; a request without it has nothing to keep alive and is answered 400. A guest whose row was
-// pruned answers 404 so the page can re-admit itself through the listen route.
+// minute meter is credited for the time. The answer carries the room's current member and guest
+// counts, which is what keeps the listener's attendance line current between refreshes.
+//
+// The guest is identified by the cookie the listen route set; a request without it has nothing to
+// keep alive and is answered 400. A guest whose row was pruned answers 404 so the page can
+// re-admit itself through the listen route.
 export async function POST(request: Request) {
   const limited = enforcePublicReadRateLimit(request, 'chyme-public-heartbeat');
   if (limited) {
@@ -32,14 +35,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const touched = await touchGuestPresence(guestId);
-    if (!touched) {
+    const beat = await touchGuestPresence(guestId);
+    if (!beat) {
       return NextResponse.json(
         { ok: false, code: CHYME_ERROR_CODE.guestIdentityMissing, message: 'This listener is no longer on the roster; tap to listen again.' },
         { status: 404 },
       );
     }
-    return NextResponse.json({ ok: true }, { status: 200 });
+    // The counts ride back on the beat so the listener's own line ("2 in the room · 1 member,
+    // 1 guest") keeps up with people arriving and leaving without a second request.
+    return NextResponse.json({ ok: true, participantCount: beat.participantCount, guestCount: beat.guestCount }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'chyme', op: 'public_heartbeat' });
     return NextResponse.json(

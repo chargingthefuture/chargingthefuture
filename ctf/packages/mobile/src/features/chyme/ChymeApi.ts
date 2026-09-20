@@ -23,6 +23,10 @@ type ChymeRoomResponse = {
   roomKey: string;
   callActive: boolean;
   participants: ChymeParticipant[];
+  // Signed-out listeners in the room right now. They cannot speak and are capped separately, so
+  // they are counted beside the participants rather than among them. Optional here so an older
+  // server answer (without the field) still renders.
+  guestCount?: number;
   // 'open' (every joiner may speak) or 'hand_raise' (a joiner listens until an admin lets them
   // speak). Who is reading, worked out on the server: whether they may moderate, and their own role.
   speakMode?: ChymeSpeakMode;

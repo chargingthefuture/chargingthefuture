@@ -59,6 +59,11 @@ export type ChymeRoomResponse = {
   roomKey: string;
   callActive: boolean;
   participants: ChymeParticipant[];
+  // Signed-out listeners in the room right now. They are not participants — they cannot speak and
+  // they are counted against their own cap — but a member reading "1 participant" while three
+  // people listen is being told the room is smaller than it is. Always 0 for a room other than the
+  // public main room, which is the only one a guest can reach.
+  guestCount: number;
   capacity: ChymeRoomCapacity;
   quota: ChymeQuotaState;
   // 'open' (every joiner may speak) or 'hand_raise' (a joiner listens until an admin lets them

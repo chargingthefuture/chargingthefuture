@@ -18,6 +18,9 @@ import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 type LiveState = {
   isLive: boolean;
   participantCount: number;
+  // Signed-out listeners on the roster right now. Shown beside the member count so the page says
+  // how many people are in the room rather than how many of them happen to have accounts.
+  guestCount: number;
   roomName?: string;
   guestListenAllowed?: boolean;
   // The room is live but guests cannot listen right now — the route's plain reason (the quota
@@ -54,6 +57,7 @@ function liveStateFrom(data: PublicRoomPayload): LiveState {
   return {
     isLive: data.isLive === true,
     participantCount: typeof data.participantCount === 'number' ? data.participantCount : 0,
+    guestCount: typeof data.guestCount === 'number' ? data.guestCount : 0,
     roomName: stringField(data, 'roomName'),
     guestListenAllowed: data.guestListenAllowed === true,
     listenUnavailable: stringField(data, 'listenUnavailable'),
@@ -65,7 +69,7 @@ function liveStateFrom(data: PublicRoomPayload): LiveState {
 function failedCheck(status: number, data: unknown): LiveState {
   const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
   const serverMessage = stringField(body, 'message') ?? stringField(body, 'error') ?? 'The server returned an error.';
-  return { isLive: false, participantCount: 0, checkFailed: `${serverMessage} (HTTP ${status})` };
+  return { isLive: false, participantCount: 0, guestCount: 0, checkFailed: `${serverMessage} (HTTP ${status})` };
 }
 
 // Four states, each said plainly. Before this, two of them rendered as something else: a failed
@@ -103,7 +107,7 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
           {/* Said before the tap, so it cannot claim the visitor is already listening (owner report,
               2026-09-19); the listener component says "Listening live" itself once the sound is on. */}
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>The room is live. Tap below to listen; sign in to speak.</div>
-          <ChymeGuestListen participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
+          <ChymeGuestListen participantCount={live.participantCount} guestCount={live.guestCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
               follow what members are saying and signs in to write. Closed until opened, so the page
               below it stays on the first screen (owner directive, 2026-09-20). */}
@@ -253,7 +257,7 @@ function ChymePublicView({
 export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellProps) {
   // Fetch the one default public room's live status once on mount. The listen credentials are
   // minted on the visitor's tap, not here, so a page load costs nothing on Stream.
-  const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0 });
+  const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0, guestCount: 0 });
   const [refreshing, setRefreshing] = useState(false);
   // Bumped by the refresh button; the chat panel re-reads when it changes.
   const [refreshKey, setRefreshKey] = useState(0);
@@ -269,7 +273,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
       setLive(res.ok && isOkPayload(data) ? liveStateFrom(data) : failedCheck(res.status, data));
     } catch (error) {
       if (signal?.aborted) return;
-      setLive({ isLive: false, participantCount: 0, checkFailed: error instanceof Error ? error.message : 'The request did not complete.' });
+      setLive({ isLive: false, participantCount: 0, guestCount: 0, checkFailed: error instanceof Error ? error.message : 'The request did not complete.' });
     }
   }, []);
 

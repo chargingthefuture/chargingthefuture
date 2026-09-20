@@ -19,10 +19,13 @@ contracts:
         type: boolean
       participants:
         type: array
+      guestCount:
+        type: number
     dataAccess:
       - chyme_rooms
       - chyme_service_profiles
       - chyme_room_members
+      - chyme_guest_listeners
     purpose: social_audio_presence
     retentionClass: derived_short_lived
     idempotency: true
@@ -295,13 +298,19 @@ contracts:
   - pluginId: chyme
     command: chyme.public.heartbeat
     version: 1.0.0
-    description: Public, unauthenticated. The signed-out listener's presence keepalive (every 35s while listening), identified by the guest-id cookie. Refreshes the roster row and credits the gap since the previous beat to the Stream Video minute meter. Same-origin CSRF header required; per-IP rate limited.
+    description: Public, unauthenticated. The signed-out listener's presence keepalive (every 35s while listening), identified by the guest-id cookie. Refreshes the roster row, credits the gap since the previous beat to the Stream Video minute meter, and answers with the room's current member and guest counts so the listener's attendance line stays right without a second request. Same-origin CSRF header required; per-IP rate limited.
     inputSchema: {}
     outputSchema:
       ok:
         type: boolean
+      participantCount:
+        type: number
+      guestCount:
+        type: number
     dataAccess:
       - chyme_guest_listeners
+      - chyme_rooms
+      - chyme_room_members
       - stream_video_usage_daily
     purpose: social_audio_public_listen
     retentionClass: derived_short_lived
