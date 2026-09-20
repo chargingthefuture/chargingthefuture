@@ -277,22 +277,25 @@ function SearchResultChip({ entry, active, tokens, onToggleEntry }: {
     <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <SkillChip entry={entry} active={active} tokens={tokens} onToggleEntry={onToggleEntry} />
       {spansSeveralSectors(entry) ? (
-        <span style={{ fontSize: 11, color: tokens.MUTED, paddingLeft: 2 }}>in {entry.sectors?.join(", ")}</span>
+        <span style={{ fontSize: 11, color: tokens.MUTED, paddingLeft: 2 }}>counts in {entry.sectors?.join(", ")}</span>
       ) : null}
     </div>
   );
 }
 
-// Says the accordion is there, shown only when a result actually spans several sectors. It states
-// that the choice exists; it does not ask anyone to make one. Picking from the search list records
-// the skill, which is what the picker is for — you say what you can do, and the kinds of work that
-// skill belongs to follow from it.
+// Says that one skill reaches several kinds of work, shown only when a result actually does.
+//
+// The copy is deliberate and the failure mode it avoids is specific: any wording that reads as "your
+// pick was ambiguous, go back and choose properly" invites the member to UNDO a pick. The people this
+// picker most has to serve are the ones already inclined to believe they have nothing to offer, and a
+// prompt to reconsider lands on them hardest. So this says the skill counts everywhere it appears. It
+// never asks anyone to narrow, re-pick, or clear anything, and it describes the accordion as another
+// way to browse rather than as a correction.
 function MultiSectorNote({ tokens }: { tokens: DirectoryTokens }) {
   return (
     <div style={{ fontSize: 11, color: tokens.MUTED, marginTop: 10, lineHeight: 1.5 }}>
-      Some of these skills belong to more than one kind of work. Picking one here records the skill
-      itself, which is usually what you want. To say which kind of work you mean, clear the search and
-      open that area in the list below.
+      Some of these skills belong to more than one kind of work, and picking one here counts in all of
+      them. The list below groups skills by area if you would like to browse them that way.
     </div>
   );
 }
