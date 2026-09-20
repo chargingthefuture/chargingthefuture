@@ -142,8 +142,12 @@ function WeaversWidget({ weavers, tokens }: { weavers: WeaversReading; tokens: T
 }
 
 // Who is delivering today, ordered by what that day's events are worth under the shared weights.
-// A member id rather than a name, because this list is read beside the badge list and the two are
-// answering different questions about the same people.
+//
+// The handle leads and the member id sits under it (owner directive, 2026-09-20). The id alone was
+// unreadable — a row of `user_361l41OShkXubCMOt4nFwVzpSBj` says nothing about who delivered, and
+// this screen is read beside the badge list, which has named its members by handle all along. The
+// id stays because it is the reading that is always there: a member can use the app without ever
+// setting a handle, and it is also what matches a row to anything else keyed by member.
 function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens: Tokens }) {
   return (
     <section
@@ -173,11 +177,17 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
                 color: tokens.TEXT,
                 display: 'flex',
                 justifyContent: 'space-between',
+                alignItems: 'baseline',
                 gap: 12,
-                padding: '3px 0',
+                padding: '5px 0',
               }}
             >
-              <span style={{ wordBreak: 'break-all' }}>{member.memberId}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <span style={{ fontWeight: 600 }}>{member.username ?? 'No handle set'}</span>
+                <span style={{ fontSize: 11, color: tokens.SUBTLE, wordBreak: 'break-all' }}>
+                  {member.memberId}
+                </span>
+              </span>
               <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
                 {Math.round(member.score * 10) / 10}
               </span>

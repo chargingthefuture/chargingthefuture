@@ -12,9 +12,9 @@ import {
   type QuoraMotdMessage,
 } from 'lib/quora-motd/types';
 
-// One message a day, ready to paste into the Skills Economy space. The whole screen exists to be
-// used from a phone with no keyboard in reach: everything worth pasting has its own copy control,
-// and nothing has to be selected by hand.
+// One message a day, ready to paste into the Skills Economy space. This screen exists to be used
+// from a phone with no keyboard in reach: everything worth pasting has its own copy control, and
+// nothing has to be selected by hand.
 
 export type QuoraMotdDay = {
   date: string;
@@ -102,9 +102,9 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
       />
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 6px', lineHeight: 1.55 }}>
-          One post a day for the Skills Economy space, so a short-lived account still says one whole
-          thing. Post it within minutes of creating the account — the record shows handles banned
-          inside the minute they were opened.
+          One post a day for the Skills Economy space, so a short-lived account still says one
+          complete thing. Post it within minutes of creating the account — the record shows handles
+          banned inside the minute they were opened.
         </p>
         <p style={{ fontSize: 12.5, color: t.MUTED, margin: '0 0 16px', lineHeight: 1.55 }}>
           The ask rotates between the three Peace Battle 2 actions, and nothing repeats until all{' '}
