@@ -283,6 +283,32 @@ Community-Health Workers — and never under this occupation. That is where the 
 a member doing it should be found.
 **Result:** web ☐ mobile ☐ — notes:
 
+### TAX-5f · One swimming skill reaches two roles, and none of it is age-scoped (added 2026-09-20)
+**Role:** member · **Surfaces:** all
+**Precondition:** changes 100–111 have been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **Education** and read its occupation list.
+2. Open **Physical Education Teachers**, then **Swimming Instructors / Sports Coaches**.
+3. Search the keyword box for `Swimming instruction` and read the results.
+4. On a Directory profile, pick **Swimming instruction** and read the roles panel (DIR-2 step 2c).
+**Expected:** Education now lists eleven occupations, the nine it had plus these two. **Physical
+Education Teachers** carries Physical education teaching, Adaptive and inclusive physical education,
+Sports safety and injury prevention, Swimming instruction, Water safety and lifeguarding.
+**Swimming Instructors / Sports Coaches** carries Swimming instruction, Water safety and
+lifeguarding, Stroke technique and race training, Sports coaching, Fitness and conditioning
+coaching. `Swimming instruction` and `Water safety and lifeguarding` appear under **both** — that is
+deliberate, not a duplicate to clean up, and step 4 is why: picking `Swimming instruction` once must
+show **both** roles in the profile's roles panel. Somebody whose one nameable skill is swimming
+reaching two roles from a single pick is the outcome this whole set exists for.
+**This step is also a scope check.** No skill here may be age-scoped: a label such as “Youth swimming
+instruction” or “Children's swimming” is a defect to report, because adults learn to swim too and an
+age-scoped name quietly excludes half the people who could teach it. Adult teaching is already
+covered by Vocational Trainers' `Adult education and training`. **Adaptive and inclusive physical
+education** must be present and must not be folded into `Physical education teaching`; a learner who
+cannot do ordinary PE needs a teacher who can say so.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
 **Role:** member · **Surfaces:** all
 **Steps:**
