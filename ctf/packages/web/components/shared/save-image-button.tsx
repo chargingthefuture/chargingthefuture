@@ -1,62 +1,66 @@
 "use client";
 
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
-import { Download } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Download, Image as ImageIcon, Share2, X } from "lucide-react";
 import { reportError } from "lib/observability/report";
 
 // THE shared way to hand a server-drawn picture to the person looking at the screen.
 //
-// Never a plain `<a href download>` to the route. That was how ClickLog's trend image and the
-// SkillsHunt missions picture both shipped, and on an installed app on iOS it is a trap (owner
-// report, 2026-09-20, the second time): the app runs in standalone mode with no browser chrome, so
-// following the link navigates the app's own window to the downloaded file. iOS then draws its file
-// preview — a PNG icon, the file name, and an "Open in…" link — with no back control anywhere,
-// because the app has no address bar or back button to draw one on. The screen the person came from
-// is gone and the only way out is to force the app closed. Fixing ClickLog by removing its second
-// "view in the browser" link did not touch this: the remaining download link navigates just the
-// same.
+// Three attempts got here, and the two that failed are worth keeping written down, because each
+// one looked obviously correct.
 //
-// So the picture is fetched instead, and the page never changes:
+// A plain `<a href download>` to the route (ClickLog since August, SkillsHunt on 2026-09-20).
+// In the installed app on iOS there is no browser chrome, so following the link navigates the
+// app's own window to the downloaded file. iOS draws its file preview — a PNG icon, the file
+// name, an "Open in…" link — with no back control, because a standalone app has no address bar to
+// put one on. Force-closing the app was the only way back.
 //
-//   1. `fetch` the route with the session that is already signed in, and read the picture as a blob.
-//   2. Offer it to the phone's own share sheet when the browser has one that takes files. That is
-//      the natural place on a phone — save to photos, send it to someone, put it in another app —
-//      and the sheet opens over the app rather than replacing it.
-//   3. Otherwise save it as a file from a blob URL, which is what a desktop browser wants.
+// Fetch it, then hand it to the share sheet, and fall back to clicking a blob-URL anchor
+// (2026-09-20, later the same day). Both halves broke on the owner's phone. The share sheet never
+// opened: drawing the picture server-side takes a second or two, and by the time `navigator.share`
+// was called Safari had expired the transient activation from the press that started it, so it
+// refused with NotAllowedError. The fallback then clicked an anchor at a `blob:` URL — which in
+// standalone mode navigates rather than downloading — at a URL the next line had already revoked.
+// The result was "Safari can't open the page … WebKitBlobResource error 1", a dead page again.
 //
-// Neither path leaves the screen, so there is nothing to come back from. A failure stays on the
-// screen as a sentence under the button instead of a dead page.
+// So this no longer tries to hand the file anywhere off the back of the press that fetched it.
+// The picture is fetched and then **shown on the screen it was asked for from**, and the ways to
+// keep it sit under it as their own controls:
+//
+//   * Press and hold the picture — the iOS way to put an image in the photo library, and it needs
+//     nothing from us.
+//   * Share, where the browser has a share sheet that takes files. Its own press, so the
+//     activation is fresh and Safari has no reason to refuse.
+//   * Save the file, for a desktop browser. The blob URL it uses is revoked a minute later rather
+//     than on the next line, because the browser reads it after the click, not before.
+//
+// Nothing navigates on any path, so there is never anything to come back from, and the picture is
+// on screen either way — which is most of what was wanted.
 
-// The person closed the share sheet. That is a choice, not a fault: nothing is saved and nothing
-// is said about it.
+// How long a blob URL is left alive after a save is started. The browser reads it asynchronously,
+// so revoking it immediately is what produced WebKitBlobResource error 1; a minute is far longer
+// than any read needs and the URL dies with the tab regardless.
+const BLOB_LIFETIME_MS = 60_000;
+
 function isDismissedByPerson(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
-// Black or white text, whichever stays readable on the accent behind it. The shells hand over their
-// own accent — ClickLog's is dark pink and wants white, SkillsHunt's is bright amber and wants
-// near-black — and picking it here means neither caller has to think about it.
+// Black or white text, whichever stays readable on the accent behind it. The shells hand over
+// their own accent — ClickLog's is dark pink and wants white, SkillsHunt's is bright amber and
+// wants near-black — and picking it here means neither caller has to think about it.
 function readableTextOn(accent: string): string {
   const hex = accent.replace("#", "");
   const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
   if (full.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(full)) return "#fff";
   const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
-  // Relative luminance (WCAG): the mid-point 0.45 puts amber and yellow on dark text and leaves
-  // the darker brand colors on white.
   const channel = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
   const luminance = 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
   return luminance > 0.45 ? "#111111" : "#ffffff";
 }
 
-function saveAsFile(blob: Blob, filename: string): void {
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(objectUrl);
+function messageFrom(caught: unknown, fallback: string): string {
+  return caught instanceof Error ? caught.message : fallback;
 }
 
 async function failureMessage(res: Response, fallback: string): Promise<string> {
@@ -64,11 +68,154 @@ async function failureMessage(res: Response, fallback: string): Promise<string> 
   return body?.message ?? fallback;
 }
 
+type Ready = { objectUrl: string; file: File };
+
+function browserCanShareFile(ready: Ready | null): boolean {
+  if (!ready) return false;
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
+  return navigator.canShare?.({ files: [ready.file] }) ?? false;
+}
+
+// Fetch the picture and put it where an <img> and a share sheet can both read it. Throws with the
+// route's own sentence when the route refused, so the caller only has to catch.
+async function drawPicture(url: string, filename: string): Promise<Ready> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    // Rule 137: the route's own sentence goes on screen; this one is only the fallback for a body
+    // that carries nothing.
+    throw new Error(await failureMessage(res, `The picture could not be drawn (${res.status}).`));
+  }
+  const blob = await res.blob();
+  return {
+    objectUrl: URL.createObjectURL(blob),
+    file: new File([blob], filename, { type: blob.type || "image/png" }),
+  };
+}
+
+// Every blob URL this control hands out, revoked together when the screen goes away, so none of
+// them outlives it.
+function useObjectUrlBin(): (objectUrl: string) => void {
+  const bin = useRef<string[]>([]);
+  useEffect(() => () => {
+    for (const objectUrl of bin.current) URL.revokeObjectURL(objectUrl);
+    bin.current = [];
+  }, []);
+  return useCallback((objectUrl: string) => {
+    bin.current.push(objectUrl);
+  }, []);
+}
+
+function secondaryButtonStyle(border: string, color: string): CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: "9px 14px",
+    borderRadius: 10,
+    background: "transparent",
+    border: `1px solid ${border}`,
+    color,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  };
+}
+
+function DrawButton({ label, busy, busyLabel, accent, onAccent, onPress }: {
+  label: string;
+  busy: boolean;
+  busyLabel: string;
+  accent: string;
+  onAccent: string;
+  onPress: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={busy}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        width: "100%",
+        padding: "10px 14px",
+        borderRadius: 10,
+        background: accent,
+        border: "none",
+        color: onAccent,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.7 : 1,
+      }}
+    >
+      <ImageIcon size={15} color={onAccent} />
+      {busy ? busyLabel : label}
+    </button>
+  );
+}
+
+// The picture itself, on the screen that asked for it, with the three ways to keep it underneath.
+// Press and hold is the one that needs no code and no permission — it is how a picture goes into
+// the photo library on a phone — so it leads the note.
+function PicturePanel({ ready, filename, accent, border, muted, shareNote, canShare, onShare, onSaveFile, onClose }: {
+  ready: Ready;
+  filename: string;
+  accent: string;
+  border: string;
+  muted: string;
+  shareNote: string | null;
+  canShare: boolean;
+  onShare: () => void;
+  onSaveFile: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div>
+      {/* A plain img, not next/image: the source is a blob: URL for a picture drawn a moment ago in
+          this session, which the image pipeline can neither know about nor optimize. */}
+      <img
+        src={ready.objectUrl}
+        alt={`The picture this screen just drew, saved as ${filename}`}
+        style={{ display: "block", width: "100%", height: "auto", borderRadius: 10, border: `1px solid ${border}` }}
+      />
+      <div style={{ fontSize: 12, color: muted, marginTop: 10, lineHeight: 1.5 }}>
+        On a phone, press and hold the picture to save it to your photos. On a computer, use Save
+        the file.
+      </div>
+      {shareNote && (
+        <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginTop: 8, lineHeight: 1.5 }}>
+          {shareNote}
+        </div>
+      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+        {canShare && (
+          <button type="button" onClick={onShare} style={secondaryButtonStyle(accent, accent)}>
+            <Share2 size={14} />
+            Share
+          </button>
+        )}
+        <button type="button" onClick={onSaveFile} style={secondaryButtonStyle(border, muted)}>
+          <Download size={14} />
+          Save the file
+        </button>
+        <button type="button" onClick={onClose} style={secondaryButtonStyle(border, muted)}>
+          <X size={14} />
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function SaveImageButton({
   url,
   filename,
   label,
-  busyLabel = "Preparing the picture…",
+  busyLabel = "Drawing the picture…",
   accent,
   surface,
   border,
@@ -97,43 +244,59 @@ export function SaveImageButton({
   style?: CSSProperties;
 }) {
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState<Ready | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shareNote, setShareNote] = useState<string | null>(null);
   const onAccent = readableTextOn(accent);
+  const trackObjectUrl = useObjectUrlBin();
 
-  const save = useCallback(async () => {
+  const draw = useCallback(async () => {
     setError(null);
+    setShareNote(null);
     setBusy(true);
     try {
-      const res = await fetch(url);
-      if (!res.ok) {
-        // Rule 137: the route's own sentence goes on screen; this one is only the fallback for a
-        // body that carries nothing.
-        throw new Error(await failureMessage(res, `The picture could not be drawn (${res.status}).`));
-      }
-      const blob = await res.blob();
-      const file = new File([blob], filename, { type: blob.type || "image/png" });
-
-      if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file] });
-          return;
-        } catch (shareError) {
-          if (isDismissedByPerson(shareError)) return;
-          // Any other refusal — commonly a browser declining because the press that started this
-          // has aged out while the picture was being drawn — falls through to saving the file, so
-          // the person still gets the picture either way.
-          reportError(shareError, { area, op: `${op}_share`, extra: { filename } });
-        }
-      }
-
-      saveAsFile(blob, filename);
+      const drawn = await drawPicture(url, filename);
+      trackObjectUrl(drawn.objectUrl);
+      setReady(drawn);
     } catch (caught) {
       reportError(caught, { area, op, extra: { url, filename } });
-      setError(caught instanceof Error ? caught.message : "The picture could not be prepared.");
+      setError(messageFrom(caught, "The picture could not be drawn."));
     } finally {
       setBusy(false);
     }
-  }, [url, filename, area, op]);
+  }, [url, filename, area, op, trackObjectUrl]);
+
+  // Its own press, so the activation Safari wants is fresh — the picture is already in hand and
+  // nothing is awaited before the sheet is asked for.
+  const share = useCallback(async (file: File) => {
+    setShareNote(null);
+    try {
+      await navigator.share({ files: [file] });
+    } catch (caught) {
+      if (isDismissedByPerson(caught)) return;
+      reportError(caught, { area, op: `${op}_share`, extra: { filename } });
+      setShareNote("The share sheet would not open. Press and hold the picture to save it instead.");
+    }
+  }, [area, op, filename]);
+
+  const saveFile = useCallback((objectUrl: string) => {
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    // Not revoked here: the browser reads the URL after the click, and revoking on this line is
+    // what produced WebKitBlobResource error 1 on iOS. The unmount cleanup above is the backstop.
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_LIFETIME_MS);
+  }, [filename]);
+
+  const close = useCallback(() => {
+    setReady(null);
+    setShareNote(null);
+  }, []);
+
+  const canShare = browserCanShareFile(ready);
 
   return (
     <div
@@ -146,36 +309,39 @@ export function SaveImageButton({
         ...style,
       }}
     >
-      <button
-        type="button"
-        onClick={() => void save()}
-        disabled={busy}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          width: "100%",
-          padding: "10px 14px",
-          borderRadius: 10,
-          background: accent,
-          border: "none",
-          color: onAccent,
-          fontSize: 13,
-          fontWeight: 700,
-          cursor: busy ? "default" : "pointer",
-          opacity: busy ? 0.7 : 1,
-        }}
-      >
-        <Download size={15} color={onAccent} />
-        {busy ? busyLabel : label}
-      </button>
+      {!ready && (
+        <DrawButton
+          label={label}
+          busy={busy}
+          busyLabel={busyLabel}
+          accent={accent}
+          onAccent={onAccent}
+          onPress={() => void draw()}
+        />
+      )}
+
       {error && (
         <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginTop: 8, lineHeight: 1.5 }}>
           {error}
         </div>
       )}
-      {children ? (
+
+      {ready && (
+        <PicturePanel
+          ready={ready}
+          filename={filename}
+          accent={accent}
+          border={border}
+          muted={muted}
+          shareNote={shareNote}
+          canShare={canShare}
+          onShare={() => void share(ready.file)}
+          onSaveFile={() => saveFile(ready.objectUrl)}
+          onClose={close}
+        />
+      )}
+
+      {children && !ready ? (
         <div style={{ fontSize: 11, color: muted, marginTop: 8, lineHeight: 1.5 }}>{children}</div>
       ) : null}
     </div>
