@@ -1,7 +1,7 @@
 # Quora Message of the Day
 
 One post a day for the Skills Economy space (`https://skillseconomy.quora.com`), written in advance
-so that an account with a short life still says one whole thing before it goes.
+so that an account with a short life still says one complete thing before it goes.
 
 Screen: `/admin/quora-message-of-the-day`. Admin only, no database, no API route — the pool is a
 static file and the day's pick is arithmetic on the date.
