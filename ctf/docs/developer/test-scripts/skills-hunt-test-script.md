@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the admin-only "Save these missions as one picture" control on the Missions tab |
 
 ---
 
@@ -376,6 +376,25 @@ Result: web ☐
 **Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown. **A count never reads past its target** (owner decision 2026-09-18): a mission whose stored count is 82 against a target of 1 shows "1/1 complete", matching the bar, which has always stopped at full width. The stored count is untouched — only what a member reads is capped.
 
 So a mis-pointed mission no longer announces itself here. Check it on the **admin** Missions tab instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with its sector or skill beside it; a mission named for one trade that reads "every accepted nomination" is the one to correct with SH-A10c.
+
+Result: web ☐
+
+---
+
+### SH-9b — Saving the missions as one picture is an admin control, and members never see it
+
+**Role:** member, admin · **Surfaces:** web
+
+**Precondition:** An active round with at least two active missions, one of them archived or locked, and one member account that is not an admin.
+
+**Steps:**
+1. Sign in as the non-admin member and open the Missions tab. Look under the "Complete missions to earn bonus points and unlock badges" line.
+2. Sign in as an admin and open the same tab.
+3. Press **Save these missions as one picture**.
+4. Open the downloaded file.
+5. Check each active mission in the picture against the admin Missions tab, and check the archived or locked one.
+
+**Expected:** Step 1 — the member sees no such control, and nothing between the subtitle and the first mission card. Step 2 — the admin sees the control with a short note under it saying what it does. Step 3 — the file downloads as `skillshunt-missions-<today>.png` and **the screen does not move**: the Missions tab is still there, scrolled where it was, with no bare image page to come back from. Step 4 — one tall picture with the round's name and dates at the top, every active mission as its own card carrying a title, a description, what the mission asks for in plain words ("3 accepted nominations with a Health skill"), and its bonus points where it pays any. Step 5 — the archived or locked mission is **not** in the picture, and no progress bar, count or "x/y complete" appears anywhere in it: the picture is made to be posted in public, and one member's counts are not an advertisement. The goal type's internal name (`count_skills_in_sector`) never appears.
 
 Result: web ☐
 
