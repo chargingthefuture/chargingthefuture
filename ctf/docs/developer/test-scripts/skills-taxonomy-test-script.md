@@ -267,9 +267,17 @@ a member doing ordinary policing had nothing to pick and Workforce read the comm
 capacity as close to zero.
 **This step is also a scope check, and it fails if the list grows the wrong way.** Owner directive,
 2026-09-20: police are not social workers, and no skill under this occupation may frame them as one.
-None of community liaison, community policing, outreach, crisis intervention, de-escalation,
-mental-health response, welfare checks or victim support belongs here, and finding any of them under
-Police Officers is a defect to report, not a gap to fill. Searching `community` and
+None of community liaison, outreach, crisis intervention, de-escalation, mental-health response,
+welfare checks or victim support belongs here, and finding any of them under Police Officers is a
+defect to report, not a gap to fill.
+**`Community policing` is refused outright, in every sector, and no longer depends on anyone
+noticing it in review.** The term is what vigilante and trafficking networks call themselves, so
+the change-list validator rejects any change that creates or renames to it
+(`PROHIBITED_NAME_PATTERNS` in `ctf/scripts/lib/taxonomyChange.mjs`). To confirm the guard is live,
+append a throwaway `addSkill` entry naming it, run
+`pnpm --dir ctf run check:taxonomy-changes`, see the check fail with the reason, then remove the
+entry. Legitimate community-prefixed labels are unaffected: `Community outreach` under Social
+Workers and the `Community-Health Workers` occupation must both still be present and pickable. Searching `community` and
 `crisis intervention` should return them under **Health** — Social Workers, Mental Health Counselors,
 Community-Health Workers — and never under this occupation. That is where the work belongs and where
 a member doing it should be found.
