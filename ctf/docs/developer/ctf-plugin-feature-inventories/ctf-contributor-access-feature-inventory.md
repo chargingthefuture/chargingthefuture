@@ -355,6 +355,20 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-09-20 — Beacon removed from the value events; PeerProgramming reweighted to 1. Owner
+  directive. These events are scored to separate members who deliver something from members who
+  only speak, because somebody here to extract rather than give shows up as talk. Reacting to or
+  replying under a Beacon broadcast is talk, so `value.beacon_broadcast_engagement` is gone from
+  the key union, the plugin map, the labels and the default weights; fourteen events remain.
+  Weekly Performance still counts that engagement in its own dashboard, where the question is
+  activity rather than value, so these keys no longer mirror `live-metrics.ts` exactly and the
+  header in `weights.ts` says why. PeerProgramming posting stays, dropped from 2 to 1, for the
+  owner's reason: a cohort session is a learning and collaboration setting like SkillUp, and
+  somebody there to extract is exposed by it rather than hidden by it. Existing badges are
+  unaffected, since eligibility is permanent once earned and this only changes what future scores
+  are built from; a stored weight override for the removed key is ignored, because
+  `effectiveWeight` is only ever asked about keys that exist.
+
 - 2026-08-18 — "What it opens" third perk catch-up: the explainer (`weavers-earned-page.tsx`)
   now also names scheme suggestions in ClickLog — badge holders can propose a new scheme name
   while logging an incident (the l-badge gate documented in the ClickLog inventory since the
@@ -435,7 +449,7 @@ fill on the first recompute / config save / member post.
   `contributor_access_eligibility` read; no new API route, schema change, or contributor-access
   contract command. Web + mobile-responsive; Android badge display is a tracked parity gap.
 - 2026-07-18 — First slice: schema (config / eligibility / audit tables), the eligibility engine
-  (fifteen per-member all-time value-event counts mirroring Weekly Performance, weighted score,
+  (per-member all-time value-event counts, weighted score,
   age/plugin-spread/counterparty gates, additive-only recompute), internal recompute route + weekly
   workflow, admin routes (config get/update, eligible list, revoke, reinstate), the admin page and
   shell, contracts, and this inventory.

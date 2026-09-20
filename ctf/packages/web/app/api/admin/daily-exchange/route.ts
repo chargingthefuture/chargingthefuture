@@ -5,7 +5,7 @@ import { countEligibleMembers, listEligibleMembers } from 'lib/contributor-acces
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// The two readings of the same fifteen value events, side by side, for the Daily exchange screen.
+// The two readings of the same fourteen value events, side by side, for the Daily exchange screen.
 //
 // `reading` is today and the last thirty days: how many members delivered value on a day, against
 // the 384 target, plus today's roster. `weavers` is the lifetime side: how many members have earned
@@ -13,7 +13,7 @@ import { failureReason } from 'lib/errors/failure';
 // the badge asks it of a member's entire time here and the daily count asks it of one day.
 //
 // Admin-only and read-only. No per-event breakdown is returned for a named member: Foundation
-// answered calls are among the fifteen and rule 132 keeps that participation internal.
+// answered calls are among the fourteen and rule 132 keeps that participation internal.
 export async function GET() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {

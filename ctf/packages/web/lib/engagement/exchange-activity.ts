@@ -9,7 +9,7 @@ import { effectiveWeight } from 'lib/contributor-access/weights';
 // the estimate this project works from. So a day at 384 is evidence the arrangement holds at that
 // scale. It is a day's worth of people, not a total to accumulate, and not the same people twice.
 //
-// This asks the Weavers of the Commons question of a single day. Same fifteen events, same weights,
+// This asks the Weavers of the Commons question of a single day. Same fourteen events, same weights,
 // same attribution — all of it from lib/contributor-access/value-events.ts, which exists so the two
 // readings cannot drift apart when a feature is added (owner directive, 2026-09-20). The badge sums
 // a member's entire time here and grants something permanent the first time the total clears the

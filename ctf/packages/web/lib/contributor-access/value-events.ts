@@ -1,6 +1,6 @@
 import type { ContributorValueEventKey } from './weights';
 
-// The fifteen value events, defined once, in the shape both readings need.
+// The fourteen value events, defined once, in the shape both readings need.
 //
 // Two things read these events and they must never disagree:
 //
@@ -33,7 +33,8 @@ export type ValueEventAggregate =
   | 'sum'
   // Distinct calendar weeks the member appeared in. PeerProgramming counts a member once per week.
   | 'distinctWeek'
-  // Distinct `ref` values. Beacon counts a member once per broadcast however often they engaged.
+  // Distinct `ref` values. Nothing uses this today — Beacon did, before it was removed — and it
+  // stays because the next event that dedupes against a target will need it.
   | 'distinctRef';
 
 export type ValueEventSource = {
@@ -168,19 +169,6 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     rowSql: `SELECT author_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM peer_programming_messages`,
     aggregate: 'distinctWeek',
-  },
-  {
-    // One point per broadcast engaged with, however many reactions or replies the member left on it.
-    key: 'value.beacon_broadcast_engagement',
-    tables: ['beacon_events', 'feed_community_post_reactions', 'feed_community_replies'],
-    rowSql: `SELECT r.user_id AS member_id, r.created_at AS at, 1::numeric AS value, b.id::text AS ref
-               FROM beacon_events b
-               JOIN feed_community_post_reactions r ON r.post_id = b.commons_recording_post_id
-              UNION ALL
-             SELECT p.author_user_id AS member_id, p.created_at AS at, 1::numeric AS value, b.id::text AS ref
-               FROM beacon_events b
-               JOIN feed_community_replies p ON p.post_id = b.commons_recording_post_id`,
-    aggregate: 'distinctRef',
   },
 ];
 

@@ -1,8 +1,20 @@
 // Contributor Access — value-event keys and default weights.
 //
-// The fifteen `value.*` event keys mirror lib/weekly-performance/live-metrics.ts exactly (the
-// owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md). The eligibility engine
-// counts the SAME events per member; this file only names them and assigns default weights.
+// The fourteen `value.*` event keys are the events that count as delivering something. They began
+// as a mirror of lib/weekly-performance/live-metrics.ts (the decision record
+// ctf/docs/developer/PLUGIN_VALUE_METRICS.md) and no longer match it exactly: Beacon broadcast
+// engagement was removed on 2026-09-20. Reacting to or replying under a broadcast is talk, and the
+// measure these keys feed is meant to separate people who deliver from people who only speak —
+// somebody extracting rather than giving would otherwise accrue points for turning up in a comment
+// thread. Weekly Performance still counts that engagement in its own dashboard, where the question
+// is activity rather than value.
+//
+// PeerProgramming posting stays, at a weight of 1, for the reason the owner gave: a cohort session
+// is a learning and collaboration setting like SkillUp, and somebody there to extract is exposed by
+// it rather than hidden by it.
+//
+// The eligibility engine counts these events per member; this file only names them and assigns
+// default weights.
 //
 // Default weights are inversely related to each event's expected base rate: a rare, large action
 // (hosting a LightHouse stay) is worth many small, frequent ones (a Chyme tip). The owner tunes
@@ -25,8 +37,7 @@ export type ContributorValueEventKey =
   | 'value.skill_up_completions'
   | 'value.skill_up_trainer_payouts'
   | 'value.recurring_ties_confirmed'
-  | 'value.peer_programming_active_posters'
-  | 'value.beacon_broadcast_engagement';
+  | 'value.peer_programming_active_posters';
 
 // Which plugin each event belongs to — used for the distinct-plugins gate.
 export const EVENT_SOURCE_PLUGIN: Record<ContributorValueEventKey, string> = {
@@ -44,7 +55,6 @@ export const EVENT_SOURCE_PLUGIN: Record<ContributorValueEventKey, string> = {
   'value.skill_up_trainer_payouts': 'skill-up',
   'value.recurring_ties_confirmed': 'recurring-activity',
   'value.peer_programming_active_posters': 'peer-programming',
-  'value.beacon_broadcast_engagement': 'beacon',
 };
 
 export const CONTRIBUTOR_VALUE_EVENT_KEYS = Object.keys(
@@ -67,7 +77,6 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
   'value.skill_up_trainer_payouts': 'SkillUp trainer payout',
   'value.recurring_ties_confirmed': 'Recurring Activity tie confirmed',
   'value.peer_programming_active_posters': 'PeerProgramming week posted in',
-  'value.beacon_broadcast_engagement': 'Beacon broadcast engaged with',
 };
 
 // Contributions is a USD SUM, not a row count, so its weight is per dollar: 0.1 per USD = 1 point
@@ -83,8 +92,7 @@ export const DEFAULT_WEIGHTS: Record<ContributorValueEventKey, number> = {
   'value.trust_transport_trips_completed': 5,
   'value.recurring_ties_confirmed': 4,
   'value.what_works_endorsements_given': 2,
-  'value.peer_programming_active_posters': 2,
-  'value.beacon_broadcast_engagement': 1,
+  'value.peer_programming_active_posters': 1,
   'value.chyme_tips_sent': 1,
   'value.service_credits_peer_sends': 1,
   'value.contributions_confirmed_usd': 0.1,
