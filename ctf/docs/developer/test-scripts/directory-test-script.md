@@ -136,6 +136,18 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
 **Steps:**
 1. Open your own profile; press "Edit my profile".
 2. Change the headline and one other field; leave the rest untouched and save.
+2b. **A skill that belongs to several kinds of work.** In the specializations picker, search for a
+   skill name that exists under more than one occupation or sector (today `Crisis intervention`,
+   which sits under four Health occupations, or `Programming`, which spans two sectors). Read the
+   result, then clear the search and open one of the named areas in the accordion.
+   **Expected:** the result shows as a single chip — one chip per name is correct and is what lets a
+   repeated name be treated as one skill — with a small `in <sector>, <sector>` caption beneath it,
+   and one line below the results saying some of these skills belong to more than one kind of work
+   and that clearing the search and opening that area is how to say which. Picking the chip from the
+   search list must still work on its own: the note states that the option exists, it does not
+   require anyone to use it, and a member who ignores it loses nothing. The accordion entries carry
+   no such caption, because each is already scoped to one sector. A single-sector skill shows no
+   caption and no note.
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
    as a removable chip at the top. Confirm each **skill name appears only once** in the accordion — a

@@ -17,7 +17,9 @@ type SkillOption = { id: string; name: string; jobTitleId: string };
 // picking a skill those duplicates are one thing — indistinguishable and confusing. So we show the
 // name once and toggle all of its ids together: picking it selects the first id; unpicking removes
 // every selected id that shares the name (which also self-heals a profile that already holds two).
-type SkillEntry = { name: string; ids: string[] };
+// `sectors` is only populated for the flat keyword-search list, where one entry can span several
+// sectors. The accordion's entries are already scoped to one sector, so it leaves the field unset.
+type SkillEntry = { name: string; ids: string[]; sectors?: string[] };
 
 // One accordion section: a sector name plus the de-duplicated skill entries grouped under it.
 type SkillCategory = { sector: string; entries: SkillEntry[] };
@@ -256,6 +258,45 @@ function SkillKeywordSearch({ categoryCount, search, onSearchChange, tokens }: {
   );
 }
 
+// True when one skill name's rows sit under more than one sector. Only the flat search list can hit
+// this — the accordion's entries are already scoped to a single sector.
+function spansSeveralSectors(entry: SkillEntry) {
+  return (entry.sectors?.length ?? 0) > 1;
+}
+
+// One keyword-search result: the chip, plus the areas it belongs to when there is more than one.
+// Naming them is the point — the search list shows a single chip per name, so a member typing to find
+// a skill would otherwise never learn that it sits under several kinds of work.
+function SearchResultChip({ entry, active, tokens, onToggleEntry }: {
+  entry: SkillEntry;
+  active: boolean;
+  tokens: DirectoryTokens;
+  onToggleEntry: (entry: SkillEntry) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <SkillChip entry={entry} active={active} tokens={tokens} onToggleEntry={onToggleEntry} />
+      {spansSeveralSectors(entry) ? (
+        <span style={{ fontSize: 11, color: tokens.MUTED, paddingLeft: 2 }}>in {entry.sectors?.join(", ")}</span>
+      ) : null}
+    </div>
+  );
+}
+
+// Says the accordion is there, shown only when a result actually spans several sectors. It states
+// that the choice exists; it does not ask anyone to make one. Picking from the search list records
+// the skill, which is what the picker is for — you say what you can do, and the kinds of work that
+// skill belongs to follow from it.
+function MultiSectorNote({ tokens }: { tokens: DirectoryTokens }) {
+  return (
+    <div style={{ fontSize: 11, color: tokens.MUTED, marginTop: 10, lineHeight: 1.5 }}>
+      Some of these skills belong to more than one kind of work. Picking one here records the skill
+      itself, which is usually what you want. To say which kind of work you mean, clear the search and
+      open that area in the list below.
+    </div>
+  );
+}
+
 // While searching, a flat cross-sector result list replaces the accordion. Rendered only when there
 // is a taxonomy and a live query.
 function SkillSearchResults({ categoryCount, query, search, allEntries, selectedIds, allowProposed, tokens, onToggleEntry }: {
@@ -277,11 +318,20 @@ function SkillSearchResults({ categoryCount, query, search, allEntries, selected
           No skills match “{search.trim()}”.{allowProposed ? " Add it as a free-text skill below." : ""}
         </div>
       ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          {matches.map((e) => (
-            <SkillChip key={e.name} entry={e} active={e.ids.some((id) => selectedIds.has(id))} tokens={tokens} onToggleEntry={onToggleEntry} />
-          ))}
-        </div>
+        <>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7, alignItems: "flex-start" }}>
+            {matches.map((e) => (
+              <SearchResultChip
+                key={e.name}
+                entry={e}
+                active={e.ids.some((id) => selectedIds.has(id))}
+                tokens={tokens}
+                onToggleEntry={onToggleEntry}
+              />
+            ))}
+          </div>
+          {matches.some(spansSeveralSectors) ? <MultiSectorNote tokens={tokens} /> : null}
+        </>
       )}
     </div>
   );
@@ -417,9 +467,23 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const [search, setSearch] = useState("");
   const query = search.trim().toLowerCase();
   const allEntries = useMemo(() => {
+    const sectorNameById = new Map(sectors.map((x) => [x.id, x.name] as const));
+    const jobTitleById = new Map(jobTitles.map((j) => [j.id, j] as const));
     const byName = new Map<string, string[]>();
+    // Which sectors each name's rows sit under. A name in more than one is the case worth telling
+    // the member about: the search list shows one chip per name, so without this the fact that the
+    // same skill belongs to several jobs is invisible here and only visible in the accordion.
+    const sectorsByName = new Map<string, string[]>();
     const order: string[] = [];
     for (const s of skills) {
+      const jobTitle = jobTitleById.get(s.jobTitleId);
+      const sectorName = jobTitle ? sectorNameById.get(jobTitle.sectorId) ?? OTHER_SECTOR : OTHER_SECTOR;
+      const seenSectors = sectorsByName.get(s.name);
+      if (seenSectors) {
+        if (!seenSectors.includes(sectorName)) seenSectors.push(sectorName);
+      } else {
+        sectorsByName.set(s.name, [sectorName]);
+      }
       const ids = byName.get(s.name);
       if (ids) {
         if (!ids.includes(s.id)) ids.push(s.id);
@@ -429,9 +493,9 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
       }
     }
     return order
-      .map((name) => ({ name, ids: byName.get(name) ?? [] }))
+      .map((name) => ({ name, ids: byName.get(name) ?? [], sectors: sectorsByName.get(name) ?? [] }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [skills]);
+  }, [skills, sectors, jobTitles]);
 
   // The selected picks, de-duplicated by name: a profile that already holds two ids for one name
   // shows a single chip, and removing it clears every id behind that name.
