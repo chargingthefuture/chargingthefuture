@@ -336,7 +336,14 @@ export const TAXONOMY_CHANGES = [
   // oversight - "Crisis intervention" already has four rows (Mental Health Counselors,
   // Psychologists, Social Workers, Therapists), "Trauma-informed care" two, "First Aid & CPR" two -
   // and it is the right shape here: one name keeps keyword search and name matching joined, while
-  // the separate row keeps the occupation attribution honest. Writing "Patient assessment" beside
+  // the separate row is what makes the skill show when somebody browses THIS occupation. What the
+  // second row does not do is fix attribution, and it is worth being exact about that: Workforce
+  // ignores the stored row's parent entirely (its skill arm re-expands by name across every
+  // same-named active row before counting), and the Directory picker collapses same-named rows into
+  // one chip and stores an arbitrary representative id, so the parent a member ends up attached to
+  // was never a choice they made. Within one sector that costs nothing, which is the case here -
+  // both reused labels stay inside Health. Across sectors it would not, because the Directory
+  // sector filter does read the stored row's parent. Writing "Patient assessment" beside
   // the live "Patient assessment and monitoring" is the failure to avoid, because a second NAME for
   // one claim splits its holders (changes 26-34 and 79).
   //

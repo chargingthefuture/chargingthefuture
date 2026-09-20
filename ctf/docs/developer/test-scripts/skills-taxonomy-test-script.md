@@ -223,8 +223,12 @@ rest). Nurses still shows **Patient assessment and monitoring** and General Prac
 **Patient communication** — both labels now appear under Medical Assistants as well, and that is
 **correct, not a duplicate to clean up**: the same name under several occupations is this sector's
 established shape (Crisis intervention has four rows), and because Workforce matches by name, each
-listing widens where holders are matched while the separate row keeps the occupation attribution
-honest. The failure this guards against is the opposite one — a second *name* for one claim, such as
+listing widens where holders are matched. Be exact about what the second row does not do: it does
+not fix attribution. Workforce ignores the stored row's parent (its skill arm re-expands by name
+before counting) and the picker stores an arbitrary representative id for a collapsed name, so the
+parent a member lands on was never their choice. Harmless within one sector, which is the case for
+both labels here; across sectors it would not be, since the Directory sector filter does read that
+parent. The failure this guards against is the opposite one — a second *name* for one claim, such as
 "Patient assessment" written beside "Patient assessment and monitoring", which splits holders. The
 keyword search returns one entry per matching row, so `Patient communication` returns both the
 General Practitioners and the Medical Assistants row and either can be picked. The second apply run
