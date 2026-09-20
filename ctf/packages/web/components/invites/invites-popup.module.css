@@ -1,0 +1,153 @@
+.wrap {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 50;
+  width: min(340px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.card {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(17, 22, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  color: #e8eaf0;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: rise 320ms ease forwards;
+}
+
+.card:focus {
+  outline: none;
+}
+
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  padding-right: 22px;
+}
+
+.date {
+  display: block;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.title {
+  margin: 2px 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.opening {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #cdd3e0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.link {
+  font-size: 12px;
+  color: #9fd0ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration: underline;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.count {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-right: 2px;
+}
+
+.btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #e8eaf0;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn:focus-visible,
+.close:focus-visible {
+  outline: 3px solid #9fd0ff;
+  outline-offset: 2px;
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #e8eaf0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

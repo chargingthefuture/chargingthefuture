@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Hash, LogIn } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hash, LogIn } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle } from './chyme-shared';
 import type { ChymeMessage } from 'lib/chyme/types';
@@ -39,13 +39,21 @@ async function readPublicChat(): Promise<ChatState> {
 // The room chat for a signed-out visitor: the same messages members see, read-only, with one way
 // in — sign in to write (owner directive, 2026-09-18). Rendered only while the room is live, under
 // the stage, in the member panel's look so the two views read as one product.
+//
+// Closed until the visitor opens it (owner directive, 2026-09-20): open, it was half the phone
+// screen, so the room, the schedule and the way in all sat below the fold on a page whose job is
+// to get somebody listening. Closed it is one row, and the rest of the page fits one screen.
+// Nothing is read while it is closed either — the poll starts on the first open.
+//
 // `refreshKey` is bumped by the page's refresh button; a change re-reads at once and restarts the poll.
 export function ChymeGuestChat({ signInUrl, refreshKey = 0 }: { signInUrl: string; refreshKey?: number }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const [state, setState] = useState<ChatState>({ kind: 'loading' });
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
     let canceled = false;
     const load = async () => {
       try {
@@ -63,24 +71,35 @@ export function ChymeGuestChat({ signInUrl, refreshKey = 0 }: { signInUrl: strin
       canceled = true;
       window.clearInterval(timer);
     };
-  }, [refreshKey]);
+  }, [open, refreshKey]);
 
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '12px 14px', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        aria-controls="chyme-guest-chat-body"
+        style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', color: t.TITLE }}
+      >
         <Hash size={14} style={{ color: t.ACCENT }} />
         <span style={{ fontSize: 14, fontWeight: 600, color: t.TITLE }}>Room Chat</span>
-        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>read-only</span>
-      </div>
-      <div style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 14px', minHeight: 120, maxHeight: '40vh' }}>
-        <GuestChatBody state={state} />
-      </div>
-      <a
-        href={signInUrl}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', borderTop: `1px solid ${t.BORDER}`, color: t.ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}
-      >
-        <LogIn size={13} /> Sign in to chat
-      </a>
+        <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{open ? 'read-only' : 'read what members are saying'}</span>
+        {open ? <ChevronDown size={16} style={{ color: t.MUTED }} /> : <ChevronRight size={16} style={{ color: t.MUTED }} />}
+      </button>
+      {open ? (
+        <>
+          <div id="chyme-guest-chat-body" style={{ overflowY: 'auto', overflowX: 'hidden', padding: '12px 14px', borderTop: `1px solid ${t.BORDER}`, minHeight: 120, maxHeight: '40vh' }}>
+            <GuestChatBody state={state} />
+          </div>
+          <a
+            href={signInUrl}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', borderTop: `1px solid ${t.BORDER}`, color: t.ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}
+          >
+            <LogIn size={13} /> Sign in to chat
+          </a>
+        </>
+      ) : null}
     </div>
   );
 }

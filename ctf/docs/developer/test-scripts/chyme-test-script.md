@@ -143,7 +143,7 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 **Role:** member (test signed-out) · **Surfaces:** all
 **Precondition:** the room is live (a signed-in member is in the call).
 **Steps:**
-1. Sign out. Open the Chyme plugin route.
+1. Sign out. Open the Chyme plugin route. Before scrolling, note what is on the first screen.
 2. Tap **Tap to listen** under the room heading, then listen to the live room; look for any speak
    control.
 3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
@@ -170,10 +170,12 @@ A phone in Silent mode with no microphone in use is muted by the switch itself, 
 override; the tap asks the browser to treat the page as media playback, and the line names the
 switch. Under those, an **On Stage** section shows the same avatar tiles the member
 room shows — every member in the call by handle with the speaking ring and mic badge, and your own
-tile as "You (listening)" with the headphones badge — and under the stage a read-only **Room Chat**
-panel with the members' messages, refreshed every ten seconds, and one **Sign in to chat** link;
-there is no composer. If the chat cannot load, the panel reads "Couldn't load the room chat." with
-the server's message and the HTTP status.
+tile as "You (listening)" with the headphones badge — and under the stage a **Room Chat** row. Since
+2026-09-20 that row starts closed, reading "Room Chat · read what members are saying" with a
+right-pointing chevron and nothing under it; the chat is not read at all while it is closed. Tap it
+and it opens to the read-only panel with the members' messages, refreshed every ten seconds, and one
+**Sign in to chat** link; there is no composer. If the chat cannot load, the open panel reads
+"Couldn't load the room chat." with the server's message and the HTTP status.
 (Since 2026-09-18: the join used to run on page load, which put the guest on stage with the audio
 blocked by the phone's autoplay rule — the member in the room saw a listener who heard nothing.) The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. When the room is not live, there is no listen audio. The public
@@ -181,6 +183,14 @@ view is one phone-width layout at every window size — never a two-column deskt
 itself scrolls: the green header stays pinned at the top while the content moves under it, and
 Safari's **Full Page** screenshot reaches the bottom of the content rather than stopping at one
 screenful.
+
+In step 1, on a phone, the first screen carries the header, the invitation card, the **Live Rooms**
+row with its refresh button, the room name and the **Tap to listen** control, the closed **Room
+Chat** row and the **Coming up on TI Radio** rail — nothing of the page's own content needs a scroll
+to be found (owner directive, 2026-09-20). What scrolls is the stage when the room holds many
+people, and the chat once you open it. The invitations card is not part of this page at all: it
+floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
+of the browser session; it is described in the non-plugin feature inventory, section 1.15.
 
 In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
 to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
@@ -511,8 +521,8 @@ phone read "Joined" after the call had dropped.
 **Precondition:** at least one booked slot on the TI Radio guide (`/ti-radio`) in the next seven
 days, and one slot booked for the current 90 minutes if the "On air now" mark is to be checked.
 **Steps:**
-1. As a member, open Chyme and read under the rooms rail.
-2. Sign out and open the Chyme route; read under the room list.
+1. As a member, open Chyme and read under the rooms rail. Drag the schedule sideways.
+2. Sign out and open the Chyme route; read under the room list. Drag the schedule sideways.
 3. In the Android app, open Chyme and tap the **Upcoming** tab.
 4. Release every booked slot on the guide, then refresh each of the three screens.
 5. Open the app with the network off (or point it at a stopped server) and read the same places.
@@ -520,7 +530,10 @@ days, and one slot booked for the current 90 minutes if the "On air now" mark is
 not ended, soonest first, each as "Today · 2:00 PM – 3:30 PM" (or "Tomorrow", or "Mon, Sep 21") in
 the phone's own timezone, the discussion title, and "Hosted by @handle"; the slot happening right
 now sits first with an "On air now" mark and the accent border; a "Full guide →" link opens
-`/ti-radio` on web. All three read the same route (`GET /api/ti-radio/guide`), so the three lists
+`/ti-radio` on web. On both web screens the slots are a sideways rail of equal-width cards — the
+same shape and scroll as the rooms rail above it — so five booked slots cost one card's height and
+the rest is a drag to the right (owner directive, 2026-09-20); the Android **Upcoming** tab keeps
+its stacked list, since there the schedule has a tab to itself. All three read the same route (`GET /api/ti-radio/guide`), so the three lists
 agree. Step 4: each screen reads "Nothing is scheduled this week" and says any approved member can
 book a slot — never an empty box. Step 5: "Couldn't read the TI Radio guide" with the reason, never
 "nothing scheduled" when the read failed. Nothing here creates a room or joins one: the guide says

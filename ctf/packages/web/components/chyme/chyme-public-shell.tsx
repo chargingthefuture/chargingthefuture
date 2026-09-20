@@ -105,8 +105,9 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>The room is live. Tap below to listen; sign in to speak.</div>
           <ChymeGuestListen participantCount={live.participantCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
-              follow what members are saying and signs in to write. */}
-          <div style={{ marginTop: 16 }}>
+              follow what members are saying and signs in to write. Closed until opened, so the page
+              below it stays on the first screen (owner directive, 2026-09-20). */}
+          <div style={{ marginTop: 10 }}>
             <ChymeGuestChat signInUrl={signInUrl} refreshKey={refreshKey} />
           </div>
         </>
