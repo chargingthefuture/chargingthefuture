@@ -9,7 +9,9 @@ name: Stream — Guest Listener Setup
 # members in the room saw nothing wrong. This runs ctf/scripts/stream-guest-listener-setup.mjs,
 # which owns the target state — role exists; on the call type it has join-call and read-call, not
 # send-audio / send-video / screenshare, everything else untouched — and applies it through Stream's
-# APIs. Members are unaffected: only that role changes, and only guests carry it. Never prints a
+# APIs. No other role changes: a speaker's `user` role is never touched. Since 2026-09-19 the named
+# role is also what Chyme's hand-raise mode gives a member an admin has moved to listening, so a red
+# check run means guest listening and hand-raise mode are both affected. Never prints a
 # secret; the api key is scrubbed from any Stream error text.
 #
 # Three modes:

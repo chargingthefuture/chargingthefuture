@@ -10,7 +10,10 @@ environment variable is set, every guest Stream user is created with that role. 
 at request time, so the code change does nothing until the role and the call-type grants below exist
 and the variable is set — making it safe to deploy in any order, then switch on.
 
-Members are unaffected: only the anonymous guest identity (`chyme-guest-…`) gets the restricted role.
+This role also carries Chyme's hand-raise mode, as of 2026-09-19: when an admin moves a member to
+listening, that member is given the same role on the call. So the role is no longer guests only, and
+the two uses want exactly the same grants — join and hear, never publish. See "What hand-raise mode
+adds" below.
 
 ## What to configure in the Stream app — run the workflow
 
@@ -24,8 +27,9 @@ target state through Stream's APIs:
 2. On the `default` Video call type, that role has `join-call` and `read-call`, does **not** have
    `send-audio`, `send-video` or `screenshare`, and keeps anything else it already had.
 
-Members are unaffected: only that role changes, and only guests carry it. Member roles on the
-`default` call type are never touched.
+No other role changes: the `default` call type's member roles (the `user` role a speaker holds) are
+never touched. The named role is the one a guest carries, and the one a member carries while an
+admin has them listening in hand-raise mode.
 
 **From the browser (works on a phone):** Actions tab → "Stream — Guest Listener Setup" → Run
 workflow.
@@ -43,6 +47,24 @@ listen-only too), or both.
 
 It takes effect on the next page load — Stream checks the role at join time — so no redeploy is
 needed. The script never prints a secret, and scrubs the api key from any Stream error text.
+
+## What hand-raise mode adds (2026-09-19)
+
+Chyme's moderation controls shipped a second use for this same role. A room is in open mic (every
+joiner may speak, the default) or hand-raise mode, where a joiner listens until an admin lets them
+speak. The app records the decision in its own tables; the call-side half gives the listening member
+this role through `updateCallMembers`, and gives a member let back on stage Stream's default `user`
+role. That code is `setCallMemberRole` in `ctf/packages/web/lib/chyme/stream-moderation.ts`.
+
+Nothing extra to configure: a listening member wants exactly what a guest wants — join and hear,
+never publish — so the target state above already serves both, and the workflow's **check** mode
+covers both. What changed is the blast radius of a drift: a missing `join-call` now also drops a
+member an admin moved to listening, and a `send-audio` added back by hand would let both a guest and
+a listening member publish.
+
+With `CHYME_GUEST_STREAM_ROLE` unset, hand-raise mode still works — the web and Android apps hide
+the microphone control and turn the microphone off — but a member who drives the Stream client
+directly could publish anyway, the same client-only enforcement guests had before this role existed.
 
 **If Infisical is unreachable.** Every Infisical-backed workflow has failed with
 "Application not found" since 2026-09-10 — the self-hosted instance on Railway is not answering (tracked in the ci-health issue #2030).
@@ -83,8 +105,10 @@ the room as live, and then the join is refused. The page reads:
 > Stream error code 17: JoinCall failed with error: "User 'chyme-guest-…' with role
 > 'chyme_listener' is not allowed to perform action JoinCall in scope 'video:default'"
 
-Members are unaffected, which is why it can go unnoticed: a host in the room sees a normal live
-room while no visitor can hear it. Two ways out, either one restores listening:
+A speaking member is unaffected, which is why it can go unnoticed: a host in the room sees a normal
+live room while no visitor can hear it. Since 2026-09-19 the same missing grant also breaks
+hand-raise mode, where a member an admin moved to listening holds this role: they are dropped from
+the call instead of listening quietly. Two ways out, either one restores listening:
 
 - **Run "Stream — Guest Listener Setup" with mode apply** (above). This is the intended end state:
   guests can hear, and still cannot publish. The weekly check run exists so this cannot go

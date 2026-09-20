@@ -42,10 +42,30 @@ describe('nobody is told twice', () => {
     expect(body).toContain("notificationType: 'fireside.reply'");
   });
 
-  it('is capped, so approving a prolific account is not a hundred pings at once', () => {
+  it('tells each person once, however many times they were answered', () => {
+    // This is what makes running it uncapped safe. The pile-up a cap would guard against only ever
+    // happened when many replies landed on the SAME person, and collapsing to one notice each
+    // removes it at the source — so nobody is dropped for being answered by somebody prolific.
     const list = functionBody(repositorySource, 'export async function listRepliesAwaitingNotice');
-    expect(list).toContain('limit = 50');
-    expect(list).toContain('LIMIT $2');
+    expect(list).toContain('SELECT DISTINCT ON (parent.author_user_id)');
+    expect(list).toContain('ORDER BY parent.author_user_id, c.created_at ASC');
+  });
+
+  it('is not capped, so nobody who was answered goes untold', () => {
+    const list = functionBody(repositorySource, 'export async function listRepliesAwaitingNotice');
+    expect(list).not.toContain('LIMIT');
+    expect(list).not.toContain('limit');
+    expect(repositorySource).toContain('listRepliesAwaitingNotice(userId: string)');
+  });
+
+  it('keeps a fixed reference per person, so a re-run is silent', () => {
+    // DISTINCT ON keeps the first row of each group as ORDER BY presents them, so the earliest
+    // reply to each person is a stable choice rather than whichever row came back first.
+    const list = functionBody(repositorySource, 'export async function listRepliesAwaitingNotice');
+    const distinct = list.indexOf('DISTINCT ON (parent.author_user_id)');
+    const order = list.indexOf('ORDER BY parent.author_user_id');
+    expect(distinct).toBeGreaterThan(0);
+    expect(order).toBeGreaterThan(distinct);
   });
 });
 
@@ -80,6 +100,12 @@ describe('the plugins stay isolated', () => {
     // The catch-up takes a user id and nothing else: no submission, no review status, no tier.
     expect(catchUpSource).not.toContain('lib/unlock');
     expect(catchUpSource).toContain('announceHeldReplies(userId: string)');
+  });
+
+  it('records people told, not replies found', () => {
+    // The audit row's number has to mean what an admin would read it as.
+    expect(interfaceSource).toContain('firesidePeopleTold');
+    expect(interfaceSource).not.toContain('firesideRepliesAnnounced');
   });
 });
 

@@ -85,6 +85,10 @@ the project controls rather than on a platform that has erased five of its accou
    copy is made, approved or not.
 11. **Your own comments in one list,** on the Fireside screen in the app, paged, each labeled live,
     held, removed or withdrawn.
+11a. **Search the conversation.** A search box on the same screen finds comments by what was
+    written, across every post, and opens the conversation each one is in. It searches only what
+    you can already read — a comment held until its author is approved is not in the results — and
+    it shows nothing until you ask something, so the screen still opens on your own comments.
 12. **A way to the blog, and a way back out.** The screen carries the standard app header with the
     shared back control, and a link to the blog both at the top and in the empty state — the
     conversation happens under the posts, so a member who has written nothing yet needs the route
@@ -139,6 +143,7 @@ the project controls rather than on a platform that has erased five of its accou
 | `/api/fireside/comments/[commentId]` | PATCH | Author | Two things, by what the body carries: `body` rewrites the comment in place, `exportToBlog` turns the blog-export request on or off. |
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
+| `/api/fireside/search?q=&page=` | GET | Signed-in member | Search the conversation. Returns only what the caller may read — publicly visible comments plus their own held ones — paged, and says when it stopped looking so a narrower search can be run. |
 | `/api/fireside/admin/comments?q=` | GET | Admin | Every comment, newest first, paged. Removed and withdrawn rows included, so anything already acted on can be found and undone. `q` searches the bodies. |
 | `/api/fireside/admin/comments/[commentId]` | POST | Admin | Remove or restore a comment. |
 | `/api/fireside/admin/threads` | GET | Admin | Every conversation, the one with the newest comment first, paged. Each carries its comment count, how many were removed or taken down, and when the last one arrived. |
@@ -260,16 +265,59 @@ member active only in Fireside is seen by being read, which is what the plugin i
    of an account somebody has already acted on. What is still not there is a count of what the
    account did in each other plugin — that needs every plugin to expose a comparable tally, and
    `account_restrictions` only says that somebody already acted, not what the account did to earn it.
-3. Search is admin-only. The bodies are indexed and the moderation list searches them; a member
-   has no way to search the conversation. A search across every thread for a member is close to the
-   browse-every-conversation view the owner tabled on 2026-09-13, so it waits to be asked for
-   rather than arriving as a side effect of this.
-4. The catch-up when somebody is approved is capped at 50 replies. A member approved after writing a
-   great deal has the rest go untold rather than queued for later — a hundred notifications landing
-   at once is its own harm, and the cap is a ceiling on that rather than a promise the remainder
-   arrives. Nothing is lost from the conversation; only the notice about it.
+3. A member's search stops after 500 matches. Whether a comment is public depends on its author
+   being approved in Unlock, which this plugin asks through the platform interface rather than in
+   SQL, so the filtering happens after the database answers and an unbounded match set would mean
+   an unbounded scan on a member-facing screen. The screen says when it stopped looking and asks
+   for a narrower search rather than presenting a slice as everything. The admin search has no such
+   ceiling, because it shows every comment whatever its state and needs no approval lookup.
+4. The browse-every-conversation view is still not built, and is still the owner's decision
+   (tabled 2026-09-13). Search answers a question somebody already has; browsing invites scrolling
+   the room, which is a different thing to offer members.
 
 ## Change Log
+
+- 2026-09-20: **A member can search the conversation, and nobody who was answered goes untold.**
+  Owner request: close the last two recorded gaps.
+
+  **Search was admin-only.** The comment bodies have been indexed since 2026-09-14 and only the
+  moderation list read that index, which left a member as the one person who could not find a
+  conversation they remembered being part of. Being searchable is one of the four reasons these
+  comments are in Postgres rather than in a chat product, and a search only moderators can run does
+  not deliver it to anybody the plugin exists for.
+
+  `/api/fireside/search` is that, signed in, on the member's own Fireside screen. It returns only
+  what the person searching may read — publicly visible comments plus their own held ones — decided
+  by `isPubliclyVisible` rather than by a filter written again here. Signed in rather than public,
+  unlike the read of one conversation: a public endpoint searching every comment in the app is a
+  different thing from a public page of one post's thread, and it is not what was asked for.
+
+  It is a search and not the browse-every-conversation view, which stays tabled and stays the
+  owner's call. The screen shows nothing until somebody asks something: it answers a question
+  already in a person's head, where a browse view invites scrolling the room. Searching is on
+  submit rather than each keystroke, the page is in the address bar, and the count comes from the
+  same filtered list the results do — the fault this plugin has already paid for twice.
+
+  The scan stops at 500 matches and says so, recorded as a gap. Approval is not a column here, so
+  the filtering happens after the database answers, and an unbounded match set on a member-facing
+  screen would be an unbounded scan. Saying "there are more than this looked at, narrow it" is
+  honest; showing a slice as though it were everything is not.
+
+  **The catch-up no longer drops anybody.** It was capped at 50 replies when it shipped the day
+  before, so a member approved after writing a great deal had the rest simply never mentioned to
+  anyone. The cap and the pile-up it guarded against were the same mistake: counting replies
+  instead of people. A flood only ever happens when many replies answer the *same* person, and one
+  notice each removes it at the source — so the cap had nothing left to protect and is gone.
+  `DISTINCT ON (parent.author_user_id)` collapses it in the database, so the work is bounded by how
+  many people were answered rather than by how much was written, and the earliest reply to each
+  person is the reference — a fixed choice, which is what keeps a re-run or a re-reviewed account
+  silent. Five hundred people each answered once is five hundred people who should each hear about
+  it, and none of them gets more than one.
+
+  The notice says nothing about how many replies it stands for. A count there would be a fact about
+  somebody's activity on a notification built to carry none, and the conversation itself is where
+  that belongs. The audit row now records `firesidePeopleTold`, because the number an admin reads
+  should mean what they would take it to mean.
 
 - 2026-09-19: **A held reply tells the person it answered, once its author is approved. And the
   export queue can see an account the app has already acted on.** Owner request: work the recorded

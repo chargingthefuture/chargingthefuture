@@ -659,7 +659,11 @@ hit one of these, it is already tracked, not a new bug:
 - Full-account delete is request-first; the final completion depends on the shared
   account-deletion orchestrator, which is the account area's.
 - Hand-raise mode is enforced in the Stream call only when `CHYME_GUEST_STREAM_ROLE` is set (it is,
-  as of 2026-09-18); without it the apps enforce the mode alone. A Stream outage during a
+  as of 2026-09-18); without it the apps enforce the mode alone. That role is the same listen-only
+  role guests carry, and it is owned by code: if a listening member is dropped from the call instead
+  of listening quietly, the role's grants on the `default` call type have drifted — run the
+  "Stream — Guest Listener Setup" workflow in **check** mode (Actions tab, works on a phone) and
+  then in **apply** mode, and do not file it as a moderation bug. A Stream outage during a
   moderation action is reported to the admin in the control, not retried.
 - Multi-room is deferred by the owner (2026-09-19) beyond the schedule: Chyme shows what is coming
   up on the TI Radio guide (CH-22), but there is no room creation, no room per slot, no search, and
