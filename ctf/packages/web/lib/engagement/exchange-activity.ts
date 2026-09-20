@@ -1,7 +1,11 @@
 import { queryDb } from 'lib/db/postgres';
 import { getContributorAccessConfig } from 'lib/contributor-access/repository';
-import { DELIVERING_VALUE_EVENT_SOURCES, aggregateExpression } from 'lib/contributor-access/value-events';
-import { effectiveWeight } from 'lib/contributor-access/weights';
+import {
+  DELIVERING_VALUE_EVENT_SOURCES,
+  VALUE_EVENT_SOURCES,
+  aggregateExpression,
+} from 'lib/contributor-access/value-events';
+import { EVENT_LABEL, EVENT_SOURCE_PLUGIN, effectiveWeight } from 'lib/contributor-access/weights';
 
 // How many members delivered value on a day, against the 384 target.
 //
@@ -35,6 +39,15 @@ export type ExchangeDay = {
   members: number;
 };
 
+export type WeightedValueEvent = {
+  key: string;
+  label: string;
+  plugin: string;
+  weight: number;
+  // Whether this one counts toward the day's number, or only toward the badge.
+  delivers: boolean;
+};
+
 export type ExchangeContributor = {
   memberId: string;
   score: number;
@@ -48,9 +61,28 @@ export type ExchangeActivityReading = {
   daysAtTarget: number;
   days: ExchangeDay[];
   todayRoster: ExchangeContributor[];
+  events: WeightedValueEvent[];
 };
 
 export const DAILY_EXCHANGE_TARGET = 384;
+
+// Everything that is weighted, with the weight in force right now, so an admin can read the whole
+// definition off the screen instead of taking it on trust (owner directive, 2026-09-20). A weight
+// of zero is shown rather than hidden: an event nobody has tuned up yet is still part of the
+// definition, and its absence from the list would be the confusing thing.
+export function listWeightedValueEvents(weights: Record<string, unknown>): WeightedValueEvent[] {
+  return VALUE_EVENT_SOURCES.map((source) => ({
+    key: source.key,
+    label: EVENT_LABEL[source.key],
+    plugin: EVENT_SOURCE_PLUGIN[source.key],
+    weight: effectiveWeight(source.key, weights),
+    delivers: source.delivers,
+  })).sort((a, b) => {
+    if (a.delivers !== b.delivers) return a.delivers ? -1 : 1;
+    if (b.weight !== a.weight) return b.weight - a.weight;
+    return a.label.localeCompare(b.label);
+  });
+}
 
 type DayRow = { day: string; members: string };
 type RosterRow = { member_id: string; score: string };
@@ -131,6 +163,7 @@ function emptyReading(window: number): ExchangeActivityReading {
     daysAtTarget: 0,
     days: fillGaps([], window),
     todayRoster: [],
+    events: [],
   };
 }
 
@@ -209,5 +242,6 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     daysAtTarget: count(atTarget.rows[0]?.days_at_target),
     days: allDays,
     todayRoster: roster.rows.map((row) => ({ memberId: row.member_id, score: numeric(row.score) })),
+    events: listWeightedValueEvents(config.weights),
   };
 }

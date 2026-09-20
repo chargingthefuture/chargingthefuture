@@ -10,6 +10,7 @@ import type {
   ExchangeActivityReading,
   ExchangeContributor,
   ExchangeDay,
+  WeightedValueEvent,
 } from 'lib/engagement/exchange-activity';
 
 type WeaversReading = {
@@ -35,6 +36,11 @@ function asPlainText(reading: ExchangeActivityReading): string {
     ...reading.days.map((day) => `    ${day.day}: ${day.members}`),
     '',
     `  delivering today: ${reading.todayRoster.length}`,
+    '',
+    '  what is weighted (weight · counts toward the day):',
+    ...reading.events.map(
+      (event) => `    ${event.label}: ${event.weight} · ${event.delivers ? 'yes' : 'badge only'}`,
+    ),
   ].join('\n');
 }
 
@@ -180,6 +186,59 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
   );
 }
 
+// The definition, read-only, so an admin can audit what is weighted without taking it on trust or
+// opening the config editor (owner directive, 2026-09-20). A weight of zero shows rather than
+// hides: an event nobody has tuned is still part of the definition. Delivering events come first,
+// then the ones that only reach the badge.
+function WeightsPanel({ events, tokens }: { events: WeightedValueEvent[]; tokens: Tokens }) {
+  if (events.length === 0) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-label="What is weighted"
+      style={{
+        borderRadius: 12,
+        background: tokens.SURFACE,
+        border: `1px solid ${tokens.BORDER}`,
+        padding: 12,
+        marginTop: 12,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>What is weighted</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
+        The whole definition, in force right now. Both readings use it. Change a weight in
+        Contributor Access and this moves with it.
+      </div>
+      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+        {events.map((event) => (
+          <li
+            key={event.key}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '4px 0',
+              borderTop: `1px solid ${tokens.BORDER}`,
+            }}
+          >
+            <span style={{ fontSize: 12, color: event.delivers ? tokens.TEXT : tokens.SUBTLE }}>
+              {event.label}
+              {!event.delivers && (
+                <span style={{ fontSize: 11, color: tokens.SUBTLE }}> · badge only</span>
+              )}
+            </span>
+            <span style={{ fontSize: 12, color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+              {event.weight}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function DailyExchangeShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
@@ -304,6 +363,8 @@ export function DailyExchangeShell() {
             {weavers && <WeaversWidget weavers={weavers} tokens={t} />}
 
             <TodayRoster roster={reading.todayRoster} tokens={t} />
+
+            <WeightsPanel events={reading.events} tokens={t} />
 
             <p style={{ fontSize: 11, color: t.SUBTLE, marginTop: 16, lineHeight: 1.6 }}>
               Both readings use one shared definition and one set of weights, so adding a feature
