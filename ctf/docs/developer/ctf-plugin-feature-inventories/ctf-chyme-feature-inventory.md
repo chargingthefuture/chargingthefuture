@@ -383,10 +383,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   a visitor reading both has no way to tell which one to believe. `CHYME_MAIN_ROOM_NAME` is now
   "Chyme Main Room", in the web constant and the Chyme seed; what is being discussed comes from the
   booked slot, which the page already shows under "Coming up on TI Radio" with the slot on air
-  marked. `ensureRoom` rewrites the stored name from the constant whenever a member opens the room,
-  and migration `0032_chyme_main_room_name_drops_topic.sql` changes the existing row so a
-  signed-out visitor sees the new name before any member has opened the room. No route, contract,
-  or column change; the Weavers room name is untouched.
+  marked. No migration goes with it and none is needed: `ensureRoom` rewrites the stored name from
+  the constant on every member room read (`ON CONFLICT DO UPDATE SET room_name`), and the name is
+  only ever shown while the room is live, which takes a member in the call — so the row has always
+  been rewritten before anyone, member or signed-out visitor, can read it. No route, contract,
+  schema, or column change; the Weavers room name is untouched.
 
 - 2026-09-20: **A signed-out listener can stop listening without closing the page.** Owner report:
   once the sound was on there was no way out of the room short of force-closing the tab or
