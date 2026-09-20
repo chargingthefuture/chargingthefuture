@@ -50,6 +50,10 @@ export type WeightedValueEvent = {
 
 export type ExchangeContributor = {
   memberId: string;
+  // The member's own handle where they have set one. Null when they have not: a member can use
+  // the app without ever setting a Clerk username, so the id stays beside it as the reading that
+  // is always there.
+  username: string | null;
   score: number;
 };
 
@@ -94,7 +98,7 @@ export function listWeightedValueEvents(weights: Record<string, unknown>): Weigh
 }
 
 type DayRow = { day: string; members: string };
-type RosterRow = { member_id: string; score: string };
+type RosterRow = { member_id: string; username: string | null; score: string };
 
 function count(value: string | null | undefined): number {
   const parsed = Number.parseInt(value ?? '0', 10);
@@ -257,10 +261,11 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
 
   const roster = await queryDb<RosterRow>(
     `
-      SELECT member_id, score::text AS score
+      SELECT member_days.member_id, u.username, member_days.score::text AS score
         FROM (${memberDays}) AS member_days
-       WHERE day = (NOW() AT TIME ZONE 'UTC')::date
-       ORDER BY score DESC, member_id
+        LEFT JOIN users u ON u.id::text = member_days.member_id
+       WHERE member_days.day = (NOW() AT TIME ZONE 'UTC')::date
+       ORDER BY member_days.score DESC, member_days.member_id
        LIMIT 500
     `,
   );
@@ -281,7 +286,11 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     longestRun: longestRunAtTarget(yearDays, DAILY_EXCHANGE_TARGET),
     daysAtTarget: count(atTarget.rows[0]?.days_at_target),
     days: allDays,
-    todayRoster: roster.rows.map((row) => ({ memberId: row.member_id, score: numeric(row.score) })),
+    todayRoster: roster.rows.map((row) => ({
+      memberId: row.member_id,
+      username: row.username,
+      score: numeric(row.score),
+    })),
     events: listWeightedValueEvents(config.weights),
   };
 }
