@@ -149,7 +149,11 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    to **undo** a pick, and the people this picker most has to serve are the ones already inclined to
    believe they have nothing to offer. Wording that tells anyone to clear, narrow, re-pick or
    reconsider is a defect to report. The accordion must be described as another way to browse, never
-   as a correction. The accordion entries carry no caption, each being already scoped to one sector,
+   as a correction — the line ends "browse them that way **instead**", and that word is doing real
+   work: without it, offering the area list straight after "counts in all of them" reads as an
+   alternative **outcome**, as though browsing by area were how to be counted under one heading
+   rather than all of them. That nudges a member away from being counted across titles, the opposite
+   of the intent, so dropping it is a defect. The accordion entries carry no caption, each being already scoped to one sector,
    and a single-sector skill shows no caption and no note.
 3. In the specializations picker, expand a sector in the accordion (only one opens at a time) and
    toggle a skill on and off; confirm the sector row shows an "N selected" badge and the pick appears
