@@ -178,7 +178,7 @@ function RunningCohorts({
   const t = getPeerProgrammingTokens(theme);
   // Only OTHER cohorts belong here — the viewer's own cohort is already the "Join Session" card at the
   // top, so listing it again is redundant. Filter it out; when there are no other cohorts (e.g. single
-  // standing Cohort 1 mode, where your cohort is the only one), the whole section disappears.
+  // standing Cohort 1 mode, where your cohort is the only one), the entire section disappears.
   const otherCohorts = cohorts.filter((cohort) => cohort.id !== myCohortId);
   if (otherCohorts.length === 0) return null;
   // The cohort currently open is either the explicit selection or, when none, the viewer's own.

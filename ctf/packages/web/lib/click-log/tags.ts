@@ -218,7 +218,7 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // Named by the owner (2026-08-04). Weeks or months of performed friendliness, then overt
   // harassment resumes — violence, name-calling, the rest. The only scheme in this list defined by
   // its shape over time rather than by a single act, which is why it is separate from
-  // `good-cop-bad-cop`: that one is two people working the same moment, this one is the whole
+  // `good-cop-bad-cop`: that one is two people working the same moment, this one is the entire
   // environment alternating, and it can be the same people doing both.
   //
   // Owner's read of the purpose, both supported: lower the member's guard so new information can
@@ -290,7 +290,7 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   // An operative approaches with scripted talk and will not disengage while the member backs
   // away — then tells staff the member assaulted them, and a second operative confirms it as a
   // "witness". Staff deny service on the false claim; police arrive on a false report. In the
-  // owner's case the same pair had followed them across the whole leg (the member had footage
+  // owner's case the same pair had followed them across the entire leg (the member had footage
   // of the earlier harassment), staff refused to pull their own security camera, and the
   // member was kept off the bus for something that never happened.
   { slug: 'planted-witness', label: 'The Planted Witness' },

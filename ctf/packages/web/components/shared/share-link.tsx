@@ -217,7 +217,7 @@ export function ShareLink({
   const [placement, setPlacement] = useState<"top" | "bottom">("top");
   // Same idea horizontally: the popup grows rightward from the trigger's left edge by default, but a
   // trigger near the right edge of the viewport (the usual header position) would push it off-screen
-  // and force the whole page into horizontal scroll — so it flips to grow leftward instead.
+  // and force the entire page into horizontal scroll — so it flips to grow leftward instead.
   const [align, setAlign] = useState<"left" | "right">("left");
   // Pixel nudge from the trigger for the case where the popup fits on neither side and has to be
   // pinned to the viewport margin instead. Zero for the two normal alignments.

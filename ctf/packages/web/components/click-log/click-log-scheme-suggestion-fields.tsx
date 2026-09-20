@@ -8,7 +8,7 @@ import type { ClickLogTokens } from "./click-log-shared";
 // owner and say so — the description is the intake that lets new schemes earn a name, and the
 // optional Quora self-link helps the owner tell real reports from spam. The description is
 // required: the form's Submit stays disabled until it has text (the server enforces the same),
-// and the whole flow is limited to Weavers of the Commons badge holders (non-holders never see
+// and the entire flow is limited to Weavers of the Commons badge holders (non-holders never see
 // the "Not listed" option).
 export function ClickLogSchemeSuggestionFields({
   suggestion,

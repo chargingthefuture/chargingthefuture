@@ -102,7 +102,7 @@ async function resolveUnlockTierDeny(
   // A not-yet-verified member who asked for help (or came back a second day) resolves to
   // `locked_support_only` here rather than to no tier at all, so the Commons admits them through the
   // ordinary support-only path below — see lib/unlock/help-requests.ts. There is no separate branch
-  // for them: the tier is the whole rule, and approved-only surfaces stay closed either way.
+  // for them: the tier is the rule, and approved-only surfaces stay closed either way.
   const tier = await getUnlockAccessTier(userId);
   const allowed =
     minUnlockTier === 'support_only'

@@ -4,7 +4,7 @@
 // same words:
 //
 //   check-us-spelling.mjs        — "does this file contain a British spelling?" (fail if yes)
-//   changed-files.mjs            — "is this file's whole diff just dialect?" (skip it if yes)
+//   changed-files.mjs            — "is this file's entire diff just dialect?" (skip it if yes)
 //
 // The second question is what lets the behavior-shaped gates — modularity, test-script drift, the
 // Stream quota note — ignore a spelling sweep. Those gates exist to catch behavior changes, and

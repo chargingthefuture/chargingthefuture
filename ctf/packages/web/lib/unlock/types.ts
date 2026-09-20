@@ -27,7 +27,7 @@ export type UnlockSubmission = {
   // Who put the URL that is stored right now. Null when the member submitted it themselves; otherwise
   // the admin who entered it for a member who could not produce one, or who corrected a wrong one.
   // Cleared when the member submits their own URL over the top, because it describes the current URL,
-  // not the row's whole history — that trail is directory_quora_url_history. A reviewer needs the
+  // not the row's entire history — that trail is directory_quora_url_history. A reviewer needs the
   // difference in front of them: "this person proved they are real" and "an admin found this profile
   // for them" are not the same claim.
   urlSetByAdminUserId: string | null;

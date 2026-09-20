@@ -8,7 +8,7 @@
 // spelling is a defect, and the only reliable way to keep it out is to check for it.
 //
 // The check is deliberately not limited to member-facing strings. Comments and identifiers set the
-// example the next writer copies, so the whole tree is held to one dialect.
+// example the next writer copies, so the entire tree is held to one dialect.
 //
 // The word list lives in ./lib/us-spelling.mjs, shared with changed-files.mjs — see the comment
 // there for why the two have to read the same list, and for how to add a rule.

@@ -752,7 +752,7 @@
   cursor: pointer;
 }
 
-/* Wrapper around the whole dashboard. On desktop it is transparent (display: contents) so the
+/* Wrapper around the entire dashboard. On desktop it is transparent (display: contents) so the
    four-column grid lays out exactly as before and the shared MobileScreenHeader renders nothing.
    At phone width it becomes a full-height flex column so the header sits above the collapsed
    single-column content (see the responsive block). */
@@ -801,7 +801,7 @@
   flex: 1;
   min-height: 0;
   /* Override the desktop height: 100vh so the grid fills only the space left below the
-     sticky header, not the whole viewport (which would overflow by the header's height). */
+     sticky header, not the entire viewport (which would overflow by the header's height). */
   height: auto;
   /* And the desktop overflow: hidden, which would clip a sticky child and hide the page's real
      length now that the document is the scroller. */

@@ -17,7 +17,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string; 
 };
 
 // Which blocking decision an admin is being asked to confirm, and on which submission. Spam and
-// duplicate both remove the member from the whole app, so both are confirm-gated the same way the
+// duplicate both remove the member from the entire app, so both are confirm-gated the same way the
 // reward revoke is — and one piece of state rather than two means the two prompts can never be open at
 // once on the same row.
 export type UnlockBlockConfirm = { submissionId: number; decision: 'spam' | 'duplicate' } | null;
@@ -305,7 +305,7 @@ function PendingActions({
       <button type="button" disabled={busy} onClick={() => onReview(s.id, 'rejected')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busyCursor, opacity: busyOpacity }}>
         <XCircle size={13} /> Reject
       </button>
-      {/* Spam and duplicate both block the member from the whole app (an 'all'-scope account
+      {/* Spam and duplicate both block the member from the entire app (an 'all'-scope account
           restriction), so each is guarded by an inline confirm the same way the reward-revoke lock is. */}
       {confirmBlock?.submissionId === s.id ? (
         <BlockConfirmRow

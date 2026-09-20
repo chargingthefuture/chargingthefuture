@@ -95,7 +95,7 @@ function toIso(value: Date | string): string {
 // Returns 'unchanged' rather than pretending to act when the row is already in the requested state,
 // so a double-tap or a replayed request does not produce a second audit entry claiming a change that
 // did not happen. Hiding a post does NOT hide its replies: each reply is judged on its own, and the
-// read path drops the whole item from the timeline anyway once the parent post is hidden.
+// read path drops the entire item from the timeline anyway once the parent post is hidden.
 export async function setCommunityModerationStatus(input: {
   target: FeedModerationTarget;
   id: string;
@@ -236,7 +236,7 @@ export async function listCommonsModerationQueue(options?: {
 }
 
 // Who is posting in the Commons, ordered by volume. This is the view for the actual problem: not one
-// stray off-topic post, but accounts whose whole footprint is Quora-style discussion unrelated to the
+// stray off-topic post, but accounts whose entire footprint is Quora-style discussion unrelated to the
 // economy. Seeing counts per person tells you whether a member wandered off topic once or has never
 // been on topic — a distinction you cannot make from a reverse-chronological list of posts.
 //

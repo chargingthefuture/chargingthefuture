@@ -112,7 +112,7 @@ function RemovedBadge({ submission }: { submission: SkillsHuntSubmission }) {
 
 // One submission as a self-contained card: a header (select + submitter + name), the skills as
 // wrapping chips, a labeled meta strip, then the action rows. No horizontal scroll, no tiny
-// adjacent buttons — the whole thing stacks inside the app's single mobile-first column.
+// adjacent buttons — all of it stacks inside the app's single mobile-first column.
 function SubmissionCard(props: RowProps) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);

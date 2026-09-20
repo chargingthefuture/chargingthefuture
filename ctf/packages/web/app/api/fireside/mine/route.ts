@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const parsed = querySchema.safeParse({ page: url.searchParams.get('page') ?? 1 });
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'Page must be a whole number, 1 or higher.' },
+      { ok: false, code: FIRESIDE_ERROR_CODE.invalidPayload, message: 'Page must be an integer, 1 or higher.' },
       { status: 400 },
     );
   }

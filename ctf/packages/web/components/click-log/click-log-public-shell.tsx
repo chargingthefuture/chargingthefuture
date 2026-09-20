@@ -100,7 +100,7 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
  * Signed-out visitor view for ClickLog. Pixel-faithful to the ClickLogPublic
  * (desktop) and MobileClickLogPublic (phone) design mockups, with sign-in
  * affordances pointing at the real hosted sign-in URL. It shows no private or
- * per-user data — the whole point of ClickLog is a private, per-user incident
+ * per-user data — the point of ClickLog is a private, per-user incident
  * log, so the visitor view is marketing copy and a locked "Log Incident" button
  * only. The mockup's simulated phone status bar (clock / signal dots) is dropped
  * because the real app renders inside the browser chrome.

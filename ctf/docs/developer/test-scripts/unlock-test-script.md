@@ -155,7 +155,7 @@ only members on the `locked_support_only` access tier — which includes rejecte
 any `pending` row whose window lapsed and was swept by `supportOnlyAfterExpiry`, so do not expect it
 to equal rejected + spam. The row count matches the Support-only counter; if the page holds fewer
 than the counter reports, the view says so ("Showing N of M …") rather than presenting a short list as
-the whole set. Every listed row shows the Support-only pill.
+the entire set. Every listed row shows the Support-only pill.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2 · Review decision — approve / reject / spam
@@ -242,7 +242,7 @@ Approve the first. Leave the second pending.
 **Expected:** Step 1: the prompt says the other account is unaffected; confirming blocks this account
 platform-wide, the same block spam places. Step 2: the Duplicate counter goes up; the member appears in
 neither the Support-only counter nor its tab, because the restriction means they hold no access at all.
-Step 3: **the Quora URL is NOT on the denylist** — this is the whole point of the decision existing. If
+Step 3: **the Quora URL is NOT on the denylist** — this is the point of the decision existing. If
 it were, the first account's submission would be auto-spammed and the real person locked out. Step 4:
 they land on `/account-closed`, not on a Commons that fails — it says they already have an account,
 offers a sign-in link for the original, and a link to manage or delete this identity. Step 5: both are

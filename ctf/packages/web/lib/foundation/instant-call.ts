@@ -319,7 +319,7 @@ async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> 
 // Resolve and validate the ring target inside the ring transaction: work out who the callee is (the other
 // participant of the thread) and run the ring pre-check. Ringing itself moves no credits, but this rejects
 // early if the call can't even fund the first block. The provider must have opted in with a valid
-// whole-credit rate, and the caller's available balance must cover at least one block at the provider's
+// integer-credit rate, and the caller's available balance must cover at least one block at the provider's
 // CURRENT rate. (The rate is only LOCKED at answer; this pre-check uses the live rate purely to avoid
 // placing a ring that could never be answered without an immediate failure.) Returns the callee's user id.
 async function resolveRingTarget(

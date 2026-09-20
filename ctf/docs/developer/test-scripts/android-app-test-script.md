@@ -1,10 +1,10 @@
 # Android app test script
 
-This is the manual test script for the **native Android app** as a whole. It exists because the
+This is the manual test script for the **native Android app** overall. It exists because the
 Android app is no longer a full copy of the web product. Under the owner decision of 2026-07-20
 (rule 105), the native app is narrowed to a small keep-list — **Clerk sign-in, Chyme live audio,
 bug reporting, and settings/account** — and everything else is served by the installable web app.
-So instead of testing "parity across the board", this one script walks the whole native app end to
+So instead of testing "parity across the board", this one script walks the entire native app end to
 end.
 
 ## Before you start

@@ -148,7 +148,7 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 2. Tap **Tap to listen** under the room heading, then listen to the live room; look for any speak
    control.
 3. On iOS Safari, scroll the public view, then take a screenshot and choose **Full Page**.
-4. Count the sign-in and join buttons on the whole page, top to bottom.
+4. Count the sign-in and join buttons overall page, top to bottom.
 5. Have the last signed-in member leave the call, then reload the signed-out page within the next
    45 seconds (inside the presence window, so the server still reports the room as live).
 6. Listen again, then press **Leave** in the **Live Rooms** row. Watch what a signed-in member in
@@ -323,7 +323,7 @@ phone is locked — that is Android-only (CH-10).
 Access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
 1. As that member, send a chat message, then delete: call `DELETE /api/account/chyme-profile`
-   (service scope) OR `DELETE /api/account/full-account` (whole account). Also worth checking the
+   (service scope) OR `DELETE /api/account/full-account` (entire account). Also worth checking the
    Clerk-webhook path (delete the user in Clerk) since that also runs the orchestrator hook.
 2. In the Stream dashboard, look up the member's Stream user `chyme-<userId>` and their messages in the
    `messaging:chyme-main-room` channel.
@@ -457,7 +457,7 @@ optimistic remove restores the message and shows a "Delete failed" alert if the 
    room title now appears only once below the rail (no duplicate).
 2. In the **Main Room**, Join Room and unmute so you are live (you hear yourself/others).
 3. While still joined and speaking, tap the **Weavers of the Commons** card, then tap **Main Room**
-   again. Confirm you were **not** disconnected — the main-room call stays connected the whole time
+   again. Confirm you were **not** disconnected — the main-room call stays connected throughout
    (audio never drops, you do not have to re-Join).
 4. Look at the joined room's layout top-to-bottom: participant avatars (On Stage), then the audio
    controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**

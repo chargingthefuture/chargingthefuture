@@ -1486,7 +1486,7 @@ async function readReclaimWalletBalances(client: PoolClient, accountId: string) 
 }
 
 // The authoritative local writes for a reclaim. No external call has been made yet, so if any of these
-// mutations throws, the whole transaction rolls back with no orphaned external-ledger posting. The
+// mutations throws, the entire transaction rolls back with no orphaned external-ledger posting. The
 // Formance call and outbox write are deferred until after every local mutation (see postReclaimExternal).
 async function applyReclaimLocalWrites(
   client: PoolClient,

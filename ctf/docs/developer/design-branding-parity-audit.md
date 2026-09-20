@@ -107,7 +107,7 @@ E5-adoption (incremental screen migration onto the primitives/typeScale) and E6 
 
 Main has since narrowed the native Android app to a small **keep-list** (rule 105): `FeatureKey` in
 `App.tsx` is now just `chyme | account-data | blocked-members | bug-report`; everything else is served
-by the **web app**, which is now an installable **PWA** covering the whole product on phones. The
+by the **web app**, which is now an installable **PWA** covering the entire product on phones. The
 product also rebranded — at the time of this audit to "TI Skills Economy (TSE)", and since then (commit
 `bb0aa50`) to **"Skills Economy" / "SE"** with the Stack mark (see `app/layout.tsx` metadata).
 

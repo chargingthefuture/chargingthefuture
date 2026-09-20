@@ -699,7 +699,7 @@ contracts:
   - pluginId: foundation
     command: foundation.provider.instant-call.set
     version: 1.0.0
-    description: Save the signed-in member's own Foundation instant 1:1 call settings. When enabled, rateCredits must be a whole number of ServiceCredits of at least 1; intervalMinutes must be a whole number between 5 and 60.
+    description: Save the signed-in member's own Foundation instant 1:1 call settings. When enabled, rateCredits must be an integer number of ServiceCredits of at least 1; intervalMinutes must be an integer between 5 and 60.
     inputSchema:
       enabled:
         type: boolean

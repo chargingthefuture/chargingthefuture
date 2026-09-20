@@ -341,10 +341,10 @@ function renderPluginShellC(
 // and carries its own signed-out landing — the page the Quora invitation links to. When this
 // redirect sat after the gate, only fully-verified members ever reached it: a signed-out visitor
 // got the generic sign-in card and a not-yet-verified member got the Unlock nudge, both wrong for
-// a page whose whole point is to be readable before joining. `redirect` throws, so returning is
+// a page whose entire point is to be readable before joining. `redirect` throws, so returning is
 // only reached for every other plugin.
 //
-// Takes the whole plugin and compares `selectedPlugin.slug` rather than a bare slug string: the
+// Takes the entire plugin and compares `selectedPlugin.slug` rather than a bare slug string: the
 // web/android parity gate discovers which slugs have an explicit web shell by scanning this file
 // for that exact expression, so renaming the variable made knowledge disappear from the scan and
 // failed the gate.

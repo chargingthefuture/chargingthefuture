@@ -60,7 +60,7 @@ function formatRent(amount: number | null): string | null {
   return `$${amount.toLocaleString()}/mo`;
 }
 
-// The admin property endpoint takes a full LighthousePropertyInput (it validates the whole
+// The admin property endpoint takes a full LighthousePropertyInput (it validates the entire
 // record), so to hide/unhide we resend the property with isActive flipped.
 function propertyToInput(p: LighthouseProperty, isActive: boolean): LighthousePropertyInput {
   return {

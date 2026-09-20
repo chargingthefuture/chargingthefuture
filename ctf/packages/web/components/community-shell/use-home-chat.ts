@@ -1053,7 +1053,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     });
     return () => teardownBootstrap(controller, liveConnectionRef);
     // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
-    // messages carry their own sender name from the server), so listing it here tore down the whole
+    // messages carry their own sender name from the server), so listing it here tore down the entire
     // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
   }, [currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 

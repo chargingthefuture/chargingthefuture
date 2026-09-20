@@ -37,14 +37,14 @@ function pruneExpired(nowMs: number): void {
       windows.delete(key);
     }
   }
-  // Stamped after the loop: the whole prune is synchronous, so nothing can re-enter mid-loop,
+  // Stamped after the loop: the entire prune is synchronous, so nothing can re-enter mid-loop,
   // and stamping last means a hypothetical future await inside the loop would fail toward
   // pruning again rather than silently skipping a cycle.
   lastPruneMs = nowMs;
 }
 
 // Fixed-window check: at most `limit` calls per `windowMs` for this key. Returns whether
-// this call is allowed and, when it is not, how many whole seconds until the window resets.
+// this call is allowed and, when it is not, how many entire seconds until the window resets.
 export function checkRateLimit(
   key: string,
   limit: number,

@@ -3,7 +3,7 @@ import { formatUpcomingWhen, pickUpcoming } from './upcoming';
 
 // What Chyme shows from the TI Radio guide: only booked slots that have not ended, soonest first,
 // with the slot on air now at the top, and never more than the cap. A malformed slot in the payload
-// is skipped rather than taking the whole list down.
+// is skipped rather than taking the entire list down.
 
 const HOUR = 60 * 60 * 1000;
 const now = new Date('2026-09-19T12:00:00Z');

@@ -278,7 +278,7 @@ commands:
       type: string
       contentMediaType: image/png
       description: >-
-        The whole report drawn as one tall PNG, carrying the same numbers as click-log.trends.fetch
+        The entire report drawn as one tall PNG, carrying the same numbers as click-log.trends.fetch
         plus the method statement (how the data was collected, what is never counted, and what the
         counts cannot show) so a reposted copy is never numbers without provenance. The ~11 km area
         coordinates are never in the image and no input can put them back (owner directive,

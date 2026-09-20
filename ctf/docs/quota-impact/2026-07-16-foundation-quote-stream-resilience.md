@@ -2,7 +2,7 @@
 
 ## Summary
 
-- Feature/Change: Server resilience fix in `ctf/packages/web/lib/foundation/stream.ts`. `ensureFoundationStreamChannel` and `createFoundationParticipantToken` now catch a Stream API error, log it via `reportError`, and return `null` — degrading exactly like the existing no-credentials path — instead of throwing and aborting the whole Request Quote transaction. No new Stream surface, channel, user, or message pattern is introduced; the same channel-per-connection model is unchanged.
+- Feature/Change: Server resilience fix in `ctf/packages/web/lib/foundation/stream.ts`. `ensureFoundationStreamChannel` and `createFoundationParticipantToken` now catch a Stream API error, log it via `reportError`, and return `null` — degrading exactly like the existing no-credentials path — instead of throwing and aborting the entire Request Quote transaction. No new Stream surface, channel, user, or message pattern is introduced; the same channel-per-connection model is unchanged.
 - PR: chargingthefuture/chargingthefuture#1548
 - Owner: chargingthefuture
 - Date: 2026-07-16

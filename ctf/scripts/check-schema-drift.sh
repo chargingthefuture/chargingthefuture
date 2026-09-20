@@ -54,7 +54,7 @@ versioning_note_changed=false
 contract_schema_failed=false
 
 # Tokens that mark a file as actually touching the database layer. Used to decide whether a changed
-# shared/server file is DB-impacting (content-aware) instead of treating the whole package as such.
+# shared/server file is DB-impacting (content-aware) instead of treating the entire package as such.
 # SQL keywords are matched case-insensitively (grep -Ei below) and tolerate any run of whitespace
 # between words, so variants like "create table" and "CREATE   TABLE" are still caught.
 DB_CONTENT_RE='queryDb|withDbTransaction|CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|INSERT[[:space:]]+INTO|DELETE[[:space:]]+FROM|CREATE[[:space:]]+INDEX|drizzle|lib/db/postgres'

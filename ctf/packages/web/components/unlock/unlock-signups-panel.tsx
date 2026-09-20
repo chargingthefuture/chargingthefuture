@@ -23,7 +23,7 @@ import {
 const PAGE_SIZE = 10;
 
 // The panel's one visible line when it is closed: title, the two numbers worth knowing at a glance, and
-// the open/close control. The whole row is the button so it is easy to hit on a phone.
+// the open/close control. The entire row is the button so it is easy to hit on a phone.
 function SignupsHeader({
   t,
   open,

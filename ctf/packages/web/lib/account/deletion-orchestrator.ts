@@ -3,10 +3,10 @@
 //
 // Two entry points:
 //   - `deleteServiceScopeData(slug, userId)` — delete just one plugin's data for this user.
-//   - `deleteAllAccountData(userId)` — delete every plugin's data for this user (whole account).
+//   - `deleteAllAccountData(userId)` — delete every plugin's data for this user (entire account).
 //
 // Both run the registry-derived plan inside a single `withDbTransaction`, so a failure rolls the
-// whole thing back rather than leaving a user half-deleted. Each run records one
+// entire thing back rather than leaving a user half-deleted. Each run records one
 // `account_deletion_events` row (the retained accountability record) and logs an audit line.
 //
 // Money is deliberately out of scope here. ServiceCredits wallets/ledgers are `retain` in the
@@ -57,7 +57,7 @@ export type DeletionScope = 'service' | 'account';
  * account or a demo test account. Nobody chose to leave; the account was tidied away.
  *
  * The distinction is recorded on the deletion event (`summary.initiatedBy`) because the two are
- * indistinguishable afterwards — every whole-account deletion writes the same row — and the Weekly
+ * indistinguishable afterwards — every full-account deletion writes the same row — and the Weekly
  * Performance dashboard reports members who chose to go. Counting a duplicate-account cleanup there
  * would read as a member leaving. Rows written before this field existed carry no marker and are
  * counted as `member`, which is what nearly all of them are.
@@ -253,7 +253,7 @@ export async function deleteAllAccountData(
     });
 
     // DB rows for every plugin are gone; clear each plugin's external-store copy (e.g. Stream chat)
-    // too, post-commit. This is the single place that covers all whole-account entry points (the
+    // too, post-commit. This is the single place that covers all full-account entry points (the
     // full-account route, the internal delete route, and the Clerk webhook all call this).
     await runExternalCleanups(userId, accountDeletionRegistry.map((entry) => entry.slug));
 

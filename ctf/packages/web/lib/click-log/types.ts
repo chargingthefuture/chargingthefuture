@@ -118,7 +118,7 @@ export type SharedIncidentArea = {
   countryName: string | null;
 };
 
-// One country across the whole window: how much activity sits in it and how widely spread. This is
+// One country across the entire window: how much activity sits in it and how widely spread. This is
 // what separates one town reporting from four continents reporting, and it is the first thing a
 // reader outside the project asks of the numbers.
 //
@@ -155,7 +155,7 @@ export type SharedIncidentTagPair = {
   reporters: number;
 };
 
-// The whole report payload, as served by the admin trends endpoint and rendered into the
+// The entire report payload, as served by the admin trends endpoint and rendered into the
 // shareable image.
 export type SharedIncidentReport = {
   summary: SharedIncidentReportSummary;

@@ -74,7 +74,7 @@ async function parseDeleteRequest(request: Request): Promise<{ error: NextRespon
 
   // Which database schema's rows to delete. An internal call has no signed-in user, so demo-mode
   // targeting never applies here — without this it would always hit production. `target: "demo"`
-  // pins the whole deletion to the demo schema (via runWithForcedPool) so a demo test account can be
+  // pins the entire deletion to the demo schema (via runWithForcedPool) so a demo test account can be
   // fully wiped, using the exact same registry/orchestrator flow as production. Anything other than
   // "demo" (including the default) targets production. The Clerk identity is global (one instance),
   // so `deleteClerk` is independent of this.

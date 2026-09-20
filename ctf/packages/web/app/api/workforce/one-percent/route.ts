@@ -54,7 +54,7 @@ async function loadTradeWeight(profile: OwnDirectoryProfile, reach: OnePercentRe
 /**
  * What's Your 1% — the signed-in member's own card, and nobody else's.
  *
- * Workforce already answers what the whole population would look like. This answers the question a
+ * Workforce already answers what the entire population would look like. This answers the question a
  * member actually asks, which is what THEY could do, and it only ever answers it about them: the
  * profile is read by the caller's own user id, and no id is accepted from the client.
  *
@@ -69,7 +69,7 @@ export async function GET() {
 
   try {
     const profile = await getOwnProfile(decision.userId);
-    // The population the whole model rests on is the admin-set one, not the module default, so the
+    // The population the entire model rests on is the admin-set one, not the module default, so the
     // figures on this screen move when the population model is edited rather than drifting from it.
     const config = await getWorkforceConfig();
     const reach = computeOnePercentReach(config.population);

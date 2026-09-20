@@ -89,7 +89,7 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
-      # Whole-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
+      # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
       # count only — no member is ever named.
       - account_deletion_events
     purpose: operational_metrics_review
@@ -142,7 +142,7 @@ contracts:
       - mood_submissions
       - click_log_incidents
       - login_events
-      # Whole-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
+      # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
       # count only — no member is ever named.
       - account_deletion_events
     purpose: operational_metrics_comparison

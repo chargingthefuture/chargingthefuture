@@ -35,7 +35,7 @@ export function surfaceForCallCid(callCid: unknown): string | null {
   return STREAM_VIDEO_WEBHOOK_SURFACE.other;
 }
 
-// What one `call.session_participant_left` payload is worth: the surface and the whole seconds,
+// What one `call.session_participant_left` payload is worth: the surface and the entire seconds,
 // or null when the payload is not that event, names a call metered elsewhere, or carries no usable
 // duration. Never throws on an odd payload — the webhook acknowledges and moves on.
 export function participantLeftUsage(payload: Record<string, unknown>): { surface: string; seconds: number } | null {

@@ -17,7 +17,7 @@ import {
 // every open, not-yet-closed post that carries a value, folded with the SAME contribution weights, into
 // a SEPARATE figure.
 //
-// Three hard rules, and the whole point of keeping this in its own file:
+// Three hard rules, and the point of keeping this in its own file:
 //   1. NOTHING here is ever added to the Community Value Index. `recognizeCommunityValueIndex` does not
 //      import this module and never will; the two figures are computed by different functions, carried
 //      in different fields, and labeled differently on screen.
@@ -254,7 +254,7 @@ export async function projectOpenValueIndex(): Promise<ProjectionBreakdown> {
   const perSource: ProjectedSourceContribution[] = [];
   // Each source is an independent read-only round trip and this runs live on every dashboard request,
   // so fire them concurrently. Promise.all keeps order, so the breakdown stays in PROJECTION_SOURCES
-  // order. If any source throws, the whole projection rejects and the caller drops the panel — the real
+  // order. If any source throws, the entire projection rejects and the caller drops the panel — the real
   // index is computed separately and is never affected.
   const volumesBySource = await Promise.all(PROJECTION_SOURCES.map((source) => source.loadVolumes()));
   PROJECTION_SOURCES.forEach((source, index) => {

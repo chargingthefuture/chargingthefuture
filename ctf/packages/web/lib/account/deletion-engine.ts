@@ -82,7 +82,7 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
         throw new Error(`Table "${owned.table}" is action "pseudonymize" but has no userColumn.`);
       }
       // Overwrite the id, and NULL any denormalized copies of the member's identity alongside it —
-      // clearing the id while leaving a captured handle would defeat the whole point.
+      // clearing the id while leaving a captured handle would defeat the point.
       //
       // The WHERE still matches the REAL id, so this is naturally idempotent: a second run finds no
       // rows, because the first already replaced them with the placeholder.
@@ -105,7 +105,7 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
 }
 
 /**
- * Pure plan for a whole plugin entry: the ordered list of statements to run (retains dropped),
+ * Pure plan for an entire plugin entry: the ordered list of statements to run (retains dropped),
  * preserving the registry's child-before-parent ordering.
  */
 export function planDeletion(entry: PluginDeletionEntry): DeletionStatement[] {

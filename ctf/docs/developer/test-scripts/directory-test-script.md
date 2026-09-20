@@ -367,11 +367,11 @@ an allow/deny audit line.
 4. Remove a skill from the claimed profile, save, reopen, confirm it is gone.
 5. Check `skill_up_trainer_skill_audit`: the claimed profile's add and remove are each a row; the unclaimed profile wrote none.
 **Expected:** Every save succeeds. No "Unable to update profile." banner in any of the four saves.
-**Regression guard:** between 2026-08-29 and 2026-09-12 every one of these saves failed. The audit's owner lookup compared `id = $1::uuid` against `directory_profiles.id`, which is varchar in the carried-over database, so Postgres threw `operator does not exist: character varying = uuid`, the surrounding transaction rolled back, and the whole profile edit was lost. It passed every automated check because a `schema.sql`-shaped database declares that column UUID and the comparison works there — so this case has to be run against a database with the carried-over varchar column to mean anything.
+**Regression guard:** between 2026-08-29 and 2026-09-12 every one of these saves failed. The audit's owner lookup compared `id = $1::uuid` against `directory_profiles.id`, which is varchar in the carried-over database, so Postgres threw `operator does not exist: character varying = uuid`, the surrounding transaction rolled back, and the entire profile edit was lost. It passed every automated check because a `schema.sql`-shaped database declares that column UUID and the comparison works there — so this case has to be run against a database with the carried-over varchar column to mean anything.
 **Also check:** force a save failure (for example, point the drawer at a profile id that does not exist) and confirm the banner now carries the server's reason after the sentence, rather than "Unable to update profile." alone.
 **Result:** web ☐ — notes:
 
-### DIR-A1b · Admin list paging, and search across the whole collection
+### DIR-A1b · Admin list paging, and search across the entire collection
 **Role:** admin · **Surfaces:** web (`/admin/directory`)
 **Steps:**
 1. With more than 20 profiles seeded, open the admin page. Confirm the first screen shows 20 profiles
@@ -384,12 +384,12 @@ an allow/deny audit line.
 4. Search for a job title and for an unclaimed profile's handle. Confirm both match. Search with
    punctuation ("o'brien") and confirm it matches the same person as "o brien".
 5. Switch to Claimed, then Unclaimed. Confirm each tab pages through only that kind, the page resets to
-   1, and the header's "N unclaimed" keeps counting the whole collection rather than the visible page.
+   1, and the header's "N unclaimed" keeps counting the entire collection rather than the visible page.
 6. Delete an unclaimed profile from a page that has a following page. Confirm the page refills from the
    next one and the header counts drop by one.
-**Expected:** The list loads one page at a time (20 per page) instead of the whole collection, so first
+**Expected:** The list loads one page at a time (20 per page) instead of the entire collection, so first
 paint does not wait on every profile. Search and the claim tabs are applied by the server across all
-profiles. The header's profile and unclaimed counts describe the whole collection.
+profiles. The header's profile and unclaimed counts describe the entire collection.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)
@@ -503,7 +503,7 @@ the Advocacy placeholder and one carrying only that placeholder.
 2. Read the counts line and the rows.
 3. Look for your own listing, and for anybody who already has an invite post on the blog.
 4. Read the **Skills coverage** block above the list.
-5. Press **Copy the whole queue**, then paste into any text field.
+5. Press **Copy the entire queue**, then paste into any text field.
 6. Sign in as an approved member who is not an admin and open the same address.
 **Expected:**
 - Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and

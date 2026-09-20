@@ -57,7 +57,7 @@ Stream user. This change builds them.
 - Expected threshold after rollout (Green/Yellow/Orange/Red): **Green**, and now measured rather
   than assumed. The bands are computed from the app's own meter; the admin screen shows the band,
   the percent, and a straight-line projection to month end.
-- Peak scenario estimate: a full room (50 members) plus a full guest gallery (100) for a whole day
+- Peak scenario estimate: a full room (50 members) plus a full guest gallery (100) for an entire day
   is 216,000 minutes — 65% of the month in one day. The Yellow notice would show that evening, the
   Orange pause the next day, and the Red cap the day after; the room stays open for 10 members at
   Red. Lower caps are one Infisical change away (rule 123 documents the keys).

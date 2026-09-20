@@ -220,7 +220,7 @@ export const AdminUnlock = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Client-side filter over the loaded page so an admin can find a submission by Quora URL, user id,
-  // or submission number without scrolling the whole list.
+  // or submission number without scrolling the entire list.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
