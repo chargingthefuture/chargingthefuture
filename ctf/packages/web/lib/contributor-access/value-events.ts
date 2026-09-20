@@ -1,6 +1,6 @@
 import type { ContributorValueEventKey } from './weights';
 
-// The fourteen value events, defined once, in the shape both readings need.
+// The thirteen value events, defined once, in the shape both readings need.
 //
 // Two things read these events and they must never disagree:
 //
@@ -154,15 +154,6 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     rowSql: `SELECT suggested_by AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM what_works_products
               WHERE status = 'approved' AND suggested_by IS NOT NULL`,
-    aggregate: 'count',
-  },
-  {
-    key: 'value.what_works_endorsements_given',
-    // An opinion about a product. Nobody receives anything.
-    delivers: false,
-    tables: ['what_works_endorsements'],
-    rowSql: `SELECT user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
-               FROM what_works_endorsements`,
     aggregate: 'count',
   },
   {

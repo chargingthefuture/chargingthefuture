@@ -355,6 +355,14 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-09-20 — WhatWorks endorsements removed from the value events. Owner directive, and the
+  reason is what WhatWorks is for: somebody lists a tool or resource, and others mark whether it
+  worked for them. The recommendation is the thing of value, so listing a tool that gets approved
+  stays weighted (`value.what_works_tools_approved`) and agreeing with one does not —
+  an endorsement is a single "this helped me" mark per member per tool, an upvote. Thirteen events
+  remain, eleven of them delivering. Weekly Performance still counts endorsements in its own
+  dashboard, where the question is activity rather than value.
+
 - 2026-09-20 — Beacon removed from the value events; PeerProgramming reweighted to 1. Owner
   directive. These events are scored to separate members who deliver something from members who
   only speak, because somebody here to extract rather than give shows up as talk. Reacting to or

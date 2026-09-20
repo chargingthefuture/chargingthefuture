@@ -14,7 +14,7 @@ import { failureReason } from 'lib/errors/failure';
 // gate, and the daily count asks it of one day, drawing only on the events that deliver something.
 //
 // Admin-only and read-only. No per-event breakdown is returned for a named member: Foundation
-// answered calls are among the fourteen and rule 132 keeps that participation internal.
+// answered calls are among the thirteen and rule 132 keeps that participation internal.
 export async function GET() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {

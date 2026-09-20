@@ -2,7 +2,7 @@ import { queryDb } from 'lib/db/postgres';
 import type { ContributorValueEventKey } from './weights';
 import { VALUE_EVENT_SOURCES, aggregateExpression, type ValueEventSource } from './value-events';
 
-// Contributor Access — per-member ALL-TIME counts of the fourteen value events.
+// Contributor Access — per-member ALL-TIME counts of the thirteen value events.
 //
 // Each query counts the SAME events as lib/weekly-performance/live-metrics.ts (same tables, same
 // fixed filters), with two differences: no week window (all-time), and grouped per the member who

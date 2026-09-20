@@ -19,8 +19,8 @@ import { effectiveWeight } from 'lib/contributor-access/weights';
 // gated on five distinct counterparties and a member who only talks can never clear that however
 // long they keep talking. The daily count has no such gate — a single event would put somebody on
 // the day's roster — so it draws only on the events marked as delivering something: eleven of the
-// fourteen. Endorsing a product, finishing a course somebody else taught, and posting in a cohort
-// are all real, and none of them is a thing another member received.
+// thirteen. Finishing a course somebody else taught and posting in a cohort are both real, and
+// neither is a thing another member received.
 //
 // Read-only. The per-day figure is a count of people; the roster carries a member id and that day's
 // score and nothing else. No per-event breakdown is returned for a named member, because Foundation
