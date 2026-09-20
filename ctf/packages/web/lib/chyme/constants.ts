@@ -1,6 +1,11 @@
 export const CHYME_PLUGIN_ID = 'chyme';
 export const CHYME_MAIN_ROOM_KEY = 'chyme-main-room';
-export const CHYME_MAIN_ROOM_NAME = 'Chyme Main Room: Exit the Gauntlet';
+// The room's name is the room, not a topic. It carried a fixed topic ("Exit the Gauntlet") from
+// before the TI Radio guide existed, when one standing subject was the only way to say what the
+// room was for. Hosts now book their own slots and name their own topic, so a name that announces
+// one subject contradicts whatever is actually on air. What is being discussed comes from the
+// booked slot, shown in "Coming up on TI Radio" with the slot on air marked.
+export const CHYME_MAIN_ROOM_NAME = 'Chyme Main Room';
 
 // The private "Weavers of the Commons" audio room — the Chyme counterpart to the gated Commons chat
 // channel. Only contributor-eligible members (and admins) can join it, gated the same way the Commons
