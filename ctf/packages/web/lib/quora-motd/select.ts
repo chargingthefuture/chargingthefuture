@@ -44,7 +44,7 @@ export function motdToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: MOTD_TIME_ZONE }).format(now);
 }
 
-/** Whole days from the epoch to a YYYY-MM-DD date. Negative before the series starts. */
+/** Days from the epoch to a YYYY-MM-DD date, as an integer. Negative before the series starts. */
 function dayIndexFor(date: string): number {
   const [y, m, d] = date.split('-').map((part) => Number.parseInt(part, 10));
   const [ey, em, ed] = QUORA_MOTD_EPOCH.split('-').map((part) => Number.parseInt(part, 10));
@@ -52,7 +52,7 @@ function dayIndexFor(date: string): number {
     throw new Error(`Message of the day: "${date}" is not a YYYY-MM-DD date.`);
   }
   // Both ends are midday UTC so a daylight-saving shift can never move the difference across a
-  // day boundary and put the whole series one out for half the year.
+  // day boundary and shift every day in the series by one for half the year.
   const ms = Date.UTC(y, m - 1, d, 12) - Date.UTC(ey, em - 1, ed, 12);
   return Math.round(ms / 86_400_000);
 }

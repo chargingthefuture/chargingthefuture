@@ -74,7 +74,7 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // questions and are read together.
   { href: '/admin/quora-live-census', name: 'Quora Live Account Census' },
   // One post a day for the Skills Economy space, written in advance so a short-lived account can
-  // say one whole thing in the minutes it has. The ask rotates between the three Peace Battle 2
+  // say one complete thing in the minutes it has. The ask rotates between the three Peace Battle 2
   // actions and nothing repeats until the pool is exhausted.
   { href: '/admin/quora-message-of-the-day', name: 'Quora Message of the Day' },
   { href: '/admin/safety', name: 'Safety Reports' },
