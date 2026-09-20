@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 import { AdminNumberField } from "./sha-number-field";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
+import { SaveImageButton } from "@/components/shared/save-image-button";
 import { MissionEditForm } from "./sha-mission-edit";
 import {
   MISSION_GOAL_LABELS,
@@ -183,6 +184,37 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
   );
 }
 
+// Saves this round's active missions as one tall picture, to post where the round is being
+// advertised. It lives here rather than on the member Missions tab (owner decision, 2026-09-20):
+// advertising a round is an admin job, and the member tab is where members read their own progress.
+//
+// The picture is fetched and handed to the share sheet or saved as a file — see
+// components/shared/save-image-button.tsx for why it is never a plain link to the route.
+function MissionPosterCard({ roundId }: { roundId: string }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <SaveImageButton
+      url={`/api/skills-hunt/admin/rounds/${roundId}/missions/image`}
+      filename={`skillshunt-missions-${today}.png`}
+      label="Save these missions as one picture"
+      accent={t.ACCENT}
+      surface="rgba(255,255,255,0.02)"
+      border={t.BORDER_STRONG}
+      muted={t.MUTED}
+      area="skills-hunt"
+      op="mission_poster_image"
+      style={{ marginTop: 0, marginBottom: 16 }}
+    >
+      Draws every active mission in this round as one tall picture, named for today&apos;s date, so
+      the round can be advertised without stitching screenshots together. On a phone the share sheet
+      opens over this screen — save it to your photos or send it straight to another app. You stay
+      here either way. The picture carries the missions themselves, not anyone&apos;s progress.
+    </SaveImageButton>
+  );
+}
+
 export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -271,6 +303,7 @@ export function SkillsHuntAdminMissions({ roundId }: { roundId: string | null })
   return (
     <div style={{ maxWidth: 720 }}>
       <SkillsHuntAutoMissionPanel onRunFinished={() => void refresh()} />
+      <MissionPosterCard roundId={roundId} />
       {open
         ? <MissionForm roundId={roundId} onCreated={() => { setOpen(false); void refresh(); }} onCancel={() => setOpen(false)} />
         : (

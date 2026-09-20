@@ -5,7 +5,6 @@ import { type SkillsHuntMissionWithProgress, type Tab } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 import { missionView } from 'lib/skills-hunt/mission-view';
-import { SkillsHuntMissionPosterLink } from './sh-mission-poster-link';
 
 function MissionTitleRow({ title, isLocked, isComplete }: { title: string; isLocked: boolean; isComplete: boolean }) {
   const { theme } = useTheme();
@@ -58,16 +57,11 @@ export function SkillsHuntMissionsTab({
   loading,
   missions,
   onNavTab,
-  isAdmin = false,
-  roundId = null,
 }: {
   noActiveRound: boolean;
   loading: boolean;
   missions: SkillsHuntMissionWithProgress[];
   onNavTab: (tab: Tab) => void;
-  /** Admins get the save-as-picture control below the heading; members never see it. */
-  isAdmin?: boolean;
-  roundId?: string | null;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
@@ -75,7 +69,6 @@ export function SkillsHuntMissionsTab({
     <>
       <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Active Missions</div>
       <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 20 }}>Complete missions to earn bonus points and unlock badges</div>
-      {isAdmin && roundId ? <SkillsHuntMissionPosterLink roundId={roundId} /> : null}
       {noActiveRound ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>No active round — no missions yet.</div>
       ) : loading ? (

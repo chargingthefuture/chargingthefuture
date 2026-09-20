@@ -43,7 +43,6 @@ interface ShellData {
   userId?: string;
   loadingMissions: boolean;
   missions: SkillsHuntMissionWithProgress[];
-  isAdmin: boolean;
   loadingFinds: boolean;
   myFinds: SkillsHuntSubmission[];
 }
@@ -72,7 +71,7 @@ function ShellContent(d: ShellData) {
     return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} userId={d.userId} />;
   }
   if (d.tab === "missions") {
-    return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} isAdmin={d.isAdmin} roundId={d.activeRound?.id ?? null} />;
+    return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} />;
   }
   return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} onNavTab={d.setTab} />;
 }
@@ -239,7 +238,7 @@ export function SkillsHuntShell({
       activeRound={activeRound} rounds={rounds}
       onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
       loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
-      loadingMissions={loadingMissions} missions={missions} isAdmin={isAdmin}
+      loadingMissions={loadingMissions} missions={missions}
       loadingFinds={loadingFinds} myFinds={myFinds}
     />
   );
