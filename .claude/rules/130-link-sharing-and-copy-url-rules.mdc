@@ -44,6 +44,52 @@ Every share / copy-link affordance MUST use the shared control — never a custo
    `textarea` + `execCommand` so the copy still works. On mobile, the OS share sheet is the copy/share
    path, so there is nothing to silently fail.
 
+## Sharing a picture of a screen (mandatory)
+
+A screen that is worth posting somewhere — a report, a list of missions, a set of figures — gets a
+**picture of itself**, drawn server-side, and it is handed over through one shared control:
+`SharePicture` (`ctf/packages/web/components/shared/share-picture.tsx`). It is the picture
+counterpart of `ShareLink` and is built the same way: one control, used everywhere, never forked.
+
+**Why a picture at all.** The screens worth sharing are taller than a phone. Capturing one by hand
+means scrolling, several screenshots and a stitch that loses rows at the seams and leaves the
+phone's own clock and battery in the middle of something meant to be seen in public.
+
+### The shape, which three attempts arrived at
+
+1. **Draw it on the server and answer with the PNG.** A route builds the image from the same
+   aggregate the screen reads, so the two can never say different things. Admin-gate it where the
+   screen is admin-only, and write an audit row.
+2. **Fetch it, then show it on the screen that asked for it.** The control puts the picture in the
+   panel under the button. It never navigates.
+3. **Share is the control.** `navigator.share({ files })` on its own press, so the browser's
+   transient activation is fresh. Press-and-hold (or right-click) is named in the note beside it and
+   needs no code.
+
+### Never, each one having shipped and failed
+
+- **Never a plain `<a href download>` to the route.** In the installed app on iOS there is no
+  browser chrome, so following it navigates the app's own window to the downloaded file, iOS draws
+  its file preview with no back control, and force-closing the app is the only way out (owner
+  reports, 2026-08-24 and 2026-09-20).
+- **Never `navigator.share` straight after the fetch that drew the picture.** Drawing takes a second
+  or two, by which time Safari has expired the activation from the press and refuses with
+  `NotAllowedError`.
+- **Never a blob-URL anchor as the fallback.** In standalone mode it navigates rather than
+  downloading, and a blob URL revoked on the next line is read after the click, which is
+  "WebKitBlobResource error 1" on a dead page.
+- **Never a "Save the file" button.** Removed 2026-09-20 by owner directive: on a phone it does not
+  do what its label says, and Share covers every case. Do not add it back.
+
+### For agents
+
+Asked for a picture of a screen? Render it with `SharePicture`, pass it the route, the filename, the
+screen's accent and surface tokens, and a note saying what the picture carries. Do not write a new
+download control, and do not put a bare `<img>` behind your own buttons — extend `SharePicture` if
+something is missing. Worked examples: the SkillsHunt admin Missions tab
+(`components/skills-hunt/sha-missions.tsx`) and the ClickLog trends dashboard
+(`components/click-log/click-log-trend-image-link.tsx`).
+
 ## For agents
 
 - Adding any "Share", "Copy link", or link-out affordance? Use `ShareLink`. If a needed capability is
