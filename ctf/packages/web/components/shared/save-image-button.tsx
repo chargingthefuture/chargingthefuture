@@ -179,7 +179,9 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
           this session, which the image pipeline can neither know about nor optimize. */}
       <img
         src={ready.objectUrl}
-        alt={`The picture this screen just drew, saved as ${filename}`}
+        // No "picture" or "image" in the alt: a screen reader already says it is one, and the
+        // a11y audit (jsx-a11y/img-redundant-alt) refuses the words.
+        alt={`What this screen just drew, as the file ${filename}`}
         style={{ display: "block", width: "100%", height: "auto", borderRadius: 10, border: `1px solid ${border}` }}
       />
       <div style={{ fontSize: 12, color: muted, marginTop: 10, lineHeight: 1.5 }}>
