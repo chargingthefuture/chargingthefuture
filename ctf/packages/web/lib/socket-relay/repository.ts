@@ -1050,7 +1050,7 @@ export async function resolveFulfillment(
 
     const updated = await client.query<FulfillmentRow>(
       `UPDATE socket_relay_fulfillments
-       SET status = $3, close_reason = $2, updated_at = NOW()
+       SET status = $3, close_reason = $2, closed_at = COALESCE(closed_at, NOW()), updated_at = NOW()
        WHERE id = $1::uuid AND status = 'active'
        RETURNING id, request_id, requester_user_id, fulfiller_user_id, requester_username, fulfiller_username, status, close_reason, created_at, updated_at`,
       [fulfillmentId, outcome, plan.fulfillmentStatus],

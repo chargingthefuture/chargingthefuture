@@ -633,6 +633,12 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
+  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
+  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
+  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
+  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
+  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
+  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -2458,9 +2464,13 @@ CREATE TABLE IF NOT EXISTS lighthouse_matches (
   host_response TEXT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending', 'accepted', 'rejected', 'canceled', 'completed')),
   stream_channel_id TEXT NOT NULL DEFAULT 'pending',
+  -- When the stay was marked completed. Set once, on the move to 'completed', and left alone after,
+  -- so a later edit to the row does not move the day the stay happened.
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE IF EXISTS lighthouse_matches ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS lighthouse_blocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3338,6 +3348,12 @@ CREATE INDEX IF NOT EXISTS idx_directory_quora_url_history_user
 -- the profile row is deleted and its normalized Quora URL is recorded here. A row with is_overridden =
 -- false is an ACTIVE block: that Quora URL cannot be listed in the directory again (auto-generated from
 -- a SkillsHunt accept, or added by an admin) until an admin lifts the block with a reason (override).
+-- `normalized_url` holds the same canonical form as skills_hunt_submissions.quora_profile_url_normalized
+-- (see the note there): a takedown is matched against the string a nomination was deduped on, so the
+-- two have to be written by the same rules or a suppressed profile can be re-listed under another
+-- spelling. Rows stored before 2026-09-18 were re-keyed by migration 0027; where two spellings of one
+-- link were both active, one was re-keyed and does the blocking and the other is kept as the record
+-- of the request, because the partial unique index below allows only one active row per link.
 CREATE TABLE IF NOT EXISTS directory_suppressed_quora_urls (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   normalized_url TEXT NOT NULL,
@@ -4369,6 +4385,9 @@ CREATE TABLE IF NOT EXISTS socket_relay_fulfillments (
   fulfiller_username TEXT,
   status TEXT NOT NULL DEFAULT 'active',
   close_reason TEXT,
+  -- When the close button was pressed. close_reason records WHETHER it went well; this records
+  -- WHEN, which updated_at cannot, because any later edit to the row moves that.
+  closed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -4380,6 +4399,7 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS request
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS fulfiller_username TEXT;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS close_reason TEXT;
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -7424,6 +7444,11 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   export_reviewed_by TEXT,
   export_reviewed_at TIMESTAMPTZ,
   export_refusal_reason TEXT,
+  -- When the author last rewrote this comment, or NULL if they never did. An author fixing their own
+  -- words keeps the row: its id, the replies under it, and the reactions on it all survive, which
+  -- taking it down and writing it again does not. The thread shows an "edited" mark from this, so
+  -- words that changed after they were posted never read as the originals.
+  edited_at TIMESTAMPTZ,
   -- What the author wrote, kept for the author alone once they take the comment down. `body` still
   -- empties on withdrawal, so the words leave the conversation for everybody else; this is the copy
   -- the person who wrote them can still see on their own screen. Taking a comment down cannot be
@@ -7450,6 +7475,7 @@ ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS export_refusal_reason TEXT;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS fireside_comments_thread_idx ON fireside_comments (thread_id, created_at);
@@ -8587,9 +8613,9 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
 -- The grid itself is never stored. Only bookings are rows, so an empty slot costs nothing and the
 -- guide can be lengthened by changing one constant in lib/ti-radio/constants.ts.
 --
--- Reading the guide needs no account at all: it is written for readers who have not joined yet, the
--- page's job is to get somebody into Chyme at the time it names, and a broadcast guide nobody can
--- read is not a guide. Claiming a slot needs Unlock approval, like everything else in this app.
+-- Reading the guide needs no account at all: it is written for people arriving from the Quora space
+-- at tiradio.quora.com who have not joined yet, and a broadcast guide nobody can read is not a
+-- guide. Claiming a slot needs Unlock approval, like everything else in this app.
 --
 -- Distinct from Mutual Time, which stays admin-only. There the owner asks a group when they can
 -- meet and the app picks the hour with the most overlap. Here nobody is asked anything.
@@ -8810,4 +8836,437 @@ CREATE INDEX IF NOT EXISTS idx_lighthouse_profiles_wanted_public
 
 ALTER TABLE IF EXISTS lighthouse_profiles
   ADD COLUMN IF NOT EXISTS budget_currency TEXT NULL REFERENCES currencies(code);
+
+
+-- ── post migration: 0024_skills_hunt_skill_missions.sql ──
+-- SkillsHunt: a mission can ask for one named skill, not only a whole sector.
+--
+-- Owner report, 2026-09-17: the Missions tab showed "Find a mechanic — 82/1 complete" and "Find a
+-- plumber — 82/3 complete" for a scout who had nominated no mechanic at all. Both read the same 82
+-- because both were stored as count_total_accepted, which counts every accepted nomination the
+-- scout has whatever the skill. That was not a mistake in the data so much as the only option the
+-- product offered: the three goal types were "everything", "a sector", and "rare skills", and the
+-- create form defaults to the first, so a mission named for a single trade silently counted the
+-- lot.
+--
+-- 'count_skill_matches' fills the gap. goal_metadata carries { skillName, skillId? } and the name is
+-- matched case-insensitively against the taxonomy skills picked on each accepted nomination.
+-- Free-text proposed skills are deliberately not counted, so a mission cannot be completed by
+-- wording.
+--
+-- No backfill. Re-pointing an existing mission means naming which skill it is about, and this
+-- migration cannot know that a row titled "Find a mechanic" means the taxonomy's "Mechanic" rather
+-- than something near it — guessing would quietly rewrite what a mission asks for. The admin
+-- Missions panel now has an Edit control for exactly this, and a "Recompute progress" button that
+-- settles every scout's counts in the round afterwards, so the correction is a job for whoever
+-- knows what the mission meant, from the app rather than from a shell.
+
+ALTER TABLE IF EXISTS skills_hunt_missions
+  DROP CONSTRAINT IF EXISTS skills_hunt_missions_goal_type_check;
+
+ALTER TABLE IF EXISTS skills_hunt_missions
+  ADD CONSTRAINT skills_hunt_missions_goal_type_check
+  CHECK (goal_type IN ('count_total_accepted', 'count_skills_in_sector', 'count_rare_skill_finds', 'count_skill_matches'));
+
+
+-- ── post migration: 0025_unlock_help_request_quora_hint.sql ──
+-- Unlock: keep whatever a member can tell us about their Quora account when they cannot give the URL.
+--
+-- The Unlock screen asks for a Quora profile URL and nothing else. A member who cannot produce one
+-- presses "Can't find your Quora profile URL?", which opens the Commons so they have somebody to ask
+-- and records a bare row in unlock_help_requests. That row carries a user id and a timestamp, so the
+-- admin sign-ups panel showed the person as "No Quora URL" with no way to look them up: the people
+-- most in need of a manual approval were exactly the people who left nothing to approve on.
+--
+-- quora_hint is that missing thing, in free text: the name on their Quora account, a link to anything
+-- they have posted, the email they joined Quora with — whatever they have. It is deliberately not
+-- validated into a URL shape. A member who could produce a valid URL would have used the field above
+-- it, so rejecting a hint for its shape rejects the only people this column exists for.
+--
+-- Nullable, no backfill: the rows already in the table were written before there was anything to ask
+-- for, and a hint is optional for every row written after it.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;
+
+
+-- ── post migration: 0026_unlock_submission_url_set_by_admin.sql ──
+-- Unlock: say who put the Quora URL that is stored on a submission.
+--
+-- An admin can now enter a Quora URL for a member who never gave one — the member asked for help,
+-- left a name or a link in the help box, and the admin looked them up by hand — and can correct one
+-- that is wrong. Both write the same column the member's own submission writes, so without this the
+-- row reads exactly as if the member had typed it. The approval decision turns on that difference:
+-- "this person proved they are real" and "an admin found this profile for them" are not the same
+-- claim, and an admin reviewing the queue next month has to be able to tell them apart.
+--
+-- url_set_by_admin_user_id is null for every row a member submitted themselves, which is every row
+-- that exists today — hence no backfill. It is cleared again the moment a member submits their own
+-- URL over the top, because it describes where the currently stored URL came from, not what has ever
+-- happened to the row. The durable trail of every change lives in directory_quora_url_history, which
+-- these paths also write, with the admin as changed_by_user_id and 'unlock_admin' as the source.
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_at TIMESTAMPTZ;
+
+
+-- ── post migration: 0027_canonical_quora_urls_directory_skills_hunt.sql ──
+-- Directory and SkillsHunt: re-key every stored Quora URL to one canonical form per link.
+--
+-- The same defect fixed in Unlock on 2026-09-18, in the two other places that key on a Quora URL.
+-- Both had their own copy of the "normalize" rules (lib/directory/quora-url.ts and a private
+-- function in lib/skills-hunt/repository.ts), kept in step by a comment; both stripped the query and
+-- hash, then returned the URL otherwise as typed. So one page had as many stored forms as there are
+-- ways to write it:
+--
+--   https://www.quora.com/profile/Mary-T-I-1     https://quora.com/profile/Mary-T-I-1
+--   http://www.quora.com/profile/Mary-T-I-1      https://www.quora.com/profile/Mary-T-I-1/
+--   https://es.quora.com/profile/Mary-T-I-1      https://www.quora.com/profile/mary-t-i-1
+--
+-- What that cost:
+--   * Directory's takedown list is matched by exact string, so a profile somebody asked to have
+--     removed could be re-listed by a nomination that dropped `www.` or changed the casing.
+--   * SkillsHunt's per-round identity is the normalized URL, so the same person could be nominated
+--     more than once in a round, and the "first match" bonus could be paid to more than one scout
+--     for the same person.
+--
+-- Both now call lib/shared/quora-url.ts, which returns https://www.quora.com + the lowercased path
+-- with trailing slashes removed. This migration rewrites the rows already stored, because a fixed
+-- function reading unfixed rows keeps the same blindness for everything recorded before today.
+--
+-- It re-keys and nothing else: no takedown is lifted or applied, no nomination is accepted, rejected
+-- or rescored, and no points move. Duplicates it brings to light are for a human to look at.
+--
+-- Re-runnable: canonicalizing an already-canonical value returns it unchanged, so a second run
+-- updates nothing.
+
+-- The rules above, in SQL, session-local so nothing is left behind in the database. Kept beside the
+-- statements that use it rather than duplicated into each one.
+CREATE OR REPLACE FUNCTION pg_temp.canonical_quora_url(value text) RETURNS text AS $$
+DECLARE
+  host text;
+  path text;
+BEGIN
+  IF value IS NULL OR btrim(value) = '' THEN
+    RETURN NULL;
+  END IF;
+
+  host := lower(substring(btrim(value) from '^https?://([^/]+)'));
+  path := substring(btrim(value) from '^https?://[^/]+(/[^?#]*)');
+
+  IF host IS NULL OR path IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- quora.com itself or a subdomain of it, and nothing else: "ends with quora.com" would also
+  -- accept evil-quora.com, which is a different site.
+  IF host <> 'quora.com' AND host NOT LIKE '%.quora.com' THEN
+    RETURN NULL;
+  END IF;
+
+  path := lower(regexp_replace(path, '/+$', ''));
+  IF length(path) < 2 THEN
+    RETURN NULL;
+  END IF;
+
+  RETURN 'https://www.quora.com' || path;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- 1) SkillsHunt nominations. The per-round uniqueness is on (round_id, signature_hash), not on this
+--    column, so rows collapsing onto one canonical URL is exactly what should happen and cannot
+--    collide. The column is what the "first match" bonus and the per-URL reads compare.
+UPDATE skills_hunt_submissions
+   SET quora_profile_url_normalized = pg_temp.canonical_quora_url(quora_profile_url_normalized)
+ WHERE pg_temp.canonical_quora_url(quora_profile_url_normalized) IS NOT NULL
+   AND quora_profile_url_normalized <> pg_temp.canonical_quora_url(quora_profile_url_normalized);
+
+-- 2) The Quora URL change history. No uniqueness here either; these columns are the trail an admin
+--    reads, so they should read in the same form as everything else.
+UPDATE directory_quora_url_history
+   SET new_url_normalized = pg_temp.canonical_quora_url(new_url_normalized)
+ WHERE pg_temp.canonical_quora_url(new_url_normalized) IS NOT NULL
+   AND new_url_normalized <> pg_temp.canonical_quora_url(new_url_normalized);
+
+UPDATE directory_quora_url_history
+   SET previous_url_normalized = pg_temp.canonical_quora_url(previous_url_normalized)
+ WHERE previous_url_normalized IS NOT NULL
+   AND pg_temp.canonical_quora_url(previous_url_normalized) IS NOT NULL
+   AND previous_url_normalized <> pg_temp.canonical_quora_url(previous_url_normalized);
+
+-- 3) The takedown list. Lifted rows (is_overridden = true) are outside the unique index, so they
+--    re-key freely.
+UPDATE directory_suppressed_quora_urls
+   SET normalized_url = pg_temp.canonical_quora_url(normalized_url)
+ WHERE is_overridden = true
+   AND pg_temp.canonical_quora_url(normalized_url) IS NOT NULL
+   AND normalized_url <> pg_temp.canonical_quora_url(normalized_url);
+
+--    Active rows are covered by a partial unique index on normalized_url, so two spellings of one
+--    link cannot both be re-keyed. One row per canonical link is re-keyed and becomes the row that
+--    blocks; the others keep their old spelling and stop matching anything, which is safe — the
+--    lookup canonicalizes the incoming URL, so the re-keyed row is what it hits. They are left in
+--    place rather than deleted because a takedown row is a record of somebody's request.
+--
+--    A row already in canonical form is preferred as the one to keep, so an existing canonical row
+--    is never displaced by an older differently-spelled one.
+WITH ranked AS (
+  SELECT
+    id,
+    pg_temp.canonical_quora_url(normalized_url) AS canonical,
+    row_number() OVER (
+      PARTITION BY pg_temp.canonical_quora_url(normalized_url)
+      ORDER BY (normalized_url = pg_temp.canonical_quora_url(normalized_url)) DESC, created_at, id
+    ) AS rank_in_group
+  FROM directory_suppressed_quora_urls
+  WHERE is_overridden = false
+    AND pg_temp.canonical_quora_url(normalized_url) IS NOT NULL
+)
+UPDATE directory_suppressed_quora_urls AS target
+   SET normalized_url = ranked.canonical
+  FROM ranked
+ WHERE target.id = ranked.id
+   AND ranked.rank_in_group = 1
+   AND target.normalized_url <> ranked.canonical;
+
+
+-- ── post migration: 0028_fireside_comment_edit.sql ──
+-- Fireside: an author can rewrite their own comment, and the thread says when they did.
+--
+-- Until now the only way to fix a typo was to take the comment down and write it again, which
+-- costs the replies under it, every reaction on it, and its place in the conversation (owner
+-- report, 2026-09-17). The Commons has had the answer since it shipped: an author rewrites their
+-- own reply in place, the row keeps its id, and an "edited" mark appears beside it so nobody reads
+-- changed words as the originals. This column is that mark.
+--
+-- Null until the author changes something, so an untouched comment carries nothing at all and the
+-- mark means what it says.
+
+ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+
+COMMENT ON COLUMN fireside_comments.edited_at IS
+  'When the author last rewrote this comment, or NULL if they never did. Shown beside the comment as an "edited" mark, so changed words never read as the originals.';
+
+
+-- ── post migration: 0028_unlock_canonical_quora_profile_urls.sql ──
+-- Unlock: re-key every stored Quora profile URL to one canonical form per profile.
+--
+-- Owner report, 2026-09-18: one Quora profile had signed up three times and nothing in the app said
+-- so. The queue card for the account that was approved showed no "Shared by" pill, and the reward
+-- was granted.
+--
+-- The cause was in normalizeQuoraProfileUrl (packages/web/lib/unlock/quora-url.ts), which stripped
+-- the query and the hash and then returned the URL otherwise as the member typed it. So all of these
+-- were stored as different "normalized" strings, though they are one person's profile:
+--
+--   https://www.quora.com/profile/Mary-T-I-1     (the share link the Quora app produces)
+--   https://quora.com/profile/Mary-T-I-1
+--   http://www.quora.com/profile/Mary-T-I-1
+--   https://www.quora.com/profile/Mary-T-I-1/
+--   https://www.quora.com/profile/Mary-T-I-1/answers
+--   https://www.quora.com/profile/mary-t-i-1
+--
+-- Three things in Unlock exist to stop one person verifying twice, and all three decide by comparing
+-- those strings: the "Shared by N" count on the queue card, the guard that withholds the
+-- verification reward when another account already holds it for that identity, and the spam denylist
+-- that keeps a known-bad profile out of the queue. Each missed a member who pasted the same profile
+-- a slightly different way.
+--
+-- The code now canonicalizes to https://www.quora.com/profile/<lowercased slug>. This migration
+-- rewrites the rows already stored, because a fixed function comparing against unfixed rows would
+-- keep the same blindness for every member who signed up before today.
+--
+-- Nothing here approves, rejects, revokes or grants anything. It only re-keys. The duplicates it
+-- brings to light appear as "Shared by N" on the queue, for a human to decide on — including any
+-- reward already granted to a duplicate, which an admin revokes from the card as usual.
+--
+-- Re-runnable: canonicalizing an already-canonical value returns it unchanged, so a second run
+-- updates nothing and merges nothing.
+
+-- 1) The submissions themselves. No unique constraint on this column (the table is keyed on
+--    user_id), so several rows collapsing onto one canonical value is exactly what should happen.
+UPDATE unlock_verification_submissions
+   SET quora_profile_url_normalized =
+         'https://www.quora.com/profile/'
+         || lower(substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)')),
+       updated_at = updated_at
+ WHERE substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)') IS NOT NULL
+   AND quora_profile_url_normalized <>
+         'https://www.quora.com/profile/'
+         || lower(substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)'));
+
+-- 2) The spam denylist. This one IS keyed on the normalized URL, so two denylisted spellings of the
+--    same profile have to merge rather than collide. Kept as separate statements (stash, delete,
+--    re-insert) rather than one data-modifying CTE, because deleting and re-inserting the same key
+--    inside a single statement can trip the unique index.
+--
+--    Merge rules: the flag counts add up (each flag was a real admin decision about this profile),
+--    the first flag keeps the earliest timestamp and the last the latest, and the human-readable URL
+--    and flagging admin come from the most recently flagged of the merged rows.
+DROP TABLE IF EXISTS unlock_spam_quora_urls_canonical;
+CREATE TEMP TABLE unlock_spam_quora_urls_canonical AS
+SELECT
+  'https://www.quora.com/profile/'
+    || lower(substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)')) AS quora_profile_url_normalized,
+  (array_agg(quora_profile_url ORDER BY last_flagged_at DESC, quora_profile_url))[1] AS quora_profile_url,
+  (array_agg(flagged_by_user_id ORDER BY last_flagged_at DESC, quora_profile_url))[1] AS flagged_by_user_id,
+  SUM(flag_count)::int AS flag_count,
+  MIN(first_flagged_at) AS first_flagged_at,
+  MAX(last_flagged_at) AS last_flagged_at
+FROM unlock_spam_quora_urls
+WHERE substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)') IS NOT NULL
+GROUP BY 1;
+
+DELETE FROM unlock_spam_quora_urls
+ WHERE substring(quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)') IS NOT NULL;
+
+INSERT INTO unlock_spam_quora_urls (
+  quora_profile_url_normalized,
+  quora_profile_url,
+  flagged_by_user_id,
+  flag_count,
+  first_flagged_at,
+  last_flagged_at,
+  updated_at
+)
+SELECT
+  quora_profile_url_normalized,
+  quora_profile_url,
+  flagged_by_user_id,
+  flag_count,
+  first_flagged_at,
+  last_flagged_at,
+  NOW()
+FROM unlock_spam_quora_urls_canonical;
+
+DROP TABLE IF EXISTS unlock_spam_quora_urls_canonical;
+
+
+-- ── post migration: 0029_chyme_stream_usage_and_guest_listeners.sql ──
+-- Chyme: a minute meter for Stream Video, a listener roster for signed-out guests.
+--
+-- Until now the app had no measure of its own Stream Video use: the Maker tier's 333,000
+-- participant-minutes a month were a number in a rule module, and the quota-impact note that
+-- turned the audio room on (2026-06-01) recorded the gap. The presence heartbeats already say who
+-- is in a call and for how long, so each one now credits the seconds since the last into a daily
+-- row per surface. The Chyme admin screen reads it; the policy that pauses guest listening and
+-- Back Channel calls near the ceiling reads it too.
+--
+-- Signed-out listeners had no row anywhere, so there was no way to cap how many listen at once,
+-- and every page load minted a fresh Stream user. The listener page now holds one random guest id
+-- in an httpOnly cookie and heartbeats like a member; this table is the roster that count reads.
+-- No personal data: a guest id is a random value and nothing else.
+
+CREATE TABLE IF NOT EXISTS chyme_guest_listeners (
+  guest_id TEXT PRIMARY KEY,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_guest_listeners ADD COLUMN IF NOT EXISTS joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS chyme_guest_listeners ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_guest_listeners_last_seen ON chyme_guest_listeners(last_seen_at);
+
+COMMENT ON TABLE chyme_guest_listeners IS
+  'Signed-out listeners in the public Chyme room, one row per browser (random guest id from an httpOnly cookie). A guest counts only while last_seen_at is inside the presence window. No personal data.';
+
+CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
+  usage_date DATE NOT NULL,
+  surface TEXT NOT NULL,
+  participant_seconds BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (usage_date, surface)
+);
+ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+COMMENT ON TABLE stream_video_usage_daily IS
+  'Stream Video participant-seconds per UTC day per surface, credited from presence heartbeats. The app''s own estimate of the participant-minutes meter; the Stream dashboard is the bill of record.';
+
+
+-- ── post migration: 0030_chyme_moderation.sql ──
+-- Chyme moderation: a speak mode per room, a removed-members list, and an admin audit trail.
+--
+-- Owner decision, 2026-09-19. Until now Chyme was open social audio with no moderator: every
+-- joiner could speak and nobody could be muted or removed. An admin can now mute a member's
+-- microphone, remove a member from a room (kept out until an admin lets them back in), and
+-- switch a room to hand-raise mode, where a joiner listens until an admin lets them speak.
+--
+-- speak_mode defaults to 'open', which is the room exactly as it shipped; nothing changes for a
+-- room nobody has switched. Only 'open' and 'hand_raise' are written by the app.
+
+ALTER TABLE IF EXISTS chyme_rooms ADD COLUMN IF NOT EXISTS speak_mode TEXT NOT NULL DEFAULT 'open';
+
+COMMENT ON COLUMN chyme_rooms.speak_mode IS
+  'open: every joiner may speak (the default). hand_raise: a joiner listens until an admin lets them speak; roles ride on chyme_room_members.role.';
+
+CREATE TABLE IF NOT EXISTS chyme_room_removals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username TEXT NULL,
+  removed_by TEXT NOT NULL,
+  reason TEXT NULL,
+  removed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  lifted_at TIMESTAMPTZ NULL,
+  lifted_by TEXT NULL
+);
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS username TEXT;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS reason TEXT;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS lifted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS chyme_room_removals ADD COLUMN IF NOT EXISTS lifted_by TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chyme_room_removals_active
+  ON chyme_room_removals(room_id, user_id) WHERE lifted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_chyme_room_removals_user ON chyme_room_removals(user_id);
+
+COMMENT ON TABLE chyme_room_removals IS
+  'A member an admin removed from a Chyme room. Keeps them out (join and heartbeat refuse) while lifted_at is null; lifted rows stay as the record.';
+
+CREATE TABLE IF NOT EXISTS chyme_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS idx_chyme_admin_audit_trail_lookup
+  ON chyme_admin_audit_trail (created_at DESC, actor_id, command);
+
+COMMENT ON TABLE chyme_admin_audit_trail IS
+  'Every Chyme admin action (mute, remove, let back in, role change, speak mode), in the shape every other plugin''s durable admin trail uses.';
+
+
+-- ── post migration: 0031_exchange_completion_timestamps.sql ──
+-- When a SocketRelay fulfillment was closed, and when a LightHouse stay was completed.
+--
+-- Both tables recorded the outcome and not the moment. SocketRelay's close button already asks
+-- whether it went well and writes `close_reason`; LightHouse moves a match to 'completed'. Neither
+-- wrote a time, so anything counting these by day had to fall back to `updated_at`, which any later
+-- edit to the row moves — a stay from March could land on today because somebody touched the row.
+--
+-- The daily exchange reading counts members per day, so a moving date moves a member between days.
+-- Hence a column that is written once and left alone.
+--
+-- Safe to replay: both columns are added only if missing, and the backfill only fills rows that are
+-- still empty.
+
+ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS lighthouse_matches ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
+-- Backfill from `updated_at` for rows that are already finished. It is the best evidence the
+-- database holds for these rows and it is what the reading used before this migration, so the
+-- figures do not jump; every row closed from here on carries a real time instead.
+UPDATE socket_relay_fulfillments
+   SET closed_at = updated_at
+ WHERE closed_at IS NULL
+   AND close_reason IS NOT NULL;
+
+UPDATE lighthouse_matches
+   SET completed_at = updated_at
+ WHERE completed_at IS NULL
+   AND status = 'completed';
 

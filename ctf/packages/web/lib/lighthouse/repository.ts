@@ -1310,6 +1310,9 @@ export async function updateMatch(input: {
         SET
           status = $2,
           host_response = $3,
+          -- Stamped once, the first time this reaches 'completed', and never moved afterwards: the
+          -- day a stay happened should not change because somebody edited the row later.
+          completed_at = CASE WHEN $2 = 'completed' THEN COALESCE(completed_at, NOW()) ELSE completed_at END,
           updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING
