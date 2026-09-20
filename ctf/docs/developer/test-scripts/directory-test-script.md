@@ -502,8 +502,9 @@ the Advocacy placeholder and one carrying only that placeholder.
    back to `/admin` and check the list there for the same destination.
 2. Read the counts line and the rows.
 3. Look for your own listing, and for anybody who already has an invite post on the blog.
-4. Press **Copy the whole queue**, then paste into any text field.
-5. Sign in as an approved member who is not an admin and open the same address.
+4. Read the **Skills coverage** block above the list.
+5. Press **Copy the whole queue**, then paste into any text field.
+6. Sign in as an approved member who is not an admin and open the same address.
 **Expected:**
 - Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and
   Audit log rows at the foot of the list. Before these existed the page could only be reached by
@@ -515,9 +516,16 @@ the Advocacy placeholder and one carrying only that placeholder.
   stands in for a trade nobody has stated, so that row's post cannot name one.
 - Step 3: neither appears. The owner's own listing is not an invitation to anybody, and a second post
   to somebody already written about is the thing this screen exists to prevent.
-- Step 4: the clipboard holds plain text, one block per person, readable without a spreadsheet. This
-  is the path that matters — the person who writes the invite posts works from a phone.
-- Step 5: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
+- Step 4: the block shows the date it was read, how many people are listed, how many of the
+  catalog's skills somebody holds, and how many have nobody, then one line per sector reading
+  "held of in catalog". A sector nobody covers is dimmed rather than left out — an empty sector is
+  the thing worth seeing. The numbers are counts only: no name, address or skill of any member
+  appears in this block.
+- Step 5: the clipboard holds plain text, readable without a spreadsheet: the coverage figures
+  first, then one block per person. This is the path that matters — the person who writes the
+  invite posts works from a phone, and the posts argue from those figures, so a paste carrying the
+  people without the numbers means the numbers get copied forward from an older reading instead.
+- Step 6: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
   object from the public sources it was built from, which is why it is admin-only here.
 **Result:** web ☐ mobile ☐ — notes:
 

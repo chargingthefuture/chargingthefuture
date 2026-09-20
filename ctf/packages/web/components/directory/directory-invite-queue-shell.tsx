@@ -7,6 +7,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import type { DirectoryInviteKind, DirectoryInviteQueueRow } from 'lib/directory/invite-queue';
+import type { DirectorySkillCoverage } from 'lib/directory/skill-coverage';
 
 const KIND_LABEL: Record<DirectoryInviteKind, string> = {
   'skill-specific': 'Write about the skill',
@@ -14,11 +15,32 @@ const KIND_LABEL: Record<DirectoryInviteKind, string> = {
   'no-skill': 'Nothing recorded yet',
 };
 
-// Plain text, because the whole point of this screen is handing the list to somebody who is on a
-// phone. One control puts every row on the clipboard in a shape that can be pasted into a message
-// and read without a spreadsheet.
-function asPlainText(rows: DirectoryInviteQueueRow[]): string {
-  return rows
+// Plain text, because this screen exists to hand the list to somebody who is on a phone. One
+// control puts everything on the clipboard in a shape that can be pasted into a message and read
+// without a spreadsheet.
+//
+// The coverage figures go first and deliberately so. The invite posts argue from them, and a paste
+// that carries the people without the numbers means the numbers get copied forward from an older
+// reading instead.
+function coverageAsPlainText(coverage: DirectorySkillCoverage): string {
+  const readAt = coverage.readAt.slice(0, 10);
+  const lines = [
+    `Skills coverage — read ${readAt} (UTC)`,
+    `  listed people: ${coverage.listedPeople}`,
+    `  skills in the catalog: ${coverage.skillsInCatalog}`,
+    `  skills somebody holds: ${coverage.skillsHeld}`,
+    `  skills with nobody: ${coverage.skillsWithNobody}`,
+    '',
+    '  by sector (held of in catalog):',
+    ...coverage.sectors.map(
+      (sector) => `    ${sector.sector}: ${sector.skillsHeld} of ${sector.skillsInCatalog}`,
+    ),
+  ];
+  return lines.join('\n');
+}
+
+function asPlainText(rows: DirectoryInviteQueueRow[], coverage: DirectorySkillCoverage | null): string {
+  const queue = rows
     .map((row) => {
       const parts = [
         `${row.name ?? '(no name)'} — ${row.quoraUrl}`,
@@ -33,6 +55,82 @@ function asPlainText(rows: DirectoryInviteQueueRow[]): string {
       return parts.filter(Boolean).join('\n');
     })
     .join('\n\n');
+
+  return coverage ? `${coverageAsPlainText(coverage)}\n\n${queue}` : queue;
+}
+
+type CoverageTokens = {
+  SURFACE: string;
+  BORDER: string;
+  TITLE: string;
+  SUBTLE: string;
+  TEXT: string;
+};
+
+// Its own component so the shell stays under the complexity limit, and because this block is a
+// different thing from the queue: counts about the catalog rather than rows about people.
+function CoverageCard({
+  coverage,
+  tokens,
+}: {
+  coverage: DirectorySkillCoverage;
+  tokens: CoverageTokens;
+}) {
+  const people = coverage.listedPeople === 1 ? 'person' : 'people';
+
+  return (
+    <section
+      aria-label="Skills coverage"
+      style={{
+        borderRadius: 14,
+        background: tokens.SURFACE,
+        border: `1px solid ${tokens.BORDER}`,
+        padding: 14,
+        marginBottom: 14,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Skills coverage</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4 }}>
+        Read {coverage.readAt.slice(0, 10)} (UTC). Copied with the queue.
+      </div>
+      <div style={{ fontSize: 12, color: tokens.TEXT, marginTop: 8, lineHeight: 1.6 }}>
+        {coverage.listedPeople} listed {people} · {coverage.skillsHeld} of {coverage.skillsInCatalog}{' '}
+        skills held · {coverage.skillsWithNobody} with nobody
+      </div>
+      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+        {coverage.sectors.map((sector) => (
+          <CoverageRow key={sector.sector} sector={sector} tokens={tokens} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// A sector nobody covers is dimmed rather than hidden. An empty sector is the thing worth seeing.
+function CoverageRow({
+  sector,
+  tokens,
+}: {
+  sector: DirectorySkillCoverage['sectors'][number];
+  tokens: CoverageTokens;
+}) {
+  return (
+    <li
+      style={{
+        fontSize: 12,
+        color: sector.skillsHeld === 0 ? tokens.SUBTLE : tokens.TEXT,
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '3px 0',
+      }}
+    >
+      <span>{sector.sector}</span>
+      <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+        {sector.skillsHeld} of {sector.skillsInCatalog}
+      </span>
+    </li>
+  );
 }
 
 export function DirectoryInviteQueueShell() {
@@ -40,6 +138,7 @@ export function DirectoryInviteQueueShell() {
   const t = getPluginShellTokens(getAppAccent('directory', theme), theme);
 
   const [rows, setRows] = useState<DirectoryInviteQueueRow[] | null>(null);
+  const [coverage, setCoverage] = useState<DirectorySkillCoverage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -49,7 +148,11 @@ export function DirectoryInviteQueueShell() {
     async function load() {
       try {
         const response = await fetch('/api/directory/admin/invite-queue');
-        const payload = (await response.json()) as { rows?: DirectoryInviteQueueRow[]; message?: string };
+        const payload = (await response.json()) as {
+          rows?: DirectoryInviteQueueRow[];
+          coverage?: DirectorySkillCoverage;
+          message?: string;
+        };
         if (canceled) {
           return;
         }
@@ -58,6 +161,7 @@ export function DirectoryInviteQueueShell() {
           return;
         }
         setRows(payload.rows ?? []);
+        setCoverage(payload.coverage ?? null);
       } catch (caught) {
         if (!canceled) {
           setError(caught instanceof Error ? caught.message : 'The queue did not load.');
@@ -84,13 +188,13 @@ export function DirectoryInviteQueueShell() {
       return;
     }
     try {
-      await navigator.clipboard.writeText(asPlainText(rows));
+      await navigator.clipboard.writeText(asPlainText(rows, coverage));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch (caught) {
       setError(caught instanceof Error ? `Copy failed: ${caught.message}` : 'Copy failed.');
     }
-  }, [rows]);
+  }, [rows, coverage]);
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -114,6 +218,8 @@ export function DirectoryInviteQueueShell() {
             Nobody is waiting. Every listed person with a Quora address already has a post.
           </p>
         )}
+
+        {coverage && <CoverageCard coverage={coverage} tokens={t} />}
 
         {rows && rows.length > 0 && (
           <>
