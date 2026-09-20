@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic |
 
 ## How to run this
 
@@ -32,8 +32,9 @@
 
 The one shared audio room — these are the can't-ship-broken checks. Member role unless noted.
 
-1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room: Exit the
-   Gauntlet"), the participant list, and the chat panel render — not a spinner or an error. → web ☐ mobile ☐ android ☐
+1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room" — the name says
+   the room, never a topic; what is being discussed comes from the booked TI Radio slot), the
+   participant list, and the chat panel render — not a spinner or an error. → web ☐ mobile ☐ android ☐
 2. **Join the call.** Press join. You connect to the live audio room, start muted, and can mute
    and unmute your own microphone. → web ☐ mobile ☐ android ☐
 3. **Chat send/read.** Type a message and send it. It appears in the list and persists on

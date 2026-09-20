@@ -292,7 +292,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
    nature: the signed-out listener path (guest identity, heartbeat, leave, refusal reasons), the
    connection-aware Join pill (Android's foreground service already keeps the call alive), and the
    admin usage screen (admin surfaces are web-only).
-6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_ROOM_KEY` / "Chyme Main Room: Exit the Gauntlet") plus the hardcoded contributor room (`CHYME_CONTRIBUTORS_ROOM_KEY`, 2026-07-23). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
+6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_ROOM_KEY` / "Chyme Main Room") plus the hardcoded contributor room (`CHYME_CONTRIBUTORS_ROOM_KEY`, 2026-07-23). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
 
 ## Seed Coverage Status
 
@@ -374,6 +374,18 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
     app's foreground service is the answer for a long sit.
 
 ## Change Log
+
+- 2026-09-20: **The main room is named for the room, not for one topic.** It shipped as "Chyme
+  Main Room: Exit the Gauntlet", a name from before the TI Radio guide existed, when one standing
+  subject was the only way to say what the room was for. Hosts now book their own slots and name
+  their own topic, so a fixed topic in the room's name contradicts whatever is actually on air and
+  a visitor reading both has no way to tell which one to believe. `CHYME_MAIN_ROOM_NAME` is now
+  "Chyme Main Room", in the web constant and the Chyme seed; what is being discussed comes from the
+  booked slot, which the page already shows under "Coming up on TI Radio" with the slot on air
+  marked. `ensureRoom` rewrites the stored name from the constant whenever a member opens the room,
+  and migration `0032_chyme_main_room_name_drops_topic.sql` changes the existing row so a
+  signed-out visitor sees the new name before any member has opened the room. No route, contract,
+  or column change; the Weavers room name is untouched.
 
 - 2026-09-20: **The room's count says how many people are in it, not how many of them have
   accounts.** Owner report: the signed-out page read "Listening live · 1 member in the room" while
