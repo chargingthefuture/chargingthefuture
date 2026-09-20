@@ -71,10 +71,18 @@ can't-ship-broken checks. Member role unless noted.
 6. Type a **location** a seeded profile has — a city, state/region, or country (e.g. `United States`,
    `California`, or a seeded city) — and confirm the people in that location are returned.
 7. Read the nomination card above the list ("Help grow the Directory").
+8. **Cross-sector skill name.** Find a skill name that exists in two sectors (today `Programming`,
+   in R&D & High-Tech and Telecommunications & IT, and `Plumber`, in Housing & Construction and
+   Water & Sanitation). Filter by each of its two sectors in turn and compare who is returned.
 **Expected:** Every active, non-deleted profile is visible to any signed-in member, including
 carried-over unclaimed ones, with no "you must have a profile first" gate. A sector chip returns
 people in that sector — including a profile whose sector comes only from its skills, not a stored
-sector. Search filters by name, headline, bio, **skills, and location** — the skill-name search
+sector. **Step 8:** every holder of that skill name appears under *both* of its sectors, regardless
+of which row they happen to hold. A member who appears under one sector but not the other is the
+defect this step exists to catch: a member picks a skill NAME, not a row, so the occupation the
+stored row hangs off was never their choice and must not decide where they are visible. This mirrors
+Workforce, which already matches holders by name — if the Directory and Workforce disagree about
+which sectors a member belongs to, that is the same defect. Search filters by name, headline, bio, **skills, and location** — the skill-name search
 (step 4) returns the people who hold that skill (matching the taxonomy skill name, its aliases, and
 free-text "pending review" skills), and the location search (step 6) returns the members in that
 city/state/country. Search is punctuation-insensitive (step 5): `first-aid`, `first aid`, and

@@ -1230,10 +1230,29 @@ export async function listDirectoryForMember(
             -- rather than stored on p.sector_id, which is typically null for carried-over/claimed
             -- profiles. Match either the profile's own sector or any sector its skills map to, so
             -- the left-rail sector filter actually returns the people whose skills belong to it.
+            --
+            -- The skills arm expands by NAME before resolving the sector, the same way Workforce's
+            -- skill arm does (see lib/workforce/repository.ts). A member picks a skill NAME, not a
+            -- row: the picker collapses same-named rows into one chip and stores an arbitrary
+            -- representative id, so which occupation - and therefore which sector - the stored row
+            -- hangs off was never their choice. Resolving only that one row hid a member from a
+            -- sector their own skill plainly belongs to, while a member whose rows came from the
+            -- legacy name-matching backfill held every copy and showed up under all of them. Same
+            -- claim, two different answers, decided by how the row was created.
+            --
+            -- It also matches the picker's premise, which reads skill-first: holding a skill says
+            -- what someone can do, and the job titles and sectors that skill hangs off are what they
+            -- could therefore do. Deriving the person from one stored occupation inverts that.
+            --
+            -- Expanded rows must be active; the member's own stored row is matched whatever its
+            -- state, which is exactly how this clause behaved before the name expansion was added.
             OR EXISTS (
               SELECT 1
               FROM directory_profile_skills dps_sec
-              JOIN skills_taxonomy_skills sk_sec ON sk_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_skills held_sec ON held_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_skills sk_sec
+                ON lower(btrim(sk_sec.name)) = lower(btrim(held_sec.name))
+                AND (sk_sec.id = held_sec.id OR sk_sec.is_active = TRUE)
               JOIN skills_taxonomy_job_titles jt_sec ON jt_sec.id = sk_sec.job_title_id
               WHERE dps_sec.profile_id::text = p.id::text
                 AND jt_sec.sector_id = $1::uuid
@@ -1327,10 +1346,29 @@ export async function listDirectoryForMember(
             -- rather than stored on p.sector_id, which is typically null for carried-over/claimed
             -- profiles. Match either the profile's own sector or any sector its skills map to, so
             -- the left-rail sector filter actually returns the people whose skills belong to it.
+            --
+            -- The skills arm expands by NAME before resolving the sector, the same way Workforce's
+            -- skill arm does (see lib/workforce/repository.ts). A member picks a skill NAME, not a
+            -- row: the picker collapses same-named rows into one chip and stores an arbitrary
+            -- representative id, so which occupation - and therefore which sector - the stored row
+            -- hangs off was never their choice. Resolving only that one row hid a member from a
+            -- sector their own skill plainly belongs to, while a member whose rows came from the
+            -- legacy name-matching backfill held every copy and showed up under all of them. Same
+            -- claim, two different answers, decided by how the row was created.
+            --
+            -- It also matches the picker's premise, which reads skill-first: holding a skill says
+            -- what someone can do, and the job titles and sectors that skill hangs off are what they
+            -- could therefore do. Deriving the person from one stored occupation inverts that.
+            --
+            -- Expanded rows must be active; the member's own stored row is matched whatever its
+            -- state, which is exactly how this clause behaved before the name expansion was added.
             OR EXISTS (
               SELECT 1
               FROM directory_profile_skills dps_sec
-              JOIN skills_taxonomy_skills sk_sec ON sk_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_skills held_sec ON held_sec.id = dps_sec.skill_id
+              JOIN skills_taxonomy_skills sk_sec
+                ON lower(btrim(sk_sec.name)) = lower(btrim(held_sec.name))
+                AND (sk_sec.id = held_sec.id OR sk_sec.is_active = TRUE)
               JOIN skills_taxonomy_job_titles jt_sec ON jt_sec.id = sk_sec.job_title_id
               WHERE dps_sec.profile_id::text = p.id::text
                 AND jt_sec.sector_id = $1::uuid
