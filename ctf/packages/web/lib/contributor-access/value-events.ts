@@ -59,7 +59,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   {
     key: 'value.socket_relay_requests_fulfilled',
     tables: ['socket_relay_fulfillments'],
-    rowSql: `SELECT fulfiller_user_id AS member_id, updated_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT fulfiller_user_id AS member_id, COALESCE(closed_at, updated_at) AS at,
+                    1::numeric AS value, NULL::text AS ref
                FROM socket_relay_fulfillments
               WHERE close_reason = 'successful'`,
     aggregate: 'count',
@@ -76,7 +77,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   {
     key: 'value.lighthouse_stays_completed',
     tables: ['lighthouse_matches'],
-    rowSql: `SELECT host_user_id AS member_id, updated_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT host_user_id AS member_id, COALESCE(completed_at, updated_at) AS at,
+                    1::numeric AS value, NULL::text AS ref
                FROM lighthouse_matches
               WHERE status = 'completed'`,
     aggregate: 'count',

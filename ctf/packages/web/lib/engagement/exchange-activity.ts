@@ -19,9 +19,9 @@ import { effectiveWeight } from 'lib/contributor-access/weights';
 // score and nothing else. No per-event breakdown is returned for a named member, because Foundation
 // answered calls are among the fifteen and rule 132 keeps that participation internal.
 //
-// Two of the fifteen date a finished row by `updated_at` for want of a completion column, so a
-// later edit moves it to the day of the edit. Named rather than hidden; the fix is a column on
-// those tables, not a cleverer query.
+// Reaching 384 in a day needs more than 384 approved members on the books, since nobody delivers
+// every day. The target is a day's attendance, so the roster it draws from has to be larger than
+// the target by whatever margin ordinary life imposes.
 
 export type ExchangeDay = {
   day: string;

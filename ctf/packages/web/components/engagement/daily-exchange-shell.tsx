@@ -309,9 +309,9 @@ export function DailyExchangeShell() {
               Both readings count the same fifteen events with the same weights, from one shared
               definition, so adding a feature updates both at once. Value is credited to whoever
               delivered it, which is what the badge has always done: a ride counts its driver, so
-              384 here means 384 people delivering rather than 384 people involved. Two of the
-              fifteen date a finished row by when it was last edited, because their table records no
-              completion time, so an edit can move a day.
+              384 here means 384 people delivering rather than 384 people involved. And reaching it
+              on a day needs a good deal more than 384 approved members on the books, because
+              nobody delivers every day — this is a day&apos;s attendance, not a register.
             </p>
           </>
         )}
