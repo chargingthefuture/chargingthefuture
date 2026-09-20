@@ -1,6 +1,6 @@
 'use client';
 
-import { Radio, LogIn, UserPlus, RefreshCw } from 'lucide-react';
+import { Radio, LogIn, LogOut, UserPlus, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -29,6 +29,15 @@ type LiveState = {
   // The live check itself failed (a 429, a 503, no network). Shown instead of the empty state, so
   // "no rooms" is only ever said when the server actually said so.
   checkFailed?: string;
+};
+
+// Wiring for the Leave control in the Live Rooms row. The listener itself sits further down the
+// tree (ChymeGuestListen), so the page holds the two ends: whether sound is actually on, and a
+// counter the listener watches to stop the listen when the visitor presses Leave.
+type GuestListenControl = {
+  listening: boolean;
+  onListeningChange: (listening: boolean) => void;
+  leaveKey: number;
 };
 
 // Chyme's brand is green. The signed-out (guest) shell must look like the signed-in app, not a
@@ -77,7 +86,7 @@ function failedCheck(status: number, data: unknown): LiveState {
 // a live room with no guest identity matched neither branch and rendered nothing at all. A visitor
 // looking at a blank space under a live room, or at "no rooms" while a member is audibly in the
 // call, has no way to tell what happened — and neither has the person they report it to.
-function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live: LiveState; onRoomGone: () => void; signInUrl: string; refreshKey: number }) {
+function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }: { live: LiveState; onRoomGone: () => void; signInUrl: string; refreshKey: number; listen: GuestListenControl }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -107,7 +116,14 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey }: { live
           {/* Said before the tap, so it cannot claim the visitor is already listening (owner report,
               2026-09-19); the listener component says "Listening live" itself once the sound is on. */}
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>The room is live. Tap below to listen; sign in to speak.</div>
-          <ChymeGuestListen participantCount={live.participantCount} guestCount={live.guestCount} accent={t.ACCENT} onRoomGone={onRoomGone} />
+          <ChymeGuestListen
+            participantCount={live.participantCount}
+            guestCount={live.guestCount}
+            accent={t.ACCENT}
+            onRoomGone={onRoomGone}
+            onListeningChange={listen.onListeningChange}
+            leaveKey={listen.leaveKey}
+          />
           {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
               follow what members are saying and signs in to write. Closed until opened, so the page
               below it stays on the first screen (owner directive, 2026-09-20). */}
@@ -137,6 +153,8 @@ function ChymePublicView({
   onRefresh,
   refreshing,
   refreshKey,
+  listen,
+  onLeave,
 }: {
   signInUrl: string;
   verifyUrl?: string;
@@ -145,6 +163,8 @@ function ChymePublicView({
   onRefresh: () => void;
   refreshing: boolean;
   refreshKey: number;
+  listen: GuestListenControl;
+  onLeave: () => void;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -215,22 +235,37 @@ function ChymePublicView({
       {/* Room list. The label row carries the same refresh control the signed-in page has beside
           Join Room (owner directive, 2026-09-18: the two screens should match, and the installed app
           on Android has no browser reload). It re-reads the room and the chat; a listener already
-          in the call keeps their connection. */}
+          in the call keeps their connection. Beside it, while sound is on, a Leave control — before
+          it, a visitor listening in had no way to stop short of closing the tab or reloading a long
+          page (owner report, 2026-09-20). It shows only while there is a call to leave. */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshing}
-            aria-label="Refresh the room and chat"
-            title="Refresh the room and chat"
-            style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
-          >
-            <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {listen.listening ? (
+              <button
+                type="button"
+                onClick={onLeave}
+                aria-label="Leave the room and stop listening"
+                title="Leave the room and stop listening"
+                style={{ height: 44, padding: '0 14px', borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: t.TITLE, fontSize: 12, fontWeight: 700 }}
+              >
+                <LogOut size={15} /> Leave
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              aria-label="Refresh the room and chat"
+              title="Refresh the room and chat"
+              style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
+            >
+              <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
+            </button>
+          </div>
         </div>
-        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} />
+        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} listen={listen} />
         {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
             back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat. */}
         <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
@@ -261,6 +296,11 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   const [refreshing, setRefreshing] = useState(false);
   // Bumped by the refresh button; the chat panel re-reads when it changes.
   const [refreshKey, setRefreshKey] = useState(0);
+  // Whether the visitor's sound is actually on, reported by the listener below. The Leave control
+  // in the Live Rooms row shows only while it is true.
+  const [listening, setListening] = useState(false);
+  // Bumped by the Leave control; the listener stops the call when it changes.
+  const [leaveKey, setLeaveKey] = useState(0);
 
   const loadLive = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -303,6 +343,14 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
     }
   }, [loadLive, refreshing]);
 
+  // Leave: tell the listener to stop. No room re-read here on purpose — the listener posts its
+  // leave as it tears the call down, so a read fired at the same moment would race it and come
+  // back still counting this visitor. The listener drops itself from its own count instead, and
+  // the refresh control beside Leave re-reads the room when the visitor wants the server's number.
+  const handleLeave = useCallback(() => {
+    setLeaveKey((n) => n + 1);
+  }, []);
+
   // One layout at every width (mobile-first, owner decision 2026-07-20): the desktop two-column
   // branch this file used to carry was hidden by CSS at every width, so it never rendered.
   // `ctf-self-responsive` opts this wrapper out of the small-screen un-row fallback so the phone
@@ -317,6 +365,8 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
         onRefresh={() => void handleRefresh()}
         refreshing={refreshing}
         refreshKey={refreshKey}
+        listen={{ listening, onListeningChange: setListening, leaveKey }}
+        onLeave={handleLeave}
       />
     </div>
   );
