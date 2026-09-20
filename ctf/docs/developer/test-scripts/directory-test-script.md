@@ -142,18 +142,19 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    result, then clear the search and open one of the named areas in the accordion.
    **Expected:** the result shows as a single chip — one chip per name is correct and is what lets a
    repeated name be treated as one skill — with a small `counts in <sector>, <sector>` caption
-   beneath it, and one line below the results saying some of these skills belong to more than one
-   kind of work and that picking one here counts in all of them.
+   beneath it, and one line below the results reading exactly: "The list below groups skills by area
+   if you would like to browse them that way instead." That single sentence is the entire note.
    **This step is also a copy check, and it fails on wording as much as on behavior.** Nothing here
    may read as "your pick was ambiguous, go back and choose properly", because that invites a member
    to **undo** a pick, and the people this picker most has to serve are the ones already inclined to
    believe they have nothing to offer. Wording that tells anyone to clear, narrow, re-pick or
-   reconsider is a defect to report. The accordion must be described as another way to browse, never
-   as a correction — the line ends "browse them that way **instead**", and that word is doing real
-   work: without it, offering the area list straight after "counts in all of them" reads as an
-   alternative **outcome**, as though browsing by area were how to be counted under one heading
-   rather than all of them. That nudges a member away from being counted across titles, the opposite
-   of the intent, so dropping it is a defect. The accordion entries carry no caption, each being already scoped to one sector,
+   reconsider is a defect to report. Two specifics, both arrived at by revision and both defects if
+   undone: the line must end "browse them that way **instead**", which attaches the alternative to
+   the act of browsing rather than to the counting; and the note must **not** re-open by explaining
+   that some skills belong to more than one kind of work and count in all of them. That explanation
+   is already carried by the per-result caption, and repeating it here raises the multiplicity as
+   something needing explanation, which implies a choice is owed — the nudge itself. Anything longer
+   than the one sentence is a regression. The accordion entries carry no caption, each being already scoped to one sector,
    and a single-sector skill shows no caption and no note.
 2c. **One skill, every role it reaches.** With no skills selected, confirm no roles panel is shown.
    Then pick a single skill that appears under several occupations (today `Crisis intervention`, under

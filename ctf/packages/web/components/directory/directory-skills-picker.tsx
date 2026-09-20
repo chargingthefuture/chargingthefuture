@@ -338,23 +338,25 @@ function SearchResultChip({ entry, active, tokens, onToggleEntry }: {
 
 // Says that one skill reaches several kinds of work, shown only when a result actually does.
 //
-// The copy is deliberate and the failure mode it avoids is specific: any wording that reads as "your
-// pick was ambiguous, go back and choose properly" invites the member to UNDO a pick. The people this
-// picker most has to serve are the ones already inclined to believe they have nothing to offer, and a
-// prompt to reconsider lands on them hardest. So this says the skill counts everywhere it appears. It
-// never asks anyone to narrow, re-pick, or clear anything.
+// One sentence, and every word of it is deliberate (owner direction, arrived at over three drafts).
+// The failure mode is specific: anything that reads as "your pick was ambiguous, go back and choose
+// properly" invites the member to UNDO a pick. The people this picker most has to serve are the ones
+// already inclined to believe they have nothing to offer, and a prompt to reconsider lands on them
+// hardest.
 //
-// The trailing "instead" carries weight and is not filler (owner direction). Without it, mentioning
-// the area list straight after "counts in all of them" reads as an alternative OUTCOME - as though
-// browsing by area were the way to be counted under one heading rather than all of them - which
-// nudges a member AWAY from being counted across titles, the opposite of the intent. "Instead"
-// attaches the alternative to the act of browsing, not to the counting: another route to the same
-// skills, never a narrower claim.
+// What was cut matters as much as what is left. Earlier drafts opened by explaining that some skills
+// belong to more than one kind of work and that picking one counts in all of them. True, and already
+// said by the per-result "counts in ..." caption - but saying it HERE raises the multiplicity as
+// something needing explanation, which implies a choice is owed, which is the nudge itself. Removing
+// it leaves a plain navigation line that frames nothing.
+//
+// The trailing "instead" is load-bearing, not filler: it attaches the alternative to the act of
+// BROWSING rather than to the counting, so the area list reads as another route to the same skills
+// and never as a narrower claim. This note never asks anyone to narrow, re-pick, or clear anything.
 function MultiSectorNote({ tokens }: { tokens: DirectoryTokens }) {
   return (
     <div style={{ fontSize: 11, color: tokens.MUTED, marginTop: 10, lineHeight: 1.5 }}>
-      Some of these skills belong to more than one kind of work, and picking one here counts in all of
-      them. The list below groups skills by area if you would like to browse them that way instead.
+      The list below groups skills by area if you would like to browse them that way instead.
     </div>
   );
 }
