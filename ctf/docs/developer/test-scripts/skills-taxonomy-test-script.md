@@ -222,7 +222,14 @@ advocacy, Crisis intervention, Family assessment and intervention, Trauma-inform
 rest). **Client advocacy** now appears under Medical Assistants too, and searching that name returns
 both rows: the label was deliberately reused rather than a new "Patient advocacy" added, because
 Workforce joins holders by name and a second name would leave the members already holding
-`Client advocacy` in a separate pool. Nurses still shows **Patient assessment and monitoring** and General Practitioners still shows
+`Client advocacy` in a separate pool.
+6. Search the keyword box for `advocacy` and read every result.
+**Expected (step 6):** the advocacy labels are **Advocacy** (Creative & Media — campaigning and
+awareness), **Legal advocacy and advice** (Lawyers — legal representation), **Client advocacy**
+(now two rows, Social Workers and Medical Assistants) and **Domestic violence advocacy** (Social
+Workers). Each names a different act. A fifth advocacy label meaning any of these again is a
+duplicate to raise before it gathers holders, not a gap to fill — this is the check that keeps the
+set from drifting back into synonyms. Nurses still shows **Patient assessment and monitoring** and General Practitioners still shows
 **Patient communication** — both labels now appear under Medical Assistants as well, and that is
 **correct, not a duplicate to clean up**: the same name under several occupations is this sector's
 established shape (Crisis intervention has four rows), and because Workforce matches by name, each
