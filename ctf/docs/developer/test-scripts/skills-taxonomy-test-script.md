@@ -201,6 +201,114 @@ detail in its reason and metadata; it is **not** a new action verb, because that
 check-constrained and an unlisted verb is rejected at apply time and rolls the whole run back.
 **Result:** web ☐ mobile ☐ — notes:
 
+### TAX-5d · Medical Assistants joins Health, and a reused label is not a duplicate (added 2026-09-20)
+**Role:** member, plus admin for the apply run · **Surfaces:** all
+**Precondition:** changes 80–92 have been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **Health › Medical Assistants › Skills** and read the list.
+2. Browse to **Health › Social Workers › Skills** and read the list.
+3. Browse to **Health › Nurses** and **Health › General Practitioners** and read both lists.
+4. In the keyword search box, type `Patient communication` and read the results.
+5. Re-run the same apply a second time without changing anything, and read the run output.
+**Expected:** **Medical Assistants** exists under Health and lists eleven skills — Phlebotomy (blood
+draws), Injections (intramuscular and subcutaneous), Vital signs measurement, Patient intake and
+registration, Patient assessment and monitoring, EKG (electrocardiogram) testing, Splinting, casting
+and orthopedic wraps, Urgent care clinic support, Psychiatric clinic support, Client advocacy,
+Patient communication. The occupation is never empty: it was seeded with its skills in the same apply
+run, because Workforce matches holders by skill name and a skill-less occupation matches nobody.
+**Social Workers** shows **Domestic violence advocacy** alongside the skills it already had (Client
+advocacy, Crisis intervention, Family assessment and intervention, Trauma-informed care and the
+rest). **Client advocacy** now appears under Medical Assistants too, and searching that name returns
+both rows: the label was deliberately reused rather than a new "Patient advocacy" added, because
+Workforce joins holders by name and a second name would leave the members already holding
+`Client advocacy` in a separate pool.
+6. Search the keyword box for `advocacy` and read every result.
+**Expected (step 6):** the advocacy labels are **Advocacy** (Creative & Media — campaigning and
+awareness), **Legal advocacy and advice** (Lawyers — legal representation), **Client advocacy**
+(now two rows, Social Workers and Medical Assistants) and **Domestic violence advocacy** (Social
+Workers). Each names a different act. A fifth advocacy label meaning any of these again is a
+duplicate to raise before it gathers holders, not a gap to fill — this is the check that keeps the
+set from drifting back into synonyms. Nurses still shows **Patient assessment and monitoring** and General Practitioners still shows
+**Patient communication** — both labels now appear under Medical Assistants as well, and that is
+**correct, not a duplicate to clean up**: the same name under several occupations is this sector's
+established shape (Crisis intervention has four rows), and because Workforce matches by name, each
+listing widens where holders are matched. Be exact about what the second row does not do: it does
+not fix attribution. Workforce ignores the stored row's parent (its skill arm re-expands by name
+before counting) and the picker stores an arbitrary representative id for a collapsed name, so the
+parent a member lands on was never their choice. Harmless within one sector, which is the case for
+both labels here; across sectors it would not be, since the Directory sector filter does read that
+parent. The failure this guards against is the opposite one — a second *name* for one claim, such as
+"Patient assessment" written beside "Patient assessment and monitoring", which splits holders. The
+keyword search returns one entry per matching row, so `Patient communication` returns both the
+General Practitioners and the Medical Assistants row and either can be picked. The second apply run
+reports every one of the thirteen changes as a no-op and writes nothing. Note that `Medical
+Assistants` is the first occupation added at or past change id 80, so it is the first one the
+plural-twin guard checked against a live sector; it shares a role token with none of Health's
+thirteen existing occupations, and an add that *did* twin one would roll the entire run back
+(TAX-5b).
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5e · Police Officers carries its job, and none of it is social work (added 2026-09-20)
+**Role:** member · **Surfaces:** all
+**Precondition:** changes 93–99 have been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **Public Safety & Justice › Police Officers › Skills** and read the list.
+2. Read it again against the scope line below, item by item.
+3. Search the keyword box for `community`, then for `crisis intervention`, and read where the
+   results sit.
+**Expected:** Police Officers lists eight skills — the pre-existing **Evidence handling and
+reporting** plus **Patrol and incident response**, **Criminal investigation**, **Arrest and custody
+procedures**, **Search and seizure procedures**, **Traffic enforcement and collision
+investigation**, **Public order and crowd management**, **Interview and statement taking**. Before
+this change it carried one skill, against two or three for every other occupation in the sector, so
+a member doing ordinary policing had nothing to pick and Workforce read the community's policing
+capacity as close to zero.
+**This step is also a scope check, and it fails if the list grows the wrong way.** Owner directive,
+2026-09-20: police are not social workers, and no skill under this occupation may frame them as one.
+None of community liaison, outreach, crisis intervention, de-escalation, mental-health response,
+welfare checks or victim support belongs here, and finding any of them under Police Officers is a
+defect to report, not a gap to fill.
+**`Community policing` is refused outright, in every sector, and no longer depends on anyone
+noticing it in review.** The term is what vigilante and trafficking networks call themselves, so
+the change-list validator rejects any change that creates or renames to it
+(`PROHIBITED_NAME_PATTERNS` in `ctf/scripts/lib/taxonomyChange.mjs`). To confirm the guard is live,
+append a throwaway `addSkill` entry naming it, run
+`pnpm --dir ctf run check:taxonomy-changes`, see the check fail with the reason, then remove the
+entry. Legitimate community-prefixed labels are unaffected: `Community outreach` under Social
+Workers and the `Community-Health Workers` occupation must both still be present and pickable. Searching `community` and
+`crisis intervention` should return them under **Health** — Social Workers, Mental Health Counselors,
+Community-Health Workers — and never under this occupation. That is where the work belongs and where
+a member doing it should be found.
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5f · One swimming skill reaches two roles, and none of it is age-scoped (added 2026-09-20)
+**Role:** member · **Surfaces:** all
+**Precondition:** changes 100–111 have been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **Education** and read its occupation list.
+2. Open **Physical Education Teachers**, then **Swimming Instructors / Sports Coaches**.
+3. Search the keyword box for `Swimming instruction` and read the results.
+4. On a Directory profile, pick **Swimming instruction** and read the roles panel (DIR-2 step 2c).
+**Expected:** Education now lists eleven occupations, the nine it had plus these two. **Physical
+Education Teachers** carries Physical education teaching, Adaptive and inclusive physical education,
+Sports safety and injury prevention, Swimming instruction, Water safety and lifeguarding.
+**Swimming Instructors / Sports Coaches** carries Swimming instruction, Water safety and
+lifeguarding, Stroke technique and race training, Sports coaching, Fitness and conditioning
+coaching. `Swimming instruction` and `Water safety and lifeguarding` appear under **both** — that is
+deliberate, not a duplicate to clean up, and step 4 is why: picking `Swimming instruction` once must
+show **both** roles in the profile's roles panel. Somebody whose one nameable skill is swimming
+reaching two roles from a single pick is the outcome this whole set exists for.
+**This step is also a scope check.** No skill here may be age-scoped: a label such as “Youth swimming
+instruction” or “Children's swimming” is a defect to report, because adults learn to swim too and an
+age-scoped name quietly excludes half the people who could teach it. Adult teaching is already
+covered by Vocational Trainers' `Adult education and training`. **Adaptive and inclusive physical
+education** must be present and must not be folded into `Physical education teaching`; a learner who
+cannot do ordinary PE needs a teacher who can say so.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
 **Role:** member · **Surfaces:** all
 **Steps:**
