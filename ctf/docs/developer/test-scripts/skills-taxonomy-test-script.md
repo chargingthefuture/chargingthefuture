@@ -214,12 +214,15 @@ check-constrained and an unlisted verb is rejected at apply time and rolls the w
 **Expected:** **Medical Assistants** exists under Health and lists eleven skills — Phlebotomy (blood
 draws), Injections (intramuscular and subcutaneous), Vital signs measurement, Patient intake and
 registration, Patient assessment and monitoring, EKG (electrocardiogram) testing, Splinting, casting
-and orthopedic wraps, Urgent care clinic support, Psychiatric clinic support, Patient advocacy,
+and orthopedic wraps, Urgent care clinic support, Psychiatric clinic support, Client advocacy,
 Patient communication. The occupation is never empty: it was seeded with its skills in the same apply
 run, because Workforce matches holders by skill name and a skill-less occupation matches nobody.
 **Social Workers** shows **Domestic violence advocacy** alongside the skills it already had (Client
 advocacy, Crisis intervention, Family assessment and intervention, Trauma-informed care and the
-rest). Nurses still shows **Patient assessment and monitoring** and General Practitioners still shows
+rest). **Client advocacy** now appears under Medical Assistants too, and searching that name returns
+both rows: the label was deliberately reused rather than a new "Patient advocacy" added, because
+Workforce joins holders by name and a second name would leave the members already holding
+`Client advocacy` in a separate pool. Nurses still shows **Patient assessment and monitoring** and General Practitioners still shows
 **Patient communication** — both labels now appear under Medical Assistants as well, and that is
 **correct, not a duplicate to clean up**: the same name under several occupations is this sector's
 established shape (Crisis intervention has four rows), and because Workforce matches by name, each

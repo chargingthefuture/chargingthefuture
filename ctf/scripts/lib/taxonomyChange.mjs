@@ -347,12 +347,18 @@ export const TAXONOMY_CHANGES = [
   // the live "Patient assessment and monitoring" is the failure to avoid, because a second NAME for
   // one claim splits its holders (changes 26-34 and 79).
   //
-  // Op 90, "Patient advocacy", is the one judgment call in the set and is flagged for review rather
-  // than buried: Social Workers already carries "Client advocacy", which is the same act in social
-  // work vocabulary. It is proposed under Medical Assistants instead of under Social Workers
-  // precisely so the two labels never sit in one occupation as the near-duplicate pair change 79 had
-  // to thin. If the owner would rather have one label for both, the fix is to drop this op and have
-  // the member pick "Client advocacy".
+  // Op 90 reuses "Client advocacy", the label Social Workers already carries, rather than adding
+  // "Patient advocacy" as a second name for the same act. This was the set's one judgment call and it
+  // was settled by the live holder counts: two members already hold "Client advocacy". Because
+  // Workforce joins holders by NAME, a new "Patient advocacy" label would never join those two, so
+  // the community's advocacy capacity would read as two separate smaller pools - the exact split
+  // changes 26-34 and 79 had to undo. Occupation is not what joins holders; the name is, which is why
+  // "it sits under a different occupation" does not make a second name safe. The cost of reusing the
+  // social-work word is that a medical assistant reads "client" where they would say "patient"; the
+  // cost of the alternative is a permanently split count. If the owner prefers the patient-facing
+  // word, the correct fix is NOT this op - it is a renameSkill of the live row, which keeps the row
+  // id (so the two holders keep their skill) and appends the old label to its aliases so the old word
+  // stays findable.
   //
   // Op 92 targets the pre-existing Social Workers occupation (occupationExisting: true). Domestic
   // violence advocacy has no live label: "Client advocacy", "Crisis intervention", "Family
@@ -377,7 +383,7 @@ export const TAXONOMY_CHANGES = [
   { id: 87, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Splinting, casting and orthopedic wraps' },
   { id: 88, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Urgent care clinic support' },
   { id: 89, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Psychiatric clinic support' },
-  { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient advocacy' },
+  { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Client advocacy' },
   { id: 91, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient communication' },
   { id: 92, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Domestic violence advocacy' },
 ];
