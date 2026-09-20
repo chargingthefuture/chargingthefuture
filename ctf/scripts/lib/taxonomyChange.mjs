@@ -460,6 +460,53 @@ export const TAXONOMY_CHANGES = [
   { id: 97, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Traffic enforcement and collision investigation' },
   { id: 98, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Public order and crowd management' },
   { id: 99, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Interview and statement taking' },
+
+  // Changes 100-111 (owner-approved 2026-09-20): swimming and physical education join Education.
+  // Nobody in this community can currently say they teach a child to swim, or teach PE at all.
+  //
+  // A read settled both halves. Education holds nine occupations - Childcare Workers,
+  // Early-Childhood Educators, Education Support Staff, Primary School Teachers, School
+  // Administrators, Secondary School Teachers, Tutors, University Faculty, Vocational Trainers -
+  // and not one of them is a physical or sports role; the nearest, Early-Childhood Educators'
+  // "Health and safety for young children", is supervision, not instruction. A scan of every active
+  // skill in all 20 sectors for swim|sport|coach|athlet|fitness|physical education|lifeguard|
+  // recreation|gym|water safety returned exactly two rows, and both are false positives on the
+  // letters "sport" inside "transport": "Safe transport and disposal procedures" (Environmental &
+  // Waste Management) and "Triage and transport protocols" (Health). So none of the twelve names
+  // below collides with anything live, in this sector or any other - which matters beyond tidiness,
+  // because a skill name shared across two sectors files a member under an arbitrary one of them.
+  //
+  // Two occupations rather than one, because a gym teacher and a swimming teacher are different
+  // jobs and the taxonomy is what tells a member which roles their skill reaches. Both are named in
+  // the plural, matching every other Education row, and neither shares a role token with a live one,
+  // so the plural-twin guard passes.
+  //
+  // "Swimming instruction" and "Water safety and lifeguarding" are deliberately listed under BOTH
+  // occupations, the same way "Crisis intervention" sits under four Health occupations. That is the
+  // point of the duplication here rather than an accident of it: somebody whose one nameable skill
+  // is swimming picks it once and reaches two roles, not one.
+  //
+  // Nothing here is scoped to children (owner note): adults learn to swim too, and a name like
+  // "Youth swimming instruction" would have quietly excluded half the people who could teach it.
+  // Vocational Trainers' pre-existing "Adult education and training" already covers the adult-teaching
+  // side for anyone who wants to claim it, so no age-specific skill is added on either end.
+  //
+  // "Adaptive and inclusive physical education" is on the list on purpose. A child who has been
+  // through what the children this is for have been through may not arrive able to do ordinary PE,
+  // and a teacher who can work with that is a different capability worth naming rather than folding
+  // into the general one. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 100, op: 'addOccupation', sector: 'Education', occupation: 'Physical Education Teachers' },
+  { id: 101, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Physical education teaching' },
+  { id: 102, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Adaptive and inclusive physical education' },
+  { id: 103, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Sports safety and injury prevention' },
+  { id: 104, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Swimming instruction' },
+  { id: 105, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Water safety and lifeguarding' },
+  { id: 106, op: 'addOccupation', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches' },
+  { id: 107, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Swimming instruction' },
+  { id: 108, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Water safety and lifeguarding' },
+  { id: 109, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Stroke technique and race training' },
+  { id: 110, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Sports coaching' },
+  { id: 111, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Fitness and conditioning coaching' },
 ];
 
 // ---------------------------------------------------------------------------
