@@ -141,13 +141,16 @@ render as muted, dashed-border "· pending review" chips alongside the real acce
    which sits under four Health occupations, or `Programming`, which spans two sectors). Read the
    result, then clear the search and open one of the named areas in the accordion.
    **Expected:** the result shows as a single chip — one chip per name is correct and is what lets a
-   repeated name be treated as one skill — with a small `in <sector>, <sector>` caption beneath it,
-   and one line below the results saying some of these skills belong to more than one kind of work
-   and that clearing the search and opening that area is how to say which. Picking the chip from the
-   search list must still work on its own: the note states that the option exists, it does not
-   require anyone to use it, and a member who ignores it loses nothing. The accordion entries carry
-   no such caption, because each is already scoped to one sector. A single-sector skill shows no
-   caption and no note.
+   repeated name be treated as one skill — with a small `counts in <sector>, <sector>` caption
+   beneath it, and one line below the results saying some of these skills belong to more than one
+   kind of work and that picking one here counts in all of them.
+   **This step is also a copy check, and it fails on wording as much as on behavior.** Nothing here
+   may read as "your pick was ambiguous, go back and choose properly", because that invites a member
+   to **undo** a pick, and the people this picker most has to serve are the ones already inclined to
+   believe they have nothing to offer. Wording that tells anyone to clear, narrow, re-pick or
+   reconsider is a defect to report. The accordion must be described as another way to browse, never
+   as a correction. The accordion entries carry no caption, each being already scoped to one sector,
+   and a single-sector skill shows no caption and no note.
 2c. **One skill, every role it reaches.** With no skills selected, confirm no roles panel is shown.
    Then pick a single skill that appears under several occupations (today `Crisis intervention`, under
    four Health occupations, or any skill spanning two sectors). Read the panel that appears under the
