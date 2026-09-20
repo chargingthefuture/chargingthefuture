@@ -329,6 +329,29 @@ explanation: earned by steadily delivering real help; automatic; permanent; no a
 to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-10 · Deleting an account releases a claimed listing instead of deleting it
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** two profiles. One with `source = 'community-generated'` (or `'admin'`) that a test
+member has claimed and then edited — give it a headline, a bio and at least one payment address. One
+with `source = 'self'` that a second test member created themselves.
+**Steps:**
+1. Note both profiles: names, skills, and for the claimed one its headline, bio and payment address.
+2. Delete the first member's account (the one holding the claimed listing).
+3. Browse `/apps/directory` as another member. The claimed listing **is still there**, with its name,
+   location, Quora address and skills.
+4. Open it. The headline, the bio and every payment address are gone.
+5. On `/admin/directory`, confirm the row shows as unclaimed and can be claimed again by someone else.
+6. Delete the second member's account. Their self-created profile **is** gone from the member view.
+**Expected:** A listing the member did not author survives their account deletion with the claim
+released — `claimed_by_user_id`, `headline`, `bio` and the four payment addresses all cleared, the
+row still active and not stamped `deleted_at`. A listing the member wrote themselves (`source =
+'self'`) is still soft-deleted and disappears per DIR-9. The split is on `directory_profiles.source`
+and covers the table exactly once: no profile is left untouched by both. Asking an admin to take a
+listing down (DIR-A3b) is unaffected and still removes it. Before 2026-09-20 step 3 failed — the
+claimed listing was soft-deleted along with the account, so research nobody on the member's side had
+written was destroyed, and removing a duplicate sign-in did the same thing silently.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Admin walkthrough

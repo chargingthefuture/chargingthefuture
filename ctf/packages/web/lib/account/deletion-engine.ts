@@ -16,6 +16,8 @@
 //   - delete       → DELETE FROM <table> WHERE <userColumn> = $1
 //   - soft-delete  → UPDATE <table> SET <softDeleteColumn> = NOW()
 //                      WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL
+//   - release-claim → UPDATE <table> SET <userColumn> = NULL, <clearColumns> = NULL
+//                      WHERE <userColumn> = $1 AND <authorColumn> <> '<authoredValue>'
 //   - retain       → no operation (money ledgers, audit trails, shared content)
 //
 // Tables in each registry entry are already ordered child-before-parent, so plain deletes respect
@@ -29,7 +31,7 @@ export type DeletionStatement = {
   /** Real table this operates on. */
   readonly table: string;
   /** Which registry action produced it. */
-  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
+  readonly action: 'delete' | 'soft-delete' | 'release-claim' | 'pseudonymize';
   /** Parameterized SQL with `$1` bound to the user id. */
   readonly sql: string;
 };
@@ -50,6 +52,66 @@ function planDelete(owned: OwnedTable): DeletionStatement {
   };
 }
 
+/** The `soft-delete` branch of `planTable`, kept separate so the switch stays simple to read. */
+function planSoftDelete(owned: OwnedTable): DeletionStatement {
+  if (!owned.userColumn) {
+    throw new Error(`Table "${owned.table}" is action "soft-delete" but has no userColumn.`);
+  }
+  if (!owned.softDeleteColumn) {
+    throw new Error(`Table "${owned.table}" is action "soft-delete" but has no softDeleteColumn.`);
+  }
+  // A soft-delete may be narrowed to the rows the member authored, leaving the ones they only
+  // claimed to `release-claim` on the same table. Like the row filter above, this can only narrow:
+  // the user-column match and the idempotence guard both stay.
+  const authored = authoredClause(owned, '=');
+  return {
+    table: owned.table,
+    action: 'soft-delete',
+    sql:
+      `UPDATE ${owned.table} SET ${owned.softDeleteColumn} = NOW() ` +
+      `WHERE ${owned.userColumn} = $1 AND ${owned.softDeleteColumn} IS NULL${authored}`,
+  };
+}
+
+/** The `release-claim` branch of `planTable`, kept separate so the switch stays simple to read. */
+function planReleaseClaim(owned: OwnedTable): DeletionStatement {
+  if (!owned.userColumn) {
+    throw new Error(`Table "${owned.table}" is action "release-claim" but has no userColumn.`);
+  }
+  if (!owned.clearColumns?.length) {
+    throw new Error(`Table "${owned.table}" is action "release-claim" but clears no columns.`);
+  }
+  if (!owned.authorColumn || !owned.authoredValue) {
+    throw new Error(`Table "${owned.table}" is action "release-claim" but has no authorColumn/authoredValue pair.`);
+  }
+  // Let the row go rather than deleting it: drop the link to this member and NULL whatever they
+  // could have filled in themselves, leaving the row in the unclaimed state it held before.
+  //
+  // The WHERE still matches the REAL id and excludes rows the member authored, so this is
+  // idempotent — the first run clears the id and a second finds nothing.
+  const sets = [`${owned.userColumn} = NULL`, ...owned.clearColumns.map((column) => `${column} = NULL`)];
+  return {
+    table: owned.table,
+    action: 'release-claim',
+    sql: `UPDATE ${owned.table} SET ${sets.join(', ')} ` + `WHERE ${owned.userColumn} = $1${authoredClause(owned, '<>')}`,
+  };
+}
+
+/**
+ * The ` AND <authorColumn> <op> '<authoredValue>'` clause shared by the two actions that split one
+ * table by who wrote a row. Returns '' when the registry entry declares no author pair, so every
+ * existing entry renders exactly the SQL it did before.
+ *
+ * The column and the value come only from the registry, which `check-deletion-registry.mjs` checks
+ * against `schema.sql` and holds to a plain slug, so neither is user input.
+ */
+function authoredClause(owned: OwnedTable, op: '=' | '<>'): string {
+  if (!owned.authorColumn || !owned.authoredValue) {
+    return '';
+  }
+  return ` AND ${owned.authorColumn} ${op} '${owned.authoredValue}'`;
+}
+
 /**
  * Pure translation of one owned table into a SQL statement, or `null` for `retain` (no-op).
  *
@@ -64,19 +126,9 @@ export function planTable(owned: OwnedTable): DeletionStatement | null {
     case 'delete':
       return planDelete(owned);
     case 'soft-delete':
-      if (!owned.userColumn) {
-        throw new Error(`Table "${owned.table}" is action "soft-delete" but has no userColumn.`);
-      }
-      if (!owned.softDeleteColumn) {
-        throw new Error(`Table "${owned.table}" is action "soft-delete" but has no softDeleteColumn.`);
-      }
-      return {
-        table: owned.table,
-        action: 'soft-delete',
-        sql:
-          `UPDATE ${owned.table} SET ${owned.softDeleteColumn} = NOW() ` +
-          `WHERE ${owned.userColumn} = $1 AND ${owned.softDeleteColumn} IS NULL`,
-      };
+      return planSoftDelete(owned);
+    case 'release-claim':
+      return planReleaseClaim(owned);
     case 'pseudonymize': {
       if (!owned.userColumn) {
         throw new Error(`Table "${owned.table}" is action "pseudonymize" but has no userColumn.`);
@@ -122,7 +174,7 @@ export function planDeletion(entry: PluginDeletionEntry): DeletionStatement[] {
 /** Per-table outcome of running a deletion, for the audit/event record. */
 export type DeletionTableResult = {
   readonly table: string;
-  readonly action: 'delete' | 'soft-delete' | 'pseudonymize';
+  readonly action: 'delete' | 'soft-delete' | 'release-claim' | 'pseudonymize';
   /** Rows affected (deleted or soft-deleted). */
   readonly rowCount: number;
 };

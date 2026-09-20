@@ -27,7 +27,7 @@
 //   - Global catalog/aggregate tables (currencies, taxonomy, GDP metrics, weekly-performance
 //     aggregates) are not listed: they are not any individual user's data.
 
-export type DeletionAction = 'delete' | 'soft-delete' | 'pseudonymize' | 'retain';
+export type DeletionAction = 'delete' | 'soft-delete' | 'release-claim' | 'pseudonymize' | 'retain';
 
 export type OwnedTable = {
   /** Real table name as it appears in `ctf/schema.sql`. */
@@ -46,11 +46,28 @@ export type OwnedTable = {
    */
   readonly rowFilter?: string;
   /**
-   * Optional for `pseudonymize`: extra columns set to NULL alongside the user column — the
-   * denormalized copies of the member's identity (a handle captured at claim time, say), which would
-   * otherwise keep naming them after their id is gone.
+   * Optional for `pseudonymize`, required for `release-claim`: extra columns set to NULL alongside
+   * the user column — the denormalized copies of the member's identity (a handle captured at claim
+   * time, say), which would otherwise keep naming them after their id is gone.
    */
   readonly clearColumns?: readonly string[];
+  /**
+   * Required for `release-claim`, and optional on `soft-delete` as its mirror image: the column
+   * saying who authored the row, and the value that column carries when the MEMBER authored it.
+   *
+   * These exist because one table can hold both kinds of row. A Directory listing the member wrote
+   * themselves is their data and is deleted; a listing somebody else researched and published,
+   * which the member merely claimed, is not theirs to take down by leaving — the claim is released
+   * and the listing stays. `release-claim` acts on rows the member did NOT author
+   * (`authorColumn <> authoredValue`), and a `soft-delete` carrying the same pair narrows to the
+   * ones they DID (`authorColumn = authoredValue`), so the two together cover the table exactly
+   * once with no row falling through either.
+   *
+   * Both are written by hand here, never from user input. `check-deletion-registry.mjs` checks the
+   * column against `schema.sql` and holds the value to a plain slug, so neither can carry SQL.
+   */
+  readonly authorColumn?: string;
+  readonly authoredValue?: string;
   /** Plain-language note for reviewers / audit. */
   readonly note?: string;
   /** Set when a human decision is still needed before this table's handling is final. */
@@ -101,6 +118,63 @@ const soft = (table: string, userColumn: string, softDeleteColumn: string, note?
   userColumn,
   action: 'soft-delete',
   softDeleteColumn,
+  note,
+});
+
+/**
+ * Soft-delete only the rows in a shared table that the MEMBER authored.
+ *
+ * Pairs with `releaseClaim` below on the same table: this one takes the rows whose author column
+ * equals the member-authored value, that one takes every other row. Same table, two dispositions,
+ * decided by who wrote the row rather than by who is currently attached to it.
+ */
+const softWhenAuthored = (
+  table: string,
+  userColumn: string,
+  softDeleteColumn: string,
+  authorColumn: string,
+  authoredValue: string,
+  note?: string,
+): OwnedTable => ({
+  table,
+  userColumn,
+  action: 'soft-delete',
+  softDeleteColumn,
+  authorColumn,
+  authoredValue,
+  note,
+});
+
+/**
+ * Let go of a row the member claimed but did not write.
+ *
+ * The case this exists for: a Directory listing is usually built by somebody else out of what a
+ * person has said about themselves in public, and then claimed by that person. Deleting their
+ * account used to soft-delete the listing along with everything else, which is wrong twice over. It
+ * destroys research the member never authored, and it treats a claim — a reversible link between a
+ * person and a row — as though it were authorship.
+ *
+ * So the claim is released instead: the user column goes to NULL, the columns the member could have
+ * filled in personally go with it, and the listing returns to the unclaimed state it was in before
+ * they ever arrived. Anyone can still ask to have it taken down; that is a separate request, made by
+ * a person, not a side effect of closing an account.
+ *
+ * Naturally idempotent: the WHERE matches the real id, and the first run clears it.
+ */
+const releaseClaim = (
+  table: string,
+  userColumn: string,
+  authorColumn: string,
+  authoredValue: string,
+  clearColumns: readonly string[],
+  note?: string,
+): OwnedTable => ({
+  table,
+  userColumn,
+  action: 'release-claim',
+  authorColumn,
+  authoredValue,
+  clearColumns,
   note,
 });
 
@@ -215,11 +289,33 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'directory',
     name: 'Directory',
-    dataSummary: 'Your directory profile and its change history.',
+    dataSummary:
+      'Your directory profile and its change history. A listing someone else published that you claimed stays up: your claim on it is released and anything you wrote or added on it is cleared. You can still ask to have it taken down.',
     serviceScopeSupported: true,
     tables: [
       del('directory_profile_change_events', 'actor_id', 'History of changes you made to directory profiles.'),
-      soft('directory_profiles', 'claimed_by_user_id', 'deleted_at', 'The directory profile you claimed.'),
+      // One table, two kinds of row, and who wrote it decides which happens (owner decision,
+      // 2026-09-20). A listing the member created is theirs and goes. A listing somebody else
+      // researched from public sources and the member later claimed is not theirs to take down by
+      // leaving: the claim is released, the listing stays, and removal is still available by asking.
+      // Until now both were soft-deleted, so closing an account — or an admin removing a duplicate
+      // sign-in — quietly deleted research the member never wrote.
+      softWhenAuthored(
+        'directory_profiles',
+        'claimed_by_user_id',
+        'deleted_at',
+        'source',
+        'self',
+        'The directory profile you created yourself.',
+      ),
+      releaseClaim(
+        'directory_profiles',
+        'claimed_by_user_id',
+        'source',
+        'self',
+        ['headline', 'bio', 'venmo_address', 'monero_address', 'bitcoin_address', 'service_credits_address'],
+        'A directory listing someone else published that you claimed: your claim is released and the listing stays, minus anything you wrote or added on it.',
+      ),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
       // Burn-down batch 4: admin content and abuse-prevention trails, retained.

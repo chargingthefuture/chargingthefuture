@@ -55,7 +55,7 @@ Rule 114 baseline: Directory extends the canonical profile by `user_id` and avoi
 - Table/entity: `directory_profiles`
   - Contains personal data? yes
   - Retention period: long-lived while active
-  - Legal/compliance note: authoritative profile projection
+  - Legal/compliance note: authoritative profile projection. One table, two kinds of row, and `source` says which. A row with `source = 'self'` was written by the member and is theirs; on deletion it is soft-deleted (`deleted_at` stamped). A row with `source = 'admin'` or `source = 'community-generated'` was researched and published by somebody else from what the person said about themselves in public, and the member only claimed it; on deletion the claim is released — `claimed_by_user_id` and every column the member could have filled in personally (`headline`, `bio`, and the four payment addresses) go to NULL — and the listing itself stays, unclaimed, exactly as it stood before they claimed it. Removal of such a listing remains available on request, which is a decision a person makes, not a side effect of closing an account (owner decision, 2026-09-20).
 - Table/entity: `directory_profile_tags`
   - Contains personal data? yes (profile linkage)
   - Retention period: long-lived
@@ -101,10 +101,12 @@ When user requests full account deletion:
 
 - Additional records removed vs service-scoped deletion:
   - remaining user-linked Directory profile and preference records
+  - a listing the member did not author is released rather than removed: the claim and the member's own additions are cleared, and the listing stays (see §4, `directory_profiles`)
 - Cross-service dependencies:
   - orchestrator coordinates removal of Directory links referenced by other plugins
 - Final expected state:
   - no recoverable user-scoped Directory profile data except policy-required audit artifacts
+  - a released listing holds nothing that identifies the departed member as its claimant: no `claimed_by_user_id`, no member-written headline or bio, no payment address. What remains is what somebody else published about a person from public sources, which is the same state the listing was in before the account existed.
 
 ## 7) Rejoin/Re-enable Behavior
 

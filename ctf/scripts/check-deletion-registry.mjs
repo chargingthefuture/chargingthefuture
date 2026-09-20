@@ -96,6 +96,12 @@ function parseRegistry(src) {
   // pseudo('table', 'user_column', ['cleared', 'columns'], 'note') — the third argument is an array,
   // captured whole so each column inside it can be checked against schema.sql like any other.
   const rePseudo = /\bpseudo\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g;
+  // softWhenAuthored('table', 'user_column', 'soft_delete_column', 'author_column', 'authored_value', 'note')
+  const reSoftAuthored =
+    /\bsoftWhenAuthored\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'/g;
+  // releaseClaim('table', 'user_column', 'author_column', 'authored_value', ['cleared', 'columns'], 'note')
+  const reRelease =
+    /\breleaseClaim\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g;
 
   let m;
   while ((m = reDel.exec(src)) !== null) {
@@ -113,6 +119,27 @@ function parseRegistry(src) {
   while ((m = rePseudo.exec(src)) !== null) {
     const clearColumns = [...m[3].matchAll(/'([^']+)'/g)].map((c) => c[1]);
     refs.push({ table: m[1], userColumn: m[2], clearColumns, action: 'pseudonymize' });
+  }
+  while ((m = reSoftAuthored.exec(src)) !== null) {
+    refs.push({
+      table: m[1],
+      userColumn: m[2],
+      softDeleteColumn: m[3],
+      authorColumn: m[4],
+      authoredValue: m[5],
+      action: 'soft-delete',
+    });
+  }
+  while ((m = reRelease.exec(src)) !== null) {
+    const clearColumns = [...m[5].matchAll(/'([^']+)'/g)].map((c) => c[1]);
+    refs.push({
+      table: m[1],
+      userColumn: m[2],
+      authorColumn: m[3],
+      authoredValue: m[4],
+      clearColumns,
+      action: 'release-claim',
+    });
   }
   return refs;
 }
@@ -238,6 +265,28 @@ function main() {
         fail(`table "${ref.table}" is soft-delete but declares no softDeleteColumn.`);
       } else if (!cols.has(ref.softDeleteColumn)) {
         fail(`table "${ref.table}" does not have soft-delete column "${ref.softDeleteColumn}".`);
+      }
+    }
+    if (ref.action === 'release-claim') {
+      if (!ref.clearColumns?.length) {
+        fail(`table "${ref.table}" is release-claim but clears no columns.`);
+      }
+      if (!ref.authorColumn || !ref.authoredValue) {
+        fail(`table "${ref.table}" is release-claim but declares no authorColumn/authoredValue pair.`);
+      }
+    }
+    // The author pair reaches the database as a literal comparison, so both halves are checked: the
+    // column against schema.sql like any other, and the value against a plain-slug shape so it can
+    // carry no quote, no space and therefore no SQL of its own.
+    if (ref.authorColumn !== undefined) {
+      if (!cols.has(ref.authorColumn)) {
+        fail(`table "${ref.table}" does not have author column "${ref.authorColumn}".`);
+      }
+      if (!/^[a-z0-9][a-z0-9_-]*$/.test(ref.authoredValue ?? '')) {
+        fail(
+          `table "${ref.table}" has an authored value this validator does not accept: ` +
+            `"${ref.authoredValue}". Only a lower-case slug (letters, digits, hyphen, underscore) is allowed.`,
+        );
       }
     }
     checked += 1;
