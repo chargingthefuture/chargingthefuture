@@ -115,6 +115,32 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
+    command: skills-hunt.mission.image
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_rounds
+      - skills_hunt_missions
+    targetContext:
+      workspaceId: workspace_identifier
+      roundId: round_identifier
+    metadata:
+      # How many missions the saved copy carried, so a picture found later can be matched to what
+      # the round held when it was drawn.
+      missionsDrawn: mission_count
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
     command: skills-hunt.round.list
     commandVersion: 1.0.0
     purpose: campaign_discovery
@@ -556,6 +582,11 @@ auditEvents:
       errorCategory: none_or_error_class
 
 changelog:
+  - date: 2026-09-20
+    change: >-
+      Added an audit event template for skills-hunt.mission.image, the admin-only picture of a
+      round's active missions. Its metadata carries how many missions the saved copy held, so a
+      picture found later can be matched to what the round looked like when it was drawn.
   - date: 2026-02-24
     change: Initial SkillsHunt audit contract set added with allow/deny policy evidence coverage for all v1 commands.
   - date: 2026-05-12
