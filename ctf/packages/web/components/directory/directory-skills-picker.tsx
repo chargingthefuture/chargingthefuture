@@ -342,13 +342,19 @@ function SearchResultChip({ entry, active, tokens, onToggleEntry }: {
 // pick was ambiguous, go back and choose properly" invites the member to UNDO a pick. The people this
 // picker most has to serve are the ones already inclined to believe they have nothing to offer, and a
 // prompt to reconsider lands on them hardest. So this says the skill counts everywhere it appears. It
-// never asks anyone to narrow, re-pick, or clear anything, and it describes the accordion as another
-// way to browse rather than as a correction.
+// never asks anyone to narrow, re-pick, or clear anything.
+//
+// The trailing "instead" carries weight and is not filler (owner direction). Without it, mentioning
+// the area list straight after "counts in all of them" reads as an alternative OUTCOME - as though
+// browsing by area were the way to be counted under one heading rather than all of them - which
+// nudges a member AWAY from being counted across titles, the opposite of the intent. "Instead"
+// attaches the alternative to the act of browsing, not to the counting: another route to the same
+// skills, never a narrower claim.
 function MultiSectorNote({ tokens }: { tokens: DirectoryTokens }) {
   return (
     <div style={{ fontSize: 11, color: tokens.MUTED, marginTop: 10, lineHeight: 1.5 }}>
       Some of these skills belong to more than one kind of work, and picking one here counts in all of
-      them. The list below groups skills by area if you would like to browse them that way.
+      them. The list below groups skills by area if you would like to browse them that way instead.
     </div>
   );
 }
