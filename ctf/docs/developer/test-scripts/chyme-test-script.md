@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic |
 
 ## How to run this
 
@@ -151,6 +151,8 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
 4. Count the sign-in and join buttons on the whole page, top to bottom.
 5. Have the last signed-in member leave the call, then reload the signed-out page within the next
    45 seconds (inside the presence window, so the server still reports the room as live).
+6. Listen again, then press **Leave** in the **Live Rooms** row. Watch what a signed-in member in
+   the room sees on their stage.
 **Expected:** Before the tap the room heading shows, under it the line "The room is live. Tap below
 to listen; sign in to speak." (never "You're listening live" before the tap), and a single **Tap to
 listen** button with the attendance line and the line "Phones only play sound after a tap. You will hear the room and
@@ -166,7 +168,7 @@ signed out it is the plain "N members in the room"; with nobody in the call it i
 listening". Each 35-second heartbeat carries the fresh counts, so the line follows people arriving
 and leaving without a page refresh.
 While listening the page posts a heartbeat every 35 seconds (visible tab only); closing the page
-posts a leave so the spot frees at once. If the tap is refused — every guest spot taken, guests
+posts a leave so the spot frees at once, and so does the **Leave** control in step 6. If the tap is refused — every guest spot taken, guests
 paused by the quota policy, the room ended, or Stream refused — the note says the server's own
 reason with the HTTP status and a **Try again** button, never a blank space. Under that line sits one muted line, "No sound? Take the phone off Silent (the
 switch or the Action button), turn the volume up, then tap here." — tapping it retries playback.
@@ -203,8 +205,9 @@ to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **
 link when the visitor has an account part-way through Unlock). The green header carries the back
 control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
 grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
-Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room;
-pressing it spins the icon, re-reads the room (live state, count) and the chat, and a listener
+Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room,
+with the **Leave** control of step 6 to its left while sound is on;
+pressing refresh spins the icon, re-reads the room (live state, count) and the chat, and a listener
 already in the call stays connected — the installed app on Android has no browser reload, so this is
 the only way a visitor there re-checks the room. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
@@ -213,6 +216,12 @@ page.
 In step 5 the page does **not** settle on "Couldn't connect to the live room" under a heading saying
 you are listening live: the listener retries, then re-reads the room and falls back to the "No public
 rooms right now" empty state once the room has ended.
+
+In step 6 the **Leave** button shows only while sound is on — it is not there before the tap, and it
+is gone again the moment you press it. Pressing it stops the audio, drops you off the stage (the
+member in the room sees your "You (listening)" tile disappear), and returns the view to the **Tap to
+listen** button with one fewer guest in the attendance line. No page reload and no tab close is
+needed, and tapping **Tap to listen** again puts you back in the room.
 
 "No public rooms right now" appears **only** when the server said the room is not live. If the live
 check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads

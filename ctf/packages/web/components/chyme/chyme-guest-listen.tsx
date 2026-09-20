@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -106,6 +106,29 @@ function postGuestLeave(): void {
   });
 }
 
+// While listening, keep the guest on the roster and the minute meter fed, and take the room's
+// fresh counts back from each beat. A tab in the background stops beating, like the member
+// heartbeat, and beats once more when it returns.
+function useGuestHeartbeat(listening: boolean, onCounts: (counts: GuestRoomCounts) => void): void {
+  useEffect(() => {
+    if (!listening) return;
+    const beat = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      postGuestHeartbeat(onCounts);
+    };
+    beat();
+    const intervalId = window.setInterval(beat, GUEST_HEARTBEAT_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') beat();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [listening, onCounts]);
+}
+
 // Ask the server for listen credentials. This is the tap: it takes one of the guest listening spots
 // and mints the browser's one Stream guest identity (the cookie the response sets). The server
 // answers with a plain reason when the visitor cannot listen right now — the room is not live,
@@ -157,6 +180,8 @@ export function ChymeGuestListen({
   guestCount,
   accent = '#22C55E',
   onRoomGone,
+  onListeningChange,
+  leaveKey = 0,
 }: {
   participantCount: number;
   // Signed-out listeners already on the roster when the page read the room. This visitor is not
@@ -168,6 +193,11 @@ export function ChymeGuestListen({
   // live. The parent then drops back to the honest "no public rooms right now" view instead of
   // leaving a dead error box under a room heading that claims the visitor is listening.
   onRoomGone?: () => void;
+  // Told whether sound is actually on. The page shows its Leave control only while this is true,
+  // so a visitor who has not tapped yet is never offered a way out of something they are not in.
+  onListeningChange?: (listening: boolean) => void;
+  // Bumped by the page's Leave control. Each new value stops the listen: see the effect below.
+  leaveKey?: number;
 }) {
   // The room's counts as of the last word from the server: the page's own read to start with, then
   // the listen answer, then each heartbeat. Held here rather than read from the props so the line
@@ -190,6 +220,41 @@ export function ChymeGuestListen({
   // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
   // to go on but "try refreshing".
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+
+  // Report the listening state upward without making the parent's callback a dependency of the
+  // effect that reports it — a parent that rebuilt the callback each render would otherwise
+  // re-run this on every render.
+  const listeningChangeRef = useRef(onListeningChange);
+  useEffect(() => {
+    listeningChangeRef.current = onListeningChange;
+  }, [onListeningChange]);
+
+  useEffect(() => {
+    listeningChangeRef.current?.(status === 'joined');
+    // Also on unmount: the room ending takes this component away, and the page must not go on
+    // offering a Leave control for a call that is no longer there.
+    return () => listeningChangeRef.current?.(false);
+  }, [status]);
+
+  // The page's Leave control. Clearing `armed` and the credentials runs the join effect's cleanup,
+  // which leaves the Stream call, disconnects the guest identity, and posts the leave so the
+  // listening spot frees at once; the view drops back to the Tap to listen button. `leaveKey` 0 is
+  // the initial value and means nobody has asked to leave. A browser without WebRTC keeps its
+  // explanation rather than being handed a listen button that cannot work.
+  useEffect(() => {
+    if (leaveKey === 0) {
+      return;
+    }
+    setArmed(false);
+    setCredentials(null);
+    setClient(null);
+    setCall(null);
+    setErrorDetail(null);
+    setStatus((current) => (current === 'unsupported' ? current : 'idle'));
+    // One fewer signed-out listener, said at once: this browser has stopped. The next refresh or
+    // the next tap replaces it with the server's own number.
+    setCounts((current) => ({ participantCount: current.participantCount, guestCount: Math.max(0, current.guestCount - 1) }));
+  }, [leaveKey]);
 
   // The parent re-reads the room on its refresh control; take that answer as the newer one.
   useEffect(() => {
@@ -303,25 +368,7 @@ export function ChymeGuestListen({
     };
   }, [armed, credentials, onRoomGone]);
 
-  // While listening, keep the guest on the roster and the minute meter fed. A tab in the
-  // background stops beating, like the member heartbeat, and beats once more when it returns.
-  useEffect(() => {
-    if (status !== 'joined') return;
-    const beat = () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      postGuestHeartbeat(setCounts);
-    };
-    beat();
-    const intervalId = window.setInterval(beat, GUEST_HEARTBEAT_MS);
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') beat();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [status]);
+  useGuestHeartbeat(status === 'joined', setCounts);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is

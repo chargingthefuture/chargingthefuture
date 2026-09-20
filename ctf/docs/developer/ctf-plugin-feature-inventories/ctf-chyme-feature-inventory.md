@@ -57,8 +57,9 @@ Lifecycle/governance references applied:
     guest id for that browser, and mints `chyme-guest-<id>` — so a returning browser reuses one
     Stream user instead of creating a fresh one per load. While listening, the page heartbeats
     `POST /api/chyme/public/heartbeat` every 35s (the guest cap counts it; the minute meter is
-    credited from it) and posts `POST /api/chyme/public/leave` on close. A refusal shows the
-    server's own reason with a "Try again" control.
+    credited from it) and posts `POST /api/chyme/public/leave` on close or when the listener
+    presses **Leave** (2026-09-20 — the control beside refresh in the **Live Rooms** row, shown
+    only while sound is on). A refusal shows the server's own reason with a "Try again" control.
 
 15. **Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19).**
     Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
@@ -386,6 +387,19 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   and migration `0032_chyme_main_room_name_drops_topic.sql` changes the existing row so a
   signed-out visitor sees the new name before any member has opened the room. No route, contract,
   or column change; the Weavers room name is untouched.
+
+- 2026-09-20: **A signed-out listener can stop listening without closing the page.** Owner report:
+  once the sound was on there was no way out of the room short of force-closing the tab or
+  reloading, on a page that is long enough that hunting for a control is a real cost. A **Leave**
+  button now sits beside the refresh button in the **Live Rooms** row, and only while sound is
+  actually on — a visitor who has not tapped yet is not offered a way out of something they are not
+  in. Pressing it tears the Stream call down, disconnects the browser's guest identity, posts
+  `POST /api/chyme/public/leave` so the listening spot frees at once rather than at the end of the
+  presence window, and drops the view back to the **Tap to listen** button, which immediately shows
+  one fewer guest. The page holds the two ends of this (whether sound is on, and a counter the
+  listener watches); the listener reports its own state rather than the page guessing from the room
+  read. No new route, no schema change, and nothing about the member view moved — the refresh
+  button keeps its place at the right edge of the row.
 
 - 2026-09-20: **The room's count says how many people are in it, not how many of them have
   accounts.** Owner report: the signed-out page read "Listening live · 1 member in the room" while
