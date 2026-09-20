@@ -89,25 +89,28 @@ function ChymeUpcomingBody({ state, t }: { state: UpcomingState; t: ReturnType<t
     );
   }
   const now = new Date();
+  // A horizontal rail of fixed-width cards, the same shape as the rooms rail above it (owner
+  // directive, 2026-09-20). Stacked, five booked slots filled a phone screen on their own and
+  // pushed the live room off the top; side by side the schedule costs one card's height and the
+  // rest is a sideways scroll.
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <ul
+      style={{ listStyle: 'none', margin: 0, padding: '0 0 2px', display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x proximity' }}
+      aria-label={`${state.slots.length} scheduled discussion${state.slots.length === 1 ? '' : 's'}, soonest first`}
+    >
       {state.slots.map((slot) => (
         <li
           key={slot.slotStartIso}
-          style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 10px', borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${slot.isOnAir ? t.ACCENT : t.BORDER}` }}
+          style={{ flex: '0 0 170px', scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 10px', borderRadius: 10, background: t.INPUT_BG, border: `1px solid ${slot.isOnAir ? t.ACCENT : t.BORDER}` }}
         >
-          <div style={{ flexShrink: 0, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: slot.isOnAir ? t.ACCENT : t.TEXT, whiteSpace: 'nowrap' }}>{formatUpcomingWhen(slot.slotStartIso, slot.slotEndIso, now)}</div>
-            {slot.isOnAir ? (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 2, fontSize: 10, fontWeight: 700, color: t.ACCENT, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                <Radio size={10} /> On air now
-              </div>
-            ) : null}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, overflowWrap: 'anywhere' }}>{slot.title}</div>
-            <div style={{ fontSize: 11, color: t.SUBTLE, marginTop: 2 }}>Hosted by @{slot.hostUsername}</div>
-          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: slot.isOnAir ? t.ACCENT : t.TEXT, lineHeight: 1.35 }}>{formatUpcomingWhen(slot.slotStartIso, slot.slotEndIso, now)}</div>
+          {slot.isOnAir ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: t.ACCENT, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Radio size={10} /> On air now
+            </div>
+          ) : null}
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: t.TITLE, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{slot.title}</div>
+          <div style={{ fontSize: 11, color: t.SUBTLE }}>Hosted by @{slot.hostUsername}</div>
         </li>
       ))}
     </ul>

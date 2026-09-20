@@ -65,8 +65,11 @@ Lifecycle/governance references applied:
     — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
     by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
     full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
-    room list on the signed-out page (both re-read on the page's refresh control). Android: the
-    Upcoming tab of the room list, which used to be a placeholder sentence. Read through the guide's
+    room list on the signed-out page (both re-read on the page's refresh control), as a sideways
+    rail of cards in the shape of the rooms rail above it (owner directive, 2026-09-20 — stacked,
+    five booked slots were a phone screen on their own). Android: the Upcoming tab of the room
+    list, which used to be a placeholder sentence; it keeps its stacked list, since it has a tab
+    and a screen to itself rather than a strip under the room. Read through the guide's
     own public route `GET /api/ti-radio/guide` (client-side; no server import, per the plugin
     boundary), so a signed-out visitor sees the same list. Empty state says nothing is scheduled and
     that any approved member can book a slot; a failed read shows the route's reason. This is the
@@ -367,6 +370,22 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-20: **The signed-out page fits one screen: a sideways schedule, a closed room chat, and
+  the invitations card floated off the page.** Owner report: Chyme had too much going on, and the
+  invitations row on top of it read as part of Chyme. Three changes, no new data and no route
+  change. (1) `chyme-upcoming.tsx` draws the booked slots as a horizontal rail of 170px cards with
+  the same scroll and snap behavior as the rooms rail above it, instead of a stacked list that put
+  five full-width rows — most of a phone screen — under the room. Both web surfaces get it; the
+  Android Upcoming tab keeps its stacked list, because there the schedule owns a tab and a screen
+  rather than a strip under the room. (2) `ChymeGuestChat` starts closed, as one row a visitor taps
+  to open (`aria-expanded` / `aria-controls`, chevron, "read what members are saying"); the
+  ten-second poll starts on the first open, so a closed chat reads nothing from
+  `GET /api/chyme/public/messages`. Open, it is the same read-only panel with the same 40vh cap and
+  the same "Sign in to chat" link. (3) The invitations row is no longer rendered above the plugin —
+  see the non-plugin inventory 1.15; on Chyme it was a block of invitation cards before anything
+  about Chyme. Net: header, invitation card, live room, the tap-to-listen control, the chat row and
+  the schedule fit one phone screen; the participant list and the chat are what scroll. Test script
+  CH-7 and CH-22 updated. No schema, route, or contract change.
 - 2026-09-19: **Moderation controls: mute, remove, let back in, and hand-raise mode with speaker
   grant.** Owner decision the same day, answering the open question of whether the room should have
   a moderator. Server: `chyme_rooms.speak_mode`, `chyme_room_removals`, `chyme_admin_audit_trail`
