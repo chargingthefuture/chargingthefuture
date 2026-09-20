@@ -361,10 +361,18 @@ export const TAXONOMY_CHANGES = [
   // stays findable.
   //
   // Op 92 targets the pre-existing Social Workers occupation (occupationExisting: true). Domestic
-  // violence advocacy has no live label: "Client advocacy", "Crisis intervention", "Family
-  // assessment and intervention" and "Trauma-informed care" are each adjacent and none of them says
-  // it. It sits under Social Workers rather than Medical Assistants because it is advocacy work in
-  // its own right, done by people who are not medical assistants.
+  // violence advocacy has no live label, and that was checked rather than assumed: a scan of every
+  // active skill in all 20 sectors for advoca|victim|domestic|abuse|survivor|safeguard|shelter
+  // returned seven rows and not one of them is this claim - "Advocacy" (Creative & Media > Advocates
+  // / Awareness Raisers) is campaigning and awareness work, "Legal advocacy and advice" (Lawyers) is
+  // legal representation, "Substance abuse counseling" and "Substance abuse support" matched only on
+  // the word abuse, "Shelter site selection and layout" (Emergency & Reserve Roles) is disaster-relief
+  // logistics, "Domestic and commercial systems" (Water & Sanitation > Plumbers) is plumbing, and
+  // "Client advocacy" is the general-purpose label op 90 reuses. Health's own "Crisis intervention",
+  // "Family assessment and intervention" and "Trauma-informed care" are adjacent and none says it
+  // either. It sits under Social Workers rather than Medical Assistants because it is advocacy work in
+  // its own right, done by people who are not medical assistants. The same scan confirmed
+  // "Client advocacy" is live exactly once, so op 90 creates its second row and splits no holders.
   //
   // Deliberately NOT proposed, from the same conversation: "single mom", which is a life
   // circumstance and already recorded as a title, not a skill the taxonomy can match a settlement's
