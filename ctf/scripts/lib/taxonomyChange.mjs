@@ -63,6 +63,34 @@
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 
+// Names the taxonomy will never carry, whatever change proposes them. Checked against every name a
+// change CREATES or RENAMES TO (skills and occupations alike), so a later pass cannot reintroduce one
+// by copying what a nearby entry does - which is how a bad name normally gets in, since an addSkill
+// line in review looks like every other addSkill line.
+//
+// "Community policing" / "community police" (owner directive, 2026-09-20). The term is what vigilante
+// and trafficking networks call themselves; it does not name a policing function this product should
+// let anyone claim. It is banned as a NAME, not as a subject: "Community outreach" (live under Social
+// Workers), "Community-Health Workers" (a live occupation) and "Community outreach" anywhere else are
+// untouched, because the pattern matches only the word community immediately followed by polic-.
+//
+// This list is deliberately tiny and every entry needs a recorded reason. It is a place for names that
+// are harmful to carry, not a style guide - a merely clumsy name is a review comment, not a ban.
+export const PROHIBITED_NAME_PATTERNS = [
+  {
+    pattern: /\bcommunit(?:y|ies)[\s\-]*polic/i,
+    reason:
+      'names what vigilante and trafficking networks call themselves rather than a policing function (owner directive, 2026-09-20)',
+  },
+];
+
+// The offending entry, or null when the name is allowed.
+export function findProhibitedName(value) {
+  const name = normalizeTaxonomyName(String(value ?? ''));
+  if (name.length === 0) return null;
+  return PROHIBITED_NAME_PATTERNS.find((entry) => entry.pattern.test(name)) ?? null;
+}
+
 export const TAXONOMY_CHANGE_TYPES = [
   'addOccupation',
   'addSkill',
@@ -310,6 +338,175 @@ export const TAXONOMY_CHANGES = [
   // video side of its post-production work. Deactivating either would leave half the occupation with
   // no way to say what it does. They stay as two skills on purpose.
   { id: 79, op: 'deactivateSkill', sector: 'Creative & Media', occupation: 'Photographers / Videographers', occupationExisting: true, skill: 'Shooting and lighting techniques', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Lighting techniques", which survives as the plainer label; the merged occupation already carries "Camera operation and settings" and "Composition and framing" for the shooting half, so no claim is lost. Members holding this row stop seeing the chip until they re-pick the surviving skill, and the audit metadata records how many were holding it at apply time. Reversible via reactivateSkill.' },
+
+  // Changes 80-92 (owner-approved 2026-09-20): "Medical Assistants" joins Health, and Social Workers
+  // gains "Domestic violence advocacy". The request came from a conversation with a member whose
+  // working life is a medical assistant's, and a read of the live Health sector settled where it
+  // belongs: thirteen occupations (Community-Health Workers, EMS / Paramedics, General
+  // Practitioners, Laboratory Technicians, Mental Health Counselors, Midwives, Nurses, Pharmacists,
+  // Psychologists, Radiographers, Social Workers, "Specialists (e.g., cardiology, pediatrics)",
+  // Therapists) and not one of them is a medical assistant. Nurses is the nearest row and is the
+  // wrong one - the member drew the distinction themselves, and a medical assistant working a
+  // psychiatry clinic is neither a nurse nor a counselor. So it gets its own occupation, the way
+  // Childcare Workers and Tutors did under Education in changes 58-67, rather than being hung off
+  // a role it is not.
+  //
+  // Op 80 creates the occupation, so ops 81-91 carry no occupationExisting flag. "Medical
+  // Assistants" was checked against all thirteen live Health occupations under the plural-twin rule
+  // (this is the first change at or past id 80, where the guard starts applying) and shares a role
+  // token with none of them. The occupation is seeded with its skills in the same apply run for the
+  // reason changes 58-67 recorded: Workforce matches holders by skill name, so an occupation with no
+  // skills matches nobody and shows empty in the browser.
+  //
+  // Two of the eleven reuse a live label EXACTLY rather than inventing a synonym: "Patient
+  // assessment and monitoring" (live under Nurses) and "Patient communication" (live under General
+  // Practitioners). Duplicating a label across occupations is the sector's established shape, not an
+  // oversight - "Crisis intervention" already has four rows (Mental Health Counselors,
+  // Psychologists, Social Workers, Therapists), "Trauma-informed care" two, "First Aid & CPR" two -
+  // and it is the right shape here: one name keeps keyword search and name matching joined, while
+  // the separate row is what makes the skill show when somebody browses THIS occupation. What the
+  // second row does not do is fix attribution, and it is worth being exact about that: Workforce
+  // ignores the stored row's parent entirely (its skill arm re-expands by name across every
+  // same-named active row before counting), and the Directory picker collapses same-named rows into
+  // one chip and stores an arbitrary representative id, so the parent a member ends up attached to
+  // was never a choice they made. Within one sector that costs nothing, which is the case here -
+  // both reused labels stay inside Health. Across sectors it would not, because the Directory
+  // sector filter does read the stored row's parent. Writing "Patient assessment" beside
+  // the live "Patient assessment and monitoring" is the failure to avoid, because a second NAME for
+  // one claim splits its holders (changes 26-34 and 79).
+  //
+  // Op 90 reuses "Client advocacy", the label Social Workers already carries, rather than adding
+  // "Patient advocacy" as a second name for the same act. This was the set's one judgment call and it
+  // was settled by the live holder counts: two members already hold "Client advocacy". Because
+  // Workforce joins holders by NAME, a new "Patient advocacy" label would never join those two, so
+  // the community's advocacy capacity would read as two separate smaller pools - the exact split
+  // changes 26-34 and 79 had to undo. Occupation is not what joins holders; the name is, which is why
+  // "it sits under a different occupation" does not make a second name safe. The cost of reusing the
+  // social-work word is that a medical assistant reads "client" where they would say "patient"; the
+  // cost of the alternative is a permanently split count. If the owner prefers the patient-facing
+  // word, the correct fix is NOT this op - it is a renameSkill of the live row, which keeps the row
+  // id (so the two holders keep their skill) and appends the old label to its aliases so the old word
+  // stays findable.
+  //
+  // Op 92 targets the pre-existing Social Workers occupation (occupationExisting: true). Domestic
+  // violence advocacy has no live label, and that was checked rather than assumed: a scan of every
+  // active skill in all 20 sectors for advoca|victim|domestic|abuse|survivor|safeguard|shelter
+  // returned seven rows and not one of them is this claim - "Advocacy" (Creative & Media > Advocates
+  // / Awareness Raisers) is campaigning and awareness work, "Legal advocacy and advice" (Lawyers) is
+  // legal representation, "Substance abuse counseling" and "Substance abuse support" matched only on
+  // the word abuse, "Shelter site selection and layout" (Emergency & Reserve Roles) is disaster-relief
+  // logistics, "Domestic and commercial systems" (Water & Sanitation > Plumbers) is plumbing, and
+  // "Client advocacy" is the general-purpose label op 90 reuses. Health's own "Crisis intervention",
+  // "Family assessment and intervention" and "Trauma-informed care" are adjacent and none says it
+  // either. It sits under Social Workers rather than Medical Assistants because it is advocacy work in
+  // its own right, done by people who are not medical assistants. The same scan confirmed
+  // "Client advocacy" is live exactly once, so op 90 creates its second row and splits no holders.
+  //
+  // Deliberately NOT proposed, from the same conversation: "single mom", which is a life
+  // circumstance and already recorded as a title, not a skill the taxonomy can match a settlement's
+  // demand against; and "interacts with people easily", which is too general to match on and is
+  // carried concretely by op 91. No proposalNormalizedSkills is set - the request came from the
+  // owner directly, not from the skill-proposal intake queue, so there is no member proposal row for
+  // the apply run to mark promoted. Applies on the next owner run of the seed-skills-taxonomy apply
+  // workflow.
+  { id: 80, op: 'addOccupation', sector: 'Health', occupation: 'Medical Assistants' },
+  { id: 81, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Phlebotomy (blood draws)' },
+  { id: 82, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Injections (intramuscular and subcutaneous)' },
+  { id: 83, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Vital signs measurement' },
+  { id: 84, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient intake and registration' },
+  { id: 85, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient assessment and monitoring' },
+  { id: 86, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'EKG (electrocardiogram) testing' },
+  { id: 87, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Splinting, casting and orthopedic wraps' },
+  { id: 88, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Urgent care clinic support' },
+  { id: 89, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Psychiatric clinic support' },
+  { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Client advocacy' },
+  { id: 91, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient communication' },
+  { id: 92, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Domestic violence advocacy' },
+
+  // Changes 93-99 (owner-approved 2026-09-20): fill out Public Safety & Justice > Police Officers.
+  // A read of the live sector for the domestic-violence-advocacy placement turned up the gap: its six
+  // occupations are Corrections Officers, Firefighters, Forensic Staff, Judges, Lawyers and Police
+  // Officers, and every one of them carries two or three skills except Police Officers, which carries
+  // exactly one - "Evidence handling and reporting". So a member whose policing work is patrol,
+  // investigation, custody or public order has nothing to pick, and the occupation shows almost empty
+  // to anyone browsing it. Workforce matches holders by skill name, so a nearly skill-less occupation
+  // also matches almost nobody and the community's policing capacity reads as near zero.
+  //
+  // SCOPE, and it is a hard line (owner directive, 2026-09-20): police are not social workers, and no
+  // skill under this occupation may frame them as such. Deliberately NOT added, each considered and
+  // rejected on that directive: community liaison, crisis intervention, de-escalation and
+  // mental-health response, welfare checks, victim support. Several of those labels already live under
+  // Health > Social Workers and Mental Health Counselors, which is where that work belongs and where a
+  // member doing it should be found. The seven below are the operational craft of the job and nothing
+  // else.
+  //
+  // "Community policing" is rejected on separate and stronger grounds and is now refused by the
+  // validator rather than left to review (see PROHIBITED_NAME_PATTERNS at the top of this file): the
+  // term is what vigilante and trafficking networks call themselves, so it is not a name this taxonomy
+  // should let anyone claim in any sector, not merely one to keep off this occupation.
+  //
+  // All seven target the pre-existing Police Officers row, so each carries occupationExisting: true.
+  // No new occupation, so the plural-twin guard has nothing to check here. None of the seven names
+  // exists anywhere else in the live taxonomy as far as the sector reads available at authoring time
+  // show; that matters beyond tidiness, because the Directory's sector filter resolves a member
+  // through the stored row's parent while its picker de-duplicates search results by name across
+  // sectors - so a name shared between two sectors can file a member under the wrong one (live today
+  // for "Programming" and "Plumber"). Keeping these names unique to this sector keeps them out of
+  // that. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 93, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Patrol and incident response' },
+  { id: 94, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Criminal investigation' },
+  { id: 95, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Arrest and custody procedures' },
+  { id: 96, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Search and seizure procedures' },
+  { id: 97, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Traffic enforcement and collision investigation' },
+  { id: 98, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Public order and crowd management' },
+  { id: 99, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Interview and statement taking' },
+
+  // Changes 100-111 (owner-approved 2026-09-20): swimming and physical education join Education.
+  // Nobody in this community can currently say they teach a child to swim, or teach PE at all.
+  //
+  // A read settled both halves. Education holds nine occupations - Childcare Workers,
+  // Early-Childhood Educators, Education Support Staff, Primary School Teachers, School
+  // Administrators, Secondary School Teachers, Tutors, University Faculty, Vocational Trainers -
+  // and not one of them is a physical or sports role; the nearest, Early-Childhood Educators'
+  // "Health and safety for young children", is supervision, not instruction. A scan of every active
+  // skill in all 20 sectors for swim|sport|coach|athlet|fitness|physical education|lifeguard|
+  // recreation|gym|water safety returned exactly two rows, and both are false positives on the
+  // letters "sport" inside "transport": "Safe transport and disposal procedures" (Environmental &
+  // Waste Management) and "Triage and transport protocols" (Health). So none of the twelve names
+  // below collides with anything live, in this sector or any other - which matters beyond tidiness,
+  // because a skill name shared across two sectors files a member under an arbitrary one of them.
+  //
+  // Two occupations rather than one, because a gym teacher and a swimming teacher are different
+  // jobs and the taxonomy is what tells a member which roles their skill reaches. Both are named in
+  // the plural, matching every other Education row, and neither shares a role token with a live one,
+  // so the plural-twin guard passes.
+  //
+  // "Swimming instruction" and "Water safety and lifeguarding" are deliberately listed under BOTH
+  // occupations, the same way "Crisis intervention" sits under four Health occupations. That is the
+  // point of the duplication here rather than an accident of it: somebody whose one nameable skill
+  // is swimming picks it once and reaches two roles, not one.
+  //
+  // Nothing here is scoped to children (owner note): adults learn to swim too, and a name like
+  // "Youth swimming instruction" would have quietly excluded half the people who could teach it.
+  // Vocational Trainers' pre-existing "Adult education and training" already covers the adult-teaching
+  // side for anyone who wants to claim it, so no age-specific skill is added on either end.
+  //
+  // "Adaptive and inclusive physical education" is on the list on purpose. A child who has been
+  // through what the children this is for have been through may not arrive able to do ordinary PE,
+  // and a teacher who can work with that is a different capability worth naming rather than folding
+  // into the general one. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 100, op: 'addOccupation', sector: 'Education', occupation: 'Physical Education Teachers' },
+  { id: 101, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Physical education teaching' },
+  { id: 102, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Adaptive and inclusive physical education' },
+  { id: 103, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Sports safety and injury prevention' },
+  { id: 104, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Swimming instruction' },
+  { id: 105, op: 'addSkill', sector: 'Education', occupation: 'Physical Education Teachers', skill: 'Water safety and lifeguarding' },
+  { id: 106, op: 'addOccupation', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches' },
+  { id: 107, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Swimming instruction' },
+  { id: 108, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Water safety and lifeguarding' },
+  { id: 109, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Stroke technique and race training' },
+  { id: 110, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Sports coaching' },
+  { id: 111, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Fitness and conditioning coaching' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -357,6 +554,15 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
     return occKey;
   };
 
+  // Every name a change creates or renames to passes the prohibited-name list. Returns true when the
+  // name is refused, so each caller can stop before registering it.
+  const refuseProhibitedName = (id, value, label) => {
+    const hit = findProhibitedName(value);
+    if (!hit) return false;
+    fail(id, `${label} "${normalizeTaxonomyName(String(value ?? ''))}" is not an allowed name: it ${hit.reason}.`);
+    return true;
+  };
+
   ops.forEach((entry, index) => {
     const expectedId = index + 1;
     if (entry.id !== expectedId) {
@@ -375,6 +581,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'addOccupation requires non-empty sector and occupation.');
           return;
         }
+        if (refuseProhibitedName(id, entry.occupation, 'occupation')) return;
         const occKey = key(entry.sector, entry.occupation);
         if (occupations.has(occKey)) {
           fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already created by an earlier change.`);
@@ -389,6 +596,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'addSkill requires non-empty sector, occupation, and skill.');
           return;
         }
+        if (refuseProhibitedName(id, entry.skill, 'skill')) return;
         const occKey = requireOccupation(id, entry.sector, entry.occupation, entry.occupationExisting, 'target');
         if (!occKey) return;
         const skillKey = key(entry.sector, entry.occupation, entry.skill);
@@ -405,6 +613,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'renameOccupation requires non-empty sector, from, and to.');
           return;
         }
+        if (refuseProhibitedName(id, entry.to, 'rename target occupation')) return;
         const fromKey = key(entry.sector, entry.from);
         const toKey = key(entry.sector, entry.to);
         if (occupations.has(toKey)) {
@@ -428,6 +637,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'renameSkill requires non-empty sector, occupation, from, and to.');
           return;
         }
+        if (refuseProhibitedName(id, entry.to, 'rename target skill')) return;
         const occKey = requireOccupation(id, entry.sector, entry.occupation, entry.occupationExisting, 'target');
         if (!occKey) return;
         const fromKey = key(entry.sector, entry.occupation, entry.from);
