@@ -63,6 +63,34 @@
 
 import { normalizeTaxonomyName } from './taxonomyNames.mjs';
 
+// Names the taxonomy will never carry, whatever change proposes them. Checked against every name a
+// change CREATES or RENAMES TO (skills and occupations alike), so a later pass cannot reintroduce one
+// by copying what a nearby entry does - which is how a bad name normally gets in, since an addSkill
+// line in review looks like every other addSkill line.
+//
+// "Community policing" / "community police" (owner directive, 2026-09-20). The term is what vigilante
+// and trafficking networks call themselves; it does not name a policing function this product should
+// let anyone claim. It is banned as a NAME, not as a subject: "Community outreach" (live under Social
+// Workers), "Community-Health Workers" (a live occupation) and "Community outreach" anywhere else are
+// untouched, because the pattern matches only the word community immediately followed by polic-.
+//
+// This list is deliberately tiny and every entry needs a recorded reason. It is a place for names that
+// are harmful to carry, not a style guide - a merely clumsy name is a review comment, not a ban.
+export const PROHIBITED_NAME_PATTERNS = [
+  {
+    pattern: /\bcommunit(?:y|ies)[\s\-]*polic/i,
+    reason:
+      'names what vigilante and trafficking networks call themselves rather than a policing function (owner directive, 2026-09-20)',
+  },
+];
+
+// The offending entry, or null when the name is allowed.
+export function findProhibitedName(value) {
+  const name = normalizeTaxonomyName(String(value ?? ''));
+  if (name.length === 0) return null;
+  return PROHIBITED_NAME_PATTERNS.find((entry) => entry.pattern.test(name)) ?? null;
+}
+
 export const TAXONOMY_CHANGE_TYPES = [
   'addOccupation',
   'addSkill',
@@ -394,6 +422,44 @@ export const TAXONOMY_CHANGES = [
   { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Client advocacy' },
   { id: 91, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient communication' },
   { id: 92, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Domestic violence advocacy' },
+
+  // Changes 93-99 (owner-approved 2026-09-20): fill out Public Safety & Justice > Police Officers.
+  // A read of the live sector for the domestic-violence-advocacy placement turned up the gap: its six
+  // occupations are Corrections Officers, Firefighters, Forensic Staff, Judges, Lawyers and Police
+  // Officers, and every one of them carries two or three skills except Police Officers, which carries
+  // exactly one - "Evidence handling and reporting". So a member whose policing work is patrol,
+  // investigation, custody or public order has nothing to pick, and the occupation shows almost empty
+  // to anyone browsing it. Workforce matches holders by skill name, so a nearly skill-less occupation
+  // also matches almost nobody and the community's policing capacity reads as near zero.
+  //
+  // SCOPE, and it is a hard line (owner directive, 2026-09-20): police are not social workers, and no
+  // skill under this occupation may frame them as such. Deliberately NOT added, each considered and
+  // rejected on that directive: community liaison, crisis intervention, de-escalation and
+  // mental-health response, welfare checks, victim support. Several of those labels already live under
+  // Health > Social Workers and Mental Health Counselors, which is where that work belongs and where a
+  // member doing it should be found. The seven below are the operational craft of the job and nothing
+  // else.
+  //
+  // "Community policing" is rejected on separate and stronger grounds and is now refused by the
+  // validator rather than left to review (see PROHIBITED_NAME_PATTERNS at the top of this file): the
+  // term is what vigilante and trafficking networks call themselves, so it is not a name this taxonomy
+  // should let anyone claim in any sector, not merely one to keep off this occupation.
+  //
+  // All seven target the pre-existing Police Officers row, so each carries occupationExisting: true.
+  // No new occupation, so the plural-twin guard has nothing to check here. None of the seven names
+  // exists anywhere else in the live taxonomy as far as the sector reads available at authoring time
+  // show; that matters beyond tidiness, because the Directory's sector filter resolves a member
+  // through the stored row's parent while its picker de-duplicates search results by name across
+  // sectors - so a name shared between two sectors can file a member under the wrong one (live today
+  // for "Programming" and "Plumber"). Keeping these names unique to this sector keeps them out of
+  // that. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 93, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Patrol and incident response' },
+  { id: 94, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Criminal investigation' },
+  { id: 95, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Arrest and custody procedures' },
+  { id: 96, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Search and seizure procedures' },
+  { id: 97, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Traffic enforcement and collision investigation' },
+  { id: 98, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Public order and crowd management' },
+  { id: 99, op: 'addSkill', sector: 'Public Safety & Justice', occupation: 'Police Officers', occupationExisting: true, skill: 'Interview and statement taking' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -441,6 +507,15 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
     return occKey;
   };
 
+  // Every name a change creates or renames to passes the prohibited-name list. Returns true when the
+  // name is refused, so each caller can stop before registering it.
+  const refuseProhibitedName = (id, value, label) => {
+    const hit = findProhibitedName(value);
+    if (!hit) return false;
+    fail(id, `${label} "${normalizeTaxonomyName(String(value ?? ''))}" is not an allowed name: it ${hit.reason}.`);
+    return true;
+  };
+
   ops.forEach((entry, index) => {
     const expectedId = index + 1;
     if (entry.id !== expectedId) {
@@ -459,6 +534,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'addOccupation requires non-empty sector and occupation.');
           return;
         }
+        if (refuseProhibitedName(id, entry.occupation, 'occupation')) return;
         const occKey = key(entry.sector, entry.occupation);
         if (occupations.has(occKey)) {
           fail(id, `occupation "${entry.occupation}" (${entry.sector}) is already created by an earlier change.`);
@@ -473,6 +549,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'addSkill requires non-empty sector, occupation, and skill.');
           return;
         }
+        if (refuseProhibitedName(id, entry.skill, 'skill')) return;
         const occKey = requireOccupation(id, entry.sector, entry.occupation, entry.occupationExisting, 'target');
         if (!occKey) return;
         const skillKey = key(entry.sector, entry.occupation, entry.skill);
@@ -489,6 +566,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'renameOccupation requires non-empty sector, from, and to.');
           return;
         }
+        if (refuseProhibitedName(id, entry.to, 'rename target occupation')) return;
         const fromKey = key(entry.sector, entry.from);
         const toKey = key(entry.sector, entry.to);
         if (occupations.has(toKey)) {
@@ -512,6 +590,7 @@ export function validateTaxonomyChanges(ops = TAXONOMY_CHANGES) {
           fail(id, 'renameSkill requires non-empty sector, occupation, from, and to.');
           return;
         }
+        if (refuseProhibitedName(id, entry.to, 'rename target skill')) return;
         const occKey = requireOccupation(id, entry.sector, entry.occupation, entry.occupationExisting, 'target');
         if (!occKey) return;
         const fromKey = key(entry.sector, entry.occupation, entry.from);
