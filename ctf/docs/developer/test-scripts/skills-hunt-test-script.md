@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the "Save these missions as one picture" control, which moved to the admin Missions tab the same day and no longer navigates away from the screen |
 
 ---
 
@@ -378,6 +378,49 @@ Result: web ☐
 So a mis-pointed mission no longer announces itself here. Check it on the **admin** Missions tab instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with its sector or skill beside it; a mission named for one trade that reads "every accepted nomination" is the one to correct with SH-A10c.
 
 Result: web ☐
+
+---
+
+### SH-9b — Saving the missions as one picture, without leaving the screen
+
+**Role:** member, admin · **Surfaces:** web · installed app (iOS, added to the home screen)
+
+**Precondition:** An active round with at least two active missions, one of them archived or locked,
+and one member account that is not an admin. For the installed-app run, add the site to the iOS home
+screen and open it from that icon, so it runs with no browser chrome — that is the case this step
+exists for.
+
+**Steps:**
+1. Sign in as the non-admin member, open the Missions tab, and read it top to bottom.
+2. Sign in as an admin, open `/admin/skills-hunt`, pick the round, and open the **Missions** tab.
+3. Press **Save these missions as one picture**, and look at the screen you are on immediately
+   after — on the phone, before touching anything in the share sheet.
+4. On the phone, save the picture to the photo library from the sheet; then press the button again
+   and close the sheet without choosing anything.
+5. Open the saved file, and check each active mission in it against the admin Missions list, along
+   with the archived or locked one.
+
+**Expected:** Step 1 — the member Missions tab carries no such control anywhere; it shows the
+heading, the subtitle and the mission cards, nothing else. Step 2 — the control sits above the
+mission list, under the auto-mission panel, with a short note saying what it does. Step 3 — **the
+admin Missions tab is still on screen and still scrolled where it was**, in the browser and in the
+installed app alike. Nothing navigates away: no page showing a PNG icon with a file name and an
+"Open in…" link, no screen without a back control, and never a need to force the app closed to get
+back — that was the defect on 2026-09-20, from a plain link to the route. On a desktop browser the
+file saves as `skillshunt-missions-<today>.png`; on the phone the share sheet opens over the
+screen. Step 4 — the picture reaches the photo library, and closing the sheet without choosing
+anything leaves the screen untouched and says nothing. Step 5 — one tall picture with the round's
+name and dates at the top, every active mission as its own card carrying a title, a description,
+what the mission asks for in plain words ("3 accepted nominations with a Health skill"), and its
+bonus points where it pays any. The archived or locked mission is **not** in it, and no progress
+bar, count or "x/y complete" appears anywhere: the picture is made to be posted in public, and one
+member's counts are not an advertisement. The goal type's internal name (`count_skills_in_sector`)
+never appears.
+
+**If it fails:** a sentence in red under the button saying what went wrong, with the screen still
+there. Never a blank page and never a dead file view.
+
+Result: web ☐ installed app ☐
 
 ---
 
