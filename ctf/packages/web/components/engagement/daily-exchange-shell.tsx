@@ -30,7 +30,7 @@ function asPlainText(reading: ExchangeActivityReading): string {
     `  target: ${reading.target}`,
     `  today: ${reading.today}`,
     `  best day: ${best}`,
-    `  days at or above the target: ${reading.daysAtTarget}`,
+    `  goal reached: ${reading.daysAtTarget}`,
     '',
     '  last 30 days:',
     ...reading.days.map((day) => `    ${day.day}: ${day.members}`),
@@ -325,7 +325,7 @@ export function DailyExchangeShell() {
                 value={reading.bestDay ? String(reading.bestDay.members) : '—'}
                 tokens={t}
               />
-              <Stat label="Days at target" value={String(reading.daysAtTarget)} tokens={t} />
+              <Stat label="Goal reached" value={String(reading.daysAtTarget)} tokens={t} />
             </div>
 
             <button
