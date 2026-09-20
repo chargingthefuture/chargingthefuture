@@ -17,12 +17,11 @@ import { SaveImageButton } from '@/components/shared/save-image-button';
 // page around it, so there was no way back to the trends screen, and saving the file works fine on
 // a phone anyway.
 //
-// Removing that second link did not settle it (owner report, 2026-09-20). The one that remained was
-// a plain link to the route, and in the installed app on iOS following it navigates the app's own
-// window to the downloaded file — iOS then draws its file preview with no back control, because a
-// standalone app has no address bar to put one on, and the only way out is to force the app closed.
-// So the picture is fetched and handed to the share sheet or saved as a file, and this screen never
-// moves. See components/shared/save-image-button.tsx.
+// Removing that second link did not settle it, and neither did the first replacement for it (owner
+// reports, 2026-09-20, twice in one day). The picture is now drawn and then shown on this screen,
+// to be pressed and held, shared, or saved from here — nothing is handed anywhere off the back of
+// the press that fetched it, and nothing navigates. Both failures and why they looked right are
+// written out in components/shared/save-image-button.tsx.
 //
 // The image never carries the area coordinates, and there is no control to put them back (owner
 // directive, 2026-08-24). An exported image is made to be shared publicly, so the choice was
@@ -35,7 +34,7 @@ export function ClickLogTrendImageLink() {
     <SaveImageButton
       url="/api/click-log/admin/trends/image"
       filename={`clicklog-trends-${today}.png`}
-      label="Save the report as one image"
+      label="Show the report as one image"
       accent={TREND_ACCENT}
       surface={TREND_SURFACE}
       border={TREND_BORDER}
@@ -45,9 +44,9 @@ export function ClickLogTrendImageLink() {
     >
       <>
         <div>
-          Saves the report as one tall picture, named for today&apos;s date. You stay on this screen.
-          On a phone the share sheet opens over it — save the picture to your photos or send it
-          straight to another app.
+          Draws the report as one tall picture and shows it here, named for today&apos;s date. You
+          stay on this screen. On a phone, press and hold the picture to save it to your photos, or
+          use Share to send it straight to another app.
         </div>
         <div style={{ marginTop: 12 }}>
           The image leaves the area coordinates out, because it is made to be shared — the countries
