@@ -691,6 +691,7 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE p.claimed_by_user_id = $1
+        AND p.deleted_at IS NULL
       LIMIT 1
     `,
     [userId],
@@ -1191,7 +1192,7 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id::text = $1 AND p.is_active = true
+        WHERE p.id::text = $1 AND p.is_active = true AND p.deleted_at IS NULL
         LIMIT 1
       `,
       [id],
@@ -1245,6 +1246,12 @@ export async function listDirectoryForMember(
     // Directory is auth-gated but not "contribute-to-browse": every authenticated
     // member sees every active profile (including carried-over unclaimed profiles),
     // so there is no requirement that the viewer first create their own profile.
+    //
+    // Both queries below exclude soft-deleted profiles. Account deletion stamps
+    // deleted_at and leaves is_active alone (see lib/account/deletion-registry.ts), so a
+    // filter on is_active by itself kept deleted listings on this screen while the invite
+    // queue and extractDirectoryShape.mjs, which check both columns, correctly dropped
+    // them. A member who deletes their account has to disappear from here.
     const offset = (pagination.page - 1) * pagination.pageSize;
     const normalizedFilters = normalizeListFilters(filters);
 
@@ -1256,6 +1263,7 @@ export async function listDirectoryForMember(
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
         WHERE p.is_active = true
+          AND p.deleted_at IS NULL
           AND (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
@@ -1342,6 +1350,7 @@ export async function listDirectoryForMember(
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
         WHERE p.is_active = true
+          AND p.deleted_at IS NULL
           AND (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
