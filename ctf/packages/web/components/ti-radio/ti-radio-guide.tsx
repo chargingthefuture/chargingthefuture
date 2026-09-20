@@ -27,9 +27,9 @@ type Props = {
 // timezone.
 //
 // It renders for a signed-out visitor exactly as it does for a member, minus the controls: that is
-// the whole idea of a broadcast guide, and this one is written for people arriving from the Quora
-// space who have not joined yet. The only thing an account changes is whether an empty row is a
-// button.
+// the idea of a broadcast guide, and this one is written for readers who have not joined yet — the
+// page's job is to get somebody into Chyme at the time it names. The only thing an account changes
+// is whether an empty row is a button.
 export function TiRadioGuideView({ initialGuide, signInUrl, verifyUrl }: Props) {
   const { theme } = useTheme();
   const t = getTiRadioTokens(theme);

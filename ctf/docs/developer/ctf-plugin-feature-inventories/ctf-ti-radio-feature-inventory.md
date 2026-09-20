@@ -33,9 +33,10 @@ they booked, they and whoever turns up meet in Chyme.
 A visitor with no account sees the same schedule and can plan around it. They cannot take a slot
 until they have joined and been approved.
 
-The page exists because the project runs a Quora space at tiradio.quora.com where people are told to
-come and talk. A space can point at a time; it cannot hold a schedule, and it cannot let somebody
-else put themselves on it.
+The page exists to get people into Chyme. A room nobody knows about is empty at the hour somebody
+would have come; a published time, with the room one tap away, is how a reader turns up. It is also
+the one surface where a member can put themselves on a time in public without asking anyone — the
+room itself cannot hold a schedule, and it cannot let somebody else book a slot on it.
 
 ## Implemented User Features
 
@@ -201,10 +202,23 @@ only here would be invisible on their own trust card.
    repository is not attached to this change and the edit is outstanding.
 8. **"TI" in a product name sits against the brand lexicon.** `ctf/docs/BRAND_VOICE_LEXICON.md` says
    TI is valid for describing a person and is never part of a product name — a line written when
-   "TI Skills Economy" was retired. The name here is the owner's and matches the live Quora space, so
-   it ships as named; the lexicon line needs an owner decision either way.
+   "TI Skills Economy" was retired. The name here is the owner's and ships as named; the lexicon
+   records it as the single exception. Its original second reason (a Quora space of the same name)
+   was withdrawn on 2026-09-20, and the exception stands without it.
 
 ## Change Log
+
+- 2026-09-20: **The page says what it is for: getting people into Chyme.** Owner directive, the
+  same day as the link removal below and the reason it went further. Saying the guide exists
+  because the project runs a Quora space overstated it — the schedule's job is to fill the room in
+  this app, and a space elsewhere was at most where some readers came from. The Intent statement,
+  the header comments in `lib/ti-radio/constants.ts` and the guide component, the command-contract
+  header, and the table comments in `schema.sql`, `schema.demo.sql` and migration `0017` now say
+  that plainly, and none of them names a Quora space. The naming exception in
+  `ctf/docs/BRAND_VOICE_LEXICON.md` keeps the name TI Radio — it is the owner's name, already
+  published, and TI is what the people it is for call themselves — with its Quora-space reason
+  withdrawn. Wording only: no schema change (SQL comments only), no route, contract shape, or
+  behavior change.
 
 - 2026-09-20: **The outbound Quora link is gone from the guide.** Owner directive: the project no longer advertises Quora, so the intro card's `tiradio.quora.com` button was removed along with the `TI_RADIO_SPACE_URL` and `TI_RADIO_SPACE_LABEL` constants that fed it. The three remaining buttons — Open Chyme, Sign in to host, Finish verifying to host — all point inside the app, so the style helper that drew a plain, unaccented button for the outbound link was collapsed to the single accented style rather than left with a branch nothing takes. The guide is still readable with no account and the rest of the intro copy is untouched. Copy and markup only — no schema, route, or contract change.
 

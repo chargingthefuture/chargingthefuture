@@ -7537,9 +7537,9 @@ CREATE INDEX IF NOT EXISTS fireside_audit_events_created_idx ON fireside_audit_e
 -- The grid itself is never stored. Only bookings are rows, so an empty slot costs nothing and the
 -- guide can be lengthened by changing one constant in lib/ti-radio/constants.ts.
 --
--- Reading the guide needs no account at all: it is written for people arriving from the Quora space
--- at tiradio.quora.com who have not joined yet, and a broadcast guide nobody can read is not a
--- guide. Claiming a slot needs Unlock approval, like everything else in this app.
+-- Reading the guide needs no account at all: it is written for readers who have not joined yet, the
+-- page's job is to get somebody into Chyme at the time it names, and a broadcast guide nobody can
+-- read is not a guide. Claiming a slot needs Unlock approval, like everything else in this app.
 --
 -- Distinct from Mutual Time, which stays admin-only. There the owner asks a group when they can
 -- meet and the app picks the hour with the most overlap. Here nobody is asked anything.
