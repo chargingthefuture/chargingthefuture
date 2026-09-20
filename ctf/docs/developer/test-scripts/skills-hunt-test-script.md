@@ -362,20 +362,39 @@ Result: web ☐
 
 ---
 
-### SH-9 — Missions tab displays progress
+### SH-9 — Missions tab shows what the round still needs, the same for everybody
 
-**Role:** member · **Surfaces:** web, android
+**Role:** member (two different accounts) · **Surfaces:** web
 
-**Precondition:** Seeded data includes at least one active mission with a goal.
+**Precondition:** An active round with at least two active missions. One mission has some accepted
+nominations against it from one scout; another has none. Two member accounts, one of them the scout
+who made those nominations.
 
 **Steps:**
-1. Navigate to the Missions tab.
-2. Observe the mission list.
-3. Each mission should show a title, progress bar, and a "Scout Now" or equivalent CTA.
+1. Sign in as the scout and open the Missions tab. Read each card's count line.
+2. Sign in as the other member — who has nominated nobody — and open the same tab.
+3. Compare the two screens card by card.
+4. Have an admin raise one mission's goal target above its current count, then reload the tab.
 
-**Expected:** Missions load from the real API (not stubbed). Progress bars reflect actual submission counts. Archived missions are not shown. **A count never reads past its target** (owner decision 2026-09-18): a mission whose stored count is 82 against a target of 1 shows "1/1 complete", matching the bar, which has always stopped at full width. The stored count is untouched — only what a member reads is capped.
+**Expected:** Missions load from the real API (not stubbed). Each card reads "**N of M
+nominated**", where N is what the **round** has between everybody, not what the reader has, and the
+bar matches it. Archived missions are not shown. **Steps 2 and 3: both members see identical
+numbers on every card.** That is the point of the change — a mission is a competition the round
+runs together (owner directive, 2026-09-20), so a member arriving at "1 of 3 nominated" can see
+what is still needed. Before this the same mission read "3/3 complete" to the scout and "0/3" to
+everyone else.
+A count never reads past its target (owner decision 2026-09-18): a round with 82 against a target
+of 1 shows "1 of 1", matching the bar. Step 4 — raising the target above the count takes the
+mission back below complete, because the community now has more to do.
+The subtitle reads that everyone's nominations count toward the same missions.
 
-So a mis-pointed mission no longer announces itself here. Check it on the **admin** Missions tab instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with its sector or skill beside it; a mission named for one trade that reads "every accepted nomination" is the one to correct with SH-A10c.
+**Not changed by this:** a scout's own bonus points. Those are still earned on their own completion
+and are not taken back — check that on the leaderboard, not here.
+
+A mis-pointed mission does not announce itself here. Check it on the **admin** Missions tab
+instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with
+its sector or skill beside it; a mission named for one trade that reads "every accepted nomination"
+is the one to correct with SH-A10c.
 
 Result: web ☐
 

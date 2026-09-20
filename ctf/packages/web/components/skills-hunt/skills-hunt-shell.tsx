@@ -11,7 +11,7 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
-  type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithProgress,
+  type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithCommunityProgress,
 } from "./sh-shared";
 import { SkillsHuntNotifications } from "./sh-notifications";
 import { SkillsHuntScoutTab, type ScoutFormModel } from "./sh-scout-tab";
@@ -42,7 +42,7 @@ interface ShellData {
   leaderboard: SkillsHuntLeaderboardItem[];
   userId?: string;
   loadingMissions: boolean;
-  missions: SkillsHuntMissionWithProgress[];
+  missions: SkillsHuntMissionWithCommunityProgress[];
   loadingFinds: boolean;
   myFinds: SkillsHuntSubmission[];
 }
@@ -90,7 +90,7 @@ export function SkillsHuntShell({
   const [activeRound, setActiveRound] = useState<SkillsHuntRound | null>(null);
   const [leaderboard, setLeaderboard] = useState<SkillsHuntLeaderboardItem[]>([]);
   const [serverCurrentUserEntry, setServerCurrentUserEntry] = useState<SkillsHuntLeaderboardItem | null>(null);
-  const [missions, setMissions] = useState<SkillsHuntMissionWithProgress[]>([]);
+  const [missions, setMissions] = useState<SkillsHuntMissionWithCommunityProgress[]>([]);
   const [loadingMissions, setLoadingMissions] = useState(false);
   const [notifications, setNotifications] = useState<SkillsHuntNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -193,7 +193,7 @@ export function SkillsHuntShell({
       try {
         const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/missions`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
-        const data = (await res.json()) as { items: SkillsHuntMissionWithProgress[] };
+        const data = (await res.json()) as { items: SkillsHuntMissionWithCommunityProgress[] };
         setMissions(data.items);
       } finally {
         if (!controller.signal.aborted) setLoadingMissions(false);

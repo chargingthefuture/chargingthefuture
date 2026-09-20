@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSkillsHuntReadAccess } from '../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
-import { listMissionsForRoundWithProgress } from 'lib/skills-hunt/missions';
+import { listMissionsForRoundWithCommunityProgress } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 
@@ -14,8 +14,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   const { roundId } = await params;
 
   try {
+    // No caller id: the same rows for everybody (owner directive, 2026-09-20). The gate still
+    // runs, so this stays a signed-in read.
     const items = await withDbTransaction((client) =>
-      listMissionsForRoundWithProgress(client, roundId, gate.auth.userId),
+      listMissionsForRoundWithCommunityProgress(client, roundId),
     );
     return NextResponse.json({ items }, { status: 200 });
   } catch (error) {

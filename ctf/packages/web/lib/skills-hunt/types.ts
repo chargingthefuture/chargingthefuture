@@ -241,8 +241,23 @@ export type SkillsHuntMissionProgress = {
   updatedAtIso: string;
 };
 
-// Composite shape returned by GET /api/skills-hunt/rounds/{roundId}/missions
-// for the requesting user — the player view that the Scout/Missions tab consumes.
+// Composite shape for one scout's own progress. Still what the recompute path and the
+// mission-complete notification work in, because a bonus is earned by a person.
 export type SkillsHuntMissionWithProgress = SkillsHuntMission & {
   progress: SkillsHuntMissionProgress | null;
+};
+
+// What the round has done on a mission, across everybody (owner directive, 2026-09-20: missions
+// are a community-wide competition, and the Missions tab renders the same for every member).
+export type SkillsHuntMissionCommunityProgress = {
+  /** Accepted nominations in the round that count toward this mission, from every scout. */
+  count: number;
+  /** How many scouts have contributed at least one of them. */
+  contributors: number;
+};
+
+// Composite shape returned by GET /api/skills-hunt/rounds/{roundId}/missions — the Missions tab.
+// It carries no per-member figure at all, so two members reading it see the same screen.
+export type SkillsHuntMissionWithCommunityProgress = SkillsHuntMission & {
+  community: SkillsHuntMissionCommunityProgress;
 };

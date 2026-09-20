@@ -1,7 +1,7 @@
 "use client";
 
 import { Target, Lock, CheckCircle } from "lucide-react";
-import { type SkillsHuntMissionWithProgress, type Tab } from "./sh-shared";
+import { type SkillsHuntMissionWithCommunityProgress, type Tab } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 import { missionView } from 'lib/skills-hunt/mission-view';
@@ -28,7 +28,7 @@ function ScoutButton({ isLocked, color, onScout }: { isLocked: boolean; color: s
   );
 }
 
-function MissionCard({ mission, onScout }: { mission: SkillsHuntMissionWithProgress; onScout: () => void }) {
+function MissionCard({ mission, onScout }: { mission: SkillsHuntMissionWithCommunityProgress; onScout: () => void }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
   const { isLocked, color, displayCount, pct, isComplete } = missionView(mission);
@@ -38,8 +38,11 @@ function MissionCard({ mission, onScout }: { mission: SkillsHuntMissionWithProgr
         <div style={{ flex: 1 }}>
           <MissionTitleRow title={mission.title} isLocked={isLocked} isComplete={isComplete} />
           {mission.description && <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 10, lineHeight: 1.5 }}>{mission.description}</div>}
+          {/* The community's count, not the reader's (owner directive, 2026-09-20). "nominated"
+              rather than "complete" because the number is what the round has done between
+              everybody, and a member arriving at "1 of 3 nominated" can see what is still needed. */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: t.MUTED }}>
-            <span>{displayCount}/{mission.goalTarget} complete</span>
+            <span>{displayCount} of {mission.goalTarget} nominated</span>
             {mission.bonusPoints > 0 && <span style={{ color, fontWeight: 700 }}>+{mission.bonusPoints} pts</span>}
           </div>
           <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
@@ -60,7 +63,7 @@ export function SkillsHuntMissionsTab({
 }: {
   noActiveRound: boolean;
   loading: boolean;
-  missions: SkillsHuntMissionWithProgress[];
+  missions: SkillsHuntMissionWithCommunityProgress[];
   onNavTab: (tab: Tab) => void;
 }) {
   const { theme } = useTheme();
@@ -68,7 +71,7 @@ export function SkillsHuntMissionsTab({
   return (
     <>
       <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Active Missions</div>
-      <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 20 }}>Complete missions to earn bonus points and unlock badges</div>
+      <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 20 }}>What this round still needs. Everyone&apos;s nominations count toward the same missions.</div>
       {noActiveRound ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>No active round — no missions yet.</div>
       ) : loading ? (

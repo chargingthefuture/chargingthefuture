@@ -543,8 +543,15 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.mission.list
-    version: 1.0.0
-    description: List a round's missions. The admin surface sees every status; the member surface sees active/locked missions with the caller's own progress attached.
+    version: 2.0.0
+    description: >-
+      List a round's missions. The admin surface sees every status. The member surface sees
+      active/locked missions with the round's community progress attached — how many accepted
+      nominations the round has toward each mission across every scout, and how many scouts have
+      contributed one. It carries no per-caller figure, so the Missions tab renders the same for
+      every member (owner directive, 2026-09-20: a mission is a community-wide competition).
+      Version 2.0.0 replaced the per-caller `progress` object with that `community` object; a
+      scout's own progress row still exists and still pays their bonus, but it is not read here.
     inputSchema:
       roundId:
         type: string
@@ -552,7 +559,9 @@ contracts:
     outputSchema:
       items:
         type: array
-        description: Mission rows; the member view includes per-caller progress.
+        description: >-
+          Mission rows. The member view attaches `community: { count, contributors }`, summed over
+          the per-scout progress rows so the figure and the bonus arithmetic share one definition.
     dataAccess:
       - skills_hunt_missions
       - skills_hunt_mission_progress
@@ -749,6 +758,15 @@ changelog:
     change: Added the previously undocumented mission commands (mission.list, mission.create, mission.update, mission.archive) and the new auto-mission commands (mission.auto_generate, mission.auto_config_update) for missions auto-opened from Workforce sector gaps.
   - date: 2026-08-27
     change: Removed the `mode` input from skills-hunt.leaderboard.list and the team wording from skills-hunt.leaderboard.rebuild — the team leaderboard is gone (owner directive), so both serve scout ranking only.
+  - date: 2026-09-20
+    change: >-
+      skills-hunt.mission.list is 2.0.0: the member view returns the round's community progress on
+      each mission instead of the caller's own. A mission is a competition the round runs together,
+      so the Missions tab has to render the same for everybody — before this the same mission read
+      "3/3 complete" to one scout and "0/3" to the next, which told a reader nothing about whether
+      the community still needed that skill. The count is summed over the per-scout progress rows
+      rather than recomputed from submissions, so it cannot drift from the arithmetic that pays a
+      scout's bonus. That bonus is unchanged: it is still earned on a scout's own completed_at.
   - date: 2026-09-20
     change: >-
       Added skills-hunt.mission.image, an admin-only PNG of a round's active missions for

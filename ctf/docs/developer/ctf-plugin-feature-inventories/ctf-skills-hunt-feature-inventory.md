@@ -72,8 +72,8 @@ Planning constraints applied:
 
 ### 1.6 Missions
 
-1. Show the active round's missions (themed sub-goals) in the Missions tab, each with a progress bar toward its goal target. A mission counts one of four things: every accepted nomination whatever the skill (`count_total_accepted`), accepted nominations carrying any skill in one sector (`count_skills_in_sector`), accepted nominations that scored a rare-skill bonus (`count_rare_skill_finds`), or accepted nominations carrying one named taxonomy skill (`count_skill_matches`, added 2026-09-17).
-2. Track progress automatically: progress is recomputed from the member's accepted nominations whenever a review lands — nothing to claim manually — and a completion sends an in-app notification.
+1. Show the active round's missions (themed sub-goals) in the Missions tab, each with a progress bar toward its goal target. **The bar is the community's, not the reader's (owner directive, 2026-09-20): a mission is a competition the round runs together, so the tab renders the same for every member** — "1 of 3 nominated" says what the round still needs, where the old per-member reading made the same mission look finished to one scout and untouched to the next, and told a reader nothing about whether the community still needed that skill. A mission counts one of four things: every accepted nomination whatever the skill (`count_total_accepted`), accepted nominations carrying any skill in one sector (`count_skills_in_sector`), accepted nominations that scored a rare-skill bonus (`count_rare_skill_finds`), or accepted nominations carrying one named taxonomy skill (`count_skill_matches`, added 2026-09-17).
+2. Track progress automatically: each scout's own progress is recomputed from their accepted nominations whenever a review lands — nothing to claim manually — and their completion sends an in-app notification. The community figure on the tab is those rows summed, so the number a member reads and the arithmetic that pays a bonus share one definition and cannot drift.
 3. Completing a mission adds its bonus points to your score. A mission's bonus points are **points, not credits** (owner directive 2026-08-27): points are a leaderboard ranking figure and have no connection to ServiceCredits. Since 2026-08-27 they are counted — a completed mission's `bonus_points` are added to the scout's round leaderboard score and to the all-time score, so finishing a mission can move you up the ranking. **Earned is earned:** the leaderboard reports a round, so archiving a mission closes it to new completions but never takes back points a scout already earned. A member only starts a fresh points count in a new round. This supersedes continuity §2.9's line about a service-credits ledger entry on mission completion.
 4. Four goal types: total accepted nominations, nominations with a skill in a named sector, rare-skill finds, and distinct sectors covered. Sector-goal progress counts a nomination when any of its skills belongs to the sector in the Skills Taxonomy (with the older claimed-profession text match kept for back-compat).
 5. Some missions open automatically from Workforce talent gaps (see §2.4): when Workforce shows a sector is short of people, an active round gets a "Scout the [sector] sector" mission pointing scouting effort at it. To the member these look and behave like any other mission.
@@ -158,7 +158,7 @@ User routes:
 - `GET /api/skills-hunt/notifications`
 - `POST /api/skills-hunt/notifications/:notificationId/read`
 - `GET /api/skills-hunt/feature-reward-card`
-- `GET /api/skills-hunt/rounds/:roundId/missions` — the member Missions tab: active/locked missions with the caller's own progress.
+- `GET /api/skills-hunt/rounds/:roundId/missions` — the member Missions tab: active/locked missions with the round's community progress attached (`community: { count, contributors }`), identical for every caller. Command `skills-hunt.mission.list` 2.0.0, which replaced the per-caller `progress` object on 2026-09-20.
 
 SkillsHunt has **no member-to-member ServiceCredits transfer**. The only ServiceCredits movement is the
 treasury **minting** the configured round reward to a scout on an accepted nomination (the
@@ -276,6 +276,23 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 7. ~~A progress bar reads past its target rather than stopping at it.~~ Decided (2026-09-18, owner): **cap it.** A mission with a target of 1 that counted 82 showed "82/1 complete" — the raw count, and not a mistake, but it reads as a fault in the bar. The count a member reads is now capped at the target in `lib/skills-hunt/mission-view.ts`; the stored count stays raw and the bar's width was already capped the same way. The case for leaving it honest was that an over-count is the signature of a mission pointed at the wrong goal — that signal now sits on the admin Missions list instead, which names what each mission counts in words with its sector or skill beside it, where the person who can correct it will see it.
 
 ## 9) Change Log
+
+- 2026-09-20: **Missions are a community-wide competition, and the Missions tab now reads that way
+  (owner directive).** The tab drew the signed-in member's own progress, so the same mission read
+  "3/3 complete" to one scout and "0/3" to the next. That is the wrong question for a screen whose
+  job is to say what the round still needs, and it made a shareable picture of the screen one
+  person's scorecard rather than an advertisement. `GET /api/skills-hunt/rounds/:roundId/missions`
+  now returns the round's totals — accepted nominations toward each mission across every scout,
+  and how many scouts contributed — and takes no caller id into the query, so two members see the
+  same screen. The card reads "1 of 3 nominated" and the subtitle says everyone's nominations
+  count toward the same missions.
+  The count is summed over the per-scout progress rows rather than recomputed from submissions:
+  every accepted nomination belongs to exactly one scout and their row already counts the ones
+  matching the goal, so adding the rows up is the same arithmetic, not a second one that can
+  drift. **A scout's own bonus is untouched** — it is still earned on their own stored
+  `completed_at`, and "earned is earned" still holds. Completion on the card is now the round
+  reaching the target, which moves if an admin raises it, because the community then has more to
+  do.
 
 - 2026-09-20 (third attempt the same day, owner report): **the picture is shown on the admin
   Missions tab instead of being handed off.** The previous attempt fetched it and offered it to the
