@@ -823,3 +823,70 @@ Result: web ☐
 - Lifting the restriction removes the line, and the row is flagged again only by its own history.
 
 Result: web ☐
+
+### FS-28 — Searching the conversation as a member
+
+**Role:** member (approved), member (unapproved), admin · **Surfaces:** web
+**Precondition:** Several comments across at least two different posts, from more than one approved
+member, with a distinctive word in one of them. An unapproved member with a held comment containing
+that same word. An admin available.
+
+**Steps:**
+1. As the approved member, open the Fireside screen and read it before typing anything.
+2. Search for the distinctive word and read the results.
+3. Press the post title on one result.
+4. Search for a phrase in quotation marks, then a search with a leading minus on one word.
+5. Search for one character, then for a word nothing contains.
+6. As the unapproved member, search for the word in their own held comment. Then as the approved
+   member, search for the same word.
+7. Have the admin remove one of the matching comments. Search again as a member who did not write
+   it, then as its author.
+8. Page to the second page of a large result, copy the address, and open it in a new tab. Then edit
+   the address by hand to a page past the end.
+
+**Expected:**
+- Before any search the screen looks as it did: your own comments, and no results section. It shows
+  nothing until you ask something.
+- The search returns matching comments from every post, each showing who wrote it, the words, and
+  the post it is under. Your own are labeled as yours.
+- Pressing the post title opens that conversation with the comment in it.
+- A quoted phrase is kept together; a leading minus leaves that word out. Neither an unbalanced
+  quotation mark nor a stray operator produces an error — the search just runs.
+- One character is refused with a line asking for at least two. A word nothing contains says
+  nothing matches, and says a comment held until its author is approved will not be there yet.
+- The unapproved member finds their **own** held comment. The approved member searching the same
+  word does **not** see it. This is the case that matters most in this script.
+- A comment an admin removed disappears from everybody's results except its author's.
+- The count above the results matches the number of results under it, on every page.
+- The copied address opens on the same page of the same search; a page past the end lands on the
+  last page rather than on nothing.
+- If the note about more matches than were looked at appears, a narrower search makes it go away.
+
+Result: web ☐
+
+### FS-29 — Everybody who was answered is told, and nobody is told twice
+
+**Role:** member (unapproved), several approved members, admin · **Surfaces:** web
+**Precondition:** A signed-in member B who is **not** approved. Members A and C, both approved, each
+with a comment under a post.
+
+**Steps:**
+1. As member B, reply to A's comment three separate times, and to C's comment once.
+2. Check that neither A nor C has been told anything.
+3. As the admin, approve member B in Unlock.
+4. Check A's notifications, then C's.
+5. As the admin, review B's submission and approve it again. Check A and C once more.
+6. Read the Unlock audit log for the approval.
+
+**Expected:**
+- Nothing reaches A or C before the approval.
+- After it, A has **one** notification, not three. C has one. Neither names any content or any
+  person, and each opens the conversation the reply is in.
+- A was answered three times and hears once — this is what makes the catch-up safe to run with no
+  cap, so nobody is dropped for being answered by somebody who wrote a lot.
+- The second approval sends nothing to either of them.
+- The audit row says two people were told, not four replies found.
+- Repeat with B replying to twenty different members before approval: all twenty are told, one
+  notice each. None is silently left out.
+
+Result: web ☐

@@ -10,6 +10,7 @@ import { FIRESIDE_BLOG_BASE } from "@/lib/fireside/constants";
 import { getAppAccent } from "@/lib/theme/theme-tokens";
 import { FiresideCommentEditor } from "./fireside-comment-editor";
 import { Pager } from "./fireside-pager";
+import { FiresideSearch } from "./fireside-search";
 import { FiresideThreadView } from "./fireside-thread-view";
 import { useUrlPage } from "./fireside-url-page";
 
@@ -421,6 +422,17 @@ export function FiresideShell({
       </div>
 
       <Guidelines t={t} />
+
+      {/* Searching the conversation, which was admin-only until now — the bodies were indexed and a
+          member was the one person who could not find a thread they remembered being in. It shows
+          nothing until somebody asks something, so the screen still opens on their own comments. */}
+      <FiresideSearch
+        t={t}
+        onOpenThread={(post) => {
+          setCameFromPost(false);
+          setOpenPost(post);
+        }}
+      />
 
       {error && (
         <div role="alert" style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", fontSize: 15, color: "#F87171" }}>

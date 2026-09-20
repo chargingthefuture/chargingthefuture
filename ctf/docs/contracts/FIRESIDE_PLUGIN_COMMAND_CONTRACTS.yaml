@@ -214,6 +214,72 @@ commands:
     purpose: Everything the signed-in member has written here, each labeled live, held, removed or withdrawn
     retentionClass: community_content
   - pluginId: fireside
+    command: fireside.search
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [q]
+      properties:
+        q:
+          type: string
+          minLength: 2
+          maxLength: 200
+        page:
+          type: integer
+          minimum: 1
+    outputSchema:
+      type: object
+      properties:
+        hits:
+          type: array
+          items:
+            type: object
+            properties:
+              commentId:
+                type: string
+              authorName:
+                type: string
+                description: A display name, never a user id or an email.
+              body:
+                type: string
+              createdAt:
+                type: string
+              editedAt:
+                type: [string, 'null']
+              postRepo:
+                type: string
+              postSlug:
+                type: string
+              postTitle:
+                type: string
+              isOwn:
+                type: boolean
+        page:
+          type: integer
+        lastPage:
+          type: integer
+        total:
+          type: integer
+        moreThanShown:
+          type: boolean
+          description: >-
+            True when the scan filled before the matches ran out. Whether a comment is public
+            depends on its author being approved in Unlock, which is asked through the platform
+            interface rather than in SQL, so the filtering happens after the database answers and
+            the scan is bounded. The screen says there is more and asks for a narrower search
+            rather than presenting a slice as everything.
+    dataAccess:
+      - fireside_comments (select)
+      - fireside_threads (select)
+      - unlock_verification_submissions (select, access_tier only)
+    purpose: >-
+      Search the conversation as a member. Returns only what the caller may read — publicly visible
+      comments, decided by the same isPubliclyVisible rule the thread read uses, plus the caller's
+      own held ones. Signed in rather than public, unlike the read of one conversation: a public
+      endpoint over every comment in the app is a different thing from a public page of one post's
+      thread. It is a search and not the browse-every-conversation view, which stays tabled.
+    retentionClass: community_content
+  - pluginId: fireside
     command: fireside.comment.remove
     version: 1.0.0
     inputSchema:

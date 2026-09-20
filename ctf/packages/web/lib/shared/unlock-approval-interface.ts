@@ -21,8 +21,14 @@ import { announceHeldReplies } from 'lib/fireside/approval-catch-up';
 
 /** What each plugin did about the approval, for the audit row the caller writes. */
 export type UnlockApprovalCatchUp = {
-  /** People told that a held reply of this member's answered their comment. */
-  firesideRepliesAnnounced: number;
+  /**
+   * How many people were told that this member had answered them while they were held.
+   *
+   * People, not replies: somebody answered five times is told once. The count is what the audit
+   * row records, so it has to mean the thing an admin would read it as — how many members heard
+   * from this approval.
+   */
+  firesidePeopleTold: number;
 };
 
 /**
@@ -37,13 +43,13 @@ export type UnlockApprovalCatchUp = {
  * written so a second run tells nobody a second time.
  */
 export async function runUnlockApprovalCatchUp(userId: string): Promise<UnlockApprovalCatchUp> {
-  let firesideRepliesAnnounced = 0;
+  let firesidePeopleTold = 0;
 
   try {
-    firesideRepliesAnnounced = await announceHeldReplies(userId);
+    firesidePeopleTold = await announceHeldReplies(userId);
   } catch (error) {
     reportError(error, { area: 'unlock-approval-catch-up', op: 'fireside_held_replies' });
   }
 
-  return { firesideRepliesAnnounced };
+  return { firesidePeopleTold };
 }
