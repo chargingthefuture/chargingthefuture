@@ -29,6 +29,11 @@ admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`.
    not vouch for a host or for what gets said in their room, and that the rules still apply in the
    room. It does **not** say the room is moderated, screened or safe — that would be a claim the
    product cannot back, and a reader deciding whether to turn up is worse off believing it.
+7. Check every link in that card. Signed out there are two — **Open Chyme** and **Sign in to host**
+   — and both stay inside the app. There is no outbound link and nothing pointing at Quora: the
+   page is here to get a reader into Chyme (owner directive, 2026-09-20). Signed in as an approved
+   member the card offers **Open Chyme** alone; signed in without approval, **Open Chyme** and
+   **Finish verifying to host**.
 
 ---
 

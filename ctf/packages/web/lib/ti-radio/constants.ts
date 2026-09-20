@@ -1,8 +1,10 @@
 // TI Radio — a published schedule of live discussions members host in Chyme.
 //
-// "TI" is Targeted Individual, the word the people this app serves use for themselves. The name
-// matches the Quora space the schedule is written for (tiradio.quora.com), where the owner points
-// people at a time and says come talk.
+// "TI" is Targeted Individual, the word the people this app serves use for themselves. The name is
+// the owner's.
+//
+// What the page is for is getting people into Chyme: it says when a discussion is happening and
+// the room is one tap away, so a reader who turns up at that time is in the app's own room.
 //
 // The shape is a broadcast guide, not an invitation list. A guide is readable by anyone walking
 // past — that is what makes it worth printing — so the page is open with no account at all. Taking
@@ -39,11 +41,6 @@ export const TI_RADIO_MAX_REMOVAL_REASON_LENGTH = 300;
 
 // Where the discussion happens. The guide says when; Chyme is the room.
 export const TI_RADIO_MEETING_ROUTE = '/apps/chyme';
-
-// The Quora space this schedule was made for. Named here rather than typed into the page so one
-// edit changes it everywhere.
-export const TI_RADIO_SPACE_URL = 'https://tiradio.quora.com';
-export const TI_RADIO_SPACE_LABEL = 'tiradio.quora.com';
 
 export const TI_RADIO_ERROR_CODE = {
   invalidPayload: 'ti_radio_invalid_payload',

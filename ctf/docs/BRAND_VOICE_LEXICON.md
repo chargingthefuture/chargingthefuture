@@ -26,10 +26,13 @@ This document is the canonical source of truth for brand language across:
     position.
 - Psyop-Free Economy: positioning phrase used in campaign and mission framing.
 - TI: Targeted Individual. Still valid when describing a person; never part of the product name.
-  - **TI Radio is the single exception** (owner decision, 2026-09-14). The capability is named for
-    the Quora space at tiradio.quora.com that it was built to serve, and a person crossing over from
-    there has to find the same name on both sides — consistency for that reader is worth more than
-    the rule. Write it **TI Radio**, capitalized, and do not "correct" it to Radio or SE Radio.
+  - **TI Radio is the single exception** (owner decision, 2026-09-14). The name is the owner's, it
+    is already published on the capability, and TI is what the people it is for call themselves —
+    for this one name that is worth more than the rule. Write it **TI Radio**, capitalized, and do
+    not "correct" it to Radio or SE Radio. (The exception was first recorded with a second reason,
+    a Quora space of the same name that the schedule was said to serve; that reason was withdrawn
+    on 2026-09-20 — the guide exists to get people into Chyme — and the naming decision stands
+    without it.)
   - This reopens nothing. "TI Skills Economy" and "TSE" stay retired, every other product name drops
     the TI, and a second exception is the owner's decision rather than a precedent this one sets.
     The exception is recorded here and on the blog Dictionary so the two never disagree.
