@@ -256,6 +256,22 @@ Owner decision, 2026-09-19. The corner reviews popup, the `/reviews` wall page, 
 4. **Why it floats (owner report, 2026-09-20).** Between 2026-09-19 and 2026-09-20 this was a row at the top of the page flow, and it read as the plugin's own first section: a visitor opening Chyme met a block of invitations before anything about Chyme, and on a phone that block was most of the first screen. A fixed corner card — the shape of the reviews popup it replaced — is read as an aside about the app rather than part of it, and takes no vertical space from the plugin under it. It is last in the page markup so it never comes before the plugin in reading order.
 5. **What it does and does not do.** Nothing moves on its own: the visitor advances with the two buttons or the keyboard. The close control hides it for the rest of the browser session (`sessionStorage`, key `ctf-invites-popup-dismissed`); in private mode the dismissal simply does not persist. The card appears 2.5 seconds after the page settles, rising into place, and `prefers-reduced-motion` turns that animation off.
 
+### 1.16 Daily Exchange (admin, the 384 reading)
+
+Owner decision, 2026-09-20. The 384 target is a day's throughput, not a headcount: 384 members trading with each other in a single day, not necessarily the same 384 on any two days. 384 is the sample size at which a reading generalizes to a population of five million, so a day at 384 is evidence the arrangement holds at that scale rather than evidence of growth. Nothing in the app computed it before this; the nearest readings were cumulative approvals and the sign-in count, neither of which is scoped to a day or to trading.
+
+1. **What "exchanged" means — `ctf/packages/web/lib/engagement/exchange-activity.ts`.** A member exchanged on a day when a completed row exists for that day naming them and another member as its two sides. Both sides count, because the goal is people working with each other. Counted: completed TrustTransport trips, completed ServiceCredits transfers (which carries Chyme tips, since a tip is a transfer), answered Foundation calls, settled Foundation quote requests, successful SocketRelay fulfillments, completed LightHouse matches, and SkillUp trainer payouts (the trainer from the disbursement row and the learner through `enrollment_id`). A member who did four things on one day counts once.
+
+2. **What is deliberately left out.** Anything one-sided — a nomination, an endorsement, a confirmed contribution, a PeerProgramming post, a Beacon reaction — because there is nobody on the other side of the row to say two members worked together. Also Recurring Activity: its row records an ongoing tie confirmed once, so counting it per day would credit the confirmation and nothing after it. And `login_events`: turning up and trading are different things, which `lib/engagement/member-activity.ts` already says at length, so this module never reads it.
+
+3. **Two dates are proxies.** LightHouse matches and SocketRelay fulfillments have no completion column, so their day comes from `updated_at`, which means a later edit to a finished row moves it to the day of the edit. Named in the module and on the screen rather than hidden. The fix is a completion column on those two tables, not a cleverer query.
+
+4. **Not the Weavers of the Commons badge (§ contributor access).** That badge sums the same kinds of event over a member's entire time here, gates on account age, and is permanent once earned, so it says who has ever contributed and can never say what happened today.
+
+5. **`GET /api/admin/daily-exchange`** — admin read, read-only, no parameters, no writes. Returns `{ reading }`: `readAt`, `target` (384), `today`, `bestDay` (`{ day, members }` or null, read across every day on record rather than the window on screen), `daysAtTarget`, and `days` — 30 entries of `{ day, members }` with quiet days filled in as zero so a gap is not mistaken for missing data. Counts only: no name, no address, no amount, and nothing about who traded with whom.
+
+6. **Screen `/admin/daily-exchange`**, linked from the admin directory at `/admin`. Four stat blocks (today, target, best day, days at or above the target), one bar per day drawn against the target rather than against the tallest day so a quiet run does not rescale into looking busy, and a control that copies the reading as plain text for pasting from a phone. A closing note on the screen names what is counted, what is left out, and the two proxy dates.
+
 ## 2) Explicit Exclusions from This Parity Inventory
 
 1. Monitoring, telemetry, and service-status operations are out of this parity inventory.
@@ -304,6 +320,8 @@ Owner decision, 2026-09-19. The corner reviews popup, the `/reviews` wall page, 
 
 ## 5) Change Log
 
+
+- 2026-09-20: **Daily Exchange, the 384 reading (§1.16).** The 384 goal had no counter and a wrong definition circulating: it is a day's throughput — 384 members trading with each other in one day, any 384 — and 384 is the sample size at which a reading generalizes to five million people. New read-only module `lib/engagement/exchange-activity.ts` counts distinct members on either side of a completed two-sided exchange per UTC day across seven sources (TrustTransport trips, ServiceCredits transfers including Chyme tips, Foundation calls, Foundation quotes, SocketRelay fulfillments, LightHouse matches, SkillUp trainer payouts), new route `GET /api/admin/daily-exchange`, new screen `/admin/daily-exchange` with a row in the admin directory. One-sided events are excluded because nobody is on the other side of the row; Recurring Activity is excluded because its row is a tie confirmed once rather than something done on a day; `login_events` is excluded because turning up is not trading. LightHouse and SocketRelay date a finished row by `updated_at` for want of a completion column, which is stated in the module and on the screen. Counts only — no member data leaves the route. No schema change, no writes.
 - 2026-08-28: **Two unused plugin-slug aliases removed** (owner decision). `pluginAliasMap` in
   `lib/plugins/repository.ts` kept `leveluptraining` and `servicecredits`. Neither string appeared
   anywhere else in the repository, so neither resolved anything a caller was actually sending, and
