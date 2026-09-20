@@ -6,7 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 import { AdminNumberField } from "./sha-number-field";
 import { SkillsHuntAutoMissionPanel } from "./sha-auto-missions";
-import { SaveImageButton } from "@/components/shared/save-image-button";
+import { SharePicture } from "@/components/shared/share-picture";
 import { MissionEditForm } from "./sha-mission-edit";
 import {
   MISSION_GOAL_LABELS,
@@ -189,14 +189,14 @@ function MissionForm({ roundId, onCreated, onCancel }: { roundId: string; onCrea
 // advertising a round is an admin job, and the member tab is where members read their own progress.
 //
 // The picture is drawn and then shown on this screen, to be pressed and held, shared, or saved
-// from here — see components/shared/save-image-button.tsx for the two earlier attempts that each
+// from here — see components/shared/share-picture.tsx for the two earlier attempts that each
 // stranded the owner on a dead page instead.
 function MissionPosterCard({ roundId }: { roundId: string }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <SaveImageButton
+    <SharePicture
       url={`/api/skills-hunt/admin/rounds/${roundId}/missions/image`}
       filename={`skillshunt-missions-${today}.png`}
       label="Show these missions as one picture"
@@ -213,7 +213,7 @@ function MissionPosterCard({ roundId }: { roundId: string }) {
       phone, press and hold it to save it to your photos, or use Share to send it straight to
       another app. You stay on this screen either way. The picture carries the missions themselves,
       not anyone&apos;s progress.
-    </SaveImageButton>
+    </SharePicture>
   );
 }
 

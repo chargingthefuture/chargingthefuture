@@ -6,7 +6,7 @@ import {
   TREND_SUBTLE,
   TREND_SURFACE,
 } from './click-log-trend-tokens';
-import { SaveImageButton } from '@/components/shared/save-image-button';
+import { SharePicture } from '@/components/shared/share-picture';
 
 // Saves the report as one tall PNG — the thing to post somewhere that takes an image, without
 // stitching phone screenshots together and losing rows at the seams.
@@ -21,7 +21,7 @@ import { SaveImageButton } from '@/components/shared/save-image-button';
 // reports, 2026-09-20, twice in one day). The picture is now drawn and then shown on this screen,
 // to be pressed and held, shared, or saved from here — nothing is handed anywhere off the back of
 // the press that fetched it, and nothing navigates. Both failures and why they looked right are
-// written out in components/shared/save-image-button.tsx.
+// written out in components/shared/share-picture.tsx.
 //
 // The image never carries the area coordinates, and there is no control to put them back (owner
 // directive, 2026-08-24). An exported image is made to be shared publicly, so the choice was
@@ -31,7 +31,7 @@ import { SaveImageButton } from '@/components/shared/save-image-button';
 export function ClickLogTrendImageLink() {
   const today = new Date().toISOString().slice(0, 10);
   return (
-    <SaveImageButton
+    <SharePicture
       url="/api/click-log/admin/trends/image"
       filename={`clicklog-trends-${today}.png`}
       label="Show the report as one image"
@@ -55,6 +55,6 @@ export function ClickLogTrendImageLink() {
           they came from and what they cannot show.
         </div>
       </>
-    </SaveImageButton>
+    </SharePicture>
   );
 }
