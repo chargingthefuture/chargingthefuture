@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { getContributorAccessConfig } from 'lib/contributor-access/repository';
-import { VALUE_EVENT_SOURCES, aggregateExpression } from 'lib/contributor-access/value-events';
+import { DELIVERING_VALUE_EVENT_SOURCES, aggregateExpression } from 'lib/contributor-access/value-events';
 import { effectiveWeight } from 'lib/contributor-access/weights';
 
 // How many members delivered value on a day, against the 384 target.
@@ -9,11 +9,18 @@ import { effectiveWeight } from 'lib/contributor-access/weights';
 // the estimate this project works from. So a day at 384 is evidence the arrangement holds at that
 // scale. It is a day's worth of people, not a total to accumulate, and not the same people twice.
 //
-// This asks the Weavers of the Commons question of a single day. Same fourteen events, same weights,
-// same attribution — all of it from lib/contributor-access/value-events.ts, which exists so the two
-// readings cannot drift apart when a feature is added (owner directive, 2026-09-20). The badge sums
-// a member's entire time here and grants something permanent the first time the total clears the
-// threshold; this counts who delivered today and how many of them there were.
+// This asks the Weavers of the Commons question of a single day. One definition, one set of
+// weights, one attribution — all of it from lib/contributor-access/value-events.ts, which exists so
+// the two readings cannot drift apart when a feature is added (owner directive, 2026-09-20). The
+// badge sums a member's entire time here and grants something permanent the first time the total
+// clears the threshold; this counts who delivered today and how many of them there were.
+//
+// One difference, stated rather than hidden. The badge scores every event, because it is already
+// gated on five distinct counterparties and a member who only talks can never clear that however
+// long they keep talking. The daily count has no such gate — a single event would put somebody on
+// the day's roster — so it draws only on the events marked as delivering something: eleven of the
+// fourteen. Endorsing a product, finishing a course somebody else taught, and posting in a cohort
+// are all real, and none of them is a thing another member received.
 //
 // Read-only. The per-day figure is a count of people; the roster carries a member id and that day's
 // score and nothing else. No per-event breakdown is returned for a named member, because Foundation
@@ -67,7 +74,7 @@ async function tableExists(table: string): Promise<boolean> {
 // contributes nothing rather than failing the reading.
 async function availableSources() {
   const checks = await Promise.all(
-    VALUE_EVENT_SOURCES.map(async (source) => {
+    DELIVERING_VALUE_EVENT_SOURCES.map(async (source) => {
       try {
         for (const table of source.tables) {
           if (!(await tableExists(table))) return null;
@@ -78,13 +85,13 @@ async function availableSources() {
       }
     }),
   );
-  return checks.filter((source): source is (typeof VALUE_EVENT_SOURCES)[number] => source !== null);
+  return checks.filter((source): source is (typeof DELIVERING_VALUE_EVENT_SOURCES)[number] => source !== null);
 }
 
 // One row per (member, day) across every available event, with that day's weighted score. The
 // aggregate per event is the same expression the badge uses, so a day's score is the badge's
 // arithmetic over a day instead of over a lifetime.
-function memberDaysSql(sources: typeof VALUE_EVENT_SOURCES, weights: Record<string, unknown>): string {
+function memberDaysSql(sources: typeof DELIVERING_VALUE_EVENT_SOURCES, weights: Record<string, unknown>): string {
   const parts = sources.map((source) => {
     const weight = effectiveWeight(source.key, weights);
     return `SELECT member_id, (at AT TIME ZONE 'UTC')::date AS day,

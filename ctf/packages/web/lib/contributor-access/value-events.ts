@@ -39,6 +39,17 @@ export type ValueEventAggregate =
 
 export type ValueEventSource = {
   key: ContributorValueEventKey;
+  // Whether somebody on the other side received something material.
+  //
+  // The badge scores every event: it is already gated on five distinct counterparties, so a member
+  // who only talks can never earn it however long they keep talking, and narrowing what it scores
+  // would move who qualifies. The daily count has no such gate — one event puts a member on the
+  // day's roster — so it counts only the events marked here (owner directive, 2026-09-20). One
+  // definition, one set of weights, and the difference stated rather than hidden.
+  //
+  // Receiving is not delivering: a learner finishing a course is marked false, and the trainer who
+  // taught it is credited by their own payout event.
+  delivers: boolean;
   // Every table the row SQL touches. A missing one makes the event contribute nothing rather than
   // failing the whole reading.
   tables: string[];
@@ -51,6 +62,8 @@ export type ValueEventSource = {
 export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   {
     key: 'value.foundation_calls_answered',
+    // A call answered is time given to the person who rang.
+    delivers: true,
     tables: ['foundation_call_sessions'],
     rowSql: `SELECT callee_user_id AS member_id, answered_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM foundation_call_sessions
@@ -59,6 +72,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.socket_relay_requests_fulfilled',
+    // Somebody asked for something and got it.
+    delivers: true,
     tables: ['socket_relay_fulfillments'],
     rowSql: `SELECT fulfiller_user_id AS member_id, COALESCE(closed_at, updated_at) AS at,
                     1::numeric AS value, NULL::text AS ref
@@ -68,6 +83,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.trust_transport_trips_completed',
+    // A ride, confirmed by both sides.
+    delivers: true,
     tables: ['trust_transport_trips'],
     rowSql: `SELECT provider_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM trust_transport_trips
@@ -77,6 +94,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.lighthouse_stays_completed',
+    // Somebody had a roof over them.
+    delivers: true,
     tables: ['lighthouse_matches'],
     rowSql: `SELECT host_user_id AS member_id, COALESCE(completed_at, updated_at) AS at,
                     1::numeric AS value, NULL::text AS ref
@@ -86,6 +105,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.chyme_tips_sent',
+    // Credits leave one member and reach another.
+    delivers: true,
     tables: ['service_credits_transfers'],
     rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM service_credits_transfers
@@ -95,6 +116,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.service_credits_peer_sends',
+    // Credits leave one member and reach another.
+    delivers: true,
     tables: ['service_credits_transfers'],
     rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM service_credits_transfers
@@ -104,6 +127,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.contributions_confirmed_usd',
+    // Real money, confirmed. Nobody is on the other side of the row, but something material arrived.
+    delivers: true,
     tables: ['contributions_submissions'],
     rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
                     COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref
@@ -113,6 +138,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.skills_hunt_nominations_accepted',
+    // An accepted nomination becomes a listing for a real person who was not findable before.
+    delivers: true,
     tables: ['skills_hunt_submissions'],
     rowSql: `SELECT submitter_user_id AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM skills_hunt_submissions
@@ -121,6 +148,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.what_works_tools_approved',
+    // An approved tool is something other members go and use.
+    delivers: true,
     tables: ['what_works_products'],
     rowSql: `SELECT suggested_by AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM what_works_products
@@ -129,6 +158,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.what_works_endorsements_given',
+    // An opinion about a product. Nobody receives anything.
+    delivers: false,
     tables: ['what_works_endorsements'],
     rowSql: `SELECT user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM what_works_endorsements`,
@@ -136,6 +167,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.skill_up_completions',
+    // The learner received the teaching rather than gave it.
+    delivers: false,
     tables: ['skill_up_enrollments'],
     rowSql: `SELECT user_id AS member_id, updated_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM skill_up_enrollments
@@ -144,6 +177,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.skill_up_trainer_payouts',
+    // The trainer taught somebody.
+    delivers: true,
     tables: ['skill_up_disbursements'],
     rowSql: `SELECT recipient_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM skill_up_disbursements
@@ -153,6 +188,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   {
     // A confirmed active tie credits both sides: each of them sustains it.
     key: 'value.recurring_ties_confirmed',
+    // A tie both sides confirm they are sustaining.
+    delivers: true,
     tables: ['recurring_activities'],
     rowSql: `SELECT owner_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM recurring_activities
@@ -165,6 +202,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.peer_programming_active_posters',
+    // Posting in a cohort. Kept in the badge at a weight of 1 because a session exposes somebody there to extract, but nobody receives a thing from a message.
+    delivers: false,
     tables: ['peer_programming_messages'],
     rowSql: `SELECT author_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM peer_programming_messages`,
@@ -187,3 +226,6 @@ export function aggregateExpression(aggregate: ValueEventAggregate): string {
       return 'COUNT(*)';
   }
 }
+
+// The events the daily count draws on: the ones where somebody received something material.
+export const DELIVERING_VALUE_EVENT_SOURCES = VALUE_EVENT_SOURCES.filter((source) => source.delivers);

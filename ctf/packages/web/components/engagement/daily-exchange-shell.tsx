@@ -101,8 +101,8 @@ function WeaversWidget({ weavers, tokens }: { weavers: WeaversReading; tokens: T
     >
       <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Weavers of the Commons</div>
       <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
-        The same fourteen events and the same weights, asked of a member&apos;s entire time here
-        instead of one day. Earned once and kept.
+        Every one of the fourteen events, at the same weights, asked of a member&apos;s entire time
+        here instead of one day. Earned once and kept, and only after five different counterparties.
       </div>
       <div style={{ fontSize: 20, fontWeight: 700, color: tokens.TITLE, marginTop: 8 }}>
         {weavers.holders}
@@ -306,8 +306,12 @@ export function DailyExchangeShell() {
             <TodayRoster roster={reading.todayRoster} tokens={t} />
 
             <p style={{ fontSize: 11, color: t.SUBTLE, marginTop: 16, lineHeight: 1.6 }}>
-              Both readings count the same fourteen events with the same weights, from one shared
-              definition, so adding a feature updates both at once. Value is credited to whoever
+              Both readings use one shared definition and one set of weights, so adding a feature
+              updates both at once. They differ in one stated way: the badge scores every event,
+              because earning it already requires five different counterparties, while this count
+              draws only on the events where somebody received something — eleven of the fourteen.
+              Endorsing a product, finishing a course somebody else taught, and posting in a cohort
+              are all real, and none of them is a thing another member received. Value is credited to whoever
               delivered it, which is what the badge has always done: a ride counts its driver, so
               384 here means 384 people delivering rather than 384 people involved. And reaching it
               on a day needs a good deal more than 384 approved members on the books, because
