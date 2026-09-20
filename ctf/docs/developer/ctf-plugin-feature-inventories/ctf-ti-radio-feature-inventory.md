@@ -54,8 +54,7 @@ else put themselves on it.
 - **Give a slot back.** A host can release their own slot at any time before it starts; it returns to
   the guide as open for anybody else. Refused once the slot has begun, because by then people have
   turned up.
-- **Get to Chyme from the page.** A link to the room sits at the top, next to a link to the Quora
-  space the schedule was made for.
+- **Get to Chyme from the page.** A link to the room sits at the top of the intro card.
 - **Be told what it would take.** A signed-out reader sees "Sign in to host"; a signed-in member who
   is not approved yet sees "Finish verifying to host", pointing at Unlock. Neither gets a button
   that fails when pressed.
@@ -206,6 +205,8 @@ only here would be invisible on their own trust card.
    it ships as named; the lexicon line needs an owner decision either way.
 
 ## Change Log
+
+- 2026-09-20: **The outbound Quora link is gone from the guide.** Owner directive: the project no longer advertises Quora, so the intro card's `tiradio.quora.com` button was removed along with the `TI_RADIO_SPACE_URL` and `TI_RADIO_SPACE_LABEL` constants that fed it. The three remaining buttons — Open Chyme, Sign in to host, Finish verifying to host — all point inside the app, so the style helper that drew a plain, unaccented button for the outbound link was collapsed to the single accented style rather than left with a branch nothing takes. The guide is still readable with no account and the rest of the intro copy is untouched. Copy and markup only — no schema, route, or contract change.
 
 - 2026-09-15: **Pressing an open slot now brings the booking form into view.** Owner report: choosing a slot appeared to do nothing, and you had to scroll up to find the form. The form renders at the top of the guide, above all seven days, so pressing a row on Thursday opened it a screen or two above where the member was looking — a developer scrolls up to check, and nobody else does. The guide now holds a ref on the form wrapper and calls `scrollIntoView` with `block: 'center'` when a slot is chosen, honoring `prefers-reduced-motion` by dropping the smooth behavior. The form focuses its own subject field on mount with `preventScroll: true`, so a keyboard or screen-reader user is told the form opened and the two scrolls do not fight each other. The form was left where it is rather than moved next to the pressed row: one form in one known place is what makes the second press replace the first instead of opening another. Behavior only — no schema, route, or contract change.
 

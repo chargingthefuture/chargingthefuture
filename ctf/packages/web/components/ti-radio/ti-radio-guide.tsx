@@ -10,8 +10,6 @@ import {
   TI_RADIO_MEETING_ROUTE,
   TI_RADIO_ROLLING_WINDOW_HOURS,
   TI_RADIO_SLOT_MINUTES,
-  TI_RADIO_SPACE_LABEL,
-  TI_RADIO_SPACE_URL,
 } from 'lib/ti-radio/constants';
 import { HOSTING_NOT_ENDORSEMENT } from '@ctf/shared';
 import type { TiRadioGuide, TiRadioGuideSlot } from 'lib/ti-radio/types';
@@ -253,19 +251,16 @@ function GuideIntro({
         {HOSTING_NOT_ENDORSEMENT}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-        <a href={TI_RADIO_MEETING_ROUTE} style={linkButton(t, true)}>
+        <a href={TI_RADIO_MEETING_ROUTE} style={linkButton(t)}>
           Open Chyme <ArrowUpRight size={12} />
         </a>
-        <a href={TI_RADIO_SPACE_URL} target="_blank" rel="noopener noreferrer" style={linkButton(t, false)}>
-          {TI_RADIO_SPACE_LABEL} <ArrowUpRight size={12} />
-        </a>
         {!isSignedIn && (
-          <a href={signInUrl} style={linkButton(t, true)}>
+          <a href={signInUrl} style={linkButton(t)}>
             Sign in to host <ArrowUpRight size={12} />
           </a>
         )}
         {isSignedIn && !canHost && (
-          <a href={verifyUrl} style={linkButton(t, true)}>
+          <a href={verifyUrl} style={linkButton(t)}>
             Finish verifying to host <ArrowUpRight size={12} />
           </a>
         )}
@@ -274,16 +269,16 @@ function GuideIntro({
   );
 }
 
-function linkButton(t: ReturnType<typeof getTiRadioTokens>, accented: boolean) {
+function linkButton(t: ReturnType<typeof getTiRadioTokens>) {
   return {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 5,
     padding: '7px 12px',
     borderRadius: 10,
-    background: accented ? `${t.ACCENT}1A` : 'transparent',
-    border: `1px solid ${accented ? `${t.ACCENT}55` : t.BORDER_SOLID}`,
-    color: accented ? t.ACCENT : t.SUBTLE,
+    background: `${t.ACCENT}1A`,
+    border: `1px solid ${t.ACCENT}55`,
+    color: t.ACCENT,
     fontSize: 12,
     fontWeight: 600,
     textDecoration: 'none',

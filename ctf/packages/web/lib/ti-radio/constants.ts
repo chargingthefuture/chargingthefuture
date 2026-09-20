@@ -40,11 +40,6 @@ export const TI_RADIO_MAX_REMOVAL_REASON_LENGTH = 300;
 // Where the discussion happens. The guide says when; Chyme is the room.
 export const TI_RADIO_MEETING_ROUTE = '/apps/chyme';
 
-// The Quora space this schedule was made for. Named here rather than typed into the page so one
-// edit changes it everywhere.
-export const TI_RADIO_SPACE_URL = 'https://tiradio.quora.com';
-export const TI_RADIO_SPACE_LABEL = 'tiradio.quora.com';
-
 export const TI_RADIO_ERROR_CODE = {
   invalidPayload: 'ti_radio_invalid_payload',
   notFound: 'ti_radio_not_found',
