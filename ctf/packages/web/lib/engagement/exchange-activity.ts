@@ -1,36 +1,36 @@
 import { queryDb } from 'lib/db/postgres';
+import { getContributorAccessConfig } from 'lib/contributor-access/repository';
+import { VALUE_EVENT_SOURCES, aggregateExpression } from 'lib/contributor-access/value-events';
+import { effectiveWeight } from 'lib/contributor-access/weights';
 
-// What "exchanged with somebody" means on this platform, in one place.
+// How many members delivered value on a day, against the 384 target.
 //
-// A member exchanged on a day when a completed row exists for that day naming them and another
-// member as the two sides of it: a ride given, a room stayed in, a call answered, a quote settled,
-// a request fulfilled, credits sent, a trainer paid for a learner. Both sides of every row count,
-// because the goal is people working with each other and a ride involves two of them.
+// 384 is the sample size at which a reading generalizes to a population of five million, which is
+// the estimate this project works from. So a day at 384 is evidence the arrangement holds at that
+// scale. It is a day's worth of people, not a total to accumulate, and not the same people twice.
 //
-// This is deliberately not the sign-in reading in `member-activity.ts`. Turning up and trading are
-// different things, and that file says so at length. This one never reads `login_events`.
+// This asks the Weavers of the Commons question of a single day. Same fifteen events, same weights,
+// same attribution — all of it from lib/contributor-access/value-events.ts, which exists so the two
+// readings cannot drift apart when a feature is added (owner directive, 2026-09-20). The badge sums
+// a member's entire time here and grants something permanent the first time the total clears the
+// threshold; this counts who delivered today and how many of them there were.
 //
-// It is also not the Weavers of the Commons badge. That badge sums the same kinds of event over a
-// member's entire time here, gates on account age and permanence, and once earned it never lapses,
-// so it can say who has ever contributed and can never say what happened today.
+// Read-only. The per-day figure is a count of people; the roster carries a member id and that day's
+// score and nothing else. No per-event breakdown is returned for a named member, because Foundation
+// answered calls are among the fifteen and rule 132 keeps that participation internal.
 //
-// What is left out, and why:
-//   * Anything one-sided. A nomination, an endorsement, a confirmed contribution, a post — real
-//     work, nobody on the other side of the row, so it cannot say two members worked together.
-//   * Recurring Activity. Its row records an ongoing tie confirmed once, not a thing that happened
-//     on a day, so counting it daily would credit the confirmation and nothing after it.
-//
-// Two sources date a row by `updated_at` because their table has no completion column: LightHouse
-// matches and SocketRelay fulfillments. That is a proxy — a later edit to a finished row moves it to
-// the day of the edit. It is named here rather than hidden, and the fix is a completion column on
-// those two tables rather than a cleverer query.
-//
-// Read-only, counts only. Every table and column name below is a fixed literal; only the window
-// bound travels as a bound parameter.
+// Two of the fifteen date a finished row by `updated_at` for want of a completion column, so a
+// later edit moves it to the day of the edit. Named rather than hidden; the fix is a column on
+// those tables, not a cleverer query.
 
 export type ExchangeDay = {
   day: string;
   members: number;
+};
+
+export type ExchangeContributor = {
+  memberId: string;
+  score: number;
 };
 
 export type ExchangeActivityReading = {
@@ -40,84 +40,67 @@ export type ExchangeActivityReading = {
   bestDay: ExchangeDay | null;
   daysAtTarget: number;
   days: ExchangeDay[];
+  todayRoster: ExchangeContributor[];
 };
 
-// 384 is the sample size at which a reading generalizes to a population of five million, which is
-// the estimate this project works from. So a day at 384 is evidence the arrangement holds at that
-// scale — not a headcount to accumulate, and not the same 384 people twice.
 export const DAILY_EXCHANGE_TARGET = 384;
 
-// One row per member per side of a completed exchange, with the day it happened. Both directions of
-// every pair are emitted, and the outer query counts distinct members per day, so a member who did
-// four things on one day counts once and a ride counts its two people.
-const MEMBER_DAYS_SQL = `
-  SELECT provider_user_id AS user_id, (completed_at AT TIME ZONE 'UTC')::date AS day
-    FROM trust_transport_trips
-   WHERE status = 'completed' AND completed_at IS NOT NULL
-  UNION ALL
-  SELECT requester_user_id, (completed_at AT TIME ZONE 'UTC')::date
-    FROM trust_transport_trips
-   WHERE status = 'completed' AND completed_at IS NOT NULL
-  UNION ALL
-  SELECT sender_user_id, (completed_at AT TIME ZONE 'UTC')::date
-    FROM service_credits_transfers
-   WHERE status = 'completed' AND completed_at IS NOT NULL
-  UNION ALL
-  SELECT recipient_user_id, (completed_at AT TIME ZONE 'UTC')::date
-    FROM service_credits_transfers
-   WHERE status = 'completed' AND completed_at IS NOT NULL
-  UNION ALL
-  SELECT callee_user_id, (answered_at AT TIME ZONE 'UTC')::date
-    FROM foundation_call_sessions
-   WHERE ring_status = 'answered' AND answered_at IS NOT NULL
-  UNION ALL
-  SELECT caller_user_id, (answered_at AT TIME ZONE 'UTC')::date
-    FROM foundation_call_sessions
-   WHERE ring_status = 'answered' AND answered_at IS NOT NULL
-  UNION ALL
-  SELECT provider_user_id, (settled_at AT TIME ZONE 'UTC')::date
-    FROM foundation_quote_requests
-   WHERE lifecycle_state = 'closed' AND settled_at IS NOT NULL
-  UNION ALL
-  SELECT survivor_user_id, (settled_at AT TIME ZONE 'UTC')::date
-    FROM foundation_quote_requests
-   WHERE lifecycle_state = 'closed' AND settled_at IS NOT NULL
-  UNION ALL
-  SELECT fulfiller_user_id, (updated_at AT TIME ZONE 'UTC')::date
-    FROM socket_relay_fulfillments
-   WHERE close_reason = 'successful' AND updated_at IS NOT NULL
-  UNION ALL
-  SELECT requester_user_id, (updated_at AT TIME ZONE 'UTC')::date
-    FROM socket_relay_fulfillments
-   WHERE close_reason = 'successful' AND updated_at IS NOT NULL
-  UNION ALL
-  SELECT host_user_id, (updated_at AT TIME ZONE 'UTC')::date
-    FROM lighthouse_matches
-   WHERE status = 'completed' AND updated_at IS NOT NULL
-  UNION ALL
-  SELECT seeker_user_id, (updated_at AT TIME ZONE 'UTC')::date
-    FROM lighthouse_matches
-   WHERE status = 'completed' AND updated_at IS NOT NULL
-  UNION ALL
-  SELECT d.recipient_user_id, (d.created_at AT TIME ZONE 'UTC')::date
-    FROM skill_up_disbursements d
-   WHERE d.disbursement_type = 'trainer_payout' AND d.created_at IS NOT NULL
-  UNION ALL
-  SELECT e.user_id, (d.created_at AT TIME ZONE 'UTC')::date
-    FROM skill_up_disbursements d
-    JOIN skill_up_enrollments e ON e.id = d.enrollment_id
-   WHERE d.disbursement_type = 'trainer_payout' AND d.created_at IS NOT NULL
-`;
-
 type DayRow = { day: string; members: string };
+type RosterRow = { member_id: string; score: string };
 
 function count(value: string | null | undefined): number {
   const parsed = Number.parseInt(value ?? '0', 10);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-// A day with no exchange writes no row, so the gaps are filled here rather than left for a reader to
-// mistake for missing data. A quiet day is a real reading and should show as a zero.
+function numeric(value: string | null | undefined): number {
+  const parsed = Number.parseFloat(value ?? '0');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function tableExists(table: string): Promise<boolean> {
+  const reg = await queryDb<{ reg: string | null }>(`SELECT to_regclass($1)::text AS reg`, [`public.${table}`]);
+  return !!reg.rows[0]?.reg;
+}
+
+// Only the events whose tables this database actually has. A plugin that has not shipped here
+// contributes nothing rather than failing the reading.
+async function availableSources() {
+  const checks = await Promise.all(
+    VALUE_EVENT_SOURCES.map(async (source) => {
+      try {
+        for (const table of source.tables) {
+          if (!(await tableExists(table))) return null;
+        }
+        return source;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return checks.filter((source): source is (typeof VALUE_EVENT_SOURCES)[number] => source !== null);
+}
+
+// One row per (member, day) across every available event, with that day's weighted score. The
+// aggregate per event is the same expression the badge uses, so a day's score is the badge's
+// arithmetic over a day instead of over a lifetime.
+function memberDaysSql(sources: typeof VALUE_EVENT_SOURCES, weights: Record<string, unknown>): string {
+  const parts = sources.map((source) => {
+    const weight = effectiveWeight(source.key, weights);
+    return `SELECT member_id, (at AT TIME ZONE 'UTC')::date AS day,
+                   (${aggregateExpression(source.aggregate)} * ${weight}) AS score
+              FROM (${source.rowSql}) AS rows
+             WHERE member_id IS NOT NULL AND at IS NOT NULL
+             GROUP BY member_id, (at AT TIME ZONE 'UTC')::date`;
+  });
+
+  return `SELECT member_id, day, SUM(score) AS score
+            FROM (${parts.join(' UNION ALL ')}) AS per_event
+           GROUP BY member_id, day`;
+}
+
+// A day with nobody writes no row, so the gaps are filled rather than left for a reader to mistake
+// for missing data. A quiet day is a real reading and shows as a zero.
 function fillGaps(rows: ExchangeDay[], days: number): ExchangeDay[] {
   const byDay = new Map(rows.map((row) => [row.day, row.members]));
   const out: ExchangeDay[] = [];
@@ -132,30 +115,48 @@ function fillGaps(rows: ExchangeDay[], days: number): ExchangeDay[] {
   return out;
 }
 
+function emptyReading(window: number): ExchangeActivityReading {
+  return {
+    readAt: new Date().toISOString(),
+    target: DAILY_EXCHANGE_TARGET,
+    today: 0,
+    bestDay: null,
+    daysAtTarget: 0,
+    days: fillGaps([], window),
+    todayRoster: [],
+  };
+}
+
 export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActivityReading> {
   const window = Number.isFinite(days) && days > 0 ? Math.min(Math.trunc(days), 365) : 30;
 
+  const sources = await availableSources();
+  if (sources.length === 0) {
+    return emptyReading(window);
+  }
+
+  const config = await getContributorAccessConfig();
+  const memberDays = memberDaysSql(sources, config.weights);
+
   const recent = await queryDb<DayRow>(
     `
-      SELECT day::text AS day, COUNT(DISTINCT user_id)::text AS members
-        FROM (${MEMBER_DAYS_SQL}) AS member_days
-       WHERE user_id IS NOT NULL
-         AND day > (NOW() AT TIME ZONE 'UTC')::date - $1::int
+      SELECT day::text AS day, COUNT(DISTINCT member_id)::text AS members
+        FROM (${memberDays}) AS member_days
+       WHERE day > (NOW() AT TIME ZONE 'UTC')::date - $1::int
        GROUP BY day
        ORDER BY day
     `,
     [window],
   );
 
-  // The best day is read across every day on record, not only the window on screen, so the figure
-  // does not fall when the window scrolls past it.
+  // Read across every day on record, not only the window on screen, so the best day does not fall
+  // out of view and take the figure with it.
   const best = await queryDb<DayRow>(
     `
       SELECT day::text AS day, members::text AS members
         FROM (
-          SELECT day, COUNT(DISTINCT user_id) AS members
-            FROM (${MEMBER_DAYS_SQL}) AS member_days
-           WHERE user_id IS NOT NULL
+          SELECT day, COUNT(DISTINCT member_id) AS members
+            FROM (${memberDays}) AS member_days
            GROUP BY day
         ) AS per_day
        ORDER BY members DESC, day DESC
@@ -167,9 +168,8 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     `
       SELECT COUNT(*)::text AS days_at_target
         FROM (
-          SELECT day, COUNT(DISTINCT user_id) AS members
-            FROM (${MEMBER_DAYS_SQL}) AS member_days
-           WHERE user_id IS NOT NULL
+          SELECT day, COUNT(DISTINCT member_id) AS members
+            FROM (${memberDays}) AS member_days
            GROUP BY day
         ) AS per_day
        WHERE members >= $1::int
@@ -177,7 +177,17 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     [DAILY_EXCHANGE_TARGET],
   );
 
-  const days_ = fillGaps(
+  const roster = await queryDb<RosterRow>(
+    `
+      SELECT member_id, score::text AS score
+        FROM (${memberDays}) AS member_days
+       WHERE day = (NOW() AT TIME ZONE 'UTC')::date
+       ORDER BY score DESC, member_id
+       LIMIT 500
+    `,
+  );
+
+  const allDays = fillGaps(
     recent.rows.map((row) => ({ day: row.day, members: count(row.members) })),
     window,
   );
@@ -187,9 +197,10 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
   return {
     readAt: new Date().toISOString(),
     target: DAILY_EXCHANGE_TARGET,
-    today: days_[days_.length - 1]?.members ?? 0,
+    today: allDays[allDays.length - 1]?.members ?? 0,
     bestDay: bestRow ? { day: bestRow.day, members: count(bestRow.members) } : null,
     daysAtTarget: count(atTarget.rows[0]?.days_at_target),
-    days: days_,
+    days: allDays,
+    todayRoster: roster.rows.map((row) => ({ memberId: row.member_id, score: numeric(row.score) })),
   };
 }

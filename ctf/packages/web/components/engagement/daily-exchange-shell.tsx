@@ -6,7 +6,16 @@ import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
-import type { ExchangeActivityReading, ExchangeDay } from 'lib/engagement/exchange-activity';
+import type {
+  ExchangeActivityReading,
+  ExchangeContributor,
+  ExchangeDay,
+} from 'lib/engagement/exchange-activity';
+
+type WeaversReading = {
+  holders: number;
+  recent: { username: string | null; firstEarnedAt: string | null }[];
+};
 
 type Tokens = ReturnType<typeof getPluginShellTokens>;
 
@@ -24,6 +33,8 @@ function asPlainText(reading: ExchangeActivityReading): string {
     '',
     '  last 30 days:',
     ...reading.days.map((day) => `    ${day.day}: ${day.members}`),
+    '',
+    `  delivering today: ${reading.todayRoster.length}`,
   ].join('\n');
 }
 
@@ -73,11 +84,108 @@ function DayBar({ day, target, tokens }: { day: ExchangeDay; target: number; tok
   );
 }
 
+// The lifetime side, as its own component so the shell stays inside the size and complexity limits.
+// Earned once and kept, so this answers whether anybody is still arriving rather than listing
+// everybody — the Contributor Access screen is where the full list lives.
+function WeaversWidget({ weavers, tokens }: { weavers: WeaversReading; tokens: Tokens }) {
+  return (
+    <section
+      aria-label="Weavers of the Commons"
+      style={{
+        borderRadius: 12,
+        background: tokens.SURFACE,
+        border: `1px solid ${tokens.BORDER}`,
+        padding: 12,
+        marginTop: 18,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Weavers of the Commons</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
+        The same fifteen events and the same weights, asked of a member&apos;s entire time here
+        instead of one day. Earned once and kept.
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: tokens.TITLE, marginTop: 8 }}>
+        {weavers.holders}
+      </div>
+      <div style={{ fontSize: 11, color: tokens.SUBTLE }}>holding the badge</div>
+      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+        {weavers.recent.map((member) => (
+          <li
+            key={`${member.username ?? 'member'}-${member.firstEarnedAt ?? ''}`}
+            style={{
+              fontSize: 12,
+              color: tokens.TEXT,
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '3px 0',
+            }}
+          >
+            <span>{member.username ?? '(no username)'}</span>
+            <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+              {member.firstEarnedAt?.slice(0, 10) ?? '—'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Who is delivering today, ordered by what that day's events are worth under the shared weights.
+// A member id rather than a name, because this list is read beside the badge list and the two are
+// answering different questions about the same people.
+function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens: Tokens }) {
+  return (
+    <section
+      aria-label="Delivering today"
+      style={{
+        borderRadius: 12,
+        background: tokens.SURFACE,
+        border: `1px solid ${tokens.BORDER}`,
+        padding: 12,
+        marginTop: 12,
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Delivering today</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
+        Who is helping reach the day&apos;s number, ordered by what that day&apos;s events are worth.
+        A member counts once however much they did.
+      </div>
+      {roster.length === 0 ? (
+        <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 8 }}>Nobody yet today.</div>
+      ) : (
+        <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+          {roster.map((member) => (
+            <li
+              key={member.memberId}
+              style={{
+                fontSize: 12,
+                color: tokens.TEXT,
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '3px 0',
+              }}
+            >
+              <span style={{ wordBreak: 'break-all' }}>{member.memberId}</span>
+              <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+                {Math.round(member.score * 10) / 10}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function DailyExchangeShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
 
   const [reading, setReading] = useState<ExchangeActivityReading | null>(null);
+  const [weavers, setWeavers] = useState<WeaversReading | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -87,7 +195,11 @@ export function DailyExchangeShell() {
     async function load() {
       try {
         const response = await fetch('/api/admin/daily-exchange');
-        const payload = (await response.json()) as { reading?: ExchangeActivityReading; message?: string };
+        const payload = (await response.json()) as {
+          reading?: ExchangeActivityReading;
+          weavers?: WeaversReading;
+          message?: string;
+        };
         if (canceled) {
           return;
         }
@@ -96,6 +208,7 @@ export function DailyExchangeShell() {
           return;
         }
         setReading(payload.reading ?? null);
+        setWeavers(payload.weavers ?? null);
       } catch (caught) {
         if (!canceled) {
           setError(caught instanceof Error ? caught.message : 'The reading did not load.');
@@ -131,9 +244,9 @@ export function DailyExchangeShell() {
       />
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
-          How many members traded with another member on a day. Both sides of an exchange count, and
-          a member counts once however much they did. Not the same people each day — the target is a
-          day&apos;s worth of people, not a total to accumulate.
+          How many members delivered value on a day, against 384. A member counts once however much
+          they did, and it does not have to be the same people twice — the target is a day&apos;s
+          worth of people, not a total to accumulate.
         </p>
 
         {error && (
@@ -188,12 +301,17 @@ export function DailyExchangeShell() {
               ))}
             </ul>
 
+            {weavers && <WeaversWidget weavers={weavers} tokens={t} />}
+
+            <TodayRoster roster={reading.todayRoster} tokens={t} />
+
             <p style={{ fontSize: 11, color: t.SUBTLE, marginTop: 16, lineHeight: 1.6 }}>
-              Counted: rides completed, rooms stayed in, calls answered, quotes settled, requests
-              fulfilled, credits sent, and trainers paid for a learner. Left out: anything with only
-              one person on the row, and an ongoing tie, which is confirmed once rather than done on
-              a day. Two sources date a finished row by when it was last edited, because their table
-              records no completion time, so an edit can move a day.
+              Both readings count the same fifteen events with the same weights, from one shared
+              definition, so adding a feature updates both at once. Value is credited to whoever
+              delivered it, which is what the badge has always done: a ride counts its driver, so
+              384 here means 384 people delivering rather than 384 people involved. Two of the
+              fifteen date a finished row by when it was last edited, because their table records no
+              completion time, so an edit can move a day.
             </p>
           </>
         )}

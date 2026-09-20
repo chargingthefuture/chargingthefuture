@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { readDailyExchangeActivity } from 'lib/engagement/exchange-activity';
+import { countEligibleMembers, listEligibleMembers } from 'lib/contributor-access/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// How many members traded with each other on a day, read by the Daily exchange screen.
+// The two readings of the same fifteen value events, side by side, for the Daily exchange screen.
 //
-// Admin-only and read-only. Counts only: no name, no address, no amount, nothing about who traded
-// with whom — the answer is a number of people per day and nothing else.
+// `reading` is today and the last thirty days: how many members delivered value on a day, against
+// the 384 target, plus today's roster. `weavers` is the lifetime side: how many members have earned
+// Weavers of the Commons and the most recent of them. Same events, same weights, same attribution —
+// the badge asks it of a member's entire time here and the daily count asks it of one day.
+//
+// Admin-only and read-only. No per-event breakdown is returned for a named member: Foundation
+// answered calls are among the fifteen and rule 132 keeps that participation internal.
 export async function GET() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
@@ -21,8 +27,24 @@ export async function GET() {
   }
 
   try {
-    const reading = await readDailyExchangeActivity(30);
-    return NextResponse.json({ reading }, { status: 200 });
+    const [reading, weaversCount, weaversMembers] = await Promise.all([
+      readDailyExchangeActivity(30),
+      countEligibleMembers(),
+      listEligibleMembers(),
+    ]);
+
+    // Newest first, and only the most recent few: this widget answers "is anybody still arriving",
+    // not "list everybody", which the Contributor Access screen already does.
+    const recent = weaversMembers
+      .filter((member) => !member.revokedForCause)
+      .slice(-8)
+      .reverse()
+      .map((member) => ({ username: member.username, firstEarnedAt: member.firstEarnedAt }));
+
+    return NextResponse.json(
+      { reading, weavers: { holders: weaversCount, recent } },
+      { status: 200 },
+    );
   } catch (error) {
     reportError(error, { area: 'engagement', op: 'admin_daily_exchange' });
     return NextResponse.json(
