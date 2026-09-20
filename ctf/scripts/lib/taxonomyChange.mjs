@@ -310,6 +310,90 @@ export const TAXONOMY_CHANGES = [
   // video side of its post-production work. Deactivating either would leave half the occupation with
   // no way to say what it does. They stay as two skills on purpose.
   { id: 79, op: 'deactivateSkill', sector: 'Creative & Media', occupation: 'Photographers / Videographers', occupationExisting: true, skill: 'Shooting and lighting techniques', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Lighting techniques", which survives as the plainer label; the merged occupation already carries "Camera operation and settings" and "Composition and framing" for the shooting half, so no claim is lost. Members holding this row stop seeing the chip until they re-pick the surviving skill, and the audit metadata records how many were holding it at apply time. Reversible via reactivateSkill.' },
+
+  // Changes 80-92 (owner-approved 2026-09-20): "Medical Assistants" joins Health, and Social Workers
+  // gains "Domestic violence advocacy". The request came from a conversation with a member whose
+  // working life is a medical assistant's, and a read of the live Health sector settled where it
+  // belongs: thirteen occupations (Community-Health Workers, EMS / Paramedics, General
+  // Practitioners, Laboratory Technicians, Mental Health Counselors, Midwives, Nurses, Pharmacists,
+  // Psychologists, Radiographers, Social Workers, "Specialists (e.g., cardiology, pediatrics)",
+  // Therapists) and not one of them is a medical assistant. Nurses is the nearest row and is the
+  // wrong one - the member drew the distinction themselves, and a medical assistant working a
+  // psychiatry clinic is neither a nurse nor a counselor. So it gets its own occupation, the way
+  // Childcare Workers and Tutors did under Education in changes 58-67, rather than being hung off
+  // a role it is not.
+  //
+  // Op 80 creates the occupation, so ops 81-91 carry no occupationExisting flag. "Medical
+  // Assistants" was checked against all thirteen live Health occupations under the plural-twin rule
+  // (this is the first change at or past id 80, where the guard starts applying) and shares a role
+  // token with none of them. The occupation is seeded with its skills in the same apply run for the
+  // reason changes 58-67 recorded: Workforce matches holders by skill name, so an occupation with no
+  // skills matches nobody and shows empty in the browser.
+  //
+  // Two of the eleven reuse a live label EXACTLY rather than inventing a synonym: "Patient
+  // assessment and monitoring" (live under Nurses) and "Patient communication" (live under General
+  // Practitioners). Duplicating a label across occupations is the sector's established shape, not an
+  // oversight - "Crisis intervention" already has four rows (Mental Health Counselors,
+  // Psychologists, Social Workers, Therapists), "Trauma-informed care" two, "First Aid & CPR" two -
+  // and it is the right shape here: one name keeps keyword search and name matching joined, while
+  // the separate row is what makes the skill show when somebody browses THIS occupation. What the
+  // second row does not do is fix attribution, and it is worth being exact about that: Workforce
+  // ignores the stored row's parent entirely (its skill arm re-expands by name across every
+  // same-named active row before counting), and the Directory picker collapses same-named rows into
+  // one chip and stores an arbitrary representative id, so the parent a member ends up attached to
+  // was never a choice they made. Within one sector that costs nothing, which is the case here -
+  // both reused labels stay inside Health. Across sectors it would not, because the Directory
+  // sector filter does read the stored row's parent. Writing "Patient assessment" beside
+  // the live "Patient assessment and monitoring" is the failure to avoid, because a second NAME for
+  // one claim splits its holders (changes 26-34 and 79).
+  //
+  // Op 90 reuses "Client advocacy", the label Social Workers already carries, rather than adding
+  // "Patient advocacy" as a second name for the same act. This was the set's one judgment call and it
+  // was settled by the live holder counts: two members already hold "Client advocacy". Because
+  // Workforce joins holders by NAME, a new "Patient advocacy" label would never join those two, so
+  // the community's advocacy capacity would read as two separate smaller pools - the exact split
+  // changes 26-34 and 79 had to undo. Occupation is not what joins holders; the name is, which is why
+  // "it sits under a different occupation" does not make a second name safe. The cost of reusing the
+  // social-work word is that a medical assistant reads "client" where they would say "patient"; the
+  // cost of the alternative is a permanently split count. If the owner prefers the patient-facing
+  // word, the correct fix is NOT this op - it is a renameSkill of the live row, which keeps the row
+  // id (so the two holders keep their skill) and appends the old label to its aliases so the old word
+  // stays findable.
+  //
+  // Op 92 targets the pre-existing Social Workers occupation (occupationExisting: true). Domestic
+  // violence advocacy has no live label, and that was checked rather than assumed: a scan of every
+  // active skill in all 20 sectors for advoca|victim|domestic|abuse|survivor|safeguard|shelter
+  // returned seven rows and not one of them is this claim - "Advocacy" (Creative & Media > Advocates
+  // / Awareness Raisers) is campaigning and awareness work, "Legal advocacy and advice" (Lawyers) is
+  // legal representation, "Substance abuse counseling" and "Substance abuse support" matched only on
+  // the word abuse, "Shelter site selection and layout" (Emergency & Reserve Roles) is disaster-relief
+  // logistics, "Domestic and commercial systems" (Water & Sanitation > Plumbers) is plumbing, and
+  // "Client advocacy" is the general-purpose label op 90 reuses. Health's own "Crisis intervention",
+  // "Family assessment and intervention" and "Trauma-informed care" are adjacent and none says it
+  // either. It sits under Social Workers rather than Medical Assistants because it is advocacy work in
+  // its own right, done by people who are not medical assistants. The same scan confirmed
+  // "Client advocacy" is live exactly once, so op 90 creates its second row and splits no holders.
+  //
+  // Deliberately NOT proposed, from the same conversation: "single mom", which is a life
+  // circumstance and already recorded as a title, not a skill the taxonomy can match a settlement's
+  // demand against; and "interacts with people easily", which is too general to match on and is
+  // carried concretely by op 91. No proposalNormalizedSkills is set - the request came from the
+  // owner directly, not from the skill-proposal intake queue, so there is no member proposal row for
+  // the apply run to mark promoted. Applies on the next owner run of the seed-skills-taxonomy apply
+  // workflow.
+  { id: 80, op: 'addOccupation', sector: 'Health', occupation: 'Medical Assistants' },
+  { id: 81, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Phlebotomy (blood draws)' },
+  { id: 82, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Injections (intramuscular and subcutaneous)' },
+  { id: 83, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Vital signs measurement' },
+  { id: 84, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient intake and registration' },
+  { id: 85, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient assessment and monitoring' },
+  { id: 86, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'EKG (electrocardiogram) testing' },
+  { id: 87, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Splinting, casting and orthopedic wraps' },
+  { id: 88, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Urgent care clinic support' },
+  { id: 89, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Psychiatric clinic support' },
+  { id: 90, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Client advocacy' },
+  { id: 91, op: 'addSkill', sector: 'Health', occupation: 'Medical Assistants', skill: 'Patient communication' },
+  { id: 92, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Domestic violence advocacy' },
 ];
 
 // ---------------------------------------------------------------------------
