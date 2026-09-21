@@ -128,7 +128,7 @@ export function CurrencySelect({
           borderRadius: 8,
           background: "transparent",
           border: "1px solid var(--ctf-border, rgba(255,255,255,0.18))",
-          color: "var(--ctf-text, #E8EAF0)",
+          color: "var(--ctf-text, #D5D9E2)",
           fontSize: 12,
           fontWeight: 600,
           cursor: loading ? "not-allowed" : "pointer",

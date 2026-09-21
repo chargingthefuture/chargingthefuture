@@ -1,7 +1,7 @@
 // Shared chrome color tokens for plugin web shells.
 //
 // Every plugin shell paints the same chrome surfaces with the same default-dark hex values
-// (page background #0F1117, header #0D0F14, body text #E8EAF0, bright title #F9FAFB, two gray
+// (page background #0F1117, header #0D0F14, body text and title both #D5D9E2, two gray
 // text tones #9CA3AF and #6B7280, faint #4B5563, and white-alpha borders). This helper returns
 // those exact values for the default theme — so a shell renders pixel-identical when the comic
 // toggle is off — and the comic surface tokens from COMIC_THEME_TOKENS.md when it is on.
@@ -60,8 +60,13 @@ export function getPluginShellTokens(accent: string, theme: ThemeName): PluginSh
     BG: '#0F1117',
     HEADER: '#0D0F14',
     RAIL: '#090B0F',
-    TEXT: '#E8EAF0',
-    TITLE: '#F9FAFB',
+    // Body text and title are the same value (owner decision, 2026-09-21). They used to be
+    // #E8EAF0 and #F9FAFB — seventeen points apart on each channel, which no screen shows as a
+    // difference, and both close enough to white to read as glare on a phone at night. The
+    // hierarchy that does the work is this value against SUBTLE, MUTED and FAINT below, plus
+    // weight and size. The comic theme has always set these two to one value for the same reason.
+    TEXT: '#D5D9E2',
+    TITLE: '#D5D9E2',
     SUBTLE: '#9CA3AF',
     MUTED: '#6B7280',
     FAINT: '#4B5563',

@@ -125,7 +125,7 @@ export function MobileScreenHeader({
           minWidth: 140,
           fontSize: 15,
           fontWeight: 700,
-          color: 'var(--ctf-text, #F9FAFB)',
+          color: 'var(--ctf-text, #D5D9E2)',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',

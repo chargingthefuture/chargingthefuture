@@ -19,7 +19,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
-  color: #e8eaf0;
+  color: #d5d9e2;
   opacity: 0;
   transform: translateY(8px);
   animation: rise 320ms ease forwards;
@@ -108,7 +108,7 @@
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: transparent;
-  color: #e8eaf0;
+  color: #d5d9e2;
   font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
@@ -140,7 +140,7 @@
 }
 
 .close:hover {
-  color: #e8eaf0;
+  color: #d5d9e2;
   background: rgba(255, 255, 255, 0.06);
 }
 

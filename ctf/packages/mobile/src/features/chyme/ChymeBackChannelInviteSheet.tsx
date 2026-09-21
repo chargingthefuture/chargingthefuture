@@ -102,7 +102,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     avatarInitials: { fontSize: 22, fontWeight: '800', fontFamily: interFamily('800'), color: accent },
     senderText: { flex: 1 },
-    senderName: { fontSize: 20, fontWeight: '700', fontFamily: interFamily('700'), color: '#f9fafb' },
+    senderName: { fontSize: 20, fontWeight: '700', fontFamily: interFamily('700'), color: '#d5d9e2' },
     senderSub: { fontSize: 14, color: t.textSecondary, fontFamily: interFamily('400'), marginTop: 2 },
     acceptBtn: {
       flexDirection: 'row',

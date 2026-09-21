@@ -56,7 +56,7 @@ export function AccountClosedNotice({
       style={{
         minHeight: '100dvh',
         background: '#0F1117',
-        color: '#F9FAFB',
+        color: '#D5D9E2',
         fontFamily: "'Inter',system-ui,sans-serif",
         display: 'flex',
         alignItems: 'center',

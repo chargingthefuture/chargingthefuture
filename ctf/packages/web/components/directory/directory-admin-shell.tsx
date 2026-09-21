@@ -55,7 +55,7 @@ const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
 const BG = "#0F1117";
 const BORDER = "#1E2A3A";
-const TEXT = "#F9FAFB";
+const TEXT = "#D5D9E2";
 const SUBTLE = "#6B7280";
 
 // Shared field chrome reused across the edit drawer inputs (label caption + input box).

@@ -8,7 +8,7 @@ import { getSkillsHuntTokens } from './sh-shared';
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups, served via the
 // shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FACC15,
-// title #F9FAFB).
+// text #D5D9E2).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
 const NOMINATE_FIELDS = ['First Name', 'Bio', 'Quora Profile URL', 'Skills', 'Claimed Professions'];

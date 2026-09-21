@@ -25,8 +25,18 @@
   --ctf-icon-rail: #090b0f;
   --ctf-border: #1e2a3a;
   --ctf-border-dim: #1e2a3a;
-  --ctf-text: #f9fafb;
-  --ctf-text-shell: #e8eaf0;
+  /*
+   * Main text (owner decision, 2026-09-21). Was #f9fafb — six points off pure white on every
+   * channel, which gave about 18:1 against --ctf-bg when the strictest accessibility standard
+   * asks for 7:1, and read as glare on a phone at night with the screen's warm tint switched
+   * off. #d5d9e2 is about 13:1, still far above that bar. --ctf-text-shell used to be a
+   * slightly dimmer #e8eaf0 and now holds the same value: the gap between the two was never
+   * visible, and the hierarchy that carries the design is this value against the three grays
+   * under it. Pure white is still correct for a label or an icon sitting on a filled accent
+   * button, where the background under it is saturated — see --ctf-brand-text below.
+   */
+  --ctf-text: #d5d9e2;
+  --ctf-text-shell: #d5d9e2;
   --ctf-text-secondary: #9ca3af;
   --ctf-text-subtle: #6b7280;
   --ctf-text-muted: #4b5563;
@@ -146,7 +156,7 @@ body {
  */
 option {
   background-color: var(--ctf-surface, #161b27);
-  color: var(--ctf-text, #f9fafb);
+  color: var(--ctf-text, #d5d9e2);
 }
 
 /*

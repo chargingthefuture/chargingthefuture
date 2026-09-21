@@ -7,7 +7,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 const BG = 'var(--ctf-bg, #0F1117)';
 const SURFACE = 'var(--ctf-surface, #161B27)';
 const BORDER = 'var(--ctf-border, #1E2A3A)';
-const TEXT = 'var(--ctf-text, #F9FAFB)';
+const TEXT = 'var(--ctf-text, #D5D9E2)';
 const SUBTLE = 'var(--ctf-text-subtle, #6B7280)';
 // Status green — no sanctioned default token (design-cohesion pass §F3); also used with the
 // `${COLOR}NN` alpha-suffix trick that CSS var() cannot express. Keep raw.

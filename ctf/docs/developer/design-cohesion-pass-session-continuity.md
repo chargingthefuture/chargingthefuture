@@ -137,7 +137,27 @@ Admin pages/components are in scope for the SAME token treatment (they share the
   tuned to the old accent. Kept raw (pixel-safe; contrast remains readable on the darker comic
   accents). A follow-up could add an ACCENT_INK token slot if wanted.
 
+- **Q7 (primary text brightness, owner value-decision): RESOLVED (2026-09-21).** The owner read the
+  app on a phone at night with the screen's warm tint off and asked whether pure white was being
+  used. It was not — `--ctf-text` was `#F9FAFB`, six points off white on every channel, which is
+  about 18:1 against `--ctf-bg` where the strictest accessibility standard asks for 7:1. Both
+  primary text values are now `#D5D9E2` (about 13:1): `--ctf-text`, `--ctf-text-shell`, the
+  `TEXT`/`TITLE` pair in `getPluginShellTokens`, mobile `textPrimary`/`textShell`, and the
+  per-module `TEXT` constants that had the hex written in directly. `#E8EAF0` is retired as a
+  distinct value — the seventeen-point gap it held below `#F9FAFB` was never visible, and the comic
+  theme has always set its two equivalents to one value. The three grays below it (`#9CA3AF`,
+  `#6B7280`, `#4B5563`) are unchanged and are what carries the hierarchy, with weight and size.
+  Comic is untouched. Per F2 this was **not** a blind find/replace: all 95 literal-white call sites
+  across web and mobile were read first, and every one is a label or icon on a filled accent
+  button, a colored chip, or the gradient header bar — a saturated background, where white is the
+  correct foreground. Those stay white, as do `--ctf-brand-text` and `--ctf-cta-text`. The reason
+  is recorded at the token definitions in `app/globals.css` and mirrored in the mobile token file.
+
 ## 8. Progress log
+
+### Session (2026-09-21) — branch `fix/dim-primary-text-tokens`
+- Primary text dimmed app-wide to `#D5D9E2`; `#E8EAF0` retired as a separate value. See Q7 above
+  for the reasoning, the contrast figures, and what deliberately stayed white.
 
 ### Session (2026-07-07) — branch `design/brand-cohesion-theme-token-pass`
 - Wrote this findings/continuity doc (this commit).

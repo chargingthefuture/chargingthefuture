@@ -3,6 +3,6 @@
 export const TREND_BG = '#0F1117';
 export const TREND_SURFACE = '#161B27';
 export const TREND_BORDER = '#1E2A3A';
-export const TREND_TEXT = '#F9FAFB';
+export const TREND_TEXT = '#D5D9E2';
 export const TREND_SUBTLE = '#6B7280';
 export const TREND_ACCENT = '#EC4899';

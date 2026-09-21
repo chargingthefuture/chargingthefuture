@@ -19,7 +19,7 @@ export const REPORT_IMAGE_WIDTH = 900;
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
+const TEXT = '#D5D9E2';
 const SUBTLE = '#8A93A6';
 const ACCENT = '#EC4899';
 

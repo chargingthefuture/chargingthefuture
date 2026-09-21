@@ -64,7 +64,7 @@ export function ChymeBackChannelInvite({
             <span style={{ fontSize: 15, fontWeight: 800, color: PRIMARY }}>{initials(fromName)}</span>
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#d5d9e2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {fromName}
             </div>
             <div style={{ fontSize: 12, color: '#9ca3af' }}>wants a Back Channel</div>

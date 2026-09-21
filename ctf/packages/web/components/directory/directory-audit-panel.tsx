@@ -5,7 +5,7 @@ import { ScrollText } from "lucide-react";
 import { COLOR } from "./shared";
 
 const BORDER = "#1E2A3A";
-const TEXT = "#F9FAFB";
+const TEXT = "#D5D9E2";
 const SUBTLE = "#6B7280";
 
 // One row of directory_admin_audit_trail, as the admin route returns it.

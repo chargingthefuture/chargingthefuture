@@ -206,7 +206,7 @@ function BackChannelPanelLive({ otherName, onHangUp }: { otherName: string; onHa
           <span style={{ fontSize: 15, fontWeight: 800, color: PRIMARY }}>{initials(otherName)}</span>
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#f9fafb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#d5d9e2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {otherName}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: remoteSpeaking ? PRIMARY : '#6b7280' }}>
@@ -229,7 +229,7 @@ function BackChannelPanelLive({ otherName, onHangUp }: { otherName: string; onHa
             borderRadius: 10,
             background: 'rgba(249,250,251,0.07)',
             border: 'none',
-            color: '#f9fafb',
+            color: '#d5d9e2',
             fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',

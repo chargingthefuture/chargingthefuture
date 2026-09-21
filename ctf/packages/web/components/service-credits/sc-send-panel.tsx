@@ -9,7 +9,7 @@ import { getServiceCreditsTokens } from './sc-shared';
 
 const inputField: React.CSSProperties = {
   width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: 8, fontSize: 13, color: "#E8EAF0", outline: "none", marginBottom: 12, boxSizing: "border-box",
+  borderRadius: 8, fontSize: 13, color: "#D5D9E2", outline: "none", marginBottom: 12, boxSizing: "border-box",
 };
 const inputLabel: React.CSSProperties = { fontSize: 12, color: "#9CA3AF", marginBottom: 6, display: "block" };
 
