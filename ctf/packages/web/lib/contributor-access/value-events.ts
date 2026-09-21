@@ -1,19 +1,22 @@
 import type { ContributorValueEventKey } from './weights';
 
-// The thirteen value events, defined once, in the shape both readings need.
+// The thirteen value events, defined once, in the shape every reading needs.
 //
-// Two things read these events and they must never disagree:
+// Three things read these events and they must never disagree:
 //
 //   * Weavers of the Commons sums them over a member's entire time here, applies the weights, and
 //     grants a badge the first time the total clears the threshold. Permanent once earned.
 //   * The daily exchange count asks the same question of one day: who delivered value today, and
 //     how many of them were there.
+//   * The Weekly Performance dashboard's Value section asks how many times each event happened in
+//     a week — not who, just how often (owner directive, 2026-09-21: the dashboard reads this list
+//     rather than keeping its own copy of the SQL).
 //
-// Same events, same weights, same attribution — the only difference is the window and what is done
-// with the answer (owner directive, 2026-09-20). Before this file each reading carried its own copy
-// of the SQL, which is how two definitions drift: a feature lands, one list is updated, and the two
-// numbers quietly stop describing the same thing. Adding a value event now means adding one entry
-// here and both readings pick it up.
+// Same events, same attribution — the only difference is the window and what is done with the
+// answer (owner directive, 2026-09-20). Before this file each reading carried its own copy of the
+// SQL, which is how definitions drift: a feature lands, one list is updated, and the numbers quietly
+// stop describing the same thing. Adding a value event now means adding one entry here and every
+// reading picks it up.
 //
 // Each entry gives a row-level SELECT — one row per occurrence, carrying the member it is
 // attributed to and when it happened — plus how that event aggregates over a window. Attribution is
@@ -37,6 +40,20 @@ export type ValueEventAggregate =
   // stays because the next event that dedupes against a target will need it.
   | 'distinctRef';
 
+// How many times an event happened in a window, for the Weekly Performance dashboard. The badge
+// and the daily count score members; the dashboard counts occurrences, and the two are not the
+// same question when a row credits a member rather than an event.
+export type ValueEventOccurrences =
+  // One occurrence per row. Most events.
+  | 'rows'
+  // Distinct members in the window. PeerProgramming: how many different people posted this week.
+  | 'distinctMembers'
+  // Distinct `ref` values. Recurring ties credit both sides with a row each, and the tie is the
+  // occurrence, so the rows carry the tie's id as `ref`.
+  | 'distinctRef'
+  // Sum of `value`. Contributions: dollars confirmed this week.
+  | 'sum';
+
 export type ValueEventSource = {
   key: ContributorValueEventKey;
   // Whether somebody on the other side received something material.
@@ -57,6 +74,7 @@ export type ValueEventSource = {
   // by the distinct-ref one, so the others select a constant for them.
   rowSql: string;
   aggregate: ValueEventAggregate;
+  occurrences: ValueEventOccurrences;
 };
 
 export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
@@ -69,6 +87,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM foundation_call_sessions
               WHERE ring_status = 'answered' AND blocks_charged > 0 AND callee_user_id IS NOT NULL`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.socket_relay_requests_fulfilled',
@@ -80,6 +99,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM socket_relay_fulfillments
               WHERE close_reason = 'successful'`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.trust_transport_trips_completed',
@@ -91,6 +111,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
               WHERE status = 'completed' AND requester_completion_confirmed_at IS NOT NULL
                 AND provider_completion_confirmed_at IS NOT NULL`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.lighthouse_stays_completed',
@@ -102,6 +123,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM lighthouse_matches
               WHERE status = 'completed'`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.chyme_tips_sent',
@@ -113,6 +135,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
               WHERE status = 'completed' AND origin_plugin = 'chyme'
                 AND sender_user_id <> recipient_user_id`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.service_credits_peer_sends',
@@ -124,6 +147,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
               WHERE status = 'completed' AND origin_plugin = 'service-credits'
                 AND sender_user_id <> recipient_user_id`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.contributions_confirmed_usd',
@@ -135,6 +159,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM contributions_submissions
               WHERE status = 'confirmed'`,
     aggregate: 'sum',
+    occurrences: 'sum',
   },
   {
     key: 'value.skills_hunt_nominations_accepted',
@@ -145,6 +170,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM skills_hunt_submissions
               WHERE status = 'accepted' AND deleted_at IS NULL`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.what_works_tools_approved',
@@ -155,6 +181,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM what_works_products
               WHERE status = 'approved' AND suggested_by IS NOT NULL`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.skill_up_completions',
@@ -165,6 +192,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM skill_up_enrollments
               WHERE status = 'completed'`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     key: 'value.skill_up_trainer_payouts',
@@ -175,6 +203,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM skill_up_disbursements
               WHERE disbursement_type = 'trainer_payout'`,
     aggregate: 'count',
+    occurrences: 'rows',
   },
   {
     // A confirmed active tie credits both sides: each of them sustains it.
@@ -182,14 +211,15 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // A tie both sides confirm they are sustaining.
     delivers: true,
     tables: ['recurring_activities'],
-    rowSql: `SELECT owner_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT owner_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref
                FROM recurring_activities
               WHERE status = 'active' AND confirmed_at IS NOT NULL
               UNION ALL
-             SELECT counterparty_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, NULL::text AS ref
+             SELECT counterparty_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref
                FROM recurring_activities
               WHERE status = 'active' AND confirmed_at IS NOT NULL`,
     aggregate: 'count',
+    occurrences: 'distinctRef',
   },
   {
     key: 'value.peer_programming_active_posters',
@@ -199,6 +229,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     rowSql: `SELECT author_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM peer_programming_messages`,
     aggregate: 'distinctWeek',
+    occurrences: 'distinctMembers',
   },
 ];
 
@@ -213,6 +244,21 @@ export function aggregateExpression(aggregate: ValueEventAggregate): string {
     case 'distinctRef':
       return 'COUNT(DISTINCT ref)';
     case 'count':
+    default:
+      return 'COUNT(*)';
+  }
+}
+
+// How many times an event happened in a window — the Weekly Performance dashboard's reading.
+export function occurrencesExpression(occurrences: ValueEventOccurrences): string {
+  switch (occurrences) {
+    case 'sum':
+      return 'COALESCE(SUM(value), 0)';
+    case 'distinctMembers':
+      return 'COUNT(DISTINCT member_id)';
+    case 'distinctRef':
+      return 'COUNT(DISTINCT ref)';
+    case 'rows':
     default:
       return 'COUNT(*)';
   }

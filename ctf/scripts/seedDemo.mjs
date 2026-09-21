@@ -303,21 +303,8 @@ async function seedWeeklyPerformance(c) {
     [ID.week, WEEK_START, 'Demo week — strong engagement across all plugins.'],
   );
 
-  const metrics = [
-    { key: 'new_members', value: 47, unit: 'count', source: 'directory' },
-    { key: 'sessions_completed', value: 12, unit: 'count', source: 'peer-programming' },
-    { key: 'credits_earned', value: 3200, unit: 'credits', source: 'service-credits' },
-  ];
-  for (const m of metrics) {
-    const id = sha256id(WEEK_START, m.key, m.source);
-    await c.query(
-      `INSERT INTO weekly_performance_metrics
-       (id, week_start_date, metric_key, metric_value, metric_unit, source_plugin)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6)
-       ON CONFLICT (id) DO NOTHING`,
-      [id, WEEK_START, m.key, m.value, m.unit, m.source],
-    );
-  }
+  // Every weekly number is computed live from the other plugins' seeded rows; there is no metric
+  // store to fill.
   console.log('  ✓ weekly-performance');
 }
 

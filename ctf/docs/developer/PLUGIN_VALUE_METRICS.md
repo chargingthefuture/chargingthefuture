@@ -66,3 +66,12 @@ Weekly Performance** with the metrics below.
    GentlePulse and Skills Taxonomy entirely; respect the Foundation privacy constraint.
 3. Only then: the gating eligibility engine consumes the value table with owner-set weights — the
    admission bar is deliberately high (owner directive; see the trusted-channels proposal).
+
+## Later decisions that narrow this table
+
+- 2026-09-20: WhatWorks **endorsements** (an upvote) and Beacon **engagement** (talk) left the value
+  events; the reasoning is in `lib/contributor-access/weights.ts` and the Contributor Access
+  inventory.
+- 2026-09-21: the Weekly Performance dashboard reads the one shared list in
+  `lib/contributor-access/value-events.ts` rather than its own copy of each event's SQL, so the two
+  rows above are no longer counted anywhere.

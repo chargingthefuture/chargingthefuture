@@ -1849,29 +1849,6 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
-  - id: wp_value_what_works_endorsements_given
-    name: Weekly WhatWorks Endorsements Given
-    description: Count of WhatWorks endorsements created within the week window.
-    owner: analytics-owner@chargingthefuture.org
-    data_type: integer
-    unit: endorsements
-    calculation: |
-      SELECT COUNT(*) AS v
-      FROM what_works_endorsements
-      WHERE created_at >= :week_start
-        AND created_at < :week_end;
-    inputs:
-      - name: what_works_endorsements.created_at
-        type: datetime
-    example_values:
-      - 8
-      - 19
-    last_updated: "2026-07-18T00:00:00Z"
-    update_cadence: weekly
-    retention: 24 months
-    allowed_thresholds:
-      min: 0
-
   - id: wp_value_skill_up_completions
     name: Weekly SkillUp Completions
     description: Count of SkillUp enrollments that reached completed status within the week window (delivered value is completion, not the enrollment start). No completed_at column exists; the status flip writes updated_at.
@@ -1966,48 +1943,6 @@ canonical_metrics:
     example_values:
       - 11
       - 26
-    last_updated: "2026-07-18T00:00:00Z"
-    update_cadence: weekly
-    retention: 24 months
-    allowed_thresholds:
-      min: 0
-
-  - id: wp_value_beacon_broadcast_engagement
-    name: Weekly Beacon Broadcast Engagement
-    description: Count of distinct (member, broadcast) pairs that engaged with a Beacon broadcast's Commons replay post within the week window, via a reaction or a reply. One member engaging with the same broadcast many times counts once. Live in-event chat and reactions are held only in Stream and expire there, so they are not counted. Broadcast completion itself is not counted either — only the owner can start a session, so it would measure the admin, not members.
-    owner: analytics-owner@chargingthefuture.org
-    data_type: integer
-    unit: engagements
-    calculation: |
-      SELECT COUNT(*) AS v FROM (
-        SELECT r.user_id AS member_id, b.id AS broadcast_id
-        FROM beacon_events b
-        JOIN feed_community_post_reactions r ON r.post_id = b.commons_recording_post_id
-        WHERE r.created_at >= :week_start AND r.created_at < :week_end
-        UNION
-        SELECT p.author_user_id AS member_id, b.id AS broadcast_id
-        FROM beacon_events b
-        JOIN feed_community_replies p ON p.post_id = b.commons_recording_post_id
-        WHERE p.created_at >= :week_start AND p.created_at < :week_end
-      ) engagement;
-    inputs:
-      - name: beacon_events.commons_recording_post_id
-        type: uuid
-      - name: feed_community_post_reactions.post_id
-        type: uuid
-      - name: feed_community_post_reactions.user_id
-        type: uuid
-      - name: feed_community_post_reactions.created_at
-        type: datetime
-      - name: feed_community_replies.post_id
-        type: uuid
-      - name: feed_community_replies.author_user_id
-        type: uuid
-      - name: feed_community_replies.created_at
-        type: datetime
-    example_values:
-      - 15
-      - 42
     last_updated: "2026-07-18T00:00:00Z"
     update_cadence: weekly
     retention: 24 months

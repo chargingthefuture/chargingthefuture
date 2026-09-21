@@ -4911,23 +4911,9 @@ CREATE INDEX IF NOT EXISTS idx_trust_signal_snapshot_user ON trust_signal_snapsh
 CREATE INDEX IF NOT EXISTS idx_trust_signal_snapshot_created ON trust_signal_snapshot(created_at);
 
 -- === WEEKLY PERFORMANCE MODULE ===
-CREATE TABLE IF NOT EXISTS weekly_performance_metrics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  week_start_date DATE NOT NULL,
-  metric_key TEXT NOT NULL,
-  metric_value NUMERIC NOT NULL,
-  metric_unit TEXT NOT NULL,
-  source_plugin TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS week_start_date DATE NOT NULL DEFAULT CURRENT_DATE;
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS metric_key TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS metric_value NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS metric_unit TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS source_plugin TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS weekly_performance_metrics ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
+-- Every weekly number is computed live from the plugins' own tables on each read
+-- (lib/weekly-performance/live-metrics.ts). The per-week aggregate store this module once declared,
+-- weekly_performance_metrics, was written by seed scripts and read by nothing; post/0035 drops it.
 CREATE TABLE IF NOT EXISTS weekly_performance_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -7679,11 +7665,8 @@ ALTER TABLE IF EXISTS lighthouse_matches
 -- read by the GDP recognizer; renaming them would orphan that history and drop SkillUp trainer
 -- payouts out of the Community Value Index.
 
--- Weekly Performance keeps one row per metric per week, keyed by metric_key, so a renamed key would
--- start a fresh series and leave last week's figure unreadable for the week-over-week comparison.
-UPDATE weekly_performance_metrics SET metric_key = 'value.skill_up_completions' WHERE metric_key = 'value.level_up_completions';
-UPDATE weekly_performance_metrics SET metric_key = 'value.skill_up_trainer_payouts' WHERE metric_key = 'value.level_up_trainer_payouts';
-UPDATE weekly_performance_metrics SET source_plugin = 'skill-up' WHERE source_plugin = 'level-up';
+-- Weekly Performance's goal snapshots are keyed by metric_key, so a renamed key would start a fresh
+-- series and leave last week's figure unreadable for the week-over-week comparison.
 UPDATE weekly_performance_goal_snapshots SET metric_key = REPLACE(metric_key, 'level_up_', 'skill_up_') WHERE metric_key LIKE '%level\_up\_%';
 
 -- Notifications already delivered point at /apps/level-up, which stops resolving after this rename.
@@ -9622,4 +9605,19 @@ BEGIN
   DROP TABLE _login_fkey_evidence;
 END
 $$;
+
+
+-- ── post migration: 0035_drop_weekly_performance_metrics.sql ──
+-- post/0035: Drop weekly_performance_metrics, the per-week aggregate store nothing reads.
+--
+-- Every weekly number on the Weekly Performance dashboard has been computed live from the plugins'
+-- own tables on each read since 2026-06-29 (lib/weekly-performance/live-metrics.ts). This table was
+-- declared for a "close the week and store the numbers" flow that never shipped: two seed scripts
+-- wrote demo rows into it and no route, library or screen ever read it. Removed with the dashboard's
+-- move to the shared value-event definitions (owner directive, 2026-09-21), along with its seed
+-- inserts, its contract data-access entries and its schema.sql declaration.
+--
+-- Idempotent: IF EXISTS, so a second run finds nothing to drop.
+
+DROP TABLE IF EXISTS weekly_performance_metrics;
 

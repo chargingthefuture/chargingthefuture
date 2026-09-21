@@ -4,20 +4,11 @@ import crypto from 'crypto';
 
 const WEEK_START = '2026-05-19';
 
-const METRICS = [
-  { key: 'engagement.daily_active', value: 892, unit: 'users' },
-  { key: 'engagement.posts_created', value: 342, unit: 'posts' },
-  { key: 'retention.week_over_week', value: 87.5, unit: 'percent' },
-  { key: 'performance.page_load_time', value: 1.2, unit: 'seconds' },
-  { key: 'performance.error_rate', value: 0.03, unit: 'percent' },
-];
+// Only the week row is seeded: every weekly number is computed live from the other plugins' rows
+// on each read, so there is no metric store to fill.
 
 function deterministicWeekId(weekDate) {
   return crypto.createHash('sha256').update('week-' + weekDate).digest('hex').slice(0, 32);
-}
-
-function deterministicMetricId(weekDate, metricKey, sourcePlugin) {
-  return crypto.createHash('sha256').update(weekDate + metricKey + sourcePlugin).digest('hex').slice(0, 32);
 }
 
 function requireEnv(name) {
@@ -51,27 +42,8 @@ async function seed() {
         ]
       );
 
-      // Seed metrics
-      for (const metric of METRICS) {
-        const metricId = deterministicMetricId(WEEK_START, metric.key, 'analytics');
-        await client.query(
-          `INSERT INTO weekly_performance_metrics
-           (id, week_start_date, metric_key, metric_value, metric_unit, source_plugin)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (id) DO NOTHING`,
-          [
-            metricId,
-            WEEK_START,
-            metric.key,
-            metric.value,
-            metric.unit,
-            'analytics',
-          ]
-        );
-      }
-
       await client.query('COMMIT');
-      console.log('Seeded weekly performance weeks and metrics.');
+      console.log('Seeded weekly performance weeks.');
     } catch (err) {
       try {
         await client.query('ROLLBACK');
