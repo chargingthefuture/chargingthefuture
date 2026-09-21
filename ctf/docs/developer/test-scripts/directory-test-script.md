@@ -329,6 +329,48 @@ explanation: earned by steadily delivering real help; automatic; permanent; no a
 to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-9 · A deleted listing disappears from the member view but stays visible to an admin
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a claimed profile with several skills, whose account you can delete (or a profile
+whose `directory_profiles.deleted_at` an admin has stamped by deleting that member's account).
+**Steps:**
+1. As a member, note the profile's name, its skills, and its profile page address.
+2. Delete that member's account, or delete the auth account that claimed the profile.
+3. Signed in as any other member, browse `/apps/directory` and page through the list. The profile
+   must not appear.
+4. Search for the person by name in the same screen. No result.
+5. Open the profile page address noted in step 1 directly. It must not render the profile.
+6. As an admin, open `/admin/directory` and search the same name. The row **is** still listed.
+**Expected:** A soft-deleted listing is gone from every member-facing read — the browse list, its
+count and paging, the search, and the profile page opened by direct address. The admin list still
+shows it, deliberately: an admin list hides nothing, and a listing taken down has to remain findable
+by whoever has to answer for it. Before 2026-09-20 steps 3 to 5 all still showed the profile, because
+those reads filtered on `is_active` alone and account deletion stamps `deleted_at` without touching
+`is_active` — so a deleted member's name, location, Quora address and skills stayed on the screen.
+Note this catches a side-effect deletion too: removing a duplicate auth account soft-deletes whatever
+listing that account had claimed, which is silent if the member view keeps rendering it.
+**Result:** web ☐ mobile ☐ — notes:
+
+### DIR-9b · A member deleting their own listing removes it everywhere at once
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a claimed profile with at least one skill, listed under a sector.
+**Steps:**
+1. As that member, delete your own listing from the Directory edit screen.
+2. Browse and search `/apps/directory` as another member: it is gone. Open its address directly:
+   gone.
+3. Check the screens that read this table from elsewhere — Workforce's skills map and counts,
+   Foundation's provider browse and its count, the Weekly Performance member figure. The person is
+   absent from all of them, and every count agrees with the list beside it.
+4. On `/admin/directory`, switch the list to include removed profiles. The row is there.
+5. Re-save the profile as an admin. It returns on every screen from steps 2 and 3.
+**Expected:** One delete, one effect, everywhere. Liveness is `deleted_at IS NULL` and nothing else,
+so no screen can disagree with another about whether a listing exists. Before 2026-09-20 the table
+carried an `is_active` flag as well and the two diverged: a member's own delete cleared the flag
+while account deletion stamped the timestamp, and each query tested whichever one its author picked.
+Step 3 is the part that used to fail quietly — a count built on one column sitting beside a list
+built on the other.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Admin walkthrough
