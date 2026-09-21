@@ -60,7 +60,7 @@ export async function getDirectorySkillCoverage(): Promise<DirectorySkillCoverag
         SELECT DISTINCT ps.skill_id::text AS skill_id
         FROM directory_profile_skills ps
         JOIN directory_profiles p ON p.id::text = ps.profile_id::text
-        WHERE p.deleted_at IS NULL AND p.is_active
+        WHERE p.deleted_at IS NULL
       )
       SELECT
         c.sector,
@@ -77,7 +77,7 @@ export async function getDirectorySkillCoverage(): Promise<DirectorySkillCoverag
     `
       SELECT count(*)::text AS listed_people
       FROM directory_profiles p
-      WHERE p.deleted_at IS NULL AND p.is_active
+      WHERE p.deleted_at IS NULL
     `,
   );
 

@@ -38,7 +38,6 @@ type DirectoryProfileRow = {
   sector_name: string | null;
   job_title_id: string | null;
   job_title_name: string | null;
-  is_active: boolean;
   // SkillsHunt + Clerk username co-change. Optional on the row type so
   // existing SELECTs that don't yet pull these columns still typecheck;
   // mapProfileRow defaults to safe values.
@@ -244,7 +243,6 @@ function buildProfile(
     skills,
     pendingSkills,
     proposedSkills: selfProposed,
-    isActive: row.is_active,
     source: row.source ?? 'admin',
     invitedByUsername: nullable(row.invited_by_username),
     unclaimedHandle: nullable(row.unclaimed_handle),
@@ -370,7 +368,7 @@ export async function countActiveDirectoryProfiles(): Promise<number | null> {
   const result = await queryDb<{ total: string }>(
     `SELECT COUNT(*)::text AS total
      FROM directory_profiles
-     WHERE is_active = TRUE AND deleted_at IS NULL`,
+     WHERE deleted_at IS NULL`,
   );
   const total = Number.parseInt(result.rows[0]?.total ?? '', 10);
   return Number.isFinite(total) ? total : null;
@@ -674,7 +672,6 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
         s.name AS sector_name,
         p.job_title_id,
         jt.name AS job_title_name,
-        p.is_active,
         p.source,
         p.invited_by_username,
         p.unclaimed_handle,
@@ -979,7 +976,7 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
             city = $13,
             state = $14,
             country = $15,
-            is_active = true,
+            deleted_at = NULL,
             updated_at = NOW()
           WHERE id = $1
         `,
@@ -1007,9 +1004,9 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           INSERT INTO directory_profiles
             (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id,
              venmo_address, monero_address, bitcoin_address, service_credits_address, city, state, country,
-             is_active, source)
+             source)
           VALUES
-            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, $9, $10, $11, $12, $13, $14, $15, true, 'self')
+            ($1, $2, $3, $4, $5, $6, $7::uuid, $8::uuid, $9, $10, $11, $12, $13, $14, $15, 'self')
           RETURNING id
         `,
         [
@@ -1091,7 +1088,6 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
@@ -1180,7 +1176,6 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
@@ -1192,7 +1187,7 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id::text = $1 AND p.is_active = true AND p.deleted_at IS NULL
+        WHERE p.id::text = $1 AND p.deleted_at IS NULL
         LIMIT 1
       `,
       [id],
@@ -1244,14 +1239,13 @@ export async function listDirectoryForMember(
 ): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination }> {
   return withDbTransaction(async (client) => {
     // Directory is auth-gated but not "contribute-to-browse": every authenticated
-    // member sees every active profile (including carried-over unclaimed profiles),
-    // so there is no requirement that the viewer first create their own profile.
+    // member sees every live profile (including carried-over unclaimed profiles), so there
+    // is no requirement that the viewer first create their own profile.
     //
-    // Both queries below exclude soft-deleted profiles. Account deletion stamps
-    // deleted_at and leaves is_active alone (see lib/account/deletion-registry.ts), so a
-    // filter on is_active by itself kept deleted listings on this screen while the invite
-    // queue and extractDirectoryShape.mjs, which check both columns, correctly dropped
-    // them. A member who deletes their account has to disappear from here.
+    // `deleted_at IS NULL` is the only liveness test, here and everywhere else. The table
+    // used to carry an `is_active` flag beside it and the two disagreed: a member deleting
+    // their own listing cleared the flag, account deletion stamped the timestamp, and a
+    // query testing one of them kept showing rows the other had removed.
     const offset = (pagination.page - 1) * pagination.pageSize;
     const normalizedFilters = normalizeListFilters(filters);
 
@@ -1262,8 +1256,7 @@ export async function listDirectoryForMember(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
-        WHERE p.is_active = true
-          AND p.deleted_at IS NULL
+        WHERE p.deleted_at IS NULL
           AND (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
@@ -1337,7 +1330,6 @@ export async function listDirectoryForMember(
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.source,
           p.invited_by_username,
           p.unclaimed_handle,
@@ -1349,8 +1341,7 @@ export async function listDirectoryForMember(
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.is_active = true
-          AND p.deleted_at IS NULL
+        WHERE p.deleted_at IS NULL
           AND (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
@@ -1482,7 +1473,7 @@ export async function deleteOwnDirectoryProfile(userId: string): Promise<{ reque
             city = NULL,
             state = NULL,
             country = NULL,
-            is_active = false,
+            deleted_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
         `,
@@ -1579,10 +1570,10 @@ export interface AdminProfileFilters {
 }
 
 // Shared predicate for the admin list's count and page queries, so the total always describes the
-// same set the page is drawn from. Parameters: $1 includeInactive, $2 claim filter, $3 search term
+// same set the page is drawn from. Parameters: $1 includeDeleted, $2 claim filter, $3 search term
 // (already collapsed by buildSearchTerm, or null for "no search").
 const ADMIN_PROFILE_WHERE = `
-  WHERE ($1::boolean OR p.is_active = true)
+  WHERE ($1::boolean OR p.deleted_at IS NULL)
     AND (
       $2::text = 'all'
       OR ($2::text = 'claimed' AND p.claimed_by_user_id IS NOT NULL)
@@ -1611,7 +1602,7 @@ const ADMIN_PROFILE_WHERE = `
 // page of rows cannot answer it.
 export async function listAdminProfiles(
   pagination: { page: number; pageSize: number },
-  includeInactive = false,
+  includeDeleted = false,
   filters: AdminProfileFilters = {},
 ): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination; unclaimedTotal: number }> {
   const claimed: AdminProfileClaimFilter = filters.claimed ?? 'all';
@@ -1619,7 +1610,7 @@ export async function listAdminProfiles(
 
   return withDbTransaction(async (client) => {
     const offset = (pagination.page - 1) * pagination.pageSize;
-    const predicateParams = [includeInactive, claimed, searchTerm];
+    const predicateParams = [includeDeleted, claimed, searchTerm];
 
     const countResult = await client.query<CountRow>(
       `
@@ -1637,10 +1628,10 @@ export async function listAdminProfiles(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
-        WHERE ($1::boolean OR p.is_active = true)
+        WHERE ($1::boolean OR p.deleted_at IS NULL)
           AND p.claimed_by_user_id IS NULL
       `,
-      [includeInactive],
+      [includeDeleted],
     );
 
     const rows = await client.query<DirectoryProfileRow>(
@@ -1660,7 +1651,6 @@ export async function listAdminProfiles(
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.venmo_address,
           p.monero_address,
           p.bitcoin_address,
@@ -1716,9 +1706,9 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country, is_active)
+          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country)
         VALUES
-          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, true)
+          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10)
         RETURNING id
       `,
       [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country],
@@ -1752,7 +1742,6 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.venmo_address,
           p.monero_address,
           p.bitcoin_address,
@@ -1853,7 +1842,7 @@ export async function updateAdminProfile(
           city = $13,
           state = $14,
           country = $15,
-          is_active = true,
+          deleted_at = NULL,
           updated_at = NOW()
         WHERE id::text = $1
       `,
@@ -1918,7 +1907,6 @@ export async function updateAdminProfile(
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.venmo_address,
           p.monero_address,
           p.bitcoin_address,
@@ -2027,7 +2015,6 @@ export async function assignAdminProfile(
           s.name AS sector_name,
           p.job_title_id,
           jt.name AS job_title_name,
-          p.is_active,
           p.venmo_address,
           p.monero_address,
           p.bitcoin_address,
