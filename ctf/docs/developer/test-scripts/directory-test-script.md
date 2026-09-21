@@ -351,6 +351,26 @@ Note this catches a side-effect deletion too: removing a duplicate auth account 
 listing that account had claimed, which is silent if the member view keeps rendering it.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-9b · A member deleting their own listing removes it everywhere at once
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a claimed profile with at least one skill, listed under a sector.
+**Steps:**
+1. As that member, delete your own listing from the Directory edit screen.
+2. Browse and search `/apps/directory` as another member: it is gone. Open its address directly:
+   gone.
+3. Check the screens that read this table from elsewhere — Workforce's skills map and counts,
+   Foundation's provider browse and its count, the Weekly Performance member figure. The person is
+   absent from all of them, and every count agrees with the list beside it.
+4. On `/admin/directory`, switch the list to include removed profiles. The row is there.
+5. Re-save the profile as an admin. It returns on every screen from steps 2 and 3.
+**Expected:** One delete, one effect, everywhere. Liveness is `deleted_at IS NULL` and nothing else,
+so no screen can disagree with another about whether a listing exists. Before 2026-09-20 the table
+carried an `is_active` flag as well and the two diverged: a member's own delete cleared the flag
+while account deletion stamped the timestamp, and each query tested whichever one its author picked.
+Step 3 is the part that used to fail quietly — a count built on one column sitting beside a list
+built on the other.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### DIR-11 · Leaving removes the listing and blocks it from being re-listed
 **Role:** member, then admin · **Surfaces:** web + mobile-responsive
 **Precondition:** a member holding a claimed profile that carries a Quora address and some skills.
