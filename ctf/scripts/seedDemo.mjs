@@ -557,8 +557,8 @@ async function seedDirectory(c) {
   for (const [id, userId, firstName, lastName, headline, bio, country] of profiles) {
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, true, 'self')
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, source)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, 'self')
        ON CONFLICT (id) DO UPDATE SET
          claimed_by_user_id = EXCLUDED.claimed_by_user_id,
          first_name = EXCLUDED.first_name,
@@ -583,9 +583,9 @@ async function seedDirectory(c) {
     // own profile row instead of overwriting / stealing another owner's.
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, source)
        VALUES ($1::uuid, $2, 'Demo', 'Counterpart', 'Community Member',
-         'Second demo participant — the other side of the marketplace.', 'United Kingdom', true, 'self')
+         'Second demo participant — the other side of the marketplace.', 'United Kingdom', 'self')
        ON CONFLICT (id) DO UPDATE SET
          claimed_by_user_id = EXCLUDED.claimed_by_user_id,
          first_name = EXCLUDED.first_name,
@@ -609,8 +609,8 @@ async function seedDirectory(c) {
   for (const tester of TESTER_PROFILES) {
     await c.query(
       `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, is_active, source)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6, 'United States', true, 'self')
+       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, source)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, 'United States', 'self')
        ON CONFLICT (id) DO UPDATE SET
          claimed_by_user_id = EXCLUDED.claimed_by_user_id,
          first_name = EXCLUDED.first_name,

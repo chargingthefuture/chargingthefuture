@@ -213,13 +213,13 @@ async function main() {
       `
         INSERT INTO directory_profiles
           (id, claimed_by_user_id, first_name, last_name, headline, bio,
-           country, is_active, source, invited_by_username, unclaimed_handle,
+           country, source, invited_by_username, unclaimed_handle,
            created_at, updated_at)
         VALUES
           ($1::uuid, NULL, 'Seed', 'Nominee',
            'Community-generated profile seeded for @handle validation.',
            'Seeded by the SkillsHunt Phase-1 fixture.',
-           'United States', TRUE, 'community-generated', 'seed-user-01', 'community-seed01',
+           'United States', 'community-generated', 'seed-user-01', 'community-seed01',
            NOW(), NOW())
         ON CONFLICT (id) DO UPDATE SET
           first_name = EXCLUDED.first_name,
@@ -227,7 +227,6 @@ async function main() {
           headline = EXCLUDED.headline,
           bio = EXCLUDED.bio,
           country = EXCLUDED.country,
-          is_active = TRUE,
           source = EXCLUDED.source,
           invited_by_username = EXCLUDED.invited_by_username,
           unclaimed_handle = EXCLUDED.unclaimed_handle,

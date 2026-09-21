@@ -3058,7 +3058,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   profile_url TEXT,
   sector_id UUID,
   job_title_id UUID,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated')),
   invited_by_username TEXT,
   -- No inline UNIQUE: the case-insensitive unique index below owns uniqueness.
@@ -3115,7 +3114,6 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TE
 ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_public;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS job_title_id UUID;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;
@@ -9269,4 +9267,60 @@ UPDATE lighthouse_matches
    SET completed_at = updated_at
  WHERE completed_at IS NULL
    AND status = 'completed';
+
+
+-- ── post migration: 0032_directory_profiles_single_liveness_flag.sql ──
+-- Directory listings: one column decides whether a listing is live.
+--
+-- directory_profiles carried two tombstones that never agreed. A member deleting their own listing
+-- cleared is_active; account deletion stamped deleted_at and left is_active alone. Every query
+-- picked one of the two, so a row could be live on one screen and gone from another at the same
+-- time — which is exactly what happened, and why a listing kept rendering in the Directory after
+-- the account holding it was removed.
+--
+-- deleted_at is the survivor: it answers the same question and records when. This backfill stamps
+-- every row that only the old flag had retired, so nothing that was meant to be gone comes back
+-- when the reads switch over.
+--
+-- The is_active column itself is NOT dropped here. Migrations run on the push to main, alongside
+-- the deploy rather than after it, so a drop could land while the previous revision is still
+-- serving and still selecting the column. Dropping it is a one-line follow-up once this is live.
+--
+-- Idempotent: a second run finds no rows left to stamp.
+
+DO $directory_profiles_single_liveness_flag$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'directory_profiles'
+      AND column_name = 'is_active'
+  ) THEN
+    -- updated_at is the closest record of when the row was retired; NOW() would claim every one of
+    -- these was deleted at migration time, which is not true of any of them.
+    UPDATE directory_profiles
+       SET deleted_at = COALESCE(updated_at, NOW())
+     WHERE is_active = FALSE
+       AND deleted_at IS NULL;
+  END IF;
+END
+$directory_profiles_single_liveness_flag$;
+
+
+-- ── post migration: 0033_drop_directory_profiles_is_active.sql ──
+-- Drop directory_profiles.is_active.
+--
+-- The column was one of two tombstones the table carried, and they never agreed: a member deleting
+-- their own listing cleared this flag while account deletion stamped deleted_at, so a query testing
+-- one of them kept showing rows the other had removed. post/0032 backfilled deleted_at from every
+-- row this flag alone had retired, and the code stopped reading or writing it in the same release.
+--
+-- Safe to drop now for the reason 0032 said it was not safe then: nothing in the deployed app
+-- selects or sets it. Migrations run on the push to main alongside the deploy rather than after it,
+-- so 0032 deliberately left the column in place for one release while the previous revision was
+-- still serving. That revision is gone.
+--
+-- Idempotent: IF EXISTS, so a second run finds nothing to drop.
+
+ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_active;
 

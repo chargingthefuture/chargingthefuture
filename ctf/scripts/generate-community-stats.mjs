@@ -97,7 +97,7 @@ const STAT_PROVIDERS = [
       // the two must cast both sides to text (see repository.ts, PR #534).
       const profiles = await client.query(
         `SELECT COUNT(*)::int AS n FROM directory_profiles
-         WHERE is_active = TRUE AND deleted_at IS NULL`,
+         WHERE deleted_at IS NULL`,
       );
       // Skills at least one active member has listed. Joined to the taxonomy and filtered to
       // is_active so this counts the same population as the catalog total below — otherwise a skill

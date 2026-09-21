@@ -3060,14 +3060,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   profile_url TEXT,
   sector_id UUID,
   job_title_id UUID,
-  -- DEPRECATED, no longer read or written by the app (2026-09-20). Liveness is decided by
-  -- deleted_at alone. The table carried both and they never agreed: a member deleting their own
-  -- listing cleared this flag while account deletion stamped deleted_at, so a query testing one of
-  -- them kept showing rows the other had removed. db/migrations/post/0032 backfills deleted_at from
-  -- every row this flag had retired. The column stays for one deploy because migrations run
-  -- alongside the deploy rather than after it, so dropping it here could land while the previous
-  -- revision is still selecting it; the drop is a one-line follow-up.
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated')),
   invited_by_username TEXT,
   -- No inline UNIQUE: the case-insensitive unique index below owns uniqueness.
@@ -3124,7 +3116,6 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TE
 ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_public;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS job_title_id UUID;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;

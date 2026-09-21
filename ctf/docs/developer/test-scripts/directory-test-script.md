@@ -366,7 +366,7 @@ listing that account had claimed, which is silent if the member view keeps rende
 **Expected:** One delete, one effect, everywhere. Liveness is `deleted_at IS NULL` and nothing else,
 so no screen can disagree with another about whether a listing exists. Before 2026-09-20 the table
 carried an `is_active` flag as well and the two diverged: a member's own delete cleared the flag
-while account deletion stamped the timestamp, and each query tested whichever one its author picked.
+while account deletion stamped the timestamp, and each query tested whichever one its author picked. The flag itself was dropped from the table on 2026-09-21 (`db/migrations/post/0033`), so there is no second column left to disagree.
 Step 3 is the part that used to fail quietly — a count built on one column sitting beside a list
 built on the other.
 **Result:** web ☐ mobile ☐ — notes:
