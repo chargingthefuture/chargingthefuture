@@ -1,6 +1,6 @@
 // Account deletion registry — the single source of truth mapping each plugin to the database
 // tables that hold a user's data, and how each is handled when that user deletes either (a) just
-// that plugin's data ("service" scope) or (b) their whole CTF account ("account" scope).
+// that plugin's data ("service" scope) or (b) their entire CTF account ("account" scope).
 //
 // Built from what actually exists in `ctf/schema.sql` (verified table + column names), NOT from the
 // plugin deletion *contracts*, which describe intended/draft schemas that have drifted from the
@@ -80,9 +80,9 @@ const del = (table: string, userColumn: string, note?: string): OwnedTable => ({
  *
  * The case this exists for: `feed_items` is one table carrying two very different things — the
  * projection of a member's own Commons post or question, and the projection of an admin-published
- * announcement. Retaining the whole table (what it did until now) left the member's own words on
+ * announcement. Retaining the entire table (what it did until now) left the member's own words on
  * the Commons after their account was deleted, re-attributed to the fallback handle `user-hub-syst`
- * because the source row behind them was gone (owner report, 2026-08-09). Deleting the whole table
+ * because the source row behind them was gone (owner report, 2026-08-09). Deleting the entire table
  * by author would take the admin announcements down with it. So the row filter names the difference.
  *
  * The filter is written here by hand, never from user input, and the CI validator only accepts
@@ -215,11 +215,18 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'directory',
     name: 'Directory',
-    dataSummary: 'Your directory profile and its change history.',
+    dataSummary:
+      'Your directory listing and its change history. The listing is removed, and its Quora address is blocked from being listed again unless you ask for it back.',
     serviceScopeSupported: true,
     tables: [
       del('directory_profile_change_events', 'actor_id', 'History of changes you made to directory profiles.'),
-      soft('directory_profiles', 'claimed_by_user_id', 'deleted_at', 'The directory profile you claimed.'),
+      // The listing is removed outright, and its Quora address is blocked from being re-listed
+      // (owner directive, 2026-09-20). Both happen in `runInTransactionSteps` in the orchestrator,
+      // which runs just before this plan: the address has to be read before the row goes, which a
+      // generated one-statement plan cannot do. By the time this delete runs the row is already gone,
+      // so it matches nothing — it stays here because this registry is the statement of record for
+      // what happens to the table, and "deleted" is what happens.
+      del('directory_profiles', 'claimed_by_user_id', 'The directory listing you claimed.'),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
       // Burn-down batch 4: admin content and abuse-prevention trails, retained.
@@ -714,7 +721,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     name: 'Recurring Activity',
     dataSummary: 'The ongoing activities you acknowledged with other members (no amounts are stored for fiat; ServiceCredits values are declared figures, never real transfers).',
     // A recurring_activities row is a two-party relationship both members consented to. Neither party
-    // can be shown a tie the other has deleted, so removing the whole row on either party's deletion is
+    // can be shown a tie the other has deleted, so removing the entire row on either party's deletion is
     // the privacy-safe default: two entries, one per party column. Not a money ledger — no value moves
     // here and fiat lines carry no amount — so unlike ServiceCredits these rows are hard-deleted.
     serviceScopeSupported: true,
@@ -856,7 +863,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // `created_by_user_id` is an admin provenance stamp on an observation, which is the
       // admin/reviewer case the notes at the top of this file already call retained. Clearing it
       // would erase who made the observation while leaving the observation standing — the wrong
-      // half to keep, and it matters more if a second coder is ever added, since the whole reason
+      // half to keep, and it matters more if a second coder is ever added, since the reason
       // to record a coder is to be able to compare them. The entry rows themselves carry no user
       // column at all: they describe third-party public accounts, not members.
       retain(

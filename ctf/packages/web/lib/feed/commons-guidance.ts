@@ -21,13 +21,13 @@ import {
 //      - "You can say what is happening to you" is the anti-scare guarantee. A rule about storytelling
 //        read alone tells a newly targeted person their experience is unwelcome — the opposite of true,
 //        and it would cost the app exactly the members it exists for.
-//      - The public rule is TOPIC, not character. An accusation posted to a whole community cannot be
+//      - The public rule is TOPIC, not character. An accusation posted to an entire community cannot be
 //        retracted, and being wrong about it lands on a survivor.
 //      - The exclusion is a FACT, not a feeling: traffickers are "not allowed", never "not tolerated".
 //      - The Weaver perk is the private group chat room, NOT the Commons. An earlier draft claimed
 //        Weavers "post without restriction" here, which was false.
 //      - The no-DM history is deliberately absent: the rule stands on the benefit, and the notice does
-//        not owe a whole community an account of what was done to the owner.
+//        not owe an entire community an account of what was done to the owner.
 //
 //   2. PUBLIC ROOMS — what is readable by whom, and where the real connections happen.
 //      - The Commons is publicly readable ONLY while `feed_render_config.is_public` is on. It is on by
@@ -120,7 +120,7 @@ const COMMONS_ROOMS_BODY = [
   para(
     'One note: anything you ask the AI Assistant is not public. The only time I look at those messages is to',
     'make sure the assistant itself is safe — when I check an answer before it goes out, I see the question',
-    'it is answering. That is the whole of it. It is never to monitor you.',
+    'it is answering. That is all of it. It is never to monitor you.',
   ),
   para(
     'And over time, as you use the features that are not public, you unlock the private audio and chat',
@@ -166,7 +166,7 @@ const COMMONS_SIGNAL_BODY = [
 // The SHORT version shown on a member's first visit.
 //
 // Not the same text as the standing notice, on purpose. The card sits above the message stream in a
-// fixed-height column, so a long body steals the whole chat area and leaves the member scrolling the
+// fixed-height column, so a long body steals the entire chat area and leaves the member scrolling the
 // conversation to get past it — which is exactly what happened when the card rendered the full notice.
 //
 // It carries only what a first-time poster needs BEFORE they type: this room is public, and the
@@ -220,7 +220,7 @@ export const COMMONS_GUIDANCE_BODY = COMMONS_NOTICES[0].body;
 // For a post cadence: due only when the count lands EXACTLY on a multiple, so the notice appears once
 // per milestone rather than on every post past a threshold. The period is that count.
 //
-// For a day cadence: the period is the interval index (whole days since the epoch divided by the
+// For a day cadence: the period is the interval index (integer days since the epoch divided by the
 // interval). It becomes due the first time a post is made inside a new interval — which means a notice
 // on a time cadence is delivered by the next post, not by a clock. A reminder nobody is present for is
 // worth nothing, so this is the intended behavior and not a compromise; in a silent room, nothing is
@@ -251,7 +251,7 @@ export function isGuidanceMilestone(postCount: number): boolean {
 
 // Claim one notice's period. Returns true only for the caller that won it.
 //
-// The UNIQUE constraint on (notice_key, milestone_count) is the whole concurrency story: two members
+// The UNIQUE constraint on (notice_key, milestone_count) is the entire concurrency story: two members
 // posting at the same moment can both compute the same period and both try to claim it, but exactly one
 // insert survives `ON CONFLICT DO NOTHING`. The loser skips silently rather than publishing a second
 // copy of the same notice.

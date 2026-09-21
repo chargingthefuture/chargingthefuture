@@ -53,7 +53,7 @@ const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"')\]]+/gi;
 //
 // Quora profile URLs and @handles are redacted because they name a PERSON: a
 // link like quora.com/profile/<Name>/<their-post-slug> carries both a member's
-// identity and what they wrote — in a community whose whole purpose is keeping
+// identity and what they wrote — in a community whose purpose is keeping
 // targeted individuals from being identified, that is the most sensitive thing
 // in an export. The slug is dropped with the URL for the same reason.
 //

@@ -9,7 +9,7 @@ column, and a right rail. On a small phone screen (for example an iPhone SE at
 locked scrolling (`overflow: hidden` on `html, body`), the overflow was clipped
 and could not be reached. The app was effectively unusable on a phone.
 
-This pass makes the whole web app usable on a phone **without changing how it looks
+This pass makes the entire web app usable on a phone **without changing how it looks
 on desktop**.
 
 ## Design-gate bypass (rule 127)

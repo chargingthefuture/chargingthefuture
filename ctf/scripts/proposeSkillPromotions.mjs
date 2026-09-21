@@ -100,7 +100,7 @@ function requireEnv(name) {
           '**What to do:** restore the key in Infisical (production).',
           '',
           '**Are the proposals lost?** No. They stay queued on the nominations and Directory entries, and the',
-          'next run after the key is restored files the whole backlog on its own.',
+          'next run after the key is restored files the entire backlog on its own.',
         ].join('\n'),
       });
     }
@@ -739,7 +739,7 @@ async function main() {
         `  Reason code: ${blocked.reason}`,
         '  Nothing is broken and nothing is lost. Every proposed skill is still queued: the pipeline reads',
         '  them off the accepted nominations and the Directory entries on every run and never marks them',
-        '  used, so the next run after this clears files the whole backlog on its own.',
+        '  used, so the next run after this clears files the entire backlog on its own.',
         `  Issues filed this run: ${proposed}.`,
         `  What to do: ${whatToDo}`,
         '  This run is red on purpose — a scheduled run that files nothing must not look healthy.',
@@ -765,7 +765,7 @@ async function main() {
         '',
         '**Are the proposals lost?** No. The pipeline reads proposed skills off the accepted nominations and',
         'the Directory entries on every run and never marks them used, so nothing needs re-entering — the',
-        'next run after this clears files the whole backlog on its own.',
+        'next run after this clears files the entire backlog on its own.',
         '',
         `Issues filed this run: ${proposed}. This run is red on purpose: a scheduled run that files nothing`,
         'must not look healthy.',

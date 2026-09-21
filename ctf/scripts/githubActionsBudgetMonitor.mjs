@@ -149,9 +149,9 @@ function firstOfCurrentUtcMonth(now = new Date()) {
 
 function billedMinutesFromTiming(timing) {
   // timing.billable is a map of runner OS -> { total_ms, jobs, job_runs[] }.
-  // GitHub bills each job's run time rounded up to the next whole minute, then
+  // GitHub bills each job's run time rounded up to the next entire minute, then
   // applies the OS multiplier. Per-job ms is not reliably present for every
-  // run shape, so we approximate per-OS: round that OS's total_ms up to whole
+  // run shape, so we approximate per-OS: round that OS's total_ms up to entire
   // minutes, then multiply by the OS rate. This matches GitHub exactly when an
   // OS ran a single job; when several jobs ran on the same OS their individual
   // round-ups can only add a little, so this is a close lower-bound estimate.
@@ -246,7 +246,7 @@ async function computeRepoMinutesUsed({ owner, repository, token }) {
         throw error;
       }
       // Otherwise skip this run's timing and keep going — one failed call must
-      // not abort the whole monitor.
+      // not abort the entire monitor.
     }
   }
 
@@ -313,7 +313,7 @@ async function collectRepoFallbackUsage({ owner, repository, token, budgets, deg
     notes.unshift(
       "minutes computed from this repo's workflow-run billable time for the current month " +
         "(repo-scoped estimate; account-level usage may include other repositories). " +
-        "Per OS, total billable ms is rounded up to whole minutes then multiplied by the OS rate " +
+        "Per OS, total billable ms is rounded up to entire minutes then multiplied by the OS rate " +
         "(Linux 1x, Windows 2x, macOS 10x).",
     );
     if (minutesCapped) {

@@ -51,7 +51,7 @@ function aggregateMoodPulseRows(rows: MoodPulseRow[]): {
   return { byIso, totalCount, totalSum };
 }
 
-// Build a contiguous day series for the whole window so the chart always has
+// Build a contiguous day series for the entire window so the chart always has
 // one bar per day, even on days with no check-ins.
 function buildMoodPulseDaySeries(
   windowDays: number,

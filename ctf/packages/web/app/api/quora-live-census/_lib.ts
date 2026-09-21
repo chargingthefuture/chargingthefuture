@@ -8,7 +8,7 @@ export type CensusApiGate =
   | { allowed: true; auth: AllowDecision }
   | { allowed: false; response: NextResponse };
 
-// The whole census is admin-only, read and write alike. It records observations about named public
+// The entire census is admin-only, read and write alike. It records observations about named public
 // accounts belonging to people who never asked to be catalogued, so it has no member-facing or
 // public surface at all — the output that reaches anyone else is a count, written by hand into a
 // post, not this table.

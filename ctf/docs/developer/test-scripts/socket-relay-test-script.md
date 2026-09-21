@@ -160,7 +160,7 @@ web ☐
 
 **Steps:**
 1. Open the post form and fill in title, details, and one tag.
-2. Select "ServiceCredits" as the settlement and enter the whole value of the transaction (e.g. 20).
+2. Select "ServiceCredits" as the settlement and enter the entire value of the transaction (e.g. 20).
 3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
    **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
 4. Submit, then find the new card in the feed.
@@ -565,13 +565,13 @@ web ☐
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 SocketRelay fulfillment message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
-1. As that member, send a fulfillment-thread message, then delete the whole account
+1. As that member, send a fulfillment-thread message, then delete the entire account
    (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path).
 2. In the Stream dashboard, look up the member's Stream user `socket-relay-<userId>` and their messages in
    the `socket-relay-fulfillment-<fulfillmentId>` channel.
 **Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
 `socket-relay-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This runs
-via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If Stream
+via the shared account-deletion external-cleanup hook, so it fires on every full-account path. If Stream
 is down at delete time, the deletion still succeeds and the failure is logged for retry.
 **Result:** web ☐ mobile ☐ — notes:
 

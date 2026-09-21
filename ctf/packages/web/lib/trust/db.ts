@@ -70,7 +70,7 @@ export async function getLatestTrustSnapshotAt(userId: string): Promise<Date | n
 // Signals used in the `cross_plugin_engagement_v6` model:
 //   - login_events             → how many days the member has signed in on, all-time, plus their
 //                                current unbroken run of days (the universal "seen" signal). Signing
-//                                in is the whole of it — reading the app without opening a plugin is
+//                                in is all of it — reading the app without opening a plugin is
 //                                still a member turning up, and which plugin they open is not part of
 //                                this. Same definition the Weekly Performance dashboard and
 //                                PeerProgramming cohort selection read.

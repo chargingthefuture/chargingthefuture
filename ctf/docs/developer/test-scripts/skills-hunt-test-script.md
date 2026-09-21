@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) |
 
 ---
 
@@ -413,30 +413,34 @@ exists for.
 1. Sign in as the non-admin member, open the Missions tab, and read it top to bottom.
 2. Sign in as an admin, open `/admin/skills-hunt`, pick the round, and open the **Missions** tab.
 3. Press **Show these missions as one picture**. Watch what happens while it draws, and look at
-   where you are when it finishes.
-4. On the phone, press and hold the picture and save it to your photos.
-5. Press **Share**, close the share sheet without choosing anything, then press it again and send
-   the picture to another app.
+   where you are when it finishes. Read the controls under the picture and count them.
+4. Press **Share**, close the sheet without choosing anything, then press Share again and save the
+   picture to your photos or send it to another app.
+5. Press and hold the picture on a phone, or right-click it on a computer, and save it that way.
 6. Read the picture: check each active mission in it against the admin Missions list, along with
    the archived or locked one. Then press **Done**.
 
 **Expected:** Step 1 — the member Missions tab carries no such control anywhere; it shows the
 heading, the subtitle and the mission cards, nothing else. Step 2 — the control sits above the
-mission list, under the auto-mission panel, with a short note saying what it does. Step 3 — the
-button reads "Drawing the picture…" while it works, and when it finishes the picture is **on the
-admin Missions tab**, under the button, scaled to the width of the card. **The screen never
-moves.** Nothing navigates: no page showing a PNG icon with a file name and an "Open in…" link, no
-"Safari can't open the page" with a WebKitBlobResource error, no screen without a back control, and
-never a need to force the app closed — those were the two defects on 2026-09-20, from a plain link
-to the route and then from a share-then-blob handoff. Step 4 — the picture reaches the photo
-library from press-and-hold alone. Step 5 — the sheet opens (it is its own press, so it is never
-refused), closing it says nothing and leaves the picture on screen, and sending it works. Step 6 —
-one tall picture with the round's name and dates at the top, every active mission as its own card
-carrying a title, a description, what the mission asks for in plain words ("3 accepted nominations
-with a Health skill"), and its bonus points where it pays any. The archived or locked mission is
-**not** in it, and no progress bar, count or "x/y complete" appears anywhere: the picture is made to
-be posted in public, and one member's counts are not an advertisement. The goal type's internal name
-(`count_skills_in_sector`) never appears. **Done** puts the picture away and brings the button back.
+mission list, under the auto-mission panel, with a short note saying what it does.
+Step 3 — the button reads "Drawing the picture…" while it works, and when it finishes the picture
+is **on the admin Missions tab**, under the button, scaled to the width of the card. **The screen
+never moves.** Nothing navigates: no page showing a PNG icon with a file name and an "Open in…"
+link, no "Safari can't open the page" with a WebKitBlobResource error, no screen without a back
+control, and never a need to force the app closed — those were the two defects on 2026-09-20, from
+a plain link to the route and then from a share-then-blob handoff. Under the picture there are
+exactly **two** controls, Share and Done: no "Save the file" button (removed 2026-09-20: on a phone
+it did not do what its label said).
+Step 4 — the sheet opens every time, because it is its own press and is never refused; closing it
+without choosing says nothing and leaves the picture on screen; sending it works.
+Step 5 — the picture saves from press-and-hold alone, with no button involved.
+Step 6 — one tall picture with the round's name and dates at the top, every active mission as its
+own card carrying a title, a description, what the mission asks for in plain words ("3 accepted
+nominations with a Health skill"), and its bonus points where it pays any. The archived or locked
+mission is **not** in it, and no progress bar, count or "x/y complete" appears anywhere: the picture
+is made to be posted in public, and one member's counts are not an advertisement. The goal type's
+internal name (`count_skills_in_sector`) never appears. **Done** puts the picture away and brings
+the button back.
 
 **If it fails:** a sentence in red under the button, with the screen still there. Never a blank page
 and never a dead file view.
@@ -673,6 +677,36 @@ Result: web ☐
 **Expected:** The row disappears from the admin list (soft-deleted). The leaderboard no longer counts it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action. On Android the "Remove" button shows on every submission card (any status) and sends `x-ctf-csrf: '1'`.
 
 Result: web ☐
+
+### SH-A4c — The moderation queue is paged, not endless
+
+**Role:** admin/moderator · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** A round with more than 25 nominations in it. The seed does not make that many, so
+add them, or pick the round that has them on a real environment.
+
+**Steps:**
+1. Open `/admin/skills-hunt` → **Moderation** and pick that round. Scroll to the bottom of the list.
+2. Count the nominations on screen, and read the line between the two controls under them.
+3. Press **Next**, then **Previous**.
+4. With a multi-page list showing, move to page 2 or later, then change the status filter.
+5. Pick a round or filter that holds 25 or fewer, and look under the list again.
+
+**Expected:** Step 2 — at most **25** nominations, and under them "Previous — Page 1 of N — Next"
+where N matches how many the round holds. The list ends; it is not an endless scroll, which is what
+it was until 2026-09-20. Step 3 — Next loads the following 25 and the line reads Page 2 of N; both
+controls are dead while a page is loading, so a double press cannot skip one; Previous brings the
+first page back. Step 4 — the filter change returns you to **page 1**, and the rows shown match the
+filter. It never leaves you on a page number the shorter list does not have, which would read as
+"No submissions matching this filter" when there are plenty. Step 5 — no Previous/Next at all: one
+page holds everything, so the control hides itself.
+
+**If the list fails to load:** the red line under the filters carries the reason the route gave,
+not a bare "Failed to load" — this is an admin screen (rule 137).
+
+Result: web ☐ mobile ☐
+
+---
 
 ### SH-A5 — Bulk review: accept multiple pending submissions at once
 
@@ -915,7 +949,7 @@ Result: web ☐
 4. Read the new row in the admin list.
 5. Open the member Missions tab.
 
-**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's whole accepted total.
+**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
 
 **Why this exists:** until 2026-09-17 there was no goal type about a single trade, so a mission titled "Find a mechanic" was stored as "every accepted nomination, whatever the skill" and read "82/1 complete" for a scout who had nominated no mechanic (owner report).
 
@@ -930,7 +964,7 @@ Result: web ☐
 **Precondition:** The round from SH-A10b, plus a mission created with goal type **Every accepted nomination, whatever the skill** and a target of 1, titled for a single trade (e.g. "Find a mechanic"). At least one accepted nomination exists, so that mission reads complete.
 
 **Steps:**
-1. On the member Missions tab, note the number the mission shows — it is the scout's whole accepted total over a target of 1, and reads Complete.
+1. On the member Missions tab, note the number the mission shows — it is the scout's entire accepted total over a target of 1, and reads Complete.
 2. On the admin Missions tab, press **Edit** on that row.
 3. Change Goal type to **Accepted nominations carrying one named skill**, clear the Skill name, and press Save mission.
 4. Put the correct skill in and save.

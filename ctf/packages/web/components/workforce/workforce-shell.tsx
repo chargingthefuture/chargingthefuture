@@ -441,7 +441,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
   );
 
     const views = SIDEBAR_VIEWS;
-    // The whole document scrolls here, like every other screen: the shell is only
+    // The entire document scrolls here, like every other screen: the shell is only
     // *at least* one viewport tall and nothing inside it owns a scrollbar. Pinning the
     // shell to exactly 100dvh and scrolling an inner box instead leaves the document
     // itself unscrollable, which is what broke Safari's "Full Page" screenshot on this

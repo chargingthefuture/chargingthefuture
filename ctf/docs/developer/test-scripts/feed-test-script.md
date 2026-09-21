@@ -480,7 +480,7 @@
 
 **Steps:**
 1. From the account under test, post two messages in the Commons and note their exact text.
-2. Delete the Commons data from Account & Data (or delete the whole account, on a throwaway
+2. Delete the Commons data from Account & Data (or delete the entire account, on a throwaway
    account).
 3. Reload the Commons in a signed-in session and scroll to where those messages were.
 4. Run the deletion a second time and reload again.
@@ -934,7 +934,7 @@ with nothing to do with the economy — this is the common case).
 6. Hide that same post again.
 
 **Expected:**
-- Step 1: the picker defaults to **Off topic — not about the economy**. It is one picker for the whole
+- Step 1: the picker defaults to **Off topic — not about the economy**. It is one picker for the entire
   list, not one per row — a sweep of twenty posts must not mean twenty identical selections.
 - Step 2/3: both hidden pills read `Hidden · Off topic — not about the economy`. The reason was not
   re-selected between them.
@@ -971,7 +971,7 @@ with nothing to do with the economy — this is the common case).
 - Step 5: the roster is still populated (a single-member request returns an empty roster by design;
   the surface must not blank the list you came from).
 - There is deliberately **no bulk "hide everything from this member"** control. Confirm it is absent:
-  one click clearing a member's whole history on a wrong hunch is the failure being avoided.
+  one click clearing a member's entire history on a wrong hunch is the failure being avoided.
 
 **Result:** web ☐
 
@@ -995,7 +995,7 @@ second browser window signed in as a different member (or signed out) so you can
 
 **Expected:**
 - Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
-- Step 3: the post is **gone** from the member timeline — and so are its replies, since the whole item
+- Step 3: the post is **gone** from the member timeline — and so are its replies, since the entire item
   drops out. This is the check that matters: before this feature the status column was ignored, so a
   hidden post stayed visible.
 - Step 4: it is absent from the signed-out public list too, not just the member view.

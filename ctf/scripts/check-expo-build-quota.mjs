@@ -14,7 +14,7 @@
 //
 // Modes (first CLI arg, default "scheduled"):
 //   scheduled  Enforce the automated cron budget (policy.scheduledBuildBudgetPerMonth).
-//              Used by the 3x/week cron so automated builds never eat the whole month.
+//              Used by the 3x/week cron so automated builds never eat the entire month.
 //   hard       Enforce the absolute monthly cap (limits.androidBuildsPerMonth).
 //              Used by on-demand preview builds — blocks only at the real ceiling.
 //   report     Never blocks; just prints the current count and the limits.
@@ -65,7 +65,7 @@ if (process.env.EXPO_QUOTA_FORCE === '1') {
 // Count Android builds created in the current UTC calendar month. EAS bills per
 // build attempt, so we count every status EXCEPT canceled (a canceled build does
 // not consume the allotment). Counting conservatively protects the free tier —
-// the whole point is to never overspend.
+// the point is to never overspend.
 function countThisMonth() {
   let raw;
   try {

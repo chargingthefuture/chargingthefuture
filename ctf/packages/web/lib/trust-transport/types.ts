@@ -120,7 +120,7 @@ export type TrustTransportAvailableRequest = {
   mode: TrustTransportMode;
   priceCurrency: string | null;
   priceAmount: number | null;
-  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) whole.
+  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) entire.
   acceptedCurrencies: string[];
   createdAtIso: string;
 };

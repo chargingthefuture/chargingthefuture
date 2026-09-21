@@ -283,7 +283,7 @@
    "body": [
     "Open ServiceCredits to see your available balance. The wallet tab shows how many credits you have.",
     "You can send credits to another member. Once you send them, both balances update right away.",
-    "The Economy tab shows numbers about credits across the whole platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds."
+    "The Economy tab shows numbers about credits across the entire platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds."
    ],
    "howTo": [
     "Sign in and open ServiceCredits. Your wallet tab will show your available balance.",
@@ -314,7 +314,7 @@
    "summary": "Knowledge Library is where you lend your own public Quora writing to the assistant, so it can answer from more than one person's experience.",
    "body": [
     "The page is at /knowledge and it is open to any signed-in member, whether or not you have finished Unlock. If you have not been approved yet, sending your writing is a way in rather than something you have to wait for: your Quora profile link goes into the same review queue at the same time. Open the page signed out and you get a public page instead, explaining what the library is, what happens to your writing, and that you can take it back.",
-    "There are two ways to give. Picking a few posts is the one selected for you: for each post you paste its link on Quora and the post's text, up to twenty in one submission. Nothing ever opens the link — it is there so the person reading your writing can see the post is public and yours. Only quora.com links are accepted, the same link twice is refused, and a post of only a line or two is refused straight away, because a couple of lines is not enough for the assistant to answer from. The other way is a whole Quora export, for the rarer case where nearly all of your public writing fits. You ask Quora for that export yourself, and the page carries Quora's own instructions for doing it. The file is read as it arrives, only the public parts are kept, and the file itself is never stored.",
+    "There are two ways to give. Picking a few posts is the one selected for you: for each post you paste its link on Quora and the post's text, up to twenty in one submission. Nothing ever opens the link — it is there so the person reading your writing can see the post is public and yours. Only quora.com links are accepted, the same link twice is refused, and a post of only a line or two is refused straight away, because a couple of lines is not enough for the assistant to answer from. The other way is a full Quora export, for the rarer case where nearly all of your public writing fits. You ask Quora for that export yourself, and the page carries Quora's own instructions for doing it. The file is read as it arrives, only the public parts are kept, and the file itself is never stored.",
     "Before you can type anything you tick six separate lines of consent — one box each, with no single 'agree to all'. They cover that this is your own public writing, the one use it is for, that you keep every right to it, that you can take it back, that a person reads it and not everything gets used, and that parts naming other people may be cut. After you send, a receipt tells you how many pieces were kept. Your submission then sits under 'What you have sent' as waiting to be read, and you can withdraw it at any time from the same page — withdrawing really does stop the assistant using your writing."
    ],
    "howTo": [

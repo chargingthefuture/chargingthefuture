@@ -8,7 +8,7 @@ import { getGuide } from 'lib/ti-radio/repository';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/ti-radio/guide — the whole schedule, open to anyone including signed-out visitors.
+// GET /api/ti-radio/guide — the entire schedule, open to anyone including signed-out visitors.
 //
 // No gate at all, deliberately. A broadcast guide nobody can read is not a guide, and this one is
 // written for people arriving from a Quora space who have no account yet. What comes back is what a

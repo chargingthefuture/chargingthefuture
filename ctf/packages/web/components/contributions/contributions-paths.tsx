@@ -93,7 +93,7 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
     if (!trimmed) return 'Enter the value of the card.';
     const amount = Number(trimmed);
     if (!Number.isFinite(amount)) return 'Enter the card value as a number, like 25.';
-    if (!Number.isInteger(amount)) return 'Whole dollars only — no cents. Round to the nearest dollar.';
+    if (!Number.isInteger(amount)) return 'Dollars only — no cents. Round to the nearest dollar.';
     if (amount < 1 || amount > 500) return 'The card value must be between $1 and $500.';
     return null;
   }
@@ -135,7 +135,7 @@ function GiftCardForm({ t, submitting, error, onSubmit, onCancel }: { t: Contrib
         </div>
       </div>
       <div style={{ marginBottom: 14 }}>
-        <label htmlFor="contrib-path-card-value" style={labelStyle(t)}>Card value (whole US dollars, $1 to $500)</label>
+        <label htmlFor="contrib-path-card-value" style={labelStyle(t)}>Card value ($1 to $500, no cents)</label>
         {/* Numeric, not decimal: cents are not accepted, so the phone keypad should not offer a
             decimal point the member cannot use. */}
         <input

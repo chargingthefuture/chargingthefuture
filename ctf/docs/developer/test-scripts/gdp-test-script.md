@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself · 2026-09-20 manual update: the picture control moved to the new /admin/gdp page, so GDP-15 runs there and GDP-A1 now asserts that page exists rather than that it does not |
 
 ---
 
@@ -55,7 +55,7 @@
 4. Read the small line directly under the big headline figure.
 
 **Expected:**
-- One hero tile labeled "Members" shows a whole number greater than zero.
+- One hero tile labeled "Members" shows an integer greater than zero.
 - The weekly-active-members tile is absent.
 - No mock or placeholder numbers (e.g. "1,234,567") appear — the count matches what the Directory shows for total active members.
 - The line "Cumulative since June 12, 2026" appears directly under the headline Community Value Index figure (added 2026-08-06: the index is all-time from the soft launch date, never a yearly figure). The date now comes from the platform-wide launch constant (`PLATFORM_LAUNCH_DATE_ISO`), so check it still reads June 12, 2026 here and matches the oldest week offered in Weekly Performance ("Jun 8–14, 2026").
@@ -329,20 +329,65 @@ Result: web ☐
 
 The GDP admin was retired 2026-07-11 (weekly publications, currency-rate management). There is no live admin UI for this plugin. The cases below verify the retirement is complete and that the built-in weights require no admin action.
 
-### GDP-A1 — Admin sees no GDP admin navigation entry
+### GDP-15 — Share the page as a picture of itself
 
-**Role:** admin
-**Surfaces:** web
-**Precondition:** Signed in as an admin. Open the admin index or `/admin`.
+**Role:** admin · **Surfaces:** web · web (mobile-responsive, ~390px) · installed app (iOS, added to the home screen)
+
+**Precondition:** A published report, so the page has figures on it. For the installed-app run, add
+the site to the iOS home screen and open it from that icon, so it runs with no browser chrome —
+that is the case this step exists for.
 
 **Steps:**
-1. Look for any GDP-related link in the admin navigation index.
+1. Open `/admin/gdp` and scroll to the bottom. Press **Show this page as one picture**.
+2. Look at where you are when it finishes, and read the controls under the picture.
+3. Compare the picture against the page above it, block by block.
+4. Read the bottom of the picture.
+5. Press **Share**, close the sheet without choosing anything, then press Share again and save the
+   picture or send it somewhere. Then press **Done**.
 
-**Expected:**
-- No "GDP" or "Gross Domestic Product" admin entry appears in the admin index.
-- No link to `/admin/gdp` or `/admin/gdp/rates` is rendered.
+**Expected:** Step 2 — **the page is still on screen, scrolled where it was.** Nothing
+navigates: no file preview, no "Safari can't open the page", no screen without a back control, and
+never a need to force the app closed. Under the picture there are two controls, Share and Done.
+Step 3 — the picture is **the page**, one to one: the same headline figure, the same chips, the
+same sector and country blocks, in the same order and the same colors — and because this page
+renders the member screen itself, that is also one to one with what a member sees. Two things are missing on
+purpose and nothing else is: the app's own top bar (back arrow, Live chip, refresh) and the share
+control itself. Step 4 — under the page content the picture carries
+`https://app.chargingthefuture.com/apps/gross-domestic-product` and a line saying the figures are
+as they stood when the picture was taken. Step 5 — the sheet opens every time, closing it says
+nothing and leaves the picture on screen, and Done puts the picture away.
 
-Result: web ☐
+**If the capture fails:** a sentence in red under the button, with the page still there. Never a
+blank page and never a half-drawn picture presented as finished.
+
+**Result:** web ☐ mobile ☐ installed app ☐ — notes:
+
+### GDP-A1 — The GDP admin page holds the picture control and nothing else
+
+**Role:** admin, member
+**Surfaces:** web · installed app (iOS, added to the home screen)
+**Precondition:** Signed in as an admin, and a second sign-in as a plain member.
+
+**Steps:**
+1. Open `/admin`. Look for the GDP entry and follow it.
+2. Compare `/admin/gdp` against the member page at `/apps/gross-domestic-product`, block by block.
+3. Look for anything on `/admin/gdp` that changes a figure — a publish button, a rate editor, a
+   recompute.
+4. As the member, open `/apps/gross-domestic-product` and look under the report.
+5. As the member, type `/admin/gdp` into the address bar.
+
+**Expected:** Step 1 — a **GDP** row is in the admin index and opens `/admin/gdp`. (Until
+2026-09-20 this case asserted the opposite: GDP had no admin surface at all, after the
+currency-rate screen was removed on 2026-07-11. The page now exists to hold one control, on the
+owner's direction that the picture control belongs in admin.) Step 2 — the two pages show the
+**same report**: same headline figure, same chips, same sector and country blocks, in the same
+order. The admin page is the member screen with one control added, not a second layout, which is
+what keeps the picture one to one with what a member sees. Step 3 — **nothing** changes a figure.
+There is no publish step, no rate editor and no recompute; the Community Value Index is live.
+Step 4 — the member sees **no** picture control under the report. Step 5 — the member is
+redirected to `/apps/gross-domestic-product` rather than shown the admin page.
+
+Result: web ☐ installed app ☐
 
 ---
 

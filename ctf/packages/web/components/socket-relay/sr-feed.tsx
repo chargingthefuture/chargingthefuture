@@ -264,7 +264,7 @@ export function SocketRelayFeed({
   reclaimBlockedIds?: Set<string>;
   submitting: boolean;
   // True when a search term or a non-"All" category/"Mine" filter is active, so the empty state can say
-  // "no matches" instead of falsely claiming the whole board is empty.
+  // "no matches" instead of falsely claiming the entire board is empty.
   filterActive?: boolean;
   // The board has more open requests than are loaded; show a "Load more" button that pulls the next page.
   hasMore?: boolean;

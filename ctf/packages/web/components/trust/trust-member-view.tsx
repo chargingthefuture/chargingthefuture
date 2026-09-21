@@ -14,7 +14,7 @@
 //
 // So this section has one job: show the member, on their own account page, exactly what another
 // member gets — the real rows another member's screen renders, not a description of them. The
-// section above it is their own full list. The two together are the whole point of the panel: this
+// section above it is their own full list. The two together are the point of the panel: this
 // is yours, that is theirs.
 import React from "react";
 import type { TrustPeerEvidenceItem } from "../../lib/trust/types";

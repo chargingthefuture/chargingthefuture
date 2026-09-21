@@ -302,7 +302,7 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
       await closeAndComputeTx(client, row, true);
     }
 
-    // One query, no N+1: the distinct voter count is a correlated subquery per row so the whole list
+    // One query, no N+1: the distinct voter count is a correlated subquery per row so the entire list
     // returns in a single round-trip. (The close loop above stays sequential — it holds FOR UPDATE.)
     const result = await client.query<EventRow & { voter_count: number }>(
       `SELECT ${EVENT_COLUMNS},

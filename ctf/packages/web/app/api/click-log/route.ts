@@ -278,7 +278,7 @@ type CreatePayload = {
   suggestion: { suggestion: string; quoraUrl: string | undefined } | undefined;
 };
 
-// Runs the whole create-body validation chain — metadata, share flag, tag lists (which require
+// Runs the entire create-body validation chain — metadata, share flag, tag lists (which require
 // a location and force sharing), and the "Not listed" suggestion — so the POST handler stays
 // under the rule-116 complexity limit.
 async function parseCreatePayload(

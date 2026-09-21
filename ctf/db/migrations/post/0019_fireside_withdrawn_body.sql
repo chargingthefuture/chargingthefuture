@@ -9,7 +9,7 @@
 -- `body` still empties, and nothing about who can read what changes. This column is the author's
 -- own copy: it is read only on /api/fireside/mine, which returns the caller's own rows and nothing
 -- else, and it is never selected by the public thread read or by the blog export feed. Deleting the
--- account still takes it, because that deletes the whole row.
+-- account still takes it, because that deletes the entire row.
 
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
 

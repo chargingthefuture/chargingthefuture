@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  // `any_authenticated`, deliberately: the whole point is that this member has no access tier yet.
+  // `any_authenticated`, deliberately: the point is that this member has no access tier yet.
   const gate = await requireUnlockUserAccess();
   if (!gate.allowed) {
     return gate.response;

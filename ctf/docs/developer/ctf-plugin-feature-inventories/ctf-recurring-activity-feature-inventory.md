@@ -28,7 +28,7 @@ signal in Trust. It is emphatically NOT a ledger, NOT a bill, and carries NO fia
 ### The two firewalls that make this safe
 
 1. **No free-text.** There is no note/description field anywhere — a vulnerable population must not be
-   able to over-disclose an auditable detail in free text. The fixed `sector` dropdown is the whole
+   able to over-disclose an auditable detail in free text. The fixed `sector` dropdown is the entire
    "description."
 2. **No fiat amount, ever.** A fiat-denominated activity stores only the currency label + cadence, never
    a number. The platform therefore never holds a summable recurring-fiat-payment total — the thing that
@@ -83,7 +83,7 @@ anyone's arrangement. One read-only review surface ships (2026-08-03):
    for a person to read, not findings. Member ids on flagged rows only are resolved to display names so
    the reviewer can see who is involved; the surface never lists the roster.
 3. It reads a bounded slice (the 5,000 most recent confirmed arrangements) and says plainly when that
-   cap was hit, rather than showing a partial picture as if it were the whole one.
+   cap was hit, rather than showing a partial picture as if it were the entire one.
 4. Every read — allow or deny — writes an audit row (`recurring-activity.admin.review.read`), because
    looking at who is connected to whom is itself a use of admin power.
 

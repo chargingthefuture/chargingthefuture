@@ -76,7 +76,7 @@ computes these counts for the caller, persists them to `trust_signal_snapshot`, 
 human-readable evidence items on `trust_user_extension`. Real signals that feed the model:
 
 - **Sign-in history, all-time** — from `login_events`: the number of separate days the member signed
-  in on, counted over their whole time here (`loginDays`), plus total events (`loginEvents`) and the
+  in on, counted over their entire time here (`loginDays`), plus total events (`loginEvents`) and the
   most recent sign-in (`lastLoginAt`, shown only to the member and admins). Cumulative: a gap between
   sign-ins never reduces it. Evidence: "Active on N days".
 - **Sign-in run, current (v5)** — from the same `login_events` rows: the member's unbroken run of
@@ -218,7 +218,7 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   their run of days were measured on different boundaries. `loginDays` now uses the UTC boundary,
   matching the streak, the Weekly Performance dashboard, and PeerProgramming cohort selection.
   Model bumped to `cross_plugin_engagement_v6` because how a signal is aggregated changed, so older
-  snapshots stay self-describing. Signing in is the whole of the signal: reading the app without
+  snapshots stay self-describing. Signing in is all of the signal: reading the app without
   opening a plugin is still a member turning up, and which plugin they open is not part of it — the
   same sign-in record that, as of today, is written when Clerk identity resolves rather than when a
   plugin access check runs. No schema, route, or access-policy change.
@@ -267,7 +267,7 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   keep-list (rule 105).
 - 2026-08-12: **Second sign-in line: the member's current run of days, alongside the all-time count**
   (model `cross_plugin_engagement_v5`, owner request). "Active on 162 days" is cumulative — distinct
-  sign-in days over a member's whole history — and on its own it cannot tell a reader whether that
+  sign-in days over a member's entire history — and on its own it cannot tell a reader whether that
   member is still here. Someone who needs housing soon has two questions, not one: can I trust this
   person, and can they answer me today. Trust now emits both facts as separate lines: the existing
   "Active on N days", then "Active N days in a row" from a new `loginStreakDays` metric — the
@@ -380,7 +380,7 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   visibility to a disclosure level instead of a single allow/deny: `public` serves the full panel,
   `restricted` serves a summary projection, `private` still refuses. The owner and admins always
   receive the full panel. The response carries `trustDisclosure` (`full` | `summary`) so the widget
-  can label a summary as one rather than passing it off as the member's whole record.
+  can label a summary as one rather than passing it off as the member's entire record.
   The projection (`lib/trust/peer-summary.ts`) follows two rules: no timestamps and no supporting
   detail survive (the login item's `details` carries the exact last sign-in, which is a record), and
   per-plugin participation collapses into a single "Took part in N plugins" line counting DISTINCT

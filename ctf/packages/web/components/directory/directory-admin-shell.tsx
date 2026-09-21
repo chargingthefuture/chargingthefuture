@@ -23,6 +23,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import Link from "next/link";
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
+import { Pager } from '@/components/shared/pager';
 import { DirectoryAuditPanel } from './directory-audit-panel';
 import { BackChevronButton } from "@/lib/nav/back-history";
 import {
@@ -97,7 +98,6 @@ export interface AdminDirectoryProfile {
   // Free-text "skill not listed" labels stored on the profile, pending review. Editable here so an
   // admin can record a skill the taxonomy does not carry yet (the member self-edit form does the same).
   proposedSkills?: string[];
-  isActive: boolean;
   source: ProfileSource;
   invitedByUsername: string | null;
   unclaimedHandle: string | null;
@@ -266,7 +266,7 @@ function buildListUrl(page: number, filter: FilterKey, query: string): string {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(PAGE_SIZE),
-    includeInactive: "true",
+    includeDeleted: "true",
     claimed: claimParam(filter),
   });
   const q = query.trim();
@@ -859,33 +859,6 @@ interface ProfileListViewProps {
   onDelete: (p: AdminDirectoryProfile) => void;
 }
 
-// Page back / forward under the list. Replaces loading the whole collection into one endless list:
-// each press fetches one page, so the first screen paints without waiting on the rest. Hidden while
-// a single page holds everything.
-function Pager({ page, pageCount, loading, onPageChange }: { page: number; pageCount: number; loading: boolean; onPageChange: (page: number) => void }) {
-  if (pageCount <= 1) return null;
-  const buttonStyle = (disabled: boolean): CSSProperties => ({
-    padding: "8px 14px",
-    borderRadius: 8,
-    background: "rgba(255,255,255,0.04)",
-    border: `1px solid ${BORDER}`,
-    color: disabled ? SUBTLE : COLOR,
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.5 : 1,
-  });
-  const atStart = page <= 1 || loading;
-  const atEnd = page >= pageCount || loading;
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12 }}>
-      <button type="button" onClick={() => onPageChange(page - 1)} disabled={atStart} style={buttonStyle(atStart)}>Previous</button>
-      <span style={{ fontSize: 12, color: SUBTLE }}>Page {page} of {pageCount}</span>
-      <button type="button" onClick={() => onPageChange(page + 1)} disabled={atEnd} style={buttonStyle(atEnd)}>Next</button>
-    </div>
-  );
-}
-
 function ProfileListContent({
   loading,
   error,
@@ -916,7 +889,7 @@ function ProfileListContent({
 
 // The invite queue, which lives on its own page because it is a different job from moderating a
 // profile: it is the list of everybody here who has no invite post on the blog yet, with their
-// skills, and a control that copies the whole thing as plain text.
+// skills, and a control that copies all of it as plain text.
 //
 // It is a row here rather than only on the admin directory landing because this is the screen
 // somebody is already on when they think about who has not been written about yet. Without it the
@@ -993,7 +966,7 @@ function ProfileListView(props: ProfileListViewProps) {
           onTakedown={onTakedown}
           onDelete={onDelete}
         />
-        <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} />
+        <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} accent={COLOR} subtle={SUBTLE} border={BORDER} />
         <InviteQueueLink />
         <SuppressionPanel />
         <DirectoryAuditPanel />

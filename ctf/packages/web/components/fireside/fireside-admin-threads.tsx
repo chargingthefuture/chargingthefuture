@@ -6,7 +6,7 @@ import { firesidePostUrl } from "@/lib/fireside/constants";
 import { Pager } from "./fireside-pager";
 import { useUrlPage } from "./fireside-url-page";
 
-// Every conversation, and the one control that acts on a whole one: close it to new comments, or
+// Every conversation, and the one control that acts on an entire one: close it to new comments, or
 // open it again.
 //
 // The control itself is not new — it has been on the thread under each post since the plugin

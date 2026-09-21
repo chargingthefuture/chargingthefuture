@@ -64,7 +64,7 @@ const MAX_CLUSTER_SIZE = 8;
 
 // The review holds the graph in memory to find loops, so it reads a bounded slice. Far above any
 // plausible real volume; if it is ever hit, `truncated` says so rather than quietly showing a
-// partial picture as if it were the whole one.
+// partial picture as if it were the entire one.
 const MAX_EDGES = 5000;
 
 async function loadActiveEdges(): Promise<{ edges: ActiveEdge[]; truncated: boolean }> {
@@ -199,7 +199,7 @@ export function findTightClusters(edges: ActiveEdge[]): TightCluster[] {
 }
 
 /**
- * Run the whole review. Read-only: it loads confirmed arrangements and reports the three patterns.
+ * Run the entire review. Read-only: it loads confirmed arrangements and reports the three patterns.
  * The caller (the admin route) resolves member ids to names for display and writes the audit row.
  */
 export async function reviewRecurringActivityForCollusion(): Promise<CollusionReview> {

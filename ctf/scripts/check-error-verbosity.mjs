@@ -259,7 +259,7 @@ const withoutComments = (body) => body.replace(/\/\*[\s\S]*?\*\//g, '').replace(
 // decision visible and greppable instead of invisible. A bare "ignore" comment is not enough.
 const NO_TRACE_MARKER = /no-trace:\s*\S+\s+\S+/;
 // `return <constant>` / `<name> = <constant>` and the loop-control keywords: the fallback IS the answer.
-// A catch whose whole body is one `return` or one assignment is not hiding anything: producing the
+// A catch whose entire body is one `return` or one assignment is not hiding anything: producing the
 // alternative value IS its job, and the caller sees that value. `return null`, `return { ok: false,
 // reason: 'not_a_zip' }`, `reporter = createNoopReporter()` — all decided outcomes. Rule 137 asks such a
 // catch to carry a comment saying why the failure is expected; that is a reviewer's check, not a

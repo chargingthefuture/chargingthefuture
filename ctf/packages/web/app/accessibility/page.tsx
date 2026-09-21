@@ -49,7 +49,7 @@ export default function AccessibilityPage() {
             for example higher color contrast on key text and plain, low-reading-level wording.
           </p>
           <p className={styles.paragraph}>
-            We do not claim Level AAA across the whole product. The guidelines themselves advise against
+            We do not claim Level AAA across the entire product. The guidelines themselves advise against
             requiring AAA for an entire site, and a few AAA rules cannot be met for our live and
             recorded audio and video features.
           </p>

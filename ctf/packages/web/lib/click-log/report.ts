@@ -8,7 +8,7 @@ import {
 import { getSharedIncidentCountries } from './country-repository';
 import type { SharedIncidentReport } from './types';
 
-// Assembles the whole shared-incident report from its aggregate queries. One place so the trends
+// Assembles the entire shared-incident report from its aggregate queries. One place so the trends
 // endpoint and the shareable image are always built from the same set of numbers over the same
 // window — a screen and an image that disagree would be worse than either alone.
 export async function buildSharedIncidentReport(days = 90): Promise<SharedIncidentReport> {

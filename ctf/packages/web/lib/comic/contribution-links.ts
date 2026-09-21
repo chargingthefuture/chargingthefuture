@@ -2,7 +2,7 @@ import { redactContributedText } from './redact';
 import type { ContributedEntry } from './quora-export-intake';
 
 // The DEFAULT contribution path: a member pastes the two or three posts that are actually about
-// being targeted, rather than handing over their whole account.
+// being targeted, rather than handing over their entire account.
 //
 // Why this is the default and the export is the fallback: most people's public writing is mixed —
 // dating, politics, faith, memes, and somewhere in there the posts that would genuinely help another
@@ -78,7 +78,7 @@ function validateSinglePost(raw: unknown, position: number, seenUrls: Set<string
     // reviewer would only discard it. Saying so now saves the contributor the wait.
     return {
       ok: false,
-      message: `Post ${position} is very short. Paste the whole post — a line or two is not enough for the assistant to answer from.`,
+      message: `Post ${position} is very short. Paste the entire post — a line or two is not enough for the assistant to answer from.`,
     };
   }
   if (trimmed.length > MAX_POST_LENGTH) {

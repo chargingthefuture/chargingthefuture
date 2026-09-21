@@ -59,6 +59,6 @@
 ## Validation
 
 - Tests added for degraded mode: `lib/stream-quota/webhook-usage.test.ts` — the prefix mapping,
-  the Chyme/Back Channel skip, the "other" bucket, whole-second rounding, and the ignored payloads
+  the Chyme/Back Channel skip, the "other" bucket, integer-second rounding, and the ignored payloads
   (wrong event type, zero duration, missing duration). Typecheck and lint pass.
 - Rollback strategy: revert the PR; no schema change.

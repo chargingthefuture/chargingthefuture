@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   try {
     const payload = await listDirectoryForMember(pagination, getFilters(request.url));
 
-    // "Weavers of the Commons" contributor badge — one guarded set-lookup for the whole page.
+    // "Weavers of the Commons" contributor badge — one guarded set-lookup for the entire page.
     // Only a claimed profile (bound to a real user) can carry the field; community-generated
     // (unclaimed) profiles never get it. The helper returns the empty set on any error, so a
     // Contributor Access outage can never break the directory list.

@@ -3,9 +3,9 @@
 //
 // Stream's own messages name the failing call and its reason ("UpdateUsers failed with error: ...",
 // "GetOrCreateChannel failed with error: ...") and carry the numeric code a support ticket needs, so
-// they are kept whole. Two things are removed: an `api_key=` value, which the Video REST client
+// they are kept entire. Two things are removed: an `api_key=` value, which the Video REST client
 // carries in its query string and which some transport errors echo back, and any run past
-// MAX_LENGTH, so a runaway body never becomes the whole screen. Never throws.
+// MAX_LENGTH, so a runaway body never becomes the entire screen. Never throws.
 const MAX_LENGTH = 300;
 
 export function describeStreamError(error: unknown, fallback = 'Stream gave no reason.'): string {

@@ -266,7 +266,7 @@ function buildSystemPrompt() {
     'result line carrying a checkbox per surface: "web ☐ mobile ☐ android ☐". A failed check becomes',
     'a row in the Bug Reporting plugin.',
     '',
-    'Output ONLY the markdown document — no code fences around the whole thing, no preamble. Match',
+    'Output ONLY the markdown document — no code fences around all of it, no preamble. Match',
     'this exact structure and tone:',
     '',
     '# <Name> — Manual Test Script',

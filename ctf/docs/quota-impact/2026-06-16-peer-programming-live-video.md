@@ -29,7 +29,7 @@
 ## Budget Threshold Risk
 
 - Expected threshold after rollout: Green. Video is opt-in, per-cohort, and capped by the 5-member
-  cohort size, so it cannot fan out to the whole member base at once.
+  cohort size, so it cannot fan out to the entire member base at once.
 - Peak scenario estimate: every cohort holding a simultaneous call. Even then, concurrency is
   (number of cohorts × ≤5), which remains small relative to the Maker-tier video ceiling at current
   scale. Re-evaluate if cohort count grows by an order of magnitude.

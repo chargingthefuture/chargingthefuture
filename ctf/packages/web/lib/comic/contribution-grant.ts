@@ -1,7 +1,7 @@
 // The ServiceCredits recognition grant for an accepted knowledge contribution.
 //
 // ServiceCredits are an internal credits unit — not money, never redeemable for fiat. This is
-// recognition for building something the whole community uses, not a payment for anyone's story.
+// recognition for building something the entire community uses, not a payment for anyone's story.
 //
 // TWO RULES, and they are the reason this is its own module rather than a few lines in the route.
 //

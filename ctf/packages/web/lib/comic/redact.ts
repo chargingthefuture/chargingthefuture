@@ -8,7 +8,7 @@
 // What it removes and why:
 //   - emails, phone-shaped number runs, Signal group links, wallet addresses — direct contact
 //     details for a person.
-//   - Quora profile links and @handles — these name a PERSON. In a community whose whole purpose is
+//   - Quora profile links and @handles — these name a PERSON. In a community whose purpose is
 //     keeping targeted individuals from being identified, a link carrying both someone's identity
 //     and what they wrote is the most sensitive thing in an export.
 //   - every other URL — on ACCURACY grounds (owner decision, 2026-07-26), not privacy. Links are the

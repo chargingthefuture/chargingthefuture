@@ -98,7 +98,7 @@ function mapBooking(row: SlotRow, viewerUserId: string | null): TiRadioBooking {
 }
 
 /**
- * The whole guide: every slot start in the window, with the booking on it when there is one. The
+ * The entire guide: every slot start in the window, with the booking on it when there is one. The
  * viewer block is worked out here rather than in the page so one answer decides what the page shows
  * and what the routes will accept.
  */

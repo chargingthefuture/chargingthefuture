@@ -68,7 +68,7 @@ export function ComicKnowledgePublicShell({ signInUrl }: { signInUrl: string }) 
           </h2>
           <ul style={{ ...bodyStyle(t), paddingLeft: 18, margin: 0 }}>
             <li style={{ marginBottom: 10 }}>
-              Only what you choose. Nothing private, ever — and if you send a whole Quora export
+              Only what you choose. Nothing private, ever — and if you send a full Quora export
               instead, your messages and drafts are deleted automatically on arrival, before a person
               opens it.
             </li>

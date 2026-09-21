@@ -1,7 +1,7 @@
 // Quora's own instructions for requesting a copy of your data, kept in the repo so the knowledge
 // library can show them even if Quora's help page moves or disappears.
 //
-// The whole-export path on `/knowledge` depends on a member being able to get the archive out of
+// The full-export path on `/knowledge` depends on a member being able to get the archive out of
 // Quora first, and that step happens entirely on Quora's side where nothing here can help. A link
 // alone is not enough: help-center articles get renumbered, and a contributor who lands on a 404 has
 // no way to tell whether the process changed or the page merely moved. So the page text is quoted

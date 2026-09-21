@@ -46,7 +46,7 @@ export const QUORA_SURVEY_ACTION = [
 export type QuoraSurveyAction = (typeof QUORA_SURVEY_ACTION)[number];
 
 export const QUORA_SURVEY_ACTION_LABEL: Record<QuoraSurveyAction, string> = {
-  account_deleted: 'The whole account was deleted',
+  account_deleted: 'The entire account was deleted',
   account_suspended: 'The account was banned or suspended',
   answers_removed: 'Answers or posts were removed, account kept',
   space_removed: 'A Space I ran was removed',

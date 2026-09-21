@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 // The owner's definition (2026-08-27): a member is active on a day the sign-in record holds a row
-// for them, and that is the whole of it. This has drifted twice toward "anything the member's rows
+// for them, and that is all of it. This has drifted twice toward "anything the member's rows
 // show they did", so it is pinned here.
 describe('what counts as active', () => {
   it('is the sign-in record', () => {

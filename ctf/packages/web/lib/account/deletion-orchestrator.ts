@@ -3,10 +3,10 @@
 //
 // Two entry points:
 //   - `deleteServiceScopeData(slug, userId)` — delete just one plugin's data for this user.
-//   - `deleteAllAccountData(userId)` — delete every plugin's data for this user (whole account).
+//   - `deleteAllAccountData(userId)` — delete every plugin's data for this user (entire account).
 //
 // Both run the registry-derived plan inside a single `withDbTransaction`, so a failure rolls the
-// whole thing back rather than leaving a user half-deleted. Each run records one
+// entire thing back rather than leaving a user half-deleted. Each run records one
 // `account_deletion_events` row (the retained accountability record) and logs an audit line.
 //
 // Money is deliberately out of scope here. ServiceCredits wallets/ledgers are `retain` in the
@@ -16,6 +16,7 @@
 
 import type { PoolClient } from 'pg';
 import { withDbTransaction } from 'lib/db/postgres';
+import { DIRECTORY_MEMBER_DELETION_REASON, removeClaimedDirectoryProfile } from 'lib/directory/repository';
 import { logAccountAudit } from './audit';
 import {
   accountDeletionRegistry,
@@ -57,7 +58,7 @@ export type DeletionScope = 'service' | 'account';
  * account or a demo test account. Nobody chose to leave; the account was tidied away.
  *
  * The distinction is recorded on the deletion event (`summary.initiatedBy`) because the two are
- * indistinguishable afterwards — every whole-account deletion writes the same row — and the Weekly
+ * indistinguishable afterwards — every full-account deletion writes the same row — and the Weekly
  * Performance dashboard reports members who chose to go. Counting a duplicate-account cleanup there
  * would read as a member leaving. Rows written before this field existed carry no marker and are
  * counted as `member`, which is what nearly all of them are.
@@ -138,6 +139,27 @@ async function recordEvent(
  * ServiceCredits, GDP, Weekly Performance), so the route can map each to the right status. Both
  * rejections are audited with `status: 'deny'` so denied attempts leave a trail.
  */
+/**
+ * Steps that a registry entry cannot express, run inside the same transaction as the plan.
+ *
+ * The registry turns into one generated statement per table. Removing a Directory listing is not
+ * that shape: the listing's Quora address has to be read before the row goes, and then written to the
+ * suppression list, so nothing re-creates it — an accepted SkillsHunt nomination of the same address
+ * included — until somebody explicitly asks for it back (owner directive, 2026-09-20).
+ *
+ * It runs BEFORE the generated plan, because the plan's own delete would take the row away first and
+ * leave nothing to read the address from. The plan's Directory delete then matches no rows, which is
+ * correct and keeps the registry honest about what happens to that table.
+ *
+ * Not the external-cleanup seam: that runs after the transaction commits and is best-effort by
+ * design, and a suppression that may or may not have been written is not a block anybody can rely on.
+ */
+async function runInTransactionSteps(client: PoolClient, userId: string, slugs: readonly string[]): Promise<void> {
+  if (slugs.includes('directory')) {
+    await removeClaimedDirectoryProfile(client, userId, DIRECTORY_MEMBER_DELETION_REASON);
+  }
+}
+
 export async function deleteServiceScopeData(
   slug: string,
   userId: string,
@@ -172,6 +194,7 @@ export async function deleteServiceScopeData(
 
   try {
     const { result, tables } = await withDbTransaction(async (client) => {
+      await runInTransactionSteps(client, userId, [entry.slug]);
       const tableResults = await executeEntry(client, entry, userId);
       const recorded = await recordEvent(client, userId, 'service', entry.slug, tableResults, 'member');
       return { result: recorded, tables: tableResults };
@@ -236,6 +259,11 @@ export async function deleteAllAccountData(
   try {
     const { result, tables } = await withDbTransaction(async (client) => {
       const allResults: DeletionTableResult[] = [];
+      await runInTransactionSteps(
+        client,
+        userId,
+        (accountDeletionRegistry as readonly PluginDeletionEntry[]).map((entry) => entry.slug),
+      );
       for (const entry of accountDeletionRegistry as readonly PluginDeletionEntry[]) {
         const entryResults = await executeEntry(client, entry, userId);
         allResults.push(...entryResults);
@@ -253,7 +281,7 @@ export async function deleteAllAccountData(
     });
 
     // DB rows for every plugin are gone; clear each plugin's external-store copy (e.g. Stream chat)
-    // too, post-commit. This is the single place that covers all whole-account entry points (the
+    // too, post-commit. This is the single place that covers all full-account entry points (the
     // full-account route, the internal delete route, and the Clerk webhook all call this).
     await runExternalCleanups(userId, accountDeletionRegistry.map((entry) => entry.slug));
 

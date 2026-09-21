@@ -163,7 +163,7 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
-| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `edited_at`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `edited_at` is null until the author rewrites the comment and is what the "edited" mark is drawn from; the earlier wording is not kept anywhere, so there is no version history to read, export or delete. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the whole table instead. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `edited_at`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `edited_at` is null until the author rewrites the comment and is what the "edited" mark is drawn from; the earlier wording is not kept anywhere, so there is no version history to read, export or delete. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the entire table instead. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. `kind` is one of the three reactions or one of the two votes, constrained in the database. A `downvote` row is stored and is never returned as a count: `FIRESIDE_COUNTED_KINDS` in `lib/fireside/constants.ts` has no such member, and every count is built from that list rather than from whatever the table happens to hold. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
 
@@ -525,7 +525,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
   Deliberately admin-only. A member-facing search across every thread is close to the
   browse-every-conversation view the owner tabled on 2026-09-13, so it is recorded as a gap and
   waits to be asked for rather than arriving as a side effect of indexing. Searching is submitted
-  rather than run on every keystroke: each key would otherwise be a query against the whole table.
+  rather than run on every keystroke: each key would otherwise be a query against the entire table.
 
 - 2026-09-14: **An admin can see every comment now, not just the export queue.** The queue answers
   one question — may this go on the blog — and it was the only admin screen, so removing or
@@ -578,13 +578,13 @@ member active only in Fireside is seen by being read, which is what the plugin i
   `listOwnComments` is its only caller and is scoped to `author_user_id = $1`. The guarantee is
   which select carries the column rather than a filter somebody has to remember, and
   `withdrawn-copy.test.ts` asserts exactly that — including that the blog export feed never selects
-  it. Deleting the account still takes it, because that deletes the whole row.
+  it. Deleting the account still takes it, because that deletes the entire row.
 
   The confirmation names the two things that are actually irreversible — nobody can put the words
   back, and anything already copied into the blog's build stays there — rather than asking a bare
   "are you sure?". It uses `window.confirm`, which is what this repo already does for a destructive
   step in twenty-odd other places.
-- 2026-09-14: **Fixed: the whole Fireside screen was hard to read.** Owner report, every section.
+- 2026-09-14: **Fixed: the entire Fireside screen was hard to read.** Owner report, every section.
   Measured rather than argued, against the page background `#0F1117`:
 
   - The plugin had no entry in `PLUGIN_ACCENTS`, so `getAppAccent('fireside', …)` returned the
@@ -648,7 +648,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
   `FIRESIDE_PLUGIN_COMMAND_CONTRACTS.yaml` was also fixed while adding to it: two commands,
   `fireside.export.queue.read` and `fireside.export.approve`, had been appended after the
-  `definitions:` block, which made the whole file invalid YAML — nothing in CI parses these
+  `definitions:` block, which made the entire file invalid YAML — nothing in CI parses these
   contracts, so it had gone unnoticed since the day they were added. Both are back under
   `commands:` and `definitions:` is last. No wording changed.
 - 2026-09-14: **The Fireside screen had no header and no way to the blog.** Owner report, from the
@@ -717,7 +717,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
   verification. The call site is recorded in the allowlist under the same 2026-09-13 decision.
 
   Back means the post, for somebody who arrived from one. The blog carries more than 300 posts, so
-  returning a reader to a list of their own comments — empty, for the first-timer this whole path is
+  returning a reader to a list of their own comments — empty, for the first-timer this entire path is
   built for — loses them exactly as thoroughly as the home page did. Opening the same thread from
   inside the app keeps the old control, so arriving one way does not change what back means the
   other way. Folder-shaped slugs (the archive entries) are rebuilt segment by segment so the return

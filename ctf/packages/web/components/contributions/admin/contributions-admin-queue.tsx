@@ -117,13 +117,13 @@ function ConfirmedValueRow({
   isPending: boolean;
   isGiftCard: boolean;
 }) {
-  // Gift cards are whole dollars, 1 to 500, and the server rejects anything else — so say the rule
+  // Gift cards are dollars with no cents, 1 to 500, and the server rejects anything else — so say the rule
   // here rather than letting the admin find it on submit. A comment or star has no such rule: the
   // field carries the configured USD-equivalent, which is free to be fractional.
   return (
     <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
       <label htmlFor="contrib-q-confirmed-value" style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>
-        {isGiftCard ? 'Confirmed value (whole USD, 1–500)' : 'Confirmed value (USD)'}
+        {isGiftCard ? 'Confirmed value (USD, 1–500, no cents)' : 'Confirmed value (USD)'}
       </label>
       <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode={isGiftCard ? 'numeric' : 'decimal'} disabled={!isPending} style={inputStyle(t, 80)} />
       <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (credits granted automatically, subject to per-cycle cap)</span>

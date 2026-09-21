@@ -230,7 +230,7 @@ function ContributionCard({
           {contribution.userId}
         </h2>
         <span style={{ fontSize: 12, color: t.MUTED }}>
-          {contribution.kind === 'links' ? 'picked posts' : 'whole export'} ·{' '}
+          {contribution.kind === 'links' ? 'picked posts' : 'full export'} ·{' '}
           {new Date(contribution.createdAtIso).toLocaleDateString()} · consent{' '}
           {contribution.consentVersion}
         </span>

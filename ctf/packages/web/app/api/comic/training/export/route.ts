@@ -24,7 +24,7 @@ import { reportError } from 'lib/observability/report';
 // Downloading also records what it took: every owner-correction row that reached the file and was
 // still at 'pending' is flipped to 'exported' with an exported_at stamp, which is what moves the
 // admin dashboard's "N awaiting export · N exported" line. The file itself is unchanged by this —
-// it is still the whole dataset every time, not a take-once queue; the status only records that a
+// it is still the entire dataset every time, not a take-once queue; the status only records that a
 // row has been downloaded at least once. Pass ?preview=1 to read the file without marking
 // anything, e.g. to look at it before a real export run.
 function escapeTrainingExample(text: string): string {

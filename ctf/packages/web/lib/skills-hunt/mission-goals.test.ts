@@ -119,7 +119,7 @@ describe('validateMissionCreateInput', () => {
 describe('validateMissionUpdateInput', () => {
   const stored = mission('count_total_accepted');
 
-  // The edit control's whole job: re-pointing a wrongly-typed mission. Sending the new goal type
+  // The edit control's entire job: re-pointing a wrongly-typed mission. Sending the new goal type
   // without the skill would store a goal that counts nothing, which is the quiet version of the
   // same bug.
   it('refuses a switch to the named-skill goal that does not name the skill', () => {

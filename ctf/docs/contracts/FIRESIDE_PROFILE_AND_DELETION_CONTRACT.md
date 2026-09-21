@@ -33,7 +33,7 @@ before doing it, because it cannot be undone.
 The words are copied to `withdrawn_body` first, which is the author's own copy and nobody else's.
 It is read by one query — `listOwnComments`, scoped to the caller's own rows — and it is not in the
 select that feeds the public thread read, so there is no shape that could return it to anybody
-else. Deleting the account still takes it, because that deletes the whole row.
+else. Deleting the account still takes it, because that deletes the entire row.
 
 This is a deliberate narrowing of what withdrawal destroys, decided 2026-09-14 on an owner report:
 taking a comment down cannot be undone, so the moment somebody most needs to read what they wrote

@@ -5,7 +5,7 @@
 //
 // What it does, in order: normalize CRLF/CR to LF; collapse runs of horizontal whitespace inside
 // each line to one space and trim the line; collapse three-or-more blank lines to one blank line;
-// trim the whole thing.
+// trim all of it.
 //
 // Why the counter cannot just use `value.length`: a member who indents, double-spaces after periods,
 // or leaves a run of blank lines is measured on the collapsed text. Counting raw characters would

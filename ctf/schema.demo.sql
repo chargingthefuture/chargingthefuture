@@ -434,7 +434,7 @@ CREATE TABLE IF NOT EXISTS chyme_deletion_events (
 );
 CREATE INDEX IF NOT EXISTS idx_chyme_deletion_events_user_scope ON chyme_deletion_events(user_id, scope, requested_at DESC);
 -- Back Channel: a free, casual 1:1 audio call between two members who are both currently in the same
--- live Chyme room (spec #1746). A single row models the whole lifecycle via `status`:
+-- live Chyme room (spec #1746). A single row models the entire lifecycle via `status`:
 --   inviting -> active (recipient accepts)      -> ended (either party hangs up)
 --   inviting -> declined (recipient declines, terminal)
 --   inviting -> lapsed  (a party left the room before it was accepted, terminal)
@@ -616,7 +616,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
   -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
-  -- A whole-credit reward minted to the scout when a nomination is accepted, capped per scout.
+  -- An integer-credit reward minted to the scout when a nomination is accepted, capped per scout.
   reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
   reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
   created_by_user_id TEXT NOT NULL,
@@ -943,10 +943,10 @@ COMMIT;
 
 -- === account deletion events (cross-plugin orchestration log) ===
 -- One row per user-initiated deletion the orchestrator runs: a per-plugin "delete my data"
--- (scope = 'service') or a whole-account deletion (scope = 'account'). This is the canonical,
+-- (scope = 'service') or a full-account deletion (scope = 'account'). This is the canonical,
 -- retained accountability record of what the orchestrator did — it is never itself deleted by a
 -- deletion. `summary` holds the per-table row counts the engine reported, for audit, plus
--- `initiatedBy` ('member' | 'operator'): who asked for the deletion. A whole-account row looks the
+-- `initiatedBy` ('member' | 'operator'): who asked for the deletion. A full-account row looks the
 -- same whether the member chose to go or an operator cleared a duplicate/test account through the
 -- manual removal workflow, and the Weekly Performance deleted-accounts row counts only the member's
 -- own choice. Rows written before that field existed carry no marker and are read as 'member'.
@@ -1205,7 +1205,7 @@ CREATE TABLE IF NOT EXISTS announcement_revisions (
 -- Backfill every column on legacy databases (per the mandatory CREATE + ALTER-IF-NOT-EXISTS rule).
 -- A database whose announcement_revisions predates these columns keeps the old table on
 -- CREATE TABLE IF NOT EXISTS, so without these ALTERs the app's revision insert (which lists
--- targeting/status/schedule_at/expires_at) fails and the whole "create draft" transaction rolls
+-- targeting/status/schedule_at/expires_at) fails and the entire "create draft" transaction rolls
 -- back with a 503. Defaults are supplied so the NOT NULL adds succeed on a table that already has rows.
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS announcement_id UUID;
 ALTER TABLE IF EXISTS announcement_revisions ADD COLUMN IF NOT EXISTS revision_number INTEGER NOT NULL DEFAULT 1;
@@ -3094,7 +3094,7 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS headline TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bio TEXT;
 -- The legacy directory_profiles.description column (exists only on cloned data) is NOT NULL
 -- with no default. v3 inserts (e.g. SkillsHunt auto-generated profiles on accept) do not set
--- it, so the insert fails on cloned databases and rolls back the whole operation. Drop the
+-- it, so the insert fails on cloned databases and rolls back the entire operation. Drop the
 -- NOT NULL where the legacy column exists so those inserts succeed; v3 reads the blurb from
 -- bio (the description -> bio backfill lives in post/0006). Guarded + idempotent.
 DO $directory_profiles_description_nullable$
@@ -4057,7 +4057,7 @@ ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Foundation instant 1:1 call opt-in (issue #808): a provider may opt in to take an immediate,
 -- paid, time-metered live call. instant_call_enabled is the on/off switch; instant_call_rate_credits
--- is the whole-number ServiceCredits charge per block (nullable, only meaningful when enabled, >= 1
+-- is the integer ServiceCredits charge per block (nullable, only meaningful when enabled, >= 1
 -- enforced in the app); instant_call_interval_minutes is the per-block length in minutes (default 10).
 -- The ring/call/billing live in later tasks — these columns only hold the provider's settings.
 ALTER TABLE IF EXISTS foundation_user_extension ADD COLUMN IF NOT EXISTS instant_call_enabled BOOLEAN NOT NULL DEFAULT FALSE;
@@ -4585,7 +4585,7 @@ BEGIN
     -- always unique and can never be a real Clerk id — so no check-in is lost and
     -- ON DELETE CASCADE still deletes it through the mapping. This runs only when
     -- the FK is absent, so on a schema that already enforces it (steady-state
-    -- production) the whole block is skipped and no mapping rows are invented.
+    -- production) the entire block is skipped and no mapping rows are invented.
     INSERT INTO mood_client_identities (pseudonym, user_id)
     SELECT DISTINCT s.pseudonym, s.pseudonym::text
     FROM mood_submissions s
@@ -4630,7 +4630,7 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS current_
 ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === LOGIN EVENTS (engagement) ===
--- The sign-in record, and the whole definition of an active member (owner decision, 2026-08-27): a
+-- The sign-in record, and the entire definition of an active member (owner decision, 2026-08-27): a
 -- member is active on a day this table holds a row for them, whatever they opened next. `source`
 -- says how the row got here. It came from v2 — production has carried it since before v3, defaulting
 -- to 'webapp' — but this canonical schema never declared it, so a database built from schema.sql
@@ -4655,7 +4655,7 @@ CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
 -- What it means for anything writing here: on production a sign-in row can only exist for an account
 -- the identity mirror still holds, and the per-plugin command trails outlive that mirror, so evidence
 -- of a session can name a member who is gone. Filter to members present in `users` when that table
--- exists, or one orphan aborts the whole insert.
+-- exists, or one orphan aborts the entire insert.
 -- Legacy guard: on databases cloned before `created_at` was a `timestamptz`, this column can be a
 -- plain `timestamp without time zone`. The guarded `ADD COLUMN IF NOT EXISTS` above does NOT retype
 -- an existing column, so it stays the legacy type. That breaks the UTC-day index below: with a
@@ -4781,7 +4781,7 @@ ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS tier TE
 ALTER TABLE IF EXISTS peer_programming_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- The room read lists one cohort's messages in time order (listMessages: WHERE cohort_id = $1
 -- ORDER BY created_at ASC LIMIT 300). Without this index that is a sequential scan + sort over the
--- whole table; under the single standing, always-open Cohort 1 mode every member's messages pile
+-- entire table; under the single standing, always-open Cohort 1 mode every member's messages pile
 -- into one cohort that grows without bound, so the scan eventually exceeds the DB statement timeout
 -- and the room request fails (the room page then shows "Failed to load room"). This index keeps the
 -- read on an index range so it stays fast as the table grows.
@@ -4972,7 +4972,7 @@ CREATE TABLE IF NOT EXISTS workforce_export_jobs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 -- Directory admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded, on
--- every surface. Directory had lib/directory/audit.ts, which builds the whole contract-shaped event and
+-- every surface. Directory had lib/directory/audit.ts, which builds the entire contract-shaped event and
 -- ends in console.info — a line in the server's log, which nothing can query, no screen can show, and
 -- which ages out of the host's retention window. This is the record it should always have written,
 -- including for the profile takedown a person outside the app asks for.
@@ -5006,7 +5006,7 @@ CREATE INDEX IF NOT EXISTS idx_directory_admin_audit_trail_lookup
   ON directory_admin_audit_trail (created_at DESC, actor_id, command);
 
 -- Feed and Announcements admin audit trail (added 2026-08-28). Owner directive: every admin action is
--- recorded, on every surface. Both surfaces share lib/feed/audit.ts, which builds the whole
+-- recorded, on every surface. Both surfaces share lib/feed/audit.ts, which builds the entire
 -- contract-shaped event and ends in console.info — a line in the server's log, which nothing can
 -- query, no screen can show, and which ages out of the host's retention window. One table serves
 -- both because the helper already did: plugin_id says which surface the action was taken on.
@@ -5042,7 +5042,7 @@ CREATE INDEX IF NOT EXISTS idx_feed_admin_audit_trail_lookup
   ON feed_admin_audit_trail (created_at DESC, plugin_id, actor_id, command);
 
 -- Comic admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded, on
--- every surface. lib/comic/audit.ts builds the whole contract-shaped event and ends in console.info —
+-- every surface. lib/comic/audit.ts builds the entire contract-shaped event and ends in console.info —
 -- a line in the server's log, which nothing can query, no screen can show, and which ages out of the
 -- host's retention window. These are decisions about other people's contributions: accepting one,
 -- declining it with a reason, editing a knowledge entry, regenerating or resolving a review turn.
@@ -5077,7 +5077,7 @@ CREATE INDEX IF NOT EXISTS idx_comic_admin_audit_trail_lookup
 
 
 -- What Works admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
--- on every surface. lib/what-works/audit.ts builds the whole contract-shaped event and ends in
+-- on every surface. lib/what-works/audit.ts builds the entire contract-shaped event and ends in
 -- console.info — a line in the server's log, which nothing can query, no screen can show, and which
 -- ages out of the host's retention window. These are decisions about what members see recommended
 -- and about suggestions members made: editing or removing a product, adding or retiring a problem.
@@ -5111,7 +5111,7 @@ CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
   ON what_works_admin_audit_trail (created_at DESC, actor_id, command);
 
 -- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
--- on every surface. lib/mutual-time/audit.ts builds the whole contract-shaped event and ends in
+-- on every surface. lib/mutual-time/audit.ts builds the entire contract-shaped event and ends in
 -- console.info — a line in the server's log, which nothing can query, no screen can show, and which
 -- ages out of the host's retention window. Opening an event and closing one decide what members can
 -- put their time into, so both belong in a record an admin can read back.
@@ -6295,7 +6295,7 @@ CREATE INDEX IF NOT EXISTS idx_quora_deletion_survey_accounts_response
 
 -- What happened at this survey, without recording who it happened to.
 --
--- Two different things are audited here and they have opposite rules, which is the whole reason
+-- Two different things are audited here and they have opposite rules, which is the reason
 -- this table needs a comment. For a SUBMIT the event is recorded and the person is not: the
 -- response id, how many account rows came with it, which consent flags were set, and whether it
 -- was accepted or refused. No user id, and no IP — the rate limiter sees one, and it stops there,
@@ -6389,7 +6389,7 @@ ALTER TABLE IF EXISTS quora_live_census_runs ADD COLUMN IF NOT EXISTS updated_at
 CREATE INDEX IF NOT EXISTS idx_quora_live_census_runs_observed_on
   ON quora_live_census_runs(observed_on DESC);
 
--- One observed account. `stance` is the column the whole census exists for: it is what separates
+-- One observed account. `stance` is the column the entire census exists for: it is what separates
 -- "accounts about this subject are still there" from "what is still there says give up".
 CREATE TABLE IF NOT EXISTS quora_live_census_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -7737,7 +7737,7 @@ COMMIT;
 --      (where `first_name` is empty/NULL), as a best-effort single-name value.
 --   2. Drop the `display_name` column.
 --
--- Safe to re-run: the whole body is guarded on `display_name` still existing.
+-- Safe to re-run: the entire body is guarded on `display_name` still existing.
 -- Once the column has been dropped, every later run is a no-op.
 
 DO $directory_display_name_to_first_last$
@@ -8038,7 +8038,7 @@ DROP TABLE IF EXISTS workforce_announcements;
 -- ── post migration: 0008_login_events_backfill_launch_gap.sql ──
 -- post/0008: Rebuild the sign-in days that nothing recorded between v2 stopping and v3 starting.
 --
--- `login_events` is the whole definition of an active member (owner decision, 2026-08-27): a member
+-- `login_events` is the entire definition of an active member (owner decision, 2026-08-27): a member
 -- is active on a day the sign-in record holds a row for them, whatever they opened next. The record
 -- carries real history from v2 — its first row is 2025-12-15 — but it has a hole. v2 wrote its last
 -- row on 2026-05-26 and v3's writer did not exist until 2026-06-19, so for 23 days nothing wrote
@@ -8184,7 +8184,7 @@ BEGIN
   -- for an account the identity mirror still holds. The command trails outlive that mirror: an
   -- account deleted since the gap leaves its audit rows behind, and those rows are evidence of a
   -- session that did happen but whose member is gone. Inserting for them is both impossible and
-  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the whole
+  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the entire
   -- statement and wrote nothing at all. Reported, not silent: a skipped day is a real day that
   -- cannot be recovered, and the operator should see the count.
   IF to_regclass('public.users') IS NOT NULL THEN
@@ -8751,7 +8751,7 @@ ALTER TABLE IF EXISTS skills_taxonomy_job_titles
 -- `body` still empties, and nothing about who can read what changes. This column is the author's
 -- own copy: it is read only on /api/fireside/mine, which returns the caller's own rows and nothing
 -- else, and it is never selected by the public thread read or by the blog export feed. Deleting the
--- account still takes it, because that deletes the whole row.
+-- account still takes it, because that deletes the entire row.
 
 ALTER TABLE IF EXISTS fireside_comments ADD COLUMN IF NOT EXISTS withdrawn_body TEXT;
 
@@ -8839,7 +8839,7 @@ ALTER TABLE IF EXISTS lighthouse_profiles
 
 
 -- ── post migration: 0024_skills_hunt_skill_missions.sql ──
--- SkillsHunt: a mission can ask for one named skill, not only a whole sector.
+-- SkillsHunt: a mission can ask for one named skill, not only an entire sector.
 --
 -- Owner report, 2026-09-17: the Missions tab showed "Find a mechanic — 82/1 complete" and "Find a
 -- plumber — 82/3 complete" for a scout who had nominated no mechanic at all. Both read the same 82

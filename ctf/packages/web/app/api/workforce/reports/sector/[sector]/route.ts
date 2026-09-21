@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sec
     const normalizedSector = sector.toLowerCase();
     // `all` returns the full breakdown (the dashboard uses this); a specific sector returns only its own
     // bucket plus its matched-member drilldown (`detail`), so a single-sector request never leaks the
-    // whole cross-sector dataset. `items` is kept for back-compat per workforce.report.sector.fetch.
+    // entire cross-sector dataset. `items` is kept for back-compat per workforce.report.sector.fetch.
     if (normalizedSector === 'all') {
       const items = await fetchSectorReport();
       return NextResponse.json({ items }, { status: 200 });
