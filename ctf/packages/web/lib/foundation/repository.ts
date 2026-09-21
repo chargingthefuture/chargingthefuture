@@ -608,7 +608,6 @@ async function getProviderForConnection(client: PoolClient, providerProfileId: s
              TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS display_name
       FROM directory_profiles
       WHERE id = $1::uuid
-        AND is_active = TRUE
         AND claimed_by_user_id IS NOT NULL
     `,
     [providerProfileId],

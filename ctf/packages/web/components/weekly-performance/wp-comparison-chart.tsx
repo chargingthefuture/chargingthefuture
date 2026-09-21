@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "@/hooks/useTheme";
-import { BRAND, getWeeklyPerformanceTokens, type WpComparison, humanizeMetricKey } from "./wp-shared";
+import { BRAND, getWeeklyPerformanceTokens, type WpComparison, humanizeMetricKey, metricGroup } from "./wp-shared";
 
 type Row = { metricKey: string; current: number; prev: number };
 
@@ -12,6 +12,10 @@ function buildRows(comparison: WpComparison): Row[] {
   ]);
   const rows: Row[] = [];
   for (const metricKey of keys) {
+    // The two goal rows are running totals on a scale of their own (index points toward 300B,
+    // members toward 2M). Drawn on the same axis they were the only visible bars and every weekly
+    // count read as zero height. Their cards carry the progress bar; this chart is for the counts.
+    if (metricGroup(metricKey) === "goal") continue;
     const current = comparison.base.find((m) => m.metricKey === metricKey)?.metricValue ?? 0;
     const prev = comparison.compare.find((m) => m.metricKey === metricKey)?.metricValue ?? 0;
     rows.push({ metricKey, current, prev });

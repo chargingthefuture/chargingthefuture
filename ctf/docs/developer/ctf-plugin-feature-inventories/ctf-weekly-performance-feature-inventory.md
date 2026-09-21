@@ -247,6 +247,41 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   admin's own row. Contracts: command, access policy and audit entries for
   `weekly-performance.admin.sign_in_record.get`; admin index row added.
 
+- 2026-09-21: **Audit of every card, after the sign-in fix (owner request).** Each card's query was
+  checked against the current `schema.sql` and against what its plugin's writer actually stores.
+  Four things were wrong and are fixed here; the rest hold. (1) **Workforce recruited read zero and
+  wrote a zero snapshot.** `liveWorkforceRecruited` still filtered `directory_profiles` on
+  `is_active` and `deleted_at`, both dropped by `post/0033` the moment it applied to production;
+  the read threw, the card showed 0, and the current week's snapshot row was recorded as 0. The
+  count is now every Directory profile, which is the definition once every removal is a hard
+  delete. The same drop had stranded reads in Workforce (recruited total), GDP (the country
+  panel), Foundation (the provider lookup on connect) and SkillsHunt (the generated Directory
+  profile insert on accept), plus three seed scripts; all fixed in the same change. (2) **Lighthouse
+  stays and SocketRelay fulfillments were windowed on `updated_at`**, so a later edit moved a stay
+  or a close to whichever week it was edited in. Both now key on the completion timestamps
+  `post/0031` added (`completed_at`, `closed_at`), with `updated_at` as the fallback for rows from
+  before that — the same definition the daily exchange count reads. (3) **The "this week vs last
+  week" chart drew the two goal rows on the same axis as the counts**, and at 300B index points and
+  2,000,000 members those were the only visible bars; every weekly count rendered as zero height.
+  Goal rows leave the chart (their cards carry the progress bar). (4) **A goal card compared against
+  a week with no stored snapshot** reported the entire running total as this week's rise
+  (`+150 vs last week` against a 0 that meant "not captured"). A goal with no prior snapshot now
+  says "No prior-week snapshot" and draws no delta. Also corrected: the registry entries
+  `wp_adoption_active_members` and `wp_adoption_daily_active_members` still described the 2026-08-15
+  union of activity sources; they now state the sign-in-record definition the code has used since
+  2026-08-27. Checked and unchanged: Foundation answered calls, TrustTransport trips (writer stamps
+  `completed_at` when both sides confirm), Chyme tips and peer sends (`origin_plugin` is written as
+  `chyme` / `service-credits`), Contributions confirmed USD (`reviewed_at` stamped on review),
+  SkillsHunt accepted, WhatWorks approved and endorsements, SkillUp completions and trainer payouts,
+  Recurring ties, PeerProgramming posters, Beacon engagement, accounts deleted, Directory findable
+  members, Mood, ClickLog. Two definition questions are left for the owner rather than changed here:
+  the Value section still carries WhatWorks endorsements and Beacon engagement, which the
+  2026-09-20 value-event decision removed from the badge and the daily count, and its SQL is a
+  separate copy of those definitions rather than a reader of `lib/contributor-access/value-events.ts`.
+  Known and untouched: `wp-sidebar.tsx`, `wp-right-rail.tsx` and `wp-icon-rail.tsx` are imported by
+  nothing, the shell fetches `activeUsersLast7Days` and never shows it, and `weekly_performance_metrics`
+  is read and written by nothing.
+
 - 2026-09-21: **Active Members and Daily Active Members were zero for most members because the
   sign-in write was being refused (owner report: only the Directory count was ever right).**
   Production's `login_events` carried a v2 foreign key, `login_events_user_id_fkey`, from `user_id`

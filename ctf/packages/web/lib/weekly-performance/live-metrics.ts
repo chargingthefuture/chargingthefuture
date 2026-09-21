@@ -129,15 +129,20 @@ const trustTransportTripsCompleted = windowCount(
   `status = 'completed' AND requester_completion_confirmed_at IS NOT NULL AND provider_completion_confirmed_at IS NOT NULL`,
 );
 
-// Lighthouse: a completed stay. The table has no completed_at column, so the window keys on
-// updated_at of rows now in 'completed' — the status flip is the last write in the normal flow.
-const lighthouseStaysCompleted = windowCount('lighthouse_matches', 'updated_at', `status = 'completed'`);
+// Lighthouse: a completed stay, on the moment the stay reached 'completed' (post/0031 added
+// completed_at and backfilled finished rows from updated_at; the fallback covers a row from before
+// that). Keying on updated_at alone moved a stay to whichever week the row was last edited in.
+const lighthouseStaysCompleted = windowCount(
+  'lighthouse_matches',
+  'COALESCE(completed_at, updated_at)',
+  `status = 'completed'`,
+);
 
-// SocketRelay: a request the requester closed as successful. No closed_at column; updated_at is
-// written by the close, so it anchors the week.
+// SocketRelay: a request the requester closed as successful, on the moment it closed (post/0031
+// added closed_at, same fallback as above). Same definition the daily exchange count reads.
 const socketRelayFulfilled = windowCount(
   'socket_relay_fulfillments',
-  'updated_at',
+  'COALESCE(closed_at, updated_at)',
   `close_reason = 'successful'`,
 );
 
@@ -307,8 +312,10 @@ const clickLogActiveLoggers = (weekStart: string) =>
 // ── Goal rows (state metrics with weekly snapshots) ───────────────────────────
 
 // Current live values. GDP: the Community Value Index (an estimate, never money/price) from the
-// same builder the GDP plugin serves. Workforce: recruited = the count of all active Directory
-// profiles — the registry definition of workforce_recruited_current_count.
+// same builder the GDP plugin serves. Workforce: recruited = the count of all Directory profiles —
+// the registry definition of workforce_recruited_current_count. Every way a listing goes away is a
+// hard delete (post/0033 dropped the is_active and deleted_at tombstones), so a row present is a
+// member recruited; there is no liveness filter left to apply.
 async function liveGdpValueIndex(): Promise<number> {
   const report = await buildLiveGdpReport();
   const row = report.metrics.find((m) => m.metricKey === 'gdp_value_index');
@@ -321,7 +328,7 @@ function liveWorkforceRecruited(weekStart: string): Promise<number> {
   return guardedScalar(
     'directory_profiles',
     `SELECT COUNT(*)::text AS v FROM directory_profiles
-     WHERE is_active = TRUE AND deleted_at IS NULL AND ($1::date IS NOT NULL)`,
+     WHERE ($1::date IS NOT NULL)`,
     weekStart,
   );
 }

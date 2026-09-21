@@ -104,7 +104,6 @@ async function main() {
               sector_id = $6::uuid,
               job_title_id = $7::uuid,
               country = $8::text,
-              deleted_at = NULL,
               updated_at = NOW()
             WHERE id = $1::uuid
             RETURNING id

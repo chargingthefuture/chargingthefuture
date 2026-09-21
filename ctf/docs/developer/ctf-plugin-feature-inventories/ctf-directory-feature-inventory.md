@@ -226,6 +226,15 @@ Seeded content:
 
 ## Change Log
 
+- 2026-09-21: **The tombstone drop below left readers behind; fixed the day it applied.** When
+  `post/0033` ran against production, five code paths still named `directory_profiles.is_active` or
+  `deleted_at`: the Weekly Performance recruited goal (read 0), the Workforce recruited total, the
+  GDP members-by-country panel, the Foundation provider lookup on connect (a connect failed), and
+  the SkillsHunt accept flow's generated-profile insert (an accept failed). Three seed scripts
+  (`seedDirectory`, `seedFoundation`, `seedSkillsHunt`) still reset `deleted_at`. All now treat a
+  present row as a live listing, which is what the drop made true. No schema, route or contract
+  change.
+
 - 2026-09-21: **Both of `directory_profiles`' tombstone columns are dropped: `is_active` and `deleted_at`.** It was left in place for one release on purpose: migrations run on the push to `main` alongside the deploy rather than after it, so dropping it in the same change could have landed while the previous revision was still selecting the column. That revision is gone and nothing reads or writes it, so `db/migrations/post/0033` drops it and the column leaves `schema.sql`. `deleted_at` is the only thing that decides whether a listing is live.
 
   Removing it surfaced two places the earlier pass had missed, both of which would have failed outright once the column was gone rather than quietly: `generate-community-stats.mjs` still counted profiles with `WHERE is_active = TRUE AND deleted_at IS NULL`, and four seed scripts (`seedDirectory`, `seedSkillsHunt`, `seedFoundation`, `seedDemo`) still wrote the column on insert. The seed fixes were caught by the INSERT column arity gate, which flagged the two inserts where the column came out of the list and its value did not — worth noting because that gate, not a reader, is what stopped a broken seed shipping. `schema.demo.sql` regenerated.

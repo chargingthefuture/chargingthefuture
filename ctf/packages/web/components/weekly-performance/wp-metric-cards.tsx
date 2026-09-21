@@ -20,11 +20,16 @@ import {
 const CARD_COLORS = ["#A78BFA", "#22C55E", "#6366F1", "#06B6D4", "#EC4899", "#F97316"];
 
 // delta = current − prior, joined by metricKey from the comparison payload.
-function deltaFor(comparison: WpComparison | null, metricKey: string): number | null {
+//
+// A goal row is a stored weekly snapshot, and a week that was never captured reports 0 rather than
+// a reading. A delta against that 0 would show the entire total as this week's rise, so a goal
+// with no prior snapshot reports no delta and the card says so.
+function deltaFor(comparison: WpComparison | null, metricKey: string, isGoal: boolean): number | null {
   if (!comparison) return null;
   const current = comparison.base.find((m) => m.metricKey === metricKey);
   const prior = comparison.compare.find((m) => m.metricKey === metricKey);
   if (!current || !prior) return null;
+  if (isGoal && prior.metricValue === 0) return null;
   return current.metricValue - prior.metricValue;
 }
 
@@ -54,9 +59,9 @@ function MetricCard({
 }) {
   const { theme } = useTheme();
   const t = getTokens(theme);
-  const delta = deltaFor(comparison, metric.metricKey);
-  const tone = deltaTone(delta ?? 0, metric.metricKey);
   const goalTarget = GOAL_TARGETS[metric.metricKey];
+  const delta = deltaFor(comparison, metric.metricKey, goalTarget !== undefined);
+  const tone = deltaTone(delta ?? 0, metric.metricKey);
   // Goal rows show progress toward the owner-set target. Progress can be tiny early on; show two
   // decimals so movement is visible instead of rounding to 0%.
   const progress = goalTarget ? Math.min(100, (metric.metricValue / goalTarget) * 100) : null;
@@ -84,7 +89,7 @@ function MetricCard({
           {tone.rising ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {formatDelta(delta, metric.metricUnit)}
         </div>
       ) : (
-        <div style={{ fontSize: 11, color: t.MUTED }}>No prior-week comparison</div>
+        <div style={{ fontSize: 11, color: t.MUTED }}>{goalTarget ? "No prior-week snapshot" : "No prior-week comparison"}</div>
       )}
     </div>
   );
