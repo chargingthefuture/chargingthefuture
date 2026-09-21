@@ -368,7 +368,7 @@ export async function countActiveDirectoryProfiles(): Promise<number | null> {
   const result = await queryDb<{ total: string }>(
     `SELECT COUNT(*)::text AS total
      FROM directory_profiles
-     WHERE deleted_at IS NULL`,
+`,
   );
   const total = Number.parseInt(result.rows[0]?.total ?? '', 10);
   return Number.isFinite(total) ? total : null;
@@ -688,7 +688,6 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE p.claimed_by_user_id = $1
-        AND p.deleted_at IS NULL
       LIMIT 1
     `,
     [userId],
@@ -976,7 +975,6 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
             city = $13,
             state = $14,
             country = $15,
-            deleted_at = NULL,
             updated_at = NOW()
           WHERE id = $1
         `,
@@ -1187,7 +1185,7 @@ export async function getDirectoryProfileForMember(profileId: string): Promise<D
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.id::text = $1 AND p.deleted_at IS NULL
+        WHERE p.id::text = $1
         LIMIT 1
       `,
       [id],
@@ -1256,8 +1254,7 @@ export async function listDirectoryForMember(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
-        WHERE p.deleted_at IS NULL
-          AND (
+        WHERE (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
             ${SECTOR_MATCHES_PROFILE_SKILLS}
@@ -1341,8 +1338,7 @@ export async function listDirectoryForMember(
         FROM directory_profiles p
         LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-        WHERE p.deleted_at IS NULL
-          AND (
+        WHERE (
             $1::uuid IS NULL
             OR p.sector_id = $1::uuid
             ${SECTOR_MATCHES_PROFILE_SKILLS}
@@ -1602,28 +1598,30 @@ export interface AdminProfileFilters {
 }
 
 // Shared predicate for the admin list's count and page queries, so the total always describes the
-// same set the page is drawn from. Parameters: $1 includeDeleted, $2 claim filter, $3 search term
-// (already collapsed by buildSearchTerm, or null for "no search").
+// same set the page is drawn from. Parameters: $1 claim filter, $2 search term (already collapsed by
+// buildSearchTerm, or null for "no search").
+//
+// There is no deleted scope to opt into: a Directory listing is deleted outright, so an admin list
+// that excluded them would be excluding nothing and one that included them would find nothing.
 const ADMIN_PROFILE_WHERE = `
-  WHERE ($1::boolean OR p.deleted_at IS NULL)
-    AND (
-      $2::text = 'all'
-      OR ($2::text = 'claimed' AND p.claimed_by_user_id IS NOT NULL)
-      OR ($2::text = 'unclaimed' AND p.claimed_by_user_id IS NULL)
+  WHERE (
+      $1::text = 'all'
+      OR ($1::text = 'claimed' AND p.claimed_by_user_id IS NOT NULL)
+      OR ($1::text = 'unclaimed' AND p.claimed_by_user_id IS NULL)
     )
     AND (
-      $3::text IS NULL
+      $2::text IS NULL
       -- Search runs here, in SQL, against every profile in the collection — not against the page
       -- currently on screen. Punctuation-insensitive in the same way the member browse search is:
       -- each side has runs of non-alphanumeric characters collapsed to a single space, so "o brien"
       -- matches "O'Brien". Fields match what the admin card shows: name, headline, profession, and
       -- the system-assigned handle of an unclaimed profile.
-      OR regexp_replace(lower(COALESCE(p.first_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
-      OR regexp_replace(lower(COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
-      OR regexp_replace(lower(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
-      OR regexp_replace(lower(COALESCE(p.headline, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
-      OR regexp_replace(lower(COALESCE(jt.name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
-      OR regexp_replace(lower(COALESCE(p.unclaimed_handle, '')), '[^a-z0-9]+', ' ', 'g') LIKE $3::text
+      OR regexp_replace(lower(COALESCE(p.first_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
+      OR regexp_replace(lower(COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
+      OR regexp_replace(lower(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
+      OR regexp_replace(lower(COALESCE(p.headline, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
+      OR regexp_replace(lower(COALESCE(jt.name, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
+      OR regexp_replace(lower(COALESCE(p.unclaimed_handle, '')), '[^a-z0-9]+', ' ', 'g') LIKE $2::text
     )
 `;
 
@@ -1634,7 +1632,6 @@ const ADMIN_PROFILE_WHERE = `
 // page of rows cannot answer it.
 export async function listAdminProfiles(
   pagination: { page: number; pageSize: number },
-  includeDeleted = false,
   filters: AdminProfileFilters = {},
 ): Promise<{ items: DirectoryProfile[]; pagination: DirectoryPagination; unclaimedTotal: number }> {
   const claimed: AdminProfileClaimFilter = filters.claimed ?? 'all';
@@ -1642,7 +1639,7 @@ export async function listAdminProfiles(
 
   return withDbTransaction(async (client) => {
     const offset = (pagination.page - 1) * pagination.pageSize;
-    const predicateParams = [includeDeleted, claimed, searchTerm];
+    const predicateParams = [claimed, searchTerm];
 
     const countResult = await client.query<CountRow>(
       `
@@ -1654,16 +1651,14 @@ export async function listAdminProfiles(
       predicateParams,
     );
 
-    // The header's "N unclaimed" describes the entire collection, so it ignores the claim tab and the
-    // search box and only applies the active/inactive scope.
+    // The header's "N unclaimed" describes the entire collection, so it ignores the claim tab and
+    // the search box.
     const unclaimedResult = await client.query<CountRow>(
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles p
-        WHERE ($1::boolean OR p.deleted_at IS NULL)
-          AND p.claimed_by_user_id IS NULL
+        WHERE p.claimed_by_user_id IS NULL
       `,
-      [includeDeleted],
     );
 
     const rows = await client.query<DirectoryProfileRow>(
@@ -1874,7 +1869,6 @@ export async function updateAdminProfile(
           city = $13,
           state = $14,
           country = $15,
-          deleted_at = NULL,
           updated_at = NOW()
         WHERE id::text = $1
       `,

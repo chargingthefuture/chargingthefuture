@@ -60,7 +60,7 @@ async function loadProfilesForMatch(): Promise<LoadedProfiles> {
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
        LEFT JOIN skills_taxonomy_sectors jt_sec ON jt_sec.id = jt.sector_id
        LEFT JOIN skills_taxonomy_sectors dp_sec ON dp_sec.id = dp.sector_id
-       WHERE dp.deleted_at IS NULL`,
+`,
     ),
     // Rows are keyed by profile and only read for the active profiles loaded above, so there is no
     // need to re-join directory_profiles here (that join can fail on databases where the id column

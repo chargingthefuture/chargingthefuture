@@ -3060,14 +3060,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   profile_url TEXT,
   sector_id UUID,
   job_title_id UUID,
-  -- DEPRECATED, no longer read or written by the app (2026-09-20). Liveness is decided by
-  -- deleted_at alone. The table carried both and they never agreed: a member deleting their own
-  -- listing cleared this flag while account deletion stamped deleted_at, so a query testing one of
-  -- them kept showing rows the other had removed. db/migrations/post/0032 backfills deleted_at from
-  -- every row this flag had retired. The column stays for one deploy because migrations run
-  -- alongside the deploy rather than after it, so dropping it here could land while the previous
-  -- revision is still selecting it; the drop is a one-line follow-up.
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
   source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('admin', 'self', 'community-generated')),
   invited_by_username TEXT,
   -- No inline UNIQUE: the case-insensitive unique index below owns uniqueness.
@@ -3091,7 +3083,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   city TEXT,
   state TEXT,
   country TEXT,
-  deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -3124,7 +3115,6 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS profile_url TE
 ALTER TABLE IF EXISTS directory_profiles DROP COLUMN IF EXISTS is_public;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS sector_id UUID;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS job_title_id UUID;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS venmo_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS monero_address TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS bitcoin_address TEXT;
@@ -3168,7 +3158,6 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
@@ -3203,8 +3192,8 @@ BEGIN
   END IF;
 END
 $directory_profiles_unclaimed_handle_unique$;
-CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id, deleted_at) WHERE claimed_by_user_id IS NULL AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source);
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id) WHERE claimed_by_user_id IS NULL;
 -- One-shot backfill: assign reserved community-<hex> handles to existing
 -- unclaimed Directory profiles so the @handle URL story is consistent on
 -- day one. Idempotent: only fires for rows without a handle and retries on

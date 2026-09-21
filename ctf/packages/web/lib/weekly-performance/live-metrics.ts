@@ -278,7 +278,7 @@ const directoryFindableMembers = (weekStart: string) =>
   guardedScalar(
     ['directory_profiles', 'directory_profile_skills'],
     `SELECT COUNT(*)::text AS v FROM directory_profiles p
-     WHERE p.claimed_by_user_id IS NOT NULL AND p.deleted_at IS NULL
+     WHERE p.claimed_by_user_id IS NOT NULL
        AND p.created_at < $1::date + INTERVAL '7 days'
        AND EXISTS (SELECT 1 FROM directory_profile_skills s WHERE s.profile_id = p.id)`,
     weekStart,

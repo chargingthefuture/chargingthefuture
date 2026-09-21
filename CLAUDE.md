@@ -641,6 +641,28 @@ markdown file, edit it there.
 
 This applies to all development: deploy scripts, CI/CD workflows, seed scripts, test fixtures, and any infrastructure code.
 
+## Remove What Nothing Uses, In the Same Change (Critical — all agents)
+
+Owner directive, 2026-09-21. When a change leaves something with no users — a database column, a
+function, a query parameter, a flag, a toggle, a whole screen — delete it as part of that change. Do
+not describe it as a follow-up, do not open an issue for it, and do not end the work by asking whether
+the owner would like it removed.
+
+Dead things left behind are the technical debt. Asking about each one moves the decision to the
+person who has least context on it and most demands on their time, and the answer is always the
+same, so the question was never worth asking.
+
+This is not license to widen a task. The rule is narrow and mechanical: the change you were asked to
+make is what stranded the thing, so removing it is part of finishing that change, not a separate one.
+Something already unused before you arrived is a different matter — mention it, and leave it alone
+unless told otherwise.
+
+Verify before deleting, every time. Search the entire repository for readers and writers, including
+seed scripts, migrations, generated schemas, SQL files kept for the owner to paste, and the other
+plugins that join to the same table. Check what an index or a constraint is defined on, because
+dropping a column takes its indexes with it. A deletion that misses a caller is worse than the dead
+code was.
+
 ## Local Build and Error Checking Requirement
 
 - After every code change, always run the local build (e.g., `pnpm build` or project-specific build command) and check for errors.

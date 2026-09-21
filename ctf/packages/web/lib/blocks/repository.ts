@@ -145,7 +145,6 @@ export async function listBlocksForUser(blockerUserId: string): Promise<MemberBl
      FROM member_blocks mb
      LEFT JOIN directory_profiles dp
        ON dp.claimed_by_user_id = mb.blocked_user_id
-      AND dp.deleted_at IS NULL
      WHERE mb.blocker_user_id = $1
      ORDER BY mb.created_at DESC`,
     [blockerUserId],
