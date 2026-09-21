@@ -126,7 +126,11 @@ function buildGdpCountries(data: {
   return mapped;
 }
 
-export default function GdpShell() {
+// `sharePicture` puts the "Show this page as one picture" control under the report. It is off for
+// a member and on at /admin/gdp (owner directive, 2026-09-20: the control belongs in admin). The
+// admin page renders this same screen rather than a version of it, which is what makes the picture
+// one to one with what a member sees — see rule 130.
+export default function GdpShell({ sharePicture = false }: { sharePicture?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReportPayload | null>(null);
@@ -247,6 +251,7 @@ export default function GdpShell() {
             per-member and nothing is private, so the picture is the screen, one to one. */}
         <div ref={reportRef}>
           <GdpContent t={t} error={error} report={report} sectors={sectors} countries={countries} metrics={metrics} />
+          {sharePicture && (
           <div style={{ padding: "0 16px 24px" }}>
             <SharePicture
               capture={captureReport}
@@ -266,6 +271,7 @@ export default function GdpShell() {
               somebody is shown is what they find when they open it.
             </SharePicture>
           </div>
+          )}
         </div>
       </div>
     );
