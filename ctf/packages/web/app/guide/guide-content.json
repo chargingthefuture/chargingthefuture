@@ -9,10 +9,10 @@
   {
    "id": "commons",
    "title": "Commons",
-   "updated": "2026-08-18",
+   "updated": "2026-09-21",
    "summary": "Commons is the home page: one shared channel to read and post in, and the list of every app.",
    "body": [
-    "Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with her name, answers from the assistant, and posts from other members.",
+    "Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with their name, answers from the assistant, and posts from other members.",
     "You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant.",
     "The other half is a grid of every app, with a search box and a choice of order — most recent, alphabetical, or most used. You do not need an account to read: a visitor sees the posts and the live community figures at the top of the page. Signing in, which is free, is what lets you post and reach the rest of the apps."
    ],
@@ -48,17 +48,18 @@
   {
    "id": "unlock",
    "title": "Unlock",
-   "updated": "2026-08-19",
+   "updated": "2026-09-21",
    "summary": "Unlock is how a new account gets approved: you send the web address of your Quora profile, and a person reads it.",
    "body": [
     "Almost everything in the app waits on this one step. You paste the web address of your own Quora profile and send it. The screen shows what that address should look like, why it is asked for, and where your submission has got to. Sending a new one replaces the one before it.",
     "While you wait you can look but not take part. If nothing has been sent for a while, access narrows to support only. Once you are approved everything opens, and a one-time thank-you of 100 ServiceCredits is sent to you.",
-    "If you cannot find the address of your own profile, the screen carries a note telling you what to do: go to skillseconomy.quora.com, comment on any post asking for help, and Farah will reply with your profile address. The same note sits beside the re-send box if a submission was turned down, so you are never left without a next step."
+    "If you cannot find the address of your own profile, press 'Ask for help in the Commons' on the same screen. That lets you into the Commons, the group chat, where you can ask and get an answer. The box beside the button is optional: anything that helps a person find you on Quora — the name on your account, a link to something you posted — means you can still be approved by hand without a profile address. The button works with the box empty.",
+    "Coming back on a second day also lets you into the Commons while your submission waits, because returning is a sign the wall was not working for you. Wherever you land, a banner above the chat still asks for the Quora address — it is no longer the only thing you can do."
    ],
    "howTo": [
     "Open the app on a new account. The Unlock screen asks for the web address of your Quora profile.",
     "Paste that address and send it. The screen changes to say it is under review.",
-    "If you cannot find the address, use the note on the same screen: comment on any post at skillseconomy.quora.com asking for help, and you will be sent your profile address.",
+    "If you cannot find the address, press 'Ask for help in the Commons' on the same screen and ask there. Add anything that helps a person find you on Quora, or leave the box empty.",
     "Wait for the decision. If your submission is turned down, you can send another address from the same screen."
    ]
   },
@@ -186,15 +187,17 @@
   {
    "id": "peer-programming",
    "title": "PeerProgramming",
-   "updated": "2026-08-09",
+   "updated": "2026-09-21",
    "summary": "PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.",
    "body": [
     "Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.",
+    "Your cohort meets by live video. On the Session tab, 'Join Session' opens the cohort's own call — you see and hear each other like any video meeting, with mute, camera and leave controls. Your camera and microphone start on, so joining puts you on screen. There is one call per cohort, for its members only, and it is open whenever the cohort is running rather than at a set hour: a cohort holds as many or as few sessions as it wants, arranged between its members.",
     "Once you're in a cohort, you can post messages and reply to others in your group's chat room. Other cohort members get a notification when someone posts, so conversations don't get missed. The room stays open while the cohort is running and shows a summary of who's taking part.",
     "After your cohort ends, a feedback box appears where you can write a note about how it went. You can only leave feedback for your own cohort, not for others you may have listened in on."
    ],
    "howTo": [
     "Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.",
+    "To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.",
     "When you're in a cohort, open the chat room and post or reply to other members' messages.",
     "After your cohort ends, use the feedback box to write about your experience."
    ]
@@ -202,11 +205,11 @@
   {
    "id": "mood",
    "title": "Mood",
-   "updated": "2026-08-02",
+   "updated": "2026-09-21",
    "summary": "Mood lets you check in on how you're doing, and see how the community is doing overall.",
    "body": [
     "Open Mood and pick a number from 1 to 5 to show how you're feeling right now. You can add a note if you want to. After you submit, you can check in again in 7 days.",
-    "The community can see a chart of all the mood check-ins together, but no one can see your individual check-in, your note, or who you are. Your check-in stays private."
+    "What comes back is a community pulse and nothing else: the average and the number of check-ins per day over the last week, and it is withheld entirely until at least five check-ins exist in that window. No one can see your individual check-in, your note, or who you are — not another member, and not an admin, because each check is stored under a pseudonym with no account on it. Mood does not respond to a low number, does not alert anyone, and is not a support or crisis service."
    ],
    "howTo": [
     "Open Mood. Pick a mood value from 1 to 5 and submit.",
@@ -249,12 +252,13 @@
   {
    "id": "workforce",
    "title": "Workforce",
-   "updated": "2026-08-05",
+   "updated": "2026-09-21",
    "summary": "Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.",
    "body": [
     "Open the Workforce dashboard to see current numbers: how many people are in the community, how many are in the workforce pool, how many have been recruited, your progress toward the recruitment goal, and how much of the skills list has at least one member behind it. The number of people each sector needs is worked out from the size of the population, not from posted jobs — nothing here is advertised or applied for.",
     "View your own profile as it appears in the workforce system. Your profile is read-only and pulls from your Directory profile — it shows your job title and skill level.",
-    "Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details."
+    "Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details.",
+    "The last tab, What's Your 1%, is about you alone: nobody else sees your figures and you see nobody else's. It starts from one percent of five million survivors — 50,000 people — and works back to what serving that many would mean for someone in your trade, weighted by how many of your occupation a population that size needs. You enter two numbers of your own, what you charge for one job and how often one person needs you in a year, and they stay in your browser — nothing is saved or sent. The screen says plainly that the figures are arithmetic on a stated share of a population estimate, not a forecast of what anybody will earn."
    ],
    "howTo": [
     "Open the Workforce dashboard. Check that Population, Workforce Total, and Recruited all show numbers (not a loading spinner or error).",
@@ -278,17 +282,17 @@
   {
    "id": "service-credits",
    "title": "ServiceCredits",
-   "updated": "2026-08-05",
+   "updated": "2026-09-21",
    "summary": "ServiceCredits is where you view and send credits within the Skills Economy.",
    "body": [
-    "Open ServiceCredits to see your available balance. The wallet tab shows how many credits you have.",
-    "You can send credits to another member. Once you send them, both balances update right away.",
-    "The Economy tab shows numbers about credits across the entire platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds."
+    "ServiceCredits has four tabs: Wallet, Earn, Send, and Economy — your own credits first, the community's figures last. The Wallet tab shows your available balance and your recent movements, ten to a page. Credits are an internal unit, not money: nothing here is redeemable for cash and nothing asks for a card.",
+    "The Send tab is where you send credits to another member. A send lands immediately — both balances update at once. The wallet also states, in one sentence, how far below zero a send may take you: community credit lets you send down to a small floor and repay as you earn, and if that is switched off for you the wallet says so plainly instead of letting a send fail.",
+    "After a send goes through, an 'Is this ongoing?' prompt appears under it. Pick how often, and it records a standing arrangement with the member you sent to, who confirms it in the Recurring Activity app. The Economy tab shows the community's numbers — how many credits are in circulation, how many were issued, how many were burned, and what the treasury holds."
    ],
    "howTo": [
-    "Sign in and open ServiceCredits. Your wallet tab will show your available balance.",
-    "To send credits, choose a member and enter the amount. After you send, check that your balance went down and theirs went up.",
-    "Open the Economy tab to see platform-wide credit numbers."
+    "Sign in and open ServiceCredits. The Wallet tab shows your available balance and your recent movements.",
+    "To send credits, open the Send tab, choose a member and enter the amount. After you send, your balance goes down and theirs goes up straight away.",
+    "Open the Economy tab to see the community-wide credit numbers."
    ]
   },
   {
@@ -376,15 +380,17 @@
   {
    "id": "lighthouse",
    "title": "LightHouse",
-   "updated": "2026-08-04",
+   "updated": "2026-09-21",
    "summary": "LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.",
    "body": [
     "Open LightHouse and you land on a list of available properties. You can browse listings, see details like location and monthly rent, and reach out to hosts. If you own a place, you can list it yourself — no approval needed. You can do both at the same time: list your own property and also request to stay elsewhere.",
+    "Both sides are visible. Browse is the places on offer. Wanted is what members are looking for, in their own words — the city and date they need, the budget they can manage in whatever currency they named, and a short introduction. A posting shows nobody's name, phone number or Signal link; reading one tells you people are asking, not who they are. To be on it, tick 'Show what I'm looking for on the Wanted tab' on Your details.",
     "When you request to stay at a listing, the host can accept or reject your request. If they accept, you can start a private chat with them. You can also record ongoing housing arrangements without leaving LightHouse — just pick how often and how it's settled, and the other person confirms it in their app.",
     "If a host makes you uncomfortable, you can block them from any listing. When you block someone, their properties disappear from your browse list and they cannot request to stay with you."
    ],
    "howTo": [
     "Open LightHouse. It loads straight to a list of available properties with titles, locations, and rent amounts.",
+    "Open the Wanted tab to see what members are looking for. To add your own need, go to Your details, fill in what you are looking for, and tick the box that shows it on the Wanted tab.",
     "Pick a property you don't own and tap or click Request to stay. If you haven't filled in your seeker details yet, you'll be sent to Your details first. Fill it in, save it, then go back and send the request.",
     "To list your own place, go to the List your place tab. Fill in the property fields — title, address, bedrooms, bathrooms, rent, accepted currencies, available date, and photos — and save it. Your listing is live right away."
    ]
@@ -392,11 +398,11 @@
   {
    "id": "click-log",
    "title": "ClickLog",
-   "updated": "2026-08-18",
+   "updated": "2026-09-21",
    "summary": "ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.",
    "body": [
     "Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: an incident can be private only when it has no tags, and a private, untagged incident does not need a location. Three: tagging an incident with problems or schemes requires a location and trend sharing, because tags exist to feed the global map — a tagged incident is always a shared one.",
-    "What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.",
+    "What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. Those grouped totals may be published: the trend report is posted publicly and given to people outside the project, and every share control says so at the moment you choose. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.",
     "You can edit or delete your own incidents at any time. An untagged incident's sharing can be turned off again whenever you like; a tagged incident becomes private by removing its tags first. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required)."
    ],
    "howTo": [
@@ -424,15 +430,18 @@
   {
    "id": "gdp",
    "title": "GDP",
-   "updated": "2026-08-09",
-   "summary": "GDP shows community metrics on a dashboard.",
+   "updated": "2026-09-21",
+   "summary": "GDP is the live dashboard of value actually exchanged inside the community, as an index rather than a sum of money.",
    "body": [
-    "The GDP dashboard loads when you sign in and visit the app. It displays data about the community in one place."
+    "The headline figure is the Community Value Index: everything recognized as exchanged and settled here, added up since June 12, 2026, the day the app launched, and never reset to a calendar year. It is a relative index in the spirit of GDP — never money, a price, or something you could redeem — and it carries no currency symbol. When part of it has had to be estimated, a small 'Estimate' chip sits beside it.",
+    "Below the headline, Value by Source shows where the exchanges came from, app by app, and Members by country shows where members are, with those who have set no location counted separately.",
+    "A separate panel, Value waiting to happen, shows what the posts already on the board would add if every one of them closed — open rides and deliveries, quotes waiting on an answer, requests nobody has done yet, arrangements waiting on a confirmation — with a count of how many posts are open. It is kept apart from the index on purpose: most posts never close, so this figure is interest rather than achievement, and it is no more money than the index is. The panel disappears when nothing is open.",
+    "A 'Show this page as one picture' control under the report turns the dashboard into a single image you can save or share, stamped with when it was taken."
    ],
    "howTo": [
-    "Sign in to your account.",
-    "Go to the GDP dashboard. The page loads without errors.",
-    "View the community metrics displayed on the dashboard."
+    "Sign in and open GDP. The dashboard shows the Community Value Index at the top.",
+    "Read Value by Source and Members by country under it for where the exchanges came from and where members are.",
+    "If posts are open across the community, read the Value waiting to happen panel — and its sentence saying what that figure is and is not."
    ]
   },
   {

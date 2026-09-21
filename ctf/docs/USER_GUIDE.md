@@ -8,11 +8,11 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Commons
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-09-21_
 
 Commons is the home page: one shared channel to read and post in, and the list of every app.
 
-Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with her name, answers from the assistant, and posts from other members.
+Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with their name, answers from the assistant, and posts from other members.
 
 You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant.
 
@@ -25,9 +25,37 @@ The other half is a grid of every app, with a search box and a choice of order �
 3. Type in the box at the bottom to post. Use Reply on a message to quote it, or the small add-reaction control under a post to react.
 4. Tap the grid button in the top bar for All Apps, then search the grid or change its order to find the one you want.
 
+## Fireside
+
+_Last updated: 2026-09-16_
+
+Fireside is the conversation under each post on the blog. Reading it needs no account at all; writing needs one, and what you write becomes publicly visible once you are approved.
+
+Every post on the blog carries a conversation underneath it, and anybody can read it — no sign-in, no account, nothing to create. Reading is not something you have to qualify for.
+
+Writing happens here in the app, which is why the button under a post brings you across. It names the post you came from and opens that exact conversation on arrival, and if you have to sign in first it returns you to the same place rather than dropping you on a list of tiles.
+
+Signing in is enough to leave a comment or a reaction. Nothing you write is publicly visible until you are approved through Unlock, and the screen tells you that at the moment you post rather than saving your words and quietly showing them to nobody. Approval is per person and it reaches backwards: when you are approved, everything you have already written appears at once.
+
+You always see your own words, whatever state they are in, labeled live, held, removed or withdrawn. You can take your own comment down at any time without an admin, and it asks first, because nobody can put the words back.
+
+Replies go one level deep and no further. A reply to a reply is unreadable at phone width, which is the only width this app has. When somebody answers you, you are told, and the notice opens that conversation.
+
+There are three reactions — I recognize this, This helped, Same here — and separate agree and disagree votes. A vote changes a number beside a comment and nothing else: the thread stays oldest first, and nothing reads a count to decide what gets read. The agree count is shown; the disagree count is shown to nobody but the person who left it.
+
+A comment can also be asked into the blog's own published pages, and that is off unless you turn it on. Turning it on asks; it does not publish. An admin reads the request first, because once a comment is in the published build it is searchable and captured by web archives, and nobody — this project included — can withdraw it after that. You can take the ask back at any point before the copy is made.
+
+**How to use it**
+
+1. Read any post on the blog. The conversation is underneath it and needs no account.
+2. Press the button under the post to write. It carries you to the same conversation in the app, and signing in returns you there.
+3. Leave a comment, a reply, or a reaction. Until you are approved through Unlock it is held, and the screen says so.
+4. Open Fireside in the app to see everything you have written in one list, each labeled live, held, removed or withdrawn.
+5. To have a comment published with the post itself, turn the request on under that comment. An admin reads it before anything is copied, and you can take the ask back until then.
+
 ## Unlock
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-09-21_
 
 Unlock is how a new account gets approved: you send the web address of your Quora profile, and a person reads it.
 
@@ -35,13 +63,15 @@ Almost everything in the app waits on this one step. You paste the web address o
 
 While you wait you can look but not take part. If nothing has been sent for a while, access narrows to support only. Once you are approved everything opens, and a one-time thank-you of 100 ServiceCredits is sent to you.
 
-If you cannot find the address of your own profile, the screen carries a note telling you what to do: go to skillseconomy.quora.com, comment on any post asking for help, and Farah will reply with your profile address. The same note sits beside the re-send box if a submission was turned down, so you are never left without a next step.
+If you cannot find the address of your own profile, press 'Ask for help in the Commons' on the same screen. That lets you into the Commons, the group chat, where you can ask and get an answer. The box beside the button is optional: anything that helps a person find you on Quora — the name on your account, a link to something you posted — means you can still be approved by hand without a profile address. The button works with the box empty.
+
+Coming back on a second day also lets you into the Commons while your submission waits, because returning is a sign the wall was not working for you. Wherever you land, a banner above the chat still asks for the Quora address — it is no longer the only thing you can do.
 
 **How to use it**
 
 1. Open the app on a new account. The Unlock screen asks for the web address of your Quora profile.
 2. Paste that address and send it. The screen changes to say it is under review.
-3. If you cannot find the address, use the note on the same screen: comment on any post at skillseconomy.quora.com asking for help, and you will be sent your profile address.
+3. If you cannot find the address, press 'Ask for help in the Commons' on the same screen and ask there. Add anything that helps a person find you on Quora, or leave the box empty.
 4. Wait for the decision. If your submission is turned down, you can send another address from the same screen.
 
 ## Directory
@@ -117,6 +147,37 @@ Anyone can open the link, whether or not they are signed in or approved. A visit
 3. Pick up to three one-hour windows you are free, choosing from the day chips and the morning, afternoon, and evening groups. Check the timezone shown is yours, and change it if it is not. Save.
 4. Open the same link after voting closes to see the chosen hour, how many members can make it, and the button through to where the meeting happens.
 
+## TI Radio
+
+_Last updated: 2026-09-16_
+
+TI Radio is a published schedule of live discussions members host in Chyme. Reading it needs no account; taking a slot needs an approved one.
+
+TI Radio shows seven days ahead, cut into 90-minute slots. Ninety minutes divides a day exactly sixteen times, so every day has the same sixteen starts and nothing drifts. Each row shows the time, who is hosting, and what it is about.
+
+Every time is printed in your own timezone, and the page names the zone it detected, so you do not have to do the arithmetic. The slot covering the current moment is marked On air, which tells you whether to open Chyme now.
+
+Reading the schedule needs no account at all. That is deliberate, and it is not how the rest of this app works: the people it was built for have not joined anything yet, and asking them to sign up before they can even see when a discussion is happening asks for the thing at the end and gives nothing at the start.
+
+Hosting is different and does need an approved account. You press an open row, write what the discussion is about, and add a few sentences if you want to help somebody decide whether to come. The slot is then yours, and your handle and subject appear on that row for everyone, including people who never sign in. First come, first served — no queue, no application, and nobody approving the topic.
+
+You can hold three slots in any 24 hours. The ceiling is checked against any 24-hour stretch rather than the calendar day, so three late one evening and a fourth after midnight is refused the same as four in one afternoon.
+
+You can give a slot back any time before it starts and it returns to the schedule as open. Once it has begun you cannot, because by then people have turned up.
+
+A listing is not an endorsement. A slot is taken, not granted, nobody reviews a description before it appears, and this project does not vouch for a host or for what gets said in their room. The rules still apply in the room, and an account goes for breaking them.
+
+TI Radio holds the schedule and nothing else. The talking happens in Chyme, which keeps its own audio and its own records, and TI Radio never records who listened.
+
+**How to use it**
+
+1. Open the schedule. It needs no account, and the times are already in your timezone.
+2. Look for the row marked On air to see whether something is happening now, and read ahead for the rest of the week.
+3. To host, sign in and finish Unlock. A signed-out reader is told to sign in; a member who is not approved yet is pointed at Unlock rather than given a button that fails.
+4. Press an open row, write what it is about, and take it. Your handle and subject appear on that row for everyone.
+5. At the time you booked, meet whoever turns up in Chyme.
+6. Changed your mind? Give the slot back before it starts and it returns to the schedule as open.
+
 ## SocketRelay
 
 _Last updated: 2026-08-09_
@@ -155,11 +216,13 @@ After the event ends, the recording stays on Beacon and gets posted to the Commo
 
 ## PeerProgramming
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-09-21_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
 Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.
+
+Your cohort meets by live video. On the Session tab, 'Join Session' opens the cohort's own call — you see and hear each other like any video meeting, with mute, camera and leave controls. Your camera and microphone start on, so joining puts you on screen. There is one call per cohort, for its members only, and it is open whenever the cohort is running rather than at a set hour: a cohort holds as many or as few sessions as it wants, arranged between its members.
 
 Once you're in a cohort, you can post messages and reply to others in your group's chat room. Other cohort members get a notification when someone posts, so conversations don't get missed. The room stays open while the cohort is running and shows a summary of who's taking part.
 
@@ -168,18 +231,19 @@ After your cohort ends, a feedback box appears where you can write a note about 
 **How to use it**
 
 1. Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.
-2. When you're in a cohort, open the chat room and post or reply to other members' messages.
-3. After your cohort ends, use the feedback box to write about your experience.
+2. To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.
+3. When you're in a cohort, open the chat room and post or reply to other members' messages.
+4. After your cohort ends, use the feedback box to write about your experience.
 
 ## Mood
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-09-21_
 
 Mood lets you check in on how you're doing, and see how the community is doing overall.
 
 Open Mood and pick a number from 1 to 5 to show how you're feeling right now. You can add a note if you want to. After you submit, you can check in again in 7 days.
 
-The community can see a chart of all the mood check-ins together, but no one can see your individual check-in, your note, or who you are. Your check-in stays private.
+What comes back is a community pulse and nothing else: the average and the number of check-ins per day over the last week, and it is withheld entirely until at least five check-ins exist in that window. No one can see your individual check-in, your note, or who you are — not another member, and not an admin, because each check is stored under a pseudonym with no account on it. Mood does not respond to a low number, does not alert anyone, and is not a support or crisis service.
 
 **How to use it**
 
@@ -225,7 +289,7 @@ View the leaderboard to see scouts ranked by accepted points. There is one board
 
 ## Workforce
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-21_
 
 Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.
 
@@ -234,6 +298,8 @@ Open the Workforce dashboard to see current numbers: how many people are in the 
 View your own profile as it appears in the workforce system. Your profile is read-only and pulls from your Directory profile — it shows your job title and skill level.
 
 Browse occupations sorted by the biggest gaps between the number of people needed and the number matched so far. Tap any occupation to see its details.
+
+The last tab, What's Your 1%, is about you alone: nobody else sees your figures and you see nobody else's. It starts from one percent of five million survivors — 50,000 people — and works back to what serving that many would mean for someone in your trade, weighted by how many of your occupation a population that size needs. You enter two numbers of your own, what you charge for one job and how often one person needs you in a year, and they stay in your browser — nothing is saved or sent. The screen says plainly that the figures are arithmetic on a stated share of a population estimate, not a forecast of what anybody will earn.
 
 **How to use it**
 
@@ -256,21 +322,21 @@ Members can browse the Skills Taxonomy to see what sectors, job titles, and skil
 
 ## ServiceCredits
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-21_
 
 ServiceCredits is where you view and send credits within the Skills Economy.
 
-Open ServiceCredits to see your available balance. The wallet tab shows how many credits you have.
+ServiceCredits has four tabs: Wallet, Earn, Send, and Economy — your own credits first, the community's figures last. The Wallet tab shows your available balance and your recent movements, ten to a page. Credits are an internal unit, not money: nothing here is redeemable for cash and nothing asks for a card.
 
-You can send credits to another member. Once you send them, both balances update right away.
+The Send tab is where you send credits to another member. A send lands immediately — both balances update at once. The wallet also states, in one sentence, how far below zero a send may take you: community credit lets you send down to a small floor and repay as you earn, and if that is switched off for you the wallet says so plainly instead of letting a send fail.
 
-The Economy tab shows numbers about credits across the entire platform — how many are in circulation, how many were issued, how many were burned, and what the treasury holds.
+After a send goes through, an 'Is this ongoing?' prompt appears under it. Pick how often, and it records a standing arrangement with the member you sent to, who confirms it in the Recurring Activity app. The Economy tab shows the community's numbers — how many credits are in circulation, how many were issued, how many were burned, and what the treasury holds.
 
 **How to use it**
 
-1. Sign in and open ServiceCredits. Your wallet tab will show your available balance.
-2. To send credits, choose a member and enter the amount. After you send, check that your balance went down and theirs went up.
-3. Open the Economy tab to see platform-wide credit numbers.
+1. Sign in and open ServiceCredits. The Wallet tab shows your available balance and your recent movements.
+2. To send credits, open the Send tab, choose a member and enter the amount. After you send, your balance goes down and theirs goes up straight away.
+3. Open the Economy tab to see the community-wide credit numbers.
 
 ## Contributions
 
@@ -366,11 +432,13 @@ When a trip is finished, you see a record of what it was worth in whatever curre
 
 ## LightHouse
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-09-21_
 
 LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.
 
 Open LightHouse and you land on a list of available properties. You can browse listings, see details like location and monthly rent, and reach out to hosts. If you own a place, you can list it yourself — no approval needed. You can do both at the same time: list your own property and also request to stay elsewhere.
+
+Both sides are visible. Browse is the places on offer. Wanted is what members are looking for, in their own words — the city and date they need, the budget they can manage in whatever currency they named, and a short introduction. A posting shows nobody's name, phone number or Signal link; reading one tells you people are asking, not who they are. To be on it, tick 'Show what I'm looking for on the Wanted tab' on Your details.
 
 When you request to stay at a listing, the host can accept or reject your request. If they accept, you can start a private chat with them. You can also record ongoing housing arrangements without leaving LightHouse — just pick how often and how it's settled, and the other person confirms it in their app.
 
@@ -379,18 +447,19 @@ If a host makes you uncomfortable, you can block them from any listing. When you
 **How to use it**
 
 1. Open LightHouse. It loads straight to a list of available properties with titles, locations, and rent amounts.
-2. Pick a property you don't own and tap or click Request to stay. If you haven't filled in your seeker details yet, you'll be sent to Your details first. Fill it in, save it, then go back and send the request.
-3. To list your own place, go to the List your place tab. Fill in the property fields — title, address, bedrooms, bathrooms, rent, accepted currencies, available date, and photos — and save it. Your listing is live right away.
+2. Open the Wanted tab to see what members are looking for. To add your own need, go to Your details, fill in what you are looking for, and tick the box that shows it on the Wanted tab.
+3. Pick a property you don't own and tap or click Request to stay. If you haven't filled in your seeker details yet, you'll be sent to Your details first. Fill it in, save it, then go back and send the request.
+4. To list your own place, go to the List your place tab. Fill in the property fields — title, address, bedrooms, bathrooms, rent, accepted currencies, available date, and photos — and save it. Your listing is live right away.
 
 ## ClickLog
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-09-21_
 
 ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.
 
 Three rules cover all of it. One: your notes are always private — nobody but you ever sees them. Two: an incident can be private only when it has no tags, and a private, untagged incident does not need a location. Three: tagging an incident with problems or schemes requires a location and trend sharing, because tags exist to feed the global map — a tagged incident is always a shared one.
 
-What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.
+What sharing sends is grouped trend data only — the date, a rough area, and the tags. Never your notes, never your exact location. Those grouped totals may be published: the trend report is posted publicly and given to people outside the project, and every share control says so at the moment you choose. An incident you keep untagged shares nothing unless you choose otherwise: for untagged incidents, sharing is off until you turn it on, per incident or as a default.
 
 You can edit or delete your own incidents at any time. An untagged incident's sharing can be turned off again whenever you like; a tagged incident becomes private by removing its tags first. If you know a scheme that is not on the list, you can suggest one while logging (Weavers of the Commons badge required).
 
@@ -420,17 +489,23 @@ Many apps have a quick prompt that lets you record an arrangement without leavin
 
 ## GDP
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-09-21_
 
-GDP shows community metrics on a dashboard.
+GDP is the live dashboard of value actually exchanged inside the community, as an index rather than a sum of money.
 
-The GDP dashboard loads when you sign in and visit the app. It displays data about the community in one place.
+The headline figure is the Community Value Index: everything recognized as exchanged and settled here, added up since June 12, 2026, the day the app launched, and never reset to a calendar year. It is a relative index in the spirit of GDP — never money, a price, or something you could redeem — and it carries no currency symbol. When part of it has had to be estimated, a small 'Estimate' chip sits beside it.
+
+Below the headline, Value by Source shows where the exchanges came from, app by app, and Members by country shows where members are, with those who have set no location counted separately.
+
+A separate panel, Value waiting to happen, shows what the posts already on the board would add if every one of them closed — open rides and deliveries, quotes waiting on an answer, requests nobody has done yet, arrangements waiting on a confirmation — with a count of how many posts are open. It is kept apart from the index on purpose: most posts never close, so this figure is interest rather than achievement, and it is no more money than the index is. The panel disappears when nothing is open.
+
+A 'Show this page as one picture' control under the report turns the dashboard into a single image you can save or share, stamped with when it was taken.
 
 **How to use it**
 
-1. Sign in to your account.
-2. Go to the GDP dashboard. The page loads without errors.
-3. View the community metrics displayed on the dashboard.
+1. Sign in and open GDP. The dashboard shows the Community Value Index at the top.
+2. Read Value by Source and Members by country under it for where the exchanges came from and where members are.
+3. If posts are open across the community, read the Value waiting to happen panel — and its sentence saying what that figure is and is not.
 
 ## Reporting a problem
 
