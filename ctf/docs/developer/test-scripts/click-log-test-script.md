@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app and checks that the picture appears on the dashboard and that nothing ever navigates away from it |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered |
 
 ## How to run this
 
@@ -182,7 +182,7 @@ message, and an edit that duplicates another incident's exact note returns a rea
    "Which schemes were used?".
 5. Repeat step 2 inside the edit form of an existing incident that has a location.
 **Expected:** Each link opens the shared share-link popup, not the page itself. The popup shows
-the whole address as selectable text — `https://www.chargingthefuture.com/look-ma` for problems,
+the entire address as selectable text — `https://www.chargingthefuture.com/look-ma` for problems,
 `https://www.chargingthefuture.com/schemes` for schemes — with "Copy link" (which confirms
 "Copied!") and "Open in new tab". Opening the page leaves the ClickLog tab as it was: the note
 you wrote and the tags you picked are still there, and nothing was submitted. Escape or a tap
@@ -287,25 +287,28 @@ that icon, so it runs with no browser chrome. That is the case this step exists 
 **Steps:**
 1. On the Trends dashboard, press "Show the report as one image".
 2. Watch what happens while it is drawing, and look at where you are when it finishes.
-3. On the phone, press and hold the picture and save it to your photos.
-4. Press **Share**, then close the share sheet without choosing anything. Press it again and send
-   the picture to another app.
-5. On a computer, press **Save the file**, then open the saved file and read it top to bottom.
-6. Press **Done**.
+3. Read the controls under the picture and count them.
+4. Press **Share**, close the sheet without choosing anything, then press Share again and save the
+   picture to your photos or send it to another app.
+5. Press and hold the picture on a phone, or right-click it on a computer, and save it that way.
+6. Open a saved copy and read it top to bottom, then press **Done**.
 **Expected:** Step 2 — the button reads "Drawing the picture…" while it works, and when it finishes
 the picture is **on the Trends dashboard**, under the button, scaled to the width of the card.
 **The dashboard never moves.** Nothing navigates: no page showing a PNG icon with a file name and
 an "Open in…" link, no "Safari can't open the page" with a WebKitBlobResource error, no screen
 without a back control, and never a need to force the app closed — those were the two defects on
-2026-09-20, from a plain link to the route and then from a share-then-blob handoff. Step 3 — the
-picture reaches the photo library from press-and-hold alone. Step 4 — the sheet opens (it is its
-own press, so it is never refused), closing it says nothing and leaves the picture on screen, and
-sending it works. Step 5 — the file saves with a name carrying today's date and opens normally.
-Step 6 — the picture is put away and the button is back.
-The picture itself contains every section of the report and the method statement, ends with the
-site line, and nothing is cut off at the bottom. It carries no area coordinates: where the areas
-would be, it says how many areas were recorded and why they were left out. The area count tile and
-the countries are still there, and every other number matches the screen.
+2026-09-20, from a plain link to the route and then from a share-then-blob handoff.
+Step 3 — exactly **two** controls, Share and Done. There is no "Save the file" button (removed
+2026-09-20: on a phone it did not do what its label said) and no separate link that opens the
+picture in the browser.
+Step 4 — the sheet opens every time, because it is its own press and is never refused; closing it
+without choosing says nothing and leaves the picture on screen; sending it works.
+Step 5 — the picture saves from press-and-hold alone, with no button involved.
+Step 6 — the saved copy contains every section of the report and the method statement, ends with
+the site line, and nothing is cut off at the bottom. It carries no area coordinates: where the
+areas would be, it says how many areas were recorded and why they were left out. The area count
+tile and the countries are still there, and every other number matches the screen. **Done** puts
+the picture away and brings the button back.
 **If it fails:** a sentence in red under the button, with the dashboard still there. Never a blank
 page and never a dead file view.
 **Result:** web ☐ mobile ☐ installed app ☐ — notes:

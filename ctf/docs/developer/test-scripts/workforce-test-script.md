@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the whole screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview |
 
 ## How to run this
 
@@ -68,7 +68,7 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
 Recruited = the count of all active Directory members, with "% of goal" beneath it. That percentage
 is printed with as many decimal places as it needs — one decimal above 1%, more below it — so any
 count of 1 or more reads as a real fraction of a percent (100 recruited → "0.005% of goal", 384 →
-"0.019%", 1,000 → "0.05%", 20,000 → "1%"). It reads "0% of goal" only when nobody is recruited. Skills Coverage shows a whole-number percent
+"0.019%", 1,000 → "0.05%", 20,000 → "1%"). It reads "0% of goal" only when nobody is recruited. Skills Coverage shows an integer percent
 with "{listed} of {catalog} skills" beneath — both numbers live: listed = the count of DIFFERENT
 skills at least one active Directory member has listed; catalog = the current count of ALL active
 skills in the Skills Taxonomy (not a hardcoded figure — adding or removing a taxonomy skill moves
@@ -215,7 +215,7 @@ reopen. On **web**, each member name is a link that opens that member's Director
 never public.
 **Result:** web ☐ mobile ☐ — notes:
 
-### WF-11 · The page itself scrolls (Safari "Full Page" screenshot captures the whole screen)
+### WF-11 · The page itself scrolls (Safari "Full Page" screenshot captures the entire screen)
 **Role:** member · **Surfaces:** all
 **Steps:**
 1. Open the Workforce dashboard on iOS Safari, signed in, on a view long enough to run past the
@@ -224,7 +224,7 @@ never public.
    underneath it.
 3. Take a screenshot, tap the preview, and choose **Full Page**.
 4. Repeat on the Occupations tab and the Community tab.
-**Expected:** The whole page scrolls — there is no separate scrolling box inside the screen, and the
+**Expected:** The entire page scrolls — there is no separate scrolling box inside the screen, and the
 browser's own address bar hides and shows as you scroll, the way it does on the knowledge library.
 The header and tab row stay pinned to the top while the content moves under them. The screenshot
 preview offers a **Full Page** option and it captures the screen all the way to the bottom of the
@@ -306,7 +306,7 @@ read it.
 ### WF-A3 · No sync / recompute / export / occupation-edit controls
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. Scan the whole admin surface for any sync, recompute, export, or occupation create/edit/delete
+1. Scan the entire admin surface for any sync, recompute, export, or occupation create/edit/delete
    control.
 **Expected:** None exist — Workforce is read-only and recruited derives live, so there is nothing to
 recompute, sync, or export, and occupations are read from Skills Taxonomy (no occupation write

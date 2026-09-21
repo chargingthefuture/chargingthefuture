@@ -54,8 +54,8 @@ export type StreamVideoUsageSummary = {
 // negative values are dropped rather than written, so a caller can pass the result of a capped
 // subtraction without checking it first.
 export async function recordStreamVideoUsage(client: PoolClient, surface: string, seconds: number): Promise<void> {
-  const whole = Math.floor(seconds);
-  if (!Number.isFinite(whole) || whole <= 0) {
+  const entire = Math.floor(seconds);
+  if (!Number.isFinite(entire) || entire <= 0) {
     return;
   }
   await client.query(
@@ -67,7 +67,7 @@ export async function recordStreamVideoUsage(client: PoolClient, surface: string
         participant_seconds = stream_video_usage_daily.participant_seconds + EXCLUDED.participant_seconds,
         updated_at = NOW()
     `,
-    [surface, whole],
+    [surface, entire],
   );
 }
 

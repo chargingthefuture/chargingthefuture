@@ -2,7 +2,7 @@ import { MUTUAL_TIME_SLOT_MINUTES, MUTUAL_TIME_SLOTS_PER_DAY } from './constants
 
 // Pure candidate-slot logic (no DB, no timezone assumptions) shared by the server (validation +
 // result computation) and the client (rendering). A candidate slot is the UTC start of a one-hour
-// meeting window, snapped to the half-hour. The full set spans window_days days — the whole 24h of
+// meeting window, snapped to the half-hour. The full set spans window_days days — the entire 24h of
 // each day, so a voter in ANY timezone can find their free hour. While a survey is open the set rolls
 // forward from now (see rollingWindowStartMs); a closed survey keeps the fixed window anchored at its
 // stored window_start_date. Each voter's UI renders these UTC instants in their

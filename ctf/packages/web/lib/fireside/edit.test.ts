@@ -64,7 +64,7 @@ describe('refuseEdit', () => {
   });
 
   // A removal is somebody's decision about that comment; a closed thread is a decision about the
-  // whole room. The comment's own state is answered first so the message names the nearer reason.
+  // entire room. The comment's own state is answered first so the message names the nearer reason.
   it('names the removal rather than the closed thread when both hold', () => {
     expect(refuseEdit({ status: 'removed', threadIsClosed: true })).toBe('removed_by_admin');
   });

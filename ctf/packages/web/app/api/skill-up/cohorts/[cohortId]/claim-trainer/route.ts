@@ -21,7 +21,7 @@ const INELIGIBLE_MESSAGE: Record<ClaimIneligibleReason, string> = {
 // A trainer claims a cohort that has no trainer yet (owner decision 2026-08-29). There is no
 // pre-assigned trainer role any more: eligibility is whether the person's claimed Directory profile
 // holds a skill belonging to the occupation this cohort trains. Read access plus that match is the
-// whole gate, which is what takes the owner out of the approval loop.
+// entire gate, which is what takes the owner out of the approval loop.
 export async function POST(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {

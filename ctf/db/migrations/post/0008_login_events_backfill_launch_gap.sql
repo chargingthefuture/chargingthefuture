@@ -1,6 +1,6 @@
 -- post/0008: Rebuild the sign-in days that nothing recorded between v2 stopping and v3 starting.
 --
--- `login_events` is the whole definition of an active member (owner decision, 2026-08-27): a member
+-- `login_events` is the entire definition of an active member (owner decision, 2026-08-27): a member
 -- is active on a day the sign-in record holds a row for them, whatever they opened next. The record
 -- carries real history from v2 — its first row is 2025-12-15 — but it has a hole. v2 wrote its last
 -- row on 2026-05-26 and v3's writer did not exist until 2026-06-19, so for 23 days nothing wrote
@@ -146,7 +146,7 @@ BEGIN
   -- for an account the identity mirror still holds. The command trails outlive that mirror: an
   -- account deleted since the gap leaves its audit rows behind, and those rows are evidence of a
   -- session that did happen but whose member is gone. Inserting for them is both impossible and
-  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the whole
+  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the entire
   -- statement and wrote nothing at all. Reported, not silent: a skipped day is a real day that
   -- cannot be recovered, and the operator should see the count.
   IF to_regclass('public.users') IS NOT NULL THEN

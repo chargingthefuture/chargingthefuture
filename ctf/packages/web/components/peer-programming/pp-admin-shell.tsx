@@ -157,7 +157,7 @@ function usePeerProgrammingAdmin(): AdminData {
     setMode(data.mode ?? null);
   }, []);
 
-  // The feedback inbox is best-effort: a failure leaves it empty rather than failing the whole admin
+  // The feedback inbox is best-effort: a failure leaves it empty rather than failing the entire admin
   // page (the topic/cohort tools must still load).
   const loadFeedback = useCallback(async () => {
     try {

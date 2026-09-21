@@ -259,7 +259,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   hand, and Weekly Performance keeps the refresh button it already had. The refresh resets in-screen
   state (open tab, filter chips, typed search), which is what closing and reopening the app did.
   The `/admin` landing's own refresh button, added 2026-07-27, was folded into this shared control,
-  and the two screens that had already grown their own whole-screen Refresh in the page body —
+  and the two screens that had already grown their own full-screen Refresh in the page body —
   Recurring Activity Review and the Quora deletion survey admin — dropped theirs so no admin
   screen shows two. Quora Live Census keeps its Refresh: it re-reads the open run, not the screen.
 
@@ -717,7 +717,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   the shared packages, and the native app's own modules. Cross-cutting, no schema/contract/route change.
   - Rule 137 gained points 13–15: a catch that does work records the reason (`reportError` in
     `web/lib/**` and the native app, `console.error` in a script — a script that fails silently and exits
-    0 is the worst case for anyone debugging it); a catch whose whole body is one `return` or one
+    0 is the worst case for anyone debugging it); a catch whose entire body is one `return` or one
     assignment is fine as it is, because producing the alternative value is its job and the caller sees
     it; and an empty catch must state why in the code as `no-trace: <reason>`, so a deliberate silence is
     visible and greppable instead of invisible. A bare `// ignore` no longer passes.

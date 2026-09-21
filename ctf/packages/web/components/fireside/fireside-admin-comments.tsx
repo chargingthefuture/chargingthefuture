@@ -90,7 +90,7 @@ function Row({
 }
 
 // Searching the comment bodies. Submitted rather than searched-as-you-type: each press of a key
-// would be a query against the whole table, and a moderator looking for one comment knows what they
+// would be a query against the entire table, and a moderator looking for one comment knows what they
 // are looking for before they start.
 function SearchBox({
   t,
@@ -138,7 +138,7 @@ function SearchBox({
 export function FiresideAdminComments({ t }: { t: PluginShellTokens }) {
   const [page, setPage] = useUrlPage("comments");
   // `draft` is what is typed; `query` is what was actually searched for. Keeping them apart is why
-  // typing does not fire a query against the whole table on every keystroke.
+  // typing does not fire a query against the entire table on every keystroke.
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [comments, setComments] = useState<AdminComment[]>([]);

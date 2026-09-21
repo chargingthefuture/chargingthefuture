@@ -72,7 +72,7 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   // both places; light enough to pass at 6.91:1 on the page and 7.69:1 for the black label on a
   // filled button. Without an entry here Fireside fell back to the neutral gray #6B7280, which is
   // 3.90:1 — every control on the screen was painted in a color that fails AA, which is most of
-  // why the whole page read as washed out (owner report, 2026-09-14).
+  // why the entire page read as washed out (owner report, 2026-09-14).
   fireside: { standard: '#F4794F', comic: '#7A3320' },
 };
 

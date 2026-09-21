@@ -141,7 +141,7 @@ export function RecurringActivityAdminShell() {
               <div style={{ fontSize: 22, fontWeight: 800, color: ACCENT }}>{review.activeArrangementCount.toLocaleString()}</div>
               {review.truncated ? (
                 <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6 }}>
-                  Only the most recent arrangements were read — this is a partial picture, not the whole one.
+                  Only the most recent arrangements were read — this is a partial picture, not the full one.
                 </div>
               ) : null}
             </Card>

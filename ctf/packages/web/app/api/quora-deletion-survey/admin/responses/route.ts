@@ -12,7 +12,7 @@ import {
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// How many responses the admin list loads at once. High enough that the whole set is on screen
+// How many responses the admin list loads at once. High enough that the entire set is on screen
 // for a long time to come; the CSV export is the path for anything larger.
 const ADMIN_LIST_LIMIT = 500;
 

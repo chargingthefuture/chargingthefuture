@@ -150,7 +150,7 @@ Every admin action is recorded, on every surface, from the day the surface ships
 lets the owner check their own admins — including themselves — and it is the reason an admin surface
 can offer every action on every row instead of withholding some to prevent misuse.
 
-A console line is not a record. Several surfaces have a lib/<plugin>/audit.ts that builds the whole
+A console line is not a record. Several surfaces have a lib/<plugin>/audit.ts that builds the entire
 contract-shaped event and ends in console.info: nothing can query it, no screen can show it, and it
 ages out of the host's log retention. Route it to a table instead.
 

@@ -1,4 +1,4 @@
-// Stream setup for the Chyme guest listener — the whole of it, done from code.
+// Stream setup for the Chyme guest listener — all of it, done from code.
 //
 // Why this exists: when CHYME_GUEST_STREAM_ROLE is set, every signed-out listener is minted as a
 // Stream user with that role, and Stream refuses the join unless (1) the role exists in the app and

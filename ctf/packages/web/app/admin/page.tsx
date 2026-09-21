@@ -58,6 +58,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/fireside', name: 'Fireside' },
   { href: '/admin/foundation', name: 'Foundation' },
   { href: '/admin/skill-up', name: 'SkillUp' },
+  // GDP's only admin surface, and it holds one control: the picture of the report to post. The
+  // index itself is live with no publish step, so nothing here changes a figure.
+  { href: '/admin/gdp', name: 'GDP' },
   { href: '/admin/lighthouse', name: 'LightHouse' },
   // Read-only review of who confirms whose recurring arrangements — the two-sided confirmation rule
   // stops one member inflating their own standing, not a small group confirming each other's.

@@ -6,7 +6,7 @@
 //   - `exportServiceData(slug, userId)` — one plugin's data for this user.
 //   - `exportAllAccountData(userId)`    — every plugin the registry knows, in one document.
 //
-// Both run the registry-derived SELECT plan inside a single `withDbTransaction`, so the whole file
+// Both run the registry-derived SELECT plan inside a single `withDbTransaction`, so the entire file
 // is one consistent snapshot. Read-only: nothing here writes, and the audit line is the only side
 // effect (emitted by the routes). Unlike deletion, export does NOT require `serviceScopeSupported` —
 // that flag is about standalone *deletion* semantics; any registry entry with at least one
@@ -70,7 +70,7 @@ export async function exportServiceData(slug: string, userId: string): Promise<A
 /**
  * Export every service's data for a user in one document. Only registry entries with at least one
  * user-scoped table appear (the others have nothing a personal export can read). One transaction,
- * so the whole file is a consistent snapshot.
+ * so the entire file is a consistent snapshot.
  */
 export async function exportAllAccountData(userId: string): Promise<AccountExportDocument> {
   const entries = accountDeletionRegistry.filter(isExportable);

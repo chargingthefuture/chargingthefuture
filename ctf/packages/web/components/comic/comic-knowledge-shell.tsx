@@ -27,7 +27,7 @@ import { QuoraExportFaqSection } from './comic-quora-export-faq';
 // come apart.
 //
 // Each clause is its own checkbox. There is deliberately no single "I agree to all of the above":
-// the whole point is that six short statements get read, and one box makes that skippable.
+// the point is that six short statements get read, and one box makes that skippable.
 
 type LinkedPostDraft = { url: string; text: string };
 
@@ -58,7 +58,7 @@ const STATUS_LABEL: Record<ContributionSummary['status'], string> = {
 
 // Links is the DEFAULT. Most people's public writing is mixed — dating, politics, faith, memes —
 // and nothing here sorts on-topic from off-topic automatically, so picking a few posts is both far
-// less work for the reviewer and a more honest consent than handing over a whole account.
+// less work for the reviewer and a more honest consent than handing over a full account.
 const MODE_OPTIONS: { value: Mode; label: string; hint: string }[] = [
   {
     value: 'links',
@@ -67,7 +67,7 @@ const MODE_OPTIONS: { value: Mode; label: string; hint: string }[] = [
   },
   {
     value: 'export',
-    label: 'Send my whole Quora export',
+    label: 'Send my full Quora export',
     hint: 'Better if nearly everything you have written publicly is on this subject. Your private messages and drafts are stripped out automatically on arrival.',
   },
 ];
@@ -733,7 +733,7 @@ function PostEditor({
         disabled={!allAgreed}
         onChange={(event) => onUpdate(index, 'text', event.target.value)}
         rows={6}
-        placeholder="Paste the whole post here"
+        placeholder="Paste the entire post here"
         style={{ ...fieldStyle(t), marginTop: 8, resize: 'vertical' }}
       />
     </div>

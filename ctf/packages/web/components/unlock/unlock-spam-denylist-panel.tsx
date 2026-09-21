@@ -9,7 +9,7 @@ import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
 import { failureText } from 'lib/errors/client-failure';
 
 // The panel's one visible line when it is closed: title, how many URLs are on the list, and the
-// open/close control. The whole row is the button so it is easy to hit on a phone.
+// open/close control. The entire row is the button so it is easy to hit on a phone.
 function DenylistHeader({
   t,
   open,

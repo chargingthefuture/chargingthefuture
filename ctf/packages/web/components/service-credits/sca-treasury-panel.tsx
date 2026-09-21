@@ -87,7 +87,7 @@ function TreasuryPolicyEditor({
             label="Save policy"
             busy={busy}
             onConfirm={onSave}
-            summary="Replace the stored treasury policy with the JSON above. This overwrites the whole policy object."
+            summary="Replace the stored treasury policy with the JSON above. This overwrites the entire policy object."
           />
         </>
       )}

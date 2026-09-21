@@ -10,7 +10,7 @@ import {
   FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS,
 } from "@/lib/foundation/constants";
 
-// Whole ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
+// Entire ServiceCredits per block of N minutes, e.g. "5 ServiceCredits / 10 min". ServiceCredits is
 // one joined word per the brand lexicon. The amount is only rendered when the provider has a valid
 // rate set; the caller already gates on instantCallEnabled + a numeric rate.
 export function instantCallRateLabel(rateCredits: number, intervalMinutes: number): string {
@@ -19,7 +19,7 @@ export function instantCallRateLabel(rateCredits: number, intervalMinutes: numbe
 }
 
 // True when this provider is reachable for an instant call at all: they opted in and set a valid
-// whole-credit rate (>= 1). This is viewer-independent — it's used to surface a passive "accepts
+// integer-credit rate (>= 1). This is viewer-independent — it's used to surface a passive "accepts
 // 1:1 calls" badge to everyone, including the provider themselves (so they can confirm their own
 // setting is live). The actionable "Connect now" button uses canOfferConnectNow instead.
 export function acceptsInstantCalls(provider: ProviderView): boolean {

@@ -6,10 +6,10 @@ import { logAccountAudit } from 'lib/account/audit';
 import { checkRateLimit } from 'lib/security/rate-limit';
 import { reportError } from 'lib/observability/report';
 
-// Whole-account JSON data export — the read-side twin of DELETE /api/account/full-account
+// Full-account JSON data export — the read-side twin of DELETE /api/account/full-account
 // (issue #1264). Walks every service in the account deletion registry and returns all of this
 // member's own rows in one downloadable, self-describing JSON document (one consistent snapshot —
-// the whole read runs in a single transaction). Read-only; nothing is changed.
+// the entire read runs in a single transaction). Read-only; nothing is changed.
 //
 // A member can only ever export their own data: the registry-derived SELECTs always bind the
 // authenticated user id as $1 (validated without a DB by ctf/scripts/check-export-engine.mjs).

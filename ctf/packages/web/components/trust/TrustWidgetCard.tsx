@@ -14,7 +14,7 @@
 //
 // On the member's own card the body is two labeled sections — "Your trust" (their signals, all of
 // them) then "What members see" (the rows another member actually receives). That comparison is the
-// card's whole job on the account page: this is yours, that is theirs. On another member's card
+// card's entire job on the account page: this is yours, that is theirs. On another member's card
 // there is one list and no comparison to draw.
 import React from "react";
 import { ShieldCheck } from "lucide-react";

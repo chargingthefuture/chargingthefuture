@@ -3,7 +3,7 @@
 // seedSkillsTaxonomy.mjs via the owner-run workflow (.github/workflows/seed-skills-taxonomy.yml).
 //
 // Design (owner decisions 2026-07-03 — see ctf/docs/developer/SKILLS_TAXONOMY_CHANGE_GOVERNANCE_PLAN.md):
-// - Replays the whole list in one transaction, in order. Every change is NATURALLY IDEMPOTENT: an entry
+// - Replays the entire list in one transaction, in order. Every change is NATURALLY IDEMPOTENT: an entry
 //   whose end state already holds writes nothing, so re-running the full list is always safe and a
 //   reseed can never resurrect a deactivated row (deactivation is itself an entry in the list).
 // - NO HARD DELETE. Deactivate/reactivate flip is_active; reparent moves a skill row's
@@ -288,7 +288,7 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
           // beside "Photographers / Videographers" - and each split one role's holders across two
           // rows that neither Workforce nor the Directory joins back together. The change list's
           // static check cannot see this: the live rows are in the database, not the repo. Here they
-          // are visible, so refuse rather than create the second row. Failing the whole run is the
+          // are visible, so refuse rather than create the second row. Failing the entire run is the
           // point - the transaction rolls back, nothing partial lands, and the change is corrected
           // in a PR instead of being cleaned up afterwards across nine more changes.
           // The id check is repeated here only to skip the extra query for changes the guard does
@@ -669,7 +669,7 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
           );
           // 'update', not a new verb: skills_taxonomy_change_events.action is check-constrained to
           // create/update/delete/rename/reparent/deactivate/reactivate, and a value outside it is
-          // rejected at apply time and rolls the whole run back. The specificity belongs in reason
+          // rejected at apply time and rolls the entire run back. The specificity belongs in reason
           // and metadata, which is what they are for.
           await recordChangeEvent(client, {
             targetType: 'job-title', targetId: jobTitle.id, action: 'update',

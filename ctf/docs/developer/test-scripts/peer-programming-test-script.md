@@ -12,7 +12,7 @@
 | **Surfaces** | web only (`/apps/peer-programming`, `/admin/peer-programming`) — no Android surface |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
-| **Generated** | 2026-07-18 (commit 34badcbb) |
+| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
 
 ---
 

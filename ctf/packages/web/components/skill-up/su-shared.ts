@@ -199,7 +199,7 @@ export function trackRepeatsTitle(title: string | null | undefined, track: strin
 //
 // Where the numbers come from, all in `releaseMilestoneCredits` (lib/skill-up/repository.ts):
 //   - The learner's deposit is held in escrow per milestone and released back to them IN FULL as
-//     each milestone is validated, so a learner who finishes gets their whole deposit back. It is
+//     each milestone is validated, so a learner who finishes gets their entire deposit back. It is
 //     held, not consumed.
 //   - The trainer is granted the cohort's flat `trainer_credits_per_milestone` on each release —
 //     newly issued credits, not a slice of the learner's deposit, and not a function of it. Over a

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   try {
     const review = await reviewRecurringActivityForCollusion();
 
-    // Resolve the ids on the flagged rows only — never the whole roster — so the reviewer sees who is
+    // Resolve the ids on the flagged rows only — never the entire roster — so the reviewer sees who is
     // involved without this becoming a member directory.
     const involved = new Set<string>();
     review.reciprocalPairs.forEach((pair) => { involved.add(pair.userA); involved.add(pair.userB); });

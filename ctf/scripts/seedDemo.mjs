@@ -1162,7 +1162,7 @@ async function seedWhatWorks(c) {
     // Upsert on the natural key (slug) — the table has a UNIQUE(slug) index, and a
     // row for this slug may already exist with a different id (e.g. from the
     // standalone seedWhatWorks.mjs, which mints ids a different way). Conflicting
-    // on id alone missed that and crashed the whole seed on the slug constraint.
+    // on id alone missed that and crashed the entire seed on the slug constraint.
     // RETURNING id gives us the row's ACTUAL id to hang products off, whether the
     // row was just inserted or already existed.
     const problemRes = await c.query(
@@ -1334,7 +1334,7 @@ async function main() {
     await client.query('BEGIN');
 
     // One named entry per step so a failure says which step it was (rule 137).
-    // The whole seed runs in one transaction, so the first failure ends the run;
+    // The entire seed runs in one transaction, so the first failure ends the run;
     // without the name, the thrown Postgres error ("column x does not exist")
     // does not say which of the twenty-odd plugin seeds wrote the statement.
     const steps = [

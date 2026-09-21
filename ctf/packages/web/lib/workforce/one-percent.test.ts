@@ -16,7 +16,7 @@ describe('computeOnePercentReach', () => {
   });
 
   // The number this screen must never misattribute. It is what those 50,000 people contribute
-  // between them, not what the member serving them earns — a thousandfold difference, and the whole
+  // between them, not what the member serving them earns — a thousandfold difference, and the entire
   // reason the field is named activityTheyGenerateUsd rather than anything with "your" in it.
   it('sizes the room those people occupy, at the benchmark the overview already states', () => {
     const reach = computeOnePercentReach();
@@ -88,7 +88,7 @@ describe('computeTradeLoad', () => {
   const reach = computeOnePercentReach();
 
   // The weight that makes this screen per-person. Two trades the model needs different numbers of
-  // land on different figures, which is the whole reason it is derived from the demand model rather
+  // land on different figures, which is the reason it is derived from the demand model rather
   // than shown as one ladder to everybody.
   it('inverts the demand model into people served by one practitioner', () => {
     const load = computeTradeLoad({ occupationName: 'Plumber', practitionersNeeded: 4_000, reach });

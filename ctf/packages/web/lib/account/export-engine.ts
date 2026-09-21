@@ -50,7 +50,7 @@ export function planTableExport(owned: OwnedTable): ExportStatement | null {
 }
 
 /**
- * Pure plan for a whole plugin entry: the ordered list of read statements (unscoped `retain`
+ * Pure plan for an entire plugin entry: the ordered list of read statements (unscoped `retain`
  * tables dropped), in registry order.
  */
 export function planExport(entry: PluginDeletionEntry): ExportStatement[] {

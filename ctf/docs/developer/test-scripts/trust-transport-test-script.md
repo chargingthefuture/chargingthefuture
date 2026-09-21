@@ -98,7 +98,7 @@ Result: web ☐
 
 **Steps:**
 1. Open the booking surface, select **Ride**, and enter origin and destination.
-2. Set the settlement type to **ServiceCredits** and enter the whole value of the ride (e.g. 20).
+2. Set the settlement type to **ServiceCredits** and enter the entire value of the ride (e.g. 20).
 3. In the **Accepted currencies** checkbox list below the amount, check **ServiceCredits** and
    **United States Dollar ($)** (the same checkbox pattern as the LightHouse listing form).
 4. Submit, then open the **Track** tab.
@@ -417,13 +417,13 @@ Result: web ☐
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 TrustTransport trip message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
-1. As that member, send a trip-thread message, then delete the whole account
+1. As that member, send a trip-thread message, then delete the entire account
    (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path).
 2. In the Stream dashboard, look up the member's Stream user `trust-transport-<userId>` and their messages
    in the `trust-transport-trip-<tripId>` channel.
 **Expected:** After the delete, the member's Postgres rows are gone **and** their Stream user
 `trust-transport-<userId>` is hard-deleted with messages marked deleted — no lingering Stream copy. This
-runs via the shared account-deletion external-cleanup hook, so it fires on every whole-account path. If
+runs via the shared account-deletion external-cleanup hook, so it fires on every full-account path. If
 Stream is down at delete time, the deletion still succeeds and the failure is logged for retry — since
 2026-09-18 with Stream's own reason (Sentry op `stream_delete_user`, area `trust-transport`).
 **Result:** web ☐ mobile ☐ — notes:

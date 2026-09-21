@@ -60,7 +60,7 @@ the tests worth running slowly.
    post**, and fill the second. Send.
 
 **Expected:**
-- **"Pick a few posts" is selected by default** — the whole-export option is there but is not the
+- **"Pick a few posts" is selected by default** — the full-export option is there but is not the
   starting point. Most people's writing is mixed, and only the author can say which posts belong.
 - At step 3 the link and text boxes are **disabled**, with "Tick all six consent lines above to add
   your posts." Consent always comes before the content, never after.
@@ -85,7 +85,7 @@ the tests worth running slowly.
 **Expected:**
 - Step 1 → refused, "Post 1 needs a link to the post on Quora."
 - Step 2 → refused as a duplicate link.
-- Step 3 → refused with "Paste the whole post — a line or two is not enough for the assistant to
+- Step 3 → refused with "Paste the entire post — a line or two is not enough for the assistant to
   answer from." (Not a quality judgment — the reviewer would only discard it, so saying so now saves
   the contributor the wait.)
 - Step 4 → each row has the pasted text in `content` and the link in `source_url`. Contact details
@@ -103,9 +103,9 @@ the tests worth running slowly.
 **Precondition:** none — no export or upload is needed for this check.
 
 **Steps:**
-1. Open `/knowledge`, choose **Send my whole Quora export**, and read the line under the two
+1. Open `/knowledge`, choose **Send my full Quora export**, and read the line under the two
    options and then the card **Getting a copy of your Quora data**.
-2. Switch between **Pick a few posts** and **Send my whole Quora export**.
+2. Switch between **Pick a few posts** and **Send my full Quora export**.
 3. Tap the `privacy@quora.com` address, then **Open the original page**.
 
 **Expected:**
@@ -126,7 +126,7 @@ the tests worth running slowly.
 
 ---
 
-## CMC-C1c · Whole export (the secondary path)
+## CMC-C1c · Entire export (the secondary path)
 **Role:** signed-in member
 **Precondition:** a real Quora export `.zip`. Ask Quora for it by hand — email `privacy@quora.com`,
 or use `quora.com/contact` and choose "I want a copy of my data" — and allow up to 72 hours. There is
@@ -134,7 +134,7 @@ no settings screen that produces one; if you find this script telling you otherw
 wrong, not Quora.
 
 **Steps:**
-1. On `/knowledge`, choose **Send my whole Quora export**.
+1. On `/knowledge`, choose **Send my full Quora export**.
 2. Before ticking anything, try to choose a file.
 3. Tick all six consent lines, then choose the `.zip` and send it.
 
@@ -330,7 +330,7 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 **Expected:**
 - Step 2: the file comes back in full; `markedExported` is 0 and `markSkippedReason` says preview mode. The counts on the dashboard are unchanged — a preview costs nothing.
 - Step 3: `markedExported` equals the number that was awaiting export; the dashboard now reads 0 awaiting export and that many exported.
-- Step 4: the file is identical (the export is the whole dataset, not a queue that drains) but `markedExported` is 0 — nothing is re-stamped.
+- Step 4: the file is identical (the export is the entire dataset, not a queue that drains) but `markedExported` is 0 — nothing is re-stamped.
 - Step 5: the YAML download carries `X-Marked-Exported`, counting only rows still awaiting export at that moment.
 - Step 6: the new correction shows as 1 awaiting export, and the next export moves it.
 

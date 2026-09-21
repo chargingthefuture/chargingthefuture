@@ -22,7 +22,7 @@ auditEvents:
     traceId: trace_identifier
     notes: >-
       Recorded even though it is a member action rather than an admin one. Who holds which slot is
-      the whole content of a public schedule, and a booking that later turns into a removal is only
+      the entire content of a public schedule, and a booking that later turns into a removal is only
       readable if the booking was recorded too.
   - eventId: uuid
     timestamp: rfc3339

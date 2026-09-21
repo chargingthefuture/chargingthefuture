@@ -14,9 +14,9 @@ auditable, legally-recognized bar — the standard referenced by the ADA effecti
 508, and EN 301 549. We do not claim Level AAA as a blanket guarantee: WCAG 2.2 advises against
 requiring AAA across an entire site, and several AAA criteria cannot be met for the live and recorded
 audio-video features (for example 1.2.6 Sign Language, 1.2.9 Audio-only (Live), and 1.4.6 Contrast
-7:1 across the whole palette).
+7:1 across the entire palette).
 
-Where the product can meet an individual AAA success criterion without constraining the whole
+Where the product can meet an individual AAA success criterion without constraining the entire
 experience, it does — for example 7:1 contrast on primary text and a 6th-grade reading level per the
 brand voice. These are enhancements on top of the AA target, not part of the public claim.
 

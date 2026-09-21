@@ -402,7 +402,7 @@ export function parsePaginationParams(url: string): SkillsHuntPagination {
   };
 }
 
-// Reward config is whole, non-negative ServiceCredits. Coerce defensively so a
+// Reward config is entire, non-negative ServiceCredits. Coerce defensively so a
 // stray float/NaN/negative from the client never reaches the ledger: floor to a
 // non-negative integer, and treat absent/blank as the safe default (0 / no cap).
 function normalizeRewardPerAccept(value: number | undefined): number {
@@ -1771,7 +1771,7 @@ const SUBMISSION_INSERT_ERRORS: ReadonlyArray<{ match: string; reason: string }>
 function rethrowSubmissionInsertError(error: unknown): never {
   const message = error instanceof Error ? error.message : 'unknown';
 
-  // Passed through whole rather than mapped: these carry a suffix the route reads — the reset
+  // Passed through entire rather than mapped: these carry a suffix the route reads — the reset
   // time for the weekly cap, and which round and status hold the blocking nomination.
   if (
     message.includes('skills_hunt_submission_limit_exceeded')
@@ -2056,7 +2056,7 @@ async function resolveReviewOutcome(
 
   if (input.action === 'accept' || input.action === 'edit') {
     // Before anything is scored or paid: this person may have asked to be taken down since the
-    // nomination was filed. Throwing here rolls the whole review back, so no points and no reward.
+    // nomination was filed. Throwing here rolls the entire review back, so no points and no reward.
     // The moderator can still reject or remove the submission.
     await assertQuoraUrlNotTakenDown(client, existing.quora_profile_url);
     const scored = await scoreSubmission(client, submissionId, input.action);

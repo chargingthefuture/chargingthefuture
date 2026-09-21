@@ -90,7 +90,7 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
   const [roomScope, setRoomScope] = useState<ChymeRoomScope>('main');
 
   // Keep every room the member has opened MOUNTED, and just toggle which one is visible. This is the
-  // whole fix for the old disconnect: the shell used to be keyed by scope, so switching rooms
+  // entire fix for the old disconnect: the shell used to be keyed by scope, so switching rooms
   // remounted it and tore down the live audio call. Now a room opened once stays mounted (hidden with
   // display:none) so its WebRTC connection survives a switch — a member in the main room can peek at
   // the Weavers room and come back still connected. The main room is mounted from the start; the

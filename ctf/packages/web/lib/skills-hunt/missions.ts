@@ -194,7 +194,7 @@ export async function recomputeMissionProgressForUser(
   const acceptedSubmissions = submissionsResult.rows.map(mapAcceptedSubmission);
 
   // Sector-goal matching: resolve each submission's skills to taxonomy sectors once.
-  // One query for the whole accepted set.
+  // One query for the entire accepted set.
   if (missions.some((mission) => mission.goalType === 'count_skills_in_sector')) {
     const sectorsBySkill = await mapSkillsToSectors(
       client,
@@ -384,7 +384,7 @@ function collectSectorsForSkills(
   return matched;
 }
 
-// Exported for the unit tests: this is the whole of what a mission counts, and it is the piece that
+// Exported for the unit tests: this is all of what a mission counts, and it is the piece that
 // decides whether a member reads "complete". Everything around it is I/O.
 export function computeProgressForMission(
   mission: SkillsHuntMission,

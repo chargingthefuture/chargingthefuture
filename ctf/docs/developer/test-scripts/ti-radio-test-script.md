@@ -193,7 +193,7 @@ Result: web ☐
 2. Try `POST /api/ti-radio/slots` directly with a valid empty slot.
 
 **Expected:**
-- The whole schedule renders, exactly as it does for anybody else.
+- The entire schedule renders, exactly as it does for anybody else.
 - Empty rows read "Open — approved members can host" and are not buttons.
 - One action is offered: "Finish verifying to host", pointing at Unlock.
 - The route refuses the direct call on the Unlock tier.

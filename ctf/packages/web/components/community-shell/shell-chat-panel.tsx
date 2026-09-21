@@ -157,7 +157,7 @@ function PublicCommunityPanel({ plugins }: { stats: ShellStats; plugins: PluginR
           <p className={styles.heroBannerSub}>Connect with your community. Access {implementedCount} live plugins for housing, work, safety, and support.</p>
         </div>
         {/* Stats are hidden on phones, where the three blocks filled a quarter of the first screen
-            before any community posts were visible (the authenticated panel already hides its whole
+            before any community posts were visible (the authenticated panel already hides its entire
             hero on mobile). The title + description above stay. */}
       </div>
 

@@ -3,7 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { AccountDataShell } from '@/components/account-data/account-data-shell';
 
 // Account & Data surface: the signed-in user can see the personal data the platform holds per
-// service, delete that data one service at a time, or delete their whole account. Auth posture
+// service, delete that data one service at a time, or delete their entire account. Auth posture
 // matches the account deletion API (`requireAccountAccess`): any signed-in identity, including
 // unlock-pending users, may exercise their right to be forgotten — so deletion is never gated by
 // approval state. The mutations themselves run through the live DELETE routes under /api/account/**.

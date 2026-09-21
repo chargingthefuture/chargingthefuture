@@ -56,7 +56,7 @@ async function resolveRoom(
 //
 // The roster is best-effort and must never blank the room: each name is resolved via an external
 // Clerk lookup, so if that is slow or fails the room still renders with an empty roster rather
-// than the whole page failing. It is also capped (PEER_PROGRAMMING_ROOM_ROSTER_LIMIT) because the
+// than the entire page failing. It is also capped (PEER_PROGRAMMING_ROOM_ROSTER_LIMIT) because the
 // standing cohort can hold every active member; the true total still shows as the member count.
 async function loadRoster(cohort: PeerProgrammingCohort | null): Promise<CohortMember[]> {
   if (!cohort) {

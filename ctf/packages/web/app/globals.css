@@ -101,7 +101,7 @@
  * predates those tokens: nearly every surface hardcodes its own border-radius (~1500 inline
  * `borderRadius` styles in TSX, ~150 declarations in CSS modules) rather than reading the token.
  * Left alone, comic renders round in most places while the nav is square — a patchwork look. This
- * one rule flattens the whole theme so every surface matches the nav and the theme is uniform.
+ * one rule flattens the entire theme so every surface matches the nav and the theme is uniform.
  *
  * Scoped to comic only, so the default theme is byte-for-byte unchanged. border-radius is purely
  * cosmetic (never affects layout or behavior). `!important` is required because most radii are
@@ -157,7 +157,7 @@ option {
  * `.ctf-phone-frame` column (see below) so a desktop visitor sees the mobile
  * view, larger, instead of a separate desktop design.
  *
- * The whole document scrolls at every width, exactly as it does on a phone —
+ * The entire document scrolls at every width, exactly as it does on a phone —
  * the old desktop viewport lock (height: 100vh; overflow: hidden) is gone.
  */
 html,
@@ -167,7 +167,7 @@ body {
 }
 
 /*
- * Stop iOS/WebKit from auto-zooming the whole page when a text field is focused. Mobile Safari
+ * Stop iOS/WebKit from auto-zooming the entire page when a text field is focused. Mobile Safari
  * (and the installed web app) zooms in whenever the focused input's font-size is below 16px, and
  * the zoom sticks — leaving the page magnified and clipped. Pinning form controls to at least 16px
  * prevents that jump while keeping pinch-to-zoom intact (so it stays WCAG-friendly, unlike a

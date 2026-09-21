@@ -98,7 +98,6 @@ export interface AdminDirectoryProfile {
   // Free-text "skill not listed" labels stored on the profile, pending review. Editable here so an
   // admin can record a skill the taxonomy does not carry yet (the member self-edit form does the same).
   proposedSkills?: string[];
-  isActive: boolean;
   source: ProfileSource;
   invitedByUsername: string | null;
   unclaimedHandle: string | null;
@@ -267,7 +266,7 @@ function buildListUrl(page: number, filter: FilterKey, query: string): string {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(PAGE_SIZE),
-    includeInactive: "true",
+    includeDeleted: "true",
     claimed: claimParam(filter),
   });
   const q = query.trim();
@@ -890,7 +889,7 @@ function ProfileListContent({
 
 // The invite queue, which lives on its own page because it is a different job from moderating a
 // profile: it is the list of everybody here who has no invite post on the blog yet, with their
-// skills, and a control that copies the whole thing as plain text.
+// skills, and a control that copies all of it as plain text.
 //
 // It is a row here rather than only on the admin directory landing because this is the screen
 // somebody is already on when they think about who has not been written about yet. Without it the

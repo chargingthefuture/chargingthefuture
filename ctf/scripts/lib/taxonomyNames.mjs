@@ -26,7 +26,7 @@ export function normalizeTaxonomyName(value) {
 // common, comparing singular forms. A name is split on "/" into segments, because the live
 // convention writes compound occupations that way ("Photographers / Videographers",
 // "Software Engineers / Developers"), and it was exactly such a compound that hid the last twin
-// from a whole-string comparison. Parenthetical glosses are dropped ("Plumbers (construction)" is
+// from a full-string comparison. Parenthetical glosses are dropped ("Plumbers (construction)" is
 // a plumber).
 //
 // Deliberately imperfect, in the safe direction. "Graphic / Visual Designers" yields the tokens

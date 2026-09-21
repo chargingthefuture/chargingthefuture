@@ -6,7 +6,7 @@
   broadcast call with `recording: { mode: 'available' }` and nothing else. Stream rejects that with a
   400 — `GetOrCreateCall failed with error: "recording quality is required when audio_only is false
   and recording is enabled"` — because a video recording has to say what picture size it records at.
-  The rejection killed the whole get-or-create, so the call was never created and the admin screen
+  The rejection killed the entire get-or-create, so the call was never created and the admin screen
   showed "Broadcast input unavailable". The create request in
   `ctf/packages/web/lib/beacon/stream.ts` now states the two values Stream validates as a pair:
   `audio_only: false` and `quality: '720p'`.

@@ -12,7 +12,7 @@ import {
   QUORA_PRIVACY_EMAIL,
 } from '../../lib/comic/quora-export-help';
 
-// The questions a member asks before they can send a whole Quora export: how do I get one, how long
+// The questions a member asks before they can send a full Quora export: how do I get one, how long
 // does it take, what do I send.
 //
 // Getting the archive happens entirely on Quora's side, so the answer is Quora's own instructions
@@ -52,7 +52,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
 ];
 
-// The tokens come from the parent because the whole page shares one theme read.
+// The tokens come from the parent because the entire page shares one theme read.
 export function QuoraExportFaqSection({ t }: { t: ComicTokens }) {
   return (
     <section style={cardStyle(t)}>
