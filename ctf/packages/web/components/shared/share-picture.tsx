@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Download, Image as ImageIcon, Share2, X } from "lucide-react";
+import { Image as ImageIcon, Share2, X } from "lucide-react";
 import { reportError } from "lib/observability/report";
 
-// THE shared way to hand a server-drawn picture to the person looking at the screen.
+// THE shared way to hand a server-drawn picture to the person looking at the screen — the
+// picture counterpart of ShareLink, and named to match it. See
+// .claude/rules/130-link-sharing-and-copy-url-rules.mdc.
 //
 // Three attempts got here, and the two that failed are worth keeping written down, because each
 // one looked obviously correct.
@@ -24,23 +26,22 @@ import { reportError } from "lib/observability/report";
 // The result was "Safari can't open the page … WebKitBlobResource error 1", a dead page again.
 //
 // So this no longer tries to hand the file anywhere off the back of the press that fetched it.
-// The picture is fetched and then **shown on the screen it was asked for from**, and the ways to
-// keep it sit under it as their own controls:
+// The picture is fetched and then **shown on the screen it was asked for from**, and there are two
+// ways to keep it:
 //
-//   * Press and hold the picture — the iOS way to put an image in the photo library, and it needs
-//     nothing from us.
-//   * Share, where the browser has a share sheet that takes files. Its own press, so the
-//     activation is fresh and Safari has no reason to refuse.
-//   * Save the file, for a desktop browser. The blob URL it uses is revoked a minute later rather
-//     than on the next line, because the browser reads it after the click, not before.
+//   * Share, where the browser has a share sheet that takes files. It is its own press, so the
+//     activation is fresh and Safari has no reason to refuse it, and the sheet opens over the app
+//     rather than replacing it. This is the one the owner uses and the one to build on.
+//   * Press and hold the picture — how an image goes into the photo library on a phone, and a
+//     right-click does the same on a computer. It needs no code from us, so it is a line in the
+//     note rather than a button.
+//
+// There was a third: a "Save the file" button that clicked a blob-URL anchor. It is gone (owner
+// directive, 2026-09-20) because on a phone it does not do what its label says, and Share already
+// covers every case a person has. Do not add it back.
 //
 // Nothing navigates on any path, so there is never anything to come back from, and the picture is
-// on screen either way — which is most of what was wanted.
-
-// How long a blob URL is left alive after a save is started. The browser reads it asynchronously,
-// so revoking it immediately is what produced WebKitBlobResource error 1; a minute is far longer
-// than any read needs and the URL dies with the tab regardless.
-const BLOB_LIFETIME_MS = 60_000;
+// on screen either way.
 
 function isDismissedByPerson(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
@@ -158,10 +159,9 @@ function DrawButton({ label, busy, busyLabel, accent, onAccent, onPress }: {
   );
 }
 
-// The picture itself, on the screen that asked for it, with the three ways to keep it underneath.
-// Press and hold is the one that needs no code and no permission — it is how a picture goes into
-// the photo library on a phone — so it leads the note.
-function PicturePanel({ ready, filename, accent, border, muted, shareNote, canShare, onShare, onSaveFile, onClose }: {
+// The picture itself, on the screen that asked for it, with Share under it. Press and hold is the
+// other way and needs no code at all, so the note names it rather than a button doing it.
+function PicturePanel({ ready, filename, accent, border, muted, shareNote, canShare, onShare, onClose }: {
   ready: Ready;
   filename: string;
   accent: string;
@@ -170,7 +170,6 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
   shareNote: string | null;
   canShare: boolean;
   onShare: () => void;
-  onSaveFile: () => void;
   onClose: () => void;
 }) {
   return (
@@ -185,8 +184,8 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
         style={{ display: "block", width: "100%", height: "auto", borderRadius: 10, border: `1px solid ${border}` }}
       />
       <div style={{ fontSize: 12, color: muted, marginTop: 10, lineHeight: 1.5 }}>
-        On a phone, press and hold the picture to save it to your photos. On a computer, use Save
-        the file.
+        Use Share to send it somewhere or save it to your photos. You can also press and hold the
+        picture on a phone, or right-click it on a computer, and save it from there.
       </div>
       {shareNote && (
         <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginTop: 8, lineHeight: 1.5 }}>
@@ -200,10 +199,6 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
             Share
           </button>
         )}
-        <button type="button" onClick={onSaveFile} style={secondaryButtonStyle(border, muted)}>
-          <Download size={14} />
-          Save the file
-        </button>
         <button type="button" onClick={onClose} style={secondaryButtonStyle(border, muted)}>
           <X size={14} />
           Done
@@ -213,7 +208,7 @@ function PicturePanel({ ready, filename, accent, border, muted, shareNote, canSh
   );
 }
 
-export function SaveImageButton({
+export function SharePicture({
   url,
   filename,
   label,
@@ -281,18 +276,6 @@ export function SaveImageButton({
     }
   }, [area, op, filename]);
 
-  const saveFile = useCallback((objectUrl: string) => {
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    // Not revoked here: the browser reads the URL after the click, and revoking on this line is
-    // what produced WebKitBlobResource error 1 on iOS. The unmount cleanup above is the backstop.
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), BLOB_LIFETIME_MS);
-  }, [filename]);
-
   const close = useCallback(() => {
     setReady(null);
     setShareNote(null);
@@ -338,7 +321,6 @@ export function SaveImageButton({
           shareNote={shareNote}
           canShare={canShare}
           onShare={() => void share(ready.file)}
-          onSaveFile={() => saveFile(ready.objectUrl)}
           onClose={close}
         />
       )}
