@@ -72,13 +72,12 @@ export async function GET(request: Request) {
 
   const pagination = parsePaginationParams(request.url);
   const params = new URL(request.url).searchParams;
-  const includeDeleted = params.get('includeDeleted') === 'true';
   // Search and the claim filter are applied in the database so both cover every profile in the
   // collection, not only the page currently on screen.
   const filters = { q: params.get('q'), claimed: parseClaimFilter(params.get('claimed')) };
 
   try {
-    const payload = await listAdminProfiles(pagination, includeDeleted, filters);
+    const payload = await listAdminProfiles(pagination, filters);
     return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles' });

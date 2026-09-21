@@ -266,7 +266,6 @@ function buildListUrl(page: number, filter: FilterKey, query: string): string {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(PAGE_SIZE),
-    includeDeleted: "true",
     claimed: claimParam(filter),
   });
   const q = query.trim();

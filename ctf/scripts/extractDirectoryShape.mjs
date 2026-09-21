@@ -90,7 +90,6 @@ async function fetchSkillsPerProfile(pool) {
     FROM directory_profiles dp
     LEFT JOIN directory_profile_skills dps ON dps.profile_id::text = dp.id::text
     LEFT JOIN skills_taxonomy_skills sk ON sk.id::text = dps.skill_id::text AND sk.is_active = TRUE
-    WHERE dp.deleted_at IS NULL
     GROUP BY dp.id
   `);
   return rows;
@@ -103,7 +102,7 @@ async function fetchSectorFrequency(pool) {
   const { rows } = await pool.query(`
     SELECT s.name AS sector, COUNT(*)::int AS holdings
     FROM directory_profile_skills dps
-    JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text AND dp.deleted_at IS NULL
+    JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text
     JOIN skills_taxonomy_skills sk ON sk.id::text = dps.skill_id::text AND sk.is_active = TRUE
     JOIN skills_taxonomy_job_titles jt ON jt.id::text = sk.job_title_id::text
     JOIN skills_taxonomy_sectors s ON s.id::text = jt.sector_id::text
@@ -122,7 +121,7 @@ async function fetchSectorPairs(pool) {
     FROM (
       SELECT DISTINCT dps.profile_id, s.name AS sector
       FROM directory_profile_skills dps
-      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text AND dp.deleted_at IS NULL
+      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text
       JOIN skills_taxonomy_skills sk ON sk.id::text = dps.skill_id::text AND sk.is_active = TRUE
       JOIN skills_taxonomy_job_titles jt ON jt.id::text = sk.job_title_id::text
       JOIN skills_taxonomy_sectors s ON s.id::text = jt.sector_id::text
@@ -130,7 +129,7 @@ async function fetchSectorPairs(pool) {
     JOIN (
       SELECT DISTINCT dps.profile_id, s.name AS sector
       FROM directory_profile_skills dps
-      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text AND dp.deleted_at IS NULL
+      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text
       JOIN skills_taxonomy_skills sk ON sk.id::text = dps.skill_id::text AND sk.is_active = TRUE
       JOIN skills_taxonomy_job_titles jt ON jt.id::text = sk.job_title_id::text
       JOIN skills_taxonomy_sectors s ON s.id::text = jt.sector_id::text
@@ -151,7 +150,7 @@ async function fetchSkillScarcity(pool) {
     FROM (
       SELECT dps.skill_id, COUNT(DISTINCT dps.profile_id)::int AS holders
       FROM directory_profile_skills dps
-      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text AND dp.deleted_at IS NULL
+      JOIN directory_profiles dp ON dp.id::text = dps.profile_id::text
       JOIN skills_taxonomy_skills sk ON sk.id::text = dps.skill_id::text AND sk.is_active = TRUE
       GROUP BY dps.skill_id
     ) per_skill
@@ -168,7 +167,6 @@ async function fetchLocations(pool) {
       COALESCE(NULLIF(btrim(dp.state), ''), 'unspecified') AS state,
       COALESCE(NULLIF(btrim(dp.city), ''), 'unspecified') AS city
     FROM directory_profiles dp
-    WHERE dp.deleted_at IS NULL
   `);
   return rows;
 }

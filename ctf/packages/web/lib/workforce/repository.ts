@@ -247,7 +247,7 @@ async function fetchWorkforceModelInputs(): Promise<{
          (dp.claimed_by_user_id IS NOT NULL) AS claimed
        FROM directory_profiles dp
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
-       WHERE dp.deleted_at IS NULL`,
+`,
     ),
   ]);
 
@@ -725,7 +725,7 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
        FROM directory_profile_skills dps
        JOIN directory_profiles p ON dps.profile_id::text = p.id::text
        JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
-       WHERE p.deleted_at IS NULL AND s.is_active = TRUE`,
+       WHERE s.is_active = TRUE`,
     ),
     // Skills coverage denominator: the live count of ALL active skills in the taxonomy — never a
     // fixed baseline, so the tile tracks the catalog as skills are added and removed. The numerator
@@ -883,7 +883,7 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
       SELECT dp.job_title_id::text AS job_title_id, jt.name AS job_title_name, dp.updated_at
       FROM directory_profiles dp
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
-      WHERE dp.claimed_by_user_id = $1 AND dp.deleted_at IS NULL
+      WHERE dp.claimed_by_user_id = $1
       ORDER BY dp.updated_at DESC
       LIMIT 1
     `,

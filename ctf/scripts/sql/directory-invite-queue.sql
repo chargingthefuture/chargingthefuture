@@ -91,7 +91,6 @@ LEFT JOIN listed_skills ls ON ls.profile_id = p.id::text
 LEFT JOIN pending_skills pn ON pn.profile_id = p.id::text
 LEFT JOIN skills_taxonomy_sectors sec ON sec.id::text = p.sector_id::text
 LEFT JOIN skills_taxonomy_job_titles jt ON jt.id::text = p.job_title_id::text
-WHERE p.deleted_at IS NULL
   AND p.is_active
   AND coalesce(p.profile_url, '') <> ''
   -- Strip any query string, the /profile/ prefix and a trailing slash before comparing.

@@ -143,8 +143,7 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
       LEFT JOIN pending_skills pn ON pn.profile_id = p.id::text
       LEFT JOIN skills_taxonomy_sectors sec ON sec.id::text = p.sector_id::text
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id::text = p.job_title_id::text
-      WHERE p.deleted_at IS NULL
-        AND coalesce(p.profile_url, '') <> ''
+      WHERE coalesce(p.profile_url, '') <> ''
       ORDER BY sec.name NULLS LAST, name NULLS LAST
     `,
     [ADVOCACY_MATCH],

@@ -104,7 +104,6 @@ async function main() {
               sector_id = $6::uuid,
               job_title_id = $7::uuid,
               country = $8::text,
-              is_active = true,
               deleted_at = NULL,
               updated_at = NOW()
             WHERE id = $1::uuid
@@ -125,9 +124,9 @@ async function main() {
         profileResult = await client.query(
           `
             INSERT INTO directory_profiles
-              (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, source, sector_id, job_title_id, country, is_active)
+              (id, claimed_by_user_id, first_name, last_name, headline, bio, profile_url, source, sector_id, job_title_id, country)
             VALUES
-              ($1::uuid, NULL, $2::text, $3::text, $4::text, $5::text, NULL, 'admin', $6::uuid, $7::uuid, $8::text, true)
+              ($1::uuid, NULL, $2::text, $3::text, $4::text, $5::text, NULL, 'admin', $6::uuid, $7::uuid, $8::text)
             RETURNING id
           `,
           [
