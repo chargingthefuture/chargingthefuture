@@ -92,6 +92,7 @@ Planning constraints applied:
 2. Capture review notes and reviewer attribution.
 3. Apply scoring breakdown (match, first-match, stack, rare-skill, quality bonus).
 4. Enforce rejection-rate guardrails for submitters.
+5. **The queue is paged, 25 nominations to a page (2026-09-20).** It asked for up to 100 rows in one request and drew no page control, so row 101 was unreachable and the queue read as an endless scroll — on a phone each nomination is a tall card with four action buttons, so a hundred of them is a scroll nobody finishes (owner report). Previous / Next sit under the list with "Page N of M", using the shared `Pager` (`components/shared/pager.tsx`), and the control hides itself when one page holds everything. Changing the round or the status filter returns to page 1, so narrowing a long list from a late page cannot land on an empty screen that reads as "no submissions". Select all and the bulk bar act on the page on screen, and the confirm says the count, so a bulk action never reaches a row nobody has looked at.
 
 ### 2.3 Directory Seeding Governance
 
@@ -170,7 +171,7 @@ Admin/moderator routes:
 
 - `POST /api/skills-hunt/admin/rounds`
 - `PUT /api/skills-hunt/admin/rounds/:roundId`
-- `GET /api/skills-hunt/admin/rounds/:roundId/submissions`
+- `GET /api/skills-hunt/admin/rounds/:roundId/submissions` — optional `?status=`, `?page=` and `?pageSize=` (default 20, capped at 100). Returns `{ items, pagination, total, round, rewardSummary }`; the Moderation tab asks for 25 a page and draws Previous / Next from `total`.
 - `POST /api/skills-hunt/admin/rounds/:roundId/leaderboard/rebuild` — admin-gated (`requireSkillsHuntAdminAccess`), CSRF. Recomputes the round's cached `skills_hunt_leaderboard` from current accepted submissions via `rebuildLeaderboard`. Command `skills-hunt.leaderboard.rebuild`. Returns `{ ok: true }`. Exposed as a "Rebuild leaderboard" button per round in the admin Rounds tab.
 - `POST /api/skills-hunt/admin/submissions/:submissionId/review`
 - `POST /api/skills-hunt/admin/submissions/:submissionId/remove` — admin-gated (`requireSkillsHuntAdminAccess`), CSRF. Soft-deletes a submission (`deleted_at`), then rebuilds the round leaderboard and recomputes the scout's mission progress. Command `skills-hunt.submission.remove`. Unlike a `reject` review, a soft-deleted row is excluded from the scout's rejection-rate/reputation calc (as well as the leaderboard, missions, My Finds, and directory eligibility), so voiding a duplicate/test/mistaken row does not penalise the scout. Does not touch the ServiceCredits ledger. Exposed as a "Remove" button on every row of the admin submissions table. Returns `{ ok, alreadyRemoved, roundId }`.
@@ -277,6 +278,17 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-09-20: **The moderation queue is paged instead of endless (owner report).** It fetched up to
+  100 nominations in one request and drew no page control, so there was no way to reach row 101 and
+  no way to tell how long the queue was without scrolling it. The route has taken `page` and
+  `pageSize` and returned `total` all along — the screen simply never asked. It now requests 25 a
+  page and draws Previous / Next under the list with "Page N of M". Changing the round or the
+  status filter returns to page 1, because narrowing a nine-page list from page 4 otherwise shows
+  an empty screen that reads as "no submissions" when there are plenty. The control is the shared
+  `Pager`, lifted out of the Directory admin shell — which held the only copy — into
+  `components/shared/pager.tsx`, so both screens page the same way and a third does not fork it.
+  The load failure also stops swallowing the route's sentence: this is an operator screen, so it
+  says what the route said (rule 137).
 - 2026-09-20 (owner directive): **the "Save the file" button is gone, and Share is the way.** On a
   phone it did not do what its label said, and Share already covers saving to the photo library and
   sending the picture to another app. Two controls remain under the picture, Share and Done, with

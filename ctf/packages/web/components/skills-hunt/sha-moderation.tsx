@@ -6,6 +6,14 @@ import { useTheme } from "@/hooks/useTheme";
 import { promptRejectReason, getSkillsHuntAdminTokens, type ReviewAction, type SkillsHuntAdminStatusFilter } from "./sha-shared";
 import { SkillsHuntAdminFilters, SkillsHuntAdminBulkBar } from "./sha-filters";
 import { SkillsHuntAdminTable } from "./sha-table";
+import { Pager } from "@/components/shared/pager";
+
+// One screenful of nominations at a time. It was one request for up to 100 rows and no way to
+// reach row 101 (owner report, 2026-09-20): the queue read as an endless scroll, and on a phone
+// each nomination is a tall card with four action buttons, so a hundred of them is a scroll nobody
+// finishes. Twenty-five is what the route's own default page is near, and it keeps Previous/Next
+// in reach without a long trip back up.
+const MODERATION_PAGE_SIZE = 25;
 
 type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number };
 
@@ -20,6 +28,30 @@ function bulkConfirmMessage(action: "accept" | "reject", count: number): string 
     ? "Each accepted nomination pays the configured reward once."
     : "Each rejected nomination counts toward that scout's rejection rate.";
   return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence} Any removed submission in the selection is restored by this.`;
+}
+
+type SubmissionPage = {
+  items: SkillsHuntSubmission[];
+  total?: number;
+  round?: SkillsHuntRound | null;
+  rewardSummary?: RewardSummary | null;
+};
+
+// One page of the queue. Throws with the route's own sentence when it refuses — this is an
+// operator screen, so the reason belongs on it rather than behind a fixed fallback (rule 137).
+async function fetchSubmissionPage(
+  roundId: string,
+  statusFilter: SkillsHuntAdminStatusFilter,
+  page: number,
+): Promise<SubmissionPage> {
+  const query = new URLSearchParams({ page: String(page), pageSize: String(MODERATION_PAGE_SIZE) });
+  if (statusFilter !== "all") query.set("status", statusFilter);
+  const res = await fetch(`/api/skills-hunt/admin/rounds/${roundId}/submissions?${query}`);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(body?.message ?? `Unable to load submissions (${res.status}).`);
+  }
+  return (await res.json()) as SubmissionPage;
 }
 
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
@@ -56,25 +88,31 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [acting, setActing] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  // Changing the round or the filter is a different list, so it starts at its first page. Without
+  // this, narrowing a nine-page list to a one-page filter from page 4 shows an empty screen that
+  // reads as "no submissions" when there are plenty.
+  useEffect(() => { setPage(1); }, [activeRoundId, statusFilter]);
 
   const refresh = useCallback(async () => {
     if (!activeRoundId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/skills-hunt/admin/rounds/${activeRoundId}/submissions?pageSize=100${statusFilter === "all" ? "" : `&status=${statusFilter}`}`);
-      if (!res.ok) throw new Error("Failed to load submissions");
-      const data = (await res.json()) as { items: SkillsHuntSubmission[]; round?: SkillsHuntRound | null; rewardSummary?: RewardSummary | null };
+      const data = await fetchSubmissionPage(activeRoundId, statusFilter, page);
       setSubmissions(data.items);
+      setTotal(data.total ?? data.items.length);
       setRound(data.round ?? null);
       setRewardSummary(data.rewardSummary ?? null);
       setSelected(new Set());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : "Unable to load submissions.");
     } finally {
       setLoading(false);
     }
-  }, [activeRoundId, statusFilter]);
+  }, [activeRoundId, statusFilter, page]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -184,6 +222,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
 
   const shownCount = submissions.length;
   const allSelected = shownCount > 0 && selected.size === shownCount;
+  const pageCount = Math.max(1, Math.ceil(total / MODERATION_PAGE_SIZE));
 
   if (rounds.length === 0) {
     return <div style={{ color: t.MUTED, fontSize: 13 }}>No rounds yet. Create one in the Rounds tab before moderating.</div>;
@@ -216,6 +255,9 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           onRestore={(id) => void onRestore(id)}
         />
       )}
+      {/* Select all and the bulk bar act on the rows on screen, which is this page — the count in
+          the confirm says how many, so a bulk action can never reach a row nobody has looked at. */}
+      <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={setPage} accent={t.ACCENT} subtle={t.SUBTLE} border={t.BORDER} />
     </>
   );
 }
