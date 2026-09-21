@@ -87,14 +87,12 @@ export async function listSafetyReportsForAdmin(): Promise<AdminSafetyReport[]> 
        SELECT dp.first_name, dp.last_name
        FROM directory_profiles dp
        WHERE dp.claimed_by_user_id = r.reporter_user_id
-         AND dp.deleted_at IS NULL
        LIMIT 1
      ) rp ON TRUE
      LEFT JOIN LATERAL (
        SELECT dp.first_name, dp.last_name
        FROM directory_profiles dp
        WHERE dp.claimed_by_user_id = r.reported_user_id
-         AND dp.deleted_at IS NULL
        LIMIT 1
      ) tp ON TRUE
      ORDER BY (r.status = 'open') DESC, r.created_at DESC`,

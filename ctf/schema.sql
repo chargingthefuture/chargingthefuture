@@ -3083,7 +3083,6 @@ CREATE TABLE IF NOT EXISTS directory_profiles (
   city TEXT,
   state TEXT,
   country TEXT,
-  deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -3159,7 +3158,6 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
-ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
@@ -3194,8 +3192,8 @@ BEGIN
   END IF;
 END
 $directory_profiles_unclaimed_handle_unique$;
-CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id, deleted_at) WHERE claimed_by_user_id IS NULL AND deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_source ON directory_profiles (source);
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed ON directory_profiles (claimed_by_user_id) WHERE claimed_by_user_id IS NULL;
 -- One-shot backfill: assign reserved community-<hex> handles to existing
 -- unclaimed Directory profiles so the @handle URL story is consistent on
 -- day one. Idempotent: only fires for rows without a handle and retries on

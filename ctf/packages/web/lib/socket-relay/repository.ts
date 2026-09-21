@@ -963,9 +963,9 @@ export async function listMyFulfillments(userId: string): Promise<SocketRelayFul
      FROM socket_relay_fulfillments f
      LEFT JOIN socket_relay_requests r ON r.id = f.request_id
      LEFT JOIN directory_profiles rp
-       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+       ON rp.claimed_by_user_id = f.requester_user_id
      LEFT JOIN directory_profiles fp
-       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
+       ON fp.claimed_by_user_id = f.fulfiller_user_id
      WHERE f.requester_user_id = $1 OR f.fulfiller_user_id = $1
      ORDER BY f.created_at DESC`,
     [userId],
@@ -1169,9 +1169,9 @@ export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]>
      FROM socket_relay_fulfillments f
      LEFT JOIN socket_relay_requests r ON r.id = f.request_id
      LEFT JOIN directory_profiles rp
-       ON rp.claimed_by_user_id = f.requester_user_id AND rp.deleted_at IS NULL
+       ON rp.claimed_by_user_id = f.requester_user_id
      LEFT JOIN directory_profiles fp
-       ON fp.claimed_by_user_id = f.fulfiller_user_id AND fp.deleted_at IS NULL
+       ON fp.claimed_by_user_id = f.fulfiller_user_id
      ORDER BY f.created_at DESC`,
   );
 
