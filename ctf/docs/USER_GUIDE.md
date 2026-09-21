@@ -8,7 +8,7 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Commons
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 Commons is the home page: one shared channel to read and post in, and the list of every app.
 
@@ -25,37 +25,9 @@ The other half is a grid of every app, with a search box and a choice of order �
 3. Type in the box at the bottom to post. Use Reply on a message to quote it, or the small add-reaction control under a post to react.
 4. Tap the grid button in the top bar for All Apps, then search the grid or change its order to find the one you want.
 
-## Fireside
-
-_Last updated: 2026-09-16_
-
-Fireside is the conversation under each post on the blog. Reading it needs no account at all; writing needs one, and what you write becomes publicly visible once you are approved.
-
-Every post on the blog carries a conversation underneath it, and anybody can read it — no sign-in, no account, nothing to create. Reading is not something you have to qualify for.
-
-Writing happens here in the app, which is why the button under a post brings you across. It names the post you came from and opens that exact conversation on arrival, and if you have to sign in first it returns you to the same place rather than dropping you on a list of tiles.
-
-Signing in is enough to leave a comment or a reaction. Nothing you write is publicly visible until you are approved through Unlock, and the screen tells you that at the moment you post rather than saving your words and quietly showing them to nobody. Approval is per person and it reaches backwards: when you are approved, everything you have already written appears at once.
-
-You always see your own words, whatever state they are in, labeled live, held, removed or withdrawn. You can take your own comment down at any time without an admin, and it asks first, because nobody can put the words back.
-
-Replies go one level deep and no further. A reply to a reply is unreadable at phone width, which is the only width this app has. When somebody answers you, you are told, and the notice opens that conversation.
-
-There are three reactions — I recognize this, This helped, Same here — and separate agree and disagree votes. A vote changes a number beside a comment and nothing else: the thread stays oldest first, and nothing reads a count to decide what gets read. The agree count is shown; the disagree count is shown to nobody but the person who left it.
-
-A comment can also be asked into the blog's own published pages, and that is off unless you turn it on. Turning it on asks; it does not publish. An admin reads the request first, because once a comment is in the published build it is searchable and captured by web archives, and nobody — this project included — can withdraw it after that. You can take the ask back at any point before the copy is made.
-
-**How to use it**
-
-1. Read any post on the blog. The conversation is underneath it and needs no account.
-2. Press the button under the post to write. It carries you to the same conversation in the app, and signing in returns you there.
-3. Leave a comment, a reply, or a reaction. Until you are approved through Unlock it is held, and the screen says so.
-4. Open Fireside in the app to see everything you have written in one list, each labeled live, held, removed or withdrawn.
-5. To have a comment published with the post itself, turn the request on under that comment. An admin reads it before anything is copied, and you can take the ask back until then.
-
 ## Unlock
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 Unlock is how a new account gets approved: you send the web address of your Quora profile, and a person reads it.
 
@@ -76,7 +48,7 @@ Coming back on a second day also lets you into the Commons while your submission
 
 ## Directory
 
-_Last updated: 2026-07-31_
+_Last updated: 2026-09-21_
 
 Directory is a list of members and the skills they have.
 
@@ -94,7 +66,7 @@ Search for members by name, headline, bio, skills, or location. Use the sector f
 
 ## Foundation
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-20_
 
 Foundation is where you find and connect with providers who offer skills, and manage your work with them.
 
@@ -111,7 +83,7 @@ Track all your requests, active connections, and past work in one place. Get not
 
 ## Chyme
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-20_
 
 Chyme is a live audio room where survivors can connect, listen, speak, and chat together in real time.
 
@@ -130,7 +102,7 @@ You can send ServiceCredits as a tip to another member in the room right now usi
 
 ## Mutual Time
 
-_Last updated: 2026-08-13_
+_Last updated: 2026-08-28_
 
 Mutual Time finds an hour a group can meet, from one link everyone opens — no calendar is collected from anyone.
 
@@ -147,40 +119,9 @@ Anyone can open the link, whether or not they are signed in or approved. A visit
 3. Pick up to three one-hour windows you are free, choosing from the day chips and the morning, afternoon, and evening groups. Check the timezone shown is yours, and change it if it is not. Save.
 4. Open the same link after voting closes to see the chosen hour, how many members can make it, and the button through to where the meeting happens.
 
-## TI Radio
-
-_Last updated: 2026-09-16_
-
-TI Radio is a published schedule of live discussions members host in Chyme. Reading it needs no account; taking a slot needs an approved one.
-
-TI Radio shows seven days ahead, cut into 90-minute slots. Ninety minutes divides a day exactly sixteen times, so every day has the same sixteen starts and nothing drifts. Each row shows the time, who is hosting, and what it is about.
-
-Every time is printed in your own timezone, and the page names the zone it detected, so you do not have to do the arithmetic. The slot covering the current moment is marked On air, which tells you whether to open Chyme now.
-
-Reading the schedule needs no account at all. That is deliberate, and it is not how the rest of this app works: the people it was built for have not joined anything yet, and asking them to sign up before they can even see when a discussion is happening asks for the thing at the end and gives nothing at the start.
-
-Hosting is different and does need an approved account. You press an open row, write what the discussion is about, and add a few sentences if you want to help somebody decide whether to come. The slot is then yours, and your handle and subject appear on that row for everyone, including people who never sign in. First come, first served — no queue, no application, and nobody approving the topic.
-
-You can hold three slots in any 24 hours. The ceiling is checked against any 24-hour stretch rather than the calendar day, so three late one evening and a fourth after midnight is refused the same as four in one afternoon.
-
-You can give a slot back any time before it starts and it returns to the schedule as open. Once it has begun you cannot, because by then people have turned up.
-
-A listing is not an endorsement. A slot is taken, not granted, nobody reviews a description before it appears, and this project does not vouch for a host or for what gets said in their room. The rules still apply in the room, and an account goes for breaking them.
-
-TI Radio holds the schedule and nothing else. The talking happens in Chyme, which keeps its own audio and its own records, and TI Radio never records who listened.
-
-**How to use it**
-
-1. Open the schedule. It needs no account, and the times are already in your timezone.
-2. Look for the row marked On air to see whether something is happening now, and read ahead for the rest of the week.
-3. To host, sign in and finish Unlock. A signed-out reader is told to sign in; a member who is not approved yet is pointed at Unlock rather than given a button that fails.
-4. Press an open row, write what it is about, and take it. Your handle and subject appear on that row for everyone.
-5. At the time you booked, meet whoever turns up in Chyme.
-6. Changed your mind? Give the slot back before it starts and it returns to the schedule as open.
-
 ## SocketRelay
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-09-20_
 
 SocketRelay is where you post a task or favor you need help with, or claim someone else's request to help them out.
 
@@ -198,7 +139,7 @@ After a favor is complete, you can record it as an ongoing arrangement (like a r
 
 ## Beacon
 
-_Last updated: 2026-08-08_
+_Last updated: 2026-09-20_
 
 Beacon is a live broadcast where members can watch, chat, and react together.
 
@@ -216,7 +157,7 @@ After the event ends, the recording stays on Beacon and gets posted to the Commo
 
 ## PeerProgramming
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
@@ -237,7 +178,7 @@ After your cohort ends, a feedback box appears where you can write a note about 
 
 ## Mood
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 Mood lets you check in on how you're doing, and see how the community is doing overall.
 
@@ -253,7 +194,7 @@ What comes back is a community pulse and nothing else: the average and the numbe
 
 ## WhatWorks
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-08-28_
 
 WhatWorks is a shared list of tools that survivors say help with specific problems.
 
@@ -289,7 +230,7 @@ View the leaderboard to see scouts ranked by accepted points. There is one board
 
 ## Workforce
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 Workforce is a live tracker of the skills the community has, sector by sector, and where the biggest gaps are.
 
@@ -309,7 +250,7 @@ The last tab, What's Your 1%, is about you alone: nobody else sees your figures 
 
 ## Skills Taxonomy
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-20_
 
 Skills Taxonomy is the shared list of work sectors, job titles, and skills that the platform uses.
 
@@ -322,7 +263,7 @@ Members can browse the Skills Taxonomy to see what sectors, job titles, and skil
 
 ## ServiceCredits
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 ServiceCredits is where you view and send credits within the Skills Economy.
 
@@ -340,7 +281,7 @@ After a send goes through, an 'Is this ongoing?' prompt appears under it. Pick h
 
 ## Contributions
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-09-20_
 
 Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.
 
@@ -358,7 +299,7 @@ You can dismiss the fundraiser banner for two months if you want. It collapses t
 
 ## Knowledge Library
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-09-20_
 
 Knowledge Library is where you lend your own public Quora writing to the assistant, so it can answer from more than one person's experience.
 
@@ -377,7 +318,7 @@ Before you can type anything you tick six separate lines of consent — one box 
 
 ## SkillUp
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-09-20_
 
 SkillUp is where you can enroll in skills training cohorts and track your progress and credits.
 
@@ -395,7 +336,7 @@ If a problem comes up with an enrollment, you can open a dispute and add comment
 
 ## Trust
 
-_Last updated: 2026-08-14_
+_Last updated: 2026-09-20_
 
 Trust shows what you have actually done in the app, written as plain lines other members can read.
 
@@ -414,7 +355,7 @@ Your own card has two parts. 'Your trust' is everything you have. 'What members 
 
 ## TrustTransport
 
-_Last updated: 2026-08-06_
+_Last updated: 2026-09-20_
 
 TrustTransport is a marketplace where members request and offer rides, package delivery, and food orders.
 
@@ -432,7 +373,7 @@ When a trip is finished, you see a record of what it was worth in whatever curre
 
 ## LightHouse
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 LightHouse is where you can find housing, list a place you own, and connect with hosts or seekers.
 
@@ -453,7 +394,7 @@ If a host makes you uncomfortable, you can block them from any listing. When you
 
 ## ClickLog
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 ClickLog records incidents — privately for your own pattern-spotting, and, if you choose, as shared trend data.
 
@@ -471,7 +412,7 @@ You can edit or delete your own incidents at any time. An untagged incident's sh
 
 ## Recurring Activity
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-09-20_
 
 Recurring Activity is where you record and confirm ongoing arrangements with other members — who you work with, what you trade, and how often.
 
@@ -489,7 +430,7 @@ Many apps have a quick prompt that lets you record an arrangement without leavin
 
 ## GDP
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-20_
 
 GDP is the live dashboard of value actually exchanged inside the community, as an index rather than a sum of money.
 
@@ -509,7 +450,7 @@ A 'Show this page as one picture' control under the report turns the dashboard i
 
 ## Reporting a problem
 
-_Last updated: 2026-08-18_
+_Last updated: 2026-08-28_
 
 Reporting a problem sends a note about anything that went wrong, from wherever you are in the app.
 
