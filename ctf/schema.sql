@@ -3208,7 +3208,6 @@ BEGIN
     SELECT id FROM directory_profiles
     WHERE claimed_by_user_id IS NULL
       AND unclaimed_handle IS NULL
-      AND (deleted_at IS NULL)
   LOOP
     attempts := 0;
     LOOP
@@ -4645,15 +4644,11 @@ ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS source VARCHAR(50) N
 ALTER TABLE IF EXISTS login_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_login_events_user ON login_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_events_created ON login_events(created_at);
--- A constraint this file cannot express, recorded because writing to this table without knowing it
--- is how post/0008 failed on its first production run. Production carries a v2 foreign key,
--- `login_events_user_id_fkey`, from `user_id` to `users(id)` (see ctf/schema-prod4.6.2026.sql). It is
--- NOT created here: `users` is the Clerk mirror carried over from v2 and is not part of this
--- canonical schema, so a database built from this file alone has neither the table nor the key.
--- What it means for anything writing here: on production a sign-in row can only exist for an account
--- the identity mirror still holds, and the per-plugin command trails outlive that mirror, so evidence
--- of a session can name a member who is gone. Filter to members present in `users` when that table
--- exists, or one orphan aborts the entire insert.
+-- Production used to carry a v2 foreign key here, `login_events_user_id_fkey`, from `user_id` to
+-- `users(id)` (see ctf/schema-prod4.6.2026.sql). `users` is the identity mirror v2 maintained and v3
+-- never writes, so the key refused a sign-in row for every member who joined after v2 stopped —
+-- which is why the active-member readings stayed at zero after launch. post/0034 drops it and
+-- rebuilds the days it refused. Nothing may reintroduce a key from this table to `users`.
 -- Legacy guard: on databases cloned before `created_at` was a `timestamptz`, this column can be a
 -- plain `timestamp without time zone`. The guarded `ADD COLUMN IF NOT EXISTS` above does NOT retype
 -- an existing column, so it stays the legacy type. That breaks the UTC-day index below: with a

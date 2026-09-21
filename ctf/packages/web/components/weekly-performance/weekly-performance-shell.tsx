@@ -97,6 +97,15 @@ export function WeeklyPerformanceShell() {
     const metricsRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`, { cache: "no-store" });
     if (metricsRes.ok) {
       setMetrics(((await metricsRes.json()) as MetricsResponse).metrics ?? []);
+      setError(null);
+    } else {
+      // A failed read used to leave the cards empty and the placeholder saying the numbers were
+      // loading, which is indistinguishable from a slow read and never resolves. Say what failed
+      // instead (rule 137), with the route's own message when it gives one.
+      const body = (await metricsRes.json().catch(() => null)) as { message?: string } | null;
+      setError(
+        `Could not load this week's numbers (${metricsRes.status})${body?.message ? `: ${body.message}` : "."}`,
+      );
     }
     if (compareWeekStartDate) {
       const cmpRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}&compareWeekStartDate=${encodeURIComponent(compareWeekStartDate)}`, { cache: "no-store" });

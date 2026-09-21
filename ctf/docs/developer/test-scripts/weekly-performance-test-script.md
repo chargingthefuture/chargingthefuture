@@ -129,9 +129,13 @@ is no "set active week" action and no per-week status.
    `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilt those days from
    first-party evidence, so that week should read at least one member. Rows it rebuilt carry
    `source = 'backfill_launch_gap'`, which is how to tell a reconstructed day from one recorded live.
-   A member whose account has since been deleted is not rebuilt — a sign-in row needs a member the
-   `users` table still holds — so the rebuilt count can be lower than the evidence the migration
-   found, and the Update Neon DB workflow log says how many days were skipped for that reason.
+   Until 2026-09-21 the table also carried a v2 foreign key to the `users` mirror, which v3 never
+   writes, so every member who joined after v2 stopped was refused a sign-in row on every request and
+   these two cards read zero for them. `post/0034` dropped the key and rebuilt those members' days
+   from the same evidence; their rebuilt rows carry `source = 'backfill_users_fkey'`. So: a week
+   from launch onward that reads zero on these cards while the Directory count moved is now a real
+   quiet week, not a refused write. If the metrics read itself fails, the dashboard no longer sits on
+   "Weekly numbers are loading" — it says what failed and the status it got.
    The Accounts Deleted card reads "N accounts": members who ended their entire account in that week.
    Check what it does NOT count. Delete one plugin's data from the account screen and leave the
    account open: the card must not move — that member is still here. Delete an entire account through
