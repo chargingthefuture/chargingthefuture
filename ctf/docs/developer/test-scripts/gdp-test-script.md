@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself · 2026-09-20 manual update: the picture control moved to the new /admin/gdp page, so GDP-15 runs there and GDP-A1 now asserts that page exists rather than that it does not |
+| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself · 2026-09-20 manual update: the picture control moved to the new /admin/gdp page, so GDP-15 runs there and GDP-A1 now asserts that page exists rather than that it does not · 2026-09-21 manual update: GDP-A1 step 1b covers the Admin / Member view header pair |
 
 ---
 
@@ -370,6 +370,9 @@ blank page and never a half-drawn picture presented as finished.
 
 **Steps:**
 1. Open `/admin`. Look for the GDP entry and follow it.
+1b. On `/admin/gdp`, look in the header for a **Member view** pill and press it. Then, on the
+   member page as an admin, look in the header for an **Admin** pill and press it. Toggle the pair
+   a few times, then press the phone's back control.
 2. Compare `/admin/gdp` against the member page at `/apps/gross-domestic-product`, block by block.
 3. Look for anything on `/admin/gdp` that changes a figure — a publish button, a rate editor, a
    recompute.
@@ -379,7 +382,11 @@ blank page and never a half-drawn picture presented as finished.
 **Expected:** Step 1 — a **GDP** row is in the admin index and opens `/admin/gdp`. (Until
 2026-09-20 this case asserted the opposite: GDP had no admin surface at all, after the
 currency-rate screen was removed on 2026-07-11. The page now exists to hold one control, on the
-owner's direction that the picture control belongs in admin.) Step 2 — the two pages show the
+owner's direction that the picture control belongs in admin.) Step 1b — each side carries the pill for the other, and each press lands on the other page. After
+toggling several times, **back leaves the pair entirely** rather than replaying the toggles —
+both navigate with replace semantics. Until 2026-09-21 GDP had neither pill, so the admin page
+was reachable only from the admin index and had no way back.
+Step 2 — the two pages show the
 **same report**: same headline figure, same chips, same sector and country blocks, in the same
 order. The admin page is the member screen with one control added, not a second layout, which is
 what keeps the picture one to one with what a member sees. Step 3 — **nothing** changes a figure.

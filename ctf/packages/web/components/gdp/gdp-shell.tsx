@@ -22,9 +22,13 @@ import { GdpDashboard } from "./gdp-dashboard";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { SharePicture } from "@/components/shared/share-picture";
+import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
+import { PluginUserShellButton } from "@/components/shared/plugin-user-shell-button";
 import { captureScreen } from "lib/share/capture-screen";
 
 const GDP_DEEP_LINK = "https://app.chargingthefuture.com/apps/gross-domestic-product";
+const GDP_MEMBER_PATH = "/apps/gross-domestic-product";
+const GDP_ADMIN_PATH = "/admin/gdp";
 
 function EmptyReport({ t }: { t: GdpTokens }) {
   return (
@@ -130,7 +134,7 @@ function buildGdpCountries(data: {
 // a member and on at /admin/gdp (owner directive, 2026-09-20: the control belongs in admin). The
 // admin page renders this same screen rather than a version of it, which is what makes the picture
 // one to one with what a member sees — see rule 130.
-export default function GdpShell({ sharePicture = false }: { sharePicture?: boolean } = {}) {
+export default function GdpShell({ sharePicture = false, isAdmin = false }: { sharePicture?: boolean; isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<GdpReportPayload | null>(null);
@@ -241,6 +245,13 @@ export default function GdpShell({ sharePicture = false }: { sharePicture?: bool
             {/* Title shrinks and truncates so the trailing controls stay on screen */}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>GDP</span>
             <Badge style={{ background: "#22C55E20", color: "#22C55E", border: "1px solid #22C55E35", fontSize: 10, padding: "3px 8px", borderRadius: 20, flexShrink: 0 }}>↑ Live</Badge>
+            {/* The admin↔member pair every other plugin header carries, which GDP was missing
+                (owner report, 2026-09-21). On the admin page the control is the way back to what
+                members see; on the member page it shows for an admin only. Both sit inside the
+                header, which the capture leaves out, so neither reaches a picture. */}
+            {sharePicture
+              ? <PluginUserShellButton href={GDP_MEMBER_PATH} accent={t.ACCENT} />
+              : <PluginAdminButton href={GDP_ADMIN_PATH} isAdmin={isAdmin} accent={t.ACCENT} />}
             <RefreshButton onRefresh={handleRefresh} title="Refresh" />
             <MobileTopActions />
           </div>

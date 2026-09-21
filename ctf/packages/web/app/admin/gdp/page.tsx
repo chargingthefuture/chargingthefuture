@@ -22,5 +22,5 @@ export default async function GdpAdminPage() {
     redirect('/apps/gross-domestic-product');
   }
 
-  return <GdpShell sharePicture />;
+  return <GdpShell sharePicture isAdmin />;
 }

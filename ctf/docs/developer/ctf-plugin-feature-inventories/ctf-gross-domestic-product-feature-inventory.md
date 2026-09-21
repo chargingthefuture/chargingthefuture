@@ -104,7 +104,8 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 1. **`/admin/gdp`**, linked from the admin index as **GDP**. It exists to hold one control: **"Show this page as one picture"**, which captures the report and shows the picture on the page with Share under it. The owner directed that the picture control belongs in admin, and GDP had no admin page to put it on.
 2. **It renders the member screen itself**, not an admin version of it, with that one control switched on. That is what keeps the picture one to one with what a member sees (rule 130) — there is no second layout here to drift from the one being advertised. A member opening `/admin/gdp` is redirected to `/apps/gross-domestic-product`, and a member never sees the control on their own page.
 3. **It brings back no governance controls.** The Community Value Index has been live with no publish step since the currency-rate surface was removed on 2026-07-11 (§2.4), and nothing on this page changes a figure. This supersedes the older statement that GDP has no admin surface at all; test case GDP-A1 asserted that and now asserts this page instead.
-4. The picture carries `https://app.chargingthefuture.com/apps/gross-domestic-product` underneath — the member page's address, not the admin one, because that is where a reader should land. Built on the shared `SharePicture` and `lib/share/capture-screen.ts`.
+4. **The header carries the admin↔member pair** every other plugin has and GDP was missing (owner report, 2026-09-21): an **Admin** pill on the member page, shown to an admin only, and a **Member view** pill on the admin page. Both navigate with replace semantics, so toggling between the two does not grow browser history. Both sit in the header, which the capture leaves out, so neither reaches a picture.
+5. The picture carries `https://app.chargingthefuture.com/apps/gross-domestic-product` underneath — the member page's address, not the admin one, because that is where a reader should land. Built on the shared `SharePicture` and `lib/share/capture-screen.ts`.
 
 ### 2.1 Metric Governance Operations
 
@@ -366,6 +367,11 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-09-21: **The GDP header gained the admin↔member pair (owner report).** Every other plugin
+  header carries an Admin pill for admins and a Member view pill on its admin side; GDP had
+  neither, so the new admin page could only be reached from the admin index and there was no way
+  back to the member view. Both use the shared controls and replace semantics, and both sit in the
+  header, which the capture leaves out, so neither reaches a picture.
 - 2026-09-20: **The picture control moved to a new `/admin/gdp` page (owner directive).** The
   control belongs in admin, and GDP had no admin page, so one was created for it. It renders the
   member screen with the control switched on rather than an admin layout of the same figures,
