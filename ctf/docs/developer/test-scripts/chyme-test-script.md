@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range |
 
 ## How to run this
 
@@ -624,21 +624,29 @@ controls exist yet (every joiner may speak — see Known gaps).
 **Precondition:** at least one member has been in the room today (so the meter has a row).
 **Steps:**
 1. Open `/admin` and tap **Chyme: Live Audio Usage**. Read the screen.
-2. Tap **Copy as text**, then paste into a note.
-3. As a non-admin member, open `/admin/chyme` directly and call `GET /api/chyme/admin/stream-usage`.
-4. Sit one member in the room for five minutes, then tap **Refresh**.
+2. On the day-by-day card, tap each of **7 days**, **30 days**, **This month**, **All of it**.
+3. With **All of it** selected, tap **Copy as text**, then paste into a note.
+4. As a non-admin member, open `/admin/chyme` directly and call `GET /api/chyme/admin/stream-usage`.
+5. Sit one member in the room for five minutes, then tap **Refresh**.
 **Expected:** Step 1: the month-to-date participant-minutes against the budget (333,000 by default),
 the percent and the band with its color, today's minutes, the straight-line projection to month end,
 "Right now" (the main room live or not, members, signed-out listeners, the caps in force, whether
 guest listening and Back Channel are open or paused, and the exact notice members see when there is
 one), the split by surface (Chyme main room, Chyme Weavers room, Chyme signed-out listeners, Chyme
 Back Channel calls, Beacon broadcasts, PeerProgramming cohort calls, Foundation calls — the Chyme
-lines from heartbeats, the rest from Stream's participant-left events as people leave a call), the last
-seven days, and the settings with their environment names. A line says one person in the room all
-day costs 1,440 minutes — about 13% of the budget over a month. Step 2: the pasted text carries all
-of that in plain lines, readable without the screen. Step 3: the page redirects to `/apps/chyme`;
-the route answers 403. Step 4: the main room's surface and today's minutes grew by about five
-(the count is credited from the 35-second heartbeats, so it lags by up to one interval).
+lines from heartbeats, the rest from Stream's participant-left events as people leave a call), a
+day-by-day card opening on the last seven days, and the settings with their environment names. A
+line says one person in the room all day costs 1,440 minutes — about 13% of the budget over a
+month. Step 2: the card's heading follows the pill — "Last 7 days", "Last 30 days", "This month,
+day by day", "Every day recorded" — and the list under it grows to match; no range is ever empty,
+a day with no usage reads 0 min rather than being skipped, and a line above the list names the
+first day the meter recorded anything (2026-09-19 on production, earlier on a seeded test
+deployment only if rows were written earlier). Step 3: the pasted text carries all of the screen in
+plain lines, readable without it, and its day section is headed "Every day recorded" with every day
+listed — that is, the paste follows the pill rather than always pasting seven days. Step 4: the page
+redirects to `/apps/chyme`; the route answers 403. Step 5: the main room's surface and today's
+minutes grew by about five (the count is credited from the 35-second heartbeats, so it lags by up
+to one interval), and the selected range is unchanged by the refresh.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

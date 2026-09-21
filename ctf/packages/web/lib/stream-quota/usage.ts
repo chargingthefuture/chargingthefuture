@@ -45,9 +45,15 @@ export type StreamVideoUsageSummary = {
   projectedMonthMinutes: number;
   projectedPercent: number;
   bySurface: StreamVideoUsageSurface[];
-  // The last 31 days, oldest first, with a zero row for a day with no usage so a chart or a list
-  // reads without gaps.
+  // Every recorded day, oldest first, with a zero row for a day inside the range that has no usage
+  // so a chart or a list reads without gaps. The table is never pruned, so this runs from the first
+  // day the meter recorded anything (2026-09-19) to today and grows by one row a day; the screen
+  // decides how much of it to show. At a year in that is 365 rows, which is a few tens of kilobytes
+  // of JSON on an admin-only screen.
   byDay: StreamVideoUsageDay[];
+  // The first day the meter has a row for, or today when it has none at all. Lets the screen say
+  // how far back the history reaches without walking the list.
+  earliestDateIso: string;
 };
 
 // Credit `seconds` of one participant's connected time to today's row for `surface`. Zero and
@@ -82,6 +88,21 @@ function utcDateIso(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// One entry per day from `fromIso` to `toIso` inclusive, with zero for a day that recorded nothing,
+// so a list or a chart has no gap in it. Walks UTC days by adding to the day number, which rolls
+// over months and years on its own.
+function fillDays(fromIso: string, toIso: string, secondsByDay: Map<string, number>): StreamVideoUsageDay[] {
+  const days: StreamVideoUsageDay[] = [];
+  const cursor = new Date(`${fromIso}T00:00:00.000Z`);
+  const last = new Date(`${toIso}T00:00:00.000Z`);
+  while (cursor.getTime() <= last.getTime()) {
+    const dateIso = utcDateIso(cursor);
+    days.push({ dateIso, minutes: toMinutes(secondsByDay.get(dateIso) ?? 0) });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return days;
+}
+
 // Month-to-date minutes against the budget, on the given client (so a route already inside a
 // transaction can read it without opening a second one).
 export async function readStreamVideoUsageSummary(client: PoolClient): Promise<StreamVideoUsageSummary> {
@@ -109,11 +130,9 @@ export async function readStreamVideoUsageSummary(client: PoolClient): Promise<S
       `
         SELECT usage_date::text AS usage_date, SUM(participant_seconds)::text AS seconds
         FROM stream_video_usage_daily
-        WHERE usage_date >= ($1::date - INTERVAL '30 days')
         GROUP BY usage_date
         ORDER BY usage_date ASC
       `,
-      [todayIso],
     ),
   ]);
 
@@ -122,12 +141,8 @@ export async function readStreamVideoUsageSummary(client: PoolClient): Promise<S
   const usedMinutes = toMinutes(usedSeconds);
 
   const secondsByDay = new Map(byDayResult.rows.map((row) => [row.usage_date, Number(row.seconds)]));
-  const byDay: StreamVideoUsageDay[] = [];
-  for (let offset = 30; offset >= 0; offset -= 1) {
-    const day = new Date(Date.UTC(year, month, now.getUTCDate() - offset));
-    const dateIso = utcDateIso(day);
-    byDay.push({ dateIso, minutes: toMinutes(secondsByDay.get(dateIso) ?? 0) });
-  }
+  const earliestDateIso = byDayResult.rows[0]?.usage_date ?? todayIso;
+  const byDay = fillDays(earliestDateIso, todayIso, secondsByDay);
 
   const budgetMinutes = streamVideoMinutesBudget();
   const percentUsed = budgetMinutes > 0 ? (usedMinutes / budgetMinutes) * 100 : 0;
@@ -147,6 +162,7 @@ export async function readStreamVideoUsageSummary(client: PoolClient): Promise<S
     projectedPercent: budgetMinutes > 0 ? Math.round((projectedMonthMinutes / budgetMinutes) * 1000) / 10 : 0,
     bySurface,
     byDay,
+    earliestDateIso,
   };
 }
 
