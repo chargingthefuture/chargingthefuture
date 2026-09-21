@@ -71,7 +71,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     const raw = data.wallet;
     if (raw && typeof raw.availableBalance === "number" && typeof raw.escrowBalance === "number") {
       // The mutual-credit fields are read-only extras: fall back to "rail off, no line" rather than
-      // failing the whole balance read if they are ever missing, so the wallet still renders.
+      // failing the entire balance read if they are ever missing, so the wallet still renders.
       setWallet({
         availableBalance: raw.availableBalance,
         escrowBalance: raw.escrowBalance,

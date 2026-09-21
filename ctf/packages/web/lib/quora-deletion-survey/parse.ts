@@ -49,9 +49,9 @@ function asOptionalBoolean(value: unknown): boolean | null {
   return null;
 }
 
-// A number the person typed, or null. Anything that is not a finite whole number in range is
+// A number the person typed, or null. Anything that is not a finite integer in range is
 // treated as "not answered" rather than rejected: an optional size estimate is not worth
-// bouncing a whole response over.
+// bouncing an entire response over.
 function asOptionalCount(value: unknown, max: number): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   const rounded = Math.round(value);
@@ -125,7 +125,7 @@ type AccountsResult =
   | { ok: true; accounts: SurveyAccountInput[] }
   | { ok: false; message: string };
 
-// Over the limit the whole response is refused, never trimmed to fit. Trimming was the old
+// Over the limit the entire response is refused, never trimmed to fit. Trimming was the old
 // behavior and it was wrong in the one direction that matters here: a person reporting more
 // accounts than the cap lost the rest with nothing on screen and nothing in the audit row saying
 // anything had been dropped. A refusal at least tells them, and the limit sits far enough out

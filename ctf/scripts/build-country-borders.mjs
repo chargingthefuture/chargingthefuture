@@ -5,7 +5,7 @@
  *
  * Why a vendored table rather than a geocoding service: the input is a member's approximate
  * location. Sending it to an outside company to ask "which country is this" would hand a third
- * party the one thing the whole report is built to keep in-house, for an answer that does not
+ * party the one thing the entire report is built to keep in-house, for an answer that does not
  * change and can be computed here. It also keeps the report working with no network, no API key,
  * and no per-call cost.
  *

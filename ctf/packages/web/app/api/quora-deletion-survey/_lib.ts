@@ -15,7 +15,7 @@ export type SurveyApiGate =
 
 // Reading responses is admin-only, and every admin route gates on this regardless of what the
 // nav shows (rule 131). There is no member-facing read of this data and no public projection:
-// the whole point of the consent questions is that nothing is published until a person decides
+// the point of the consent questions is that nothing is published until a person decides
 // it is, and an app-wide reader would make that decision for them.
 //
 // The command name is passed in so a refused admin read is recorded here rather than in each

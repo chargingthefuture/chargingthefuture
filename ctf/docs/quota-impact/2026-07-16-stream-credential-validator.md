@@ -31,7 +31,7 @@
 
 ## Observability
 
-- Metrics and alerts added/updated: None. The script's whole purpose is observability — it surfaces whether the configured Stream credentials authenticate, complementing the runtime `reportError` logging added for the Foundation quote path.
+- Metrics and alerts added/updated: None. The script's purpose is observability — it surfaces whether the configured Stream credentials authenticate, complementing the runtime `reportError` logging added for the Foundation quote path.
 - Dashboard link (if available): Existing Stream usage dashboard; no new panel.
 
 ## Validation

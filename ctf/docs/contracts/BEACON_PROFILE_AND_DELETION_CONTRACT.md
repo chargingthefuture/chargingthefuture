@@ -74,7 +74,7 @@ When a member requests full account deletion:
 - The member's Stream chat copy (`beacon-<userId>`) is hard-deleted via the orchestrator's
   external-cleanup hook (`deleteBeaconStreamData`), best-effort after the DB transaction commits — so a
   Beacon registry entry now exists (both tables `retain`) purely so the orchestrator knows Beacon and
-  runs this cleanup on every whole-account path (full-account route, internal delete, Clerk webhook).
+  runs this cleanup on every full-account path (full-account route, internal delete, Clerk webhook).
 - An admin's `host_user_id` references on past events are retained as event history (the events are
   public broadcasts already posted to the Commons); the orchestrator does not hard-delete public
   broadcast history.

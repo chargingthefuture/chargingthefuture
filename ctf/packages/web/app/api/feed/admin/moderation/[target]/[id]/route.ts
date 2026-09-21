@@ -62,7 +62,7 @@ async function parseModerationBody(
 // POST: hide or un-hide one piece of member-facing content — a Commons post, a reply on a post or on
 // an official announcement, or a question or answer in the Q&A.
 //
-// Hiding rather than deleting is the whole point. Deletion is unrecoverable and takes the member's
+// Hiding rather than deleting is the point. Deletion is unrecoverable and takes the member's
 // own words plus the reply thread with it; hiding is reversible, so a moderator making a fast
 // judgment call is not making a permanent one. The member's own delete control is unchanged — this
 // route is the moderator's power, and it stops at visibility: there is no admin edit, because

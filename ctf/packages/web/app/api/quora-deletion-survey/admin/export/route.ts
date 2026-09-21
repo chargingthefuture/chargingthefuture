@@ -9,7 +9,7 @@ import {
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-// The export is the whole table, not a page of it: it exists so the survey can be analyzed and
+// The export is the entire table, not a page of it: it exists so the survey can be analyzed and
 // cited outside the app, and a truncated file would produce a wrong count in a blog post.
 const EXPORT_LIMIT = 100_000;
 
@@ -23,7 +23,7 @@ export async function GET() {
   try {
     const responses = await listSurveyResponses(EXPORT_LIMIT);
     // Written before the file is handed over, not after: once the CSV leaves the app it is a
-    // copy of the whole table on someone's disk, outside anything this code can see. The row
+    // copy of the entire table on someone's disk, outside anything this code can see. The row
     // says who took it and how many responses were in it, which is what a later question about
     // where a published number came from actually needs.
     await insertSurveyAudit({

@@ -198,7 +198,7 @@ export async function getSurveyTotals(): Promise<SurveyTotals> {
        (SELECT COUNT(*)::text FROM quora_deletion_survey_accounts) AS reported_removals,
        (SELECT COUNT(*)::text FROM quora_deletion_survey_responses
          WHERE consent_publish_handles = TRUE) AS consenting,
-       -- Members who sent more than one response. The whole reason the member id is on the row:
+       -- Members who sent more than one response. The reason the member id is on the row:
        -- without it a person answering twice is indistinguishable from two people answering, and
        -- a count quoted in a post would be wrong with nothing to show that it was.
        (SELECT COUNT(*)::text FROM (

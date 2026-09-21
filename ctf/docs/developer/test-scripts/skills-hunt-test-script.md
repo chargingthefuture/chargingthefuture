@@ -900,7 +900,7 @@ Result: web ☐
 4. Read the new row in the admin list.
 5. Open the member Missions tab.
 
-**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's whole accepted total.
+**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
 
 **Why this exists:** until 2026-09-17 there was no goal type about a single trade, so a mission titled "Find a mechanic" was stored as "every accepted nomination, whatever the skill" and read "82/1 complete" for a scout who had nominated no mechanic (owner report).
 
@@ -915,7 +915,7 @@ Result: web ☐
 **Precondition:** The round from SH-A10b, plus a mission created with goal type **Every accepted nomination, whatever the skill** and a target of 1, titled for a single trade (e.g. "Find a mechanic"). At least one accepted nomination exists, so that mission reads complete.
 
 **Steps:**
-1. On the member Missions tab, note the number the mission shows — it is the scout's whole accepted total over a target of 1, and reads Complete.
+1. On the member Missions tab, note the number the mission shows — it is the scout's entire accepted total over a target of 1, and reads Complete.
 2. On the admin Missions tab, press **Edit** on that row.
 3. Change Goal type to **Accepted nominations carrying one named skill**, clear the Skill name, and press Save mission.
 4. Put the correct skill in and save.

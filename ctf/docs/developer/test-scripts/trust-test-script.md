@@ -376,7 +376,7 @@ Trust reports sign-in activity as two lines that answer different questions. To 
 6. Both lines count days in UTC, so they agree with each other and with the Active Members figure on
    the Weekly Performance dashboard. A sign-in just after midnight UTC belongs to the new day in both
    lines; if the all-time count and the run disagree about which day a sign-in fell on, that is a bug.
-7. Signing in is the whole signal. A member who signs in and only reads — opening no plugin at all —
+7. Signing in is the entire signal. A member who signs in and only reads — opening no plugin at all —
    still gains a day on both lines. If reading the app leaves the count unchanged, the sign-in is not
    being recorded and the fault is in `recordLoginEvent`, not here.
 6. Days are counted in UTC, so a sign-in at 23:00 and one at 01:00 the next morning are two days.

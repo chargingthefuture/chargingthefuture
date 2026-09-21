@@ -72,7 +72,7 @@ function ViewerStateNote({ comment }: { comment: ThreadComment }) {
 
 // A comment's words, or the box its author is rewriting them in.
 //
-// The "edited" mark is the whole reason the mark exists: a rewritten comment keeps its id, its
+// The "edited" mark is the reason the mark exists: a rewritten comment keeps its id, its
 // replies and its reactions, so without it a reader has no way to tell that what they are reading
 // is not what was answered. The Commons marks a rewritten reply the same way.
 function CommentBody({

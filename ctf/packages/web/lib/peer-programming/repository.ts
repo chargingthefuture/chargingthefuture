@@ -565,7 +565,7 @@ type FeedbackRow = {
 };
 
 // Admin-only: the most recent member feedback, newest first. Resolves author display names in one
-// batched Clerk lookup. `limit` is clamped to a sane range so a bad caller can't pull the whole table.
+// batched Clerk lookup. `limit` is clamped to a sane range so a bad caller can't pull the entire table.
 export async function listRecentFeedback(limit = 50): Promise<PeerProgrammingFeedbackItem[]> {
   const pageSize = Math.min(Math.max(1, limit), 100);
   const result = await queryDb<FeedbackRow>(

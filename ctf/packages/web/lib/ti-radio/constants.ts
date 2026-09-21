@@ -28,7 +28,7 @@ export const TI_RADIO_SLOTS_PER_DAY = (24 * 60) / TI_RADIO_SLOT_MINUTES; // 16
 export const TI_RADIO_GUIDE_DAYS = 7;
 
 // How many slots one member may hold inside any 24-hour stretch of the guide. Not a judgment about
-// anybody — a ceiling so one person cannot take a whole day and leave the guide looking like one
+// anybody — a ceiling so one person cannot take an entire day and leave the guide looking like one
 // show. Checked against every 24-hour window that contains the slot being booked, not against the
 // calendar day, so three slots at 11pm and one at 1am is the same thing as four in an evening.
 export const TI_RADIO_MAX_SLOTS_PER_DAY = 3;

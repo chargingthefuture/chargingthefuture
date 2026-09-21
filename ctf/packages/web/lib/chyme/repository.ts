@@ -287,7 +287,7 @@ async function ensureServiceProfile(client: PoolClient, identity: IdentityInput)
 // Upsert the member's presence row and return how many seconds of connected time this heartbeat
 // stands for: the gap since the previous last_seen_at, capped at the presence window. A gap longer
 // than the window means the member was not counted as present across it (they dropped out and came
-// back), so it credits nothing rather than the whole absence. The sub-select in RETURNING reads the
+// back), so it credits nothing rather than the full absence. The sub-select in RETURNING reads the
 // row as it was before this statement ran, which is the previous last_seen_at.
 async function upsertMember(client: PoolClient, roomId: string, identity: IdentityInput): Promise<number> {
   const result = await client.query<{ credited_seconds: string | null }>(

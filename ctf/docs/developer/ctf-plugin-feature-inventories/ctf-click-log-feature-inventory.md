@@ -13,7 +13,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 3. User Features
 
-- Three privacy rules cover the whole feature, and member-facing copy leads with them in this
+- Three privacy rules cover the entire feature, and member-facing copy leads with them in this
   order (owner directive, 2026-08-18): (1) notes are always private, nobody but the member ever
   sees them; (2) an incident can be private only when it is untagged, and a private, untagged
   incident does not need a location; (3) tagging problems or schemes requires both a location
@@ -50,7 +50,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   "Full list" link beside its question — the problems picker points at
   `https://www.chargingthefuture.com/look-ma`, the schemes picker at
   `https://www.chargingthefuture.com/schemes`. Both open in the shared share-link popup (the same
-  control used everywhere else in the app), which shows the whole address, opens it in a new tab,
+  control used everywhere else in the app), which shows the entire address, opens it in a new tab,
   or copies it — so reading the long description of a problem or a scheme never replaces the page
   and never loses the incident the member is part-way through logging. The same links appear in
   the pickers of the after-the-fact edit form.
@@ -133,7 +133,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - Problem-and-scheme pairs (added 2026-08-19): how often a named scheme was tagged on the same
   incident as a given problem. Two separate rankings say what happened and what was used; the pair
   list says which method was attached to which harm.
-- Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the whole
+- Shareable report image (added 2026-08-19): `GET /api/click-log/admin/trends/image` draws the entire
   report — every section plus the method statement — as one tall PNG, so it can be posted somewhere
   that takes an image without stitching phone screenshots together and losing rows at the seams.
   The trends screen offers one control, "Show the report as one image", which draws the picture and
@@ -179,7 +179,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 - `GET /api/click-log/preferences` — Read the member's global owner-share default (`{ shareWithOwner }`).
 - `PUT /api/click-log/preferences` — Set the member's global owner-share default. Body `{ shareWithOwner }`.
 - `GET /api/click-log/admin/trends` — Admin-only aggregate trends over shared incidents from the last 90 days: `{ summary, buckets, areas, tagTrends, categories, pairs }`. `summary` carries the window, shared-incident total, distinct member count, repeat-reporter count, tagged total, location coverage, and first/last day; `buckets` are day / ~11 km location cell / count (unchanged); `areas` are ~11 km cells with incident count, distinct member count, and date span; `tagTrends` are tag kind (`problem` | `scheme`) / tag slug / count (unchanged); `categories` are harm-category rollups counted once per incident; `pairs` are the top problem-and-scheme combinations on the same incident. Every figure comes from a grouped query in `lib/click-log/report-repository.ts`; member identity appears only inside `COUNT(DISTINCT …)`.
-- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the whole report, built from the same aggregate as the endpoint above. The ~11 km area coordinates are never in the image and no parameter can put them back (owner directive, 2026-08-24: exporting the image is how the report gets shared publicly, so the coordinates cannot be an option on this route). The country rollup is in every image, and where the areas would be the image says how many were recorded and why they were left out. Takes no parameters. Always responds with `Content-Disposition: attachment` (owner test on iOS, 2026-08-24: served inline it is a bare image with no page around it and no way back to the trends screen), a dated filename, and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
+- `GET /api/click-log/admin/trends/image` — Admin-only PNG of the entire report, built from the same aggregate as the endpoint above. The ~11 km area coordinates are never in the image and no parameter can put them back (owner directive, 2026-08-24: exporting the image is how the report gets shared publicly, so the coordinates cannot be an option on this route). The country rollup is in every image, and where the areas would be the image says how many were recorded and why they were left out. Takes no parameters. Always responds with `Content-Disposition: attachment` (owner test on iOS, 2026-08-24: served inline it is a bare image with no page around it and no way back to the trends screen), a dated filename, and `Cache-Control: no-store`. The image carries the method statement with the numbers so a reposted copy is never counts without provenance.
 
 ## 6. Data Model and Storage Contracts
 
@@ -467,7 +467,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   seven from seven members are different situations, and the old view could not tell them apart), a
   rollup of the 53 problem tags into six harm categories, kind labels on scheme rows closing the
   taxonomy gap `tags.ts` records, and a problem-and-scheme pair list. New endpoint
-  `GET /api/click-log/admin/trends/image` (`click-log.trends.image` 1.0.0) draws the whole report as
+  `GET /api/click-log/admin/trends/image` (`click-log.trends.image` 1.0.0) draws the entire report as
   one tall PNG for posting. Superseded the same day: area coordinates are **included** in that image
   by default and `?areas=0` leaves them out (owner directive — recording where incidents happen is
   why ClickLog asks for a location, so a shared copy that withheld it withheld the point of the
@@ -642,7 +642,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 - 2026-08-04: **New scheme tag: The Warm Spell (owner-named).** `performed-kindness` — weeks or
   months of performed friendliness, then overt harassment resumes. The only scheme in the list
   defined by its shape over time rather than by a single act, and separate from `good-cop-bad-cop`
-  on that basis: that one is two people working the same moment, this one is the whole environment
+  on that basis: that one is two people working the same moment, this one is the entire environment
   alternating and can be the same people doing both. Purpose per the owner: lower the member's
   guard so new information can be collected, and keep them swinging between relief and dread.
   Recorded alongside it: alternation is more destabilizing than constant hostility because constant

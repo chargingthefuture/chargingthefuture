@@ -11,7 +11,7 @@ import { canViewSharedTrends } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import { requireClickLogAdminAccess } from '../../../_lib';
 
-// The whole shared-incident report as one tall PNG, for posting somewhere that takes an image.
+// The entire shared-incident report as one tall PNG, for posting somewhere that takes an image.
 // Always answered as a file download (owner test on iOS, 2026-08-24): shown in the browser instead,
 // the response is a bare image with no page around it and no way back to the trends screen — the
 // browser had nothing to draw a back control on. Saving the file leaves the trends screen where it

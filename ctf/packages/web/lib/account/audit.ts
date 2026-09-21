@@ -12,7 +12,7 @@ export type AccountAuditEvent = {
   readonly actorId: string;
   readonly status: 'allow' | 'deny';
   readonly reason: string;
-  /** 'service' for a single plugin, 'account' for the whole account. */
+  /** 'service' for a single plugin, 'account' for the entire account. */
   readonly scope: 'service' | 'account';
   /** Plugin slug for service scope; omitted/undefined for account scope. */
   readonly serviceName?: string;

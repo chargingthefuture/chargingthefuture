@@ -16,7 +16,7 @@ sessions.
 - Stream Chat only: the member's Stream user `beacon-<userId>` and their messages in Beacon event chat
   channels are hard-deleted on deletion. Beacon Stream Video (the livestream) is host-published and
   unaffected.
-- One extra server-side `deleteUser` call per whole-account deletion — a low-frequency, user-initiated
+- One extra server-side `deleteUser` call per full-account deletion — a low-frequency, user-initiated
   event.
 
 ## Estimated Monthly Impact

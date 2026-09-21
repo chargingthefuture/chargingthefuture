@@ -44,7 +44,7 @@
 //   CODE_REVIEW_MODEL      Model id (default: claude-sonnet-4-6). Use a cheaper model to cut cost.
 //   CODE_REVIEW_SLICE      Review this exact plugin/module name instead of the rotation pick.
 //   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first.
-//   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most whole plugins).
+//   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most entire plugins).
 //   CODE_REVIEW_CONTRACTS_MAX_BYTES  Cap on contract reference bytes (default: 60000).
 //   CODE_REVIEW_DEPS_MAX_BYTES  Cap on imported-code reference bytes (default: 70000; 0 disables).
 //   CODE_REVIEW_DRY_RUN    "1" to print findings without filing issues or touching the ledger.
@@ -72,12 +72,12 @@ const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES |
 // turn the dependency context off.
 //
 // 70000 was calibrated when extracted declarations were, through a bug, only their signatures. Now
-// that they carry their bodies — which is the whole point, since the reasoning a reviewer needs is
+// that they carry their bodies — which is the point, since the reasoning a reviewer needs is
 // inside the function — the same set of dependencies costs more. Measured on the commons slice: at
 // 70000 two files are dropped, at 90000 all 16 fit.
 const DEPS_MAX_BYTES = Number(process.env.CODE_REVIEW_DEPS_MAX_BYTES || '90000');
-// The model's findings JSON must fit in one response. 4000 was too small for a whole-plugin
-// review: the JSON truncated mid-string and JSON.parse threw, failing the whole run. Give it ample
+// The model's findings JSON must fit in one response. 4000 was too small for a full-plugin
+// review: the JSON truncated mid-string and JSON.parse threw, failing the entire run. Give it ample
 // room (Sonnet allows far more), overridable for cost tuning.
 const MAX_OUTPUT_TOKENS = Number(process.env.CODE_REVIEW_MAX_OUTPUT_TOKENS || '16000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
@@ -439,7 +439,7 @@ async function askClaude(slice, source, chunkNote, contractsText, existingFindin
     'You are a senior engineer doing a code review of one plugin/module of "Charging the',
     'Future", an open-source Next.js + React Native app. Follow the repository rules in CLAUDE.md.',
     '',
-    'You are shown the whole slice across its layers at once. Look hard for bugs that live at',
+    'You are shown the entire slice across its layers at once. Look hard for bugs that live at',
     'the SEAMS between layers, not just within one file:',
     '  - the API route returns one shape but the web component or mobile screen expects another;',
     "  - a lib/server function's contract changed but a caller still uses the old shape;",
@@ -568,7 +568,7 @@ function parseFindings(raw) {
     return findings;
   } catch (error) {
     // The response can be truncated (model hit max_tokens) or otherwise malformed, which used to
-    // fail the whole run. Salvage the complete finding objects parsed before the break instead of
+    // fail the entire run. Salvage the complete finding objects parsed before the break instead of
     // dropping the entire review. If nothing is recoverable, re-throw the original error.
     const salvaged = salvageFindings(text);
     if (salvaged.length > 0) {
@@ -840,7 +840,7 @@ async function main() {
   const chunk = gatherChunk(fileList, start, MAX_BYTES);
   const covered = `files ${chunk.startIdx + 1}–${chunk.endIdx} of ${fileList.length}`;
   const chunkNote = chunk.complete && start === 0
-    ? `This run covers the whole slice (${fileList.length} file(s)).`
+    ? `This run covers the entire slice (${fileList.length} file(s)).`
     : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
 
   const contracts = gatherContracts(slice.name);

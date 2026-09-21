@@ -50,7 +50,7 @@ export function WhatWorksRightRail({ stats }: { stats: WhatWorksStats }) {
 
       <div style={{ padding: '13px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: `1px solid ${t.BORDER_SOLID}` }}>
         <div style={{ fontSize: 12, color: t.SUBTLE, lineHeight: 1.6 }}>
-          One shared list for the whole community — for now. Per-survivor lists may come later.
+          One shared list for the entire community — for now. Per-survivor lists may come later.
         </div>
         <a href={LOOK_MA_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: t.ACCENT, fontWeight: 600, textDecoration: 'none', marginTop: 8 }}>
           From the problems in “Look Ma, I Fixed It” <ChevronRight size={13} />

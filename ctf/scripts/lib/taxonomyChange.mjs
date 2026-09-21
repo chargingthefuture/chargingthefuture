@@ -175,7 +175,7 @@ export const TAXONOMY_CHANGES = [
   { id: 37, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Content Marketing', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Content strategy and analytics", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
   { id: 38, op: 'deactivateSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', skill: 'Brand strategy and positioning', skillExisting: true, acknowledgedImpact: 'Near-duplicate of "Brand Management", the owner-picked survivor of the pair. Members holding this row stop seeing the chip until they re-pick the surviving skill; the audit metadata records how many were holding it.' },
 
-  // Change 39 (owner-approved 2026-07-03): the change that started the whole governance effort. The
+  // Change 39 (owner-approved 2026-07-03): the change that started the entire governance effort. The
   // generic marketing skill under the Food & Agriculture occupation funneled every holder into that
   // sector in the Workforce match (its job_title_id was the skill's only parent). Marketing now
   // lives under Professional & Business Services > Marketing Specialists; the sole known holder
@@ -305,7 +305,7 @@ export const TAXONOMY_CHANGES = [
   // marketing pairs. Merging first and thinning second is the same order that worked there.
   //
   // Ops 77-78 fix two singular occupation names with no duplicate behind them, so a rename is the
-  // whole fix: "Apparel / Fashion Designer" against the plural Creative & Media convention
+  // entire fix: "Apparel / Fashion Designer" against the plural Creative & Media convention
   // (Graphic / Visual Designers, Artists / Illustrators, Photographers / Videographers), and
   // "Machinist" against Manufacturing & Industry's (Production Workers, Quality Inspectors, Process
   // Operators). Renaming an occupation moves no rows and breaks no member link - the row keeps its

@@ -49,7 +49,7 @@ export function summarize(accounts: UnlockSignupAccount[]) {
     neverReturnedCount: neverBack,
     returnedAnywayCount: notSubmitted.length - neverBack,
     // Median rather than mean: one member who reloaded the screen twenty times would drag an average
-    // and make the whole group look like it kept trying.
+    // and make the entire group look like it kept trying.
     medianScreenViews: views.length === 0 ? 0 : views[Math.floor(views.length / 2)],
   };
 }

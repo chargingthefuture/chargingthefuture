@@ -34,7 +34,7 @@ export function SkillUpBrowse({
 }) {
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
-  // All three cards are about you, not about the whole site: how many cohorts are open to join, how
+  // All three cards are about you, not about the entire site: how many cohorts are open to join, how
   // many you are in, and how many of your credits are held. The middle card used to read just
   // "Enrolled" next to a people icon, which invited reading it as a count of everyone enrolled
   // site-wide (owner report). It is your own count, so it says so.

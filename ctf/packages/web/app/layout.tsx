@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   applicationName: 'Skills Economy',
   // Installable PWA (owner decision, 2026-07-20): the manifest + service worker make the web app
   // installable to the home screen on Android and iOS, so the mobile-responsive web app covers the
-  // whole product on phones. appleWebApp enables the standalone (no browser chrome) mode on iOS.
+  // entire product on phones. appleWebApp enables the standalone (no browser chrome) mode on iOS.
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

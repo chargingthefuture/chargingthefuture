@@ -200,7 +200,7 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
      URLs stripped from the corpus in the first place. Only quora.com links are accepted, duplicates
      within one submission are rejected, and a post under 120 characters is refused up front (not a
      quality judgment — a couple of lines cannot ground an answer, and saying so now saves the wait).
-   - **Whole export.** For the rarer member whose public writing is nearly all on-topic: they ask
+   - **Entire export.** For the rarer member whose public writing is nearly all on-topic: they ask
      Quora for the export by hand — there is no settings screen that produces one (checked by the
      owner, 2026-08-20) — and upload the `.zip` exactly as it arrived. A FAQ card on the same page —
      **Getting a copy of your Quora data** — carries Quora's own help article quoted in full
@@ -554,7 +554,7 @@ The export logic is in `ctf/packages/web/lib/comic/repository.ts`:
 
 **Running the export marks what it took.** Every owner-correction row that reached the file and was
 still awaiting export is set to `exported` with an `exported_at` stamp
-(`markComicTrainingExamplesExported()`), which is what moves the counter below. The file is the whole
+(`markComicTrainingExamplesExported()`), which is what moves the counter below. The file is the entire
 non-discarded dataset on every call — marking does not shrink it, it only records that a row has been
 downloaded at least once, so a repeat download changes nothing. A row added while the file was being
 built keeps its awaiting-export status and is picked up by the next download. Two things to know:
@@ -788,7 +788,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   `exported_at`; `exportComicTrainingExamples()` returns `{ byIntent, pendingIds }` so only rows that
   actually reached the file are marked (blank-text rows are skipped, and a row written while the file
   was being built stays awaiting export for the next run). The file itself is unchanged — still the
-  whole non-discarded dataset every time, so a repeat download is a no-op rather than a re-stamp.
+  entire non-discarded dataset every time, so a repeat download is a no-op rather than a re-stamp.
   `?preview=1` returns the file without marking anything. The count comes back as `markedExported`
   in JSON and the `X-Marked-Exported` header on the YAML download; because the file is built before
   the update runs, a failed update still returns the full export and says why the counts did not
@@ -810,7 +810,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   **Do not reinstate a settings path unless Quora publishes one.** Copy only — no route, schema, or
   contract change.
 - 2026-08-20: **The knowledge library now says how to get a Quora export, in Quora's own
-  words.** `/knowledge` offered "Send my whole Quora export" and a one-line pointer at Quora's
+  words.** `/knowledge` offered "Send my full Quora export" and a one-line pointer at Quora's
   settings, but nothing told a member how the archive is actually requested or how long it takes —
   a step that happens entirely on Quora's side, where nothing in this app can help. Added a FAQ card
   (`components/comic/comic-quora-export-faq.tsx`) under the two sending options, showing Quora's help
@@ -864,7 +864,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   for. Gating contribution behind Unlock reviews the same account twice and makes the most useful
   thing a new member can do into something they wait for. (This settles a mismatch found the same
   day: the page was `any_authenticated` while the routes were `approved_full`, so a member could fill
-  in the whole form and only then be refused. Resolved by loosening the routes, not tightening the
+  in the entire form and only then be refused. Resolved by loosening the routes, not tightening the
   page — PR #1963, which did the opposite, was closed unmerged.)
   - **Access:** new `requireComicContributionAccess` (`any_authenticated`) on the three contribution
     routes; the rest of comic stays `approved_full`.
@@ -913,12 +913,12 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   to requires bumping `CONTRIBUTION_CONSENT_VERSION`, and a page cached from before a change is
   refused rather than recorded as consent to wording it never showed. The file picker stays disabled
   until all six are ticked, so the order is always read-then-choose.
-  **Picking a few posts is the default; the whole export is the fallback (owner decision,
+  **Picking a few posts is the default; the entire export is the fallback (owner decision,
   2026-07-29).** Most people's public writing is mixed — dating, politics, faith, memes — and nothing
   in this pipeline sorts on-topic from off-topic automatically, so an export means the reviewer reads
   hundreds of posts to find a handful. Picking moves that choice to the author, who knows instantly
   which posts belong, and is the more honest consent: choosing three posts is knowing exactly what you
-  are giving. It also carries no upload at all, which removes the whole attack surface for the common
+  are giving. It also carries no upload at all, which removes the entire attack surface for the common
   case. Picked posts are pasted as text with a quora.com link as **provenance that is never fetched** —
   scraping would inherit the exact link-rot fragility that got URLs stripped from the corpus.
   **On the export path, the contributor is still not asked to clean their own file.** A Quora `.zip` bundles inbox messages,

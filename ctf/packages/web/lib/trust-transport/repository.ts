@@ -623,7 +623,7 @@ export async function listAvailableRequests(options: {
     [excludeUserId, offset, pageSize],
   );
 
-  // Attach each open request's accepted-currencies set (split settlements) so a driver sees the whole
+  // Attach each open request's accepted-currencies set (split settlements) so a driver sees the entire
   // offer (e.g. ServiceCredits + USD). Mode/settlement/age only — still no locations before acceptance.
   const requestIds = result.rows.map((row) => row.id);
   const acceptedRows =

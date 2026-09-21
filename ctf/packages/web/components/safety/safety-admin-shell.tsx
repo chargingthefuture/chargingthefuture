@@ -267,7 +267,7 @@ export function SafetyAdminShell() {
           When a member blocks someone and flags them as a{' '}
           <span style={{ color: t.TITLE, fontWeight: 600 }}>suspected predator or human trafficker</span>, the
           report shows up here. Ordinary blocks are private and never appear. Review a report once you have
-          acted on it, or dismiss it if it is not a real safety concern. Banning a member from the whole
+          acted on it, or dismiss it if it is not a real safety concern. Banning a member from the entire
           product is a separate admin action that arrives in a later change.
         </p>
 

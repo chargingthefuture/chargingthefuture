@@ -101,7 +101,7 @@ async function fetchFeedEvents(lat, lon) {
         }
       }
     } catch {
-      // A single bad/unreachable feed must not break the whole report.
+      // A single bad/unreachable feed must not break the entire report.
     }
   }
   return out;

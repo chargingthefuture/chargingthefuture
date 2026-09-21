@@ -229,7 +229,7 @@ function mergeTeamMembers(memberLists: WorkforceMatchedMember[][]): WorkforceMat
 
 export async function fetchCommunityPlanningReport(): Promise<CommunityPlanningReport> {
   // Every sector referenced by any team, resolved in a single pass so the model and the Directory
-  // profile set are loaded once for the whole report rather than once per sector per team.
+  // profile set are loaded once for the entire report rather than once per sector per team.
   const allSectors = Array.from(
     new Set(COMMUNITY_PLANNING_TEAMS.flatMap((team) => team.sectors)),
   );

@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 // Web app manifest (owner decision, 2026-07-20): make the web app a first-class installable PWA on
 // Android and iOS. With this + the service worker (public/sw.js) + web push (already shipped), the
-// mobile-responsive web app covers phones for the whole product; the native Android app is narrowed
+// mobile-responsive web app covers phones for the entire product; the native Android app is narrowed
 // to Chyme (live audio). "Add to Home screen" then gives members a standalone app icon that opens
 // the Commons in its own window — no browser chrome — and receives web push.
 export default function manifest(): MetadataRoute.Manifest {

@@ -49,7 +49,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 // Each fact the metadata may carry, said plainly. A table rather than a chain of ifs so a new
-// recorded field is one row here, and the whole description is a filter and a join.
+// recorded field is one row here, and the entire description is a filter and a join.
 const METADATA_PHRASES: ReadonlyArray<(meta: Record<string, unknown>) => string | null> = [
   (meta) => (typeof meta.action === "string" ? ACTION_LABELS[meta.action] ?? meta.action : null),
   (meta) => {

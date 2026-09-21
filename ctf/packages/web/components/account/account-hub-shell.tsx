@@ -119,7 +119,7 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
             href="/account/data"
             icon={<Database size={18} />}
             title="Your data &amp; deletion"
-            desc="See everything the platform stores about you, and delete it — one service or your whole account."
+            desc="See everything the platform stores about you, and delete it — one service or your entire account."
             tok={tok}
           />
           <AccountLinkRow

@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       {
         ok: false,
         code: FIRESIDE_ERROR_CODE.invalidPayload,
-        message: `A cursor must be the one returned by the previous read, and a limit must be a whole number from 1 to ${FIRESIDE_EXPORT_SCAN_LIMIT}.`,
+        message: `A cursor must be the one returned by the previous read, and a limit must be an integer from 1 to ${FIRESIDE_EXPORT_SCAN_LIMIT}.`,
       },
       { status: 400, headers: PUBLIC_READ_HEADERS },
     );

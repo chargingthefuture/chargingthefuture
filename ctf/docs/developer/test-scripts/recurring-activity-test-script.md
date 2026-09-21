@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/recurring-activity`) · android (`RecurringActivity.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:recurring-activity` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-recurring-activity-feature-inventory.md` |
-| **Generated** | 2026-07-14 (commit 453b14fe) |
+| **Generated** | 2026-07-14 (commit 453b14fe) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
 
 ---
 

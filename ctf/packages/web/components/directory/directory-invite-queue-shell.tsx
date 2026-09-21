@@ -247,7 +247,7 @@ export function DirectoryInviteQueueShell() {
               }}
             >
               <ClipboardCopy size={15} />
-              {copied ? 'Copied' : 'Copy the whole queue'}
+              {copied ? 'Copied' : 'Copy the entire queue'}
             </button>
 
             {rows.map((row) => (

@@ -1,6 +1,6 @@
 // Scheduled rooms, MVP (owner decision, 2026-09-19): what Chyme shows from the TI Radio guide.
 //
-// The guide's public route returns the whole week of 90-minute slots, booked or not. Chyme keeps
+// The guide's public route returns the entire week of 90-minute slots, booked or not. Chyme keeps
 // only the booked ones that have not ended, soonest first, capped — the slot on air now comes first
 // by construction — and prints them in the reader's own timezone. Pure functions, shared by the
 // member view and the signed-out page; the Android app carries the same two in its ChymeApi.
@@ -31,7 +31,7 @@ function isGuideSlot(value: unknown): value is GuideSlot {
 }
 
 // Booked slots that have not ended yet, soonest first, capped. A malformed entry is skipped rather
-// than taking the whole list down.
+// than taking the entire list down.
 export function pickUpcoming(slots: unknown[], now: Date, limit: number = UPCOMING_LIMIT): ChymeUpcomingSlot[] {
   const nowMs = now.getTime();
   const picked: ChymeUpcomingSlot[] = [];

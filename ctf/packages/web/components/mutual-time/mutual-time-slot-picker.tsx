@@ -21,7 +21,7 @@ type VotePeriod = { label: string; order: number; slots: string[] };
 // and a signed-out visitor sees the same thing grayed out behind the sign-in prompt, so the link shows
 // what they'd be picking from instead of only a locked box.
 //
-// `disabled` makes the whole picker inert: nothing responds to a tap, nothing takes keyboard focus, and
+// `disabled` makes the entire picker inert: nothing responds to a tap, nothing takes keyboard focus, and
 // screen readers skip it (the surface around it carries the real message). Everything is still laid out
 // exactly as a voter sees it.
 
@@ -62,7 +62,7 @@ function SlotGrid({ periods, picks, atMax, toggle, tz, disabled, t }: { periods:
               {period.slots.map((iso) => {
                 const isSel = picks.includes(iso);
                 const isDis = disabled || (!isSel && atMax);
-                // The preview is already faded as a whole, so only fade a button here when it is a live
+                // The preview is already faded overall, so only fade a button here when it is a live
                 // form and the member has used up their picks.
                 return <SlotButton key={iso} iso={iso} isSel={isSel} isDis={isDis} dimmed={!disabled && isDis} disabled={disabled} toggle={toggle} tz={tz} t={t} />;
               })}

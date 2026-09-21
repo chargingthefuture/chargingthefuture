@@ -626,4 +626,4 @@ changelog:
       whether the action also brought a removed row back, instead of only the action name. The
       auto-mission run, the auto-mission settings change and the mission create/update/archive
       events now write a durable row in skills_hunt_audit_log as well as an observability log line,
-      so the readable trail is the whole set of admin mutations rather than a subset.
+      so the readable trail is the entire set of admin mutations rather than a subset.

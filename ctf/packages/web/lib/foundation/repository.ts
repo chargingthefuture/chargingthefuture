@@ -394,7 +394,7 @@ function mapInstantCallRow(row: FoundationInstantCallRow | undefined): Foundatio
 }
 
 // The provider's own instant 1:1 call settings (Foundation "Connect now", issue #808). enabled is the
-// opt-in switch; rateCredits is whole ServiceCredits per block (only meaningful when enabled);
+// opt-in switch; rateCredits is integer ServiceCredits per block (only meaningful when enabled);
 // intervalMinutes is the block length. A member with no row yet reads the off default.
 export async function getOwnInstantCallSettings(userId: string): Promise<FoundationInstantCallSettings> {
   const result = await queryDb<FoundationInstantCallRow>(
@@ -410,7 +410,7 @@ export async function getOwnInstantCallSettings(userId: string): Promise<Foundat
 }
 
 // Save the provider's instant-call settings. Validates before writing: when enabled, rateCredits must
-// be a whole number >= 1 ('invalid_rate'); intervalMinutes must be a whole number in [5, 60]
+// be an integer >= 1 ('invalid_rate'); intervalMinutes must be an integer in [5, 60]
 // ('invalid_interval'). When disabled the rate is stored as given (or null). Upserts only the three
 // settings columns + updated_at into foundation_user_extension, matching upsertNotificationPreferences.
 export async function setOwnInstantCallSettings(

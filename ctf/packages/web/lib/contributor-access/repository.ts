@@ -131,7 +131,7 @@ export async function listEligibleMembers(): Promise<EligibleMember[]> {
 }
 
 // Categorical membership check for the gated channel: eligible AND not revoked (a for-cause
-// revoke already sets eligible = FALSE, so the flag alone is the whole answer).
+// revoke already sets eligible = FALSE, so the flag alone is the answer).
 export async function isMemberEligible(userId: string): Promise<boolean> {
   const result = await queryDb<{ user_id: string }>(
     `SELECT user_id FROM contributor_access_eligibility WHERE user_id = $1 AND eligible = TRUE`,

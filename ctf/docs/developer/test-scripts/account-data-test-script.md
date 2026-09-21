@@ -47,7 +47,7 @@ page. It is valid JSON with the envelope `exportVersion: 1`, `generatedAtIso`, `
 no data still downloads an honest zero-table/zero-row file.
 **Result:** web ☐ — notes:
 
-## AD-3 · Export the whole account
+## AD-3 · Export the entire account
 
 **Role:** member
 **Steps:**
@@ -76,7 +76,7 @@ routes return the auth denial, never data.
 **Role:** member · **Precondition:** a service with data you are willing to delete.
 **Steps:**
 1. Tap Delete on a service card; read the confirm dialog; confirm.
-2. Re-export the whole account.
+2. Re-export the entire account.
 **Expected:** The two-step confirm names the service and states permanence. After deletion the card
 leaves the list and a fresh full export shows zero rows for that service. Full-account deletion
 still requires typing `delete my account` (do not run this casually).
@@ -88,7 +88,7 @@ still requires typing `delete my account` (do not run this casually).
 least two messages in the Commons, and one of them is still visible on the Commons chat.
 **Steps:**
 1. Open the Commons and note the exact text of your posts.
-2. Go to Account & Data and delete the Commons service (or the whole account on a throwaway
+2. Go to Account & Data and delete the Commons service (or the entire account on a throwaway
    account).
 3. Reload the Commons in a signed-in session and scroll to where the posts were.
 4. Repeat the deletion once more, then reload again.
