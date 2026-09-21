@@ -9,7 +9,7 @@ import type {
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,
-  SkillsHuntMissionWithProgress,
+  SkillsHuntMissionWithCommunityProgress,
 } from "lib/skills-hunt/types";
 
 export type {
@@ -18,7 +18,7 @@ export type {
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,
-  SkillsHuntMissionWithProgress,
+  SkillsHuntMissionWithCommunityProgress,
 };
 
 export const COLOR = "#FACC15";

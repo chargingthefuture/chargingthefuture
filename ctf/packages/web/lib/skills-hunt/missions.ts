@@ -28,6 +28,8 @@ import type {
   SkillsHuntMissionProgress,
   SkillsHuntMissionStatus,
   SkillsHuntMissionWithProgress,
+  SkillsHuntMissionWithCommunityProgress,
+  SkillsHuntMissionCommunityProgress,
 } from './types';
 
 type SkillsHuntMissionRow = {
@@ -127,32 +129,47 @@ async function listMissionsForRound(
   return result.rows.map(mapMission);
 }
 
-export async function listMissionsForRoundWithProgress(
+// What the round has done on each of its missions, across everybody — the Missions tab's reading.
+//
+// A mission is a community-wide competition (owner directive, 2026-09-20), so this screen renders
+// the same for every member. It used to return the caller's own row, which made the same mission
+// read "3/3 complete" to one scout and "0/3" to the next, and told a reader nothing about whether
+// the community still needed that skill. It also made the shareable picture of this screen one
+// person's scorecard rather than an advertisement.
+//
+// The sum is over the per-scout rows rather than a second query over submissions: every accepted
+// nomination belongs to exactly one scout, and their row counts the ones matching this mission's
+// goal, so adding the rows up is the same arithmetic the bonus already runs — one definition, not
+// two that can drift. A scout with nothing to show has no row and adds nothing.
+export async function listMissionsForRoundWithCommunityProgress(
   client: PoolClient,
   roundId: string,
-  userId: string,
-): Promise<SkillsHuntMissionWithProgress[]> {
+): Promise<SkillsHuntMissionWithCommunityProgress[]> {
   const missions = await listMissionsForRound(client, roundId);
   if (missions.length === 0) {
     return [];
   }
-  const progressResult = await client.query<SkillsHuntMissionProgressRow>(
+  const totals = await client.query<{ mission_id: string; total: string; contributors: string }>(
     `
-      SELECT id, mission_id, user_id, progress_count, completed_at,
-             metadata, updated_at
-      FROM skills_hunt_mission_progress
-      WHERE user_id = $1
-        AND mission_id = ANY($2::uuid[])
+      SELECT mission_id,
+             COALESCE(SUM(progress_count), 0)::text AS total,
+             COUNT(*) FILTER (WHERE progress_count > 0)::text AS contributors
+        FROM skills_hunt_mission_progress
+       WHERE mission_id = ANY($1::uuid[])
+       GROUP BY mission_id
     `,
-    [userId, missions.map((m) => m.id)],
+    [missions.map((m) => m.id)],
   );
-  const byMission = new Map<string, SkillsHuntMissionProgress>();
-  for (const row of progressResult.rows) {
-    byMission.set(row.mission_id, mapMissionProgress(row));
+  const byMission = new Map<string, SkillsHuntMissionCommunityProgress>();
+  for (const row of totals.rows) {
+    byMission.set(row.mission_id, {
+      count: Number.parseInt(row.total, 10) || 0,
+      contributors: Number.parseInt(row.contributors, 10) || 0,
+    });
   }
   return missions.map((mission) => ({
     ...mission,
-    progress: byMission.get(mission.id) ?? null,
+    community: byMission.get(mission.id) ?? { count: 0, contributors: 0 },
   }));
 }
 
