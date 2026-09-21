@@ -22,7 +22,6 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 
 type ShellData = {
   weeks: WpWeek[];
-  activeUsers: number | null;
   currentWeekStart: string | null;
   initialWeekStart: string | null;
 };
@@ -50,7 +49,6 @@ async function fetchShellData(): Promise<ShellData> {
   const currentWeekStart = readCurrentWeekStart(currentData);
   return {
     weeks: weeksData.weeks,
-    activeUsers: currentData?.activeUsersLast7Days ?? null,
     currentWeekStart,
     initialWeekStart: currentWeekStart ?? weeksData.weeks[0]?.weekStartDate ?? null,
   };
@@ -61,7 +59,6 @@ export function WeeklyPerformanceShell() {
   const [weeks, setWeeks] = useState<WpWeek[]>([]);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [currentWeekStart, setCurrentWeekStart] = useState<string | null>(null);
-  const [, setActiveUsers] = useState<number | null>(null);
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +71,6 @@ export function WeeklyPerformanceShell() {
       .then((data) => {
         if (!active) return;
         setWeeks(data.weeks);
-        setActiveUsers(data.activeUsers);
         setCurrentWeekStart(data.currentWeekStart);
         setSelectedWeekStart(data.initialWeekStart);
       })

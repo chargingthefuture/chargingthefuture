@@ -13,8 +13,8 @@
 //     or resource and others mark whether it worked. So the listing is what is weighted
 //     (`value.what_works_tools_approved`), and agreeing with one is not.
 //
-// Weekly Performance still counts both in its own dashboard, where the question is activity rather
-// than value.
+// Weekly Performance's Value section reads this same list (owner directive, 2026-09-21), so it no
+// longer carries either of them; its Adoption rows are where turning up is counted.
 //
 // PeerProgramming posting stays, at a weight of 1, for the reason the owner gave: a cohort session
 // is a learning and collaboration setting like SkillUp, and somebody there to extract is exposed by
