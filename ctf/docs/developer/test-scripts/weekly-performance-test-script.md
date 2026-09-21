@@ -120,9 +120,10 @@ is no "set active week" action and no per-week status.
    (progress bar toward 2,000,000); **Value delivered** — one card per plugin's defining event
    (Foundation answered calls, SocketRelay successful closes, TrustTransport completed trips,
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
-   USD, SkillsHunt accepted nominations, WhatWorks approved tools + endorsements, SkillUp
+   USD, SkillsHunt accepted nominations, WhatWorks approved tools, SkillUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters, Beacon engagement per unique broadcast); **Adoption** — Active Members, Daily Active
+   posters — the thirteen events of the shared value-event list, so no endorsement or Beacon card
+   appears); **Adoption** — Active Members, Daily Active
    Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
    incidents + distinct
    loggers. The Active Members card reads "N members": how many different members signed in

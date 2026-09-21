@@ -17,7 +17,6 @@ contracts:
         type: string
     dataAccess:
       - weekly_performance_weeks
-      - weekly_performance_metrics
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -39,9 +38,6 @@ contracts:
         type: boolean
     dataAccess:
       - weekly_performance_weeks
-      # The /current-week response also carries activeUsersLast7Days, a rolling headcount of the
-      # sign-in record. Aggregate only.
-      - login_events
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -89,7 +85,6 @@ contracts:
       generatedAt:
         type: string
     dataAccess:
-      - weekly_performance_metrics
       - canonical_metrics_registry
       - weekly_performance_goal_snapshots
       - foundation_call_sessions
@@ -100,14 +95,10 @@ contracts:
       - contributions_submissions
       - skills_hunt_submissions
       - what_works_products
-      - what_works_endorsements
       - skill_up_enrollments
       - skill_up_disbursements
       - recurring_activities
       - peer_programming_messages
-      - beacon_events
-      - feed_community_post_reactions
-      - feed_community_replies
       - directory_profiles
       - directory_profile_skills
       - mood_submissions
@@ -142,7 +133,6 @@ contracts:
       comparisons:
         type: array
     dataAccess:
-      - weekly_performance_metrics
       - canonical_metrics_registry
       - weekly_performance_goal_snapshots
       - foundation_call_sessions
@@ -153,14 +143,10 @@ contracts:
       - contributions_submissions
       - skills_hunt_submissions
       - what_works_products
-      - what_works_endorsements
       - skill_up_enrollments
       - skill_up_disbursements
       - recurring_activities
       - peer_programming_messages
-      - beacon_events
-      - feed_community_post_reactions
-      - feed_community_replies
       - directory_profiles
       - directory_profile_skills
       - mood_submissions

@@ -62,7 +62,6 @@ export type WpComparison = {
 export type CurrentWeekResponse = {
   ok: boolean;
   currentWeek: WpWeek | null;
-  activeUsersLast7Days: number;
 };
 
 export type WeeksResponse = { ok: boolean; weeks: WpWeek[] };

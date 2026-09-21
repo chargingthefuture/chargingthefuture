@@ -11,7 +11,6 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - weekly_performance_weeks
-      - weekly_performance_metrics
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -73,7 +72,6 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - weekly_performance_metrics
       - canonical_metrics_registry
     targetContext:
       workspaceId: workspace_identifier
@@ -96,7 +94,6 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - weekly_performance_metrics
       - canonical_metrics_registry
     targetContext:
       workspaceId: workspace_identifier

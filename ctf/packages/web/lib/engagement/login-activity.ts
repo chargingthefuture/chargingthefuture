@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { countActiveMembersLastDays, listActiveMemberIdsLastDays } from 'lib/engagement/member-activity';
+import { listActiveMemberIdsLastDays } from 'lib/engagement/member-activity';
 import { failureReason } from 'lib/errors/failure';
 
 // Per-instance memory of who we already recorded today (UTC), so a signed-in
@@ -106,19 +106,14 @@ export function recordLoginEvent(userId: string): void {
   });
 }
 
-// Both readers below answer "who has been active lately", and both go through the shared member-day
-// set in lib/engagement/member-activity.ts, which counts the sign-in record above and nothing else
-// (owner decision, 2026-08-27). Keeping the two on one definition stops the dashboard and the cohort
-// run from disagreeing about who turned up. It also means the write above is load-bearing: a member
-// whose row never lands is missing from both, which is why its failure is logged rather than
-// swallowed.
+// The cohort run's reader of "who has been active lately" goes through the shared member-day set in
+// lib/engagement/member-activity.ts, which counts the sign-in record above and nothing else (owner
+// decision, 2026-08-27) — the same set the dashboard's Active Members rows read, so the two cannot
+// disagree about who turned up. It also means the write above is load-bearing: a member whose row
+// never lands is missing from both, which is why its failure is logged rather than swallowed.
 
 export async function getActiveUserIdsLastDays(days: number): Promise<string[]> {
   return listActiveMemberIdsLastDays(days);
-}
-
-export async function countActiveUsersLastDays(days: number): Promise<number> {
-  return countActiveMembersLastDays(days);
 }
 
 // Whether the `users` table exists, probed once per process. The table is created (or not) at

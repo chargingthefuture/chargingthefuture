@@ -61,7 +61,7 @@ Read routes (admin or approved user). Each writes a `weekly_performance_audit_tr
 
 - `GET /api/weekly-performance/weeks` — a continuous run of weeks, newest first: every week from the current week (an ISO Monday start) back to the earliest of one year ago or the oldest tracked week, so the list never skips a week. The run stops at the week containing the platform launch date (`PLATFORM_LAUNCH_DATE_ISO` = 2026-06-12, `ctf/packages/web/lib/platform/launch.ts`), so the oldest week in the list is the week of Jun 8–14, 2026 and no pre-launch week is offered — the floor applies to stored rows too, so demo/seed data cannot pull the list back past launch. Stored weeks keep their real status; generated weeks with no row are `open` and read live per window. Audits `weekly-performance.week.list`.
 - `GET /api/weekly-performance/weeks/[weekStart]` — canonical window metadata for an arbitrary week start date (`{weekStart, weekEnd, isCurrentWeek, status}`); this is the full `weekly-performance.week.get` surface (accepts any `weekStart`, validated as an ISO `YYYY-MM-DD` date), audits `weekly-performance.week.get`.
-- `GET /api/weekly-performance/current-week` — convenience read of the **current** week plus active-user count (last 7 days); also audits `weekly-performance.week.get` (it is the current-week-only projection of that command, not the parameterized surface).
+- `GET /api/weekly-performance/current-week` — convenience read of the **current** week; also audits `weekly-performance.week.get` (it is the current-week-only projection of that command, not the parameterized surface). It once also carried a rolling seven-day active-user count that no screen showed; removed 2026-09-21.
 - `GET /api/weekly-performance/metrics?weekStartDate=...[&compareWeekStartDate=...]` — week metrics, or a week-over-week comparison when `compareWeekStartDate` is supplied; audits `weekly-performance.metrics.get` or `weekly-performance.comparison.get` per branch.
 
 Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or the `operations` role):
@@ -100,9 +100,10 @@ Internal (service-to-service, never member/browser callable):
 
 ### 3.1 Owned storage tables
 
-The aggregates above are persisted in two tables in `ctf/schema.sql`:
+Nothing aggregate is persisted: every weekly number is computed live on read. The plugin owns two
+tables in `ctf/schema.sql` (a third, `weekly_performance_metrics`, was declared for a store-the-week
+flow that never shipped, was read by nothing, and was dropped by `post/0035` on 2026-09-21):
 
-- `weekly_performance_metrics` — the per-week aggregate store. One row per metric: `id`, `week_start_date` (DATE), `metric_key`, `metric_value` (NUMERIC), `metric_unit`, `source_plugin`, `created_at`.
 - `weekly_performance_audit_trail` — the admin allow/deny audit log. Columns: `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `metadata` (jsonb), `created_at` — the audit coverage required by §4.4.
 - `weekly_performance_goal_snapshots` — weekly memory for the dashboard's two goal rows (GDP
   Community Value Index toward 300B; Workforce recruited toward 2,000,000). Those are state metrics
@@ -148,7 +149,12 @@ Goals (state metrics — the current-week read stores a snapshot, past weeks rep
 - `goal.gdp_value_index` — Community Value Index, toward the 300B goal (from the GDP plugin's live report).
 - `goal.workforce_recruited` — active, non-deleted Directory profiles, toward the 2,000,000 goal.
 
-Value delivered (each plugin's defining action, windowed on the event's own timestamp):
+Value delivered (each plugin's defining action, windowed on the event's own timestamp). Since
+2026-09-21 these cards are generated from the shared value-event definition in
+`lib/contributor-access/value-events.ts` — the same rows the Weavers of the Commons badge and the
+daily exchange count read — and each card applies the event's occurrence rule (`rows`,
+`distinctMembers`, `distinctRef`, or `sum`) to the rows whose own timestamp falls in the week. There
+is no dashboard-side copy of the SQL; changing a value event changes every reading at once:
 
 - `value.foundation_calls_answered` — answered Foundation calls with at least one block charged (aggregate only, rule 132).
 - `value.socket_relay_requests_fulfilled` — SocketRelay fulfillments the requester closed as successful.
@@ -158,11 +164,10 @@ Value delivered (each plugin's defining action, windowed on the event's own time
 - `value.service_credits_peer_sends` — completed direct peer sends originated by ServiceCredits.
 - `value.contributions_confirmed_usd` — confirmed real dollars this week (a sum, not a row count).
 - `value.skills_hunt_nominations_accepted` — nominations a moderator accepted.
-- `value.what_works_tools_approved` / `value.what_works_endorsements_given` — approved tools and endorsements given.
+- `value.what_works_tools_approved` — approved tools contributed.
 - `value.skill_up_completions` / `value.skill_up_trainer_payouts` — completed enrollments and trainer payouts.
-- `value.recurring_ties_confirmed` — ties the counterparty confirmed.
+- `value.recurring_ties_confirmed` — ties the counterparty confirmed (one per tie, though the shared rows credit both sides).
 - `value.peer_programming_active_posters` — distinct members who posted in their cohort.
-- `value.beacon_broadcast_engagement` — distinct (member, broadcast) pairs that reacted or replied on a broadcast's Commons replay post.
 
 Adoption (honest non-value rows):
 
@@ -246,6 +251,27 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   Copy-as-text and read-again controls; admin or operations only; aggregate only apart from the
   admin's own row. Contracts: command, access policy and audit entries for
   `weekly-performance.admin.sign_in_record.get`; admin index row added.
+
+- 2026-09-21: **The Value section reads the shared value-event list, and what nothing used is gone
+  (owner directive).** The dashboard carried its own copy of each value event's SQL, which is how it
+  kept counting WhatWorks endorsements and Beacon engagement after the 2026-09-20 decision removed
+  both from the badge and the daily exchange count. `live-metrics.ts` now generates one card per
+  entry in `lib/contributor-access/value-events.ts`, so the three readings can no longer disagree
+  about what a value event is: adding, removing or redefining one happens in that file alone. The
+  shared definition gained an `occurrences` rule per event — how many times it happened in a
+  window, as distinct from how it scores a member — because the two are not the same question when a
+  row credits a member rather than an event: Recurring ties credit both sides with a row each, so
+  those rows now carry the tie's id as `ref` and the card counts distinct ties; PeerProgramming
+  counts distinct members who posted; Contributions sums dollars; everything else counts rows. The
+  two removed cards, `value.what_works_endorsements_given` and `value.beacon_broadcast_engagement`,
+  leave the dashboard, the registry and the contracts' data-access lists (with the four tables only
+  they read). Removed in the same change because nothing used them: `wp-sidebar.tsx`,
+  `wp-right-rail.tsx` and `wp-icon-rail.tsx` (imported by nothing since the mobile-first rebuild);
+  the rolling `activeUsersLast7Days` on `GET /current-week`, which only the deleted right rail ever
+  showed, with its `countActiveUsersLastDays` reader (the cohort run's `getActiveUserIdsLastDays`
+  stays); and the `weekly_performance_metrics` table, declared for a store-the-week flow that never
+  shipped, written by two seed scripts and read by nothing — `post/0035` drops it, `schema.sql` and
+  both seeds stop naming it, and the contracts' data-access lists lose it.
 
 - 2026-09-21: **Audit of every card, after the sign-in fix (owner request).** Each card's query was
   checked against the current `schema.sql` and against what its plugin's writer actually stores.

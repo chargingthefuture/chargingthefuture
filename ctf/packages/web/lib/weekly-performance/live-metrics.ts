@@ -1,6 +1,8 @@
 import { queryDb } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
 import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
+import { VALUE_EVENT_SOURCES, occurrencesExpression, type ValueEventSource } from 'lib/contributor-access/value-events';
+import { EVENT_SOURCE_PLUGIN, type ContributorValueEventKey } from 'lib/contributor-access/weights';
 import {
   countActiveMembersInWeek,
   countMemberDaysInWeek,
@@ -18,7 +20,8 @@ import {
 //      weekly_performance_goal_snapshots, and past weeks report their stored snapshot.
 //   2. The per-plugin VALUE EVENTS — each plugin's defining action, the event that means the
 //      plugin was used as intended (a completed trip, a hosted stay, a confirmed contribution…).
-//      These are windowed on the event's own timestamp, so any week reports its real count.
+//      Read from the one shared definition in lib/contributor-access/value-events.ts, windowed on
+//      the event's own timestamp, so any week reports its real count.
 //   3. Honest ADOPTION rows: how many members are actually turning up — active members (the plain
 //      headcount for the week) and daily active members (the average across the week's days) — and
 //      the other side of that, deleted accounts: members who ended their entire account this week,
@@ -28,8 +31,9 @@ import {
 //      never per-member detail).
 //
 // Dropped from the old set (owner decision): feed counts and SkillUp enrollments-started (intent,
-// not delivered value — replaced by completions). Skills Taxonomy carries no dashboard stats at
-// all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
+// not delivered value — replaced by completions), and on 2026-09-20 WhatWorks endorsements (an
+// upvote) and Beacon engagement (talk), which left the shared list. Skills Taxonomy carries no
+// dashboard stats at all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
 // dashboard has to answer "how many people showed up this week", so the turnout rows are carried as
 // adoption (owner report, 2026-08-15). Both read the shared member-day set in
 // lib/engagement/member-activity.ts, which counts a member as active on a day when the sign-in
@@ -111,120 +115,43 @@ function windowCount(table: string, dateColumn: string, filter = ''): (weekStart
 
 // ── Value events ───────────────────────────────────────────────────────────────
 
-// Foundation: an answered, charged 1:1 call — the only Foundation signal (messages are too easy to
-// game; quote completion is not tracked as an event). Aggregate count only, admin surface only.
-const foundationCallsAnswered = (weekStart: string) =>
-  guardedScalar(
-    'foundation_call_sessions',
-    `SELECT COUNT(*)::text AS v FROM foundation_call_sessions
-     WHERE answered_at >= $1::date AND answered_at < $1::date + INTERVAL '7 days'
-       AND blocks_charged > 0`,
-    weekStart,
-  );
+// One card per value event, read from the shared definition in
+// lib/contributor-access/value-events.ts — the same rows the Weavers of the Commons badge and the
+// daily exchange count read (owner directive, 2026-09-21). This dashboard used to carry its own
+// copy of each event's SQL, which is how it kept counting two events the 2026-09-20 decision had
+// removed. Now adding, removing or redefining a value event happens in one file and every reading
+// follows. The dashboard's question is how many times an event happened in the week, so each card
+// applies the event's occurrence rule (rows, distinct members, distinct ties, or a sum of dollars)
+// to the rows whose own timestamp falls in the window.
 
-// TrustTransport: a trip both sides confirmed complete.
-const trustTransportTripsCompleted = windowCount(
-  'trust_transport_trips',
-  'completed_at',
-  `status = 'completed' AND requester_completion_confirmed_at IS NOT NULL AND provider_completion_confirmed_at IS NOT NULL`,
-);
+// The unit each card is read in. A dashboard concern, so it lives here rather than in the shared
+// definition.
+const VALUE_EVENT_UNITS: Record<ContributorValueEventKey, string> = {
+  'value.foundation_calls_answered': 'calls',
+  'value.socket_relay_requests_fulfilled': 'requests',
+  'value.trust_transport_trips_completed': 'trips',
+  'value.lighthouse_stays_completed': 'stays',
+  'value.chyme_tips_sent': 'tips',
+  'value.service_credits_peer_sends': 'sends',
+  'value.contributions_confirmed_usd': 'USD',
+  'value.skills_hunt_nominations_accepted': 'nominations',
+  'value.what_works_tools_approved': 'tools',
+  'value.skill_up_completions': 'completions',
+  'value.skill_up_trainer_payouts': 'payouts',
+  'value.recurring_ties_confirmed': 'ties',
+  'value.peer_programming_active_posters': 'members',
+};
 
-// Lighthouse: a completed stay, on the moment the stay reached 'completed' (post/0031 added
-// completed_at and backfilled finished rows from updated_at; the fallback covers a row from before
-// that). Keying on updated_at alone moved a stay to whichever week the row was last edited in.
-const lighthouseStaysCompleted = windowCount(
-  'lighthouse_matches',
-  'COALESCE(completed_at, updated_at)',
-  `status = 'completed'`,
-);
-
-// SocketRelay: a request the requester closed as successful, on the moment it closed (post/0031
-// added closed_at, same fallback as above). Same definition the daily exchange count reads.
-const socketRelayFulfilled = windowCount(
-  'socket_relay_fulfillments',
-  'COALESCE(closed_at, updated_at)',
-  `close_reason = 'successful'`,
-);
-
-// Chyme: a peer tip (a completed ServiceCredits transfer originated by Chyme, never self-to-self).
-const chymeTips = windowCount(
-  'service_credits_transfers',
-  'completed_at',
-  `status = 'completed' AND origin_plugin = 'chyme' AND sender_user_id <> recipient_user_id`,
-);
-
-// ServiceCredits: a completed DIRECT peer send. origin_plugin scoping keeps plugin-mediated
-// transfers (Chyme tips, SkillUp flows…) counted once, in their originating plugin.
-const serviceCreditsPeerSends = windowCount(
-  'service_credits_transfers',
-  'completed_at',
-  `status = 'completed' AND origin_plugin = 'service-credits' AND sender_user_id <> recipient_user_id`,
-);
-
-// Contributions: confirmed real dollars this week (SUM, not a row count).
-const contributionsConfirmedUsd = (weekStart: string) =>
-  guardedScalar(
-    'contributions_submissions',
-    `SELECT COALESCE(SUM(confirmed_amount_usd), 0)::text AS v FROM contributions_submissions
-     WHERE status = 'confirmed'
-       AND reviewed_at >= $1::date AND reviewed_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-
-// SkillsHunt: a nomination a moderator accepted (produces a real Directory profile + reward).
-const skillsHuntAccepted = windowCount(
-  'skills_hunt_submissions',
-  'reviewed_at',
-  `status = 'accepted' AND deleted_at IS NULL`,
-);
-
-// WhatWorks: an approved tool contributed (primary) and an endorsement given (secondary).
-const whatWorksApproved = windowCount('what_works_products', 'reviewed_at', `status = 'approved'`);
-const whatWorksEndorsements = windowCount('what_works_endorsements', 'created_at');
-
-// SkillUp: delivered value is COMPLETION (the old dashboard counted enrollments started — intent).
-// No completed_at column; the status flip writes updated_at.
-const skillUpCompletions = windowCount('skill_up_enrollments', 'updated_at', `status = 'completed'`);
-const skillUpTrainerPayouts = windowCount(
-  'skill_up_disbursements',
-  'created_at',
-  `disbursement_type = 'trainer_payout'`,
-);
-
-// Recurring Activity: a tie the counterparty confirmed this week.
-const recurringTiesConfirmed = windowCount('recurring_activities', 'confirmed_at');
-
-// PeerProgramming: distinct members who posted in their cohort this week (participation IS the
-// plugin's purpose; weighs low for gating but is the honest dashboard signal).
-const peerProgrammingActivePosters = (weekStart: string) =>
-  guardedScalar(
-    'peer_programming_messages',
-    `SELECT COUNT(DISTINCT author_user_id)::text AS v FROM peer_programming_messages
-     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-
-// Beacon: member engagement per unique broadcast — distinct (member, broadcast) pairs that reacted
-// to or replied on a broadcast's Commons replay post this week. Broadcast completion itself does NOT
-// count (only the owner can start a session — an admin action measures the admin, not members), and
-// one member engaging with the same broadcast many times counts once. Live in-event chat/reactions
-// are Stream-ephemeral and are not countable here.
-const beaconBroadcastEngagement = (weekStart: string) =>
-  guardedScalar(
-    ['beacon_events', 'feed_community_post_reactions', 'feed_community_replies'],
-    `SELECT COUNT(*)::text AS v FROM (
-       SELECT r.user_id AS member_id, b.id AS broadcast_id
-       FROM beacon_events b
-       JOIN feed_community_post_reactions r ON r.post_id = b.commons_recording_post_id
-       WHERE r.created_at >= $1::date AND r.created_at < $1::date + INTERVAL '7 days'
-       UNION
-       SELECT p.author_user_id AS member_id, b.id AS broadcast_id
-       FROM beacon_events b
-       JOIN feed_community_replies p ON p.post_id = b.commons_recording_post_id
-       WHERE p.created_at >= $1::date AND p.created_at < $1::date + INTERVAL '7 days'
-     ) engagement`,
-    weekStart,
-  );
+function valueEventInWeek(source: ValueEventSource): (weekStart: string) => Promise<number> {
+  return (weekStart: string) =>
+    guardedScalar(
+      source.tables,
+      `SELECT (${occurrencesExpression(source.occurrences)})::text AS v
+         FROM (${source.rowSql}) AS rows
+        WHERE rows.at >= $1::date AND rows.at < $1::date + INTERVAL '7 days'`,
+      weekStart,
+    );
+}
 
 // ── Adoption rows (honest non-value metrics) ──────────────────────────────────
 
@@ -406,21 +333,12 @@ const METRIC_SPECS: MetricSpec[] = [
     compute: (weekStart) =>
       goalMetricForWeek('goal.workforce_recruited', weekStart, () => liveWorkforceRecruited(weekStart)),
   },
-  { metricKey: 'value.foundation_calls_answered', metricUnit: 'calls', sourcePlugin: 'foundation', compute: foundationCallsAnswered },
-  { metricKey: 'value.socket_relay_requests_fulfilled', metricUnit: 'requests', sourcePlugin: 'socket-relay', compute: socketRelayFulfilled },
-  { metricKey: 'value.trust_transport_trips_completed', metricUnit: 'trips', sourcePlugin: 'trust-transport', compute: trustTransportTripsCompleted },
-  { metricKey: 'value.lighthouse_stays_completed', metricUnit: 'stays', sourcePlugin: 'lighthouse', compute: lighthouseStaysCompleted },
-  { metricKey: 'value.chyme_tips_sent', metricUnit: 'tips', sourcePlugin: 'chyme', compute: chymeTips },
-  { metricKey: 'value.service_credits_peer_sends', metricUnit: 'sends', sourcePlugin: 'service-credits', compute: serviceCreditsPeerSends },
-  { metricKey: 'value.contributions_confirmed_usd', metricUnit: 'USD', sourcePlugin: 'contributions', compute: contributionsConfirmedUsd },
-  { metricKey: 'value.skills_hunt_nominations_accepted', metricUnit: 'nominations', sourcePlugin: 'skills-hunt', compute: skillsHuntAccepted },
-  { metricKey: 'value.what_works_tools_approved', metricUnit: 'tools', sourcePlugin: 'what-works', compute: whatWorksApproved },
-  { metricKey: 'value.what_works_endorsements_given', metricUnit: 'endorsements', sourcePlugin: 'what-works', compute: whatWorksEndorsements },
-  { metricKey: 'value.skill_up_completions', metricUnit: 'completions', sourcePlugin: 'skill-up', compute: skillUpCompletions },
-  { metricKey: 'value.skill_up_trainer_payouts', metricUnit: 'payouts', sourcePlugin: 'skill-up', compute: skillUpTrainerPayouts },
-  { metricKey: 'value.recurring_ties_confirmed', metricUnit: 'ties', sourcePlugin: 'recurring-activity', compute: recurringTiesConfirmed },
-  { metricKey: 'value.peer_programming_active_posters', metricUnit: 'members', sourcePlugin: 'peer-programming', compute: peerProgrammingActivePosters },
-  { metricKey: 'value.beacon_broadcast_engagement', metricUnit: 'engagements', sourcePlugin: 'beacon', compute: beaconBroadcastEngagement },
+  ...VALUE_EVENT_SOURCES.map((source) => ({
+    metricKey: source.key,
+    metricUnit: VALUE_EVENT_UNITS[source.key],
+    sourcePlugin: EVENT_SOURCE_PLUGIN[source.key],
+    compute: valueEventInWeek(source),
+  })),
   { metricKey: 'adoption.active_members', metricUnit: 'members', sourcePlugin: 'platform', compute: activeMembers },
   { metricKey: 'adoption.daily_active_members', metricUnit: 'per day', sourcePlugin: 'platform', compute: dailyActiveMembers },
   { metricKey: 'adoption.accounts_deleted', metricUnit: 'accounts', sourcePlugin: 'platform', compute: accountsDeleted },
