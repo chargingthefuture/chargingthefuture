@@ -3,7 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 // What "active" means on this platform, in one place.
 //
 // A member is active on a day when the sign-in record holds a row for them on that day. That record
-// is `login_events`, and it is the whole definition (owner decision, 2026-08-27). Every reading
+// is `login_events`, and it is the entire definition (owner decision, 2026-08-27). Every reading
 // below — the dashboard's Active Members and Daily Active Members rows, and PeerProgramming's
 // cohort-forming active set — counts that table and nothing else.
 //
@@ -70,7 +70,7 @@ const WEEK_WINDOW = `created_at >= $1::date AND created_at < $1::date + INTERVAL
 const LAST_DAYS_WINDOW = `created_at >= NOW() - make_interval(days => $1::int)`;
 
 // Run a member-day query. A database without the sign-in record reports the empty set rather than
-// throwing, so a missing table can never take the whole dashboard down.
+// throwing, so a missing table can never take the entire dashboard down.
 async function queryMemberDays<T extends { [key: string]: unknown }>(
   windowClause: string,
   wrap: (memberDays: string) => string,

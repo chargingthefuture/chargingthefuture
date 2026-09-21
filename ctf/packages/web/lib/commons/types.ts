@@ -34,7 +34,7 @@ export type CommonsMessage = {
   // `announcement` for official operator posts, `question` for AI Q&A items.
   kind: CommonsMessageKind;
   // The announcement's own title, rendered as a heading above the body on the official card.
-  // Null for peer posts and AI answers (their `text` is the whole message).
+  // Null for peer posts and AI answers (their `text` is the entire message).
   title: string | null;
   // The plugins this announcement links to (0–3), resolved to { slug, name } — drives one clickable
   // "Open <Plugin>" chip per entry on the official card, in order. Empty when the announcement has no

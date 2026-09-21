@@ -387,7 +387,7 @@ export function FiresideShell({
     <div style={{ background: t.BG, minHeight: "100%" }}>
       {/* The shared screen header, so the way back is the same control as everywhere else in the
           app (rule 134). This screen shipped without one and had no way back at phone width, which
-          is the breakpoint the whole web app renders at (owner report, 2026-09-14). */}
+          is the breakpoint the entire web app renders at (owner report, 2026-09-14). */}
       {/* The admin pill, shown only to admins, is the way to moderation — the same control every
           other plugin uses for it (rule 131: one dedicated admin page per plugin). The export queue
           and the comments list used to open inside this screen, which left Fireside with no row in

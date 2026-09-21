@@ -9,11 +9,11 @@
 // reviewer therefore read route handlers calling functions it could not open, guessed what they
 // did, and filed confident, wrong findings (issues #2205, #2206, #2208 were all this).
 //
-// Whole dependency files do not fit: lib/feed/repository.ts alone is ~110 KB against a 200 KB
+// Entire dependency files do not fit: lib/feed/repository.ts alone is ~110 KB against a 200 KB
 // per-run source budget. So a large dependency contributes only the declarations the slice
 // actually imports, plus the file-local helpers those declarations call — which is exactly the
 // evidence the reviewer was missing (e.g. `updateCommonsLastSeen` and the `isValidIsoDatetime`
-// check inside it). Small files are included whole, since the surrounding code is cheap context.
+// check inside it). Small files are included in full, since the surrounding code is cheap context.
 
 import { readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -27,14 +27,14 @@ const MAX_LOCAL_HELPERS = Number(process.env.CODE_REVIEW_HELPERS_PER_ROUND || '1
 // How many times to follow calls outward from the requested declarations.
 //
 // Measured on the commons slice against lib/feed/repository.ts, and one round wins: a second round
-// spends the file's share of the budget on helpers two calls deep, which pushed a whole dependency
+// spends the file's share of the budget on helpers two calls deep, which pushed an entire dependency
 // out of the run and still did not reach the private loaders at the end of the chain. A 111 KB
 // module's call graph does not fit at any budget worth paying, so the reviewer is told to leave a
 // finding out when it cannot see a definition rather than to guess. Overridable for tuning.
 const MAX_HELPER_ROUNDS = Number(process.env.CODE_REVIEW_HELPER_ROUNDS || '1');
 
 // Ceiling on a single captured declaration. Real functions in this codebase sit far below it; the
-// value exists so a declaration the scanner fails to terminate cannot spend the whole budget.
+// value exists so a declaration the scanner fails to terminate cannot spend the entire budget.
 const MAX_DECLARATION_BYTES = 8_000;
 
 // Identifiers that appear in extracted code but are never a file-local helper worth chasing.
@@ -57,7 +57,7 @@ function isFile(path) {
 }
 
 // Cut text at the last line boundary at or before `limit`, so a shortened extract still ends on a
-// whole line rather than mid-token.
+// entire line rather than mid-token.
 function trimToLine(text, limit) {
   const cut = text.lastIndexOf('\n', limit);
   return cut > 0 ? text.slice(0, cut) : text.slice(0, limit);
@@ -124,7 +124,7 @@ export function resolveSpecifier(specifier, fromFileAbs, repoRoot) {
 }
 
 // Every `import ... from '<specifier>'` / `export ... from '<specifier>'` in one file, with the
-// names each pulls in. A namespace or default import records no names, which makes the whole file
+// names each pulls in. A namespace or default import records no names, which makes the entire file
 // the unit of interest for that dependency.
 export function parseImports(text) {
   const results = [];
@@ -166,7 +166,7 @@ function declarationEnd(text, startIdx) {
     // An escaped slash belongs to a regular expression, not a comment. Without this guard a
     // pattern like /https?:\/\//g reads as "// comment", the rest of its line is skipped, and the
     // brackets that line closes are never counted — so the declaration never ends and one helper
-    // swallows the whole file.
+    // swallows the entire file.
     if (ch === '/' && next === '/' && text[i - 1] !== '\\') {
       const nl = text.indexOf('\n', i);
       i = nl === -1 ? text.length : nl;
@@ -213,7 +213,7 @@ function declarationEnd(text, startIdx) {
       // Backstop. This scanner is a heuristic, not a TypeScript parser, so a construct it misreads
       // could leave brackets unbalanced and run to the end of the file — which is how one helper
       // once contributed 100 KB of a 111 KB module. Cut at the last line boundary instead, so a
-      // misread costs one truncated declaration rather than the whole budget.
+      // misread costs one truncated declaration rather than the entire budget.
       const lastNewline = text.lastIndexOf('\n', startIdx + MAX_DECLARATION_BYTES);
       return lastNewline > startIdx ? lastNewline : startIdx + MAX_DECLARATION_BYTES;
     }
@@ -317,7 +317,7 @@ export function extractSymbols(fileText, names) {
   // enough in practice: a route calls an exported function, that function delegates to a private
   // loader, and the answer to "is this actually correct?" sits in what the loader does. Each round
   // only scans what the previous round added, and both the round count and the per-round helper cap
-  // are bounded, so this widens the extract without letting it walk the whole module.
+  // are bounded, so this widens the extract without letting it walk the entire module.
   let frontier = spans.map(([start, end]) => fileText.slice(start, end)).join('\n');
   for (let round = 0; round < MAX_HELPER_ROUNDS && frontier; round += 1) {
     const added = [];
@@ -353,7 +353,7 @@ export function extractSymbols(fileText, names) {
 // files it covers, and how many were dropped for budget, so the caller can log an honest count
 // rather than implying full coverage.
 export function collectDependencyContext(fileList, options) {
-  // Files at or under `wholeFileMaxBytes` come in whole (surrounding code is cheap context); bigger
+  // Files at or under `wholeFileMaxBytes` come in full (surrounding code is cheap context); bigger
   // ones contribute only what the slice imports. Kept low deliberately: a mid-size module asking for
   // its full text buys far less per byte than the same budget spread over several files' relevant
   // declarations, and crowding out a small type definition is what loses an argument outright.
@@ -386,12 +386,12 @@ export function collectDependencyContext(fileList, options) {
       if (rel.startsWith('..') || sliceFiles.has(rel)) {
         continue; // outside the repo, or part of the slice and already under review
       }
-      const entry = wanted.get(rel) || { rel, abs: resolved, names: new Set(), whole: false, importers: 0 };
+      const entry = wanted.get(rel) || { rel, abs: resolved, names: new Set(), entire: false, importers: 0 };
       for (const name of names) {
         entry.names.add(name);
       }
       if (wantsWholeModule) {
-        entry.whole = true;
+        entry.entire = true;
       }
       entry.importers += 1;
       wanted.set(rel, entry);
@@ -414,7 +414,7 @@ export function collectDependencyContext(fileList, options) {
       continue; // no-trace: a dependency we cannot read is simply not offered as reference.
     }
     let note = '';
-    if (body.length > wholeFileMaxBytes && !entry.whole && entry.names.size > 0) {
+    if (body.length > wholeFileMaxBytes && !entry.entire && entry.names.size > 0) {
       const extracted = extractSymbols(body, [...entry.names]);
       if (extracted.text.length === 0) {
         continue;
@@ -422,7 +422,7 @@ export function collectDependencyContext(fileList, options) {
       body = extracted.text;
       note = ` (only the declarations this slice imports, plus their local helpers: ${extracted.names.join(', ')})`;
     } else if (body.length > wholeFileMaxBytes) {
-      // Wanted whole (namespace/default import) but too big to afford in full.
+      // Wanted in full (namespace/default import) but too big to afford in full.
       body = `${trimToLine(body, wholeFileMaxBytes)}\n... (truncated) ...`;
       note = ' (truncated)';
     }

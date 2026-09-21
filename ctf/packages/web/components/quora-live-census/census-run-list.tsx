@@ -15,7 +15,7 @@ import { buttonStyle, cardStyle, inputStyle, labelStyle, mutedStyle } from './ce
 // Starting a run, and picking one to work on.
 //
 // The scope and method boxes are required by the route, not decorated as optional here, because a
-// run without them produces counts nobody can reproduce — which is the failure this whole thing
+// run without them produces counts nobody can reproduce — which is the failure this entire thing
 // exists to avoid.
 
 export function CensusRunForm({

@@ -124,7 +124,7 @@ export interface AvailableRequest {
   mode?: string;
   priceCurrency?: string | null;
   priceAmount?: number | null;
-  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) whole.
+  // Accepted settlement currencies, so a driver sees a split offer (e.g. ServiceCredits + USD) entire.
   acceptedCurrencies?: string[];
   createdAtIso?: string;
 }
@@ -147,7 +147,7 @@ export const STATIC_RIDE_TYPES: RideType[] = [
 // a generic card for modes the design doesn't enumerate.
 export function deriveRideTypes(modes: Mode[]): RideType[] {
   // Defensive: tolerate a non-array or modes missing id/name so a response-shape
-  // change can never throw during render (that crashed the whole page before).
+  // change can never throw during render (that crashed the entire page before).
   if (!Array.isArray(modes) || modes.length === 0) return STATIC_RIDE_TYPES;
   return modes.map((m) => {
     const id = m?.id ?? "";

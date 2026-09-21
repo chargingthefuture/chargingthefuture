@@ -15,7 +15,7 @@
     "",
     "Never add a NEW route here to silence the gate. A new route with no caller means either the",
     "feature is unfinished or the route should not exist. Both are worth failing the build over \u2014",
-    "that is the whole point of the gate."
+    "that is the point of the gate."
   ],
   "routes": [
     {

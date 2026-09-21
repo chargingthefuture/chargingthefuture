@@ -1,7 +1,7 @@
 // Account & Data API client — binds to the same live backend the web surface uses.
 // GET    /api/account/services           → AccountServicesResponse (read-only registry projection)
 // DELETE /api/account/services/:slug      → per-service deletion
-// DELETE /api/account/full-account        → whole-account deletion
+// DELETE /api/account/full-account        → full-account deletion
 //
 // Mutations send the same-origin CSRF header (`x-ctf-csrf: 1`) and JSON content type that the
 // account routes require. All calls go through authedFetch so the Clerk bearer token is

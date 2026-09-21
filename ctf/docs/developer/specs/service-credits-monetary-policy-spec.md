@@ -22,7 +22,7 @@ over-saturated and each credit ends up buying less. This spec is that rule.
 
 Bitcoin's fixed 21-million cap and halving schedule exist to manufacture scarcity, because its value
 proposition is being a scarce asset that appreciates. Copying that here would be the wrong model: credits
-would appreciate, holders would hoard, newcomers could not get any, and circulation — the whole point —
+would appreciate, holders would hoard, newcomers could not get any, and circulation — the point —
 would die. ServiceCredits' value proposition is the opposite: access and circulation. The right reference
 models are closed-loop store credit (loyalty points, redeemable only internally) and community /
 complementary currencies built for groups excluded from the mainstream economy (time banks, mutual-credit
@@ -229,7 +229,7 @@ Both are read-only and best-effort. Neither renders a fiat figure.
 The Economy/circulation dashboard and the GDP model measure different things and must never share a
 number:
 
-- **GDP** measures economic *activity/output* across the whole platform — fiat, crypto, ServiceCredits,
+- **GDP** measures economic *activity/output* across the entire platform — fiat, crypto, ServiceCredits,
   barter, free — folded into one relative **Community Value Index** via owner-set contribution weights
   (`currency_usd_rates`, USD only as a reference base of 1). It is an index, not dollars, and it never
   expresses a per-wallet ServiceCredits-to-fiat value.

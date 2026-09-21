@@ -20,7 +20,7 @@ export default async function UnlockAdminPage() {
     // each row here. Never throws — an unresolved id just prints as the raw id on the card.
     listUnlockSubmissions({ limit: 50 }).then(withMemberIdentities),
     listSpamQuoraUrls(),
-    // Reads the account roster from the auth provider, so the whole sign-up reading is on this page and
+    // Reads the account roster from the auth provider, so the entire sign-up reading is on this page and
     // the owner does not have to open the provider dashboard. Never throws — a provider failure comes
     // back as an unavailable overview carrying the reason.
     getUnlockSignupOverview(),

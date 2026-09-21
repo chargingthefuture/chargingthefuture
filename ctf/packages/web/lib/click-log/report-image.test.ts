@@ -76,7 +76,7 @@ async function render(includeAreas: boolean): Promise<Buffer> {
 }
 
 describe('ClickLog report image', () => {
-  it('renders a PNG the whole report fits into', async () => {
+  it('renders a PNG the entire report fits into', async () => {
     const png = await render(true);
     // PNG magic number: any other bytes mean the renderer produced something else.
     expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));

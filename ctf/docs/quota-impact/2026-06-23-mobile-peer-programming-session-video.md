@@ -37,7 +37,7 @@
 ## Budget Threshold Risk
 
 - Expected threshold after rollout (Green/Yellow/Orange/Red): Green. Video is opt-in, per-cohort, and
-  capped by the ~5-member cohort size, so it cannot fan out to the whole member base at once. Mobile
+  capped by the ~5-member cohort size, so it cannot fan out to the entire member base at once. Mobile
   parity adds reach (a member can join from the phone) but not a new call.
 - Peak scenario estimate: every cohort holding a simultaneous call with all members on a phone. Even
   then, concurrency is (number of cohorts × ≤5), which remains small relative to the Maker-tier video

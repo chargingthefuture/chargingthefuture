@@ -224,7 +224,7 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     // A post auto-expires 28 days after it is posted or re-posted. It only counts as expired while it is
     // still open and waiting (a claimed/closed/canceled post is not "expired"). Derived here so the
-    // whole app reads the same expiry without a scheduled job flipping a status column.
+    // entire app reads the same expiry without a scheduled job flipping a status column.
     isExpired: row.status === 'open' && row.expires_at != null && new Date(row.expires_at).getTime() < Date.now(),
   };
 }
@@ -953,7 +953,7 @@ export async function listMyFulfillments(userId: string): Promise<SocketRelayFul
   // Join the request so the chat can show what the conversation is about (title + current status)
   // instead of a bare "Fulfillment <uuid>", and both participants' real names so the header can say
   // WHO the other person is. The usernames captured at claim time are null for anyone without a
-  // handle, which left a member with no way to tell who had offered to help — the whole point of
+  // handle, which left a member with no way to tell who had offered to help — the point of
   // being able to open a past conversation (owner report).
   const result = await queryDb<FulfillmentRow & { request_title: string | null; request_status: string | null }>(
     `SELECT f.id, f.request_id, f.requester_user_id, f.fulfiller_user_id, f.requester_username, f.fulfiller_username, f.status, f.close_reason, f.created_at, f.updated_at,
@@ -1206,7 +1206,7 @@ export async function adminDeleteRequest(requestId: string, audit: AuditInput): 
     await client.query(`DELETE FROM socket_relay_request_events WHERE request_id = $1::uuid`, [requestId]);
 
     // Write the audit row in the SAME transaction as the delete, so the removal is never committed
-    // without its audit record (if the audit insert fails, the whole delete rolls back).
+    // without its audit record (if the audit insert fails, the entire delete rolls back).
     const auditQuery = socketRelayAuditInsert(audit);
     await client.query(auditQuery.text, auditQuery.params);
 

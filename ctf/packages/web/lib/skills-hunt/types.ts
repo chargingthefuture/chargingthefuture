@@ -23,7 +23,7 @@ export type SkillsHuntRound = {
   startsAtIso: string;
   endsAtIso: string;
   scoringConfig: Record<string, unknown>;
-  // Whole ServiceCredits minted to the scout when a nomination is accepted (0 = no reward).
+  // Entire ServiceCredits minted to the scout when a nomination is accepted (0 = no reward).
   rewardCreditsPerAccept: number;
   // Optional ceiling on total reward credits one scout can earn in this round (null = no cap).
   rewardPerUserRoundCap: number | null;
@@ -195,7 +195,7 @@ export type SkillsHuntMissionGoalType =
   | 'count_total_accepted'
   | 'count_skills_in_sector'
   | 'count_rare_skill_finds'
-  // One named skill, rather than a whole sector. Added 2026-09-17: a mission titled for a single
+  // One named skill, rather than an entire sector. Added 2026-09-17: a mission titled for a single
   // trade ("Find a mechanic") had no goal type that could express it, so it was created as
   // count_total_accepted — which counts every accepted nomination the scout has, whatever the
   // skill. It read "82/1 complete" for a scout who had nominated no mechanic at all.

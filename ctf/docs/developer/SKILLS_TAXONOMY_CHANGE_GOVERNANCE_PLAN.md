@@ -31,7 +31,7 @@ reviewed, reproducible path.
 5. **Apply** — the owner starts the apply workflow by hand, which runs the changes against the live
    database. Idempotent: already-applied changes write nothing.
 
-## Change vocabulary (the whole surface)
+## Change vocabulary (the entire surface)
 
 - `addOccupation` — sector (looked up by name, never created) + occupation name.
 - `addSkill` — occupation + skill name (+ optional aliases).
@@ -53,7 +53,7 @@ rule: a missing sector is a mis-named entry, not a creation request).
 - Sector referenced by name exists in the committed sector list; occupation/skill targets of
   rename/reparent/deactivate changes must be created by an earlier change or declared as pre-existing
   live rows.
-- No duplicate skill (normalized name) under the same occupation after replaying the whole list.
+- No duplicate skill (normalized name) under the same occupation after replaying the entire list.
 - A `deactivate*` change must carry an `acknowledgedImpact` note when the target is above the
   dependency threshold (the apply step re-checks live counts via the same query the
   `dependency-impact` endpoint uses and aborts if the note is missing or stale).
@@ -71,7 +71,7 @@ These checks run in the apply engine, which does see them:
   Specialist" beside "Marketing Specialists" (cleaned up by changes 1 and 26–34) and "Photographer"
   beside "Photographers / Videographers" (changes 68–76) — each time splitting one role's holders
   across two rows that neither Workforce nor the Directory joins back together, and each time
-  costing nine changes to unwind. The guard fails the whole run, so the transaction rolls back and
+  costing nine changes to unwind. The guard fails the entire run, so the transaction rolls back and
   the change is corrected in a PR rather than cleaned up afterwards. Deactivated rows count: creating
   a twin of a row somebody deliberately turned off would quietly resurrect the split.
   It applies to changes appended from id 80 on. Everything below replays as before, because change 1

@@ -50,7 +50,7 @@ export function TrustEvidenceRow({ item }: { item: TrustPeerEvidenceItem }) {
 }
 
 // Shown above a summary projection so a viewer never mistakes the reduced list for the member's
-// whole record. Without it, "Took part in 6 plugins" reads as everything they have ever done.
+// entire record. Without it, "Took part in 6 plugins" reads as everything they have ever done.
 export function TrustSummaryNote() {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);
@@ -66,7 +66,7 @@ export function TrustSummaryNote() {
 
 // The card is two things stacked — the member's own signals, then what everyone else gets — and
 // without a label on each the reader has to work out where one ends and the other starts. These
-// labels are the whole answer to that.
+// labels are the answer to that.
 export function TrustSectionLabel({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   const t = getTrustTokens(theme);

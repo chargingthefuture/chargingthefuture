@@ -112,7 +112,7 @@ export function validateConfigInput(input: WorkforceConfigInput): boolean {
 // ---------------------------------------------------------------------------
 // Live workforce model
 //
-// The whole tracker is a read-only overlay of two upstream sources plus the workforce config:
+// The entire tracker is a read-only overlay of two upstream sources plus the workforce config:
 //   - Skills Taxonomy (sectors + their workforce_share, and job titles) gives the DEMAND.
 //   - Directory (active profiles, claimed = recruited) gives the SUPPLY.
 //   - The workforce config gives the population scale.
@@ -216,7 +216,7 @@ function buildSectorDemand(sectors: SectorModelRow[], workforceTotal: number): M
 // occupation whose copy the member happened to pick — row-based matching funneled every holder of a
 // shared skill into a single sector. The `held` join is the member's own skill row; `other` is every
 // active same-named row across the taxonomy. If this optional query fails on a given database,
-// recruited degrades to the sector and job-title arms rather than failing the whole read-only
+// recruited degrades to the sector and job-title arms rather than failing the entire read-only
 // dashboard with a 503.
 async function fetchWorkforceModelInputs(): Promise<{
   sectors: SectorModelRow[];
@@ -247,7 +247,7 @@ async function fetchWorkforceModelInputs(): Promise<{
          (dp.claimed_by_user_id IS NOT NULL) AS claimed
        FROM directory_profiles dp
        LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
-       WHERE dp.is_active = TRUE AND dp.deleted_at IS NULL`,
+       WHERE dp.deleted_at IS NULL`,
     ),
   ]);
 
@@ -696,7 +696,7 @@ function parseCountTotal(result: { rows: CountRow[] }): number {
 // occupation in a member's sector, and the DISTINCT profile-skill -> job-title join). Running the full
 // model here made the most-loaded workforce endpoint compute work it never returns; at production data
 // scale that extra join/expansion can exceed the DB statement timeout and throw, which the dashboard
-// route turns into a 503 that blanks the whole page. This lightweight summary reads only what the
+// route turns into a 503 that blanks the entire page. This lightweight summary reads only what the
 // dashboard shows: the config, the sector demand, and two counts. recruitedTotal mirrors the full model
 // exactly (the count of all active Directory profiles), so the numbers never diverge.
 export async function getDashboard(): Promise<WorkforceDashboard> {
@@ -725,7 +725,7 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
        FROM directory_profile_skills dps
        JOIN directory_profiles p ON dps.profile_id::text = p.id::text
        JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
-       WHERE p.is_active = TRUE AND p.deleted_at IS NULL AND s.is_active = TRUE`,
+       WHERE p.deleted_at IS NULL AND s.is_active = TRUE`,
     ),
     // Skills coverage denominator: the live count of ALL active skills in the taxonomy — never a
     // fixed baseline, so the tile tracks the catalog as skills are added and removed. The numerator
@@ -883,7 +883,7 @@ export async function getOwnProfile(userId: string): Promise<WorkforceProfile | 
       SELECT dp.job_title_id::text AS job_title_id, jt.name AS job_title_name, dp.updated_at
       FROM directory_profiles dp
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = dp.job_title_id
-      WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      WHERE dp.claimed_by_user_id = $1 AND dp.deleted_at IS NULL
       ORDER BY dp.updated_at DESC
       LIMIT 1
     `,
@@ -1032,7 +1032,7 @@ export async function updateWorkforceConfig(actorId: string, input: WorkforceCon
     ],
   );
 
-  // Config drives the whole model's demand numbers; drop the cached model so the next read recomputes
+  // Config drives the entire model's demand numbers; drop the cached model so the next read recomputes
   // with the new config instead of serving the pre-update snapshot for up to the cache TTL.
   invalidateWorkforceModelCache();
 

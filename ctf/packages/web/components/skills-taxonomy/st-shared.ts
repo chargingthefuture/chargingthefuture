@@ -1,7 +1,7 @@
 // Shared constants, types, and helpers for the Skills Taxonomy web shell.
 // Palette derives from design/.../survivor-hub/SkillsTaxonomy.tsx.
 // Types mirror the nested hierarchy returned by GET /api/skills-taxonomy/hierarchy
-// (lib/skills-taxonomy/types.ts: TaxonomyHierarchy*). The whole tree arrives in
+// (lib/skills-taxonomy/types.ts: TaxonomyHierarchy*). The entire tree arrives in
 // one request, so the browser derives sectors/titles/skills client-side.
 
 import type {

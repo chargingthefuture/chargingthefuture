@@ -103,7 +103,7 @@ Result: web ☐
 4. Confirm no fiat figure appears on any row.
 5. Check the newest entry appears at the top.
 6. If the seed includes an escrow **refund**, confirm it reads as **"Escrow refunded"** (money back in), distinct from **"Escrow released"** — the two are recorded as different ledger entry types, not the same label.
-7. Count the rows on screen: the list shows at most **10** at a time, not the whole history (2026-08-27 — the list is paged, it does not run on down the screen).
+7. Count the rows on screen: the list shows at most **10** at a time, not the entire history (2026-08-27 — the list is paged, it does not run on down the screen).
 8. With an account that has more than 10 entries, check the controls under the list: the entry count on the left ("42 transactions"), then `Previous`, `Page 1 of N`, `Next`. `Previous` is grayed out on the first page.
 9. Press `Next`. The next 10 entries load, the label reads `Page 2 of N`, and no row from page 1 repeats. Press `Previous` and the same page 1 rows come back.
 10. Go to the last page and check `Next` is grayed out.

@@ -162,7 +162,7 @@ Adoption (honest non-value rows):
   by the days of the window that have already started (1–7), so the live current week averages over the days it
   has actually had and every past week divides by 7. The divisor is computed in UTC, matching the day boundary
   the member-days are bucketed on.
-- `adoption.accounts_deleted` — how many members ended their whole account during the week: the counterpart to
+- `adoption.accounts_deleted` — how many members ended their entire account during the week: the counterpart to
   the two turnout rows above, and the one card on the dashboard that is worse when it rises (its week-over-week
   figure is drawn red on a rise and green on a fall; the arrow still points the way the number moved). Counted
   from `account_deletion_events` on `completed_at`, per member rather than per row, so a repeated event for one
@@ -177,7 +177,7 @@ Adoption (honest non-value rows):
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
 is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
-`login_events`, and it is the whole definition (**owner decision, 2026-08-27**). No other table feeds these two
+`login_events`, and it is the entire definition (**owner decision, 2026-08-27**). No other table feeds these two
 rows. Every member reaches the app through Clerk, so a sign-in is a sign-in whatever plugin they then open —
 which plugin they used is not part of this and never has been, in v2 or v3. `login_events` is a preexisting
 table carried from v2 (it is in the April 2026 production schema snapshot with its own history); v3 added
@@ -225,7 +225,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 - 2026-08-28: **Third adoption row: deleted accounts (owner request).** The dashboard showed who
   turned up — active members and daily active members — and nothing about who left, so the
-  Adoption group now carries `adoption.accounts_deleted`: members who ended their whole account
+  Adoption group now carries `adoption.accounts_deleted`: members who ended their entire account
   during the week, counted from `account_deletion_events` on `completed_at` and counted per member
   rather than per row. Only a member's own choice counts. A per-plugin "delete my data"
   (`scope = 'service'`) is not a member leaving — they still have an account — so account scope is
@@ -247,7 +247,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   and then the insert failed outright: production's `login_events` carries a v2 foreign key to
   `users(id)`, and one of those two members is no longer in the identity mirror. The command trails
   outlive that mirror, so a deleted account leaves its audit rows behind; those rows are evidence of a
-  session that really happened but whose member is gone. A single orphan aborted the whole statement,
+  session that really happened but whose member is gone. A single orphan aborted the entire statement,
   so nothing at all was written. The migration now drops evidence for any member the `users` table no
   longer holds, before the insert rather than at it, and reports the count — a skipped day is a real
   day nobody can recover, and that should be visible rather than silent. The filter applies only when
@@ -314,7 +314,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   which caught every error and returned 0 without a word — so a failed read, a missing table, and a
   week in which nothing happened all looked the same on screen, and the wrong zero is the harder one
   to notice because it looks like an answer. The 0 stays (one unreadable table must not take the
-  whole dashboard down), but it is no longer silent: reads now propagate to a single per-metric
+  entire dashboard down), but it is no longer silent: reads now propagate to a single per-metric
   reporter in `computeLiveWeekMetrics` that logs which metric was flattened, for which week, and why
   (rule 137); a missing table is reported once per table per process. Two failure paths that were
   wrong in their own right are also fixed: a goal row whose weekly snapshot WRITE failed used to
@@ -343,7 +343,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   `login_events` to `weekly-performance.week.get`, which returns `activeUsersLast7Days` and had never
   listed it. No schema, route, or access-policy change.
 
-- 2026-08-26: **Turnout was undercounting whole members (owner report: "there are two daily active
+- 2026-08-26: **Turnout was undercounting entire members (owner report: "there are two daily active
   users and it says one").** Both turnout readings — the dashboard's `adoption.daily_active_members`
   row and the `/current-week` rolling `activeUsersLast7Days` — read `login_events` and nothing else.
   That table has exactly one writer: a fire-and-forget insert in

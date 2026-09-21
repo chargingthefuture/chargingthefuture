@@ -152,7 +152,7 @@ settings (whether it begins the public feed automatically once video arrives). I
 symptom is exactly the one above: the phone reports it is sending, and the public page stays empty.
 
 - **Working around it now:** open the same live event on `/admin/beacon` from a computer and click
-  **Share screen** once. That starts the public feed and the recording for the whole broadcast,
+  **Share screen** once. That starts the public feed and the recording for the entire broadcast,
   including the phone's video.
 - **The proper fix:** call `start-broadcast` when RTMP video begins as well — for example from the
   video service's ingress webhook, or a short retry after "Go live" that starts the public feed once

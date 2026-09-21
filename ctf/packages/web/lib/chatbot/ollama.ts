@@ -238,7 +238,7 @@ const RUNPOD_TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'T
 const RUNPOD_POLL_INTERVAL_MS = 1_500;
 
 // Talk to a RunPod serverless endpoint: submit the chat as a job, then poll until
-// it finishes. The whole exchange shares one OLLAMA_TIMEOUT_MS budget, so a slow
+// it finishes. The entire exchange shares one OLLAMA_TIMEOUT_MS budget, so a slow
 // cold start aborts the same way the native path does — the caller then falls back
 // to the template draft and a human still answers. The endpoint base is
 // OLLAMA_BASE_URL (e.g. https://api.runpod.ai/v2/<id>); OLLAMA_API_KEY is the

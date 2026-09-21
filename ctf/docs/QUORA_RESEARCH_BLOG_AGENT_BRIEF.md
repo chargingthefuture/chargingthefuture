@@ -48,7 +48,7 @@ removed (optional), free-text evidence, free-text notes, and three separate publ
 Per closed account, one card each, up to 25:
 
 - The handle.
-- What happened: the whole account was deleted / banned or suspended / answers or posts removed with
+- What happened: the entire account was deleted / banned or suspended / answers or posts removed with
   the account kept / a Space they ran was removed / blocked from posting. Every option is something
   Quora did — there is no self-closure option, so nothing self-initiated is in this data.
 - Month and year, either optional.
@@ -121,7 +121,7 @@ in any post that uses the numbers.
 
 Only someone who found their way to another platform can answer at all, and only someone willing to
 make an account can submit. So the survey counts people who kept going and were willing to sign up,
-and misses everyone else. Every survey total is a **floor**, never an estimate of the whole.
+and misses everyone else. Every survey total is a **floor**, never an estimate of how many there are.
 
 ### A removal rate is readable from only one kind of census run
 

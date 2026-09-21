@@ -127,7 +127,7 @@ Result: web ☐
 - At step 2 the claim is refused and the card shows the server's own sentence, which names what to change — that the profile carries no skill for this occupation and adding one you actually have will let you claim it. It is not a generic failure.
 - At step 4 the claim succeeds, the card says you are the trainer for this cohort, and the list reloads so the cohort no longer offers the control. The cohort's trainer name is now yours on reload.
 - At step 5 the refusal says to claim your Directory profile first.
-- None of this needs an admin. The whole flow works for a signed-in member with read access.
+- None of this needs an admin. The entire flow works for a signed-in member with read access.
 - A cohort whose occupation was never set refuses with the sentence about no occupation to match against, which names an admin as the person who can fix it.
 - At phone width the control and any refusal wrap rather than overflowing, and the page does not scroll sideways.
 
@@ -226,7 +226,7 @@ Result: web ☐
 4. Try to leave an enrollment belonging to somebody else.
 
 **Expected:**
-- The whole deposit comes back: balance rises by the full amount held, escrow drops to zero for that cohort, and the enrollment reads as left.
+- The entire deposit comes back: balance rises by the full amount held, escrow drops to zero for that cohort, and the enrollment reads as left.
 - The response names how many credits were returned.
 - Step 3 does not refund twice — the balance is unchanged from step 2, and the request reports the enrollment is already finished or left.
 - Step 4 is refused; you can only leave your own enrollment.

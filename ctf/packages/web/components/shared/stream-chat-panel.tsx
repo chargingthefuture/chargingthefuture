@@ -518,7 +518,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
   if (error) return <div style={{ padding: 16, color: '#EF4444', fontSize: 14 }}>{error}</div>;
   if (!client || !channel) return <div style={{ padding: 16, color: '#9CA3AF', fontSize: 14 }}>Chat unavailable.</div>;
 
-  // The whole app is dark, so the chat must use Stream's dark theme. The theme class MUST go on
+  // The entire app is dark, so the chat must use Stream's dark theme. The theme class MUST go on
   // <Chat theme=...>: the SDK composes that prop into the class list of its own `.str-chat` root
   // element, and Stream's stylesheet defines the light palette as element-own custom properties on
   // `.str-chat` itself — element-own values always beat anything inherited, so a theme class (or an

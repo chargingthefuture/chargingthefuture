@@ -15,7 +15,7 @@
 --      (where `first_name` is empty/NULL), as a best-effort single-name value.
 --   2. Drop the `display_name` column.
 --
--- Safe to re-run: the whole body is guarded on `display_name` still existing.
+-- Safe to re-run: the entire body is guarded on `display_name` still existing.
 -- Once the column has been dropped, every later run is a no-op.
 
 DO $directory_display_name_to_first_last$

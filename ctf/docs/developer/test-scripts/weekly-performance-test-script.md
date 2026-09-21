@@ -132,9 +132,9 @@ is no "set active week" action and no per-week status.
    A member whose account has since been deleted is not rebuilt — a sign-in row needs a member the
    `users` table still holds — so the rebuilt count can be lower than the evidence the migration
    found, and the Update Neon DB workflow log says how many days were skipped for that reason.
-   The Accounts Deleted card reads "N accounts": members who ended their whole account in that week.
+   The Accounts Deleted card reads "N accounts": members who ended their entire account in that week.
    Check what it does NOT count. Delete one plugin's data from the account screen and leave the
-   account open: the card must not move — that member is still here. Delete a whole account through
+   account open: the card must not move — that member is still here. Delete an entire account through
    the account screen: the card goes up by one on the week that deletion ran. Clear a duplicate or a
    test account through the manual `Delete Account (manual)` workflow: the card must not move, because
    nobody chose to leave; the event row that run writes carries `summary.initiatedBy = 'operator'` and

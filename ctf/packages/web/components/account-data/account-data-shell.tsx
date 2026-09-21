@@ -14,7 +14,7 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 // Account & Data surface. Fetches the live service list from GET /api/account/services (a read-only
 // projection of the deletion registry), lets the user delete one service at a time via
-// DELETE /api/account/services/:slug, and delete the whole account via DELETE /api/account/full-account.
+// DELETE /api/account/services/:slug, and delete the entire account via DELETE /api/account/full-account.
 // Desktop and mobile share this state; the layout switches on useIsMobile().
 export function AccountDataShell() {
   const [loadState, setLoadState] = useState<LoadState>('loading');

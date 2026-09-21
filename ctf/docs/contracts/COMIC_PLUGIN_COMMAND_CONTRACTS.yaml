@@ -202,7 +202,7 @@ contracts:
       Signed-in members. TWO PATHS: kind=links (DEFAULT) takes posts the member picked, each with a
       quora.com URL kept as provenance and NEVER fetched — most accounts are mixed, nothing here sorts
       on-topic from off-topic automatically, and picking is both far less reviewer reading and a more
-      honest consent than handing over a whole account. kind=export takes the whole Quora export for
+      honest consent than handing over a full account. kind=export takes the entire Quora export for
       the rarer member whose public writing is nearly all on-topic. Consent is validated BEFORE the file is
       read at all, and the submitted consentVersion must match the current wording — a page cached
       from before a consent change is refused rather than recorded as agreement to wording it never
@@ -339,7 +339,7 @@ contracts:
       corrections, and human feedback ratings. Running the export also records it: every owner
       correction that reached the file and was still awaiting export is set to exported with an
       exported_at stamp, which is what moves the admin dashboard's awaiting-export / exported counts.
-      The file is unchanged by this — it is the whole dataset on every call, not a take-once queue.
+      The file is unchanged by this — it is the entire dataset on every call, not a take-once queue.
       Pass preview=1 to read it without marking anything.
     inputSchema:
       format:

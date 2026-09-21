@@ -2,7 +2,7 @@
 
 This note explains `ctf/packages/web/lib/account/deletion-registry.ts` — the single source of truth
 that maps each plugin to the database tables holding a user's data, and how each table is handled
-when a user deletes either just that plugin's data ("service" scope) or their whole CTF account
+when a user deletes either just that plugin's data ("service" scope) or their entire CTF account
 ("account" scope).
 
 This is the foundation the future account-deletion orchestrator, the per-plugin "delete my data"
@@ -43,7 +43,7 @@ Conservative-by-default, because deletion is irreversible:
   product decision rather than silently cascaded.
 - **A member's own words are not "retained under a generic name".** Renaming the author while the
   text stays on screen is not a deletion. `feed_items` is the case that taught this: it holds both
-  the Commons copy of a member's post and the copy of an admin announcement, and retaining the whole
+  the Commons copy of a member's post and the copy of an admin announcement, and retaining the entire
   table left deleted members' posts on the Commons re-labeled `user-hub-syst` (owner report,
   2026-08-09). A table that mixes the two kinds gets a `delWhere()` row filter that separates them,
   not a blanket `retain`.

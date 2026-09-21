@@ -53,7 +53,7 @@ function fromRound(r: SkillsHuntRound): FormValues {
 function parseWholeNonNegative(value: string): number | null {
   if (!value.trim()) return null;
   const n = Number(value);
-  // Reject fractional input rather than truncating — payout amounts must be exact whole credits.
+  // Reject fractional input rather than truncating — payout amounts must be exact integer credits.
   if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) return Number.NaN;
   return n;
 }
@@ -70,7 +70,7 @@ function buildPayloadOrError(v: FormValues): { error: string } | { payload: Subm
   const endIso = endDate.toISOString();
   const perAccept = parseWholeNonNegative(v.rewardPerAccept) ?? 0;
   const cap = parseWholeNonNegative(v.rewardCap);
-  if (Number.isNaN(perAccept) || Number.isNaN(cap)) return { error: "Reward amounts must be whole, non-negative numbers." };
+  if (Number.isNaN(perAccept) || Number.isNaN(cap)) return { error: "Reward amounts must be integers, and never negative." };
   return {
     payload: {
       name: v.name.trim(), description: v.description.trim() || null, status: v.status,

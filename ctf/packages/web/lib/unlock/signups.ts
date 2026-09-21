@@ -11,7 +11,7 @@ import type { UnlockReviewStatus, UnlockSignupAccount, UnlockSignupOverview } fr
 // the two questions the owner actually asks of it: how many people have joined, and how many joined and
 // then stopped before verifying. The first number lives only in the auth provider (the sign-up is an
 // account, not a row of ours), so this module reads the full account roster from the provider's backend
-// API and joins it to the submissions table. That way the whole reading is on the Unlock admin page and
+// API and joins it to the submissions table. That way the entire reading is on the Unlock admin page and
 // nobody has to open the provider dashboard to get it.
 //
 // A large gap between sign-ups and submissions is the signal: either the Quora-URL step is doing its job
@@ -110,7 +110,7 @@ async function listDeletedAccountDates(): Promise<Map<string, string>> {
 // apart: they only move on a fresh sign-in, so somebody with a live session can return again and again
 // without the dates changing.
 //
-// Best-effort: a failure here leaves every count at 0 rather than taking the whole panel down, since
+// Best-effort: a failure here leaves every count at 0 rather than taking the entire panel down, since
 // this is a supporting reading and not the panel's reason for existing.
 async function countUnlockScreenViews(): Promise<Map<string, number>> {
   try {

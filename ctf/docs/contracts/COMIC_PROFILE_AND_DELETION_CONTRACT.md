@@ -51,7 +51,7 @@ fields.
   - Contains personal data? yes (`user_id` ownership, and `asker_username` — the asker's @username
     snapshotted at ask time for display in the review dashboard)
   - Retention period: medium-lived under supervision policy
-  - Legal/compliance note: conversation context for the human-in-the-loop review trail; the whole row
+  - Legal/compliance note: conversation context for the human-in-the-loop review trail; the entire row
     (including `asker_username`) is removed when the user's comic data is deleted (see deletion scope)
 - Table/entity: `comic_turns`
   - Contains personal data? yes (asker message content + bot/human drafts)

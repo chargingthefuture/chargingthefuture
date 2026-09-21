@@ -25,7 +25,6 @@ export type DirectoryProfile = {
   // into the edit form so the owner can change or remove them, whereas SkillsHunt-nominated
   // pending skills are not self-editable. Stored in directory_profile_proposed_skills.
   proposedSkills: string[];
-  isActive: boolean;
   // SkillsHunt + Clerk username co-change (continuity §2.4 / §4 in
   // ctf-skills-hunt-session-continuity.md). source drives the visible
   // "Community generated" badge in the design; unclaimedHandle drives the

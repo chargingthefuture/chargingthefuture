@@ -55,7 +55,7 @@ export function MobileScreenHeader({
         display: 'flex',
         alignItems: 'center',
         // Wrap rather than squeeze: see the title comment below. The controls are one flex child, so
-        // when they and a legible title cannot share a row, the whole control cluster drops to a
+        // when they and a legible title cannot share a row, the entire control cluster drops to a
         // second row instead of eating the title. On a wide enough bar nothing wraps and this is a
         // no-op, so it costs height only when it is actually buying legibility.
         flexWrap: 'wrap',
@@ -120,7 +120,7 @@ export function MobileScreenHeader({
         style={{
           flex: 1,
           // A floor, not zero: the title must claim at least this much before the control cluster is
-          // allowed to share the row. Below it the controls wrap away instead, which is the whole
+          // allowed to share the row. Below it the controls wrap away instead, which is the entire
           // point — a one-letter title is worse than a two-row bar.
           minWidth: 140,
           fontSize: 15,

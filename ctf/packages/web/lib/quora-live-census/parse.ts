@@ -1,7 +1,7 @@
 // Validation for the census admin writes.
 //
 // Admin-entered rather than public, but validated the same way: a miscoded row is worse here than
-// a rejected one, because the whole value of the census is that a later reader can trust what each
+// a rejected one, because the entire value of the census is that a later reader can trust what each
 // row says.
 
 import {

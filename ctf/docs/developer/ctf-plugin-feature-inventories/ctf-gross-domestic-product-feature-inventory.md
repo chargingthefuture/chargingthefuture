@@ -93,7 +93,7 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 
 1. A panel under the headline figure showing what the posts already on the board would add **if every
    one of them closed successfully** — a separate number from the Community Value Index above it.
-2. A plain count beside it: how many posts are open across the whole community.
+2. A plain count beside it: how many posts are open across the entire community.
 3. A per-app breakdown of where that open value sits — open rides and deliveries in
    TrustTransport, quotes waiting on an answer in Foundation, requests nobody has done yet in
    SocketRelay, and recurring activities waiting for the other member to confirm.

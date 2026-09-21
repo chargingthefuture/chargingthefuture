@@ -54,8 +54,8 @@ Rule 114 baseline: Directory extends the canonical profile by `user_id` and avoi
 
 - Table/entity: `directory_profiles`
   - Contains personal data? yes
-  - Retention period: long-lived while active
-  - Legal/compliance note: authoritative profile projection
+  - Retention period: long-lived while listed
+  - Legal/compliance note: authoritative profile projection. A member who deletes their Directory data or their whole account has the listing they claimed **removed** — the row and its skills, tags and proposed skills all go — and its Quora address is written to `directory_suppressed_quora_urls`, so nothing re-creates it, an accepted SkillsHunt nomination of the same address included, until somebody explicitly asks for it back and an admin lifts the block. This is the same disposition `takedownAdminProfile` applies, deliberately: a person who leaves and a person who asks to be taken down want the same thing and should not produce two different states. An admin deleting a profile they created is a plain delete and suppresses nothing — the block is recorded only when the admin uses the takedown control and gives a reason (owner directive, 2026-09-20).
 - Table/entity: `directory_profile_tags`
   - Contains personal data? yes (profile linkage)
   - Retention period: long-lived
@@ -84,8 +84,8 @@ When user deletes Directory usage only:
 - Delete immediately:
   - `directory_user_extension` and optional discoverability preferences
   - `directory_profile_skills` and `directory_profile_proposed_skills` for the user's profile (profile_id-keyed child rows)
-- Anonymize/pseudonymize:
-  - directory profile projection where historical records must remain
+- Remove and block from re-listing:
+  - the claimed `directory_profiles` row, with its skills, tags and proposed skills, and its Quora address recorded on the takedown list
 - Retain for compliance/fraud/finance:
   - `directory_profile_change_events`
   - `directory_deletion_events`
@@ -114,6 +114,7 @@ If user returns after service-scoped deletion:
   - new `directory_user_extension` and empty profile draft state
 - Data that is not restored:
   - deleted profile content and historical preferences
+  - the listing itself: its Quora address stays blocked, so returning means asking for the block to be lifted rather than being re-listed automatically
 - Re-consent required? (yes/no):
   - yes (discoverability and contact preferences)
 

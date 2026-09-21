@@ -14,7 +14,7 @@
 // wipe inside disconnectUser (a setTimeout), so a disconnect racing a reconnect on the same
 // instance could strip the freshly set token and leave every later call unauthenticated.
 //
-// Separate instances remove the whole class: no surface can re-authenticate or disconnect another
+// Separate instances remove the entire class: no surface can re-authenticate or disconnect another
 // identity's connection, and a released instance's deferred token wipe lands on that dead instance
 // only — never on its replacement, which is always a brand-new client.
 import { StreamChat } from 'stream-chat';

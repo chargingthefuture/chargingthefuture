@@ -242,7 +242,7 @@ export async function ensureBeaconCallAndIngest(input: {
         settings_override: {
           // Backstage on: the call is not visible to viewers until goLive() is called.
           backstage: { enabled: true },
-          // `quality` is not optional in practice: Stream rejects the whole get-or-create with 400
+          // `quality` is not optional in practice: Stream rejects the entire get-or-create with 400
           // "recording quality is required when audio_only is false and recording is enabled" when a
           // video recording is turned on without one, which failed every "Go live" click. Both inputs
           // are landscape — the in-browser host shares a screen or window, and the phone path pushes

@@ -329,6 +329,75 @@ explanation: earned by steadily delivering real help; automatic; permanent; no a
 to buy it, no score anywhere). Non-holder / unclaimed profiles render nothing badge-related.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-9 · A deleted listing disappears from the member view but stays visible to an admin
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a claimed profile with several skills, whose account you can delete (or a profile
+whose `directory_profiles.deleted_at` an admin has stamped by deleting that member's account).
+**Steps:**
+1. As a member, note the profile's name, its skills, and its profile page address.
+2. Delete that member's account, or delete the auth account that claimed the profile.
+3. Signed in as any other member, browse `/apps/directory` and page through the list. The profile
+   must not appear.
+4. Search for the person by name in the same screen. No result.
+5. Open the profile page address noted in step 1 directly. It must not render the profile.
+6. As an admin, open `/admin/directory` and search the same name. The row **is** still listed.
+**Expected:** A soft-deleted listing is gone from every member-facing read — the browse list, its
+count and paging, the search, and the profile page opened by direct address. The admin list still
+shows it, deliberately: an admin list hides nothing, and a listing taken down has to remain findable
+by whoever has to answer for it. Before 2026-09-20 steps 3 to 5 all still showed the profile, because
+those reads filtered on `is_active` alone and account deletion stamps `deleted_at` without touching
+`is_active` — so a deleted member's name, location, Quora address and skills stayed on the screen.
+Note this catches a side-effect deletion too: removing a duplicate auth account soft-deletes whatever
+listing that account had claimed, which is silent if the member view keeps rendering it.
+**Result:** web ☐ mobile ☐ — notes:
+
+### DIR-9b · A member deleting their own listing removes it everywhere at once
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a claimed profile with at least one skill, listed under a sector.
+**Steps:**
+1. As that member, delete your own listing from the Directory edit screen.
+2. Browse and search `/apps/directory` as another member: it is gone. Open its address directly:
+   gone.
+3. Check the screens that read this table from elsewhere — Workforce's skills map and counts,
+   Foundation's provider browse and its count, the Weekly Performance member figure. The person is
+   absent from all of them, and every count agrees with the list beside it.
+4. On `/admin/directory`, switch the list to include removed profiles. The row is there.
+5. Re-save the profile as an admin. It returns on every screen from steps 2 and 3.
+**Expected:** One delete, one effect, everywhere. Liveness is `deleted_at IS NULL` and nothing else,
+so no screen can disagree with another about whether a listing exists. Before 2026-09-20 the table
+carried an `is_active` flag as well and the two diverged: a member's own delete cleared the flag
+while account deletion stamped the timestamp, and each query tested whichever one its author picked.
+Step 3 is the part that used to fail quietly — a count built on one column sitting beside a list
+built on the other.
+**Result:** web ☐ mobile ☐ — notes:
+
+### DIR-11 · Leaving removes the listing and blocks it from being re-listed
+**Role:** member, then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a member holding a claimed profile that carries a Quora address and some skills.
+Note the address.
+**Steps:**
+1. As that member, delete your Directory data from Account & Data (service scope). Confirm the screen
+   says the listing is removed and the address blocked unless you ask for it back.
+2. As another member, browse and search `/apps/directory`. The listing is gone — not blanked, not a
+   "Deleted profile" row. Open its old address directly: gone.
+3. On `/admin/directory`, open the **Taken-down Quora URLs** panel. The address is listed, with a
+   reason naming a member deletion rather than an admin's own words.
+4. Accept a fresh SkillsHunt nomination of that same Quora address. No directory profile is created.
+5. As an admin, try to create a profile with that address. Rejected
+   (409 `DIRECTORY_QUORA_URL_SUPPRESSED`).
+6. Click **Allow again** on the panel entry, give a reason, then repeat step 5. It works now.
+7. Repeat steps 1 to 4 with full-account deletion instead of service-scope. Same outcome.
+8. Separately, as an admin, delete a profile **you** created (DIR-A3). It is deleted and its address
+   is **not** on the panel — an admin's own delete suppresses nothing.
+**Expected:** Leaving and asking to be taken down land in the same state, because they are the same
+request. The listing is deleted with its skills, tags and proposed skills, and the address is blocked
+until somebody explicitly asks. Before 2026-09-20 neither member path did this: the service delete
+blanked the row and left it active, the account delete stamped it and left it rendering, and either
+way an accepted nomination of the same address put the person back with no one noticing. Step 8 is the
+line that must not move — an admin deleting their own creation is an ordinary delete, and the block is
+recorded only through the takedown control with a reason.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Admin walkthrough
@@ -367,11 +436,11 @@ an allow/deny audit line.
 4. Remove a skill from the claimed profile, save, reopen, confirm it is gone.
 5. Check `skill_up_trainer_skill_audit`: the claimed profile's add and remove are each a row; the unclaimed profile wrote none.
 **Expected:** Every save succeeds. No "Unable to update profile." banner in any of the four saves.
-**Regression guard:** between 2026-08-29 and 2026-09-12 every one of these saves failed. The audit's owner lookup compared `id = $1::uuid` against `directory_profiles.id`, which is varchar in the carried-over database, so Postgres threw `operator does not exist: character varying = uuid`, the surrounding transaction rolled back, and the whole profile edit was lost. It passed every automated check because a `schema.sql`-shaped database declares that column UUID and the comparison works there — so this case has to be run against a database with the carried-over varchar column to mean anything.
+**Regression guard:** between 2026-08-29 and 2026-09-12 every one of these saves failed. The audit's owner lookup compared `id = $1::uuid` against `directory_profiles.id`, which is varchar in the carried-over database, so Postgres threw `operator does not exist: character varying = uuid`, the surrounding transaction rolled back, and the entire profile edit was lost. It passed every automated check because a `schema.sql`-shaped database declares that column UUID and the comparison works there — so this case has to be run against a database with the carried-over varchar column to mean anything.
 **Also check:** force a save failure (for example, point the drawer at a profile id that does not exist) and confirm the banner now carries the server's reason after the sentence, rather than "Unable to update profile." alone.
 **Result:** web ☐ — notes:
 
-### DIR-A1b · Admin list paging, and search across the whole collection
+### DIR-A1b · Admin list paging, and search across the entire collection
 **Role:** admin · **Surfaces:** web (`/admin/directory`)
 **Steps:**
 1. With more than 20 profiles seeded, open the admin page. Confirm the first screen shows 20 profiles
@@ -384,12 +453,12 @@ an allow/deny audit line.
 4. Search for a job title and for an unclaimed profile's handle. Confirm both match. Search with
    punctuation ("o'brien") and confirm it matches the same person as "o brien".
 5. Switch to Claimed, then Unclaimed. Confirm each tab pages through only that kind, the page resets to
-   1, and the header's "N unclaimed" keeps counting the whole collection rather than the visible page.
+   1, and the header's "N unclaimed" keeps counting the entire collection rather than the visible page.
 6. Delete an unclaimed profile from a page that has a following page. Confirm the page refills from the
    next one and the header counts drop by one.
-**Expected:** The list loads one page at a time (20 per page) instead of the whole collection, so first
+**Expected:** The list loads one page at a time (20 per page) instead of the entire collection, so first
 paint does not wait on every profile. Search and the claim tabs are applied by the server across all
-profiles. The header's profile and unclaimed counts describe the whole collection.
+profiles. The header's profile and unclaimed counts describe the entire collection.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)
@@ -503,7 +572,7 @@ the Advocacy placeholder and one carrying only that placeholder.
 2. Read the counts line and the rows.
 3. Look for your own listing, and for anybody who already has an invite post on the blog.
 4. Read the **Skills coverage** block above the list.
-5. Press **Copy the whole queue**, then paste into any text field.
+5. Press **Copy the entire queue**, then paste into any text field.
 6. Sign in as an approved member who is not an admin and open the same address.
 **Expected:**
 - Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and

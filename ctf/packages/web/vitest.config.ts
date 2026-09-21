@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 // Unit tests for the web package's pure logic only (no DB, no network). We deliberately scope the
 // run to a few settled, high-value cores (ServiceCredits amount math, Trust evidence) rather than
-// the whole app — see Rule 118 (testing scope) and Rule 133. The aliases mirror tsconfig `paths`
+// the entire app — see Rule 118 (testing scope) and Rule 133. The aliases mirror tsconfig `paths`
 // (`@/*` -> package root, `lib/*` -> ./lib) so test imports resolve the same way the app does.
 //
 // `esbuild.jsx: 'automatic'` is set because one tested module builds JSX (the ClickLog report

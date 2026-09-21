@@ -4,7 +4,7 @@ import type { ReportNote, ReportRow, TrendReportView } from './trend-report-view
 // The shareable ClickLog report, drawn as one tall image.
 //
 // Why an image and not a screenshot: a phone screenshot of the trends screen stops at the bottom of
-// the screen, and stitching several together loses rows and produces seams. This renders the whole
+// the screen, and stitching several together loses rows and produces seams. This renders the entire
 // report — every section, in order, plus the method statement — into a single PNG that can be posted
 // anywhere as-is.
 //
@@ -30,7 +30,7 @@ const SECTION_HEADING = 46;
 const CONTENT_WIDTH = REPORT_IMAGE_WIDTH - PAD * 2;
 
 // Stat tiles wrap on their own once the row is full, so the width arithmetic has to leave room for
-// every gutter — one tile too wide and the whole row falls to the next line, which would put the
+// every gutter — one tile too wide and the entire row falls to the next line, which would put the
 // rendered height out of step with the estimate below.
 const STATS_PER_ROW = 2;
 const STAT_GUTTER = 12;
@@ -163,7 +163,7 @@ function Note({ note }: { note: ReportNote }): ReactElement {
   );
 }
 
-// Builds the whole image. `generatedOn` is passed in rather than read from the clock here so the
+// Builds the entire image. `generatedOn` is passed in rather than read from the clock here so the
 // output is reproducible in tests.
 export function buildReportImageElement(view: TrendReportView, generatedOn: string): ReactElement {
   return (
