@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
-import type { StreamVideoUsageSummary } from 'lib/stream-quota/usage';
+import type { StreamVideoUsageDay, StreamVideoUsageSummary } from 'lib/stream-quota/usage';
 import type { ChymeQuotaPolicy } from 'lib/stream-quota/policy';
 import type { ChymeRoomRemoval } from 'lib/chyme/types';
 import { requestJson } from './chyme-shared';
@@ -64,7 +64,36 @@ function formatMinutes(minutes: number): string {
   return minutes.toLocaleString('en-US');
 }
 
-function asPlainText(payload: UsagePayload): string {
+// How much of the daily record the day-by-day card shows. The meter keeps every day it has ever
+// recorded and never prunes, so 'all' is the entire history rather than a long window; the other
+// three are the questions actually asked of it — the last week, the last month, and the calendar
+// month the budget is measured against.
+const DAY_RANGES = ['7', '30', 'month', 'all'] as const;
+
+type DayRange = (typeof DAY_RANGES)[number];
+
+const DAY_RANGE_PILL: Record<DayRange, string> = {
+  '7': '7 days',
+  '30': '30 days',
+  month: 'This month',
+  all: 'All of it',
+};
+
+const DAY_RANGE_TITLE: Record<DayRange, string> = {
+  '7': 'Last 7 days',
+  '30': 'Last 30 days',
+  month: 'This month, day by day',
+  all: 'Every day recorded',
+};
+
+function daysInRange(usage: StreamVideoUsageSummary, range: DayRange): StreamVideoUsageDay[] {
+  if (range === '7') return usage.byDay.slice(-7);
+  if (range === '30') return usage.byDay.slice(-30);
+  if (range === 'month') return usage.byDay.filter((day) => day.dateIso >= usage.monthStartIso);
+  return usage.byDay;
+}
+
+function asPlainText(payload: UsagePayload, range: DayRange): string {
   const { usage, policy, room, config } = payload;
   const lines = [
     `Chyme live audio — Stream Video minutes, ${usage.monthStartIso} to ${usage.todayIso} (day ${usage.daysElapsed} of ${usage.daysInMonth})`,
@@ -83,8 +112,8 @@ function asPlainText(payload: UsagePayload): string {
       ? ['  (nothing recorded yet)']
       : usage.bySurface.map((row) => `  ${surfaceLabel(row.surface)}: ${formatMinutes(row.minutes)} minutes`)),
     '',
-    'Last 7 days:',
-    ...usage.byDay.slice(-7).map((day) => `  ${day.dateIso}: ${formatMinutes(day.minutes)} minutes`),
+    `${DAY_RANGE_TITLE[range]}:`,
+    ...daysInRange(usage, range).map((day) => `  ${day.dateIso}: ${formatMinutes(day.minutes)} minutes`),
     '',
     `Settings: budget ${formatMinutes(config.budgetMinutes)} minutes (STREAM_VIDEO_MINUTES_BUDGET); room cap ${config.maxParticipants} (CHYME_MAX_PARTICIPANTS); guest cap ${config.maxGuestListeners} (CHYME_MAX_GUEST_LISTENERS); Red-band room cap ${config.redBandMaxParticipants} (CHYME_RED_BAND_MAX_PARTICIPANTS)`,
     `One person in the room all day costs ${formatMinutes(ONE_PERSON_ALL_DAY_MINUTES)} minutes; all month, about ${Math.round((ONE_PERSON_ALL_DAY_MINUTES * usage.daysInMonth * 100) / config.budgetMinutes)}% of the budget.`,
@@ -196,6 +225,56 @@ function MinuteRows({ rows, t }: { rows: { key: string; label: string; minutes: 
         </li>
       ))}
     </ul>
+  );
+}
+
+// The day-by-day card. The range control sits inside it because the range is a property of this
+// card and nothing else on the screen; the copy control at the top follows whatever is chosen here.
+function DailySection({
+  usage,
+  range,
+  onRange,
+  t,
+}: {
+  usage: StreamVideoUsageSummary;
+  range: DayRange;
+  onRange: (next: DayRange) => void;
+  t: Tokens;
+}) {
+  const rows = daysInRange(usage, range);
+  return (
+    <Section t={t}>
+      <SectionTitle t={t}>{DAY_RANGE_TITLE[range]}</SectionTitle>
+      <div role="group" aria-label="How far back to show" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {DAY_RANGES.map((option) => {
+          const active = option === range;
+          return (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onRange(option)}
+              style={{
+                padding: '6px 11px',
+                borderRadius: 999,
+                background: active ? t.ACCENT : t.INPUT_BG,
+                border: `1px solid ${active ? t.ACCENT : t.BORDER}`,
+                color: active ? '#0B0B0F' : t.SUBTLE,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {DAY_RANGE_PILL[option]}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 10 }}>
+        The meter keeps every day and never drops one. The record starts {usage.earliestDateIso}.
+      </div>
+      <MinuteRows rows={rows.map((day) => ({ key: day.dateIso, label: day.dateIso, minutes: day.minutes }))} t={t} />
+    </Section>
   );
 }
 
@@ -322,19 +401,20 @@ export function ChymeStreamUsageShell() {
   const t = getPluginShellTokens(getAppAccent('chyme', theme), theme);
   const { payload, error, loading, load, setError } = useStreamUsage();
   const [copied, setCopied] = useState(false);
+  const [range, setRange] = useState<DayRange>('7');
 
   const onCopy = useCallback(async () => {
     if (!payload) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(asPlainText(payload));
+      await navigator.clipboard.writeText(asPlainText(payload, range));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch (caught) {
       setError(caught instanceof Error ? `Copy failed: ${caught.message}` : 'Copy failed.');
     }
-  }, [payload, setError]);
+  }, [payload, range, setError]);
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -365,10 +445,7 @@ export function ChymeStreamUsageShell() {
               <SectionTitle t={t}>This month by surface</SectionTitle>
               <MinuteRows rows={payload.usage.bySurface.map((row) => ({ key: row.surface, label: surfaceLabel(row.surface), minutes: row.minutes }))} t={t} />
             </Section>
-            <Section t={t}>
-              <SectionTitle t={t}>Last 7 days</SectionTitle>
-              <MinuteRows rows={payload.usage.byDay.slice(-7).map((day) => ({ key: day.dateIso, label: day.dateIso, minutes: day.minutes }))} t={t} />
-            </Section>
+            <DailySection usage={payload.usage} range={range} onRange={setRange} t={t} />
             <SettingsSection payload={payload} t={t} />
           </>
         )}

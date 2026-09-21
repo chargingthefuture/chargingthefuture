@@ -95,10 +95,14 @@ Lifecycle/governance references applied:
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
    month-to-date participant-minutes against the budget, the percent and the band, today's
    minutes, a straight-line projection to month end, the per-surface split (main room, Weavers
-   room, signed-out listeners, Back Channel), the last seven days, who is in the main room this
+   room, signed-out listeners, Back Channel), a day-by-day card, who is in the main room this
    minute (members and signed-out listeners), the caps and pauses in force, and the settings
-   behind them. Read-only, admin-only, with a "Copy as text" control so all of it can be
-   pasted into a message from a phone (rule 131). Reads `GET /api/chyme/admin/stream-usage`. The
+   behind them. The day-by-day card carries a range control — **7 days**, **30 days**, **This
+   month**, **All of it** — because `stream_video_usage_daily` is never pruned and the screen used
+   to show a fixed seven days of a record that goes back further. It opens on 7 days, names the
+   first day the meter recorded anything, and the "Copy as text" control pastes whichever range is
+   selected. Read-only, admin-only, so all of it can be pasted into a message from a phone (rule
+   131). Reads `GET /api/chyme/admin/stream-usage`. The
    count is the app's own estimate from the presence heartbeats; the Stream dashboard is the bill
    of record.
 2. Eligibility gate must enforce shared access approval model (`approved user` or `admin`) for room/chat/join routes.
@@ -161,7 +165,7 @@ side did not apply (the decision is recorded and enforced by this app either way
 - `POST /api/chyme/admin/role` ← `{ userId, role: 'speaker' | 'listener' }` — hand-raise mode: let a present member speak, or move them back to listening (which also mutes them). Sets `chyme_room_members.role` and, when `CHYME_GUEST_STREAM_ROLE` is set, the member's role on the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when they are not present. Audit `chyme.admin.role`.
 - `POST /api/chyme/admin/speak-mode` ← `{ mode: 'open' | 'hand_raise' }` — switch the room's mode. Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call (`demoted` in the answer). Audit `chyme.admin.speak-mode`.
 - `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
-- `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface and per-day rows), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
+- `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface rows, one row for every day the meter has ever recorded — zero-filled so there are no gaps — and `earliestDateIso`, the first of those days), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
 
 Back Channel routes (free 1:1 audio sidebar between two members in the same live room, spec #1746). All under `/api/chyme/back-channel/`; all require `requireChymeAccess` (signed-in + approved_full); all mutations CSRF-guarded:
 
@@ -465,6 +469,16 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   with the member's account and `chyme_admin_audit_trail` is retained (deletion registry and the
   deletion contract). The SDK's package `postinstall` runs `husky` when it can resolve it, which
   broke a clean CI install; pnpm `neverBuiltDependencies` skips that script.
+- 2026-09-21: **The day-by-day card on the Live Audio Usage screen picks its own range.** Owner
+  question: the screen showed a fixed "Last 7 days" list, and whether the database kept anything
+  older was not answerable from the screen. It does — `stream_video_usage_daily` has one row per
+  day per surface, nothing prunes it, and the month-to-date figures reset by date filter rather
+  than by dropping rows. `readStreamVideoUsageSummary` used to fetch a 31-day window and the shell
+  sliced seven days off it; it now reads every recorded day and returns `earliestDateIso` with it,
+  and the card has a **7 days / 30 days / This month / All of it** control. The card names the
+  first recorded day so "All of it" has a known start, and "Copy as text" pastes the selected
+  range under a heading that matches it. The record starts 2026-09-19, when the meter shipped;
+  there is nothing before that.
 - 2026-09-19: **The minute meter covers every Stream Video call.** Owner decision: the app's meter
   is the only one read; the Stream dashboard is not. Beacon publishers, PeerProgramming cohort
   calls, and Foundation calls are now credited to `stream_video_usage_daily` from Stream's
