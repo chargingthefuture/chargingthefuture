@@ -67,6 +67,16 @@ Read routes (admin or approved user). Each writes a `weekly_performance_audit_tr
 Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or the `operations` role):
 
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
+- `GET /api/weekly-performance/admin/sign-in-record` — the sign-in record (`login_events`) as a
+  health check, for the screen at `/admin/weekly-performance/sign-in-record` (linked from the admin
+  index as "Weekly Performance: Sign-in Record"). Runs the once-per-day sign-in write for the
+  calling admin (`recordLoginEventNow`, the same statement the identity gate fires) and returns the
+  outcome with the database's own error text when it fails; then totals, today, the current week
+  exactly as the dashboard computes it (`countMemberDaysInWeek` / `countActiveMembersInWeek` /
+  `elapsedDaysInWeek`), the last fourteen days of distinct members per UTC day, and whether the v2
+  foreign key `login_events_user_id_fkey` is present. Aggregate only; the one per-member fact is
+  the caller's own row for today. Audits `weekly-performance.admin.sign_in_record.get`
+  (`lib/engagement/sign-in-record.ts`, `components/weekly-performance/wp-sign-in-record-shell.tsx`).
 
 Internal (service-to-service, never member/browser callable):
 
@@ -227,6 +237,20 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-09-21: **Sign-in record screen (owner report: Daily Active Members sits at zero).** When the
+  Active Members rows read zero, the question is whether the sign-in write is landing, and until
+  now the only ways to answer it were the server log or SQL pasted into the Neon dashboard. New
+  admin screen `/admin/weekly-performance/sign-in-record` and route
+  `GET /api/weekly-performance/admin/sign-in-record`: opening it runs the once-per-day sign-in write
+  for the admin themselves — the same statement the identity gate fires on every request, via a
+  new awaited `recordLoginEventNow` in `lib/engagement/login-activity.ts` — and shows whether the
+  row is on record or the database's own words for why not. Under that: members today, active and
+  per-day for the current week computed by the dashboard's own helpers, the record's size and span,
+  whether the v2 `users` foreign key is back, and the last fourteen days of members per UTC day.
+  Copy-as-text and read-again controls; admin or operations only; aggregate only apart from the
+  admin's own row. Contracts: command, access policy and audit entries for
+  `weekly-performance.admin.sign_in_record.get`; admin index row added.
 
 - 2026-09-21: **The Value section reads the shared value-event list, and what nothing used is gone
   (owner directive).** The dashboard carried its own copy of each value event's SQL, which is how it

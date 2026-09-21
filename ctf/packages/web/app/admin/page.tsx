@@ -86,6 +86,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/socket-relay', name: 'SocketRelay' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },
   { href: '/admin/weekly-performance', name: 'Weekly Performance' },
+  // The sign-in record behind the dashboard's Active Members rows, read as a health check: opening
+  // it records the admin's own sign-in and shows what the database did with the write.
+  { href: '/admin/weekly-performance/sign-in-record', name: 'Weekly Performance: Sign-in Record' },
   { href: '/admin/what-works', name: 'WhatWorks' },
   { href: '/admin/workforce', name: 'Workforce' },
 ];
