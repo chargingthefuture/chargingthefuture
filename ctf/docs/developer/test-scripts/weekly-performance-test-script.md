@@ -129,6 +129,11 @@ is no "set active week" action and no per-week status.
    `ctf/db/migrations/post/0008_login_events_backfill_launch_gap.sql` rebuilt those days from
    first-party evidence, so that week should read at least one member. Rows it rebuilt carry
    `source = 'backfill_launch_gap'`, which is how to tell a reconstructed day from one recorded live.
+   The Workforce Recruited goal card is the count of every Directory profile (every removal is a
+   hard delete since 2026-09-21); it must never read 0 while the Directory has listings. The "This
+   week vs last week" chart shows the counts only — the two goal rows are not drawn there, because
+   at their scale nothing else was visible. A goal card whose prior week has no stored snapshot
+   reads "No prior-week snapshot" rather than a delta.
    Until 2026-09-21 the table also carried a v2 foreign key to the `users` mirror, which v3 never
    writes, so every member who joined after v2 stopped was refused a sign-in row on every request and
    these two cards read zero for them. `post/0034` dropped the key and rebuilt those members' days

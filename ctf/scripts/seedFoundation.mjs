@@ -39,7 +39,6 @@ async function main() {
           bio = EXCLUDED.bio,
           profile_url = EXCLUDED.profile_url,
           country = EXCLUDED.country,
-          deleted_at = NULL,
           updated_at = NOW()
       `,
       [providerProfileId],

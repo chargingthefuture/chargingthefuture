@@ -714,8 +714,7 @@ export async function getDashboard(): Promise<WorkforceDashboard> {
     ),
     queryDb<CountRow>(
       `SELECT COUNT(*)::text AS total
-       FROM directory_profiles
-       WHERE is_active = TRUE AND deleted_at IS NULL`,
+       FROM directory_profiles`,
     ),
     // Skills coverage numerator: DIFFERENT active skills at least one active member has listed.
     // directory_profiles.id is varchar on the production (v2-cloned) database while

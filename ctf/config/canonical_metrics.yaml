@@ -1238,8 +1238,8 @@ canonical_metrics:
     name: Workforce Recruited (Current)
     description: >-
       Aspirational/projection "recruited" count, mirroring V2 Workforce Recruiter. The top-line total
-      is the count of all active Directory profiles. Per-sector, per-skill-level, and per-occupation
-      "recruited" is the count of DISTINCT active Directory profiles that match the bucket by ANY of
+      is the count of all Directory profiles. Per-sector, per-skill-level, and per-occupation
+      "recruited" is the count of DISTINCT Directory profiles that match the bucket by ANY of
       three signals — same sector, same job title, or a skill registered under the job title (a
       profile's own sector matches every occupation in that sector). Derived live from Directory and
       Skills Taxonomy on read; there is no inferred-event table, sync, or stored state.
@@ -1247,18 +1247,13 @@ canonical_metrics:
     data_type: integer
     unit: users
     calculation: |
-      -- Top-line total (mirrors V2: all active Directory profiles).
+      -- Top-line total (mirrors V2: all Directory profiles). Every removal is a hard delete since
+      -- post/0033 dropped the is_active and deleted_at tombstones, so a present row is a listing.
       SELECT COUNT(*)
-      FROM directory_profiles
-      WHERE is_active = TRUE
-        AND deleted_at IS NULL;
+      FROM directory_profiles;
       -- Per-bucket recruited is the distinct profiles matching that bucket by sector, job title, or a
       -- skill registered under the job title (see computeWorkforceModel in lib/workforce/repository.ts).
     inputs:
-      - name: directory_profiles.is_active
-        type: boolean
-      - name: directory_profiles.deleted_at
-        type: datetime
       - name: directory_profiles.sector_id
         type: string
       - name: directory_profiles.job_title_id
@@ -2021,49 +2016,23 @@ canonical_metrics:
 
   - id: wp_adoption_active_members
     name: Weekly Active Members
-    description: How many different members did something in the app during the week window — the plain turnout headcount. Built from the member-day set below, so a member counts if any first-party record of their own action falls in the window, whether or not a sign-in row was written for them. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
+    description: How many different members signed in during the week window — the plain turnout headcount. A member is active on a day when the sign-in record (login_events) holds a row for them that day, and nothing else (owner decision, 2026-08-27); what a member did once here is measured per plugin by that plugin's own cards. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: members
     calculation: |
-      -- member_days is the UNION (not UNION ALL) of (member, UTC day) pairs across every
-      -- member-attributed activity source: login_events, click_log_incidents, mood_submissions,
-      -- feed_community_posts, feed_community_replies, feed_community_post_reactions and
-      -- peer_programming_messages, each windowed on its own date column and skipping blank ids.
+      -- member_days is the DISTINCT (user_id, UTC day) set from login_events for the window,
+      -- skipping blank ids: one row per member per day they signed in.
       SELECT COUNT(DISTINCT user_id) AS v FROM member_days;
     inputs:
       - name: login_events.user_id
         type: string
       - name: login_events.created_at
         type: datetime
-      - name: click_log_incidents.user_id
-        type: string
-      - name: click_log_incidents.created_at
-        type: datetime
-      - name: mood_submissions.user_id
-        type: string
-      - name: mood_submissions.submitted_at
-        type: datetime
-      - name: feed_community_posts.author_user_id
-        type: string
-      - name: feed_community_posts.created_at
-        type: datetime
-      - name: feed_community_replies.author_user_id
-        type: string
-      - name: feed_community_replies.created_at
-        type: datetime
-      - name: feed_community_post_reactions.user_id
-        type: string
-      - name: feed_community_post_reactions.created_at
-        type: datetime
-      - name: peer_programming_messages.author_user_id
-        type: string
-      - name: peer_programming_messages.created_at
-        type: datetime
     example_values:
       - 2
       - 47
-    last_updated: "2026-08-26T00:00:00Z"
+    last_updated: "2026-09-21T00:00:00Z"
     update_cadence: weekly
     retention: 24 months
     allowed_thresholds:
@@ -2071,12 +2040,12 @@ canonical_metrics:
 
   - id: wp_adoption_daily_active_members
     name: Weekly Daily Active Members
-    description: Average number of members active on a day of the week window — the dashboard's daily-active-members reading, and the companion to the plain headcount in wp_adoption_active_members. A member-day is a (member, UTC day) pair on which that member did something the app recorded; it is drawn from every member-attributed activity source, not from login_events alone, so a member whose sign-in row was never written still counts on the days their own rows carry. The divisor is the number of days of the window that have already started (1-7), computed in UTC to match the day the member-days are bucketed on, so the live current week averages over the days it has actually had and every past week divides by the full 7. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
+    description: Average number of members active on a day of the week window — the dashboard's daily-active-members reading, and the companion to the plain headcount in wp_adoption_active_members. A member-day is a (member, UTC day) pair on which the sign-in record (login_events) holds a row for that member, and nothing else (owner decision, 2026-08-27). The divisor is the number of days of the window that have already started (1-7), computed in UTC to match the day the member-days are bucketed on, so the live current week averages over the days it has actually had and every past week divides by the full 7. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.
     owner: analytics-owner@chargingthefuture.org
     data_type: number
     unit: per day
     calculation: |
-      -- member_days is the same UNION described in wp_adoption_active_members.
+      -- member_days is the same login_events set described in wp_adoption_active_members.
       -- elapsed_days = LEAST(7, GREATEST(1, days of the window that have already started, in UTC)).
       SELECT ROUND(COUNT(*)::numeric / :elapsed_days, 2) AS v FROM member_days;
     inputs:
@@ -2084,34 +2053,10 @@ canonical_metrics:
         type: string
       - name: login_events.created_at
         type: datetime
-      - name: click_log_incidents.user_id
-        type: string
-      - name: click_log_incidents.created_at
-        type: datetime
-      - name: mood_submissions.user_id
-        type: string
-      - name: mood_submissions.submitted_at
-        type: datetime
-      - name: feed_community_posts.author_user_id
-        type: string
-      - name: feed_community_posts.created_at
-        type: datetime
-      - name: feed_community_replies.author_user_id
-        type: string
-      - name: feed_community_replies.created_at
-        type: datetime
-      - name: feed_community_post_reactions.user_id
-        type: string
-      - name: feed_community_post_reactions.created_at
-        type: datetime
-      - name: peer_programming_messages.author_user_id
-        type: string
-      - name: peer_programming_messages.created_at
-        type: datetime
     example_values:
       - 12.43
       - 18
-    last_updated: "2026-08-26T00:00:00Z"
+    last_updated: "2026-09-21T00:00:00Z"
     update_cadence: weekly
     retention: 24 months
     allowed_thresholds:
@@ -2153,7 +2098,7 @@ canonical_metrics:
 
   - id: wp_adoption_directory_findable_members
     name: Weekly Directory Findable Members
-    description: Cumulative state count — claimed, active, non-deleted Directory profiles holding at least one skill, created by the end of the week window. Claim time is not stored, so the count reflects each profile's CURRENT claimed/active/skilled state, not its state at the time.
+    description: Cumulative state count — claimed Directory profiles holding at least one skill, created by the end of the week window (a removed listing is a deleted row, so every present row is live). Claim time is not stored, so the count reflects each profile's CURRENT claimed/active/skilled state, not its state at the time.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: members
@@ -2161,17 +2106,11 @@ canonical_metrics:
       SELECT COUNT(*) AS v
       FROM directory_profiles p
       WHERE p.claimed_by_user_id IS NOT NULL
-        AND p.is_active = TRUE
-        AND p.deleted_at IS NULL
         AND p.created_at < :week_end
         AND EXISTS (SELECT 1 FROM directory_profile_skills s WHERE s.profile_id = p.id);
     inputs:
       - name: directory_profiles.claimed_by_user_id
         type: uuid|null
-      - name: directory_profiles.is_active
-        type: boolean
-      - name: directory_profiles.deleted_at
-        type: datetime|null
       - name: directory_profiles.created_at
         type: datetime
       - name: directory_profile_skills.profile_id
@@ -2318,7 +2257,7 @@ canonical_metrics:
 
   - id: wp_goal_workforce_recruited_weekly_snapshot
     name: Weekly Goal Snapshot — Workforce Recruited
-    description: Weekly snapshot of the workforce recruited count (the state metric already registered as workforce_recruited_current_count — all active, non-deleted Directory profiles) toward the platform goal of 2000000 members. A state metric, so week-over-week needs memory — each read of the current week upserts the live value into weekly_performance_goal_snapshots; past weeks report their stored snapshot; a week never read while current reports 0 and renders as not captured.
+    description: Weekly snapshot of the workforce recruited count (the state metric already registered as workforce_recruited_current_count — all Directory profiles) toward the platform goal of 2000000 members. A state metric, so week-over-week needs memory — each read of the current week upserts the live value into weekly_performance_goal_snapshots; past weeks report their stored snapshot; a week never read while current reports 0 and renders as not captured.
     owner: analytics-owner@chargingthefuture.org
     data_type: integer
     unit: members
@@ -2339,10 +2278,8 @@ canonical_metrics:
       WHERE metric_key = 'goal.workforce_recruited'
         AND week_start_date = :week_start;
     inputs:
-      - name: directory_profiles.is_active
-        type: boolean
-      - name: directory_profiles.deleted_at
-        type: datetime|null
+      - name: directory_profiles.id
+        type: uuid
       - name: weekly_performance_goal_snapshots.metric_key
         type: string
       - name: weekly_performance_goal_snapshots.week_start_date
