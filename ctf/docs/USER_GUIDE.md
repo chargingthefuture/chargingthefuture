@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-08-19_
+_Last updated: 2026-09-21_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -207,15 +207,15 @@ Suggest a new tool for a problem you know about. Give the product name, a link t
 
 ## SkillsHunt
 
-_Last updated: 2026-08-04_
+_Last updated: 2026-09-21_
 
 SkillsHunt is a round-based nomination system where members submit and review skills and work experience.
 
-Open a SkillsHunt round to nominate a survivor. Fill in their display name, short bio, Quora profile URL, and skills from the list. You can also add skills that are not on the list. Submit only while the round is active.
+Open a SkillsHunt round to nominate a survivor. Fill in their display name, short bio, Quora profile URL, and skills from the list. You can also add skills that are not on the list. Submit only while the round is open — a round whose dates have run out shows a notice instead of the form.
 
-Your submissions are checked for safety and accuracy. The system verifies the Quora profile URL is live and blocks duplicate submissions from the same profile across all rounds.
+Your submissions are checked for safety and accuracy. The system verifies the Quora profile URL is live, and one person's Quora profile can only have one active nomination across all rounds, so the same survivor is not nominated twice.
 
-View the leaderboard to see accepted nominations ranked by points. Team leaderboards group members by claimed profession. You'll get notifications when your submissions are accepted or rejected, and achievements for reaching milestones.
+View the leaderboard to see scouts ranked by accepted points. There is one board. The Missions tab shows the round's shared goals — nominate three people, find someone in a sector that is short, and so on — with a progress bar that is the community's, not yours, and completing one adds its bonus points to your score. You'll get notifications when your submissions are accepted or rejected, when a mission completes, and for reaching milestones.
 
 **How to use it**
 
