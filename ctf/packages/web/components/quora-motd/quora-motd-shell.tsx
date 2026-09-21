@@ -13,8 +13,12 @@ import {
 } from 'lib/quora-motd/types';
 
 // One message a day, ready to paste into the Skills Economy space. This screen exists to be used
-// from a phone with no keyboard in reach: everything worth pasting has its own copy control, and
-// nothing has to be selected by hand.
+// from a phone with no keyboard in reach: the day's message is one copy control, and nothing has
+// to be selected by hand.
+//
+// Title and post copy together, in that order, because Quora's composer has no separate title
+// field — a post is one box. Two controls meant two pastes into one box and a member deciding
+// which order they went in, so the screen now hands over the text already in the order it is read.
 
 export type QuoraMotdDay = {
   date: string;
@@ -29,17 +33,7 @@ type Props = {
   poolSize: number;
 };
 
-function CopyButton({
-  text,
-  label,
-  accent,
-  wide,
-}: {
-  text: string;
-  label: string;
-  accent: string;
-  wide?: boolean;
-}) {
+function CopyButton({ text, label, accent }: { text: string; label: string; accent: string }) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
 
@@ -64,19 +58,19 @@ function CopyButton({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 7,
-          width: wide ? '100%' : undefined,
+          width: '100%',
           boxSizing: 'border-box',
           background: accent,
           color: '#0B0B0F',
           border: 'none',
           borderRadius: 10,
-          padding: wide ? '12px 14px' : '7px 11px',
-          fontSize: wide ? 14 : 12.5,
+          padding: '12px 14px',
+          fontSize: 14,
           fontWeight: 700,
           cursor: 'pointer',
         }}
       >
-        <ClipboardCopy size={wide ? 15 : 13} />
+        <ClipboardCopy size={15} />
         {copied ? 'Copied' : label}
       </button>
       {failed && (
@@ -92,6 +86,8 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('fireside', theme), theme);
   const [showUpcoming, setShowUpcoming] = useState(false);
+  // Exactly what the preview above shows, so what is pasted is what was read.
+  const pasteText = `${today.message.title}\n\n${today.message.body}`;
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -129,21 +125,9 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
             Ask: {QUORA_MOTD_ACTION_LABEL[today.message.action]}
           </div>
 
-          <div style={{ fontSize: 11.5, color: t.MUTED, marginBottom: 5 }}>Title</div>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: t.TITLE,
-              lineHeight: 1.4,
-              marginBottom: 10,
-            }}
-          >
-            {today.message.title}
+          <div style={{ fontSize: 11.5, color: t.MUTED, marginBottom: 5 }}>
+            The post, title first — one paste
           </div>
-          <CopyButton text={today.message.title} label="Copy the title" accent={t.ACCENT} />
-
-          <div style={{ fontSize: 11.5, color: t.MUTED, margin: '18px 0 5px' }}>Post</div>
           <pre
             style={{
               fontSize: 13.5,
@@ -159,9 +143,13 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
               border: `1px solid ${t.BORDER_SOLID}`,
             }}
           >
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>
+              {today.message.title}
+            </span>
+            {'\n\n'}
             {today.message.body}
           </pre>
-          <CopyButton text={today.message.body} label="Copy the post" accent={t.ACCENT} wide />
+          <CopyButton text={pasteText} label="Copy the post" accent={t.ACCENT} />
         </article>
 
         <button

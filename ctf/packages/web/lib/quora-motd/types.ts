@@ -49,7 +49,11 @@ export type QuoraMotdMessage = {
   /** Stable across edits to the text. Used for the rotation and for saying which one ran when. */
   id: string;
   action: QuoraMotdAction;
-  /** The post title. Quora asks for this separately from the body, so it is stored separately. */
+  /**
+   * The first line of the post. Quora's composer has no title field — a post is one box — so this
+   * is copied together with the body rather than on its own. It stays a separate value because the
+   * screen lists it by itself when showing which message runs on which day.
+   */
   title: string;
   /**
    * The post itself, already in the shape Quora accepts: plain text, one paragraph per line, no
