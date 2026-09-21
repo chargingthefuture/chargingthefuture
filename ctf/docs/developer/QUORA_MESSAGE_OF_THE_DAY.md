@@ -47,8 +47,10 @@ The pools are `lib/quora-motd/messages-fireside.ts`, `messages-ti-radio.ts` and
 around more often than another's.
 
 - `id` is stable across edits to the text. Changing an id changes where it lands in the rotation.
-- `title` and `body` are stored separately because Quora asks for them separately, and the screen
-  gives each its own copy control.
+- `title` and `body` are stored as two values, but they are copied as one. Quora's composer has no
+  title field — a post is one box — so the screen's single copy control hands over the title, a
+  blank line, then the body, which is the order the preview shows them in. The two values stay
+  apart because the list of what is coming shows titles on their own.
 - `body` is plain text, one paragraph per line, no markdown of any kind — Quora's editor shows
   every marker literally. It ends with a `Full post:` line. That label is load-bearing: an address
   alone on its own line is what the editor turns into a preview card, and the blog's paste sheets
