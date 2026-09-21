@@ -155,7 +155,7 @@ export async function searchProviders(input: {
       `
         SELECT COUNT(*)::text AS total
         FROM directory_profiles dp
-        WHERE dp.is_active = TRUE
+        WHERE dp.deleted_at IS NULL
           AND dp.claimed_by_user_id IS NOT NULL
           AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
           AND ($2::uuid IS NULL OR EXISTS (
@@ -199,7 +199,7 @@ export async function searchProviders(input: {
           fue.short_description
         FROM directory_profiles dp
         LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
-        WHERE dp.is_active = TRUE
+        WHERE dp.deleted_at IS NULL
           AND dp.claimed_by_user_id IS NOT NULL
           AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
           AND ($4::uuid IS NULL OR EXISTS (
@@ -264,7 +264,7 @@ export async function getProviderById(profileId: string): Promise<FoundationProv
       FROM directory_profiles dp
       LEFT JOIN foundation_user_extension fue ON fue.user_id = dp.claimed_by_user_id
       WHERE dp.id::text = $1
-        AND dp.is_active = TRUE
+        AND dp.deleted_at IS NULL
         AND dp.claimed_by_user_id IS NOT NULL
         AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
       LIMIT 1
@@ -291,7 +291,7 @@ export async function listOwnOfferableSkills(
       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
       LEFT JOIN foundation_provider_skills fps
         ON fps.user_id = dp.claimed_by_user_id AND fps.skill_id = s.id
-      WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+      WHERE dp.claimed_by_user_id = $1 AND dp.deleted_at IS NULL
       ORDER BY s.name ASC
     `,
     [userId],
@@ -313,7 +313,7 @@ export async function setOwnOfferedSkills(userId: string, skillIds: string[]): P
         FROM directory_profiles dp
         JOIN directory_profile_skills dps ON dps.profile_id::text = dp.id::text
         JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
-        WHERE dp.claimed_by_user_id = $1 AND dp.is_active = TRUE AND dp.deleted_at IS NULL
+        WHERE dp.claimed_by_user_id = $1 AND dp.deleted_at IS NULL
       `,
       [userId],
     );
@@ -1879,7 +1879,7 @@ export async function getFoundationDashboard(): Promise<{
     queryDb<{ total: string }>(
       `SELECT COUNT(*)::text AS total
        FROM directory_profiles dp
-       WHERE dp.is_active = TRUE
+       WHERE dp.deleted_at IS NULL
          AND dp.claimed_by_user_id IS NOT NULL
          AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)`,
     ),

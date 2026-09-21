@@ -107,7 +107,7 @@ const STAT_PROVIDERS = [
          FROM directory_profile_skills dps
          JOIN directory_profiles p ON dps.profile_id::text = p.id::text
          JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
-         WHERE p.is_active = TRUE AND p.deleted_at IS NULL AND s.is_active = TRUE`,
+         WHERE p.deleted_at IS NULL AND s.is_active = TRUE`,
       );
       const totalSkills = await client.query(
         `SELECT COUNT(*)::int AS n FROM skills_taxonomy_skills WHERE is_active = TRUE`,
@@ -117,7 +117,7 @@ const STAT_PROVIDERS = [
          FROM directory_profile_skills dps
          JOIN directory_profiles p ON dps.profile_id::text = p.id::text
          JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
-         WHERE p.is_active = TRUE AND p.deleted_at IS NULL AND s.is_active = TRUE
+         WHERE p.deleted_at IS NULL AND s.is_active = TRUE
          GROUP BY s.name
          ORDER BY n DESC, s.name ASC
          LIMIT 5`,

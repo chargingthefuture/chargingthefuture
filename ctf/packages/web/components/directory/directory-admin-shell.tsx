@@ -97,7 +97,6 @@ export interface AdminDirectoryProfile {
   // Free-text "skill not listed" labels stored on the profile, pending review. Editable here so an
   // admin can record a skill the taxonomy does not carry yet (the member self-edit form does the same).
   proposedSkills?: string[];
-  isActive: boolean;
   source: ProfileSource;
   invitedByUsername: string | null;
   unclaimedHandle: string | null;
@@ -266,7 +265,7 @@ function buildListUrl(page: number, filter: FilterKey, query: string): string {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: String(PAGE_SIZE),
-    includeInactive: "true",
+    includeDeleted: "true",
     claimed: claimParam(filter),
   });
   const q = query.trim();
