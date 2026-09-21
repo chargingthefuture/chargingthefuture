@@ -9,7 +9,7 @@ import { failureText, responseFailureText } from 'lib/errors/client-failure';
 const BG = '#0F1117';
 const SURFACE = '#161B27';
 const BORDER = '#1E2A3A';
-const TEXT = '#F9FAFB';
+const TEXT = '#D5D9E2';
 const SUBTLE = '#9CA3AF';
 const FAINT = '#6B7280';
 const ACCENT = '#14B8A6';

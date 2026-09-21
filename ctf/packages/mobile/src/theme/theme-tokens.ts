@@ -130,8 +130,10 @@ const DEFAULT_TOKENS: ThemeTokens = {
   border: '#1E2A3A',
   borderDim: '#1E2A3A',
   borderFaint: 'rgba(255,255,255,0.06)',
-  textPrimary: '#F9FAFB',
-  textShell: '#E8EAF0',
+  // Matches --ctf-text / --ctf-text-shell in the web app's globals.css, which carry the reason
+  // these two are one value and no longer near-white (owner decision, 2026-09-21).
+  textPrimary: '#D5D9E2',
+  textShell: '#D5D9E2',
   textSecondary: '#9CA3AF',
   textMuted: '#4B5563',
   danger: '#B91C1C',

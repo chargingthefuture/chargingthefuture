@@ -9,7 +9,7 @@
      Safari's "Full Page" screenshot from reaching past the first viewport. */
   min-height: 100dvh;
   background: var(--ctf-bg, #0f1117);
-  color: var(--ctf-text, #f9fafb);
+  color: var(--ctf-text, #d5d9e2);
   font-family: 'Inter', system-ui, sans-serif;
 }
 
@@ -111,7 +111,7 @@
   display: block;
   font-size: 14px;
   font-weight: 700;
-  color: var(--ctf-text, #f9fafb);
+  color: var(--ctf-text, #d5d9e2);
 }
 
 
@@ -124,7 +124,7 @@
 }
 
 .footerStrong {
-  color: var(--ctf-text, #f9fafb);
+  color: var(--ctf-text, #d5d9e2);
   font-weight: 600;
 }
 

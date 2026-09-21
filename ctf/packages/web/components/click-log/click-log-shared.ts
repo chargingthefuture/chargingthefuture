@@ -9,7 +9,7 @@ export const BRAND = "#EC4899";
 export const BG = "#0F1117";
 export const SURFACE = "#161B27";
 export const BORDER = "#1E2A3A";
-export const TEXT = "#F9FAFB";
+export const TEXT = "#D5D9E2";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 

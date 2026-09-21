@@ -28,7 +28,7 @@ export function PublicShellBackLink() {
         flexShrink: 0,
         background: 'rgba(255,255,255,0.06)',
         border: '1px solid rgba(255,255,255,0.14)',
-        color: 'var(--ctf-text, #F9FAFB)',
+        color: 'var(--ctf-text, #D5D9E2)',
         textDecoration: 'none',
         marginRight: 2,
       }}

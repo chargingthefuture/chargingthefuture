@@ -9,7 +9,7 @@ import { getPluginShellTokens, type PluginShellTokens } from "@/components/share
 
 export const COLOR = "#FDBA74";
 export const BG = "#0F1117";
-export const TEXT = "#E8EAF0";
+export const TEXT = "#D5D9E2";
 export const SUBTLE = "#6B7280";
 export const FAINT = "#4B5563";
 

@@ -131,7 +131,7 @@ function ShareLinkPopup({
     background: "transparent",
     border: "none",
     borderRadius: 8,
-    color: "var(--ctf-text, #E8EAF0)",
+    color: "var(--ctf-text, #D5D9E2)",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -170,7 +170,7 @@ function ShareLinkPopup({
         value={absolute}
         aria-label="Link URL"
         onFocus={(e) => e.currentTarget.select()}
-        style={{ width: "100%", padding: "8px 10px", background: "var(--ctf-surface, rgba(255,255,255,0.04))", border: "1px solid var(--ctf-border, rgba(255,255,255,0.08))", borderRadius: 8, fontSize: 12, color: "var(--ctf-text, #E8EAF0)", outline: "none", boxSizing: "border-box" }}
+        style={{ width: "100%", padding: "8px 10px", background: "var(--ctf-surface, rgba(255,255,255,0.04))", border: "1px solid var(--ctf-border, rgba(255,255,255,0.08))", borderRadius: 8, fontSize: 12, color: "var(--ctf-text, #D5D9E2)", outline: "none", boxSizing: "border-box" }}
       />
       <button type="button" onClick={onCopy} style={itemStyle}>
         {copied ? <Check size={15} /> : <Copy size={15} />}

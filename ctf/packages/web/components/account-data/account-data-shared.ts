@@ -1,7 +1,7 @@
 // Shared design tokens and types for the Account & Data surface.
 //
 // The default-theme tokens mirror the survivor-hub mockups exactly (BRAND `#D946EF`, bg `#0F1117`,
-// surface `#161B27`, border `#1E2A3A`, text `#F9FAFB`, subtle `#6B7280`). The shell uses inline
+// surface `#161B27`, border `#1E2A3A`, text `#D5D9E2`, subtle `#6B7280`). The shell uses inline
 // styles with a `${color}NN` opacity pattern (e.g. `background: ${BRAND}15`) that plain CSS
 // variables can't retrofit, so colors are resolved through a theme-aware token object instead.
 //
@@ -26,7 +26,7 @@ const DEFAULT_TOKENS: AccountDataTokens = {
   BG: '#0F1117',
   SURFACE: '#161B27',
   BORDER: '#1E2A3A',
-  TEXT: '#F9FAFB',
+  TEXT: '#D5D9E2',
   SUBTLE: '#6B7280',
 };
 
