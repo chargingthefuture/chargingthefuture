@@ -223,6 +223,39 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-09-21: **Active Members and Daily Active Members were zero for most members because the
+  sign-in write was being refused (owner report: only the Directory count was ever right).**
+  Production's `login_events` carried a v2 foreign key, `login_events_user_id_fkey`, from `user_id`
+  to `users(id)`. `users` is the identity mirror v2 maintained; v3 never writes it, so it holds only
+  the accounts that existed while v2 ran. For every member who joined since, `recordLoginEvent`'s
+  insert raised a foreign-key violation on every request, the fire-and-forget writer logged it to
+  the server log, and the member's day was never recorded — so the two adoption rows could only ever
+  count members v2 already knew, while the Directory (a count of profiles, no key involved) kept
+  moving. The Update Neon DB log had been saying so on every run: `post/0008` reported evidence it
+  "skipped" for a member "no longer in the users table", which the 2026-08-28 entry below read as a
+  deleted account; it was a live member the mirror never held. Same rows, same undercount, in
+  PeerProgramming's cohort selection, Trust's "seen" signal and the Recurring Activity counterparty
+  check. `ctf/db/migrations/post/0034_login_events_drop_v2_users_fkey.sql` drops the key and, in the
+  same statement, rebuilds the days it refused for exactly the members it refused (those with no
+  `users` row), from the same first-party evidence `post/0008` uses, over 2026-05-27 to the moment it
+  runs; rebuilt rows carry `source = 'backfill_users_fkey'`. It is gated on the key being present, so
+  a re-run does nothing and a later writer failure shows as a real absence rather than being
+  rebuilt on the next push. Verified on a scratch Postgres 16 with production's table shape and the
+  key: the app's insert is refused before and lands after; a member outside the mirror gets one row
+  per evidenced day with the day's earliest action as its time; a member inside the mirror is
+  untouched; platform actor ids are never written; a second run writes nothing; a database built
+  from `schema.sql` alone reports and does nothing. The definition of active is unchanged: one
+  table, one meaning; what changed is that the table can now hold everyone. Two things stood in the
+  way of the migration landing and are fixed alongside it: `post/0027` failed on re-run with
+  `schema "pg_temp" does not exist` because the workflow's pooled connection can hand each statement
+  to a different session, which skipped every later migration (it now runs in one transaction), and
+  `schema.sql`'s handle-backfill block still filtered on `directory_profiles.deleted_at`, a column
+  `post/0033` drops, which failed on any fresh database and would have failed production on the
+  first run after that drop. Web: a failed read of `GET /metrics` used to leave the dashboard on the
+  "Weekly numbers are loading" placeholder for good; the shell now shows what failed and the status
+  it got (`components/weekly-performance/weekly-performance-shell.tsx`). No route, contract or
+  schema.sql table change; `schema.demo.sql` regenerated.
+
 - 2026-08-28: **Third adoption row: deleted accounts (owner request).** The dashboard showed who
   turned up — active members and daily active members — and nothing about who left, so the
   Adoption group now carries `adoption.accounts_deleted`: members who ended their entire account

@@ -26,6 +26,15 @@
 --
 -- Re-runnable: canonicalizing an already-canonical value returns it unchanged, so a second run
 -- updates nothing.
+--
+-- One transaction, added 2026-09-21 after this file failed on re-run. The workflow reaches Neon
+-- through its connection pooler, which may hand each statement outside a transaction to a
+-- different server session. The function below is session-local (`pg_temp`), so on a run where the
+-- CREATE landed on one session and the first UPDATE on another, the UPDATE failed with
+-- `schema "pg_temp" does not exist` and every later migration in the run was skipped. Inside one
+-- transaction every statement runs on the session that holds the function. This is the only edit
+-- to an applied migration: it changes where the statements run, not what they do.
+BEGIN;
 
 -- The rules above, in SQL, session-local so nothing is left behind in the database. Kept beside the
 -- statements that use it rather than duplicated into each one.
@@ -115,3 +124,5 @@ UPDATE directory_suppressed_quora_urls AS target
  WHERE target.id = ranked.id
    AND ranked.rank_in_group = 1
    AND target.normalized_url <> ranked.canonical;
+
+COMMIT;
