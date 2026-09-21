@@ -40,7 +40,8 @@ WITH already_written AS (
     'espada-18',        -- an-invitation-to-espada.md
     'syah-neal-adoretm', -- an-invitation-to-syah.md
     'gn0b0dy-pneuma',   -- an-invitation-to-gn0b0dy-pneuma.md
-    'tommy-gumbert'     -- an-invitation-to-tommy.md
+    'tommy-gumbert',    -- an-invitation-to-tommy.md
+    'alphelus-allen'    -- an-invitation-to-alphelus.md
   ]) AS handle
 ),
 listed_skills AS (
