@@ -25,6 +25,53 @@ function utcDayKey(now = new Date()): string {
 // Fire-and-forget by design — call sites do not await it, and a failure here must
 // never break the request. We only drop the in-memory marker on failure so a
 // later request retries the write.
+// Once per member per UTC day, two ways over. The `WHERE NOT EXISTS` guard is the one that
+// always applies: it holds on any database, including one where the (user_id, UTC-day) unique
+// index was never built. The bare `ON CONFLICT DO NOTHING` closes the race between two
+// concurrent requests wherever that index does exist. It is deliberately bare rather than
+// naming the index expression: an inference target that matches no index raises `42P10` and
+// fails the insert outright, which is exactly how a database with a stalled index build used to
+// end up recording nobody at all.
+//
+// One statement, used by both writers below, so the self-check on the admin Sign-in record screen
+// exercises exactly the write the identity gate makes and not a lookalike.
+const RECORD_MEMBER_DAY_SQL = `INSERT INTO login_events (user_id, created_at)
+     SELECT $1, NOW()
+     WHERE NOT EXISTS (
+       SELECT 1 FROM login_events
+       WHERE user_id = $1
+         AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date
+     )
+     ON CONFLICT DO NOTHING`;
+
+export type RecordLoginEventOutcome = {
+  // True when the statement ran without error: the row now exists for today, whether this call
+  // wrote it or an earlier one had.
+  recorded: boolean;
+  // True when this call inserted the row; false when the day was already on record.
+  wroteNow: boolean;
+  // The database's own words when the write failed, and null otherwise (rule 137).
+  error: string | null;
+};
+
+// The awaited form of the write below, for the admin Sign-in record screen: it runs the same
+// statement for the signed-in admin and reports the outcome instead of logging it, so "is my
+// sign-in being recorded, and if not, why" is answered on screen from a phone rather than by
+// reading the server log. Bypasses the in-memory marker on purpose — the question is what the
+// database does with the write, not whether this process thinks it already happened.
+export async function recordLoginEventNow(userId: string): Promise<RecordLoginEventOutcome> {
+  const trimmed = userId.trim();
+  if (trimmed.length === 0) {
+    return { recorded: false, wroteNow: false, error: 'No member id on this request.' };
+  }
+  try {
+    const result = await queryDb(RECORD_MEMBER_DAY_SQL, [trimmed]);
+    return { recorded: true, wroteNow: (result.rowCount ?? 0) > 0, error: null };
+  } catch (error) {
+    return { recorded: false, wroteNow: false, error: failureReason(error) };
+  }
+}
+
 export function recordLoginEvent(userId: string): void {
   const trimmed = userId.trim();
   if (trimmed.length === 0) {
@@ -41,25 +88,9 @@ export function recordLoginEvent(userId: string): void {
   }
   recordedToday.seen.add(trimmed);
 
-  // Once per member per UTC day, two ways over. The `WHERE NOT EXISTS` guard is the one that
-  // always applies: it holds on any database, including one where the (user_id, UTC-day) unique
-  // index was never built. The bare `ON CONFLICT DO NOTHING` closes the race between two
-  // concurrent requests wherever that index does exist. It is deliberately bare rather than
-  // naming the index expression: an inference target that matches no index raises `42P10` and
-  // fails the insert outright, which is exactly how a database with a stalled index build used to
-  // end up recording nobody at all. The in-memory marker above only spares the database repeated
-  // no-op inserts; correctness does not depend on it.
-  void queryDb(
-    `INSERT INTO login_events (user_id, created_at)
-     SELECT $1, NOW()
-     WHERE NOT EXISTS (
-       SELECT 1 FROM login_events
-       WHERE user_id = $1
-         AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date
-     )
-     ON CONFLICT DO NOTHING`,
-    [trimmed],
-  ).catch((error: unknown) => {
+  // The in-memory marker above only spares the database repeated no-op inserts; correctness does
+  // not depend on it.
+  void queryDb(RECORD_MEMBER_DAY_SQL, [trimmed]).catch((error: unknown) => {
     // Say what failed and why (rule 137). This write used to fail in silence, and a silent failure
     // here does not look like a failure — it looks like a quiet week, which is the harder thing to
     // notice. The member id is not logged: the failure is what an operator needs, not who.

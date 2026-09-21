@@ -24,6 +24,27 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: weekly-performance
+    command: weekly-performance.admin.sign_in_record.get
+    commandVersion: 1.0.0
+    purpose: operational_metrics_review
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - login_events
+    targetContext:
+      workspaceId: workspace_identifier
+      weekStart: week_start_iso
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: weekly-performance
     command: weekly-performance.week.get
     commandVersion: 1.0.0
     purpose: operational_metrics_review

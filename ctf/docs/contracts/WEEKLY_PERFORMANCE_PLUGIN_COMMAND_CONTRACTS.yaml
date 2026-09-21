@@ -47,6 +47,30 @@ contracts:
     idempotency: true
 
   - pluginId: weekly-performance
+    command: weekly-performance.admin.sign_in_record.get
+    version: 1.0.0
+    description: >-
+      Health check of the sign-in record (login_events) behind the Active Members and Daily Active
+      Members rows. Runs the once-per-day sign-in write for the calling admin and reports the
+      outcome with the database's own error text when it fails, then reads aggregates: totals,
+      today, the current week exactly as the dashboard computes it, the last fourteen days, and
+      whether the v2 foreign key to users(id) that post/0034 dropped is present. Aggregate only; the
+      one per-member fact returned is the caller's own row for today.
+    inputSchema: {}
+    outputSchema:
+      selfWrite:
+        type: object
+      health:
+        type: object
+    dataAccess:
+      - login_events
+      - pg_constraint
+      - weekly_performance_audit_trail
+    purpose: operational_metrics_review
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: weekly-performance
     command: weekly-performance.metrics.get
     version: 1.0.0
     description: Read deterministic weekly metrics snapshot for approved growth, revenue, and engagement fields.

@@ -78,6 +78,20 @@ dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPer
 admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.
 **Result:** web ☐ mobile ☐ — notes:
 
+### WP-A1b · Sign-in record screen
+**Role:** admin · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. From the admin index open "Weekly Performance: Sign-in Record" (`/admin/weekly-performance/sign-in-record`).
+2. Read the first line, then tap "Read again" and "Copy the reading".
+3. As a plain member, request `/api/weekly-performance/admin/sign-in-record`.
+**Expected:** The first line reads "Your sign-in today is on record" in green with a UTC time; if it
+reads "NOT recorded" in red, the database's own error text is shown under it and the dashboard's
+Active Members rows will be wrong for the same reason. "Members today" is at least 1 (you), "Active
+this week" at least 1, and today's row in the fourteen-day list is at least 1. "Copy the reading"
+puts the same figures on the clipboard as plain text. The member's request is denied with
+`insufficient_role`.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### WP-A2 · Week navigation and review picker
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
