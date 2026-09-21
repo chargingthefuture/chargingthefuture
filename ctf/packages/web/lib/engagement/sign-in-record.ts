@@ -22,6 +22,14 @@ import { currentWeekStart } from 'lib/weekly-performance/live-metrics';
 
 export type SignInRecordDay = { day: string; members: number };
 
+export type SignInRecordWeek = {
+  weekStart: string;
+  memberDays: number;
+  activeMembers: number;
+  elapsedDays: number;
+  dailyActiveMembers: number;
+};
+
 export type SignInRecordHealth = {
   readAt: string;
   totalRows: number;
@@ -36,104 +44,135 @@ export type SignInRecordHealth = {
   // The v2 constraint that refused every member the `users` mirror did not hold. Dropped by
   // post/0034; if it is back, the write is refused again for every newer member.
   usersForeignKeyPresent: boolean;
-  currentWeek: {
-    weekStart: string;
-    memberDays: number;
-    activeMembers: number;
-    elapsedDays: number;
-    dailyActiveMembers: number;
-  };
+  currentWeek: SignInRecordWeek;
   // Distinct members per UTC day, most recent first, the last fourteen days including today. A
   // day with no rows is listed as 0 so a gap reads as a gap.
   days: SignInRecordDay[];
 };
 
-function toIso(value: Date | string | null): string | null {
+type Totals = Pick<SignInRecordHealth, 'totalRows' | 'totalMembers' | 'firstRowAt' | 'lastRowAt'>;
+type Today = Pick<SignInRecordHealth, 'rowsToday' | 'membersToday'>;
+
+function toIso(value: Date | string | null | undefined): string | null {
   if (!value) {
     return null;
   }
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-export async function readSignInRecordHealth(actorUserId: string): Promise<SignInRecordHealth> {
-  const weekStart = currentWeekStart();
+// One query per fact, each returning its own parsed shape, so the assembly at the bottom is a
+// plain object literal and every reading here is one statement a reader can check on its own.
 
-  const [totals, today, self, fkey, memberDays, activeMembers, days] = await Promise.all([
-    queryDb<{ total_rows: string; total_members: string; first_row: Date | null; last_row: Date | null }>(
-      `SELECT COUNT(*)::text AS total_rows,
-              COUNT(DISTINCT user_id) FILTER (WHERE btrim(user_id) <> '')::text AS total_members,
-              MIN(created_at) AS first_row,
-              MAX(created_at) AS last_row
-       FROM ${MEMBER_ACTIVITY_TABLE}`,
-    ),
-    queryDb<{ rows_today: string; members_today: string }>(
-      `SELECT COUNT(*)::text AS rows_today,
-              COUNT(DISTINCT user_id) FILTER (WHERE btrim(user_id) <> '')::text AS members_today
-       FROM ${MEMBER_ACTIVITY_TABLE}
-       WHERE (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date`,
-    ),
-    queryDb<{ recorded_at: Date | null }>(
-      `SELECT MIN(created_at) AS recorded_at
-       FROM ${MEMBER_ACTIVITY_TABLE}
-       WHERE user_id = $1
-         AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date`,
-      [actorUserId],
-    ),
-    queryDb<{ present: boolean }>(
-      `SELECT EXISTS (
-         SELECT 1 FROM pg_constraint
-         WHERE conname = 'login_events_user_id_fkey'
-           AND conrelid = to_regclass('public.${MEMBER_ACTIVITY_TABLE}')
-       ) AS present`,
-    ),
+async function readTotals(): Promise<Totals> {
+  const result = await queryDb<{ total_rows: string; total_members: string; first_row: Date | null; last_row: Date | null }>(
+    `SELECT COUNT(*)::text AS total_rows,
+            COUNT(DISTINCT user_id) FILTER (WHERE btrim(user_id) <> '')::text AS total_members,
+            MIN(created_at) AS first_row,
+            MAX(created_at) AS last_row
+     FROM ${MEMBER_ACTIVITY_TABLE}`,
+  );
+  const row = result.rows[0];
+  return {
+    totalRows: Number(row?.total_rows ?? 0),
+    totalMembers: Number(row?.total_members ?? 0),
+    firstRowAt: toIso(row?.first_row),
+    lastRowAt: toIso(row?.last_row),
+  };
+}
+
+async function readToday(): Promise<Today> {
+  const result = await queryDb<{ rows_today: string; members_today: string }>(
+    `SELECT COUNT(*)::text AS rows_today,
+            COUNT(DISTINCT user_id) FILTER (WHERE btrim(user_id) <> '')::text AS members_today
+     FROM ${MEMBER_ACTIVITY_TABLE}
+     WHERE (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date`,
+  );
+  const row = result.rows[0];
+  return { rowsToday: Number(row?.rows_today ?? 0), membersToday: Number(row?.members_today ?? 0) };
+}
+
+async function readSelfRecordedAt(actorUserId: string): Promise<string | null> {
+  const result = await queryDb<{ recorded_at: Date | null }>(
+    `SELECT MIN(created_at) AS recorded_at
+     FROM ${MEMBER_ACTIVITY_TABLE}
+     WHERE user_id = $1
+       AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date`,
+    [actorUserId],
+  );
+  return toIso(result.rows[0]?.recorded_at);
+}
+
+async function readUsersForeignKeyPresent(): Promise<boolean> {
+  const result = await queryDb<{ present: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM pg_constraint
+       WHERE conname = 'login_events_user_id_fkey'
+         AND conrelid = to_regclass('public.${MEMBER_ACTIVITY_TABLE}')
+     ) AS present`,
+  );
+  return result.rows[0]?.present === true;
+}
+
+// The current week exactly as the dashboard computes it: the same helpers, the same divisor.
+async function readCurrentWeek(): Promise<SignInRecordWeek> {
+  const weekStart = currentWeekStart();
+  const [memberDays, activeMembers] = await Promise.all([
     countMemberDaysInWeek(weekStart),
     countActiveMembersInWeek(weekStart),
-    queryDb<{ day: string; members: string }>(
-      `WITH span AS (
-         SELECT generate_series(
-                  (NOW() AT TIME ZONE 'UTC')::date - 13,
-                  (NOW() AT TIME ZONE 'UTC')::date,
-                  INTERVAL '1 day'
-                )::date AS day
-       ),
-       member_days AS (
-         SELECT DISTINCT user_id, (created_at AT TIME ZONE 'UTC')::date AS activity_day
-         FROM ${MEMBER_ACTIVITY_TABLE}
-         WHERE created_at >= NOW() - INTERVAL '15 days'
-           AND user_id IS NOT NULL
-           AND btrim(user_id) <> ''
-       )
-       SELECT span.day::text AS day, COUNT(member_days.user_id)::text AS members
-       FROM span
-       LEFT JOIN member_days ON member_days.activity_day = span.day
-       GROUP BY span.day
-       ORDER BY span.day DESC`,
-    ),
   ]);
-
-  const totalRow = totals.rows[0];
-  const todayRow = today.rows[0];
-  const selfRecordedAt = toIso(self.rows[0]?.recorded_at ?? null);
   const elapsedDays = elapsedDaysInWeek(weekStart);
+  return {
+    weekStart,
+    memberDays,
+    activeMembers,
+    elapsedDays,
+    dailyActiveMembers: Math.round((memberDays / elapsedDays) * 100) / 100,
+  };
+}
+
+async function readRecentDays(): Promise<SignInRecordDay[]> {
+  const result = await queryDb<{ day: string; members: string }>(
+    `WITH span AS (
+       SELECT generate_series(
+                (NOW() AT TIME ZONE 'UTC')::date - 13,
+                (NOW() AT TIME ZONE 'UTC')::date,
+                INTERVAL '1 day'
+              )::date AS day
+     ),
+     member_days AS (
+       SELECT DISTINCT user_id, (created_at AT TIME ZONE 'UTC')::date AS activity_day
+       FROM ${MEMBER_ACTIVITY_TABLE}
+       WHERE created_at >= NOW() - INTERVAL '15 days'
+         AND user_id IS NOT NULL
+         AND btrim(user_id) <> ''
+     )
+     SELECT span.day::text AS day, COUNT(member_days.user_id)::text AS members
+     FROM span
+     LEFT JOIN member_days ON member_days.activity_day = span.day
+     GROUP BY span.day
+     ORDER BY span.day DESC`,
+  );
+  return result.rows.map((row) => ({ day: row.day, members: Number(row.members) }));
+}
+
+export async function readSignInRecordHealth(actorUserId: string): Promise<SignInRecordHealth> {
+  const [totals, today, selfRecordedAt, usersForeignKeyPresent, currentWeek, days] = await Promise.all([
+    readTotals(),
+    readToday(),
+    readSelfRecordedAt(actorUserId),
+    readUsersForeignKeyPresent(),
+    readCurrentWeek(),
+    readRecentDays(),
+  ]);
 
   return {
     readAt: new Date().toISOString(),
-    totalRows: Number(totalRow?.total_rows ?? 0),
-    totalMembers: Number(totalRow?.total_members ?? 0),
-    firstRowAt: toIso(totalRow?.first_row ?? null),
-    lastRowAt: toIso(totalRow?.last_row ?? null),
-    rowsToday: Number(todayRow?.rows_today ?? 0),
-    membersToday: Number(todayRow?.members_today ?? 0),
+    ...totals,
+    ...today,
     selfRecordedToday: selfRecordedAt !== null,
     selfRecordedAt,
-    usersForeignKeyPresent: fkey.rows[0]?.present === true,
-    currentWeek: {
-      weekStart,
-      memberDays,
-      activeMembers,
-      elapsedDays,
-      dailyActiveMembers: Math.round((memberDays / elapsedDays) * 100) / 100,
-    },
-    days: days.rows.map((row) => ({ day: row.day, members: Number(row.members) })),
+    usersForeignKeyPresent,
+    currentWeek,
+    days,
   };
 }

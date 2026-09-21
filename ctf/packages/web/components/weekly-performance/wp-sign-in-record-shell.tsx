@@ -87,6 +87,77 @@ function SelfWriteLine({ reading, tokens }: { reading: Reading; tokens: WeeklyPe
   );
 }
 
+// Everything shown once the record has loaded, as its own component so the shell above it stays
+// inside the complexity limit: the shell owns state and chrome, this owns the reading.
+function SignInRecordBody({
+  reading,
+  tokens,
+  loading,
+  copied,
+  onCopy,
+  onReload,
+}: {
+  reading: Reading;
+  tokens: WeeklyPerformanceTokens;
+  loading: boolean;
+  copied: boolean;
+  onCopy: () => void;
+  onReload: () => void;
+}) {
+  const { health } = reading;
+  const week = health.currentWeek;
+  const plural = (n: number) => (n === 1 ? '' : 's');
+  return (
+    <>
+      <SelfWriteLine reading={reading} tokens={tokens} />
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+        <Stat label="Members today" value={String(health.membersToday)} tokens={tokens} />
+        <Stat label="Active this week" value={String(week.activeMembers)} tokens={tokens} />
+        <Stat label="Per day this week" value={String(week.dailyActiveMembers)} tokens={tokens} />
+        <Stat label="Members on record" value={String(health.totalMembers)} tokens={tokens} />
+      </div>
+
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginBottom: 14, lineHeight: 1.6 }}>
+        Week from {week.weekStart}: {week.memberDays} member-day{plural(week.memberDays)} over{' '}
+        {week.elapsedDays} day{plural(week.elapsedDays)} so far. Record holds {health.totalRows} rows
+        from {utcDate(health.firstRowAt)} to {utcDate(health.lastRowAt)}; last row at{' '}
+        {utcClock(health.lastRowAt)}.
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onCopy}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: tokens.ACCENT, color: '#0B0B0F', border: 'none', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+        >
+          <ClipboardCopy size={15} />
+          {copied ? 'Copied' : 'Copy the reading'}
+        </button>
+        <button
+          type="button"
+          onClick={onReload}
+          disabled={loading}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: tokens.BTN_BG, color: tokens.TITLE, border: `1px solid ${tokens.BORDER_HI}`, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          <RefreshCw size={15} />
+          {loading ? 'Reading…' : 'Read again'}
+        </button>
+      </div>
+
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginBottom: 6 }}>Last 14 days · members signed in</div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {health.days.map((day) => (
+          <li key={day.day} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '3px 0', fontSize: 12, color: day.members > 0 ? tokens.TEXT : tokens.SUBTLE }}>
+            <span>{day.day}</span>
+            <span>{day.members}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 export function WeeklyPerformanceSignInRecordShell() {
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
@@ -129,8 +200,6 @@ export function WeeklyPerformanceSignInRecordShell() {
     }
   }, [reading]);
 
-  const week = reading?.health.currentWeek;
-
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
       <MobileScreenHeader
@@ -154,54 +223,15 @@ export function WeeklyPerformanceSignInRecordShell() {
 
         {loading && !reading && <p style={{ fontSize: 13, color: t.SUBTLE }}>Reading the record…</p>}
 
-        {reading && week && (
-          <>
-            <SelfWriteLine reading={reading} tokens={t} />
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-              <Stat label="Members today" value={String(reading.health.membersToday)} tokens={t} />
-              <Stat label="Active this week" value={String(week.activeMembers)} tokens={t} />
-              <Stat label="Per day this week" value={String(week.dailyActiveMembers)} tokens={t} />
-              <Stat label="Members on record" value={String(reading.health.totalMembers)} tokens={t} />
-            </div>
-
-            <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 14, lineHeight: 1.6 }}>
-              Week from {week.weekStart}: {week.memberDays} member-day{week.memberDays === 1 ? '' : 's'} over{' '}
-              {week.elapsedDays} day{week.elapsedDays === 1 ? '' : 's'} so far. Record holds{' '}
-              {reading.health.totalRows} rows from {utcDate(reading.health.firstRowAt)} to{' '}
-              {utcDate(reading.health.lastRowAt)}; last row at {utcClock(reading.health.lastRowAt)}.
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => void onCopy()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: t.ACCENT, color: '#0B0B0F', border: 'none', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-              >
-                <ClipboardCopy size={15} />
-                {copied ? 'Copied' : 'Copy the reading'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void load()}
-                disabled={loading}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: t.BTN_BG, color: t.TITLE, border: `1px solid ${t.BORDER_HI}`, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                <RefreshCw size={15} />
-                {loading ? 'Reading…' : 'Read again'}
-              </button>
-            </div>
-
-            <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 6 }}>Last 14 days · members signed in</div>
-            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {reading.health.days.map((day) => (
-                <li key={day.day} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '3px 0', fontSize: 12, color: day.members > 0 ? t.TEXT : t.SUBTLE }}>
-                  <span>{day.day}</span>
-                  <span>{day.members}</span>
-                </li>
-              ))}
-            </ul>
-          </>
+        {reading && (
+          <SignInRecordBody
+            reading={reading}
+            tokens={t}
+            loading={loading}
+            copied={copied}
+            onCopy={() => void onCopy()}
+            onReload={() => void load()}
+          />
         )}
       </div>
     </div>
