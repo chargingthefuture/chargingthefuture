@@ -322,7 +322,7 @@ function renderPluginShellC(
   }
 
   if (selectedPlugin.slug === 'gdp') {
-    return <GdpShell />;
+    return <GdpShell isAdmin={decision.isAdmin} />;
   }
 
   if (selectedPlugin.slug === 'service-credits') {
