@@ -5,7 +5,7 @@ import { recognizeCommunityValueIndex } from 'lib/gdp/recognition';
 import { projectOpenValueIndex } from 'lib/gdp/projection';
 
 // Canonical community member count (owner decision 2026-07-15): the active Directory roster —
-// countActiveDirectoryProfiles (is_active AND NOT deleted, claimed or not) — the SAME definition the
+// countActiveDirectoryProfiles (every Directory profile, claimed or not) — the SAME definition the
 // Workforce dashboard and the Directory use, so GDP shows the identical number as those two surfaces.
 // Falls back to the Clerk `users` / login_events signup count only if the Directory read fails, so the
 // figure never blanks. (`users` is a different population — accounts, not directory profiles — which is
@@ -148,9 +148,9 @@ export async function buildLiveGdpReport(): Promise<GdpLiveReport> {
 // === Country distribution (Top Countries panel) ===
 // Real per-country member distribution — the honest "location tied to people" signal for the GDP
 // country breakdown. Location lives once on the member's directory profile (the shared member profile,
-// where country is a required field). This counts EVERY active directory profile that has a country —
+// where country is a required field). This counts EVERY directory profile that has a country —
 // claimed or not — so it uses the SAME member population as the dashboard's total member count
-// (countActiveDirectoryProfiles: is_active AND not deleted), not just the claimed subset. Filtering to
+// (countActiveDirectoryProfiles; a listing that is gone is a deleted row), not just the claimed subset. Filtering to
 // claimed_by_user_id previously collapsed the panel to the one claimed profile even though the member
 // total counts every active profile. Ordered most members first. No small-count suppression (owner
 // decision, 2026-07-11): every country with a member is shown. A people-count, never a per-country
@@ -161,8 +161,6 @@ export async function listMemberCountsByCountry(): Promise<Array<{ country: stri
        FROM directory_profiles
        WHERE country IS NOT NULL
          AND btrim(country) <> ''
-         AND is_active = true
-         AND deleted_at IS NULL
        GROUP BY btrim(country)
        ORDER BY COUNT(*) DESC, btrim(country) ASC`,
   );

@@ -230,7 +230,6 @@ async function main() {
           source = EXCLUDED.source,
           invited_by_username = EXCLUDED.invited_by_username,
           unclaimed_handle = EXCLUDED.unclaimed_handle,
-          deleted_at = NULL,
           updated_at = NOW()
       `,
       [directoryProfileId],
