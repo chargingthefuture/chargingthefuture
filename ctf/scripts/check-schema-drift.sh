@@ -150,7 +150,23 @@ for file in "${files[@]}"; do
     seed_changed=true
   fi
 
-  if [[ "$file" =~ ^ctf/packages/ ]] && [[ "$file_lc" =~ contract|schema|command|access-policy|audit ]]; then
+  # A path keyword under ctf/packages marks a possible contract / schema / command / access-policy
+  # change. React components are excluded by extension: a .tsx renders a screen, and a screen
+  # cannot define any of those things. Contracts live in the YAML under ctf/docs/contracts/,
+  # schema lives in ctf/schema.sql, and commands and policies live in the TypeScript modules the
+  # routes call — none of which is a .tsx.
+  #
+  # The exclusion exists because every admin screen that DISPLAYS an audit log is named after it:
+  # directory-audit-panel.tsx and seven siblings. Changing a color or a line of copy in one of them
+  # demanded versioning evidence for a contract change that had not happened, which is the same
+  # class of false positive the content-aware DB rule above was written to remove.
+  #
+  # What is still caught, deliberately: the audit writers (ctf/packages/web/lib/<plugin>/audit.ts),
+  # the routes that serve audit events, and real schema modules such as
+  # ctf/packages/economic-models/schemas.ts. Only the rendering layer is let go.
+  if [[ "$file" =~ ^ctf/packages/ ]] \
+    && [[ ! "$file" =~ \.tsx$ ]] \
+    && [[ "$file_lc" =~ contract|schema|command|access-policy|audit ]]; then
     contract_changed=true
   fi
   if [[ "$file" =~ ^ctf/docs/contracts/.*_PLUGIN_(COMMAND|ACCESS_POLICY|AUDIT)_CONTRACTS\.ya?ml$ ]]; then

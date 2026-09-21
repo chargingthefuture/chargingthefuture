@@ -49,6 +49,14 @@ Prevent schema and contract drift from reaching any deployment target.
 - Pure auth-logic files under `shared/.../auth/` (token decode/verify only — they never touch the database) and docs/test files are excluded.
 - **Trade-off to know:** a type-only change that mirrors a brand-new DB column will not be auto-flagged, because the type file carries no SQL token. Pair such a change with the matching `ctf/schema.sql` edit; that edit satisfies the gate on its own, so the contract still holds in practice.
 
+## How the Gate Decides a Change Is a Contract Change (same script)
+Separate from the DB-impacting decision above, the gate marks a change as a **contract** change — which requires versioning evidence under `ctf/docs/developer/**`, this rule file, or `ctf/schema.sql` — in three ways:
+- A file under `ctf/docs/contracts/` matching `*_PLUGIN_(COMMAND|ACCESS_POLICY|AUDIT)_CONTRACTS.yaml`. These are also validated for their required keys (`pluginId`, a version key, and the per-type key).
+- A rule module in the `.claude/rules/20x` series (the contract templates).
+- A file under `ctf/packages/` whose path contains `contract`, `schema`, `command`, `access-policy`, or `audit` — **except a `.tsx`**.
+- **The `.tsx` exclusion (2026-09-21).** A React component renders a screen; a screen cannot define a contract, a schema, a command, or an access policy. Those live in the contract YAML, in `ctf/schema.sql`, and in the TypeScript modules the routes call. The exclusion was added because every admin screen that *displays* an audit log is named for it — `directory-audit-panel.tsx` and seven siblings — so changing a color or a line of copy in one demanded versioning evidence for a contract change that had not happened. Same class of false positive as the content-aware DB rule above, and the same remedy: judge the file by what it can actually be, not by its name.
+- **Still caught, deliberately:** the audit writers (`ctf/packages/web/lib/<plugin>/audit.ts`), the routes that serve audit events, and real schema modules such as `ctf/packages/economic-models/schemas.ts`. Of the 40 files under `ctf/packages/` that the keyword matched when the exclusion was added, 8 were display panels and are now let go; the other 32 are unchanged.
+
 ## PR Evidence Contract
 - When schema/contract changes are present, PR description must include:
   - `Schema Drift` section with drift class impact summary,
