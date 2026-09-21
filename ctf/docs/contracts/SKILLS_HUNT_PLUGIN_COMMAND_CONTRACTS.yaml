@@ -22,7 +22,7 @@ contracts:
       rewardCreditsPerAccept:
         type: integer
         required: false
-        description: Whole ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
+        description: Entire ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
       rewardPerUserRoundCap:
         type: integer
         required: false
@@ -70,7 +70,7 @@ contracts:
       rewardCreditsPerAccept:
         type: integer
         required: false
-        description: Whole ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
+        description: Entire ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
       rewardPerUserRoundCap:
         type: integer
         required: false

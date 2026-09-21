@@ -75,7 +75,7 @@ export function formatTime(iso: string, tz: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-/** "7:30 PM – 9:00 PM", the whole 90 minutes as one label. */
+/** "7:30 PM – 9:00 PM", the entire 90 minutes as one label. */
 export function formatRange(startIso: string, endIso: string, tz: string): string {
   return `${formatTime(startIso, tz)} – ${formatTime(endIso, tz)}`;
 }

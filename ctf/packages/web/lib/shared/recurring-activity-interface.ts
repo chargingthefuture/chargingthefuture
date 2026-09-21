@@ -1,7 +1,7 @@
 // Platform-owned interface for the Recurring Activity capability (owner decision 2026-08-03: strict
 // plugin isolation). This file is the single sanctioned crossing point for Recurring Activity:
 // plugins must import it, never lib/recurring-activity directly. Keep it narrow — a new export needs
-// a reason, and re-exporting whole modules is prohibited. Enforced by
+// a reason, and re-exporting entire modules is prohibited. Enforced by
 // ctf/scripts/check-plugin-boundaries.mjs.
 //
 // GDP is the consumer today: it counts ongoing arrangements toward the economic picture, so it needs

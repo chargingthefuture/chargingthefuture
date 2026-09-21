@@ -23,7 +23,7 @@ describe('surfaceForCallCid', () => {
 });
 
 describe('participantLeftUsage', () => {
-  it('reads whole seconds from a participant-left event', () => {
+  it('reads entire seconds from a participant-left event', () => {
     expect(participantLeftUsage({ type: 'call.session_participant_left', call_cid: 'default:pp-1', duration_seconds: 125.9 })).toEqual({
       surface: 'peer-programming',
       seconds: 125,

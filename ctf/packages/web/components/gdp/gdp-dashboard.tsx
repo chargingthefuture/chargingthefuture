@@ -123,7 +123,7 @@ function GdpCountries({ countries }: { countries: GdpCountry[] }) {
             <span style={{ fontSize: 13, color: c.unspecified ? t.MUTED : t.TEXT, fontWeight: 600, fontStyle: c.unspecified ? "italic" : "normal" }}>{c.country}</span>
             <span style={{ fontSize: 13, color: c.unspecified ? t.MUTED : t.ACCENT, fontWeight: 700 }}>{c.members.toLocaleString()} {c.members === 1 ? "member" : "members"}</span>
           </div>
-          {/* The bar width IS a real metric: this row's share of the whole member roster (countries plus
+          {/* The bar width IS a real metric: this row's share of the entire member roster (countries plus
               the "Location not set" bucket sum to the roster). */}
           <div style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${Math.max(2, Math.min(100, c.share))}%`, background: c.unspecified ? t.MUTED : t.ACCENT, borderRadius: 999 }} />

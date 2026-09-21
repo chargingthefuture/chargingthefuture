@@ -200,7 +200,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
         const res = await fetch("/api/directory/sectors");
         // The endpoint returns { items: Sector[] }; reading the body as a bare
         // array left `sectors` holding an object, so `sectors.map(...)` during
-        // render threw and the whole Directory page failed to load.
+        // render threw and the entire Directory page failed to load.
         if (res.ok) {
           const data = await res.json() as { items?: Sector[] };
           setSectors(data.items ?? []);
@@ -296,7 +296,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
 
   const sectorFilters = ["All", ...sectors.map((s) => s.name)];
   const isFiltered = activeFilter !== "All" || query.trim().length > 0;
-  // Sector chips come from the whole skills taxonomy, not from who is actually listed, so a genuinely
+  // Sector chips come from the entire skills taxonomy, not from who is actually listed, so a genuinely
   // empty, unfiltered directory would show a lone "Technology" chip with nothing behind it. Only show
   // the sector filters when there is something to filter — a filter is active, results are still
   // loading, or at least one provider is listed.

@@ -7,7 +7,7 @@
 // out of step. The daily rotation refreshes scripts over time, but a PR that edits behavior should
 // not merge with a test script that still describes the old behavior.
 //
-// This is diff-based (unlike the inventory gate, which scans the whole tree): it compares the PR
+// This is diff-based (unlike the inventory gate, which scans the entire tree): it compares the PR
 // branch against its base. Outside a PR / with no resolvable base it does nothing, so it is safe to
 // run locally.
 //

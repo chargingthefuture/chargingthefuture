@@ -284,7 +284,7 @@ function groupByProfileId<TRow extends { profile_id: string }, TValue>(
   return byId;
 }
 
-// Batched form of loadProfileSkills: the taxonomy skills for a whole page of profiles in one query.
+// Batched form of loadProfileSkills: the taxonomy skills for an entire page of profiles in one query.
 async function loadSkillsForProfiles(
   client: PoolClient,
   profileIds: string[],
@@ -341,7 +341,7 @@ async function loadProposedSkillsForProfiles(client: PoolClient, profileIds: str
   return groupByProfileId(result.rows, (row) => row.skill_label);
 }
 
-// Map a whole page of rows in three queries total. mapProfileRow costs three queries PER row, and a
+// Map an entire page of rows in three queries total. mapProfileRow costs three queries PER row, and a
 // pooled client runs them one after another, so a 100-row page meant ~300 sequential round trips
 // before the list could paint — the reason the admin list was slow on first load. Use this for any
 // list; keep mapProfileRow for single-row reads.
@@ -1560,7 +1560,7 @@ export async function listTaxonomySkills(jobTitleId: string | null = null): Prom
 }
 
 // Which claim states the admin list should return. The admin surface's All / Claimed / Unclaimed
-// tabs map straight onto this, and it is applied in SQL so a tab covers the whole collection rather
+// tabs map straight onto this, and it is applied in SQL so a tab covers the entire collection rather
 // than only the rows already on screen.
 export type AdminProfileClaimFilter = 'all' | 'claimed' | 'unclaimed';
 
@@ -1597,8 +1597,8 @@ const ADMIN_PROFILE_WHERE = `
 
 // One page of admin profiles, plus the totals the header shows. Filtering and search are applied in
 // SQL so both the tabs and the search box cover every profile, while only one page of rows is
-// mapped and sent — the list no longer loads the whole collection to paint its first screen.
-// `unclaimedTotal` is counted across the whole collection because the header states it there, and a
+// mapped and sent — the list no longer loads the entire collection to paint its first screen.
+// `unclaimedTotal` is counted across the entire collection because the header states it there, and a
 // page of rows cannot answer it.
 export async function listAdminProfiles(
   pagination: { page: number; pageSize: number },
@@ -1622,7 +1622,7 @@ export async function listAdminProfiles(
       predicateParams,
     );
 
-    // The header's "N unclaimed" describes the whole collection, so it ignores the claim tab and the
+    // The header's "N unclaimed" describes the entire collection, so it ignores the claim tab and the
     // search box and only applies the active/inactive scope.
     const unclaimedResult = await client.query<CountRow>(
       `

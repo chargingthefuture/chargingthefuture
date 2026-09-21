@@ -509,7 +509,7 @@ export function DirectorySkillsPicker(props: DirectorySkillsPickerProps) {
   const proposedFull = proposedSkills.length >= DIRECTORY_MAX_PROPOSED_SKILLS;
 
 
-  // Toggle a whole name-entry: unpick removes every selected id that shares the name (both parents'
+  // Toggle an entire name-entry: unpick removes every selected id that shares the name (both parents'
   // onToggleSkill is a functional setState, so N synchronous calls compose correctly); pick adds the
   // first id as the representative. This is what lets the member treat a repeated name as one skill.
   function toggleEntry(entry: SkillEntry) {

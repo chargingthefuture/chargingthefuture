@@ -23,7 +23,7 @@ export type BugReportSubmitInput = {
   message: string;
   context: string;
   // Page the member was on when they opened the report. The server caps it at 512
-  // characters; we send the whole href and let the server trim.
+  // characters; we send the entire href and let the server trim.
   pageUrl?: string;
   // Plugin the member was using, if the surface could work it out. Optional.
   pluginSlug?: string;

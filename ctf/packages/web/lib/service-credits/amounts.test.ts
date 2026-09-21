@@ -5,7 +5,7 @@ import { toMinorUnits, ensurePositiveAmount } from './amounts';
 // be silent in a glance and in a code read but wrong in the ledger — exactly what a unit test is for.
 
 describe('toMinorUnits', () => {
-  it('converts whole and fractional credits to integer minor units', () => {
+  it('converts entire and fractional credits to integer minor units', () => {
     expect(toMinorUnits(1)).toBe(100);
     expect(toMinorUnits(2.5)).toBe(250);
     expect(toMinorUnits(0.01)).toBe(1);

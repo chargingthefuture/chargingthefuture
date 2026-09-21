@@ -241,7 +241,7 @@ function groupCandidatesBySector(candidates: Candidate[]): Map<string, Candidate
  * queue spans sectors rather than being dominated by one big-gap sector. Input `candidates` is already
  * sorted largest-gap-first, so the first time we meet a sector it is at its largest gap — Map insertion
  * order therefore orders sectors by their top gap. Each sector contributes at most `perSectorCap`; the
- * whole queue is bounded by `topN` for reviewability.
+ * entire queue is bounded by `topN` for reviewability.
  */
 function sectorDiverseOrder(candidates: Candidate[], perSectorCap: number, topN: number): Candidate[] {
   const bySector = groupCandidatesBySector(candidates);

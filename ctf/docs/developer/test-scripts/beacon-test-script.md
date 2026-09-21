@@ -104,7 +104,7 @@ and tapping it opens the Beacon viewer. The replay is posted only once (never do
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 message in a Beacon event's live chat; access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
-1. As that member, chat in a live Beacon event, then delete the whole account
+1. As that member, chat in a live Beacon event, then delete the entire account
    (`DELETE /api/account/full-account`, or delete the user in Clerk to exercise the webhook path — both
    run the deletion orchestrator, which now includes a Beacon registry entry).
 2. In the Stream dashboard, look up the member's Stream user `beacon-<userId>` and their messages in the

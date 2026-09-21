@@ -125,7 +125,7 @@ export function FiresidePublicShell({ signInUrl, verifyUrl }: PublicVisitorShell
 
         <p style={{ margin: 0, fontSize: 13.5, color: t.SUBTLE, lineHeight: 1.65 }}>
           Fireside is the conversation under every post on the blog — about trafficking, about
-          being targeted, about the ordinary work of rebuilding. Read the whole thread with no
+          being targeted, about the ordinary work of rebuilding. Read the entire thread with no
           account. Sign in when you want to answer somebody.
         </p>
 

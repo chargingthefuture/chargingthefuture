@@ -21,7 +21,7 @@ Scope decisions locked for this rewrite:
 ## Intent and Outcome
 
 Mood is a private check-in on how a member is doing. Pick a number from 1 to 5, add a note if you
-want to, and that is the whole thing; the next check-in is available 7 days later. Each check is
+want to, and that is all of it; the next check-in is available 7 days later. Each check is
 stored under a server-controlled pseudonym with no account id on the row, so no one — including an
 admin — can read one member's check-in or note.
 

@@ -17,7 +17,7 @@ import { requestJson } from './chyme-shared';
 // 2026-09-19 the only place that number could be checked was the Stream dashboard, and the app had
 // no idea where in the month it was. This screen reads the app's own count (credited from the
 // presence heartbeats) against the budget, names the band the room is under and what the policy is
-// doing about it, and copies the whole thing as plain text for pasting into a message.
+// doing about it, and copies all of it as plain text for pasting into a message.
 
 type UsagePayload = {
   ok: true;
@@ -211,7 +211,7 @@ function SettingsSection({ payload, t }: { payload: UsagePayload; t: Tokens }) {
         <div>Guest cap: {config.maxGuestListeners} listeners (<code>CHYME_MAX_GUEST_LISTENERS</code>)</div>
         <div>Room cap in the Red band: {config.redBandMaxParticipants} members (<code>CHYME_RED_BAND_MAX_PARTICIPANTS</code>)</div>
         <div style={{ marginTop: 6 }}>
-          One person in the room all day costs {formatMinutes(ONE_PERSON_ALL_DAY_MINUTES)} minutes — about {monthShare}% of the budget over a whole month.
+          One person in the room all day costs {formatMinutes(ONE_PERSON_ALL_DAY_MINUTES)} minutes — about {monthShare}% of the budget over an entire month.
         </div>
       </div>
     </Section>

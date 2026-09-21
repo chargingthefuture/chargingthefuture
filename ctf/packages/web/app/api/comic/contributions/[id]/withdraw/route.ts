@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// Withdraw a contribution. This route is the whole reason the consent form can promise withdrawal
+// Withdraw a contribution. This route is the reason the consent form can promise withdrawal
 // and mean it: the member presses a button and their material stops being quoted, without having to
 // ask anyone or wait for a person to act.
 //

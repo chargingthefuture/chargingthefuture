@@ -1,5 +1,5 @@
 # Owner directive, 2026-08-28: every admin action is recorded, on every surface. Until that date these
-# events were written by logMutualTimeAudit, which builds the whole shape below and ends in
+# events were written by logMutualTimeAudit, which builds the entire shape below and ends in
 # console.info — a line in the server's log, which nothing can query, no screen can show, and which
 # ages out of the host's retention window. Every admin event here is now also a durable row in
 # mutual_time_admin_audit_trail, written by recordMutualTimeAdminAudit on every outcome including a

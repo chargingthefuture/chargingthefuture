@@ -21,7 +21,7 @@ import type { TrustPeerView, TrustUserExtension } from 'lib/trust/types';
 // what every member gets about every other member.
 //
 // `trustDisclosure` on the response tells the client which of the two it received, so the widget can
-// label a summary as a summary instead of presenting it as the member's whole record.
+// label a summary as a summary instead of presenting it as the member's entire record.
 function fullView(trust: TrustUserExtension): TrustPeerView {
   return { ...trust, trustDisclosure: 'full' };
 }

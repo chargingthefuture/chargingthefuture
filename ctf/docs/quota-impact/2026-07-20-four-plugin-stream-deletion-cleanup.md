@@ -16,7 +16,7 @@ messages, or sessions.
 - Stream Chat only: the member's Stream user (`foundation-<userId>` / `lighthouse-<userId>` /
   `socket-relay-<userId>` / `trust-transport-<userId>`) and their messages in the plugin's thread
   channels are hard-deleted on deletion.
-- One extra server-side `deleteUser` call per plugin per whole-account deletion — a low-frequency,
+- One extra server-side `deleteUser` call per plugin per full-account deletion — a low-frequency,
   user-initiated event.
 
 ## Estimated Monthly Impact

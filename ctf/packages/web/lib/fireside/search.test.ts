@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 // Search is one of the four reasons these comments are in Postgres rather than in a chat product.
 // Two things have to stay true for it to be that: the query has to use the same text configuration
-// as the index, or Postgres silently does a sequential scan of the whole table; and the query has
+// as the index, or Postgres silently does a sequential scan of the entire table; and the query has
 // to survive whatever a person types into a search box.
 const repositorySql = readFileSync(join(__dirname, 'repository.ts'), 'utf8');
 const schemaSql = readFileSync(join(__dirname, '../../../../schema.sql'), 'utf8');

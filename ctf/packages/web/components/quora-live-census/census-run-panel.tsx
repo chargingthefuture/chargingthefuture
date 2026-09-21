@@ -21,7 +21,7 @@ function topicLabels(topics: QuoraCensusTopic[]): string {
 
 // What the run says about removals — which depends entirely on where its accounts came from.
 //
-// On a list assembled beforehand, `gone` over the whole set is a real rate: the denominator was
+// On a list assembled beforehand, `gone` over the entire set is a real rate: the denominator was
 // fixed before any of it was removed. On a fresh search it is not a rate at all, because a search
 // cannot return an account that no longer exists — so that case prints the reason instead of a
 // number. Printing the number anyway is the single easiest way to publish something false out of

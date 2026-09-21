@@ -10,7 +10,7 @@ import { reportError } from "lib/observability/report";
 // pricing form offers the same control: the listed price above names ONE settlement, and these
 // checkboxes independently name EVERY currency the poster accepts. A post settled part in
 // ServiceCredits and part in dollars checks both instead of forcing a zero into one of them, and the
-// projected/actual value of the transaction can be recorded whole. Reads the same live catalog as
+// projected/actual value of the transaction can be recorded entire. Reads the same live catalog as
 // CurrencySelect (`GET /api/currencies`).
 
 function optionLabel(currency: Currency): string {

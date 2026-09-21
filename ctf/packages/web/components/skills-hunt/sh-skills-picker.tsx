@@ -156,7 +156,7 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
   );
 }
 
-// Optional profession prefill — fills in a whole occupation's skills at once. Renders nothing
+// Optional profession prefill — fills in an entire occupation's skills at once. Renders nothing
 // until the taxonomy is loaded and at least one occupation is known.
 function OccupationPrefill({ occupations, canAddMore, onAddOccupationSkills }: {
   occupations: Record<string, string[]>;

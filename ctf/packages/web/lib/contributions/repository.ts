@@ -28,9 +28,9 @@ export const CONTRIBUTION_KINDS: readonly ContributionKind[] = ['gift_card', 'qu
 export const GIFT_CARD_METHODS: readonly GiftCardMethod[] = ['amazon', 'apple', 'dennys'];
 export const CONTRIBUTION_STATUSES: readonly ContributionStatus[] = ['pending', 'confirmed', 'rejected'];
 
-// Gift-card claims are whole dollars, 1 to 500 (owner decision, 2026-08-09). Real gift cards do not
+// Gift-card claims are integer dollars, 1 to 500 (owner decision, 2026-08-09). Real gift cards do not
 // come in fractions of a dollar, so nothing is lost by refusing them, and it keeps a claim amount
-// something a member can say out loud. The floor is not what keeps credit grants whole — see
+// something a member can say out loud. The floor is not what keeps credit grants entire — see
 // roundCredits below for that — the two rules are independent on purpose.
 export const GIFT_CARD_MIN_USD = 1;
 export const GIFT_CARD_MAX_USD = 500;
@@ -625,7 +625,7 @@ function resolveConfirmedAmount(
   config: ContributionsRuntimeConfig,
 ): number {
   if (row.kind === 'gift_card') {
-    // Same whole-dollar rule the member's claim had to clear. The admin types what was actually
+    // Same integer-dollar rule the member's claim had to clear. The admin types what was actually
     // redeemed, which can differ from the claim, so it is checked here too rather than trusted.
     const amount = input.confirmedAmountUsd;
     if (!isValidGiftCardAmount(amount)) {
@@ -641,13 +641,13 @@ function resolveConfirmedAmount(
   return amount;
 }
 
-// Credits are a whole-number unit, so a grant is rounded before it is stored or minted.
+// Credits are an integer unit, so a grant is rounded before it is stored or minted.
 //
 // Nothing upstream guarantees this on its own. Credits are `confirmedAmountUsd × creditsPerUsd`, and
-// `creditsPerUsd` is an admin-editable number with no requirement to be a whole number or to divide
-// evenly into a dollar — set it to 3 and a whole-dollar claim still lands on a third of a credit. The
+// `creditsPerUsd` is an admin-editable number with no requirement to be an integer or to divide
+// evenly into a dollar — set it to 3 and an integer-dollar claim still lands on a third of a credit. The
 // per-cycle cap can be fractional too, so the clamp below can produce a fraction from inputs that
-// were both whole. `credits_granted` and the ledger balance are unconstrained NUMERIC columns, so a
+// were both entire. `credits_granted` and the ledger balance are unconstrained NUMERIC columns, so a
 // fraction would persist exactly rather than being cleaned up by the database. Rounding here is the
 // one place that holds regardless of what the rate is set to.
 //

@@ -32,7 +32,7 @@ export const ONE_PERCENT_SHARE = 0.01;
 export const ONE_PERCENT_RATE_LADDER_USD = [5, 20, 50, 100, 250] as const;
 
 export type OnePercentReach = {
-  /** The population estimate the whole model rests on. */
+  /** The population estimate the entire model rests on. */
   population: number;
   /** One percent of it — the people served. */
   peopleReached: number;

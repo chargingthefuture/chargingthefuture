@@ -1,7 +1,7 @@
 // Access gates for TI Radio. Three postures, and the first is the one the plugin exists for.
 //
 //   readPublic  — no account at all. A broadcast guide nobody can read is not a guide. A visitor
-//                 sees the whole schedule: times, hosts' handles, and what each one is about.
+//                 sees the entire schedule: times, hosts' handles, and what each one is about.
 //   requireHost — a signed-in member approved in Unlock, the default gate everything else in this
 //                 app uses. Taking a slot puts a member's name on a time in public and commits
 //                 them to turning up, so it is not a route into verification the way writing a

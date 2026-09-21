@@ -37,7 +37,7 @@ ensure_ledger() {
     # 000 AND exits non-zero. Do NOT append `|| echo 000` — that emitted
     # "000\n000", which matched neither branch below. And do NOT rely on `set -e`
     # here: `code="$(curl …)"` takes curl's non-zero exit as the assignment's
-    # status, so under errexit the very first warm-up failure killed this whole
+    # status, so under errexit the very first warm-up failure killed this entire
     # (backgrounded) loop before it could retry or log — leaving the books
     # uncreated with no trace. The caller runs this loop with `set +e` so a
     # transient curl failure just yields "000" and is retried.
@@ -58,7 +58,7 @@ ensure_ledger() {
 }
 
 if command -v curl >/dev/null 2>&1; then
-  # `set +e` for the whole bootstrap subshell: it is best-effort and ensure_ledger
+  # `set +e` for the entire bootstrap subshell: it is best-effort and ensure_ledger
   # always returns 0, but a transient curl failure during warm-up would otherwise
   # abort the subshell under the script's top-level `set -e` (see note in the retry
   # loop above). The startup echo makes a failed/slow bootstrap visible in the logs.

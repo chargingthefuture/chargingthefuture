@@ -914,7 +914,7 @@ type AuditRow = {
  */
 export async function listFiresideAuditEvents(limit = 100): Promise<FiresideAuditEvent[]> {
   // Clamped rather than trusted: the caller is an admin, but an unbounded limit from a query string
-  // is still a way to ask the database for the whole table.
+  // is still a way to ask the database for the entire table.
   const capped = Math.min(Math.max(Math.trunc(limit) || 100, 1), 500);
   const result = await queryDb<AuditRow>(
     `SELECT id::text AS id, actor_id, command, policy_status, reason,

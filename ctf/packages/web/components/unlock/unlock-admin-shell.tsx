@@ -71,7 +71,7 @@ export function UnlockAdminShell({
   const [editError, setEditError] = useState<string | null>(null);
   const [savingUrl, setSavingUrl] = useState(false);
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
-  // Spam and duplicate both block the member from the whole app (an 'all'-scope account restriction), so
+  // Spam and duplicate both block the member from the entire app (an 'all'-scope account restriction), so
   // each is guarded by an inline confirm the same way the reward-revoke lock is. One piece of state
   // carrying the decision means two prompts can never be open at once on the same row.
   const [confirmBlock, setConfirmBlock] = useState<UnlockBlockConfirm>(null);
@@ -206,7 +206,7 @@ export function UnlockAdminShell({
         />
 
         <p style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginTop: 16 }}>
-          Approving grants full access and mints the ServiceCredits verification reward. Rejecting keeps the member on support-only access; marking spam blocks them from the whole app and adds their Quora URL to the denylist below. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
+          Approving grants full access and mints the ServiceCredits verification reward. Rejecting keeps the member on support-only access; marking spam blocks them from the entire app and adds their Quora URL to the denylist below. Rewards are issued on approval and the background self-heal retries any that did not land within {UNLOCK_REWARD_SLA_HOURS} hours. If a reward is still showing pending, use Retry pending rewards above to grant it now. A Quora profile earns the reward on one account: if the same profile is approved on another account, its reward is <strong>held</strong> for your determination — use <strong>Grant reward</strong> to award the account you choose, and <strong>Revoke reward</strong> to claw it back from the others (a perp impersonating a victim is exactly this case).
         </p>
 
         <UnlockSpamDenylistPanel initialEntries={spamDenylist} />

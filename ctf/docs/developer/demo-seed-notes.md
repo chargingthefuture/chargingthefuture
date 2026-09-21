@@ -136,14 +136,14 @@ guard now self-heals first: when the constraint is absent it inserts a server-co
 for every orphan pseudonym (`user_id` set to the pseudonym text — always unique, never a real
 Clerk id) before adding the FK, so no check-in is lost and `ON DELETE CASCADE` still deletes it
 through the mapping. The heal sits inside the `IF NOT EXISTS (… pg_constraint …)` guard, so on a
-schema that already enforces the FK (steady-state production) the whole block is skipped and no
+schema that already enforces the FK (steady-state production) the entire block is skipped and no
 mapping rows are invented. Verified locally: reproducing the orphan state (FK dropped, orphan
 row inserted) and re-provisioning heals it — FK added, orphan preserved, cascade-delete works,
 idempotent on re-run.
 
 The what-works seed was corrected to upsert problems on their `slug` (the table's unique
 key) and endorsements on `(product_id, user_id)`, rather than on `id`. Previously a
-pre-existing row with the same slug but a different id was not caught and aborted the whole
+pre-existing row with the same slug but a different id was not caught and aborted the entire
 seed with `duplicate key value violates unique constraint "idx_what_works_problems_slug"`.
 
 ## Schema impact

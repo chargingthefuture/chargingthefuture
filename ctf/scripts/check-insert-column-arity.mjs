@@ -10,7 +10,7 @@
  * columns". Nothing in CI reads SQL that is written as a string, so nothing caught it.
  *
  * What this cannot check: whether each value is opposite the RIGHT column. That needs the schema's
- * column types and is a separate job. The count is the failure that takes the whole feature down.
+ * column types and is a separate job. The count is the failure that takes the entire feature down.
  *
  * Only single-row INSERTs with an explicit column list are read. `INSERT ... SELECT`, multi-row
  * VALUES, and an INSERT with no column list are skipped — their shapes carry no arity to compare.

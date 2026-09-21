@@ -105,7 +105,7 @@ function MissionCard({ row }: { row: MissionPosterRow }): ReactElement {
   );
 }
 
-// Builds the whole picture. `generatedOn` is passed in rather than read from the clock here so the
+// Builds the entire picture. `generatedOn` is passed in rather than read from the clock here so the
 // output is the same every time in tests.
 export function buildMissionPosterElement(view: MissionPosterView, generatedOn: string): ReactElement {
   return (

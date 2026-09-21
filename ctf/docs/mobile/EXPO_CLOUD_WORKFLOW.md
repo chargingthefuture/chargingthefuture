@@ -199,7 +199,7 @@ Other rules that fall out of immutable releases:
 
 ## When to Use EAS Build vs EAS Update
 
-A **build** (EAS Build) compiles the whole native Android app — native code, native dependencies, the
+A **build** (EAS Build) compiles the entire native Android app — native code, native dependencies, the
 app icon, permissions, and the JavaScript bundle — into the `.apk` you install on a phone. It is the
 thing that spends one of your **15 monthly Android builds**. Use it for native dependency or
 configuration changes, a new permission, a runtime-version bump, or any signed release.

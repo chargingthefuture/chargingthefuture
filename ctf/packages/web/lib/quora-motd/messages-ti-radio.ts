@@ -106,7 +106,7 @@ export const QUORA_MOTD_TI_RADIO: QuoraMotdMessage[] = [
       'Somebody wrote in the Skills Economy space that others say these people read minds and see through your eyes. They do not believe it. Neither do I, and here is what it actually is.',
       'They made me destitute, and destitution left one hot meal I could afford. No stove, so not the cheap pasta everybody recommends — just a particular chain\'s pizza. They decided that was my favorite food.',
       'It is a budget with the options removed, and anybody reading a mind would know the difference.',
-      'They are not geniuses and they are not supernatural. The slave trade ran on far less technology with the whole globe taking part. What made me readable was poverty, not carelessness, and options are material rather than a mindset.',
+      'They are not geniuses and they are not supernatural. The slave trade ran on far less technology with the entire globe taking part. What made me readable was poverty, not carelessness, and options are material rather than a mindset.',
       'Ninety minutes on how somebody got their options back is worth more than another hour on how they do it. Take a slot: https://app.chargingthefuture.com/ti-radio',
       'Full post: ' + motdArticleUrl('pizza-is-not-my-favorite-food'),
     ].join('\n\n'),

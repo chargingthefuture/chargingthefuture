@@ -179,7 +179,7 @@ export async function setCensusRunStatus(
 export type CensusStateCounts = { live: number; gone: number; renamedOrMoved: number };
 
 // How the run's accounts split by what was found at each one. On an existing-list run this is the
-// removal measurement: `gone` against the whole set is a real rate, because the denominator was
+// removal measurement: `gone` against the entire set is a real rate, because the denominator was
 // fixed before anything was removed. On a fresh-search run it is close to meaningless, and the
 // screens say so rather than printing a number that invites the wrong reading.
 export async function getCensusStateCounts(runId: string): Promise<CensusStateCounts> {

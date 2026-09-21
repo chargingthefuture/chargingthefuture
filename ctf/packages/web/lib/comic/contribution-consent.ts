@@ -56,7 +56,7 @@ export const CONTRIBUTION_CONSENT_CLAUSES: ConsentClause[] = [
 
 // Shown above the checkboxes. Facts the contributor needs before consenting, not terms to tick.
 export const CONTRIBUTION_CONSENT_NOTES: string[] = [
-  'Only your public answers and posts are kept. If you send a whole export, everything else Quora bundles into it — your private messages, your unpublished drafts, your profile details — is deleted automatically as soon as it arrives, before any person opens it. You do not have to clean the file yourself.',
+  'Only your public answers and posts are kept. If you send an entire export, everything else Quora bundles into it — your private messages, your unpublished drafts, your profile details — is deleted automatically as soon as it arrives, before any person opens it. You do not have to clean the file yourself.',
   'A file you upload is never stored. It is read once, in memory, and the archive itself is discarded — there is no copy of it sitting anywhere afterwards.',
   'Your words are not used to train a model. They go into a table the assistant searches when it needs them, which is why withdrawing is something that can actually be done: the row comes out and the assistant stops quoting it. A bot trained the usual way could not honestly promise that.',
   'An accepted contribution earns a ServiceCredits grant — an internal credits unit inside this app, not money and never cashable. You need to have finished verifying (Unlock) to receive it. You can contribute before then and your writing is used the same way; the grant simply waits.',

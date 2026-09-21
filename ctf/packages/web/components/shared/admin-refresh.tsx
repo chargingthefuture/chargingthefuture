@@ -19,7 +19,7 @@ import { RefreshCw } from 'lucide-react';
 //    pass the result down as props. `router.refresh()` re-runs that server render in place.
 //  - Client-fetched screens (Directory, Beacon, Comic, Peer Programming …) call their API routes
 //    from a useEffect. `router.refresh()` does nothing for those, so the provider also changes the
-//    key on a Fragment wrapping the whole admin subtree, which remounts it and re-runs those
+//    key on a Fragment wrapping the entire admin subtree, which remounts it and re-runs those
 //    effects. A keyed Fragment emits no DOM of its own, so no layout or sticky positioning changes.
 //
 // The remount resets in-screen state (open tab, filter chips, typed search). That is the same thing

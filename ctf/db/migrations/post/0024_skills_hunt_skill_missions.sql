@@ -1,4 +1,4 @@
--- SkillsHunt: a mission can ask for one named skill, not only a whole sector.
+-- SkillsHunt: a mission can ask for one named skill, not only an entire sector.
 --
 -- Owner report, 2026-09-17: the Missions tab showed "Find a mechanic — 82/1 complete" and "Find a
 -- plumber — 82/3 complete" for a scout who had nominated no mechanic at all. Both read the same 82

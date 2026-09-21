@@ -157,7 +157,7 @@ function ModerationTabs({
   );
 }
 
-// The reason applied to the next hide. One picker for the whole list rather than one per row:
+// The reason applied to the next hide. One picker for the entire list rather than one per row:
 // a sweep of off-topic posts is the same judgment repeated, and asking for it on every card
 // would be twenty identical clicks. Restoring ignores this.
 function ReasonPicker({ reason, onChange }: { reason: FeedModerationReason; onChange: (r: FeedModerationReason) => void }) {

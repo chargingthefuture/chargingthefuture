@@ -113,10 +113,10 @@ The member-facing copy shows the same numbers as the admin settings. If admin se
 **Expected:**
 - Amount `0` is rejected with a validation error before submission reaches the server.
 - Amount `501` is rejected with a validation error.
-- `12.50` and `0.001` are both rejected, and the message says whole dollars with no cents — gift-card amounts are whole US dollars from 1 to 500.
+- `12.50` and `0.001` are both rejected, and the message says integer dollars with no cents — gift-card amounts are entire US dollars from 1 to 500.
 - Missing Signal contact is rejected with a validation error.
 - In every case the form stays open and no claim is created.
-- The amount field's label reads "Card value (whole US dollars, $1 to $500)", and on a phone the keypad it opens has no decimal point.
+- The amount field's label reads "Card value ($1 to $500, no cents)", and on a phone the keypad it opens has no decimal point.
 
 **Result:** web ☐
 
@@ -140,9 +140,9 @@ The member-facing copy shows the same numbers as the admin settings. If admin se
 7. In the database, read `credits_granted` for the claim you confirmed in step 3.
 
 **Expected:**
-- The confirm in step 3 succeeds and grants a whole number of credits — 30 at a rate of 3. No decimal appears in the granted figure, on the claim or in the member's balance.
-- `credits_granted` in step 7 is a whole number. A value like `29.999` or `30.5` is the bug this case exists for.
-- Step 5 is rejected: the confirmed value for a gift card is whole dollars, 1 to 500, the same rule the member's claim had to clear.
+- The confirm in step 3 succeeds and grants an integer number of credits — 30 at a rate of 3. No decimal appears in the granted figure, on the claim or in the member's balance.
+- `credits_granted` in step 7 is an integer. A value like `29.999` or `30.5` is the bug this case exists for.
+- Step 5 is rejected: the confirmed value for a gift card is integer dollars, 1 to 500, the same rule the member's claim had to clear.
 - A grant that rounds down to 0 still marks the claim confirmed, with 0 credits granted — that is the same outcome as a claim capped to 0, not an error.
 
 **Result:** web ☐
@@ -578,7 +578,7 @@ The new cycle is saved and displayed with correct start/end dates and all three 
 **Precondition:** Signed in as admin, with an existing cycle whose three goals are all non-zero (CONT-A10 leaves one). Note the three goal values before you start.
 
 **Steps:**
-1. Throttle the connection in browser dev tools (Network → Slow 3G) so the dashboard's data takes a few seconds to arrive. This is the whole point of the case — the bug only appears while the cycle is still loading.
+1. Throttle the connection in browser dev tools (Network → Slow 3G) so the dashboard's data takes a few seconds to arrive. This is the point of the case — the bug only appears while the cycle is still loading.
 2. Load `/admin/contributions` and tap the **Drive** tab immediately, before the page finishes loading.
 3. Wait for loading to finish and look at the three goal boxes.
 4. Without editing anything, save.

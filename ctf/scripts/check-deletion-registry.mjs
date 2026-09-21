@@ -94,7 +94,7 @@ function parseRegistry(src) {
   const reSoft = /\bsoft\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'/g;
   const reRetain = /\bretain\(\s*'([^']+)'/g;
   // pseudo('table', 'user_column', ['cleared', 'columns'], 'note') — the third argument is an array,
-  // captured whole so each column inside it can be checked against schema.sql like any other.
+  // captured entire so each column inside it can be checked against schema.sql like any other.
   const rePseudo = /\bpseudo\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g;
 
   let m;

@@ -636,7 +636,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   // Only the default "All" feed paginates the board; "Mine" is already the member's own full set.
   const hasMore = sr.category !== "Mine" && sr.requests.length < sr.requestsTotal;
   // "Mine" is a leading filter (only when signed in) so a member can always find their own posts — on a
-  // small phone screen especially — to edit or re-post them, instead of hunting through the whole feed.
+  // small phone screen especially — to edit or re-post them, instead of hunting through the entire feed.
   const baseCategories = deriveCategories(sr.requests, sr.category === "Mine" ? "All" : sr.category);
   const categories = userId ? ["All", "Mine", ...baseCategories.filter((c) => c !== "All")] : baseCategories;
   // "Mine" sources from `myRequests` (owner-scoped server-side, fetched at pageSize=100), NOT the global

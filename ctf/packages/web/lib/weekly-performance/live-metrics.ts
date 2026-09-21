@@ -11,7 +11,7 @@ import {
 // (ctf/docs/developer/PLUGIN_VALUE_METRICS.md, owner-locked 2026-07-18).
 //
 // The dashboard's shape, in card order:
-//   1. Two GOAL rows — the two numbers the whole platform is driving toward:
+//   1. Two GOAL rows — the two numbers the entire platform is driving toward:
 //      GDP Community Value Index (goal: $300B) and Workforce recruited (goal: 2,000,000).
 //      Both are STATE metrics (a current total, not a windowed event count), so week-over-week
 //      needs memory: each read of the current week upserts the live value into
@@ -21,7 +21,7 @@ import {
 //      These are windowed on the event's own timestamp, so any week reports its real count.
 //   3. Honest ADOPTION rows: how many members are actually turning up — active members (the plain
 //      headcount for the week) and daily active members (the average across the week's days) — and
-//      the other side of that, deleted accounts: members who ended their whole account this week,
+//      the other side of that, deleted accounts: members who ended their entire account this week,
 //      never someone who stayed and cleared one plugin's data — plus
 //      the no-value-to-others plugins the owner wants visible: Directory (findable members), Mood
 //      (check-ins + average, aggregate only), ClickLog (aggregate incidents + distinct loggers —
@@ -40,7 +40,7 @@ import {
 // any per-member figure.
 //
 // Every query is guarded on table existence and never throws: a missing table or a transient error
-// contributes 0 rather than failing the whole dashboard. All table and column names below are fixed
+// contributes 0 rather than failing the entire dashboard. All table and column names below are fixed
 // literals — no user input is interpolated into SQL.
 
 type LiveMetric = {
@@ -59,7 +59,7 @@ async function tableExists(table: string): Promise<boolean> {
 
 // A card the dashboard could not read renders as 0, which on screen is indistinguishable from a week
 // in which nothing happened — and the wrong zero is the harder one to notice, because it looks like
-// an answer. One failed read must still not take the whole dashboard down, so the zero stays; what
+// an answer. One failed read must still not take the entire dashboard down, so the zero stays; what
 // changes is that it is never silent. Every failure that gets flattened to 0 says what broke and
 // which metric it flattened (rule 137), so "this week reads zero and I know that is wrong" is one
 // look at the server log instead of a guess.
@@ -246,13 +246,13 @@ const dailyActiveMembers = async (weekStart: string) => {
   return Math.round((memberDays / elapsedDaysInWeek(weekStart)) * 100) / 100;
 };
 
-// Deleted accounts: how many members ended their whole account during the week — the turnout rows'
+// Deleted accounts: how many members ended their entire account during the week — the turnout rows'
 // counterpart, and the only row here that is bad when it rises.
 //
 // Two things are deliberately left out, because both would make this read as people leaving when
 // they did not:
 //   - A per-plugin "delete my data" (`scope = 'service'`). That member still has an account and is
-//     still here; they cleared one plugin. Only whole-account deletions (`scope = 'account'`) count.
+//     still here; they cleared one plugin. Only full-account deletions (`scope = 'account'`) count.
 //   - An operator-run removal. The manual `Delete Account (manual)` workflow clears duplicate and
 //     demo test accounts, and writes the same account-scope row as a member's own deletion, so the
 //     orchestrator marks who asked (`summary.initiatedBy`) and only the member's own choice counts.

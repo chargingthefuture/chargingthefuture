@@ -52,7 +52,7 @@ find it):
 Both render the one shared `SurveyInviteNote` (`components/shared/survey-invite-note.tsx`) so the
 wording cannot drift, and both are invitations — nothing in either flow depends on answering.
 
-Anyone can open `/survey/quora-account-deletions` and read the whole explanation — what the survey
+Anyone can open `/survey/quora-account-deletions` and read the entire explanation — what the survey
 is for, what happens to answers, and what the results can and cannot show. A signed-out visitor
 sees that plus a sign-in link, and no questions. Any signed-in member, verified or not, can:
 
@@ -97,7 +97,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 - Read every response newest first, each showing its three consent decisions as labeled chips
   above the handles they apply to, then each reported account with its date, outcome, stated
   reason, subject matter, appeal result, and size.
-- Download the whole survey as a CSV, one row per reported removal, with the consent columns
+- Download the entire survey as a CSV, one row per reported removal, with the consent columns
   placed immediately after the response id.
 - Refresh without leaving the page.
 
@@ -108,7 +108,7 @@ At `/admin/quora-deletion-survey`, an admin can:
 | `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows against the member's id, then writes each reported closure to that member's account history. Same-origin CSRF header and a per-IP brake of 5 submissions per hour. |
 | `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link to the account the member still holds. Creates a pending submission only, and does nothing for a member who already has one. Same session, CSRF, and per-IP brake as the submit route. |
 | `/api/quora-deletion-survey/admin/responses` | GET | Admin | The newest 500 responses with their account rows, plus the three totals. |
-| `/api/quora-deletion-survey/admin/export` | GET | Admin | The whole survey as CSV, one row per reported removal. |
+| `/api/quora-deletion-survey/admin/export` | GET | Admin | The entire survey as CSV, one row per reported removal. |
 
 ## Data Model and Storage Contracts
 
@@ -276,7 +276,7 @@ Audit trail: every path through the submit route writes a row — stored, and ea
 anonymity of the response the event is about. Admin reads and exports are the mirror image: the
 admin's user id, the action, and the row count, and never the responses themselves. The export row
 is written before the file is handed over, since once a CSV leaves the app it is a copy of the
-whole table outside anything this code can see.
+entire table outside anything this code can see.
 
 Consent: all three consent columns default to FALSE at the database as well as in the form, so a
 row created by any future path that forgets to set them is still "do not publish". The admin

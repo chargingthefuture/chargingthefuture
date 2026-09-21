@@ -4,7 +4,7 @@
 // must NEVER be rendered as a fiat equivalent (e.g. "2,420 credits ≈ $242 USD", "purchasing power",
 // "real monetary value"). This guard detects that pattern in a single value/label string.
 //
-// IMPORTANT: apply this to an individual rendered value or label, NOT to a whole composed view.
+// IMPORTANT: apply this to an individual rendered value or label, NOT to an entire composed view.
 // A compact layout that shows a fiat price field AND a separate "Accepts ServiceCredits" badge is
 // allowed (two distinct fields) and is not a parity claim — each field passes this guard on its own.
 

@@ -27,7 +27,7 @@
 
 - What degrades first: Stream Video (audio). If Stream is unconfigured or a token mint fails, `createStreamJoinCredentials` returns null and the join route returns 503 (`CHYME_STREAM_UNAVAILABLE`) — identical to the main room's existing behavior. WebRTC-less browsers get the existing "live audio isn't available" message; room chat still works.
 - User-visible messaging behavior: same as the main room — a clear "Stream service is not configured" / "connecting…" state, never a crash.
-- Kill switch / feature flag: the contributor **channel-open switch** (`contributor_access_config.channel_open`) gates the whole private room. Turning it off closes the room for all non-admins immediately (they get the "how it's earned" explainer), which also stops all private-room Stream usage.
+- Kill switch / feature flag: the contributor **channel-open switch** (`contributor_access_config.channel_open`) gates the entire private room. Turning it off closes the room for all non-admins immediately (they get the "how it's earned" explainer), which also stops all private-room Stream usage.
 
 ## Observability
 

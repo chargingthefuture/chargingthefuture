@@ -346,7 +346,7 @@ export const RECURRING_ACTIVITY_COUNT_UNIT = 'RACT';
  * rows count. Two firewalled treatments:
  *   - Fiat lines (currency_code <> 'SC'): counted by NUMBER of activities, one RACT each. A fiat line
  *     carries NO amount (the schema never stores one), so the platform never holds a summable
- *     recurring-fiat-payment total — the whole point of the plugin.
+ *     recurring-fiat-payment total — the point of the plugin.
  *   - ServiceCredits lines (currency_code = 'SC'): counted by their declared `sc_value`, scaled to a
  *     MONTHLY figure by the line's cadence (`CADENCE_MONTHLY_FACTOR`) so a weekly arrangement and a
  *     monthly one moving the same credits over a year count the same. Before that scaling, a weekly 50
@@ -469,7 +469,7 @@ export async function recognizeCommunityValueIndex(): Promise<RecognitionBreakdo
   // Each source's loadVolumes() is an independent, read-only DB round trip, and this runs live on every
   // dashboard request — so fire them concurrently instead of awaiting one at a time. Promise.all keeps
   // result order, so the folded per-source breakdown stays in the same RECOGNITION_SOURCES order it had
-  // when this loop was sequential. Failure semantics are unchanged: if any source throws, the whole
+  // when this loop was sequential. Failure semantics are unchanged: if any source throws, the entire
   // recognition rejects, exactly as the sequential await did.
   const volumesBySource = await Promise.all(RECOGNITION_SOURCES.map((source) => source.loadVolumes()));
   RECOGNITION_SOURCES.forEach((source, index) => {

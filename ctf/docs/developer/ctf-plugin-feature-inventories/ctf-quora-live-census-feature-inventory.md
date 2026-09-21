@@ -89,7 +89,7 @@ judgment about their state of mind. That is not built and is not scoped.
 - A closed run takes no new entries, so a number that has been quoted cannot change under the
   quotation.
 
-What the census cannot do: speak for Quora as a whole. It reports what one run looked at. Every
+What the census cannot do: speak for Quora overall. It reports what one run looked at. Every
 percentage in the admin screen is a share of the live accounts in that run, and is labeled as such.
 
 ## User Features

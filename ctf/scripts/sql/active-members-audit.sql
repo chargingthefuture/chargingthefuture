@@ -7,7 +7,7 @@
 -- reports seeded synthetic data rather than real members — query 3 tells the two apart.
 --
 -- A member is active on a day when the sign-in record (`login_events`) holds a row for them that
--- day. That is the whole definition of the dashboard's Active Members and Daily Active Members
+-- day. That is the entire definition of the dashboard's Active Members and Daily Active Members
 -- rows, so query 2 below returns the dashboard's own numbers.
 
 -- 1. What the sign-in record holds and how far back it reaches. `total_members` skips blank ids so

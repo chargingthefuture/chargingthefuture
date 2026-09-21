@@ -69,7 +69,7 @@ number of children (job titles / skills), derived from the data.
 **Steps:**
 1. Type a skill name into the in-tree search box.
 2. Clear the box.
-**Expected:** The list filters in place to matching entries. Clearing the box restores the whole
+**Expected:** The list filters in place to matching entries. Clearing the box restores the entire
 tree. The search is over real taxonomy names, not a faked chip set.
 **Result:** web ☐ mobile ☐ — notes:
 
@@ -161,7 +161,7 @@ Fashion Designers** and **Machinists** now read in the plural, keeping every ski
 rename moves no rows.
 **Result:** web ☐ mobile ☐ — notes:
 
-### TAX-5b · A change that would create a duplicate occupation fails the whole apply run
+### TAX-5b · A change that would create a duplicate occupation fails the entire apply run
 **Role:** admin (whoever starts the apply workflow) · **Surfaces:** n/a — this is the apply run, not a screen
 **Precondition:** a change-list entry with id 80 or higher whose `addOccupation` names a role an occupation
 in that sector already names (for example `Photographer` where `Photographers / Videographers` is live).
@@ -198,7 +198,7 @@ a second run of the same entry reports it as a no-op rather than writing again. 
 recomputed or backfilled — per-occupation demand is derived live on read — so the Workforce figure
 moves on the next page load. The audit row for the change records `action: 'update'` with the weight
 detail in its reason and metadata; it is **not** a new action verb, because that column is
-check-constrained and an unlisted verb is rejected at apply time and rolls the whole run back.
+check-constrained and an unlisted verb is rejected at apply time and rolls the entire run back.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-5d · Medical Assistants joins Health, and a reused label is not a duplicate (added 2026-09-20)
@@ -300,7 +300,7 @@ lifeguarding, Stroke technique and race training, Sports coaching, Fitness and c
 coaching. `Swimming instruction` and `Water safety and lifeguarding` appear under **both** — that is
 deliberate, not a duplicate to clean up, and step 4 is why: picking `Swimming instruction` once must
 show **both** roles in the profile's roles panel. Somebody whose one nameable skill is swimming
-reaching two roles from a single pick is the outcome this whole set exists for.
+reaching two roles from a single pick is the outcome this entire set exists for.
 **This step is also a scope check.** No skill here may be age-scoped: a label such as “Youth swimming
 instruction” or “Children's swimming” is a defect to report, because adults learn to swim too and an
 age-scoped name quietly excludes half the people who could teach it. Adult teaching is already

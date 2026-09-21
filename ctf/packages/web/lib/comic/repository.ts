@@ -83,7 +83,7 @@ async function validateLinkedPluginSlugs(input: string[] | undefined): Promise<s
 }
 
 // Resolve stored slugs to { slug, name } for rendering, in the stored order, dropping any slug that
-// is no longer a visible plugin. `nameBySlug` is passed in so the asker-stream read resolves a whole
+// is no longer a visible plugin. `nameBySlug` is passed in so the asker-stream read resolves an entire
 // page against one registry fetch.
 function resolveLinkedPlugins(slugs: unknown, nameBySlug: Map<string, string>): ComicLinkedPlugin[] {
   if (!Array.isArray(slugs)) {
@@ -1001,7 +1001,7 @@ export async function resolveComicReview(
 // owner correction) grouped by intent. Supersedes the feed category-only export by sourcing real
 // turns + corrections. A single loop — no double counting.
 //
-// Every non-discarded row is included on every call — the export is the whole dataset, not a
+// Every non-discarded row is included on every call — the export is the entire dataset, not a
 // take-once queue — but the ids of the rows still sitting at 'pending' come back alongside it so
 // the caller can mark them exported (markComicTrainingExamplesExported). Rows whose text is blank
 // after trimming are left out of both the grouped map and the id list, so nothing is marked as
@@ -1257,7 +1257,7 @@ export async function listComicAskerStream(
     [askerUserId, safeLimit],
   );
 
-  // Resolve plugin slugs to display names once for the whole page (one registry fetch). Unknown or
+  // Resolve plugin slugs to display names once for the entire page (one registry fetch). Unknown or
   // now-hidden slugs are dropped when each row is mapped.
   const registry = await listPluginRegistry();
   const nameBySlug = new Map(registry.map((plugin) => [plugin.slug, plugin.name]));
