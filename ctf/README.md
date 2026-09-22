@@ -1,6 +1,6 @@
 # Skills Economy Monorepo (ctf)
 
-This folder contains the rewrite monorepo scaffold for:
+This folder contains the v3 monorepo for:
 
 - Next.js web application (`packages/web`)
 - React Native mobile application (`packages/mobile`)
@@ -46,7 +46,7 @@ This folder contains the rewrite monorepo scaffold for:
 - Runbook: `ctf/docs/developer/MOCKUPS_SUBMODULE_SYNC_RUNBOOK.md`
 - Most common update command: `git submodule update --remote --merge`
 
-## Invite-Only Access Flow (Rewrite)
+## Access Flow (Unlock)
 
 - Users sign in through the active auth provider on the web app root page.
 - First-time users must submit a Quora profile URL.

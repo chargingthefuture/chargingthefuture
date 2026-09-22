@@ -260,13 +260,14 @@ needed to authenticate `infisical run`.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17. Three routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22. Four routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
 | `/bpr` | [`.claude/commands/bpr.md`](.claude/commands/bpr.md) | The owner asks for any change to files. |
 | `/pr` | [`.claude/commands/pr.md`](.claude/commands/pr.md) | Open pull requests are blocked, behind, conflicted, or failing checks. |
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
+| `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 
 ### /bpr — every executed change
 
@@ -277,6 +278,14 @@ In short: descriptive branch off the latest `main` before any edit, do the work 
 ### /pr — opening a PR is the start of the job, not the end
 
 Agents open pull requests and abandon them. They do not merge themselves once a branch falls behind or a check goes red, so a PR left alone is work that never shipped. Sweep every open PR that is blocked, behind, conflicted, or failing, and drive each one to merge: resolve conflicts by understanding both sides, read the actual failure log before touching anything, update branches that fell behind. Do not report that a PR needs something — do it. Leave alone only a draft someone is actively working, or a risky-lane PR sitting green and waiting on the owner's review, and say which those are.
+
+### /fix — rewrite the sentence, do not explain it
+
+The owner sends a screenshot with a sentence highlighted and a short remark. It means the sentence reads badly. Rewrite it, push it, and reply in two lines with the new wording.
+
+The argument is not in question: a `/fix` is about how a sentence reads, never about whether the claim is right. Keep every fact, figure, name and link exactly as it was, fix the same wording wherever else it appears (the post, its excerpt and teaser, the paste sheet entry), regenerate rather than hand-edit the generated files, and do not move the date or publish a dated correction — nothing a reader acted on was wrong.
+
+What this replaces: the paragraph explaining what was wrong with the old sentence. The owner could see it was wrong, which is why they sent it. They read and type on a phone on limited usage, so that paragraph costs them the thing they are short of.
 
 ### /cr — verify every finding before acting on it
 
