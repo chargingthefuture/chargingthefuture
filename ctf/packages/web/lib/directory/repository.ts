@@ -1692,7 +1692,7 @@ export async function listAdminProfiles(
         LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
         ${ADMIN_PROFILE_WHERE}
         ORDER BY p.updated_at DESC
-        OFFSET $4 LIMIT $5
+        OFFSET $3 LIMIT $4
       `,
       [...predicateParams, offset, pagination.pageSize],
     );

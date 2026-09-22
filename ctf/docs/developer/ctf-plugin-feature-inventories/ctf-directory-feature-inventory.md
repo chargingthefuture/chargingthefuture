@@ -226,6 +226,20 @@ Seeded content:
 
 ## Change Log
 
+- 2026-09-22: **The admin profiles list returned nothing but a red line (owner report).** The
+  screen read "0 profiles · 0 unclaimed" over "Unable to list admin profiles: could not determine
+  data type of parameter $3". The tombstone drop recorded below removed the `includeDeleted`
+  parameter and renumbered the shared `ADMIN_PROFILE_WHERE` from $2/$3 down to $1/$2, but the page
+  query keeps its own tail outside that constant and it still read `OFFSET $4 LIMIT $5`. So the
+  call supplied four values while the statement referenced $1, $2, $4 and $5: the offset arrived as
+  $3, nothing referenced it, and Postgres infers a parameter's type from where it is used — with no
+  use it refuses the statement before running it. The tail now reads `OFFSET $3 LIMIT $4`. The count
+  and unclaimed-total queries were already right; only the page query was wrong, and because all
+  three run in one transaction its failure took the screen down entirely. A new CI gate,
+  `ctf/scripts/check-sql-placeholder-gaps.mjs` (job `sql-placeholder-gap-gate`), now fails any query
+  whose placeholders skip a number, which is the signature of a renumbering that missed a spot. It
+  was written against this bug and Foundation's identical one, and catches both.
+
 - 2026-09-21: **The tombstone drop below left readers behind; fixed the day it applied.** When
   `post/0033` ran against production, five code paths still named `directory_profiles.is_active` or
   `deleted_at`: the Weekly Performance recruited goal (read 0), the Workforce recruited total, the

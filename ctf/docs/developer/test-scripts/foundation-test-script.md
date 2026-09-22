@@ -10,7 +10,7 @@
 | **Surfaces** | Web (Next.js) — Android surface removed 2026-07-20 (rule 105, PR #1742); plugin is now web-only (PWA) |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
+| **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason |
 
 ---
 
@@ -812,6 +812,31 @@ Result: web ☐
 - The provider does NOT see it on their own side; it is offered to the survivor, the side that would keep calling the same provider.
 - The provider is already filled in — no member search.
 - After recording, the row appears in the Recurring Activity app marked "Recorded from Foundation", awaiting the provider's confirmation, and the prompt is gone from both the thread and the quote row.
+
+Result: web ☐
+
+
+### FDN-39 — A quote can move through its lifecycle at all (added 2026-09-22)
+
+**Role:** member (provider side, then either side)
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** An open quote request with a Direct Line thread.
+
+**Steps:**
+1. As the provider, respond to the quote with a price and a currency.
+2. Read the quote row and the thread afterwards.
+3. Close the quote from whichever side can close it.
+4. Check the quote's recorded state and its settled timestamp.
+
+**Expected:** The price is saved against the quote and the state moves to "provider responded".
+Closing moves it to closed and stamps the settled time when a price was quoted. Neither step
+returns a 5xx or an "unavailable" message.
+
+**Regression guard:** until 2026-09-22 both steps failed in the database. The update supplied six
+values and referenced only four of them, leaving the previous state and the transition reason at
+$3 and $4 with nothing reading them, and Postgres refuses a statement whose parameter it cannot
+type: "could not determine data type of parameter $3". The gate
+`ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
 
 Result: web ☐
 

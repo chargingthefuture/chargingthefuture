@@ -447,6 +447,22 @@ jobs:
       - name: Fail on an INSERT whose columns and values disagree
         run: node ctf/scripts/check-insert-column-arity.mjs
 
+  sql-placeholder-gap-gate:
+    name: SQL Placeholder Gap Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Sibling of the arity gate above, for the other way a string of SQL ships green. Postgres
+      # infers a parameter's type from where it is used, so a parameter supplied and referenced
+      # nowhere is refused before the statement runs: "could not determine data type of parameter
+      # $3". It happens when a predicate is dropped and the placeholders after it are not
+      # renumbered. Directory's admin list and Foundation's quote transition both shipped that way.
+      - name: Fail on a query with a gap in its placeholder numbering
+        run: node ctf/scripts/check-sql-placeholder-gaps.mjs
+
   orphan-route-gate:
     name: Orphan Route Gate
     runs-on: ubuntu-latest

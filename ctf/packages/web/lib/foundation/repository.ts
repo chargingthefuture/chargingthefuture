@@ -1237,8 +1237,8 @@ export async function updateQuoteRequestState(input: {
         SET lifecycle_state = $2,
             last_transitioned_at = NOW(),
             updated_at = NOW(),
-            quoted_amount = CASE WHEN $2 = 'provider_responded' THEN $5::numeric ELSE quoted_amount END,
-            quoted_currency = CASE WHEN $2 = 'provider_responded' THEN $6 ELSE quoted_currency END,
+            quoted_amount = CASE WHEN $2 = 'provider_responded' THEN $3::numeric ELSE quoted_amount END,
+            quoted_currency = CASE WHEN $2 = 'provider_responded' THEN $4 ELSE quoted_currency END,
             settled_at = CASE WHEN $2 = 'closed' AND quoted_amount IS NOT NULL THEN NOW() ELSE settled_at END
         WHERE id = $1::uuid
         RETURNING
@@ -1257,8 +1257,6 @@ export async function updateQuoteRequestState(input: {
       [
         input.quoteRequestId,
         input.targetState,
-        quote.lifecycle_state,
-        transitionReason,
         input.quotedAmount ?? null,
         input.quotedCurrency ?? null,
       ],
