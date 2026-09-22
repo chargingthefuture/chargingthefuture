@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
 
 ## How to run this
 
@@ -459,6 +459,23 @@ an allow/deny audit line.
 **Expected:** The list loads one page at a time (20 per page) instead of the entire collection, so first
 paint does not wait on every profile. Search and the claim tabs are applied by the server across all
 profiles. The header's profile and unclaimed counts describe the entire collection.
+**Result:** web ☐ mobile ☐ — notes:
+
+### DIR-A1d · The admin list loads at all (added 2026-09-22)
+**Role:** admin · **Surfaces:** web (`/admin/directory`)
+**Steps:**
+1. Open `/admin/directory` with profiles seeded and read the header and the body of the page.
+2. Type a name into the search box, then switch to Claimed and to Unclaimed.
+3. Page forward with Next if there is more than one page.
+**Expected:** Profiles are listed. The header counts the real number of profiles and unclaimed
+profiles, not "0 profiles · 0 unclaimed", and no red line appears in place of the list. Search,
+the claim tabs and paging each return rows.
+**Regression guard:** on 2026-09-21 this screen showed only "Unable to list admin profiles: could
+not determine data type of parameter $3". The page query asked for `OFFSET $4 LIMIT $5` after the
+predicate it shares with the count query had been renumbered down to $1/$2, so the offset was
+passed as $3 and referenced nowhere, and Postgres refused the statement. All three queries run in
+one transaction, so the header counts read 0 as well. The gate
+`ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)

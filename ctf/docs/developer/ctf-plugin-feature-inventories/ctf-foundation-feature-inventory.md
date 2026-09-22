@@ -177,6 +177,19 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-09-22: **Every quote lifecycle transition was refused by the database.** The UPDATE in
+  `transitionQuote` supplied six values and referenced four of them — `$1` the quote id, `$2` the
+  target state, `$5` the quoted amount and `$6` the currency — leaving the previous state and the
+  transition reason sitting at `$3` and `$4` with nothing reading them. Postgres infers a
+  parameter's type from where it is used, so an unreferenced parameter has nothing to infer from
+  and the statement is refused before it runs: "could not determine data type of parameter $3". A
+  provider responding with a price, and a quote being closed, both failed. The amount and currency
+  are now `$3` and `$4`, and the two values the statement never used are gone from the call — they
+  were already passed separately to the status-events insert below it, which is where they belong.
+  Found by the sweep that followed the same failure on Directory's admin list, and now guarded by
+  `ctf/scripts/check-sql-placeholder-gaps.mjs` (job `sql-placeholder-gap-gate`), which fails any
+  query whose placeholders skip a number.
+
 - 2026-09-12: **A failed call now says which attempt it was, and a bookkeeping failure no longer
   reports a working call as broken (owner report: a member could not start a Foundation call on two
   consecutive nights, seeing "Thread create unavailable." each time).** Three changes on the
