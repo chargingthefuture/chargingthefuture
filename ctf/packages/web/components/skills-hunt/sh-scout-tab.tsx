@@ -83,7 +83,7 @@ function RoundWindowClosed({ round }: { round: SkillsHuntRound }) {
   );
 }
 
-function SubmittedState({ onReset, onViewLeaderboard }: { onReset: () => void; onViewLeaderboard: () => void }) {
+function SubmittedState({ roundName, onReset, onViewLeaderboard }: { roundName: string | null; onReset: () => void; onViewLeaderboard: () => void }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
   return (
@@ -95,6 +95,9 @@ function SubmittedState({ onReset, onViewLeaderboard }: { onReset: () => void; o
       <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>
         Thank you for growing the network. This submission is under review — you&apos;ll earn points once accepted.
       </div>
+      {roundName ? (
+        <div style={{ fontSize: 13, color: t.SUBTLE }}>Submitted to <b style={{ color: t.TITLE }}>{roundName}</b>.</div>
+      ) : null}
       <div style={{ display: "flex", gap: 12 }}>
         <button type="button" onClick={onReset} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Nominate Another</button>
         <button type="button" onClick={onViewLeaderboard} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>View Leaderboard</button>
@@ -216,6 +219,9 @@ function RoundHeader({ activeRound, rounds, onSelectRound }: {
         <div style={{ fontSize: 11, color: t.FAINT, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Nominating for round</div>
         <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>{activeRound.name} <span style={{ fontSize: 11, fontWeight: 600, color: t.ACCENT }}>· {activeRound.status}</span></div>
         <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2 }}>{roundWindow}</div>
+        {activeRound.description ? (
+          <div style={{ fontSize: 12.5, color: t.MUTED, marginTop: 6, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{activeRound.description}</div>
+        ) : null}
       </div>
       {rounds.length > 1 && (
         <select value={activeRound.id} onChange={(e) => onSelectRound(e.target.value)} aria-label="Choose a round"
@@ -292,7 +298,7 @@ export function SkillsHuntScoutTab({
   onNavTab: (tab: Tab) => void;
 }) {
   if (noActiveRound) return <NoActiveRound />;
-  if (submitted) return <SubmittedState onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
+  if (submitted) return <SubmittedState roundName={activeRound?.name ?? null} onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
   if (activeRound && !isRoundOpenForNominations(activeRound)) return <RoundWindowClosed round={activeRound} />;
   return (
     <div>

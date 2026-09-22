@@ -40,6 +40,7 @@ Planning constraints applied:
 1. List active, upcoming, and closed SkillsHunt rounds.
 2. View round details including scoring config, rules, and dates.
 3. Submit entries only during active windows. "Active" means both halves: the round's status is `active` **and** today falls inside its start and end dates. The Scout tab checks the same condition the submit guard checks (`isRoundAcceptingSubmissions` in `lib/skills-hunt/round-window.ts`), so a round whose dates have run out shows a "Nominations have closed" panel naming the round and its end date instead of a nomination form. The leaderboard and My finds still read that round.
+4. **The round a member picks is kept, and the round says what it is looking for (2026-09-22).** With more than one round open the Scout tab draws a picker; the choice now survives a refresh instead of reverting to whichever round sorts first, and the round header shows the round's `description` under its dates. That description is the only place a round's subject is written — the Rounds tab labels the field "What this round is about" — and until now no member-facing screen drew it, so every round offered the same nomination form whatever it was asking for.
 
 ### 1.2 Entry Submission Experience
 
@@ -49,6 +50,7 @@ Planning constraints applied:
 4. Prevent duplicate submissions by normalized Quora profile URL: a person's Quora URL uniquely identifies them (Quora does not recycle handles), so at most one *active* (not rejected, not deleted) submission may exist for a given normalized URL, across all rounds. A rejected or deleted submission does not block a legitimate re-nomination. Enforced in `createSubmission` under a transaction-scoped advisory lock on the normalized URL. (The older per-round url + skills signature key remains as a secondary guard but was insufficient on its own — the same person with a different skill list hashed differently and slipped through.)
 5. Enforce rolling submission cap per user with reputation-driven dynamic limits (see §5). **Admins are exempt** from these rate limits (the rolling weekly cap and the reputation-driven pre-approval/restricted gate) — `createSubmission` skips `ensureSubmissionRateLimits` when the submitter `isAdmin`. The active-round window and the one-active-submission-per-Quora-URL duplicate guard still apply to admins.
 6. A submitter is attributed to their `@handle` when they have one; a member who has not set a Clerk username yet submits under their stable per-user handle (`user-<id>`, the same one shown in the Commons) via the nullable `submitter_username` snapshot. The submit gate does **not** require a Clerk username (`requireUsername: false`) — the reward and reputation systems key on `submitter_user_id`, and the reserved-prefix check is a no-op for a null username. (Owner decision 2026-07-03: an approved member without a username must not be blocked from submitting.)
+7. **The confirmation names the round the nomination went to (2026-09-22).** "Nomination submitted!" used to say only that it was under review, so a nomination filed under the wrong round was invisible after the fact as well as before it. The screen now reads "Submitted to <round name>".
 
 ### 1.3 Quality and Safety Validation
 
@@ -93,6 +95,8 @@ Planning constraints applied:
 3. Apply scoring breakdown (match, first-match, stack, rare-skill, quality bonus).
 4. Enforce rejection-rate guardrails for submitters.
 5. **The queue is paged, 25 nominations to a page (2026-09-20).** It asked for up to 100 rows in one request and drew no page control, so row 101 was unreachable and the queue read as an endless scroll — on a phone each nomination is a tall card with four action buttons, so a hundred of them is a scroll nobody finishes (owner report). Previous / Next sit under the list with "Page N of M", using the shared `Pager` (`components/shared/pager.tsx`), and the control hides itself when one page holds everything. Changing the round or the status filter returns to page 1, so narrowing a long list from a late page cannot land on an empty screen that reads as "no submissions". Select all and the bulk bar act on the page on screen, and the confirm says the count, so a bulk action never reaches a row nobody has looked at.
+
+6. **The round's purpose sits above the queue (2026-09-22).** The moderation screen showed the round's name on a filter tab and its reward in a banner, but never what the round was asking for, so a reviewer working a list of names and skill chips had nothing on screen to judge fit against. The round's `description` now reads above the Accept and Reject controls as "<round> is looking for: …", and the panel hides itself when a round has no description.
 
 ### 2.3 Directory Seeding Governance
 
@@ -276,7 +280,29 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 7. ~~A progress bar reads past its target rather than stopping at it.~~ Decided (2026-09-18, owner): **cap it.** A mission with a target of 1 that counted 82 showed "82/1 complete" — the raw count, and not a mistake, but it reads as a fault in the bar. The count a member reads is now capped at the target in `lib/skills-hunt/mission-view.ts`; the stored count stays raw and the bar's width was already capped the same way. The case for leaving it honest was that an over-count is the signature of a mission pointed at the wrong goal — that signal now sits on the admin Missions list instead, which names what each mission counts in words with its sector or skill beside it, where the person who can correct it will see it.
 
+8. **A ServiceCredits reward paid on an accepted nomination cannot be reversed from the app.** `credit_granted` is the idempotency marker for the mint and is never unset once a reward is paid, so flipping an accepted nomination to rejected, flagged or removed rolls back its points, its mission progress and its leaderboard place, and leaves the credits with the scout. That is correct as a ledger rule — a minted credit a member may already have sent is not something a moderator should be able to take back silently — but it means an accept made in error has no in-app remedy, and the moderation screen does not say so at the moment of accepting. Two ways to settle it, and picking one is a decision rather than a build step: a reversing transfer an admin can raise against a named nomination, with the scout told why, or a confirmation step on accept for rounds that pay a reward, so the irreversible half is stated before it happens.
+
 ## 9) Change Log
+
+- 2026-09-22: **A nomination reached a round it was not meant for, and neither screen said what
+  that round wanted (owner report).** Three member-facing fixes and one admin one, all on shipped
+  screens. (1) **The chosen round is kept.** The Scout tab seeded the round from the first row of
+  `GET /api/skills-hunt/rounds?status=active`, and that effect re-runs on every refresh, so
+  pressing Refresh with a part-filled form moved the nomination to whichever round sorts first
+  (`ORDER BY starts_at DESC`) and said nothing. Nothing clears the form when the round changes, so
+  the typed nomination carried over to the new target. With two rounds open at once a nomination
+  meant for one was filed under the other. The choice now survives a refresh; the round row is
+  re-read so its window, status and reward stay current, and the first round is used only when
+  nothing has been chosen yet or the chosen round has left the active list. (2) **The round's
+  purpose is on the nomination screen**, under the dates in the round header, read from the
+  `description` the Rounds tab collects under the label "What this round is about". No
+  member-facing screen had ever drawn that field. (3) **The confirmation names the round**, so a
+  wrong round is visible after submitting and not only before. (4) On the admin side the same
+  description reads above the Accept and Reject controls in the moderation queue. Not changed
+  here, and both recorded in §8: nothing compares a nomination's skills against the round, because
+  a round has no target to compare against — its subject lives in its name and description and in
+  no column; and a reward already minted on an accepted nomination still cannot be reversed from
+  the app, so an accept made in error leaves the credits with the scout.
 
 - 2026-09-20: **Missions are a community-wide competition, and the Missions tab now reads that way
   (owner directive).** The tab drew the signed-in member's own progress, so the same mission read

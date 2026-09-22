@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round picker keeping its choice across a refresh, the round description on the Scout tab and the round named on the confirmation; SH-A4d covers the same description above the moderation controls |
 
 ---
 
@@ -108,6 +108,41 @@ Result: web ☐
 **Expected:** The Scout tab shows a panel reading "Nominations for *round name* have closed", naming the date the round ran until and saying an admin opens the next round. No nomination form and no submit button. This is not the "No active round right now" panel — the round exists and is named. The Leaderboard and My finds tabs still load that round's data.
 
 **Regression guard:** before 2026-09-12 this drew a working nomination form. Filling it in and pressing Submit returned "Round is not currently active." after the fact, which read as the form being broken. If the form appears here, the client and the server have gone back to disagreeing about what "active" means.
+
+Result: web ☐
+
+---
+
+### SH-1c — The round a member picks survives a refresh, and the round says what it wants
+
+**Role:** member · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** Two rounds open at once — both `status = 'active'`, both inside their dates, with
+different `starts_at` values — and a description on each, written in the admin Rounds tab under
+"What this round is about". Make them obviously different (for example "Doctors, nurses and
+paramedics" against a general round). The round with the later `starts_at` is the one the Scout tab
+offers first.
+
+**Steps:**
+1. Sign in as a member and open `/apps/skills-hunt` on the Scout tab.
+2. Read the round header: name, dates, and the description under them.
+3. Use the round picker to choose the *other* round, and read the header again.
+4. Fill in a nominee name and pick one skill. Do not submit yet.
+5. Press the Refresh control in the header bar.
+6. Read the round header again, then submit the nomination.
+7. Read the confirmation screen, then open My finds.
+
+**Expected:** Steps 2 and 3 — each round shows its own description under its dates, never the other
+round's, and a round with no description simply shows nothing there. Step 6 — the header still names
+the round chosen in step 3; the refresh did not move it. Step 7 — the confirmation reads "Submitted
+to *round name*" for that same round, and My finds lists the nomination under it.
+
+**Regression guard:** before 2026-09-22 the Scout tab re-seeded the round from the first active round
+every time the data loaded, so the refresh in step 5 moved the part-filled nomination to the other
+round without saying so — nothing clears the form when the round changes, so the typed nomination
+went with it. Neither screen gave the member a way to notice: the description was never drawn and the
+confirmation named no round. A nomination landing in a round other than the one chosen in step 3
+means that reset is back.
 
 Result: web ☐
 
@@ -705,6 +740,31 @@ page holds everything, so the control hides itself.
 not a bare "Failed to load" — this is an admin screen (rule 137).
 
 Result: web ☐ mobile ☐
+
+---
+
+### SH-A4d — The moderation queue says what the round is looking for
+
+**Role:** admin/moderator · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** Two rounds, one with a description written in the admin Rounds tab and one with
+that field left empty. At least one pending nomination in each.
+
+**Steps:**
+1. Open `/admin/skills-hunt` → **Moderation** and pick the round that has a description.
+2. Read what sits between the round tabs and the reward banner, before touching any nomination.
+3. Switch to the round with no description and read the same place.
+
+**Expected:** Step 2 — a panel reading "*round name* is looking for: …" with the round's own
+description, above the Accept and Reject controls, so the reviewer can see what the round asked for
+while judging a nomination. Step 3 — no panel at all; an empty description leaves no empty box
+behind.
+
+**Regression guard:** before 2026-09-22 this screen showed the round's name on a filter tab and its
+reward in a banner and never said what the round wanted, so a nomination unrelated to the round's
+subject looked the same as a fitting one and could be accepted and paid.
+
+Result: web ☐
 
 ---
 

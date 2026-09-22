@@ -54,6 +54,22 @@ async function fetchSubmissionPage(
   return (await res.json()) as SubmissionPage;
 }
 
+// What the round is for, shown above the Accept/Reject controls. The round's description is the
+// only place its purpose is written, and a reviewer working a list of names cannot otherwise tell
+// whether a nomination belongs here (owner report: a nomination unrelated to the round's subject
+// was accepted and paid its reward).
+function RoundPurpose({ round }: { round: SkillsHuntRound | null }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  if (!round?.description) return null;
+  return (
+    <div style={{ padding: "10px 14px", marginBottom: 12, borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER}`, fontSize: 12.5, color: t.SUBTLE, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+      <span style={{ color: t.TITLE, fontWeight: 700 }}>{round.name} is looking for: </span>
+      {round.description}
+    </div>
+  );
+}
+
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -231,6 +247,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   return (
     <>
       <SkillsHuntAdminFilters rounds={rounds} activeRoundId={activeRoundId} onRound={onRoundChange} statusFilter={statusFilter} onStatus={setStatusFilter} />
+      <RoundPurpose round={round} />
       <RewardBanner round={round} summary={rewardSummary} />
       <SkillsHuntAdminBulkBar count={selected.size} onAccept={() => void bulkReview("accept")} onReject={() => void bulkReview("reject")} onClear={() => setSelected(new Set())} />
 

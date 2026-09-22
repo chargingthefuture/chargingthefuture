@@ -132,7 +132,15 @@ export function SkillsHuntShell({
         if (!roundsRes.ok) throw new Error("rounds");
         const roundsData = (await roundsRes.json()) as { rounds: SkillsHuntRound[] };
         setRounds(roundsData.rounds);
-        setActiveRound(roundsData.rounds[0] ?? null);
+        // Keep the round the member chose. This effect re-runs on every refresh, and re-seeding
+        // from rounds[0] moved a half-filled nomination to a different round without saying so
+        // (owner report: a nomination was filed under a round it was not meant for). The row is
+        // re-read so the window, status and reward stay current; the first round is a fallback
+        // only when nothing was chosen yet or the chosen one is no longer active.
+        setActiveRound((current) => {
+          if (!current) return roundsData.rounds[0] ?? null;
+          return roundsData.rounds.find((r) => r.id === current.id) ?? roundsData.rounds[0] ?? null;
+        });
         if (achRes.ok) {
           const achData = (await achRes.json()) as { achievements: SkillsHuntAchievement[] };
           setAchievements(achData.achievements);
