@@ -4,12 +4,12 @@ World's first psyop-free economy.
 
 ## Overview
 
-This repository contains the v3 rewrite of the Charging the Future platform — a full-stack application for building psyop-resistant economic systems. It includes:
+This repository contains v3 of the Charging the Future app — a full-stack application for building psyop-resistant economic systems. It includes:
 
 - **Web App** — Next.js frontend for the core user experience
-- **Mobile App** — React Native (Expo) Android client with feature parity to web
+- **Mobile App** — React Native (Expo) Android client, narrowed to sign-in, Chyme, bug reporting, and settings; every other feature is served by the installable web app
 - **Ledger** — Formance-backed ledger for ServiceCredits (non-fiat internal credits)
-- **Agents** — AI-powered MCP servers for autonomous build, deployment, and operational workflows
+- **Agents** — agent role files and an MCP server for build, deployment, and operational workflows
 - **Schema** — PostgreSQL schema migrations and audit trails
 
 **Credits are not money.** ServiceCredits and every in-app credit are a non-fiat internal credits
@@ -35,19 +35,24 @@ ctf/
 ├── ops/
 │   ├── formance/               # Formance ledger Docker configs
 │   ├── infisical/              # Secrets management Docker configs
-│   ├── ollama/                 # Local LLM inference
-├── scripts/                    # Utilities: seeding, backups, schema migration
+│   ├── route-weather/          # Plain-text weather service
+├── config/                     # Checked-in config the CI gates read (plugin parity, allowlists)
+├── db/migrations/              # Post-schema migrations
+├── docs/                       # Contracts, plugin feature inventories, developer runbooks
+├── scripts/                    # Utilities: seeding, backups, schema migration, CI gates
 ├── agents/                     # AI agent definitions (.agent.md files)
 ├── schema.sql                  # PostgreSQL schema (CREATE TABLE + ALTER TABLE)
-├── render.yaml                 # Render Blueprint (production infrastructure)
 ├── pnpm-workspace.yaml         # pnpm monorepo configuration
 ```
+
+`render.yaml` (the Render Blueprint for production) sits at the repository root, next to the
+agent instructions in `CLAUDE.md` and the rule modules under `.claude/rules/`.
 
 ## Getting Started (Development)
 
 ### Prerequisites
 
-- **Node.js 24+** (or use Codespaces)
+- **Node.js 22** (what CI runs; or use Codespaces)
 - **pnpm 9.12+**
 - **PostgreSQL** (for local schema testing)
 - **Docker** (for Formance, Infisical, Ollama)
@@ -96,10 +101,12 @@ See `.devcontainer/README.md` for fast-mode options and database setup.
 
 Production deployment uses:
 
-- **[Render](https://render.com)** — All services (web, workers, ledger, LLM inference)
+- **[Render](https://render.com)** — The web app and the route-weather service, pulling images that GitHub Actions builds
+- **[Railway](https://railway.com)** — The Formance ledger and its Postgres, Infisical, and Unleash (feature flags)
 - **[Infisical](https://infisical.com)** (self-hosted on Railway) — Single source of truth for secrets
 - **[Neon](https://neon.tech)** — PostgreSQL database with connection pooling
-- **Private GitHub repo** — Formance ledger backups (stored as Release assets)
+- **[RunPod](https://www.runpod.io)** — Serverless GPU endpoint for the Ollama model; its worker image lives in the `runpod` repository
+- **Private GitHub repo** (`backups`) — Formance ledger backups (stored as Release assets)
 
 See `render.yaml` for service definitions and `ctf/docs/developer/` for runbooks.
 
@@ -109,11 +116,12 @@ See `render.yaml` for service definitions and `ctf/docs/developer/` for runbooks
 |---|---|
 | [`ctf/docs/spec.md`](ctf/docs/spec.md) | Archived v2 architecture (for reference) |
 | [`ctf/docs/developer/README.md`](ctf/docs/developer/README.md) | Developer guide (setup, API, plugin system) |
-| [`ctf/docs/developer/FORMANCE.md`](ctf/docs/developer/FORMANCE.md) | Formance ledger runtime contract and bootstrap |
-| [`ctf/docs/developer/FORMANCE_BACKUP_RUNBOOK.md`](ctf/docs/developer/FORMANCE_BACKUP_RUNBOOK.md) | Backup/restore procedures |
+| [`ctf/docs/developer/FORMANCE.md`](ctf/docs/developer/FORMANCE.md) | Formance ledger runtime contract, bootstrap, and backup/restore |
 | [`ctf/docs/contracts/`](ctf/docs/contracts/) | Plugin command contracts, access policies, audit schema |
-| [`ctf/AGENTS.md`](ctf/AGENTS.md) | Agent framework and MCP setup |
+| [`ctf/docs/developer/ctf-plugin-feature-inventories/`](ctf/docs/developer/ctf-plugin-feature-inventories/) | One feature inventory per plugin — what each part of the app does today |
+| [`ctf/agents/README.md`](ctf/agents/README.md) | Agent role files and MCP setup |
 | [`ctf/README.md`](ctf/README.md) | CTF monorepo overview |
+| [`CLAUDE.md`](CLAUDE.md) | Agent instructions: layout, secrets policy, branch and PR conventions, rule modules |
 
 ## Contributing
 
@@ -148,8 +156,9 @@ All commits run through:
 
 - **TypeScript** type checking (tsc)
 - **EOF format validation** (all files end with exactly one newline)
-- **Pre-commit hooks** (Husky) — runs tsc + linting
-- **CI workflow** (`.github/workflows/ci.yml`) — full test suite, schema drift checks, dependency audit
+- **Git hooks** (Husky, in `ctf/.husky/`) — pre-commit runs the typecheck; pre-push runs the web build
+- **CI workflow** (`.github/workflows/ci.yml`) — full test suite, schema drift checks, inventory drift checks, dependency audit
+- **PR conventions** — a Conventional Commit title and a `Parity Status:` line in the description; see `CLAUDE.md`
 
 To prepare a PR:
 
@@ -175,4 +184,4 @@ bash scripts/check-eof-format.sh  # EOF validation
 
 ---
 
-**Last updated:** August 2026 | v3
+**Last updated:** September 2026 | v3
