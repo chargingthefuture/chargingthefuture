@@ -22,10 +22,33 @@ type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number
 // confirm says what will happen; it never withholds the action. Any selected row is included,
 // whatever state it is in, and a removed one is made live again by the review (owner directive
 // 2026-08-28: this is the admin page).
+// Accept is the one review action that mints credits, and the mint cannot be reversed from the
+// app — rejecting or removing the nomination afterwards rolls back its points and its leaderboard
+// place and leaves the credits with the scout. So accept asks a second time and says, in the
+// dialog, what the round wanted and what is about to be paid to whom (owner directive,
+// 2026-09-22: a filter pill naming the round is not enough to stop a wrong accept). Reject, flag
+// and unflag pay nothing and stay one tap.
+function acceptConfirmMessage(round: SkillsHuntRound | null, submission: SkillsHuntSubmission | undefined): string {
+  const who = submission ? submission.fullName : "this nomination";
+  const parts = [round ? `Accept ${who} into ${round.name}?` : `Accept ${who}?`];
+
+  if (round?.description) {
+    parts.push(`\n${round.name} is looking for: ${round.description}`);
+  }
+
+  const reward = round?.rewardCreditsPerAccept ?? 0;
+  if (reward > 0) {
+    const scout = submission?.submitterUsername ? `@${submission.submitterUsername}` : "the scout";
+    parts.push(`\nThis sends ${reward} ServiceCredits to ${scout}. It cannot be undone from here — if this turns out to be the wrong round or the wrong person, the credits have to be burned separately.`);
+  }
+
+  return parts.join("\n");
+}
+
 function bulkConfirmMessage(action: "accept" | "reject", count: number): string {
   const verb = action === "accept" ? "Accept" : "Reject";
   const consequence = action === "accept"
-    ? "Each accepted nomination pays the configured reward once."
+    ? "Each accepted nomination pays the configured reward once, and a paid reward cannot be undone from here."
     : "Each rejected nomination counts toward that scout's rejection rate.";
   return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence} Any removed submission in the selection is restored by this.`;
 }
@@ -52,6 +75,22 @@ async function fetchSubmissionPage(
     throw new Error(body?.message ?? `Unable to load submissions (${res.status}).`);
   }
   return (await res.json()) as SubmissionPage;
+}
+
+// What the round is for, shown above the Accept/Reject controls. The round's description is the
+// only place its purpose is written, and a reviewer working a list of names cannot otherwise tell
+// whether a nomination belongs here (owner report: a nomination unrelated to the round's subject
+// was accepted and paid its reward).
+function RoundPurpose({ round }: { round: SkillsHuntRound | null }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  if (!round?.description) return null;
+  return (
+    <div style={{ padding: "10px 14px", marginBottom: 12, borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER}`, fontSize: 12.5, color: t.SUBTLE, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+      <span style={{ color: t.TITLE, fontWeight: 700 }}>{round.name} is looking for: </span>
+      {round.description}
+    </div>
+  );
 }
 
 function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
@@ -149,6 +188,11 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   // Remove = soft-delete. Use for a void that should not count against the scout
   // (a duplicate, a test row, an admin mistake) — unlike Reject, it does not raise
   // the scout's rejection rate. It does not reverse any ServiceCredits reward.
+  async function acceptWithConfirm(id: string) {
+    if (!window.confirm(acceptConfirmMessage(round, submissions.find((sub) => sub.id === id)))) return;
+    await reviewAndRefresh(id, "accept", null);
+  }
+
   async function onRemove(id: string) {
     if (!window.confirm("Remove this submission? It is soft-deleted and no longer counts toward scores, missions, or the scout's reputation — unlike Reject, it does not count against the scout. This does not reverse any ServiceCredits reward; burn that separately if needed.")) return;
     setActing(id);
@@ -231,6 +275,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   return (
     <>
       <SkillsHuntAdminFilters rounds={rounds} activeRoundId={activeRoundId} onRound={onRoundChange} statusFilter={statusFilter} onStatus={setStatusFilter} />
+      <RoundPurpose round={round} />
       <RewardBanner round={round} summary={rewardSummary} />
       <SkillsHuntAdminBulkBar count={selected.size} onAccept={() => void bulkReview("accept")} onReject={() => void bulkReview("reject")} onClear={() => setSelected(new Set())} />
 
@@ -247,7 +292,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
           allSelected={allSelected}
           onToggleAll={toggleAllVisible}
           onToggle={toggleOne}
-          onAccept={(id) => void reviewAndRefresh(id, "accept", null)}
+          onAccept={(id) => void acceptWithConfirm(id)}
           onReject={onReject}
           onFlag={(id) => void reviewAndRefresh(id, "flag", null)}
           onUnflag={(id) => void reviewAndRefresh(id, "unflag", null)}

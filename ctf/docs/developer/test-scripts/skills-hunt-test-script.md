@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept |
 
 ---
 
@@ -108,6 +108,64 @@ Result: web ☐
 **Expected:** The Scout tab shows a panel reading "Nominations for *round name* have closed", naming the date the round ran until and saying an admin opens the next round. No nomination form and no submit button. This is not the "No active round right now" panel — the round exists and is named. The Leaderboard and My finds tabs still load that round's data.
 
 **Regression guard:** before 2026-09-12 this drew a working nomination form. Filling it in and pressing Submit returned "Round is not currently active." after the fact, which read as the form being broken. If the form appears here, the client and the server have gone back to disagreeing about what "active" means.
+
+Result: web ☐
+
+---
+
+### SH-1c — The round is a field the scout marks, and each round says what it wants
+
+**Role:** member · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** Two rounds open at once — both `status = 'active'`, both inside their dates, with
+different `starts_at` values — and a description on each, written in the admin Rounds tab under
+"What this round is about". Make them obviously different (for example "Doctors, nurses and
+paramedics" against a general round).
+
+**Steps:**
+1. Sign in as a member and open `/apps/skills-hunt` on the Scout tab.
+2. Before marking anything, read the top of the nomination form and try to submit.
+3. Fill in a nominee name, a Quora URL, a country and one skill. Try to submit again.
+4. Mark the round that is *not* first in the list. Read its row.
+5. Press the Refresh control in the header bar, then read the form again.
+6. Submit, read the confirmation, then open My finds.
+
+**Expected:** Step 2 — a field reading "Which round is this for? *" with one row per open round,
+each showing its name, its dates and its own description, and **no row marked**. The submit button
+is inactive. Step 3 — still inactive with every other field filled: the round is what is missing.
+Step 4 — that row alone carries the check mark. Step 5 — the same round is still marked; the
+refresh did not move it, and the form still holds what was typed. Step 6 — the confirmation reads
+"Submitted to *round name*" for the round marked in step 4, and My finds lists it under that round.
+With only one round open, that single row is marked already and the button behaves as it always did.
+
+**Regression guard:** this replaced a dropdown in a header above the form (2026-09-22). That picker
+set itself from whichever round sorts first and re-set itself every time the data loaded, so the
+refresh in step 5 moved a part-filled nomination to another round in silence. A round pre-marked in
+step 2 while two are open, or a marked round that changes on refresh, means that behavior is back.
+
+Result: web ☐
+
+---
+
+### SH-1d — A round whose dates have run out does not strand the scout
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Two rounds with `status = 'active'`: one inside its dates, one whose `ends_at` has
+passed (`UPDATE skills_hunt_rounds SET ends_at = NOW() - INTERVAL '1 day' WHERE id = '<round>';`).
+
+**Steps:**
+1. Open `/apps/skills-hunt` on the Scout tab.
+2. Mark the round whose dates have passed.
+3. Read what replaces the rest of the form, and check the round field is still there.
+4. Mark the round that is still inside its dates and submit a nomination.
+
+**Expected:** Step 3 — the "Nominations for *round name* have closed" notice sits where the fields
+were, naming the date it ran until, and the round field stays on screen with every round still
+markable. Step 4 — the fields come back and the nomination submits against the open round.
+
+**Regression guard:** before 2026-09-22 a closed round replaced the entire Scout tab, picker and
+all, so a member who landed on one had no way to reach another round from that screen.
 
 Result: web ☐
 
@@ -705,6 +763,42 @@ page holds everything, so the control hides itself.
 not a bare "Failed to load" — this is an admin screen (rule 137).
 
 Result: web ☐ mobile ☐
+
+---
+
+### SH-A4d — The queue says what the round wants, and accept asks a second time
+
+**Role:** admin/moderator · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** Two rounds — one with a description and a reward above zero
+(`reward_credits_per_accept`), one with the description left empty. At least one pending nomination
+in each.
+
+**Steps:**
+1. Open `/admin/skills-hunt` → **Moderation** and pick the round with a description.
+2. Read what sits between the round tabs and the reward banner, before touching a nomination.
+3. Press **Accept** on a nomination and read the dialog without confirming. Cancel it.
+4. Check the nomination's status and the "Paid so far" figure in the reward banner.
+5. Press **Accept** again and confirm this time.
+6. Press **Reject** on a different nomination, and **Flag** on another.
+7. Switch to the round with no description and read the same place, then press Accept and read the
+   dialog.
+
+**Expected:** Step 2 — a panel reading "*round name* is looking for: …" with that round's own
+description, above the Accept and Reject controls. Step 3 — a confirmation naming the nominee and
+the round, repeating what the round is looking for, and saying how many ServiceCredits go to which
+scout and that it cannot be undone from the app. Step 4 — the cancel changed nothing: the
+nomination is still pending and "Paid so far" has not moved. Step 5 — the accept goes through
+normally. Step 6 — reject and flag still act on one press; only accept asks twice, because only
+accept pays. Step 7 — no purpose panel for a round with no description, and the dialog still names
+the nominee, the round and the reward without an empty "is looking for" line.
+
+**Regression guard:** before 2026-09-22 this screen showed the round's name on a filter pill and its
+reward in a banner, said nothing about what the round wanted, and paid the reward on a single press
+of Accept with no confirmation. That is how a nomination unrelated to a round's subject was accepted
+and paid.
+
+Result: web ☐
 
 ---
 
