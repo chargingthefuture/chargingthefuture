@@ -40,7 +40,7 @@ Planning constraints applied:
 1. List active, upcoming, and closed SkillsHunt rounds.
 2. View round details including scoring config, rules, and dates.
 3. Submit entries only during active windows. "Active" means both halves: the round's status is `active` **and** today falls inside its start and end dates. The Scout tab checks the same condition the submit guard checks (`isRoundAcceptingSubmissions` in `lib/skills-hunt/round-window.ts`), so a round whose dates have run out shows a "Nominations have closed" panel naming the round and its end date instead of a nomination form. The leaderboard and My finds still read that round.
-4. **The round a member picks is kept, and the round says what it is looking for (2026-09-22).** With more than one round open the Scout tab draws a picker; the choice now survives a refresh instead of reverting to whichever round sorts first, and the round header shows the round's `description` under its dates. That description is the only place a round's subject is written — the Rounds tab labels the field "What this round is about" — and until now no member-facing screen drew it, so every round offered the same nomination form whatever it was asking for.
+4. **The round is a field on the nomination form, marked by the scout (2026-09-22, owner directive).** Every open round is a row in the form carrying its own check mark, its dates, and its `description` — the text the admin Rounds tab collects under the label "What this round is about", which no member-facing screen had ever drawn. With more than one round open nothing is marked to begin with and the submit button waits for a mark, so a nomination only ever lands in a round somebody chose; a single open round is marked already, there being nothing to choose between. The choice survives a refresh. This replaced a dropdown that sat in a header above the form, seeded itself from whichever round sorted first (`ORDER BY starts_at DESC`) and re-seeded on every refresh. A round whose dates have run out shows its "nominations have closed" notice in place of the rest of the form while its row stays markable, so a scout moves to another round instead of being stranded on a closed one.
 
 ### 1.2 Entry Submission Experience
 
@@ -97,6 +97,8 @@ Planning constraints applied:
 5. **The queue is paged, 25 nominations to a page (2026-09-20).** It asked for up to 100 rows in one request and drew no page control, so row 101 was unreachable and the queue read as an endless scroll — on a phone each nomination is a tall card with four action buttons, so a hundred of them is a scroll nobody finishes (owner report). Previous / Next sit under the list with "Page N of M", using the shared `Pager` (`components/shared/pager.tsx`), and the control hides itself when one page holds everything. Changing the round or the status filter returns to page 1, so narrowing a long list from a late page cannot land on an empty screen that reads as "no submissions". Select all and the bulk bar act on the page on screen, and the confirm says the count, so a bulk action never reaches a row nobody has looked at.
 
 6. **The round's purpose sits above the queue (2026-09-22).** The moderation screen showed the round's name on a filter tab and its reward in a banner, but never what the round was asking for, so a reviewer working a list of names and skill chips had nothing on screen to judge fit against. The round's `description` now reads above the Accept and Reject controls as "<round> is looking for: …", and the panel hides itself when a round has no description.
+
+7. **Accept asks a second time, and says what it is about to pay (2026-09-22, owner directive).** Accept is the one review action that mints credits, and the mint cannot be reversed from the app, so a single tap on a tall card was the entire distance between a glance and a paid reward. It now raises a confirmation naming the nominee and the round, repeating what that round is looking for, and stating the reward and the scout it goes to, in the same words on the bulk bar. Reject, flag and unflag pay nothing and stay one tap. The accept is never withheld — the dialog says what will happen and the reviewer decides.
 
 ### 2.3 Directory Seeding Governance
 
@@ -280,29 +282,32 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 7. ~~A progress bar reads past its target rather than stopping at it.~~ Decided (2026-09-18, owner): **cap it.** A mission with a target of 1 that counted 82 showed "82/1 complete" — the raw count, and not a mistake, but it reads as a fault in the bar. The count a member reads is now capped at the target in `lib/skills-hunt/mission-view.ts`; the stored count stays raw and the bar's width was already capped the same way. The case for leaving it honest was that an over-count is the signature of a mission pointed at the wrong goal — that signal now sits on the admin Missions list instead, which names what each mission counts in words with its sector or skill beside it, where the person who can correct it will see it.
 
-8. **A ServiceCredits reward paid on an accepted nomination cannot be reversed from the app.** `credit_granted` is the idempotency marker for the mint and is never unset once a reward is paid, so flipping an accepted nomination to rejected, flagged or removed rolls back its points, its mission progress and its leaderboard place, and leaves the credits with the scout. That is correct as a ledger rule — a minted credit a member may already have sent is not something a moderator should be able to take back silently — but it means an accept made in error has no in-app remedy, and the moderation screen does not say so at the moment of accepting. Two ways to settle it, and picking one is a decision rather than a build step: a reversing transfer an admin can raise against a named nomination, with the scout told why, or a confirmation step on accept for rounds that pay a reward, so the irreversible half is stated before it happens.
+8. **A ServiceCredits reward paid on an accepted nomination cannot be reversed from the app.** `credit_granted` is the idempotency marker for the mint and is never unset once a reward is paid, so flipping an accepted nomination to rejected, flagged or removed rolls back its points, its mission progress and its leaderboard place, and leaves the credits with the scout. That is correct as a ledger rule — a minted credit a member may already have sent is not something a moderator should be able to take back silently. Since 2026-09-22 the accept confirmation states it before it happens (§2.2), which is the guard the owner asked for; the remedy after the fact is still manual, the scout or the owner burning the credits by hand. A reversing transfer an admin could raise against a named nomination remains undesigned, and is a decision rather than a build step.
 
 ## 9) Change Log
 
-- 2026-09-22: **A nomination reached a round it was not meant for, and neither screen said what
-  that round wanted (owner report).** Three member-facing fixes and one admin one, all on shipped
-  screens. (1) **The chosen round is kept.** The Scout tab seeded the round from the first row of
-  `GET /api/skills-hunt/rounds?status=active`, and that effect re-runs on every refresh, so
-  pressing Refresh with a part-filled form moved the nomination to whichever round sorts first
+- 2026-09-22: **A nomination reached a round it was not meant for, was accepted, and paid its
+  reward (owner report).** The Scout tab seeded its round from the first row of
+  `GET /api/skills-hunt/rounds?status=active` and re-ran that on every refresh, so pressing
+  Refresh with a part-filled form moved the nomination to whichever round sorts first
   (`ORDER BY starts_at DESC`) and said nothing. Nothing clears the form when the round changes, so
-  the typed nomination carried over to the new target. With two rounds open at once a nomination
-  meant for one was filed under the other. The choice now survives a refresh; the round row is
-  re-read so its window, status and reward stay current, and the first round is used only when
-  nothing has been chosen yet or the chosen round has left the active list. (2) **The round's
-  purpose is on the nomination screen**, under the dates in the round header, read from the
-  `description` the Rounds tab collects under the label "What this round is about". No
-  member-facing screen had ever drawn that field. (3) **The confirmation names the round**, so a
-  wrong round is visible after submitting and not only before. (4) On the admin side the same
-  description reads above the Accept and Reject controls in the moderation queue. Not changed
-  here, and both recorded in §8: nothing compares a nomination's skills against the round, because
-  a round has no target to compare against — its subject lives in its name and description and in
-  no column; and a reward already minted on an accepted nomination still cannot be reversed from
-  the app, so an accept made in error leaves the credits with the scout.
+  the typed nomination went with it. With two rounds open at once a nomination meant for one was
+  filed under the other, and neither screen said what either round was for: the round's
+  `description` — collected in the Rounds tab under "What this round is about" — had never been
+  drawn on a member-facing screen, the confirmation named no round, and the moderation queue
+  showed the round's name on a filter pill and its reward in a banner and nothing about its
+  subject. **The round is now a field on the form, marked by the scout** (owner directive): one
+  row per open round with its check mark, dates and description, nothing marked when more than one
+  is open, and the submit button waiting for a mark. The dropdown and the header above the form
+  are gone. **Accept now asks a second time** (owner directive), naming the nominee and the round,
+  repeating what the round is looking for, and stating the reward and the scout it goes to —
+  because accept is the step that mints credits and the mint cannot be undone from the app. The
+  confirmation after submitting names the round, and the moderation queue shows the round's
+  description above the Accept and Reject controls. Not built, and recorded in §8: nothing compares
+  a nomination's skills against the round. A round has no target to compare against, and giving it
+  one from the taxonomy was refused on the owner's reading that the taxonomy does not carry every
+  skill or job title a round might ask for — so the guard is a person choosing, twice, with the
+  round's own words in front of them both times.
 
 - 2026-09-20: **Missions are a community-wide competition, and the Missions tab now reads that way
   (owner directive).** The tab drew the signed-in member's own progress, so the same mission read

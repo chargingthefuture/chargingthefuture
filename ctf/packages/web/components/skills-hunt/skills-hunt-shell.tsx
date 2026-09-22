@@ -132,14 +132,16 @@ export function SkillsHuntShell({
         if (!roundsRes.ok) throw new Error("rounds");
         const roundsData = (await roundsRes.json()) as { rounds: SkillsHuntRound[] };
         setRounds(roundsData.rounds);
-        // Keep the round the member chose. This effect re-runs on every refresh, and re-seeding
+        // The round is the scout's to choose, and this effect re-runs on every refresh. Seeding it
         // from rounds[0] moved a half-filled nomination to a different round without saying so
-        // (owner report: a nomination was filed under a round it was not meant for). The row is
-        // re-read so the window, status and reward stay current; the first round is a fallback
-        // only when nothing was chosen yet or the chosen one is no longer active.
+        // (owner report: a nomination was filed under a round it was not meant for), so the choice
+        // is kept and the row re-read to keep its window, status and reward current. With more
+        // than one round open nothing is chosen until the scout marks one in the form; a single
+        // open round is the round, since there is nothing to choose between. A chosen round that
+        // has left the active list clears the choice rather than sliding to its neighbour.
         setActiveRound((current) => {
-          if (!current) return roundsData.rounds[0] ?? null;
-          return roundsData.rounds.find((r) => r.id === current.id) ?? roundsData.rounds[0] ?? null;
+          if (current) return roundsData.rounds.find((r) => r.id === current.id) ?? null;
+          return roundsData.rounds.length === 1 ? roundsData.rounds[0] : null;
         });
         if (achRes.ok) {
           const achData = (await achRes.json()) as { achievements: SkillsHuntAchievement[] };
