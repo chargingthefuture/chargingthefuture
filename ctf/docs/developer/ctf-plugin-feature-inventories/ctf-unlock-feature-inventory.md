@@ -63,6 +63,28 @@ This plugin must:
 3. Wherever they land, the Commons shows the verification banner above the chat, so the Quora URL is
    still asked for — it is no longer the only thing they can do.
 
+### 1.5 What Gets an Account Banned (member-facing)
+
+Stated plainly on the Unlock screen, under a "What gets an account banned" heading a member opens
+themselves. It is there rather than only in the guide because a ban now reaches further than this
+app: it closes the account itself, so anything else a member signs into with the same account closes
+with it, and a rule with that reach should not be something somebody finds out by hitting it. It is
+closed by default — somebody arriving to verify is not there to read a list of ways to be removed.
+
+1. Signing up to harass people here gets the account banned. That includes the address it is signed
+   up with — an address chosen to mock somebody is the harassment, not a preamble to it.
+2. Running a second account when one already exists gets the second one banned. The first is
+   untouched.
+3. Not finishing verification is not one of them. An account that never sends a profile address stays
+   where it is, with the access that tier carries, for as long as it takes. Nobody is removed for
+   being slow, for being unable to find their profile address, or for asking for help instead.
+4. A ban is not a deletion and it can be lifted. The account stays and so does the record of it; an
+   admin reversing the decision restores access without the member doing anything.
+
+The distinction in the third item is the one that matters to write down. Most people who have not
+finished are not the people rules 1 and 2 describe, and a member reading a ban policy should not have
+to guess which group a wall of silence puts them in.
+
 ## 2) Admin Features
 
 ### 2.1 Moderation Queue
