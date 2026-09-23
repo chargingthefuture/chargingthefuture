@@ -273,6 +273,27 @@ needed to authenticate `infisical run`.
 - The primary development environment is GitHub Codespaces.
 - All environment-type updates, additions, and tooling changes must be reflected in the devcontainer setup (e.g., .devcontainer/setup.sh, devcontainer.json) to ensure reproducibility and zero manual steps on container start.
 
+## One-Shot Workflows Are Deleted When They Are Done (owner directive, 2026-09-23)
+
+A workflow written to do something once — create a service, wire two systems together, run a
+backfill — is removed once it has done it, along with any script only it used. Not kept in case it
+is wanted again.
+
+Every entry in the Actions list is something somebody might press. A list that mixes live
+operations with finished one-offs makes the dangerous press and the routine one look alike, and the
+finished ones pile up faster than anybody prunes them.
+
+Git history keeps the work. A copy recovered from history also gets read in full by whoever
+recovers it, which is the review a finished workflow sitting in the list never gets — so recovery
+is safer than leaving it there, not worse.
+
+So the sequence is: ship the workflow, run it, confirm it did what it was for, then delete it in
+the same piece of work. Say so in the workflow's own header when you write it, so the next person
+reading it knows it is temporary.
+
+Recurring workflows are the opposite and stay: deploys, CI gates, scheduled checks, anything with a
+next run. The test is whether it has one.
+
 ## Branch Naming (Critical — all agents)
 
 - Always create a descriptive, task-named branch and develop on it. Use a Conventional-Commit-style prefix plus a short kebab-case summary of the task: e.g. `feat/survivor-hub-feed-consolidation`, `fix/feed-csrf-dedup`, `chore/agent-branch-naming-rule`, `docs/brand-voice-lexicon`.
