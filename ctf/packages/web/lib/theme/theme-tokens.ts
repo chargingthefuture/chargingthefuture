@@ -74,6 +74,10 @@ export const PLUGIN_ACCENTS: Record<string, AccentPair> = {
   // 3.90:1 — every control on the screen was painted in a color that fails AA, which is most of
   // why the entire page read as washed out (owner report, 2026-09-14).
   fireside: { standard: '#F4794F', comic: '#7A3320' },
+  // Reader: a slate blue that reads as text on a page rather than a signal light — the reader is
+  // somewhere to read, not a broadcast, so it deliberately does not borrow Beacon's red or TI
+  // Radio's amber. Light enough to pass AA on this background and under a black button label.
+  reader: { standard: '#60A5FA', comic: '#22406E' },
 };
 
 const FALLBACK_ACCENT: AccentPair = { standard: '#6B7280', comic: '#7A6A50' };

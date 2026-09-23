@@ -31,6 +31,7 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   'recurring-activity': { emoji: '🔁', color: '#14B8A6', bg: '#021412' },
   trust: { emoji: '🛡️', color: '#0EA5E9', bg: '#02121A' },
   unlock: { emoji: '🔓', color: '#D946EF', bg: '#18081A' },
+  reader: { emoji: '📰', color: '#60A5FA', bg: '#0A1220' },
 };
 
 const FALLBACK: PluginVisuals = { emoji: '🔌', color: '#9CA3AF', bg: '#1a1a2e' };

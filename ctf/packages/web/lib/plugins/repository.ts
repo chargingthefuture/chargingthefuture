@@ -266,6 +266,14 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
+    slug: 'reader',
+    name: 'Reader',
+    summary: 'A feed reader on a server this project pays for. Sign in with this account; your subscriptions are yours alone and nobody else on it can see them.',
+    availabilityState: 'implemented_shell',
+    navRank: 280,
+    isVisible: true,
+  },
+  {
     slug: 'ti-radio',
     name: 'TI Radio',
     summary: 'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.',

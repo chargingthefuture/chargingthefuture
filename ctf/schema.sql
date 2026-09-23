@@ -2901,7 +2901,8 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
   ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE),
   ('fireside',           'Fireside',             'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.','implemented_shell', 260, TRUE),
-  ('ti-radio',           'TI Radio',             'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.','implemented_shell', 270, TRUE)
+  ('ti-radio',           'TI Radio',             'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.','implemented_shell', 270, TRUE),
+  ('reader',             'Reader',               'A feed reader on a server this project pays for. Sign in with this account; your subscriptions are yours alone and nobody else on it can see them.','implemented_shell', 280, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
