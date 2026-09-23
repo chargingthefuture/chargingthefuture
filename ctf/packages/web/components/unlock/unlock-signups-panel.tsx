@@ -129,6 +129,44 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
     }
   }
 
+  // Ban an account outright, or lift that ban. Two writes on the server: the row the counts read, and
+  // the ban at the auth provider that actually stops the sign-in. A provider failure still writes the
+  // row, carrying the reason, so the ban shows as needing another press instead of silently not
+  // happening.
+  async function toggleBanned(userId: string, banned: boolean) {
+    setBusyUserId(userId);
+    setError(null);
+    try {
+      const res = await fetch('/api/unlock/admin/banned-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ userId, banned }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; code?: string; providerOk?: boolean; providerReason?: string | null }
+        | null;
+      if (!res.ok) {
+        setError(data?.message ?? data?.code ?? `Update failed (${res.status}).`);
+        return;
+      }
+      if (data?.providerOk === false) {
+        setError(data.providerReason ?? 'The account was recorded but the auth provider did not apply the ban.');
+      }
+      setAccounts((prev) =>
+        prev.map((account) =>
+          account.userId === userId
+            ? { ...account, banned, bannedReason: banned ? 'perp' : null, bannedAt: banned ? new Date().toISOString() : null }
+            : account,
+        ),
+      );
+      router.refresh();
+    } catch (caught) {
+      setError(failureText(caught, { area: 'unlock', op: 'ban_account', fallback: 'Network error. Try again.' }));
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
   // Enter the Quora URL an admin found for a member who never gave one. Creates the same pending
   // submission the member would have created — it approves nobody, so the row then goes through the
   // ordinary review on the queue below. The server stamps it as admin-entered.
@@ -231,6 +269,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                       account={account}
                       busy={busyUserId === account.userId}
                       onToggleExcluded={(userId, excluded) => void toggleExcluded(userId, excluded)}
+                      onToggleBanned={(userId, banned) => void toggleBanned(userId, banned)}
                       onAddUrl={(userId, url) => void addUrl(userId, url)}
                     />
                   ))}

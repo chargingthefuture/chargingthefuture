@@ -1686,6 +1686,33 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS excluded
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Accounts an admin has banned outright. Separate from the demo/test exclusion above and from an
+-- account deletion, because it means something else: a real person really signed up, was judged, and
+-- should not hold a login anywhere this project runs.
+--
+-- A row here is paired with a ban at the auth provider. The row is what the admin page reads and what
+-- keeps the ban countable; the provider ban is what actually stops the sign-in, on this app and on
+-- anything else the same provider fronts. Neither one alone is the gate.
+--
+-- Nothing here is deleted when a ban is lifted by mistake and re-applied, and nothing here deletes the
+-- account: these rows are the record of who arrived and what they did.
+--
+-- reason is the shape of the judgment ('spam', 'duplicate', or 'perp' for an account blocked from the
+-- sign-up list without ever submitting a Quora URL), not free text for an admin to compose.
+CREATE TABLE IF NOT EXISTS unlock_banned_accounts (
+  user_id TEXT PRIMARY KEY,
+  reason TEXT NOT NULL,
+  note TEXT,
+  banned_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT 'perp';
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS banned_by_user_id TEXT;
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Members who asked for help from the Unlock screen instead of submitting a Quora URL. Pressing that
 -- button is what lets them into the Commons (support-only) straight away, so there is somebody to ask.
 -- Without a row here a first-time member has no submission, so no access tier, so no way to reach the
