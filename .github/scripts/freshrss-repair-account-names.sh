@@ -47,8 +47,15 @@
 set -uo pipefail
 
 service="${SERVICE_NAME:-ctf-freshrss}"
+mode="${MODE:-repair}"
 
 fail() { echo "::error title=Account names not repaired::$1"; exit 1; }
+
+# Every line that reaches the job summary or the run log goes through this
+# first. A workflow log in this repository is public, and an account name here
+# is somebody's email address. The service's own log, which only the owner can
+# read, keeps the names; this does not.
+redact() { sed -E 's/[^[:space:]]*@[^[:space:]]*/[address]/g'; }
 
 [ -n "${RENDER_API_KEY:-}" ] || fail "RENDER_API_KEY is not set on this run, so the Render API cannot be called."
 
@@ -73,6 +80,47 @@ case "$status" in
 esac
 service_id=$(jq -r --arg n "$service" 'map(.service) | map(select(.name == $n)) | .[0].id // empty' /tmp/render.json 2>/dev/null || true)
 [ -n "$service_id" ] || fail "No Render service named '${service}'."
+owner_id=$(jq -r --arg n "$service" 'map(.service) | map(select(.name == $n)) | .[0].ownerId // empty' /tmp/render.json 2>/dev/null || true)
+
+# ── What the service said ─────────────────────────────────────────────────────
+# A start command that the container refuses shows up here as a deploy that
+# ended, with nothing to say why. The reason is in the service's own events and
+# log, and reading them is the difference between fixing the command and
+# guessing at it. Read-only: this changes nothing.
+report() {
+  echo "── The service's recent events ──"
+  if [ -n "$owner_id" ]; then
+    api GET "/events?serviceId=${service_id}&limit=15" >/dev/null || true
+    jq -r '[.[] | .event] | sort_by(.timestamp) | reverse | .[] |
+      "\(.timestamp)  \(.type)  \(.details.reason.reasonText // .details.status // .details.exitCode // "" | tostring)"' \
+      /tmp/render.json 2>/dev/null | redact || echo "(events could not be read)"
+  fi
+
+  echo ""
+  echo "── The last lines the container printed ──"
+  local logs_status
+  logs_status=$(api GET "/logs?ownerId=${owner_id}&resource=${service_id}&limit=60&direction=backward" || true)
+  case "$logs_status" in
+    2*) jq -r '.logs[]? | "\(.timestamp)  \(.message)"' /tmp/render.json 2>/dev/null | redact || true ;;
+    404|403) echo "(Render did not serve the log over the API on this plan — HTTP ${logs_status})" ;;
+    *) echo "(the log could not be read — HTTP ${logs_status:-none})" ;;
+  esac
+}
+
+if [ "$mode" = diagnose ]; then
+  echo "Reading only. Nothing is changed."
+  report | tee /tmp/report.txt
+  {
+    echo "### What the reader said"
+    echo ""
+    echo '```'
+    cat /tmp/report.txt
+    echo '```'
+    echo ""
+    echo "Account names are replaced with \`[address]\` above, because this log is public. The service's own log keeps them."
+  } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+  exit 0
+fi
 
 # ── The repair command ────────────────────────────────────────────────────────
 # Written without any quote characters of its own, because Render splits this
@@ -136,7 +184,12 @@ deploy_id=$(deploy || true)
 [ -n "$deploy_id" ] || fail "Render accepted the start command but started no deploy, so the repair has not run. The service is now carrying the repair command and needs putting back."
 
 repaired=yes
-wait_for_deploy "$deploy_id" || repaired=no
+if ! wait_for_deploy "$deploy_id"; then
+  repaired=no
+  # Read why before putting the command back, while the failed start is still
+  # the most recent thing the service has to say about itself.
+  report | tee /tmp/report.txt
+fi
 
 # ── Put the start command back ────────────────────────────────────────────────
 # Done whether or not the repair worked. Leaving a one-off command on a service
@@ -170,6 +223,16 @@ fi
     echo "An account made on arrival is an ordinary one, so the settings screen will not be reachable from it. Say so if that happens: granting it takes another run of this, once the account exists to grant it to."
   else
     echo "The repair deploy did not finish. The reader is unchanged and still refuses sign-in."
+    if [ -s /tmp/report.txt ]; then
+      echo ""
+      echo "What the service said:"
+      echo ""
+      echo '```'
+      cat /tmp/report.txt
+      echo '```'
+      echo ""
+      echo "Account names are replaced with \`[address]\` above, because this log is public."
+    fi
   fi
   echo ""
   if [ "$restored" = yes ]; then
