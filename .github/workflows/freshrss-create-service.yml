@@ -38,7 +38,14 @@ jobs:
         env:
           CONFIRM: ${{ inputs.confirm }}
         run: |
-          if [ "$CONFIRM" != "create" ]; then
+          # Trimmed and lower-cased before comparing. This box is filled in on a
+          # phone, where the keyboard capitalizes the first letter by default and
+          # a trailing space arrives from autocomplete — an exact match rejects
+          # both, which reads as the workflow being broken rather than as a typo.
+          # The word still has to be typed; only the keyboard's additions are
+          # forgiven.
+          typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          if [ "$typed" != "create" ]; then
             echo "::error title=Not confirmed::Type create in the confirmation box to start a paid service."
             exit 1
           fi
