@@ -15,6 +15,12 @@ name: FreshRSS — Wire sign-in with the app
 # One secret this repository does not already hold: CLERK_SECRET_KEY, the auth
 # provider's backend key. Everything else is here — the issuer address is
 # decoded from the publishable key rather than typed.
+#
+# Delete this workflow, and the script only it uses, once it has run and sign-in
+# works. It does one thing once. Git history keeps it if the reader is ever
+# rebuilt, and a copy recovered from history gets read in full by whoever
+# recovers it — which is the review a finished workflow sitting in the Actions
+# list never gets.
 
 on:
   workflow_dispatch:
