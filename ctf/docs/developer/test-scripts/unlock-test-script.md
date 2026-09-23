@@ -550,6 +550,67 @@ page or the route. If the auth provider secret is missing from the runtime, the 
 itself and prints the reason in plain words, and the rest of the admin page still loads.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A9b · Ban an account from the sign-up list, and have the ban hold at the auth provider
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** signed in as an admin; the auth provider secret is set in the app runtime; a test
+account that signed up and never submitted a Quora URL, whose password you hold.
+**Steps:**
+1. Open `/admin/unlock`, open the Sign-ups panel, and find that account on the **No Quora URL** tab.
+2. Press **Ban this account**, read the confirm line, then press **Confirm ban**.
+3. Watch the Members and Banned numbers, and the row's chip and detail line.
+4. Open the **Banned** tab, then the **No Quora URL** tab again.
+5. Sign out and try to sign in as that account.
+6. Back as admin, find the row on the **Banned** tab and press **Lift this ban**.
+7. Sign in as that account again.
+**Expected:** Step 2 asks before it acts — the first press only reveals the confirm line, and Cancel
+leaves everything as it was. Step 3: `POST /api/unlock/admin/banned-accounts` writes the row and bans
+the account at the auth provider (audited `unlock.admin.signups.ban`); Members drops by one and Banned
+rises by one immediately, the chip reads `Banned`, and the detail line says when and that they are
+signed out of this app and anything else they sign into with the account. Step 4: the row is on
+**Banned** and gone from **No Quora URL**; the **Add Quora URL** control is no longer offered on it.
+Step 5: the sign-in is refused by the provider — the ban is not this app's access alone. Step 6 lifts
+it with no confirm, because restoring access is repeatable and reversing it again is one press. Step 7:
+they sign in, and the account is back in the member count. Banning your own account is refused with a
+plain message. If the provider refuses the ban, the row is still written, the screen says so in plain
+words, and the account stays signed-in-able — a ban an admin believes in but that never reached the
+provider is the failure this is guarding against, so it is shown rather than swallowed.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A9c · A blocking review decision bans the account too, and a later approve lifts it
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a submission that can be marked spam, and the ability to sign in as that member.
+**Steps:**
+1. Mark the submission **spam** (confirm the block), as in UNLOCK-A2b.
+2. As that member, try to sign in from a signed-out browser.
+3. Back as admin, open the Sign-ups panel's **Banned** tab and find that account.
+4. Re-review the same submission to **Approved**.
+5. As that member, sign in again.
+**Expected:** Step 1 does everything UNLOCK-A2b describes and also bans the account at the auth
+provider, recording the row with reason `spam`. Step 2: the sign-in is refused — previously the member
+kept a working login to the provider and only lost this app's access, which is what this covers. Step
+3: the row's detail line names the reason as `marked spam`, and the account is out of the member count
+so the share who finished Unlock is not dragged down by it. Step 4 lifts the ban as well as restoring
+the tier, so Step 5 signs in normally. The same holds for a **duplicate** decision, which bans that
+account and leaves the member's original untouched (UNLOCK-A2e).
+**Result:** web ☐ — notes:
+
+### UNLOCK-M4 · What gets an account banned, said on the Unlock screen
+**Role:** member · **Surfaces:** web + android
+**Precondition:** signed in on an account at any verification status.
+**Steps:**
+1. Open the Unlock / verification status screen and scroll past the status card and the help card.
+2. Find the **What gets an account banned** row and read it without pressing anything.
+3. Press it, read all four paragraphs, then press again.
+**Expected:** Step 2: it is closed — a member arriving to verify sees a heading and a Read control,
+not a list of ways to be removed. Step 3 opens it and names two things that do get an account banned
+(harassing people here, including through the address the account signs up with; running a second
+account when you already have one) and one that does not: not finishing verification. That third
+paragraph is the one to check is present and legible, because a member waiting in a long queue should
+not have to guess whether silence means they are in trouble. The last paragraph says a ban closes the
+account rather than this app alone, and that it is not a deletion and can be lifted. Pressing again
+closes it.
+**Result:** web ☐ · android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
