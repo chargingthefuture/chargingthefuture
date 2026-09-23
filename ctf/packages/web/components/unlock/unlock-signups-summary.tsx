@@ -29,8 +29,10 @@ export function UnlockSignupsSummary({ counts, truncated }: { counts: SignupCoun
     <>
       <div style={{ fontSize: 11, color: t.MUTED, marginBottom: 10, lineHeight: 1.6 }}>
         {counts.totalAccounts} account{counts.totalAccounts === 1 ? '' : 's'} in total, {counts.excludedCount}{' '}
-        marked demo / test and {counts.deletedCount} who deleted their data. Someone who signs up and
-        never gives a Quora URL never reaches the review queue, so they are listed here instead.
+        marked demo / test, {counts.bannedCount} banned and {counts.deletedCount} who deleted their
+        data. None of those three are in the member count, so the share who gave a Quora URL is the
+        share of people who could have finished. Someone who signs up and never gives a Quora URL never
+        reaches the review queue, so they are listed here instead.
         {truncated ? ' Only the most recent accounts were read, so these numbers are a floor.' : ''}
       </div>
 
@@ -39,6 +41,7 @@ export function UnlockSignupsSummary({ counts, truncated }: { counts: SignupCoun
         <SignupStat label="Gave a Quora URL" value={counts.submittedCount} accent="#22C55E" />
         <SignupStat label="No Quora URL" value={counts.notSubmittedCount} accent="#F59E0B" />
         <SignupStat label="Demo / test" value={counts.excludedCount} />
+        <SignupStat label="Banned" value={counts.bannedCount} accent="#EF4444" />
         <SignupStat label="Left" value={counts.deletedCount} />
       </div>
 

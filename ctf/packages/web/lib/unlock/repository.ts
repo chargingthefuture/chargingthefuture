@@ -1,5 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { addUnlockBannedAccount, removeUnlockBannedAccount } from './banned-accounts';
+import { banAccountWithProvider, unbanAccountWithProvider } from './provider-ban';
 import { recordQuoraUrlChangeStandalone, type QuoraUrlChangeSource } from 'lib/shared/directory-interface';
 import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
 import type {
@@ -9,6 +11,7 @@ import type {
   UnlockAccessTier,
   UnlockDashboardSnapshot,
   UnlockQueueFilters,
+  UnlockReviewStatus,
   UnlockStatus,
   UnlockSubmission,
 } from './types';
@@ -541,8 +544,68 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
     reportError(error, { area: 'unlock', op: 'sync_spam_denylist', extra: { submissionId: input.submissionId } });
   }
 
+  // Keep the auth provider in step with the decision, so one decision on one screen is the whole ban.
+  //
+  // Dropping access_tier above stops this app letting them in and stops nothing else. The provider is
+  // what any other surface signing people in through it asks, and until this call it kept answering
+  // yes for an account an admin had already judged. Both blocking decisions ban: 'duplicate' removes
+  // app access exactly as 'spam' does, and it is this account being shut, never the original.
+  //
+  // Best-effort in the same way as the denylist, and for the same reason — the decision is committed
+  // and a provider outage must not roll it back. The difference is that a silently missing ban leaves
+  // an admin believing somebody is out when they are not, so the outcome is recorded either way and
+  // the row carries it to the admin page.
+  await syncProviderBanForDecision({
+    userId: submission.userId,
+    reviewStatus: input.reviewStatus,
+    actorUserId: input.actorUserId,
+    submissionId: input.submissionId,
+  });
+
   return submission;
 }
+
+// Put the auth provider in step with a review decision, and record the ban so the admin page can count
+// it. Its own function so reviewUnlockSubmission stays inside the rule-116 complexity limit.
+//
+// Never throws. The review decision is already committed by the time this runs, so a provider outage
+// must not roll it back or fail the caller. A failure is reported instead, and the recorded row keeps
+// the refusal, so an admin sees a ban that needs another press rather than believing in one that never
+// happened.
+async function syncProviderBanForDecision(input: {
+  userId: string;
+  reviewStatus: UnlockReviewStatus;
+  actorUserId: string;
+  submissionId: number;
+}): Promise<void> {
+  const blocking = input.reviewStatus === 'spam' || input.reviewStatus === 'duplicate';
+  const extra = { submissionId: input.submissionId };
+
+  try {
+    if (blocking) {
+      const outcome = await banAccountWithProvider(input.userId);
+      await addUnlockBannedAccount({
+        userId: input.userId,
+        reason: input.reviewStatus,
+        note: outcome.ok ? null : outcome.reason,
+        actorUserId: input.actorUserId,
+      });
+      if (!outcome.ok) {
+        reportError(new Error(outcome.reason), { area: 'unlock', op: 'ban_account_with_provider', extra });
+      }
+      return;
+    }
+
+    const outcome = await unbanAccountWithProvider(input.userId);
+    await removeUnlockBannedAccount(input.userId);
+    if (!outcome.ok) {
+      reportError(new Error(outcome.reason), { area: 'unlock', op: 'unban_account_with_provider', extra });
+    }
+  } catch (error) {
+    reportError(error, { area: 'unlock', op: 'sync_provider_ban', extra });
+  }
+}
+
 
 // Admin correction path: overwrite the stored Quora profile URL (and its normalized form) for a
 // single submission, e.g. when a member submitted a link with a typo. Does not touch review status,

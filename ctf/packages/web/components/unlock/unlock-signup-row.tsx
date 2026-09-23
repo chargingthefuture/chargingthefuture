@@ -4,10 +4,12 @@ import type { UnlockSignupAccount } from 'lib/unlock/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
 import { UnlockSignupAddUrl } from './unlock-signup-add-url';
+import { UnlockSignupBan } from './unlock-signup-ban';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
 function statusChip(account: UnlockSignupAccount): { label: string; color: string } {
+  if (account.banned) return { label: 'Banned', color: '#EF4444' };
   if (account.deletedTheirData) return { label: 'Deleted their data', color: '#6B7280' };
   if (!account.hasSubmission) return { label: 'No Quora URL', color: '#F59E0B' };
   if (account.reviewStatus === 'approved') return { label: 'Approved', color: '#22C55E' };
@@ -59,6 +61,22 @@ function helpHintLine(account: UnlockSignupAccount): string | null {
   return `Told us: ${account.quoraHint}`;
 }
 
+// Said only for a banned account: when it happened, and which judgment put them there — a review
+// decision on their submission, or a ban straight from this list for somebody who never submitted.
+function banLine(account: UnlockSignupAccount): string | null {
+  if (!account.banned) return null;
+  const on = shortDate(account.bannedAt);
+  const why =
+    account.bannedReason === 'spam'
+      ? 'marked spam'
+      : account.bannedReason === 'duplicate'
+        ? 'marked a duplicate account'
+        : 'banned from this list';
+  return on
+    ? `Banned on ${on} — ${why}. Signed out of this app and anything else they sign into with it. Not counted.`
+    : `Banned — ${why}. Signed out of this app and anything else they sign into with it. Not counted.`;
+}
+
 // Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
 // data, so the row would otherwise read as "never gave a Quora URL" with nothing to explain it.
 function departureLine(account: UnlockSignupAccount): string | null {
@@ -82,6 +100,20 @@ function DetailLine({ text, breakAll = false }: { text: string | null; breakAll?
   );
 }
 
+// Whether an admin can enter a Quora URL on this row: only where there is nothing on file and
+// somebody left to approve. A member who deleted their data is gone, one who already has a URL is
+// changed from the Edit control on their queue card so an "add" can never quietly overwrite what they
+// gave, and a banned account is not going through review.
+function canAddUrl(account: UnlockSignupAccount): boolean {
+  return !account.hasSubmission && !account.deletedTheirData && !account.banned;
+}
+
+// Whether the ban control shows. Not offered for an account that already asked to be forgotten: they
+// are gone, and there is nothing left to sign out.
+function canBan(account: UnlockSignupAccount): boolean {
+  return !account.deletedTheirData;
+}
+
 // One signed-up account in the Unlock admin's sign-up list: who they are, when they joined, whether they
 // ever came back, what happened to their Quora URL, and the button that takes them out of (or puts them
 // back into) the sign-up counts.
@@ -89,11 +121,13 @@ export function UnlockSignupRow({
   account,
   busy,
   onToggleExcluded,
+  onToggleBanned,
   onAddUrl,
 }: {
   account: UnlockSignupAccount;
   busy: boolean;
   onToggleExcluded: (userId: string, excluded: boolean) => void;
+  onToggleBanned: (userId: string, banned: boolean) => void;
   onAddUrl: (userId: string, url: string) => void;
 }) {
   const { theme } = useTheme();
@@ -116,14 +150,17 @@ export function UnlockSignupRow({
       <DetailLine text={helpHintLine(account)} breakAll />
       <DetailLine text={timingLine(account)} />
       <DetailLine text={screenViewLine(account)} />
+      <DetailLine text={banLine(account)} />
       <DetailLine text={departureLine(account)} />
       <DetailLine text={account.excludedNote ? `Note: ${account.excludedNote}` : null} />
 
       {/* Only where there is nothing on file and somebody left to approve: a member who deleted their
           data is gone, and one who already has a URL is changed from the Edit control on their queue
           card, so that an "add" can never quietly overwrite what they gave. */}
-      {!account.hasSubmission && !account.deletedTheirData ? (
-        <UnlockSignupAddUrl userId={account.userId} busy={busy} onAdd={onAddUrl} />
+      {canAddUrl(account) ? <UnlockSignupAddUrl userId={account.userId} busy={busy} onAdd={onAddUrl} /> : null}
+
+      {canBan(account) ? (
+        <UnlockSignupBan userId={account.userId} banned={account.banned} busy={busy} onToggleBanned={onToggleBanned} />
       ) : null}
 
       <button

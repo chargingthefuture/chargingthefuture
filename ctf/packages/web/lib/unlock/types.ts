@@ -125,6 +125,24 @@ export type UnlockExcludedAccount = {
   updatedAt: string;
 };
 
+// Why an account was banned. Not free text: an admin picks the judgment, and the wording that goes
+// with it lives in one place rather than being retyped per ban. 'spam' and 'duplicate' come from a
+// review decision on a submission; 'perp' is an account banned straight from the sign-up list, which
+// is the only route available for somebody who never submitted a Quora URL at all.
+export type UnlockBanReason = 'spam' | 'duplicate' | 'perp';
+
+// One banned account. Separate from an excluded (demo/test) account and from a deleted one: this is a
+// real person who really signed up and was judged, recorded so the pattern stays countable. The row is
+// paired with a ban at the auth provider, which is the half that actually stops a sign-in.
+export type UnlockBannedAccount = {
+  userId: string;
+  reason: string;
+  note: string | null;
+  bannedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // One signed-up account as the Unlock admin's sign-up panel shows it: who they are, when they joined,
 // and whether they ever gave us a Quora URL. Identity comes from the auth provider (an account that
 // never submitted has no row of ours to read a name from); the submission fields come from
@@ -144,6 +162,12 @@ export type UnlockSignupAccount = {
   // counted as "signed up, never gave a Quora URL" — the opposite of what happened.
   deletedTheirData: boolean;
   deletedAt: string | null;
+  // True when an admin has banned this account. The sign-up counters leave it out of memberCount, the
+  // same way a demo/test mark does, so the share of real people who finished Unlock is not dragged
+  // down by accounts nobody expected to finish. The ban itself is still counted, in bannedCount.
+  banned: boolean;
+  bannedReason: string | null;
+  bannedAt: string | null;
   hasSubmission: boolean;
   reviewStatus: UnlockReviewStatus | null;
   submittedAt: string | null;
@@ -172,9 +196,15 @@ export type UnlockSignupOverview = {
   totalAccounts: number;
   // How many of those an admin has marked demo/test.
   excludedCount: number;
+  // How many of the rest an admin has banned outright.
+  bannedCount: number;
   // How many of the rest deleted their data (an account-scope row in account_deletion_events).
   deletedCount: number;
-  // totalAccounts - excludedCount - deletedCount: the people we treat as real sign-ups.
+  // totalAccounts - excludedCount - bannedCount - deletedCount: the people we treat as real sign-ups.
+  // Banned accounts come out of this denominator on purpose. Leaving them in reports the share of
+  // everyone who ever signed up, which answers a question nobody is asking; taking them out reports
+  // the share of people who could have finished and did. Neither number is hidden — bannedCount is
+  // right above.
   memberCount: number;
   // Of memberCount, how many have a Quora URL on file, in any review state.
   submittedCount: number;

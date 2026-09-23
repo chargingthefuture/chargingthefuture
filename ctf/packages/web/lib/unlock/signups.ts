@@ -3,6 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 import { getClerkSecretKey } from 'lib/auth/clerk-env';
 import { failureReason } from 'lib/errors/failure';
 import { listUnlockExcludedAccounts } from './excluded-accounts';
+import { listUnlockBannedAccounts } from './banned-accounts';
 import type { UnlockReviewStatus, UnlockSignupAccount, UnlockSignupOverview } from './types';
 
 // Who has signed up, and which of those people never gave us a Quora URL.
@@ -172,6 +173,55 @@ function neverReturned(account: { createdAt: string; lastSignInAt: string | null
   return account.lastSignInAt.slice(0, 10) === account.createdAt.slice(0, 10);
 }
 
+// Everything the overview joins onto one provider account. Passed as one object so the builder below
+// takes three arguments rather than seven.
+type AccountMarks = {
+  excludedUserIds: Map<string, string | null>;
+  bannedAccounts: Map<string, { reason: string; bannedAt: string }>;
+  deletedDates: Map<string, string>;
+  screenViews: Map<string, number>;
+  quoraHints: Map<string, string>;
+};
+
+// One provider account joined to everything we know about it. Its own function so the overview below
+// stays inside the rule-116 complexity limit — the joining is a list of lookups, and reading it is
+// easier without the surrounding assembly.
+function buildSignupAccount(
+  account: ProviderAccount,
+  submission: SubmissionFact | null,
+  marks: AccountMarks,
+): UnlockSignupAccount {
+  return { ...account, ...adminMarkFields(account.userId, marks), ...submissionFields(submission) };
+}
+
+// The three admin marks an account can carry — demo/test, banned, deleted their data — plus the two
+// supporting readings. Split from the builder above so each function stays inside the rule-116
+// complexity limit.
+function adminMarkFields(userId: string, marks: AccountMarks) {
+  const banned = marks.bannedAccounts.get(userId) ?? null;
+  return {
+    excluded: marks.excludedUserIds.has(userId),
+    excludedNote: marks.excludedUserIds.get(userId) ?? null,
+    banned: banned !== null,
+    bannedReason: banned?.reason ?? null,
+    bannedAt: banned?.bannedAt ?? null,
+    deletedTheirData: marks.deletedDates.has(userId),
+    deletedAt: marks.deletedDates.get(userId) ?? null,
+    unlockScreenViews: marks.screenViews.get(userId) ?? 0,
+    quoraHint: marks.quoraHints.get(userId) ?? null,
+  };
+}
+
+// What happened to this account's Quora URL, for an account that has one. All three fields are null
+// together when they never submitted, which is the case this panel exists for.
+function submissionFields(submission: SubmissionFact | null) {
+  return {
+    hasSubmission: submission !== null,
+    reviewStatus: submission?.reviewStatus ?? null,
+    submittedAt: submission?.submittedAt ?? null,
+  };
+}
+
 function emptyOverview(unavailableReason: string): UnlockSignupOverview {
   return {
     available: false,
@@ -179,6 +229,7 @@ function emptyOverview(unavailableReason: string): UnlockSignupOverview {
     truncated: false,
     totalAccounts: 0,
     excludedCount: 0,
+    bannedCount: 0,
     deletedCount: 0,
     memberCount: 0,
     submittedCount: 0,
@@ -202,19 +253,22 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
 
   let submissions: Map<string, SubmissionFact>;
   let excludedUserIds: Map<string, string | null>;
+  let bannedAccounts: Map<string, { reason: string; bannedAt: string }>;
   let deletedDates: Map<string, string>;
   let screenViews: Map<string, number>;
   let quoraHints: Map<string, string>;
   try {
-    const [facts, excluded, deleted, views, hints] = await Promise.all([
+    const [facts, excluded, banned, deleted, views, hints] = await Promise.all([
       listSubmissionFacts(),
       listUnlockExcludedAccounts(),
+      listUnlockBannedAccounts(),
       listDeletedAccountDates(),
       countUnlockScreenViews(),
       listQuoraHints(),
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
+    bannedAccounts = new Map(banned.map((entry) => [entry.userId, { reason: entry.reason, bannedAt: entry.createdAt }]));
     deletedDates = deleted;
     screenViews = views;
     quoraHints = hints;
@@ -222,26 +276,22 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
 
-  const accounts: UnlockSignupAccount[] = roster.accounts.map((account) => {
-    const submission = submissions.get(account.userId) ?? null;
-    return {
-      ...account,
-      excluded: excludedUserIds.has(account.userId),
-      excludedNote: excludedUserIds.get(account.userId) ?? null,
-      deletedTheirData: deletedDates.has(account.userId),
-      deletedAt: deletedDates.get(account.userId) ?? null,
-      hasSubmission: submission !== null,
-      reviewStatus: submission?.reviewStatus ?? null,
-      submittedAt: submission?.submittedAt ?? null,
-      unlockScreenViews: screenViews.get(account.userId) ?? 0,
-      quoraHint: quoraHints.get(account.userId) ?? null,
-    };
-  });
+  const marks: AccountMarks = { excludedUserIds, bannedAccounts, deletedDates, screenViews, quoraHints };
+  const accounts: UnlockSignupAccount[] = roster.accounts.map((account) =>
+    buildSignupAccount(account, submissions.get(account.userId) ?? null, marks),
+  );
 
-  // A demo/test mark wins over a deletion mark, so an account is only ever taken out of the member
-  // count once.
-  const deletedCount = accounts.filter((account) => !account.excluded && account.deletedTheirData).length;
-  const counted = accounts.filter((account) => !account.excluded && !account.deletedTheirData);
+  // One account is only ever taken out of the member count once, so the three marks are ranked rather
+  // than added up: a demo/test mark wins over a ban, and a ban wins over a deletion. The order is
+  // arbitrary except that each account lands in exactly one bucket and the buckets sum to
+  // totalAccounts.
+  const bannedCount = accounts.filter((account) => !account.excluded && account.banned).length;
+  const deletedCount = accounts.filter(
+    (account) => !account.excluded && !account.banned && account.deletedTheirData,
+  ).length;
+  const counted = accounts.filter(
+    (account) => !account.excluded && !account.banned && !account.deletedTheirData,
+  );
   const submittedCount = counted.filter((account) => account.hasSubmission).length;
   const notSubmitted = counted.filter((account) => !account.hasSubmission);
 
@@ -251,6 +301,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     truncated: roster.truncated,
     totalAccounts: accounts.length,
     excludedCount: accounts.filter((account) => account.excluded).length,
+    bannedCount,
     deletedCount,
     memberCount: counted.length,
     submittedCount,

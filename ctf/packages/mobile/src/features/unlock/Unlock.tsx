@@ -95,6 +95,56 @@ function QuoraHelp({ s, accent, onHelped }: { s: Styles; accent: string; onHelpe
   );
 }
 
+// What gets an account banned, said where a member reads the rules of the gate.
+//
+// It is here rather than only in the guide because a ban closes the account itself rather than this
+// app's access to it, so it reaches anything else a member signs into with the same account. A rule
+// with that reach should not be something somebody finds out by hitting it.
+//
+// Closed by default. Somebody arriving to verify is not there to read a list of ways to be removed,
+// and leading with it reads as suspicion of a person who has done nothing. The third paragraph is the
+// one worth opening it for: not finishing is not a ban, and a member sitting in a long queue should
+// not have to guess whether silence means they are in trouble.
+function BanPolicy({ s, accent }: { s: Styles; accent: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <View style={s.banPolicy}>
+      <TouchableOpacity
+        onPress={() => setOpen((prev) => !prev)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={s.banPolicyHeader}
+      >
+        <Text style={s.banPolicyTitle}>What gets an account banned</Text>
+        <Text style={[s.banPolicyToggle, { color: accent }]}>{open ? 'Hide' : 'Read'}</Text>
+      </TouchableOpacity>
+
+      {open ? (
+        <View style={{ marginTop: 8 }}>
+          <Text style={s.banPolicyBody}>
+            Signing up to harass people here gets the account banned. That includes the address it is
+            signed up with — an address chosen to mock somebody is the harassment, not a preamble to it.
+          </Text>
+          <Text style={[s.banPolicyBody, { marginTop: 8 }]}>
+            Running a second account when you already have one gets the second one banned. Your first
+            is untouched.
+          </Text>
+          <Text style={[s.banPolicyBody, s.banPolicyEmphasis, { marginTop: 8 }]}>
+            Not finishing this step is not one of them. An account that never sends a profile address
+            stays where it is, with the access that carries, for as long as it takes. Nobody is removed
+            for being slow, for not finding their profile address, or for asking for help instead.
+          </Text>
+          <Text style={[s.banPolicyBody, { marginTop: 8 }]}>
+            A ban closes the account rather than this app alone, so anything else you sign into with it
+            closes too. It is not a deletion and it can be lifted.
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 // Loading state
 function LoadingView({ s, t }: { s: Styles; t: ThemeTokens }) {
   return (
@@ -203,6 +253,7 @@ function SubmissionView({
       </View>
       <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
       <QuoraHelp s={s} accent={accent} onHelped={onSubmitted} />
+      <BanPolicy s={s} accent={accent} />
       {error ? <Text style={s.errorText}>{error}</Text> : null}
       <TouchableOpacity
         onPress={handleSubmit}
@@ -391,6 +442,10 @@ function StatusView({
         />
       )}
 
+      {/* Shown whatever the verification status is: the rules of the gate are the same for a member
+          waiting, a member turned down, and a member already through. */}
+      <BanPolicy s={s} accent={accent} />
+
       {/* What gets unlocked */}
       <View style={s.benefitsCard}>
         <Text style={s.benefitsHeading}>What gets unlocked</Text>
@@ -531,5 +586,20 @@ function makeStyles(t: ThemeTokens, accent: string) {
     quoraHelpTitle: { fontSize: 14, fontWeight: '800', color: t.textPrimary, marginBottom: 5 },
     quoraHelpBody: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
     quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
+    banPolicy: {
+      marginTop: 12,
+      marginBottom: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: t.radius,
+      backgroundColor: t.surface,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    banPolicyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    banPolicyTitle: { fontSize: 13, fontWeight: '800', color: t.textPrimary, flex: 1 },
+    banPolicyToggle: { fontSize: 12, fontWeight: '700' },
+    banPolicyBody: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
+    banPolicyEmphasis: { color: t.textPrimary },
   });
 }

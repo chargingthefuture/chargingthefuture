@@ -202,6 +202,47 @@ contracts:
     idempotency: true
 
   - pluginId: unlock
+    command: unlock.admin.signups.ban
+    version: 1.0.0
+    description: >-
+      Ban one account outright from the Unlock admin's sign-up list, or lift that ban. The only route to
+      a ban for somebody who never submitted a Quora URL — the spam and duplicate decisions hang off a
+      submission row, so an account that signed up and stopped had no control beside it. Two writes: the
+      unlock_banned_accounts row the admin page reads and counts, and a ban at the auth provider, which
+      is what actually stops a sign-in on this app and on anything else the same provider fronts. A
+      provider failure does not fail the command: the row is written carrying the refusal, providerOk
+      comes back false, and the admin page shows the ban needs another press. Reversible, and it never
+      deletes the account — the row is the record of who arrived. Refused when the caller names their
+      own account.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      banned:
+        type: boolean
+        required: true
+      note:
+        type: string
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+      userId:
+        type: string
+      banned:
+        type: boolean
+      providerOk:
+        type: boolean
+      providerReason:
+        type: string
+    dataAccess:
+      - unlock_banned_accounts
+      - unlock_audit_log
+    purpose: abuse_prevention
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: unlock
     command: unlock.admin.submission.create
     version: 1.0.0
     description: >-

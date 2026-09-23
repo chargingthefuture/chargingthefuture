@@ -7,6 +7,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { STATUS_CONFIG, getUnlockTokens, type DisplayStatus } from "./unlock-shared";
 import { UnlockStatusCard } from "./unlock-status-card";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
+import { UnlockBanPolicy } from "./unlock-ban-policy";
 import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 
 export function UnlockStatusView({
@@ -50,6 +51,7 @@ export function UnlockStatusView({
             being approved, and an approved member is just as likely to have lost some. */}
         <SurveyInviteNote accent={t.ACCENT} muted={t.MUTED} title={t.TITLE} />
       </div>
+      <UnlockBanPolicy />
     </>
   );
 

@@ -4,21 +4,28 @@
 
 import type { UnlockSignupAccount } from 'lib/unlock/types';
 
-export type SignupTab = 'not-submitted' | 'all' | 'excluded' | 'deleted';
+export type SignupTab = 'not-submitted' | 'all' | 'excluded' | 'banned' | 'deleted';
 
-export const SIGNUP_TABS: readonly SignupTab[] = ['not-submitted', 'all', 'excluded', 'deleted'];
+export const SIGNUP_TABS: readonly SignupTab[] = ['not-submitted', 'all', 'excluded', 'banned', 'deleted'];
 
 export const TAB_LABEL: Record<SignupTab, string> = {
   'not-submitted': 'No Quora URL',
   all: 'All sign-ups',
   excluded: 'Demo / test',
+  banned: 'Banned',
   deleted: 'Left',
 };
 
-// Whether this account counts as a member: not a demo/test account, and not someone who deleted their
-// data. A demo/test mark wins over a deletion mark so nobody is subtracted twice.
+// Whether this account counts as a member: not a demo/test account, not banned, and not someone who
+// deleted their data. The three marks are ranked — demo/test, then banned, then deleted — so nobody is
+// subtracted twice.
+//
+// Banned accounts come out on purpose. Left in, the share who finished Unlock reports what fraction of
+// everyone who ever signed up got through, which is a question about how many perps arrived rather than
+// about how the step is working. Taken out, it reports the share of people who could have finished and
+// did. The ban count sits beside it, so nothing is hidden by the choice.
 export function isCounted(account: UnlockSignupAccount): boolean {
-  return !account.excluded && !account.deletedTheirData;
+  return !account.excluded && !account.banned && !account.deletedTheirData;
 }
 
 // Has this member never signed in again since the day they signed up? A hint, not proof — the provider
@@ -42,7 +49,10 @@ export function summarize(accounts: UnlockSignupAccount[]) {
   return {
     totalAccounts: accounts.length,
     excludedCount: accounts.filter((account) => account.excluded).length,
-    deletedCount: accounts.filter((account) => !account.excluded && account.deletedTheirData).length,
+    bannedCount: accounts.filter((account) => !account.excluded && account.banned).length,
+    deletedCount: accounts.filter(
+      (account) => !account.excluded && !account.banned && account.deletedTheirData,
+    ).length,
     memberCount: counted.length,
     submittedCount: submitted,
     notSubmittedCount: notSubmitted.length,
@@ -58,7 +68,10 @@ export function summarize(accounts: UnlockSignupAccount[]) {
 export function accountsForTab(accounts: UnlockSignupAccount[], tab: SignupTab): UnlockSignupAccount[] {
   if (tab === 'not-submitted') return accounts.filter((account) => isCounted(account) && !account.hasSubmission);
   if (tab === 'excluded') return accounts.filter((account) => account.excluded);
-  if (tab === 'deleted') return accounts.filter((account) => !account.excluded && account.deletedTheirData);
+  if (tab === 'banned') return accounts.filter((account) => !account.excluded && account.banned);
+  if (tab === 'deleted') {
+    return accounts.filter((account) => !account.excluded && !account.banned && account.deletedTheirData);
+  }
   return accounts;
 }
 

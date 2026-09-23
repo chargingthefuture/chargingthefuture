@@ -63,6 +63,28 @@ This plugin must:
 3. Wherever they land, the Commons shows the verification banner above the chat, so the Quora URL is
    still asked for — it is no longer the only thing they can do.
 
+### 1.5 What Gets an Account Banned (member-facing)
+
+Stated plainly on the Unlock screen, under a "What gets an account banned" heading a member opens
+themselves. It is there rather than only in the guide because a ban now reaches further than this
+app: it closes the account itself, so anything else a member signs into with the same account closes
+with it, and a rule with that reach should not be something somebody finds out by hitting it. It is
+closed by default — somebody arriving to verify is not there to read a list of ways to be removed.
+
+1. Signing up to harass people here gets the account banned. That includes the address it is signed
+   up with — an address chosen to mock somebody is the harassment, not a preamble to it.
+2. Running a second account when one already exists gets the second one banned. The first is
+   untouched.
+3. Not finishing verification is not one of them. An account that never sends a profile address stays
+   where it is, with the access that tier carries, for as long as it takes. Nobody is removed for
+   being slow, for being unable to find their profile address, or for asking for help instead.
+4. A ban is not a deletion and it can be lifted. The account stays and so does the record of it; an
+   admin reversing the decision restores access without the member doing anything.
+
+The distinction in the third item is the one that matters to write down. Most people who have not
+finished are not the people rules 1 and 2 describe, and a member reading a ban policy should not have
+to guess which group a wall of silence puts them in.
+
 ## 2) Admin Features
 
 ### 2.1 Moderation Queue
@@ -144,7 +166,18 @@ This plugin must:
    again. Nothing on the account itself says it is not a real member, so the exclusion is recorded in
    `unlock_excluded_accounts` by an admin. Marking changes only the counters — never the member's
    access, submission, or reward.
-4. **Tell a bounce from a person who is stuck.** The sign-up panel breaks the "No Quora URL" number
+4. **Ban an account, and have the ban hold everywhere.** A blocking review decision (`spam` or
+   `duplicate`) now also bans the account at the auth provider, and the sign-up list carries its own
+   Ban control for an account that never submitted a Quora URL at all — previously the only blocking
+   controls hung off a submission row, so those accounts showed on the admin page with no action
+   beside them. A ban is two writes: the `unlock_banned_accounts` row the admin page reads, and the
+   provider ban that actually stops a sign-in, on this app and on anything else the same provider
+   fronts. Reversible in both directions: any non-blocking review decision lifts the ban, and the
+   sign-up list's control lifts it directly. Banned accounts come out of the member count (their own
+   count sits beside it), so the share who finished Unlock reports the people who could have finished
+   rather than being dragged down by accounts nobody expected to finish. A ban never deletes: the row
+   and the account stay, so who arrived stays countable.
+5. **Tell a bounce from a person who is stuck.** The sign-up panel breaks the "No Quora URL" number
    into how many never signed in again after the day they signed up, how many came back and still did
    not submit, and how many times a typical one of them loaded the Unlock screen (counted from
    `unlock.status.get` audit rows). Those two groups need different answers — one is a discovery or
@@ -152,7 +185,7 @@ This plugin must:
    rather than leaving an admin to read it off row by row. The view count is the firmer of the two
    signals: a sign-in date only moves on a fresh sign-in, so a member with a live session can come back
    repeatedly without it changing. Each row carries its own view count.
-5. **The panel opens and closes, and the list comes a page at a time.** The panel starts closed with
+6. **The panel opens and closes, and the list comes a page at a time.** The panel starts closed with
    one line of its own — the member count and how many have no Quora URL — so the review queue below it
    is the first thing on the page instead of being pushed past a full roster. Opening it shows the
    counts, the tabs, the search box, and the first ten sign-ups; "Show 10 more" adds another ten and
@@ -171,7 +204,7 @@ This plugin must:
    needed a manual approval were the ones nobody could approve. A member who already has a URL is not
    offered this: changing one is the Edit control, so an "add" can never quietly overwrite what the
    member gave.
-6. See who left. An account with an account-scope row in `account_deletion_events` asked to be
+7. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
    count, their own tab, and a line on the row saying when they asked, and they are subtracted from the
@@ -193,7 +226,8 @@ This plugin must:
 9. `unlock.admin.spam_denylist.remove`
 10. `unlock.admin.signups.read`
 11. `unlock.admin.signups.exclude`
-12. `unlock.help.request`
+12. `unlock.admin.signups.ban`
+13. `unlock.help.request`
 
 ### 3.2 HTTP Projection Routes
 
@@ -212,6 +246,7 @@ Admin routes:
 - `POST /api/unlock/admin/reconcile-rewards` — admin-session-gated (`requireUnlockAdminAccess`, no `CRON_SECRET`). Runs the same idempotent reward drain as the cron and returns `{ scanned, granted, alreadyGranted, withheld, failed }`. Lets an admin grant any approved-but-uncredited reward on demand from the Unlock admin screen (the "Retry pending rewards" button), independent of the GitHub cron. Audited as `unlock.admin.rewards.reconcile`.
 - `POST /api/unlock/admin/submissions/:submissionId/revoke` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Duplicate-identity determination "loser" path: claws a granted reward back (best-effort `burnCredits`, key `unlock-revoke-submission-<id>`) and sets the submission to `rejected` + `locked_support_only` with `reward_revoked_at`, so reconcile never re-grants it. Body `{ reviewNote? }`. Returns `{ ok, submission, creditsReclaimed, reclaimAmount }`; idempotent (a second call on an already-revoked submission is a no-op). Audited as `unlock.admin.submission.revoke` (+ `service-credits.governance.burn.unlock.revoke` when credits were reclaimed).
 - `POST /api/unlock/admin/submissions/:submissionId/grant-reward` — admin-session-gated + CSRF. Duplicate-identity determination "winner" path: clears the hold and grants the reward to the chosen account through the shared guard. Returns 409 `unlock_reward_still_held` (with `holderUserId`) if another account still holds the identity's reward (revoke that one first); 409 if the submission is not approved; otherwise `{ ok, submission }`. Idempotent if the reward already landed. Audited as `unlock.admin.reward.grant` (+ `service-credits.governance.mint.grant.unlock.determination` on a fresh grant).
+- `POST /api/unlock/admin/banned-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Bans one account outright, or lifts that ban. Body `{ userId, banned, note? }` (`note` is capped at 200 characters); returns `{ ok: true, userId, banned, providerOk, providerReason }`, 400 on a missing `userId`, a non-boolean `banned`, or an attempt to ban your own account. Writes `unlock_banned_accounts` and calls the auth provider's ban/unban. A provider failure does not fail the request: the row is still written carrying the reason, `providerOk` comes back false, and the admin page shows that the ban needs another press rather than reporting one that never happened. Idempotent in both directions. Audited as `unlock.admin.signups.ban`, with `reason: 'provider_ban_failed'` when the provider refused.
 - `POST /api/unlock/admin/excluded-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Marks one account as demo / test so the sign-up counters leave it out, or puts it back. Body `{ userId, excluded, note? }` (`note` is capped at 200 characters); returns `{ ok: true, userId, excluded }`, 400 on a missing `userId` or a non-boolean `excluded`. Idempotent in both directions — re-marking refreshes the note, unmarking an account that was never marked is a no-op. Writes `unlock_excluded_accounts` only: it never touches the member's access tier, submission, or reward. Audited as `unlock.admin.signups.exclude`. The list itself is read server-side by the admin page (`getUnlockSignupOverview`) and shown in the admin shell's sign-up panel.
 - `POST /api/unlock/admin/spam-denylist/remove` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Removes one normalized Quora URL from `unlock_spam_quora_urls`. Body `{ quoraProfileUrlNormalized }`; returns `{ ok: true }`, 400 if missing. Only stops future submissions of that URL from being auto-blocked — it does not lift the restriction on a member already blocked for it (re-review their submission to approved/rejected for that). The denylist itself is read server-side by the admin page (`listSpamQuoraUrls`) and shown in the admin shell's denylist panel. Audited as `unlock.admin.spam_denylist.remove`.
 
@@ -272,7 +307,17 @@ Admin page:
    account deletes their data, the marker goes with it (the account it names no longer exists, so the
    row would count for nothing).
 
-6. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
+6. `unlock_banned_accounts` — the accounts an admin has banned outright. Keyed on `user_id` (primary
+   key); also stores `reason` (`'spam'` / `'duplicate'` from a review decision, or `'perp'` for a ban
+   applied straight from the sign-up list), `note` (null normally; carries the provider's refusal when
+   a ban did not take), `banned_by_user_id`, `created_at`, `updated_at`. Paired with a ban at the auth
+   provider — the row is what the admin page reads and what keeps the ban countable, the provider ban
+   is what stops the sign-in. Distinct from `unlock_excluded_accounts`, which is fiction an admin
+   created and the counters ignore; these are real people who really signed up and were judged. Not
+   registered for deletion: the row is the record of who arrived, and it names an account that still
+   exists.
+
+7. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
    of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at` and `quora_hint`
    (nullable free text, capped at 300 characters by the writer). It is what admits a member with no
    submission to the Commons, and it doubles as the count of how many people could not get through the
@@ -407,6 +452,28 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-09-23: **A blocking decision stopped at our own database, so a banned member kept a working
+  login to the auth provider.** Marking a submission `spam` or `duplicate` wrote `review_status` and
+  dropped `access_tier`, and nothing else. That was the entire gate for as long as this app was the
+  only surface the provider fronted; anything else signing people in through the same provider asks
+  the provider rather than us, and it kept answering yes for an account an admin had already judged.
+  Both blocking decisions now ban the account at the provider, and every non-blocking decision lifts
+  that ban, so the existing promise that a spam mark is reversible still holds. A second gap went
+  with it: the Spam and Duplicate buttons hang off a submission row, so an account that signed up and
+  never gave a Quora URL appeared on the sign-up list with no control beside it — which is how a
+  number of judged accounts came to be sitting there un-actioned. That list now carries its own Ban
+  control, behind a confirm, with a Banned tab and a Banned count. New table
+  `unlock_banned_accounts` (retained on account deletion, because a row that disappeared on request
+  would make deleting your data the way back in) plus `POST /api/unlock/admin/banned-accounts`,
+  command `unlock.admin.signups.ban`, audited, CSRF-guarded, and refused when an admin names their
+  own account. A provider refusal does not fail the request: the row is written carrying the reason
+  and the response says the ban did not take, because an admin believing in a ban that never happened
+  is worse than a visible failure. Banned accounts now come out of the member count the way demo/test
+  and deleted accounts already did, so the share who finished Unlock reports the people who could
+  have finished rather than being pulled down by accounts nobody expected to finish; the ban count
+  sits beside it, so nothing is hidden by the choice. A ban never deletes — the account and the row
+  stay, so who arrived stays countable.
 
 - 2026-09-18: **One Quora profile could sign up three times without anything noticing (owner
   report).** The owner sent a queue card for an approved, rewarded account and said that URL had

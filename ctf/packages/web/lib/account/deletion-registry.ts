@@ -581,6 +581,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // Counter-only marker: it says "leave this account out of the admin sign-up numbers" and grants
       // nothing. Once the account is gone the row counts for nothing, so it goes with the rest.
       del('unlock_excluded_accounts', 'user_id', 'The admin marker that left your account out of the sign-up counts.'),
+      // Retained, unlike the counter-only marker above, because deleting it would undo the ban. A ban
+      // is keyed on the account id and is what keeps somebody out of this app and anything else the
+      // auth provider fronts; a row that disappears on request would make "delete your data" the way
+      // back in. The account is banned rather than deleted at the provider, so the id this row names
+      // still exists.
+      retain(
+        'unlock_banned_accounts',
+        'A record that this account was banned, retained for abuse prevention: deleting it would lift the ban.',
+      ),
       del(
         'unlock_help_requests',
         'user_id',
