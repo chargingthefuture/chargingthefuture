@@ -160,6 +160,27 @@ decision in review — it looks like the house style. **Adding a fourth exceptio
 decision, never a build step. Ask first.** The fourth was asked for and decided on 2026-09-13;
 that it happened does not make a fifth ordinary.
 
+## What the Gate Costs, and What It Does Not (owner decision, 2026-09-23)
+
+Not finishing Unlock never costs somebody their account. They stay where they are, on the tier that
+carries, for as long as it takes. Nobody is removed for being slow, for not finding their Quora
+profile address, or for asking for help instead. The app says exactly that on the Unlock screen, and
+that line is load-bearing: most people who have not finished are not the people the ban rules
+describe, and a member waiting in a long queue should not have to guess which group silence puts
+them in.
+
+A place on a service this project pays to run is a different question and must never be written as
+the same one. Such a place is something a member earns by finishing the check or by contributing to
+what it costs, and it can be withdrawn when the bill makes that necessary. Losing one is not a ban:
+the account is untouched, the member keeps everything the app gives them, and they can come back to
+the service later. An agent writing about either must keep the two apart — collapsing them would put
+the product in the position of telling survivors that not finishing a step costs them their place
+here, which is false and is the opposite of what the gate is for.
+
+Whichever service ships first, its own announcement carries that rule and states it before anybody
+signs up. A rule somebody learns on the day it is used against them is the one that produces a
+grievance, and it would be the only true thing they could say about it afterwards.
+
 ## Credits Are Not Money (Critical — all agents)
 
 ServiceCredits and every in-app credit are a **non-fiat internal credits unit** — not money, not
