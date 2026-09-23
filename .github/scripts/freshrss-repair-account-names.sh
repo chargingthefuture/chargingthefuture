@@ -24,6 +24,14 @@
 # A folder is left alone when a lower-case one of the same name already exists,
 # so this can never merge two accounts into one or delete anything.
 #
+# It also makes sure the reader is set to create an account for anybody the
+# provider vouches for. That is the setting's own default and it is what makes
+# the reader hands-off, but it is not reachable from the settings screen, so a
+# reader that had it turned off could only ever be opened by an account that
+# already existed — and if the mismatch above deleted the last one, that is
+# nobody. The edit only changes the word false to true on that one line, so it
+# does nothing when the setting is already on or absent.
+#
 # Then it puts the start command back to the image's own, so the service is not
 # left carrying a repair it no longer needs.
 #
@@ -73,7 +81,7 @@ service_id=$(jq -r --arg n "$service" 'map(.service) | map(select(.name == $n)) 
 #
 # The tail of it is the image's own command, reproduced. Losing the OIDC flag
 # there would turn sign-in off while looking like it had worked.
-repair='/bin/sh -c "u=/var/www/FreshRSS/data/users; for d in $u/*/; do n=$(basename $d); l=$(basename $d | tr A-Z a-z); if [ $n != $l ] && [ ! -e $u/$l ]; then mv $d $u/$l; echo FreshRSS renamed account folder $n to $l; fi; done; ./cli/access-permissions.sh --only-userdirs; ([ -z $CRON_MIN ] || cron) && . /etc/apache2/envvars && exec apache2 -D FOREGROUND $([ -n $OIDC_ENABLED ] && [ $OIDC_ENABLED -ne 0 ] && echo -D OIDC_ENABLED)"'
+repair='/bin/sh -c "u=/var/www/FreshRSS/data/users; for d in $u/*/; do n=$(basename $d); l=$(basename $d | tr A-Z a-z); if [ $n != $l ] && [ ! -e $u/$l ]; then mv $d $u/$l; echo FreshRSS renamed account folder $n to $l; fi; done; sed -i /http_auth_auto_register/s/false/true/ /var/www/FreshRSS/data/config.php; ./cli/access-permissions.sh --only-userdirs; ([ -z $CRON_MIN ] || cron) && . /etc/apache2/envvars && exec apache2 -D FOREGROUND $([ -n $OIDC_ENABLED ] && [ $OIDC_ENABLED -ne 0 ] && echo -D OIDC_ENABLED)"'
 
 set_command() {
   # $1 = the start command, or an empty string to hand the service back to the
@@ -155,9 +163,11 @@ fi
   echo "### FreshRSS account names"
   echo ""
   if [ "$repaired" = yes ]; then
-    echo "Ran. Any account folder with a capital letter in it now has a lower-case name, which is the form the identity provider sends."
+    echo "Ran. Any account folder with a capital letter in it now has a lower-case name, which is the form the identity provider sends, and the reader is set to create an account for anybody the provider vouches for."
     echo ""
-    echo "Open the reader and sign in. If it still answers 403, the name in that message is not an account at all and needs creating."
+    echo "Open the reader and sign in. Either an account was there under the corrected name, or one is made on arrival."
+    echo ""
+    echo "An account made on arrival is an ordinary one, so the settings screen will not be reachable from it. Say so if that happens: granting it takes another run of this, once the account exists to grant it to."
   else
     echo "The repair deploy did not finish. The reader is unchanged and still refuses sign-in."
   fi
