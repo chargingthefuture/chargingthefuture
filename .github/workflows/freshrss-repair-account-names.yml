@@ -1,0 +1,51 @@
+name: FreshRSS — Repair account names
+
+# Makes every FreshRSS account folder name lower case, once.
+#
+# FreshRSS looks an account up by the exact name of its folder, and the identity
+# provider sends the address in lower case. An account created with a capital
+# letter therefore never matches: sign-in succeeds at the provider, the reader
+# finds no such account, and answers 403. The same mismatch locks everybody out
+# of the reader's own settings, so it cannot be fixed from inside.
+#
+# It works by setting the service's start command through Render's API, letting
+# it start once, then putting the start command back. A folder is left alone
+# when a lower-case one of the same name already exists, so no account can be
+# merged into another or lost.
+#
+# Delete this workflow, and the script only it uses, once the reader lets
+# somebody in. It does one thing once. Git history keeps it if the reader is
+# ever rebuilt, and a copy recovered from history gets read in full by whoever
+# recovers it — which is the review a finished workflow sitting in the Actions
+# list never gets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type repair to confirm. This restarts the reader twice.'
+        required: true
+        type: string
+
+jobs:
+  repair:
+    name: Repair account names
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          if [ "$typed" != "repair" ]; then
+            echo "::error title=Not confirmed::Type repair in the confirmation box to run this."
+            exit 1
+          fi
+
+      - name: Rename any account folder that is not lower case
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_NAME: ctf-freshrss
+        run: bash .github/scripts/freshrss-repair-account-names.sh
