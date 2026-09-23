@@ -239,6 +239,7 @@ read directly (verified against `secrets.*` references in `.github/workflows/`):
 | GitHub Actions — app/cron calls | `CRON_SECRET`, `SERVICE_CREDITS_INTERNAL_TOKEN`, `ACCOUNT_DELETE_SECRET` |
 | GitHub Actions — other services | `EXPO_TOKEN`, `GITLEAKS_LICENSE`, `NTFY_TOPIC` |
 | GitHub Actions — reader sign-in (`freshrss-wire-signin.yml`) | `CLERK_SECRET_KEY` |
+| GitHub Actions — reader account repair (`freshrss-repair-reader-account.yml`) | `FRESHRSS_ADMIN_USER` |
 | GitHub Actions — Stream fallback (read only when Infisical set nothing; `stream-guest-listener-setup.yml`) | `STREAM_API_KEY`, `STREAM_API_SECRET`, `STREAM_API_KEY_STAGING`, `STREAM_API_SECRET_STAGING` |
 
 Some of these (e.g. `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, the database URLs) are deliberate
