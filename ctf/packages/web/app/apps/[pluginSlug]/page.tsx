@@ -24,6 +24,7 @@ import { SkillsTaxonomyShell } from '@/components/skills-taxonomy/skills-taxonom
 import { TrustTransportShell } from '@/components/trust-transport/trust-transport-shell';
 import { ClickLogShell } from '@/components/click-log/click-log-shell';
 import { FiresideShell } from '@/components/fireside/fireside-shell';
+import { ReaderShell } from '@/components/reader/reader-shell';
 import { WhatWorksShell } from '@/components/what-works/what-works-shell';
 import { WorkforceShell } from '@/components/workforce/workforce-shell';
 import Link from 'next/link';
@@ -299,6 +300,13 @@ function renderPluginShellC(
 ): ReactNode | null {
   if (selectedPlugin.slug === 'mood') {
     return <MoodShell />;
+  }
+
+  if (selectedPlugin.slug === 'reader') {
+    // The reader runs on its own server. This page is where a member reads what it is and what a
+    // place on it costs before they meet another address and a sign-in prompt; the tile does not
+    // throw them straight onto the other domain.
+    return <ReaderShell />;
   }
 
   if (selectedPlugin.slug === 'trust') {
