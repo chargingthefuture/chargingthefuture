@@ -13,6 +13,11 @@ name: FreshRSS — Repair account names
 # when a lower-case one of the same name already exists, so no account can be
 # merged into another or lost.
 #
+# It also makes sure the reader creates an account for anybody the provider
+# vouches for, which covers the case where the mismatched account was deleted
+# rather than renamed: there is then nothing to rename and nothing to sign in
+# as, and that setting is the only thing that can make an account again.
+#
 # Delete this workflow, and the script only it uses, once the reader lets
 # somebody in. It does one thing once. Git history keeps it if the reader is
 # ever rebuilt, and a copy recovered from history gets read in full by whoever
