@@ -18,6 +18,12 @@ name: FreshRSS — Repair account names
 # rather than renamed: there is then nothing to rename and nothing to sign in
 # as, and that setting is the only thing that can make an account again.
 #
+# The diagnose mode reads the service's events and the last lines the container
+# printed, and changes nothing. A start command the container refuses shows up
+# on Render as a deploy that ended with no reason attached, and reading the log
+# is the difference between fixing the command and guessing at it. Account names
+# are replaced before anything reaches this log, which is public.
+#
 # Delete this workflow, and the script only it uses, once the reader lets
 # somebody in. It does one thing once. Git history keeps it if the reader is
 # ever rebuilt, and a copy recovered from history gets read in full by whoever
@@ -27,9 +33,17 @@ name: FreshRSS — Repair account names
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type repair to confirm. This restarts the reader twice.'
+      mode:
+        description: 'diagnose reads the service events and log and changes nothing. repair renames and restarts.'
         required: true
+        default: diagnose
+        type: choice
+        options:
+          - diagnose
+          - repair
+      confirm:
+        description: 'Type repair to confirm, when the mode is repair. This restarts the reader twice.'
+        required: false
         type: string
 
 jobs:
@@ -40,12 +54,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check the confirmation
+        if: ${{ inputs.mode == 'repair' }}
         env:
           CONFIRM: ${{ inputs.confirm }}
         run: |
           typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
           if [ "$typed" != "repair" ]; then
-            echo "::error title=Not confirmed::Type repair in the confirmation box to run this."
+            echo "::error title=Not confirmed::Type repair in the confirmation box to run this in repair mode."
             exit 1
           fi
 
@@ -53,4 +68,5 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           SERVICE_NAME: ctf-freshrss
+          MODE: ${{ inputs.mode }}
         run: bash .github/scripts/freshrss-repair-account-names.sh
