@@ -20,8 +20,8 @@ be right before somebody goes, not to prove the reader works, which its own serv
    mark, and it is not painted in the fallback gray every unknown plugin gets.
 2. Press it. The page opens at `/apps/reader` with a Reader header and a short paragraph saying a
    feed reader collects what sites publish, in the order they published it.
-3. Read the three cards. One says the blog is already in a new account and nothing else is added for
-   you. One says the reader cannot reach back before you start and does not notify you. One says
+3. Read the three cards. One says the blog and the demo-video channel are already in a new account
+   and nothing else is added for you. One says the reader cannot reach back before you start and does not notify you. One says
    what a place on it costs.
 4. Read the cost card to the end. It says losing a place is not a ban, that the account in this app
    is untouched, and that not finishing the check never costs anybody their account. If any of those

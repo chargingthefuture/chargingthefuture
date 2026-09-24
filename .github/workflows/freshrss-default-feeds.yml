@@ -1,0 +1,61 @@
+name: FreshRSS — Give new accounts the blog and the demo videos
+
+# Puts two feeds in every reader account made from now on: this blog and the
+# owner's demo-video channel, collected at feeds/youtube/mutilpe.xml. Once.
+#
+# The first run of this (as freshrss-default-blog-feed, 2026-09-23) wrote the
+# blog alone. FreshRSS reads data/opml.xml first and only falls back to its own
+# list when that file is absent, so the same file rewritten with two entries
+# changes what everybody gets from now on. The copy overwrites what is there.
+#
+# The reader's image carries no download tool, and Render expands anything
+# beginning with a dollar sign in a start command while leaving quotes as
+# ordinary text, so a shell one-liner that writes the file cannot be sent
+# either. Render's secret files can carry the content instead: written through
+# the API, mounted as a real file, copied into place by a start command that is
+# one plain copy and nothing else, then removed again.
+#
+# The mount path differs between Render's service kinds, so both known paths are
+# tried, one service start each. Those starts end with the container exiting
+# rather than serving, which Render reports as a failed deploy — the expected
+# shape of this. The last step hands the start command back and waits for the
+# service to be live.
+#
+# Accounts that already exist are unchanged; the announcement post carries a
+# link that adds the feed in one step.
+#
+# Delete this workflow, and the script only it uses, once a new account arrives
+# with both feeds in it. It does one thing once. Git history keeps it, and a copy
+# recovered from there gets read in full by whoever recovers it — which is the
+# review a finished workflow sitting in the Actions list never gets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type set to confirm. The reader is down for a few minutes.'
+        required: true
+        type: string
+
+jobs:
+  default-feed:
+    name: Give new accounts the blog and the demo videos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          if [ "$typed" != "set" ]; then
+            echo "::error title=Not confirmed::Type set in the confirmation box to run this."
+            exit 1
+          fi
+
+      - name: Write the file and copy it into place
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_NAME: ctf-freshrss
+        run: bash .github/scripts/freshrss-default-feeds.sh
