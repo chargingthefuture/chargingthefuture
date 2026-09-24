@@ -92,7 +92,8 @@ puts the same figures on the clipboard as plain text. The member's request is de
 `insufficient_role`. "inconsistent types deduced for parameter $1" under a red first line means the
 member id is no longer cast to text in the write (fixed 2026-09-24); that is a regression, file it.
 After `post/0038` has run, the fourteen-day list shows members on 2026-09-21 to 2026-09-23 wherever
-the command trails hold evidence for them, rather than 0.
+the command trails hold evidence for them, rather than 0; after `post/0039`, also members whose last
+Commons, Chyme or admin-area visit fell on those days.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A2 · Week navigation and review picker
