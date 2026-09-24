@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-23_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -506,6 +506,29 @@ A 'Show this page as one picture' control under the report turns the dashboard i
 1. Sign in and open GDP. The dashboard shows the Community Value Index at the top.
 2. Read Value by Source and Members by country under it for where the exchanges came from and where members are.
 3. If posts are open across the community, read the Value waiting to happen panel — and its sentence saying what that figure is and is not.
+
+## Reader
+
+_Last updated: 2026-09-23_
+
+Reader is a feed reader on a server this project pays for, for people who would rather not install or configure one: you sign in with the account you already have, and what you subscribe to is yours alone.
+
+A feed reader collects what sites publish, in the order they published it, and nothing decides what you see first. This one runs on a server the project pays for, so there is nothing to install or set up: you sign in with the same account you use here.
+
+The Reader tile opens a short page that says what the reader is and what a place on it costs, with an 'Open the reader' button that goes to rss.chargingthefuture.com in a new tab. A line under the button names that address and says the sign-in is this same account.
+
+A new reader account starts with two feeds and nothing else added for you: this project's blog, and the owner's channel of demo videos of the app. Everything else you read, you add yourself. Your list is yours — there is no shared list, and nobody else on the reader can see what you subscribe to.
+
+Two things it cannot do, and the page says so rather than leaving you to find out: it collects only from the day a feed is added, so nothing older than that ever arrives; and it never notifies anybody — it waits until you open it.
+
+A place on the reader is something you get by finishing Unlock or by contributing to what the server costs, and if the bill makes it necessary, places go to the people who did one of those. Losing a place is not a ban: your account in this app is untouched, and not finishing Unlock never costs anybody their account.
+
+**How to use it**
+
+1. Sign in and open Reader from the apps list; the tile carries a newspaper mark. It needs an approved account — before that, the tile opens the Unlock nudge instead.
+2. Read the three cards: what a new account starts with, what the reader cannot do, and what a place on it costs.
+3. Press 'Open the reader'. It opens rss.chargingthefuture.com in a new tab, and you sign in there with this same account.
+4. Add anything else you read there. The blog and the demo-video channel are already in a new account.
 
 ## Reporting a problem
 
