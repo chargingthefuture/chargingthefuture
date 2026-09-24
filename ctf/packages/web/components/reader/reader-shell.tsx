@@ -87,7 +87,7 @@ export function ReaderShell() {
 
         <Note title="What you get" tokens={t}>
           <p style={{ margin: 0 }}>
-            The blog is already in a new account. Add anything else you read, and your list is yours: no shared list, no
+            The blog and the demo-video channel are already in a new account. Add anything else you read, and your list is yours: no shared list, no
             comments, and no way for one account to see another.
           </p>
         </Note>
