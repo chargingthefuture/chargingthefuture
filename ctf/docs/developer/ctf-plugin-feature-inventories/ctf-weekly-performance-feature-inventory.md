@@ -238,6 +238,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-09-24: **Missed sign-in days rebuilt (owner request).** `post/0038_login_events_backfill_type_error_gap.sql` writes the member-days the type error refused, 2026-09-20 to 2026-09-24, from the same first-party evidence `post/0034` uses (a command-trail row with the member as actor, or a row the member wrote). Rows are marked `source = 'backfill_type_error_gap'`; days the live writer recorded are left alone. The window is fixed, so a re-run writes nothing new.
 - 2026-09-24: **Sign-in write fixed (owner report: the Sign-in record screen said the sign-in was not recorded, with "inconsistent types deduced for parameter $1").** The once-a-day write in `lib/engagement/login-activity.ts` used an uncast `$1` both as the inserted value and in the duplicate check. Production's `login_events.user_id` is the v2 `VARCHAR` while `schema.sql` declares `TEXT`, so Postgres read the parameter as two types and refused the statement for every member from 2026-09-20 until this fix. Both uses are now `$1::text`, which works on either column type; `login-activity.test.ts` pins the cast. Days missed in that window are not rebuilt here.
 - 2026-09-21: **Sign-in record screen (owner report: Daily Active Members sits at zero).** When the
   Active Members rows read zero, the question is whether the sign-in write is landing, and until
