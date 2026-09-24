@@ -51,15 +51,14 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
    before the capture workflow existed reads 0.) → web ☐ mobile ☐
 3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
-   as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards +
-   comparison chart; phone: week selector in the sticky header). There is no Export control anywhere
+   as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards; phone: week selector in the sticky header). There is no Export control anywhere
    (the export feature was removed 2026-07-19). Opening
    `/apps/weekly-performance` as an admin redirects straight to `/admin/weekly-performance` — there
    is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
    There is **no** "Active week / Set as active week" control and no open/locked/published
    status. → web ☐ mobile ☐
-4. **Numbers, not a spinner.** Metric cards and the this-week-vs-last-week comparison render real
-   values, not a stuck loading state. → web ☐ mobile ☐
+4. **Numbers, not a spinner.** Metric cards render real values, each with its change from the week
+   before, not a stuck loading state. → web ☐ mobile ☐
 
 ---
 
@@ -102,7 +101,7 @@ Commons, Chyme or admin-area visit fell on those days.
 1. Read the week history (current week back through prior weeks) and the current week.
 2. Scroll the list to the bottom and read the oldest week it offers.
 3. Pick a week to review (web admin picker, or the History tab on Android).
-4. Pick the oldest week — the launch week — and look for the comparison chart.
+4. Pick the oldest week — the launch week — and read the metric cards.
 **Expected:** Weeks use an ISO Monday start. The list is **continuous — it never skips a week**:
 every week from the current one back to the earliest tracked week (or a year, whichever is longer)
 appears, newest first, even for weeks with no activity (they read zero). The list **stops at the
