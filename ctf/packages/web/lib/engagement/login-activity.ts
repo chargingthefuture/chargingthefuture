@@ -33,13 +33,18 @@ function utcDayKey(now = new Date()): string {
 // fails the insert outright, which is exactly how a database with a stalled index build used to
 // end up recording nobody at all.
 //
+// `$1` is cast to text at both uses. Production's `user_id` is the v2 `VARCHAR`, not the `TEXT`
+// schema.sql declares, and an uncast `$1` is read as text in the SELECT list and as varchar in the
+// comparison, so Postgres refuses the statement with "inconsistent types deduced for parameter $1"
+// and nobody's sign-in is recorded. That is what happened from 2026-09-20 to 2026-09-24.
+//
 // One statement, used by both writers below, so the self-check on the admin Sign-in record screen
 // exercises exactly the write the identity gate makes and not a lookalike.
 const RECORD_MEMBER_DAY_SQL = `INSERT INTO login_events (user_id, created_at)
-     SELECT $1, NOW()
+     SELECT $1::text, NOW()
      WHERE NOT EXISTS (
        SELECT 1 FROM login_events
-       WHERE user_id = $1
+       WHERE user_id = $1::text
          AND (created_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date
      )
      ON CONFLICT DO NOTHING`;

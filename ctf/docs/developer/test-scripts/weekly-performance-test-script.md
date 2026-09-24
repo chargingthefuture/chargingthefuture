@@ -89,7 +89,8 @@ reads "NOT recorded" in red, the database's own error text is shown under it and
 Active Members rows will be wrong for the same reason. "Members today" is at least 1 (you), "Active
 this week" at least 1, and today's row in the fourteen-day list is at least 1. "Copy the reading"
 puts the same figures on the clipboard as plain text. The member's request is denied with
-`insufficient_role`.
+`insufficient_role`. "inconsistent types deduced for parameter $1" under a red first line means the
+member id is no longer cast to text in the write (fixed 2026-09-24); that is a regression, file it.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A2 · Week navigation and review picker
