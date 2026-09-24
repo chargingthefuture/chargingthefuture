@@ -207,6 +207,8 @@ record is placed (actor `system:unlock-spam-denylist`, reason `unlock:spam`). St
 member's submission does **not** appear in Pending — the admin never has to re-review the same spam
 Quora account. Step 5: the second member is blocked from the Commons and all plugins. Re-reviewing that
 URL to approved/rejected (in the admin queue) removes it from the denylist and lifts the block.
+After a database update, every submission marked spam should still have its URL in the denylist panel
+unless an admin removed it there; a missing one is the 2026-09-24 `post/0028` loss (restored by `post/0040`).
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2d · Spam denylist panel — view and remove a URL
