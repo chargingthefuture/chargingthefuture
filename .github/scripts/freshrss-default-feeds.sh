@@ -50,9 +50,10 @@ set -uo pipefail
 service="${SERVICE_NAME:-ctf-freshrss}"
 feed="https://chargingthefuture.github.io/chargingthefuture/feed.xml"
 site="https://chargingthefuture.github.io/chargingthefuture/"
-# The owner's own channel, collected by the blog repository's YouTube workflow.
-# Only demo videos of the app go up there; the handle is a random one.
-demo_feed="https://chargingthefuture.github.io/chargingthefuture/feeds/youtube/mutilpe.xml"
+# The owner's own channel, collected by chargingthefuture/rss-feeds (the feeds
+# live apart from the blog, with a disclaimer of their own). Only demo videos of
+# the app go up there; the handle is a random one.
+demo_feed="https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml"
 demo_site="https://www.youtube.com/@mutilpe"
 target=/var/www/FreshRSS/data/opml.xml
 

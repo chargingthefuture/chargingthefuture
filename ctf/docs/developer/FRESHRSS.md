@@ -55,7 +55,9 @@ account with that account's own SQLite database and settings, `data/opml.xml`, a
 
 `data/opml.xml` is what a brand-new account is given instead of the FreshRSS project's own default
 list. It holds two feeds and nothing else: this blog, and the owner's demo-video channel (the
-collected feed at `feeds/youtube/mutilpe.xml`, added 2026-09-23).
+feed collected by `chargingthefuture/rss-feeds` at
+`https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml`, added 2026-09-23; the
+collected feeds moved out of the blog repository on 2026-09-24).
 
 ## What is not backed up
 
