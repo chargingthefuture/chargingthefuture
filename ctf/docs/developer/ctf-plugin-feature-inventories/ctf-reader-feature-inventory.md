@@ -26,7 +26,8 @@ already have.
 - A tile in the apps list called Reader, opening a page that explains the reader in plain words.
 - An "Open the reader" button that goes to rss.chargingthefuture.com in a new tab, with a line
   underneath naming the address it opens and saying the sign-in is this same account.
-- A statement of what a new reader account starts with: this blog, and nothing else added for you.
+- A statement of what a new reader account starts with: this blog and the owner's demo-video
+  channel, and nothing else added for you (the channel joined the default list 2026-09-23).
 - A statement of what the reader cannot do: it collects only from the day a feed is added, and it
   never notifies anybody.
 - A statement of what a place on the reader costs, and that losing one is not a ban: the account in

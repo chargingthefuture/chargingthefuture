@@ -31,6 +31,16 @@
 --
 -- Re-runnable: canonicalizing an already-canonical value returns it unchanged, so a second run
 -- updates nothing and merges nothing.
+--
+-- One transaction, added 2026-09-24 after this file deleted a denylist row it never put back. The
+-- workflow reaches Neon through its connection pooler, which may hand each statement outside a
+-- transaction to a different server session. The stash below is a TEMP table, visible only to the
+-- session that created it, so on the 2026-09-24 run the DELETE ran and the INSERT that should have
+-- restored the rows failed with `relation "unlock_spam_quora_urls_canonical" does not exist`: the
+-- deleted row was committed as gone. Inside one transaction every statement runs on the session that
+-- holds the stash, and a failure rolls the DELETE back. post/0040 restores what that run lost. As with
+-- post/0027, this changes where the statements run, not what they do.
+BEGIN;
 
 -- 1) The submissions themselves. No unique constraint on this column (the table is keyed on
 --    user_id), so several rows collapsing onto one canonical value is exactly what should happen.
@@ -89,3 +99,5 @@ SELECT
 FROM unlock_spam_quora_urls_canonical;
 
 DROP TABLE IF EXISTS unlock_spam_quora_urls_canonical;
+
+COMMIT;

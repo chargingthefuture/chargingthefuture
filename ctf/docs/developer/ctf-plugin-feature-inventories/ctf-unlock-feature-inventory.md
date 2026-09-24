@@ -453,6 +453,8 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-09-24: **A database update removed one spam denylist entry and did not put it back.** `post/0028` (the Quora URL re-keying) deleted the denylist rows and re-inserted them from a TEMP table; on the 2026-09-24 "Neon — Update DB" run the connection pooler ran the re-insert on a different session, the TEMP table was not there, and the deleted row stayed deleted. `post/0028` now runs in one transaction, so a failure undoes the delete. `post/0040` rebuilds missing entries from submissions marked `spam`, except a URL an admin removed from the denylist after that decision. An entry whose submission was deleted with its account cannot be rebuilt from the database.
+
 - 2026-09-23: **A blocking decision stopped at our own database, so a banned member kept a working
   login to the auth provider.** Marking a submission `spam` or `duplicate` wrote `review_status` and
   dropped `access_tier`, and nothing else. That was the entire gate for as long as this app was the

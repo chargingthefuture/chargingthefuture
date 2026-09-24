@@ -1649,6 +1649,9 @@ CREATE INDEX IF NOT EXISTS idx_unlock_verification_submissions_url_normalized
 -- deletion; (2) a fresh submission of a denylisted URL (even from a new account) is auto-marked spam at
 -- submission time and never re-enters the review queue. A later approve/reject of the same URL removes
 -- it here, so a mistaken spam mark is fully reversible.
+-- A migration that deletes rows here and re-inserts them must do it in one transaction: on
+-- 2026-09-24 post/0028 lost a row that way through the connection pooler, and post/0040 restores
+-- entries from the spam decisions on unlock_verification_submissions.
 CREATE TABLE IF NOT EXISTS unlock_spam_quora_urls (
   -- Same canonical form as unlock_verification_submissions.quora_profile_url_normalized above; here it
   -- is the primary key, so migration 0027 had to merge two denylisted spellings of one profile rather

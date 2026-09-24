@@ -54,7 +54,8 @@ disk, which outlives the container, and a following step hands the start command
 account with that account's own SQLite database and settings, `data/opml.xml`, and the caches.
 
 `data/opml.xml` is what a brand-new account is given instead of the FreshRSS project's own default
-list. It holds this blog's feed and nothing else.
+list. It holds two feeds and nothing else: this blog, and the owner's demo-video channel (the
+collected feed at `feeds/youtube/mutilpe.xml`, added 2026-09-23).
 
 ## What is not backed up
 
