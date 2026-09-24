@@ -4662,6 +4662,11 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_
 -- alone lacked a column production has always had. Declared here so the two agree, and so the value
 -- is writable everywhere: post/0008 marks the days it rebuilt as 'backfill_launch_gap', which is
 -- what tells a reconstructed sign-in day from one that was recorded live.
+--
+-- `user_id` is TEXT here but production still has v2's VARCHAR. A query that uses one parameter both
+-- as an inserted value and in a `user_id = $n` comparison must cast it (`$n::text`), or Postgres
+-- refuses it on production only with "inconsistent types deduced for parameter". That refused
+-- every sign-in from 2026-09-20 to 2026-09-24; post/0038 rebuilds those days.
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
   source VARCHAR(50) NOT NULL DEFAULT 'webapp',
