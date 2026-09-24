@@ -10,7 +10,7 @@
 | **Surfaces** | Web (Next.js) — Android surface removed 2026-07-20 (rule 105, PR #1742); plugin is now web-only (PWA) |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
-| **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason |
+| **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason · 2026-09-23 manual update: FDN-40 checks that marking the work done settles a quote and that the value reaches the community index, after nothing in the app was found to send the closing transition |
 
 ---
 
@@ -825,7 +825,7 @@ Result: web ☐
 **Steps:**
 1. As the provider, respond to the quote with a price and a currency.
 2. Read the quote row and the thread afterwards.
-3. Close the quote from whichever side can close it.
+3. Close the quote with "Mark the work done" on the quote row (see FDN-40), from either side.
 4. Check the quote's recorded state and its settled timestamp.
 
 **Expected:** The price is saved against the quote and the state moves to "provider responded".
@@ -837,6 +837,37 @@ values and referenced only four of them, leaving the previous state and the tran
 $3 and $4 with nothing reading them, and Postgres refuses a statement whose parameter it cannot
 type: "could not determine data type of parameter $3". The gate
 `ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
+
+Result: web ☐
+
+
+### FDN-40 — Marking the work done settles the quote and it reaches the community index (added 2026-09-23)
+
+**Role:** member (either side of the quote), then admin
+**Surfaces:** web (desktop), web (mobile-responsive)
+**Precondition:** A quote in `provider_responded` carrying a price (FDN-12 leaves one). Note the
+Community Value Index on the Skills Economy — Live screen before you start.
+
+**Steps:**
+1. Open the Quotes tab on the side of the quote you are signed in as. Read the row.
+2. Press "Mark the work done."
+3. Read what the confirmation says, then press "Not yet." Check the row is unchanged.
+4. Press "Mark the work done" again and confirm.
+5. Read the row again.
+6. Sign in as the other party to the same quote and read the same row.
+7. Open the Skills Economy — Live screen and read the Community Value Index.
+
+**Expected:** The control appears for both the member who asked and the provider who quoted. The
+confirmation names the amount it is about to record and says it cannot be undone; "Not yet" leaves
+the quote in `provider_responded` with no settled marker. Confirming moves the quote to closed, the
+row shows the Settled marker beside the price, and the control is gone — from both sides, since the
+quote is terminal. The settled value has joined the Community Value Index. A quote with no price is
+never offered the control.
+
+**Regression guard:** until 2026-09-23 nothing in the app sent the `closed` transition. The server
+accepted it and `settled_at` fed GDP, but the only caller of the state route sent
+`provider_responded`, so every quote stopped at the priced state and no Foundation job ever counted.
+A run of this case that finds no control on a priced quote is that fault returning.
 
 Result: web ☐
 
