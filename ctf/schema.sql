@@ -4666,7 +4666,8 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_
 -- `user_id` is TEXT here but production still has v2's VARCHAR. A query that uses one parameter both
 -- as an inserted value and in a `user_id = $n` comparison must cast it (`$n::text`), or Postgres
 -- refuses it on production only with "inconsistent types deduced for parameter". That refused
--- every sign-in from 2026-09-20 to 2026-09-24; post/0038 rebuilds those days.
+-- every sign-in from 2026-09-20 to 2026-09-24; post/0038 (from writes) and post/0039 (from visits)
+-- rebuild those days.
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
   source VARCHAR(50) NOT NULL DEFAULT 'webapp',
