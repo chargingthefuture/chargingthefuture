@@ -281,6 +281,102 @@ function QuotedPriceRow({ quote: q, title }: { quote: QuoteView; title: string }
   );
 }
 
+// Marks a priced quote delivered: the 'closed' transition, which stamps settled_at and is what puts the
+// engagement into the Community Value Index. Nothing else in the app sent this transition, so a quote
+// could be priced and then never counted however the work went.
+//
+// Two presses rather than one. Closing cannot be undone — there is no transition out of 'closed' — and
+// the press is what recognizes the value, so a mis-tap on a phone would be permanent and would show up
+// in a community figure. The second press states the amount it is about to record.
+//
+// Offered to both sides. The server accepts the transition from either party on the quote, a delivery is
+// something either of them can confirm, and the status event records who did it.
+function QuoteCloseForm({
+  quote: q, onClose, accent, subtle,
+}: {
+  quote: QuoteView;
+  onClose: (quote: QuoteView) => Promise<boolean>;
+  accent: string;
+  subtle: string;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    const ok = await onClose(q);
+    setBusy(false);
+    if (ok) {
+      setConfirming(false);
+    } else {
+      setError("Could not mark the work done. Try again.");
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 4 }}>
+      {confirming ? (
+        <>
+          <div style={{ fontSize: 12, color: subtle, lineHeight: 1.6 }}>
+            {q.quotedAmount !== null && q.quotedCurrency
+              ? `Records ${formatQuotedPrice(q.quotedAmount, q.quotedCurrency)} as delivered. This cannot be undone.`
+              : "Records this as delivered. This cannot be undone."}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button
+              onClick={() => void submit()}
+              disabled={busy}
+              style={{ padding: "8px 14px", borderRadius: 8, background: accent, border: "none", color: "#fff", fontSize: 12, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}
+            >
+              {busy ? "Recording…" : "Yes, it is done"}
+            </button>
+            <button
+              onClick={() => { setConfirming(false); setError(null); }}
+              disabled={busy}
+              style={{ padding: "8px 14px", borderRadius: 8, background: "transparent", border: `1px solid ${accent}30`, color: subtle, fontSize: 12, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer" }}
+            >
+              Not yet
+            </button>
+          </div>
+        </>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: `${accent}15`, border: `1px solid ${accent}30`, color: accent, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+        >
+          <CheckCircle2 size={14} /> Mark the work done
+        </button>
+      )}
+      {error ? <div style={{ fontSize: 12, color: "#EF4444" }}>{error}</div> : null}
+    </div>
+  );
+}
+
+// Whether the "mark it done" control belongs on a row, kept out of the row itself so QuoteCard stays
+// inside its complexity budget (rule 116).
+//
+// A quote qualifies once it is priced and not yet closed. An unpriced quote is deliberately excluded:
+// closing one stamps no settled value, so the control would read as recording something and record
+// nothing.
+function QuoteCloseSlot({
+  quote: q, onClose, accent, subtle,
+}: {
+  quote: QuoteView;
+  onClose?: (quote: QuoteView) => Promise<boolean>;
+  accent: string;
+  subtle: string;
+}) {
+  if (!onClose || q.lifecycleState !== "provider_responded" || q.quotedAmount === null) return null;
+  return (
+    <div style={{ paddingLeft: 54 }}>
+      <QuoteCloseForm quote={q} onClose={onClose} accent={accent} subtle={subtle} />
+    </div>
+  );
+}
+
 // One quote row. Lifted out of the list's map callback so each stays a single readable unit: the row
 // decides four things (its status chip, whether the viewer is the provider, whether a price is shown,
 // and which of the two forms belongs underneath), which is more than a callback should carry.
@@ -289,11 +385,13 @@ function QuoteCard({
   viewerUserId,
   onOpenDirectLine,
   onRespond,
+  onClose,
 }: {
   quote: QuoteView;
   viewerUserId?: string | null;
   onOpenDirectLine: (quote: QuoteView) => void;
   onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
+  onClose?: (quote: QuoteView) => Promise<boolean>;
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
@@ -321,6 +419,10 @@ function QuoteCard({
       </div>
 
       <QuotedPriceRow quote={q} title={t.TITLE} />
+
+      {/* The delivery step: until somebody says the work happened, a priced quote carries no settled
+          value and nothing about it reaches the Community Value Index. */}
+      <QuoteCloseSlot quote={q} onClose={onClose} accent={t.ACCENT} subtle={t.SUBTLE} />
 
       {/* A closed engagement is often the start of a standing arrangement — the same electrician every
           quarter. Offered to the survivor side (the side that would keep calling the same provider)
@@ -356,7 +458,7 @@ function QuoteCard({
 }
 
 export function QuotesPanel({
-  quotes, viewerUserId = null, onBrowse, onOpenDirectLine, onRespond,
+  quotes, viewerUserId = null, onBrowse, onOpenDirectLine, onRespond, onClose,
 }: {
   quotes: QuoteView[];
   // The signed-in member's id, so the price-response form is shown only to the quote's provider.
@@ -365,6 +467,8 @@ export function QuotesPanel({
   onOpenDirectLine: (quote: QuoteView) => void;
   // Provider responds to a 'requested' quote with a price; returns whether the POST succeeded.
   onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
+  // Either party marks a priced quote delivered, which settles it; returns whether the POST succeeded.
+  onClose?: (quote: QuoteView) => Promise<boolean>;
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
@@ -403,6 +507,7 @@ export function QuotesPanel({
                 viewerUserId={viewerUserId}
                 onOpenDirectLine={onOpenDirectLine}
                 onRespond={onRespond}
+                onClose={onClose}
               />
             ))}
           </div>

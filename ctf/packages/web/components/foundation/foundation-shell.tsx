@@ -7,6 +7,7 @@ import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { BrowsePanel, QuotesPanel } from "./foundation-panels";
+import { useQuoteTransitions } from "./foundation-quote-actions";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
 import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials } from "./foundation-direct-line";
@@ -123,6 +124,7 @@ type FoundationMainScreenProps = {
   quotes: QuoteView[];
   onOpenDirectLine: (quote: QuoteView) => void;
   onRespond: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
+  onClose: (quote: QuoteView) => Promise<boolean>;
   onRefresh: () => void;
 };
 
@@ -187,6 +189,7 @@ function FoundationTabContent(props: FoundationMainScreenProps) {
           onBrowse={() => props.onTabChange("browse")}
           onOpenDirectLine={props.onOpenDirectLine}
           onRespond={props.onRespond}
+          onClose={props.onClose}
         />
       )}
     </>
@@ -338,23 +341,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     }
   }, [loadQuotes]);
 
-  // Provider responds to a requested quote with a price: POST the state transition to
-  // 'provider_responded' carrying quotedAmount + quotedCurrency. Only the provider can do this (the
-  // server enforces provider-only). On success, refresh the quotes list so the row shows the price.
-  const respondToQuote = useCallback(async (quote: QuoteView, quotedAmount: number, quotedCurrency: string): Promise<boolean> => {
-    try {
-      const res = await fetch(`/api/foundation/quotes/${encodeURIComponent(quote.id)}/state`, {
-        method: "POST",
-        headers: CSRF_HEADERS,
-        body: JSON.stringify({ transitionTo: "provider_responded", quotedAmount, quotedCurrency }),
-      });
-      if (!res.ok) return false;
-      await loadQuotes();
-      return true;
-    } catch {
-      return false;
-    }
-  }, [loadQuotes]);
+  const { respondToQuote, closeQuote } = useQuoteTransitions(loadQuotes);
 
   if (loading) {
     return <AppLoading />;
@@ -431,6 +418,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       quotes={quotes}
       onOpenDirectLine={(q) => setQuoteDirectLine({ threadId: q.threadId, subtitle: q.serviceType, providerUserId: q.providerUserId })}
       onRespond={respondToQuote}
+      onClose={closeQuote}
       onRefresh={() => setRefreshKey((k) => k + 1)}
     />,
   );

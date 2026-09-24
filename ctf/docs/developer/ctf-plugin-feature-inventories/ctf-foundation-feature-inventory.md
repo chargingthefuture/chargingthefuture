@@ -23,7 +23,14 @@ Foundation provides trauma-informed survivors with deterministic access to vette
 5. Connection and quote history lists scoped by actor ownership.
 6. In-app notifications for messages, quote state changes, and missed calls.
 7. Notification preferences and quiet-hour controls.
-8. **Record ongoing work with a provider, without leaving Foundation (2026-08-03).** The Direct Line
+8. **Mark the work done, on the quote (2026-09-23).** A quote that carries a price shows "Mark the
+   work done" to both the member who asked and the provider who quoted. Pressing it asks once, naming
+   the amount it is about to record, and confirming settles the quote: it moves to `closed`, stamps
+   `settled_at`, and the settled value joins the Community Value Index through the
+   `foundationQuoteSource` recognition source. Before this the app could price a quote and never close
+   one, so a job that was actually delivered counted as nothing. Closing cannot be undone, which is why
+   the control confirms; an unpriced quote is not offered it, because closing one settles no value.
+9. **Record ongoing work with a provider, without leaving Foundation (2026-08-03).** The Direct Line
    thread carries an "Is this ongoing?" prompt on the survivor's side: pick how often and how it is
    settled, and it records an ongoing service arrangement with that provider. The provider confirms it
    in the Recurring Activity app. A money arrangement records no amount — only that it happens and how
@@ -121,7 +128,7 @@ Cross-plugin read dependencies (read-only):
 7. Stream integration via shared wrappers in `packages/shared` (no direct Stream API calls).
 8. Rate limiting and command-level throttling for high-frequency actions.
 9. Quota-aware degradation: preserve core send/receive/active thread reliability under red quota threshold.
-10. **Provider-only price on a quote (2026-07-21).** Only the quote's provider may attach `quoted_amount` + `quoted_currency`, and only on the `provider_responded` transition. The repository (`updateQuoteRequestState`) enforces this: a non-provider attempting `provider_responded` is denied (`policy_denied` → 403), and a missing/invalid amount or currency on that transition is rejected (`invalid_payload` → 400). The survivor may still move the quote through its lifecycle but can never set the price. The price is persisted only on `provider_responded` (a later `closed` transition leaves the amount/currency untouched and only stamps `settled_at`). The provider-only price form is hidden from the survivor in the UI as well, but the server check is authoritative.
+10. **Provider-only price on a quote (2026-07-21).** Only the quote's provider may attach `quoted_amount` + `quoted_currency`, and only on the `provider_responded` transition. The repository (`updateQuoteRequestState`) enforces this: a non-provider attempting `provider_responded` is denied (`policy_denied` → 403), and a missing/invalid amount or currency on that transition is rejected (`invalid_payload` → 400). The survivor may still move the quote through its lifecycle but can never set the price. The price is persisted only on `provider_responded` (a later `closed` transition leaves the amount/currency untouched and only stamps `settled_at`). The provider-only price form is hidden from the survivor in the UI as well, but the server check is authoritative. The `closed` transition is open to either party and is sent by the "Mark the work done" control on a priced quote row (2026-09-23); it is what stamps `settled_at` and therefore what puts the engagement into GDP recognition.
 
 ## Web and Android Delivery Status
 
@@ -176,6 +183,25 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 10. **Web Push requires the owner to provision VAPID keys.** Until `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` are set (the owner generates them once with `npx web-push generate-vapid-keys` and stores them in Infisical `production`), the ring is delivered in-app only — every push is a graceful no-op. No keys are generated or committed in the repo (open-source secrets policy). See `.claude/rules/123-environment-configuration-rules.mdc`.
 
 ## Change Log
+
+- 2026-09-23: **A quote could be priced but never closed, so no Foundation job reached GDP.** The
+  server has always accepted the `closed` transition, and `updateQuoteRequestState` stamps
+  `settled_at` on it whenever the quote carries a value; `foundationQuoteSource` reads exactly those
+  rows. Nothing in the app ever sent that transition. The one caller of
+  `POST /api/foundation/quotes/:id/state` sent `provider_responded` and nothing else, so every quote
+  stopped at the priced state, `settled_at` stayed null, and the Community Value Index counted no
+  Foundation quote however much work was delivered. The `MarkRecurringControl` on a closed quote row
+  had the same problem from the other side: it renders only on a `closed` quote, which nothing could
+  produce.
+  Added `QuoteCloseForm` (`foundation-panels.tsx`) and `closeQuote` (`foundation-shell.tsx`). The
+  control appears on a quote in `provider_responded` that carries an amount, for both parties — the
+  server accepts the transition from either, a delivery is something either can confirm, and
+  `foundation_quote_status_events` records which one did. It confirms before sending, naming the
+  amount: `closed` is terminal, so a mis-tap on a phone would be permanent and would land in a
+  community figure. An unpriced quote is deliberately not offered the control, since closing one
+  stamps no `settled_at` and would record nothing while appearing to record something.
+  No route, schema, or contract change — the transition, its policy check and its audit entry already
+  existed and are untouched.
 
 - 2026-09-22: **Every quote lifecycle transition was refused by the database.** The UPDATE in
   `transitionQuote` supplied six values and referenced four of them — `$1` the quote id, `$2` the
