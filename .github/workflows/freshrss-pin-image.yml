@@ -1,0 +1,47 @@
+name: FreshRSS — Pin the reader's image
+
+# Sets the reader's Render service to the exact image recorded in
+# ctf/ops/freshrss/image.txt.
+#
+# The service was created on the `latest` tag, so any redeploy could pull a
+# different FreshRSS underneath a running reader. A digest names one exact build
+# and cannot be re-pointed; a tag can, because a publisher may push a new image
+# to the same tag. The ledger's image is pinned by digest for the same reason.
+#
+# Upgrading is a pull request that edits that file, then a run of this. The
+# change is reviewed and the repository records what is running, so the two
+# cannot drift — which is what a dashboard edit loses.
+#
+# Not a one-shot. It has no schedule, but it is the control for every later
+# version move, so it stays.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type pin to confirm. The reader restarts once.'
+        required: true
+        type: string
+
+jobs:
+  pin:
+    name: Pin the reader's image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          if [ "$typed" != "pin" ]; then
+            echo "::error title=Not confirmed::Type pin in the confirmation box to run this."
+            exit 1
+          fi
+
+      - name: Set the service to the recorded image
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_NAME: ctf-freshrss
+        run: bash .github/scripts/freshrss-pin-image.sh

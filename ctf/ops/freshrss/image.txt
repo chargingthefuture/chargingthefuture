@@ -1,0 +1,1 @@
+docker.io/freshrss/freshrss@sha256:258b8edfc8a76a61f60d2d6a14d8f8d12495d78abf38646a2137612dfa264a21
