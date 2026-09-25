@@ -122,7 +122,9 @@ function initialCohortIdFromUrl(): string | null {
 }
 
 // A notification about the goal board links with ?tab=goals, so it opens on the board rather than
-// on the conversation a cohort deep link otherwise opens.
+// on the conversation a cohort deep link otherwise opens. Without a cohort id the room already opens
+// on Goals; the blog's Peace Battle 2 page links to /apps/peer-programming?tab=goals and relies on
+// that, so a change to the default tab has to keep ?tab=goals landing on the board.
 function goalsTabRequested(): boolean {
   if (typeof window === "undefined") return false;
   return new URLSearchParams(window.location.search).get("tab") === "goals";
