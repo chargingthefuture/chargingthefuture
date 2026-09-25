@@ -35,9 +35,11 @@ about it, being able to join the call, and being able to post and reply whenever
 quiet text room is not by itself a failure. While the community is small this normally runs as one
 standing room, Cohort 1, that everyone joins (inventory Intent and Outcome, 2026-08-18).
 
-The room opens on the Goals tab: the cohort's goal board (2026-09-25). A member posts one goal with a
-finish line and small tasks, other members take a task and post what they found, and the goal's owner
-keeps the result or sends it back. There is no conversation on the board by design, so the absence of
+The room opens on the Goals tab: the cohort's goal board (2026-09-25), laid out as three columns of
+cards — Up for grabs, Doing, Done. A member posts one goal with a finish line and small tasks (cards),
+other members take any one card and post what they found, and the goal's owner keeps the result or
+sends it back. On a phone the columns scroll sideways; a sliver of the next column shows at the right
+edge. There is no conversation on the board by design, so the absence of
 a reply box there is not a bug to file.
 
 Session timing is ad hoc by decision: a cohort holds as many or as few calls as it wants, whenever
@@ -73,9 +75,10 @@ web ☐
 
 **6. The goal board opens and takes a goal**
 Signed in as a cohort member with no open goal, open `/apps/peer-programming`. The Goals tab is
-selected, the top card shows how many tasks were done in the last 24 hours, and the "Your goal" form
-is visible. Post a goal with two tasks, one per line. It appears on the board as "Your goal" with
-"0 of 2 tasks done", and the form is gone.
+selected, the top line shows how many cards were done in the last 24 hours, and a "+ Add your goal"
+button is visible above the Up for grabs, Doing and Done columns. Press it, write a goal and two
+cards, one per line, and press "Post goal". A "Your goal" panel appears reading "0 of 2 cards done",
+the button is gone, and both cards sit in Up for grabs marked "Your goal".
 web ☐
 
 ---
@@ -350,13 +353,14 @@ Result: web ☐
 member of the same cohort.
 
 **Steps:**
-1. As B, open the Goals tab and press "Take it" on A's task.
+1. As B, open the Goals tab and press "Take it" on A's card in Up for grabs.
 2. Type a result, such as a phone number and a yard name, and press "Post result".
 3. As A, open the notifications center, then the Goals tab.
 
-**Expected:** After step 1 the task reads "@B is on it" and B sees a result box with "Post result"
-and "Let it go". After step 2 the task reads "Done by @B, waiting on the goal's owner" with the
-result shown, and the count at the top goes up by one. A has a notification that somebody finished a
+**Expected:** After step 1 the card moves to Doing; B sees "You are on it", a result box, "Post
+result" and "Let it go", and everyone else sees "@B is on it". After step 2 the card moves to Done and
+reads "Done by @B, waiting on the goal's owner" with the result shown (A sees "Done by @B. Keep it or
+send it back."), and the count at the top goes up by one. A has a notification that somebody finished a
 task on their goal, and it opens the Goals tab.
 
 Result: web ☐
@@ -373,8 +377,9 @@ Result: web ☐
 1. As A, press "Keep" on the first result.
 2. As A, press "Send back" on the second.
 
-**Expected:** The first task reads "Done by @B" and keeps its result. The second task reads "Open"
-with no result and no name, anybody can take it again, and the count at the top drops by one.
+**Expected:** The first card stays in Done, reads "Done by @B" and keeps its result. The second card
+goes back to Up for grabs with no result and no name, anybody can take it again, and the count at the
+top drops by one.
 
 Result: web ☐
 
@@ -385,12 +390,13 @@ Result: web ☐
 **Role:** member · **Surfaces:** web
 
 **Steps:**
-1. With an open goal, look for the "Your goal" form.
+1. With an open goal, look for the "+ Add your goal" button.
 2. Press "Reached it" on your goal.
 
-**Expected:** While the goal is open there is no form to post a second one. After "Reached it" the
-goal stays on the board marked Reached, with no task controls, and the "Your goal" form is back.
-"Take it down" instead removes the goal from the board.
+**Expected:** While the goal is open there is no button to post a second one, only the "Your goal"
+panel. After "Reached it" the panel and the goal's unfinished cards leave the board, its done cards
+stay in Done with no controls, and "+ Add your goal" is back. "Take it down" instead removes the goal
+and all its cards from the board.
 
 Result: web ☐
 
@@ -401,10 +407,11 @@ Result: web ☐
 **Role:** member · **Surfaces:** web
 
 **Steps:**
-1. On your own open goal, look at an open task.
+1. In Up for grabs, look at a card marked "Your goal".
 
-**Expected:** There is no "Take it" button on your own tasks, only "Remove". Removing it takes it off
-the goal. A task with a posted result shows "Keep" and "Send back" instead, never "Remove".
+**Expected:** There is no "Take it" button on your own cards, only "Remove". Removing it takes it off
+the board. A card of yours in Done with a posted result shows "Keep" and "Send back" instead, never
+"Remove".
 
 Result: web ☐
 
@@ -415,7 +422,7 @@ Result: web ☐
 **Role:** member (two accounts) · **Surfaces:** web
 
 **Steps:**
-1. With the board open as B and C, both press "Take it" on the same open task.
+1. With the board open as B and C, both press "Take it" on the same card in Up for grabs.
 
 **Expected:** One of them holds the task. The other sees "Somebody took this task a moment before
 you." and the board reloads showing who has it. Nothing breaks.
@@ -433,7 +440,7 @@ Result: web ☐
 **Steps:**
 1. As C, open the Goals tab.
 
-**Expected:** The task reads "Open" with a "Take it" button. C can take it. B can no longer post a
+**Expected:** The card is back in Up for grabs with a "Take it" button. C can take it. B can no longer post a
 result on it once C holds it.
 
 Result: web ☐

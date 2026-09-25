@@ -26,11 +26,12 @@ signed in during the last 7 days is placed in a cohort of up to 12, and in pract
 take part in a given week. The app tells a member when they have been placed, and tells the rest of
 the cohort when someone posts.
 
-The room opens on a Goals tab: the cohort's goal board (owner decision, 2026-09-25). Each member
-can post one goal with a finish line — a yard jockey job in Texas, a camper — and break it into small
-tasks somebody else could do from a phone in under half an hour, like finding three yards hiring near
-Dallas and adding their numbers. Other members of the cohort take a task, do it, and post what they
-found: phone numbers, a link, what a call said. The goal's owner keeps the result or sends the task
+The room opens on a Goals tab: the cohort's goal board (owner decision, 2026-09-25), laid out as three
+columns of cards — Up for grabs, Doing, Done. Each member can post one goal with a finish line — a
+yard jockey job in Texas, a camper — and break it into cards, each a small task somebody else could do
+from a phone in under half an hour, like finding three yards hiring near Dallas and adding their
+numbers. Other members of the cohort pick any one card, do it, and post what they found: phone
+numbers, a link, what a call said. Nobody takes on a goal as a unit. The goal's owner keeps the result or sends the task
 back for somebody else, and each finished task shows who did it. The top of the board counts the
 tasks finished across the cohort in the last 24 hours. There is no conversation on the board: a
 goal, its tasks and their results are the only things anyone can write there. The conversation and
@@ -152,25 +153,35 @@ to the env flag, then the default. With no admin setting and no env override, th
 
 1. The Goals tab is the first tab and the one the room opens on. A notification about the board
    links with `?tab=goals` and opens it directly.
-2. A member with no open goal sees a "Your goal" form: one line for the goal and a box for its first
-   tasks, one per line. "Post goal" puts it on the board. A member can have one open goal at a time;
-   posting a second is refused with a message saying to close the first.
-3. Every member of the cohort sees every open goal, newest first, plus goals reached in the last two
-   weeks. A goal taken down unfinished leaves the board.
-4. Each task shows its state: Open; "@name is on it"; "Done by @name, waiting on the goal's owner";
-   or "Done by @name" once kept. The helper's name is shown on every finished task (owner decision,
-   2026-09-25).
-5. Another member presses "Take it" on an open task. While they hold it, they see a box for the
-   result with "Post result" and "Let it go". A task taken and not finished within 24 hours opens
-   again for anyone.
-6. The goal's owner cannot take tasks on their own goal. On a finished task they press "Keep" or
-   "Send back". Sending back clears the helper and the result and opens the task again, and the
-   result no longer counts. They can remove a task nobody has finished, add tasks (up to 30 on a
-   goal), and close the goal with "Reached it" or "Take it down".
-7. The top of the board shows how many tasks were finished across the cohort in the last 24 hours.
-8. When a helper posts a result, the goal's owner gets a notifications-center notification
+2. The board is three side-by-side columns of cards that scroll sideways on a phone: Up for grabs
+   (open tasks), Doing (held tasks) and Done (finished or kept tasks, newest first; the newest 8 show,
+   with "Show all N" for the rest). One card is one task. Each card carries its goal's owner and title
+   on a small line, and a colored left edge shared by every card of the same goal (owner decision,
+   2026-09-25: a kanban layout, so the board reads as casual and a member picks one card rather than a
+   goal).
+3. A member with no open goal sees a "+ Add your goal" button. It opens a form: one line for the goal
+   and a box for its first cards, one per line. "Post goal" puts it on the board. A member can have
+   one open goal at a time; posting a second is refused with a message saying to close the first. A
+   member with an open goal sees it in a "Your goal" panel above the columns instead.
+4. Up for grabs and Doing hold cards from open goals only. Done also holds cards from goals reached in
+   the last two weeks. A goal taken down unfinished leaves the board.
+5. Cards in Doing read "@name is on it" ("You are on it" for the holder). Cards in Done read
+   "Done by @name, waiting on the goal's owner" (to the goal's owner: "Done by @name. Keep it or send
+   it back."), or "Done by @name" once kept. The helper's name is shown on every done card (owner
+   decision, 2026-09-25).
+6. Another member presses "Take it" on an open card. While they hold it, they see a box for the
+   result with "Post result" and "Let it go". A card held for 24 hours without a result goes back to
+   Up for grabs for anyone.
+7. The goal's owner cannot take cards on their own goal. On a done card they press "Keep" or
+   "Send back". Sending back clears the helper and the result and returns the card to Up for grabs,
+   and the result no longer counts. They can remove a card nobody has finished, add cards with "Add
+   card" in the "Your goal" panel (up to 30 on a goal), and close the goal with "Reached it" or "Take
+   it down".
+8. The top of the board shows how many cards were done across the cohort in the last 24 hours, and
+   one line: grab any one card, do it from your phone, post what you found.
+9. When a helper posts a result, the goal's owner gets a notifications-center notification
    (`peer-programming.goal.task-finished`, category `community`) linking to the board.
-9. On an ended cohort the board is read-only.
+10. On an ended cohort the board is read-only.
 
 ### Tiered Participation Visibility
 
@@ -345,6 +356,12 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-09-25: The Goals tab is laid out as a kanban board (owner decision): three columns of cards —
+  Up for grabs, Doing, Done — one card per task across every goal, with the goal's owner and title on
+  each card and a colored edge per goal. The goal form sits behind "+ Add your goal", and an open goal
+  shows in a "Your goal" panel above the columns. Wording moves from tasks to cards. The routes, tables
+  and rules are unchanged; this is the screen only (`pp-goals-board.tsx` added).
 
 - 2026-09-25: Goal board added as the Goals tab, which the room now opens on (owner decision). A
   member posts one goal with a finish line and tasks another member can do from a phone; other

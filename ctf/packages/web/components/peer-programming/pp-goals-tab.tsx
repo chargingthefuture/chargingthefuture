@@ -1,29 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Target } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getPeerProgrammingTokens } from "./pp-shared";
-import { GoalCard, NewGoalForm } from "./pp-goals-parts";
-import { actOnTask, addGoalTask, closeGoal, loadBoard, postGoal, type ActionResult, type Board, type TaskAction } from "./pp-goals-api";
-
-function BoardIntro({ finishedLastDay }: { finishedLastDay: number }) {
-  const { theme } = useTheme();
-  const t = getPeerProgrammingTokens(theme);
-  return (
-    <section style={{ padding: 14, borderRadius: 12, background: t.ACCENT_TINT_BG, border: `1px solid ${t.ACCENT_TINT_BORDER}`, display: "grid", gap: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: t.TITLE, fontWeight: 700, fontSize: 15 }}>
-        <Target size={18} style={{ color: t.ACCENT }} />
-        {finishedLastDay === 1 ? "1 task done in the last 24 hours" : `${finishedLastDay} tasks done in the last 24 hours`}
-      </div>
-      <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
-        Post one goal with a finish line and break it into tasks somebody could do from a phone in under
-        half an hour. When you have something left in a day, take a task on somebody else&rsquo;s goal, do
-        it, and post what you found. There is no conversation here: a goal, its tasks, and their results.
-      </div>
-    </section>
-  );
-}
+import { GoalsBoardView } from "./pp-goals-board";
+import { actOnTask, addGoalTask, closeGoal, loadBoard, postGoal, type ActionResult, type Board } from "./pp-goals-api";
 
 function Notice({ children, tone }: { children: React.ReactNode; tone: "muted" | "error" }) {
   const { theme } = useTheme();
@@ -76,31 +57,18 @@ export function PeerProgrammingGoalsTab() {
   if (!board) return <div style={{ padding: 16 }}>{error ? <Notice tone="error">{error}</Notice> : <Notice tone="muted">Loading the goal board…</Notice>}</div>;
   if (!board.cohortId) return <div style={{ padding: 16 }}><Notice tone="muted">You are not in a cohort yet, so there is no goal board to show.</Notice></div>;
 
-  const hasOpenGoal = board.goals.some((goal) => goal.ownerUserId === board.viewerUserId && goal.status === "open");
-  const onAction = (taskId: string, action: TaskAction, result?: string) => void run(() => actOnTask(taskId, action, result));
-  const onAddTask = (goalId: string, description: string) => run(() => addGoalTask(goalId, description));
-  const onClose = (goalId: string, outcome: "reached" | "withdrawn") => void run(() => closeGoal(goalId, outcome));
-
   return (
     <div style={{ padding: 16, display: "grid", gap: 12 }}>
-      <BoardIntro finishedLastDay={board.finishedLastDay} />
       {error && <Notice tone="error">{error}</Notice>}
       {board.ended && <Notice tone="muted">This cohort has ended, so its board is read-only.</Notice>}
-      {!board.ended && !hasOpenGoal && <NewGoalForm busy={busy} onPost={(title, tasks) => run(() => postGoal(title, tasks))} />}
-      {board.goals.length === 0 && <Notice tone="muted">No goals on the board yet.</Notice>}
-      {board.goals.map((goal) => (
-        <GoalCard
-          key={goal.id}
-          goal={goal}
-          viewerUserId={board.viewerUserId}
-          names={board.names}
-          readOnly={board.ended}
-          busy={busy}
-          onAction={onAction}
-          onAddTask={onAddTask}
-          onClose={onClose}
-        />
-      ))}
+      <GoalsBoardView
+        board={board}
+        busy={busy}
+        onAction={(taskId, action, result) => void run(() => actOnTask(taskId, action, result))}
+        onAddTask={(goalId, description) => run(() => addGoalTask(goalId, description))}
+        onClose={(goalId, outcome) => void run(() => closeGoal(goalId, outcome))}
+        onPost={(title, tasks) => run(() => postGoal(title, tasks))}
+      />
     </div>
   );
 }
