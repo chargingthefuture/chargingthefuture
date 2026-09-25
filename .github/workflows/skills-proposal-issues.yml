@@ -5,22 +5,8 @@ name: Skills Hunt — Propose Skill Promotions
 # AI-suggested sector + occupation. The pipeline ONLY files issues — it never writes
 # the taxonomy. A unique tracking row per distinct skill keeps reruns and overlapping
 # schedules from filing duplicate issues. See ctf/scripts/proposeSkillPromotions.mjs.
-#
-# When the Anthropic account is out of credit, a manual run with `skip_classification`
-# files the issues anyway with the placement left open; the agent session that started
-# the run then adds the suggested sector and occupation to each issue itself.
 on:
-  workflow_dispatch:
-    inputs:
-      skip_classification:
-        description: "File the issues without the AI placement step (for an unfunded Anthropic account; the session that started the run adds the placement to each issue)"
-        required: false
-        type: boolean
-        default: false
-      proposal_limit:
-        description: "Max skills to file this run (blank = 10)"
-        required: false
-        type: string
+  workflow_dispatch: {}
   schedule:
     - cron: "17 */6 * * *"   # every 6 hours, at :17 to avoid a top-of-hour stampede
 
@@ -64,7 +50,4 @@ jobs:
           # GITHUB_TOKEN is the automatic GitHub Actions token (issues: write granted above).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          # Both are empty on a scheduled run, which the script reads as its defaults.
-          SKIP_CLASSIFICATION: ${{ inputs.skip_classification == true && 'true' || '' }}
-          PROPOSAL_LIMIT: ${{ inputs.proposal_limit }}
         run: node ctf/scripts/proposeSkillPromotions.mjs

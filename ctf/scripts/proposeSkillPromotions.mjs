@@ -45,12 +45,13 @@
 // guessed at — a wrong "out of credit" label once would make every later one unreliable.
 //
 // WHEN THE RUN IS STARTED WITH SKIP_CLASSIFICATION: the issues are filed without step 3.
-// This is the path for an unfunded month when the owner wants the queue filed anyway: an
-// agent session starts the run, the run files one issue per candidate with the placement
-// left open and says so in the body, and that session then reads each issue and adds the
+// This is the path for an unfunded month when the owner wants the queue filed anyway. The
+// manual-only companion workflow (skills-proposal-issues-manual.yml) sets it: an agent
+// session starts that run, the run files one issue per candidate with the placement left
+// open and says so in the body, and that session then reads each issue and adds the
 // suggested sector and occupation itself. The dedupe row is written exactly as in a normal
 // run, so the next funded scheduled run does not file the same skills again. No key is
-// needed on this path.
+// needed on this path. The scheduled workflow never sets it.
 //
 // Required environment:
 //   DATABASE_URL        Postgres connection string (the app database).

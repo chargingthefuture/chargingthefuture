@@ -1201,7 +1201,7 @@ Result: web ☐
 4. Query `skills_hunt_proposed_skill_promotions` for that skill.
 5. Restore a working key with credit and run the workflow again.
 6. Run it a third time with nothing else changed.
-7. With the API still unavailable and a second unfiled proposed skill in place, run the workflow by hand with the `skip_classification` input ticked (optionally set `proposal_limit`).
+7. With the API still unavailable and a second unfiled proposed skill in place, run the manual companion workflow `Skills Hunt — Propose Skill Promotions (no AI, manual)` (optionally set `proposal_limit`).
 8. Restore credit and let the next scheduled run happen.
 
 **Expected:**
@@ -1211,7 +1211,7 @@ Result: web ☐
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
 - Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue.
-- Step 8: the scheduled run files no second issue for that skill (its row already carries an issue number) and does not read the inputs — they are empty on a schedule.
+- Step 8: the scheduled workflow files no second issue for that skill (its row already carries an issue number). The scheduled workflow itself is unchanged: it still classifies with the API and still goes red while the account is unfunded.
 
 **Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
 - a 403 `permission_error` → `access_denied`, and the text says outright it is NOT a funding problem;
