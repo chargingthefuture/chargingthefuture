@@ -88,9 +88,14 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    channel and runs the first membership sync; closing an open channel is always allowed.
 3. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
    and the synced Stream member count (best-effort; "unavailable" when Stream is not configured).
-4. Admin page `/admin/contributor-access` (server-side admin gate; non-admins redirect to
-   `/apps`), rendering `components/contributor-access/contributor-access-admin-shell.tsx` with
-   loading/empty/error/populated states and the mobile-responsive `MobileScreenHeader` layout.
+4. The three sections above render as the Weavers of the Commons section of the Daily exchange
+   screen, `/admin/daily-exchange#weavers` (server-side admin gate; non-admins redirect to `/apps`),
+   from `components/contributor-access/contributor-access-admin-sections.tsx`, with
+   loading/error/populated states. The badge and the daily count score the same events with the
+   same weights, so they share one admin page (owner decision, 2026-09-25). The weights are edited as
+   a list, one event per row with its number on the right, in the order the daily reading lists them
+   (delivering events first, heaviest first); the events that reach the badge but never a day's
+   count are dimmed and marked "badge only", and saving re-reads the day above. The old address `/admin/contributor-access` redirects to that section.
 
 ## API Surface and Route Map
 
@@ -299,10 +304,10 @@ counts still feed the score internally).
 
 ## Web and Android Delivery Status
 
-- **Web (desktop):** complete — admin (`/admin/contributor-access`), the member gated channel
+- **Web (desktop):** complete — admin (`/admin/daily-exchange#weavers`), the member gated channel
   inside the Commons shell (channel rail entry, gated panel), the Directory profile badge +
   dialog, and the `/apps/directory/weavers-of-the-commons` explainer page.
-- **Web (mobile-responsive):** complete — the admin shell keeps its `MobileScreenHeader` layout;
+- **Web (mobile-responsive):** complete — the admin sections sit under the Daily exchange screen's `MobileScreenHeader`;
   the gated channel is reachable at phone widths via the channel-pill switch row (the desktop
   channel rail is hidden there) and the panel reuses the Commons' responsive chat layout; the
   badge, dialog, and explainer page are responsive in the Directory shell.
@@ -354,6 +359,20 @@ fill on the first recompute / config save / member post.
   authored; the deletion behavior itself is already wired via the account deletion registry.
 
 ## Change Log
+
+- 2026-09-25 — One admin page for the badge and the daily count (owner decision). The badge admin
+  (eligible members with revoke and reinstate, the eligibility settings and weights, the channel
+  status card) moved onto the Daily exchange screen as its Weavers of the Commons section, because
+  both readings score the same events with the same weights and were shown on two pages. That
+  screen's read-only What is weighted panel and its Weavers of the Commons widget (holder count and
+  recent earners) are removed, since the editable weights and the eligible members list now sit on
+  the same page; the editor takes that panel's list layout instead (one row per event, the number on
+  the right, the same order, badge-only events dimmed and marked), and a save re-reads the day.
+  `contributor-access-admin-shell.tsx` becomes `contributor-access-admin-sections.tsx` with no page
+  header of its own, `/admin/contributor-access` redirects to `/admin/daily-exchange#weavers`, and
+  the admin directory lists one row, Daily Exchange and Badge. No route, contract, or schema change
+  on this module's side; the admin routes and their audit rows are unchanged. The intro line now
+  says no badge score is shown, since the daily roster on the same page shows a day's score.
 
 - 2026-09-20 — WhatWorks endorsements removed from the value events. Owner directive, and the
   reason is what WhatWorks is for: somebody lists a tool or resource, and others mark whether it

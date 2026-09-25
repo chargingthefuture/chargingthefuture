@@ -30,11 +30,12 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/chyme', name: 'Chyme: Live Audio Usage' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
-  { href: '/admin/contributor-access', name: 'Contributor Access' },
   // How many members traded with another member on a day, against the 384 target. Counts people
   // per day rather than accumulating a total, because the goal is a day's worth of members working
-  // with each other, not a headcount that only ever rises.
-  { href: '/admin/daily-exchange', name: 'Daily Exchange' },
+  // with each other, not a headcount that only ever rises. The Weavers of the Commons badge admin
+  // (eligible members, weights, the gated channel) sits on the same screen, because both readings
+  // score the same events with the same weights (owner decision, 2026-09-25).
+  { href: '/admin/daily-exchange', name: 'Daily Exchange and Badge' },
   { href: '/admin/directory', name: 'Directory' },
   // Everybody listed in the Directory who does not have an invite post on the blog yet, with
   // their skills, and a control that copies the list as plain text. It had no row here, which
