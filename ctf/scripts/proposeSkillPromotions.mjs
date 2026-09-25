@@ -44,13 +44,24 @@
 // reading its prose, and an unrecognized failure is reported as unrecognized rather than
 // guessed at — a wrong "out of credit" label once would make every later one unreliable.
 //
+// WHEN THE RUN IS STARTED WITH SKIP_CLASSIFICATION: the issues are filed without step 3.
+// This is the path for an unfunded month when the owner wants the queue filed anyway. The
+// manual-only companion workflow (skills-proposal-issues-manual.yml) sets it: an agent
+// session starts that run, the run files one issue per candidate with the placement left
+// open and says so in the body, and that session then reads each issue and adds the
+// suggested sector and occupation itself. The dedupe row is written exactly as in a normal
+// run, so the next funded scheduled run does not file the same skills again. No key is
+// needed on this path. The scheduled workflow never sets it.
+//
 // Required environment:
 //   DATABASE_URL        Postgres connection string (the app database).
-//   ANTHROPIC_API_KEY   Anthropic API key (used to classify each skill).
+//   ANTHROPIC_API_KEY   Anthropic API key (used to classify each skill). Not read when
+//                       SKIP_CLASSIFICATION is set.
 //   GITHUB_TOKEN        A token with `issues: write` on this repo.
 //   GITHUB_REPOSITORY   "owner/repo" (GitHub Actions provides this).
 // Optional:
 //   PROPOSAL_LIMIT      Max skills to process per run (default 10).
+//   SKIP_CLASSIFICATION `true` or `1` files the issues without calling the Anthropic API.
 //
 // Never prints secret values.
 
@@ -109,8 +120,10 @@ function requireEnv(name) {
   return value;
 }
 
+const SKIP_CLASSIFICATION = /^(1|true)$/i.test((process.env.SKIP_CLASSIFICATION ?? '').trim());
+
 const DATABASE_URL = requireEnv('DATABASE_URL');
-const ANTHROPIC_API_KEY = requireEnv('ANTHROPIC_API_KEY');
+const ANTHROPIC_API_KEY = SKIP_CLASSIFICATION ? null : requireEnv('ANTHROPIC_API_KEY');
 const GITHUB_TOKEN = requireEnv('GITHUB_TOKEN');
 const GITHUB_REPOSITORY = requireEnv('GITHUB_REPOSITORY');
 
@@ -386,11 +399,23 @@ async function classifySkill(skillLabel, sectorNames, occupations) {
   return { sector, occupation, rationale };
 }
 
+// The placement text for a run that filed without classifying. The session that started the run
+// is the one that fills the placement in, so the body says so rather than reading as a model that
+// could not decide.
+const SKIPPED_PLACEMENT = {
+  sector: null,
+  occupation: null,
+  rationale:
+    'Classification was skipped for this run (started with skip_classification). The session that started the run adds the suggested sector and occupation to this issue.',
+};
+
 function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sourceSubmissionId }) {
   const mapping =
     sector && occupation
       ? `- Suggested sector: **${sector}**\n- Suggested occupation: **${occupation}**`
-      : '- **Needs manual mapping** — the AI could not confidently place this skill in an existing sector/occupation.';
+      : SKIP_CLASSIFICATION
+        ? '- **Placement pending** — this run filed the issue without the classification step; the session that started it adds the suggested sector and occupation.'
+        : '- **Needs manual mapping** — the AI could not confidently place this skill in an existing sector/occupation.';
 
   const sourceLabel =
     source === 'directory'
@@ -412,8 +437,9 @@ function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sou
     '',
     `> Why: ${rationale}`,
     '',
-    '> Caveat: the sector and occupation above are an AI guess, not a decision. Check them before promoting.',
-    '',
+    ...(sector && occupation
+      ? ['> Caveat: the sector and occupation above are an AI guess, not a decision. Check them before promoting.', '']
+      : []),
     '## Source',
     '',
     `- Source app: ${sourceLabel}`,
@@ -596,6 +622,12 @@ async function main() {
       process.exit(1);
     }
 
+    if (SKIP_CLASSIFICATION) {
+      console.log(
+        'proposeSkillPromotions: SKIP_CLASSIFICATION is set; issues are filed with the placement left open and no Anthropic API call is made.',
+      );
+    }
+
     // Make sure the label exists once up front.
     await ensureLabel();
 
@@ -643,11 +675,9 @@ async function main() {
         rollbackRowId = rowId;
 
         // 3. Classify (only after we own the row, so we never burn API calls on dupes).
-        const { sector, occupation, rationale } = await classifySkill(
-          candidate.skill_label,
-          sectorNames,
-          occupations,
-        );
+        const { sector, occupation, rationale } = SKIP_CLASSIFICATION
+          ? SKIPPED_PLACEMENT
+          : await classifySkill(candidate.skill_label, sectorNames, occupations);
 
         // 4b. File the issue.
         const body = buildIssueBody({
