@@ -69,8 +69,16 @@ export type CardControlProps = {
   isOwner: boolean;
   viewerUserId: string;
   busy: boolean;
+  taskHoldHours: number;
   onAction: (taskId: string, action: TaskAction, result?: string) => void;
 };
+
+// When a held card stops being reserved for its holder and reopens for anyone. Shown so a member
+// never does the work and comes back later to find someone else already took the credit.
+function formatHoldDeadline(takenAtIso: string, holdHours: number): string {
+  const deadline = new Date(new Date(takenAtIso).getTime() + holdHours * 60 * 60 * 1000);
+  return deadline.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
 
 // What the goal's owner can do with a card: say a result helped, keep it without that, or send it
 // back; or remove a card nobody has finished. Only "It helped" counts toward the Weavers of the
@@ -92,14 +100,27 @@ function OwnerControls({ task, busy, onAction }: CardControlProps) {
 }
 
 // What another member can do: take an open card, or post the result of one they hold.
-function HelperControls({ task, viewerUserId, busy, onAction }: CardControlProps) {
+function HelperControls({ task, viewerUserId, busy, taskHoldHours, onAction }: CardControlProps) {
+  const t = useTokens();
   const [result, setResult] = useState("");
   if (task.status === "open") {
-    return <SmallButton label="Take it" primary disabled={busy} onClick={() => onAction(task.id, "take")} />;
+    return (
+      <div style={{ display: "grid", gap: 4 }}>
+        <SmallButton label="Take it" primary disabled={busy} onClick={() => onAction(task.id, "take")} />
+        <div style={{ fontSize: 11, color: t.MUTED }}>
+          Post a result within {taskHoldHours} hours of taking it, or it goes back to Up for grabs for someone else.
+        </div>
+      </div>
+    );
   }
   if (task.status !== "taken" || task.takenByUserId !== viewerUserId) return null;
   return (
     <div style={{ display: "grid", gap: 8 }}>
+      {task.takenAtIso && (
+        <div style={{ fontSize: 12, color: t.SUBTLE }}>
+          Post by {formatHoldDeadline(task.takenAtIso, taskHoldHours)} or this goes back to Up for grabs for someone else to take.
+        </div>
+      )}
       <TextBox value={result} onChange={setResult} rows={3} maxLength={1000} placeholder="What you found: numbers, a link, what a call said." />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <SmallButton label="Post result" primary disabled={busy || result.trim().length === 0} onClick={() => onAction(task.id, "finish", result)} />
