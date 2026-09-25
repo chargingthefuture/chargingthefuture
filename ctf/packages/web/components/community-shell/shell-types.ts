@@ -38,6 +38,8 @@ export type ChatReactionSummary = {
 // messages (empty-state prompt, concierge replies), which are treated as ordinary bubbles.
 export type ChatMessageKind = 'announcement' | 'question' | 'community';
 
+export type ChatMessageAction = { label: string; href: string };
+
 export type ChatMessage = {
   id: string;
   from: 'commons' | 'user';
@@ -56,8 +58,10 @@ export type ChatMessage = {
   // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
   sentAtIso?: string;
   senderLabel?: string;
-  actionLabel?: string;
-  actionSlug?: string;
+  // Buttons under the bubble, each opening a path in the app or an address on the blog. Set only by
+  // the local replies this client writes itself (the concierge, an answer chip); a stored message
+  // never carries one, so a peer post cannot be made to look as if its author linked a plugin.
+  actions?: ChatMessageAction[];
   // The underlying community post id, when this message is a peer post. This is the id a reply
   // must reference. Absent for AI answers, concierge replies, and the empty-state prompt.
   communityPostId?: string | null;

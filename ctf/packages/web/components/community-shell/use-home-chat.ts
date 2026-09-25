@@ -13,7 +13,7 @@ import {
 import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
 import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
 import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
-import { commonsSuggestionChips } from '../../lib/concierge/commons-suggestions';
+import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 
@@ -104,7 +104,7 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // members cannot attach one. (The old keyword inference here wrongly decorated any post containing
 // words like "economy"/"housing" with an "Open GDP"/"Open LightHouse" button, making it look as if
 // the poster had linked a plugin.) Action buttons come only from an explicit source — the local
-// concierge reply sets its own actionLabel/actionSlug — never from message text.
+// concierge reply and an answer chip set their own `actions` — never from message text.
 function buildChatMessage(
   id: string,
   from: 'commons' | 'user',
@@ -662,8 +662,7 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
       text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
       time,
       sentAtIso,
-      actionLabel: `Open ${top.name} →`,
-      actionSlug: top.slug,
+      actions: [{ label: `Open ${top.name} →`, href: `/apps/${top.slug}` }],
     }
     : {
       id: `concierge-a-${stamp}`,
@@ -674,6 +673,22 @@ function buildConciergeMessages(promptText: string): ChatMessage[] {
     };
 
   return [userMsg, reply];
+}
+
+// An answer chip: the member's question as their own message, then the chip's fixed reply with its
+// buttons, both local. Nothing is sent anywhere. Same timestamp handling as the concierge above, for
+// the same reason: the stream sorts by sentAtIso.
+function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>, setters: ChatSetters): void {
+  const now = new Date();
+  const time = formatTimeLabel(now);
+  const sentAtIso = now.toISOString();
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  setters.setMessages((previous) =>
+    mergeMessages(previous, [
+      { id: `answer-q-${stamp}`, from: 'user', text: chip.question, time, sentAtIso },
+      { id: `answer-a-${stamp}`, from: 'commons', text: chip.reply, time, sentAtIso, actions: [...chip.actions] },
+    ]),
+  );
 }
 
 // Run a concierge ask: append the member's question plus the instant local reply. No-op for empty input.
@@ -1082,6 +1097,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [consentGranted, isSending, routeToComic],
   );
 
+  // One-tap fixed answer for an answer chip: the reply is written in the chip itself and shown at once.
+  const answerChip = useCallback(
+    (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => applyAnswerChip(chip, settersRef.current),
+    [],
+  );
+
   // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
   const beginReply = useCallback((message: ChatMessage) => {
     const target = buildReplyTarget(message);
@@ -1157,6 +1178,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     sendMessage,
     sendConciergeAsk,
     askComic,
+    answerChip,
     starterPrompts,
     suggestionChips,
     rateComicAnswer,

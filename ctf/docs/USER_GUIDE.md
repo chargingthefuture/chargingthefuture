@@ -1,6 +1,6 @@
 # How to use Charging the Future
 
-_Last updated: 2026-09-23_
+_Last updated: 2026-09-25_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -8,13 +8,13 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Commons
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-25_
 
 Commons is the home page: one shared channel to read and post in, and the list of every app.
 
 Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with their name, answers from the assistant, and posts from other members.
 
-You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant.
+You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant, and the first one, 'I'm new. What do I do first?', answers on the spot with the three things to do first and a button for each.
 
 The other half is a grid of every app, with a search box and a choice of order — most recent, alphabetical, or most used. You do not need an account to read: a visitor sees the posts and the live community figures at the top of the page. Signing in, which is free, is what lets you post and reach the rest of the apps.
 

@@ -527,6 +527,14 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
+/* Several buttons under one bubble (an answer chip's reply names more than one place): a row that
+   wraps at phone width rather than one button per line. */
+.chatActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* Official announcement card. Emerald treatment + a left accent + a shield "Official"
    badge so an official post reads as a distinct, must-see message instead of blending into the
    purple peer bubbles or the cyan AI card. Mirrors the comic card's header structure. */
