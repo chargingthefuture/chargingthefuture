@@ -1491,6 +1491,35 @@ ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS use
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- A picture attached to a Commons post (owner decision, 2026-09-25). Admins only: the owner explains
+-- the product with screenshots, and Quora erases the accounts those screenshots were shared from, so the
+-- Commons is where they are shown now. Members cannot attach one, which is also why STREAM_FEATURE_ADOPTION
+-- still lists image upload as excluded for members.
+--
+-- One picture per post, keyed on the post, so deleting the post (by its author, by moderation, or with
+-- the account) deletes the picture with it and nothing needs a second deletion rule. The bytes live here
+-- rather than in object storage because there is no image store in this project and the volume is a
+-- handful of screenshots; the browser has already scaled each one down and re-encoded it, which also
+-- drops the location and camera data a phone writes into a photo.
+CREATE TABLE IF NOT EXISTS feed_community_post_images (
+  post_id UUID PRIMARY KEY REFERENCES feed_community_posts(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL CHECK (content_type IN ('image/png', 'image/jpeg', 'image/webp')),
+  bytes BYTEA NOT NULL,
+  byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+  width INTEGER NOT NULL CHECK (width > 0),
+  height INTEGER NOT NULL CHECK (height > 0),
+  alt_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS post_id UUID;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'image/webp';
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS bytes BYTEA;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS byte_size INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS width INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS height INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS alt_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Per-member "last seen" marker for the Commons home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.
@@ -4834,6 +4863,79 @@ ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS suggest
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS release_surface TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- The goal board in a cohort (owner decision, 2026-09-25). A member posts one goal with a finish
+-- line, breaks it into small tasks another member can do from a phone, and other members take a
+-- task, do it, and post the result. There is no conversation on the board: a goal, its tasks, and
+-- their results are the only things anyone can write. At most one open goal per member, enforced by
+-- the partial-unique index below.
+CREATE TABLE IF NOT EXISTS peer_programming_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cohort_id UUID NOT NULL,
+  owner_user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  -- 'open' while members can work on it; 'reached' when the owner says the finish line was met;
+  -- 'withdrawn' when the owner takes it down unfinished.
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reached','withdrawn')),
+  closed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS cohort_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One open goal per member.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_peer_programming_goals_one_open
+  ON peer_programming_goals (owner_user_id)
+  WHERE status = 'open';
+-- The board lists one cohort's goals, newest first.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goals_cohort_created
+  ON peer_programming_goals (cohort_id, created_at);
+
+-- One small task toward a goal. The goal's owner writes it; any other member of the cohort takes it
+-- (taken_by_user_id), does it, and posts what they found (result, finished_at). The owner then keeps
+-- the result or sends the task back: sending it back clears the taker and the result so somebody
+-- else can take it, which is also why a result the owner rejected never counts. A task taken and not
+-- finished within a day can be taken by somebody else; that rule lives in the repository, not here.
+CREATE TABLE IF NOT EXISTS peer_programming_goal_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  goal_id UUID NOT NULL REFERENCES peer_programming_goals(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  taken_by_user_id TEXT,
+  taken_at TIMESTAMPTZ,
+  result TEXT,
+  finished_at TIMESTAMPTZ,
+  kept_at TIMESTAMPTZ,
+  helped BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS goal_id UUID NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS taken_by_user_id TEXT;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS taken_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS result TEXT;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS kept_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS helped BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_goal
+  ON peer_programming_goal_tasks (goal_id, created_at);
+-- The daily count reads tasks finished in the last day across the board.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_finished
+  ON peer_programming_goal_tasks (finished_at)
+  WHERE finished_at IS NOT NULL;
+-- The Weavers of the Commons badge and the daily count read the cards a goal's owner said helped.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_helped
+  ON peer_programming_goal_tasks (kept_at)
+  WHERE helped;
 
 CREATE TABLE IF NOT EXISTS peer_programming_assignment_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

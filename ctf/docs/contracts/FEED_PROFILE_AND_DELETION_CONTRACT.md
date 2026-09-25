@@ -53,6 +53,10 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
   - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy
   - Legal/compliance note: abuse evidence may require retention
+- Table/entity: `feed_community_post_images`
+  - Contains personal data? no user column; linked to its author only through the post
+  - Retention period: the life of the post it is attached to
+  - Legal/compliance note: admins only (2026-09-25). `post_id` → `feed_community_posts` `ON DELETE CASCADE`, so every deletion of a post (by its author, by moderation, or with the account) deletes its picture; no registry entry of its own is needed. The browser re-encodes the picture before upload, dropping location and camera data.
 - Table/entity: `feed_community_replies`
   - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy

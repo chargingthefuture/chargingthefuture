@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
 import type { CommonsMessagesResponse, CommonsMessage } from 'lib/commons/types';
 import { OFFICIAL_SENDER_LABEL } from 'lib/commons/constants';
+import { toCommonsMessageImage } from 'lib/commons/message-image';
 import type { FeedTimelineItem } from 'lib/feed/types';
 import {
   FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH,
@@ -69,6 +70,12 @@ function commonsReactions(item: FeedTimelineItem): CommonsMessage['reactions'] {
   return [];
 }
 
+// The picture an admin attached to a peer post. Only community posts carry one.
+function commonsMessageImage(item: FeedTimelineItem): CommonsMessage['image'] {
+  if (item.itemType !== 'community' || !item.community || !item.sourceCommunityPostId) return null;
+  return toCommonsMessageImage(item.sourceCommunityPostId, item.community.image);
+}
+
 // Announcement-only parts of a message: the title rendered as a heading on the official card, the
 // linked plugins (0–3) resolved to { slug, name } for the "Open <Plugin>" chips, the id
 // reactions/replies key on, and the reply count for the "N replies" affordance. Peer posts and AI
@@ -120,6 +127,7 @@ function mapTimelineItemToCommonsMessage(
     quotedMessage: commonsQuotedMessage(item),
     reactions: commonsReactions(item),
     replyCount,
+    image: commonsMessageImage(item),
   };
 }
 
@@ -357,6 +365,8 @@ export async function POST(request: Request) {
       reactions: [],
       // Peer posts are not replied to through the announcement thread.
       replyCount: 0,
+      // Pictures are attached through POST /api/commons/images, never through this route.
+      image: null,
     };
 
     return NextResponse.json({ ok: true, message }, { status: 201 });

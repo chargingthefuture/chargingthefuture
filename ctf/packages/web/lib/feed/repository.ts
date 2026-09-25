@@ -29,6 +29,7 @@ import {
 } from './commons-guidance';
 import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { normalizeMultilineText } from './normalize';
+import { insertCommunityPostImage, loadCommunityPostImages, type FeedCommunityImage } from './community-images';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
@@ -1328,6 +1329,7 @@ function buildCommunityDetail(
     repliesByPost: Map<string, FeedCommunityReply[]>;
     reactionsByPost: Map<string, FeedReactionSummary[]>;
     quotedById: Map<string, FeedQuotedPost>;
+    imagesByPost: Map<string, FeedCommunityImage>;
   },
 ): FeedCommunityDetail {
   const quotedPost = row.reply_to_post_id ? maps.quotedById.get(row.reply_to_post_id) ?? null : null;
@@ -1344,6 +1346,7 @@ function buildCommunityDetail(
     replyToPostId: quotedPost ? row.reply_to_post_id : null,
     quotedPost,
     reactions: orderReactionsByFixedSet(maps.reactionsByPost.get(row.id) ?? []),
+    image: maps.imagesByPost.get(row.id) ?? null,
   };
 }
 
@@ -1401,9 +1404,10 @@ async function loadCommunityDetails(
   const reactionsByPost = groupReactionsByPost(reactionRows.rows);
   const repliesByPost = groupRepliesByPost(replyRows.rows);
   const quotedById = await loadQuotedPosts(client, postRows.rows);
+  const imagesByPost = await loadCommunityPostImages(client, postRows.rows.map((row) => row.id));
 
   for (const row of postRows.rows) {
-    communityDetails.set(row.id, buildCommunityDetail(row, { repliesByPost, reactionsByPost, quotedById }));
+    communityDetails.set(row.id, buildCommunityDetail(row, { repliesByPost, reactionsByPost, quotedById, imagesByPost }));
   }
 
   return communityDetails;
@@ -2256,6 +2260,7 @@ export async function createFeedCommunityPost(
     );
 
     const postId = inserted.rows[0].id;
+    await insertCommunityPostImage(client, postId, input.image);
     await syncFeedItemForCommunityPost(client, actorId, postId, getCommunityTitle(category), body);
 
     // Every Nth post, publish the Commons guidance notice. Inside this transaction on purpose: the

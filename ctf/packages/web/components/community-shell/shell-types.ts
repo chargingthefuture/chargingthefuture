@@ -40,6 +40,10 @@ export type ChatMessageKind = 'announcement' | 'question' | 'community';
 
 export type ChatMessageAction = { label: string; href: string };
 
+// A picture an admin attached to a Commons post: the member-gated address it is served from, what it
+// shows (read aloud by a screen reader), and its size, so its space is held before it loads.
+export type ChatMessageImage = { url: string; alt: string; width: number; height: number };
+
 export type ChatMessage = {
   id: string;
   from: 'commons' | 'user';
@@ -75,6 +79,8 @@ export type ChatMessage = {
   reactions?: ChatReactionSummary[];
   // The number of replies on this announcement (announcements only). Absent/0 otherwise.
   replyCount?: number;
+  // The picture on this peer post, when an admin attached one. Absent/null otherwise.
+  image?: ChatMessageImage | null;
 };
 
 export type ComicAnswerRating = 'helpful' | 'not_helpful' | 'flagged';

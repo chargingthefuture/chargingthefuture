@@ -398,6 +398,46 @@ contracts:
     idempotency: false
 
   - pluginId: feed
+    command: feed.community.post.image.create
+    version: 1.0.0
+    description: >-
+      Admins only (owner decision, 2026-09-25): post a Commons message with one picture attached.
+      Route POST /api/commons/images, multipart. The picture's type is read from its first bytes and
+      must be PNG, JPEG or WebP, at most 3 MB; the description (alt text) is required. The post and
+      its picture are written in one transaction, under the same moderation and rate limit as any
+      community post. The picture is served by GET /api/commons/images/:postId to signed-in members
+      while the post is up, and deleted with the post.
+    inputSchema:
+      image:
+        type: file
+        required: true
+      alt:
+        type: string
+        maxLength: 500
+        required: true
+      text:
+        type: string
+        required: true
+      width:
+        type: integer
+        required: true
+      height:
+        type: integer
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      message:
+        type: object
+    dataAccess:
+      - feed_community_post_images
+      - feed_community_posts
+      - feed_items
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: feed
     command: feed.community.post.reply
     version: 1.0.0
     description: Reply to a community support post.

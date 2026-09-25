@@ -1,3 +1,5 @@
+import type { CommunityPostImageUpload, FeedCommunityImage } from './community-images';
+
 export type FeedRenderMode = 'card_only' | 'card_toast';
 
 export type FeedChannel = 'all' | 'announcements' | 'questions' | 'community';
@@ -90,6 +92,9 @@ export type FeedCommunityDetail = {
   // Emoji reactions on this post, one entry per reacted emoji, ordered by the fixed reaction
   // set. Always an array (never null); empty when the post has no reactions.
   reactions: FeedReactionSummary[];
+  // The picture an admin attached to this post, or null. Metadata only; the bytes are served by
+  // GET /api/commons/images/:postId.
+  image: FeedCommunityImage | null;
 };
 
 // One reply on an official announcement. Members can reply to an official announcement; the
@@ -222,4 +227,7 @@ export type FeedCommunityPostInput = {
   // Optional id of the peer post this one quotes (Signal-style reply). Validated server-side
   // to reference an existing post; ignored when absent.
   replyToPostId?: string | null;
+  // A picture to attach. Set only by the admin image route; the ordinary message route never passes
+  // one, so a member cannot attach a picture by adding a field to the request.
+  image?: CommunityPostImageUpload | null;
 };
