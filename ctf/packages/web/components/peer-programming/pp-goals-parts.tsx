@@ -20,6 +20,8 @@ export function SmallButton({ label, onClick, disabled, primary }: { label: stri
       onClick={onClick}
       disabled={disabled}
       style={{
+        // A lone button inside a grid row would otherwise stretch to the row's full width.
+        justifySelf: "start",
         padding: "6px 12px",
         borderRadius: 8,
         border: `1px solid ${primary ? t.ACCENT : t.BORDER_STRONG}`,
@@ -137,7 +139,7 @@ function OwnerGoalControls({ goal, busy, onAddTask, onClose }: { goal: BoardGoal
   }
   return (
     <div style={{ display: "grid", gap: 8, paddingTop: 10 }}>
-      <TextBox value={task} onChange={setTask} maxLength={300} placeholder="Another task somebody could do from a phone" />
+      <TextBox value={task} onChange={setTask} rows={2} maxLength={300} placeholder="Another task somebody could do from a phone" />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <SmallButton label="Add task" disabled={busy || task.trim().length === 0} onClick={() => void add()} />
         <SmallButton label="Reached it" primary disabled={busy} onClick={() => onClose(goal.id, "reached")} />
@@ -195,7 +197,7 @@ export function NewGoalForm({ busy, onPost }: { busy: boolean; onPost: (title: s
   return (
     <section style={{ padding: 14, borderRadius: 12, border: `1px dashed ${t.BORDER_STRONG}`, display: "grid", gap: 8 }}>
       <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE }}>Your goal</div>
-      <TextBox value={title} onChange={setTitle} maxLength={200} placeholder="One goal with a finish line, e.g. a yard jockey job in Texas" />
+      <TextBox value={title} onChange={setTitle} rows={2} maxLength={200} placeholder="One goal with a finish line, e.g. a yard jockey job in Texas" />
       <TextBox value={tasks} onChange={setTasks} rows={4} maxLength={9000} placeholder={"Tasks, one per line, each doable from a phone in under half an hour.\ne.g. Find 3 yards hiring near Dallas and add their numbers"} />
       <div>
         <SmallButton label="Post goal" primary disabled={busy || title.trim().length === 0} onClick={() => void submit()} />
