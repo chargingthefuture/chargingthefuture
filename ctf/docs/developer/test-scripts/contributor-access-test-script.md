@@ -30,7 +30,7 @@
 
 ## Core smoke (every session)
 
-1. Sign in as an **admin**. Go to `/admin/contributor-access`. The page loads — no redirect, no blank screen, no unhandled error. web ☐
+1. Sign in as an **admin**. Go to `/admin/daily-exchange` and scroll to the Weavers of the Commons section under the daily reading. It loads — no redirect, no blank screen, no unhandled error. The old address `/admin/daily-exchange` (Weavers of the Commons section) lands on the same section. web ☐
 2. Go to `/apps/directory`. Open any **claimed** Directory profile that the seed data marks as a badge holder. The "Weavers of the Commons" braid badge renders next to the member's name. web ☐
 3. Go to `/apps/directory/weavers-of-the-commons` while signed in as a **member**. The explainer page loads — no redirect, no error. web ☐
 4. Sign out, then navigate directly to `/apps/directory/weavers-of-the-commons`. You are redirected to `/apps/directory` — the page does not render. web ☐
@@ -402,11 +402,11 @@ Result: web ☐
 **Precondition:** Have both an admin account and a plain member account available.
 
 **Steps:**
-1. Sign in as **admin**. Navigate to `/admin/contributor-access`.
+1. Sign in as **admin**. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
 2. Confirm the page loads.
-3. Sign out. Sign in as a plain **member**. Navigate to `/admin/contributor-access`.
+3. Sign out. Sign in as a plain **member**. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
 
-**Expected:** Admin sees the full Contributor Access admin shell — eligible members section, config editor, and channel status card. The member is redirected to `/apps` and never sees admin content.
+**Expected:** Admin sees the daily reading followed by the Weavers of the Commons section — eligible members, config editor, and channel status card. The member is redirected to `/apps` and never sees admin content.
 
 Result: web ☐
 
@@ -415,7 +415,7 @@ Result: web ☐
 ### CA-A2 — Eligible members list shows categorical data only
 **Role:** admin | **Surfaces:** web (desktop)
 
-**Precondition:** At least one member is eligible (seed data or manually triggered). Sign in as admin. Go to `/admin/contributor-access`.
+**Precondition:** At least one member is eligible (seed data or manually triggered). Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
 
 **Steps:**
 1. Look at the eligible members section.
@@ -433,7 +433,7 @@ Result: web ☐
 **Precondition:** At least one eligible member is listed. Sign in as admin.
 
 **Steps:**
-1. Go to `/admin/contributor-access`, eligible members section.
+1. Go to `/admin/daily-exchange` (Weavers of the Commons section), eligible members section.
 2. Click Revoke on an eligible member.
 3. Leave the reason field empty and attempt to confirm.
 4. Then enter a reason (e.g. "Test revocation — this is a manual test run") and confirm.
@@ -470,7 +470,7 @@ Result: web ☐
 **Precondition:** The member revoked in CA-A3/CA-A4 is still revoked. The channel is open.
 
 **Steps:**
-1. Sign in as admin. Go to `/admin/contributor-access`.
+1. Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
 2. Click Reinstate on the revoked member. Confirm.
 3. Sign in as the reinstated member.
 4. Open the Commons.
@@ -518,7 +518,7 @@ Result: web ☐
 ### CA-A8 — Config editor loads with current values
 **Role:** admin | **Surfaces:** web (desktop), web (mobile-responsive)
 
-**Precondition:** Sign in as admin. Go to `/admin/contributor-access`.
+**Precondition:** Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
 
 **Steps:**
 1. Open the config editor section.
@@ -533,7 +533,7 @@ Result: web ☐ mobile-responsive ☐
 ### CA-A9 — Config update saves successfully
 **Role:** admin | **Surfaces:** web (desktop)
 
-**Precondition:** Sign in as admin. Go to `/admin/contributor-access`, config editor.
+**Precondition:** Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
 
 **Steps:**
 1. Change the score threshold to a new value (e.g. 95).
@@ -552,7 +552,7 @@ Result: web ☐
 **Precondition:** Sign in as admin. The eligible count is below `min_eligible_to_open_channel` (default 10). If the seed data produces fewer than 10 eligible members, this condition should hold naturally.
 
 **Steps:**
-1. Go to `/admin/contributor-access`, config editor.
+1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
 2. Observe the channel toggle.
 3. Attempt to turn the channel open toggle ON and save.
 
@@ -568,7 +568,7 @@ Result: web ☐
 **Precondition:** The eligible count meets or exceeds `min_eligible_to_open_channel`. (Lower the minimum via the config editor if needed — set it to 1, save, then try the open toggle. Remember to restore it after the test.) The channel is currently closed.
 
 **Steps:**
-1. Go to `/admin/contributor-access`, config editor.
+1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
 2. Set `minEligibleToOpenChannel` to 1 (if eligible count is low) and save.
 3. Turn the channel open toggle ON and save.
 
@@ -584,7 +584,7 @@ Result: web ☐
 **Precondition:** The channel is currently open (CA-A11 completed). Sign in as admin.
 
 **Steps:**
-1. Go to `/admin/contributor-access`, config editor.
+1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
 2. Turn the channel open toggle OFF and save.
 3. Sign in as an eligible member and open the Commons.
 
@@ -601,7 +601,7 @@ Result: web ☐
 
 **Steps:**
 1. Sign in as the operations-role user.
-2. Navigate to `/admin/contributor-access`.
+2. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
 
 **Expected:** The user is redirected to `/apps`. No admin content renders.
 
@@ -635,7 +635,7 @@ Android was removed on 2026-07-20 (rule 105, PR #1742). There is no Android surf
 - **One-time Stream setup not done:** The `ctf-gated` channel type must be created manually by running `ctf/scripts/setupGatedChannelType.mjs` against the staging credentials before the channel can be created on Stream. If the channel open toggle succeeds but returns a `channelSyncWarning`, and Stream membership is not visible, this is the likely cause — not a code bug.
 - **Default weights not owner-tuned:** The shipped `DEFAULT_WEIGHTS` are a starting point. Members may or may not reach eligibility in the seed data depending on the demo data volume. Adjust `minEligibleToOpenChannel` downward in the config editor for local testing if needed.
 - **Clean-standing gate is partial:** Active blocks and safety reports are not yet read as an admission gate. A member with an active block could be eligible. This is a tracked gap pending an owner decision, not a bug.
-- **The same weights feed a second reading.** These weights are also what the Daily exchange screen (`/admin/daily-exchange`) scores a day by, from the one shared registry, so a weight changed here changes both. The two differ in one stated way: this badge scores all fourteen events, because earning it already requires five distinct counterparties, while the daily count draws only on the twelve marked as delivering something a person received. A goal card marked "It helped" counts toward both, at most three per owner-and-helper pair per week, and the pair also counts toward the five-counterparty gate. Changing a weight and re-reading both screens is the way to see that they move together: that screen's What is weighted panel lists every weighted event read-only, with the weight in force and a mark on the ones that reach the badge but never a day's count, so the definition can be audited without opening this editor.
+- **The same weights feed a second reading.** These weights are also what the daily count at the top of the same screen scores a day by, from the one shared registry, so a weight changed here changes both. The two sit on one admin page for that reason (owner decision, 2026-09-25); saving the settings re-reads the day above. The two differ in one stated way: this badge scores all fourteen events, because earning it already requires five distinct counterparties, while the daily count draws only on the twelve marked as delivering something a person received. A goal card marked "It helped" counts toward both, at most three per owner-and-helper pair per week, and the pair also counts toward the five-counterparty gate. The weights editor marks the other two "badge only".
 
 - **No per-member admin drill-down:** The admin eligible list shows no breakdown of how a member earned eligibility (no score, no per-event view). This is intentional.
 - **Quoted-reply jump not available on mobile-responsive:** Clicking the quoted block to scroll to the original message is web (desktop) only. The mobile-responsive quoted block displays the reference but is not yet a tappable scroll target.

@@ -1,22 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipboardCopy, Repeat } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
+import { ContributorAccessAdminSections } from '@/components/contributor-access/contributor-access-admin-sections';
 import type {
   ExchangeActivityReading,
   ExchangeContributor,
   ExchangeDay,
-  WeightedValueEvent,
 } from 'lib/engagement/exchange-activity';
-
-type WeaversReading = {
-  holders: number;
-  recent: { username: string | null; firstEarnedAt: string | null }[];
-};
 
 type Tokens = ReturnType<typeof getPluginShellTokens>;
 
@@ -96,51 +91,6 @@ function DayBar({ day, target, tokens }: { day: ExchangeDay; target: number; tok
 // The lifetime side, as its own component so the shell stays inside the size and complexity limits.
 // Earned once and kept, so this answers whether anybody is still arriving rather than listing
 // everybody — the Contributor Access screen is where the full list lives.
-function WeaversWidget({ weavers, tokens }: { weavers: WeaversReading; tokens: Tokens }) {
-  return (
-    <section
-      aria-label="Weavers of the Commons"
-      style={{
-        borderRadius: 12,
-        background: tokens.SURFACE,
-        border: `1px solid ${tokens.BORDER}`,
-        padding: 12,
-        marginTop: 18,
-      }}
-    >
-      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Weavers of the Commons</div>
-      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
-        Every one of the fourteen events, at the same weights, asked of a member&apos;s entire time
-        here instead of one day. Earned once and kept, and only after five different counterparties.
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: tokens.TITLE, marginTop: 8 }}>
-        {weavers.holders}
-      </div>
-      <div style={{ fontSize: 11, color: tokens.SUBTLE }}>holding the badge</div>
-      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
-        {weavers.recent.map((member) => (
-          <li
-            key={`${member.username ?? 'member'}-${member.firstEarnedAt ?? ''}`}
-            style={{
-              fontSize: 12,
-              color: tokens.TEXT,
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '3px 0',
-            }}
-          >
-            <span>{member.username ?? '(no username)'}</span>
-            <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
-              {member.firstEarnedAt?.slice(0, 10) ?? '—'}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 // Who is delivering today, ordered by what that day's events are worth under the shared weights.
 //
 // The handle leads and the member id sits under it (owner directive, 2026-09-20). The id alone was
@@ -199,99 +149,50 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
   );
 }
 
-// The definition, read-only, so an admin can audit what is weighted without taking it on trust or
-// opening the config editor (owner directive, 2026-09-20). A weight of zero shows rather than
-// hides: an event nobody has tuned is still part of the definition. Delivering events come first,
-// then the ones that only reach the badge.
-function WeightsPanel({ events, tokens }: { events: WeightedValueEvent[]; tokens: Tokens }) {
-  if (events.length === 0) {
-    return null;
-  }
-
-  return (
-    <section
-      aria-label="What is weighted"
-      style={{
-        borderRadius: 12,
-        background: tokens.SURFACE,
-        border: `1px solid ${tokens.BORDER}`,
-        padding: 12,
-        marginTop: 12,
-      }}
-    >
-      <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>What is weighted</div>
-      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
-        Every weighted event and what it is worth right now. Both readings score from this list.
-      </div>
-      <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
-        {events.map((event) => (
-          <li
-            key={event.key}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '4px 0',
-              borderTop: `1px solid ${tokens.BORDER}`,
-            }}
-          >
-            <span style={{ fontSize: 12, color: event.delivers ? tokens.TEXT : tokens.SUBTLE }}>
-              {event.label}
-              {!event.delivers && (
-                <span style={{ fontSize: 11, color: tokens.SUBTLE }}> · badge only</span>
-              )}
-            </span>
-            <span style={{ fontSize: 12, color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
-              {event.weight}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 export function DailyExchangeShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
 
   const [reading, setReading] = useState<ExchangeActivityReading | null>(null);
-  const [weavers, setWeavers] = useState<WeaversReading | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    let canceled = false;
-
-    async function load() {
-      try {
-        const response = await fetch('/api/admin/daily-exchange');
-        const payload = (await response.json()) as {
-          reading?: ExchangeActivityReading;
-          weavers?: WeaversReading;
-          message?: string;
-        };
-        if (canceled) {
-          return;
-        }
-        if (!response.ok) {
-          setError(payload.message ?? `The reading did not load (${response.status}).`);
-          return;
-        }
-        setReading(payload.reading ?? null);
-        setWeavers(payload.weavers ?? null);
-      } catch (caught) {
-        if (!canceled) {
-          setError(caught instanceof Error ? caught.message : 'The reading did not load.');
-        }
+  // Read the day. Called on open, and again after the badge settings below are saved, because a
+  // saved weight changes today's scores too.
+  const load = useCallback(async (isCanceled: () => boolean = () => false) => {
+    try {
+      const response = await fetch('/api/admin/daily-exchange');
+      const payload = (await response.json()) as { reading?: ExchangeActivityReading; message?: string };
+      if (isCanceled()) {
+        return;
+      }
+      if (!response.ok) {
+        setError(payload.message ?? `The reading did not load (${response.status}).`);
+        return;
+      }
+      setReading(payload.reading ?? null);
+    } catch (caught) {
+      if (!isCanceled()) {
+        setError(caught instanceof Error ? caught.message : 'The reading did not load.');
       }
     }
+  }, []);
 
-    void load();
+  useEffect(() => {
+    let canceled = false;
+    void load(() => canceled);
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [load]);
+
+  // The events that reach the badge but never a day's count, marked in the weights editor below.
+  const badgeOnlyKeys = useMemo(
+    () => new Set((reading?.events ?? []).filter((event) => !event.delivers).map((event) => event.key)),
+    [reading],
+  );
+  const weightOrder = useMemo(() => (reading?.events ?? []).map((event) => event.key), [reading]);
+  const reloadDay = useCallback(() => void load(), [load]);
 
   const onCopy = useCallback(async () => {
     if (!reading) {
@@ -309,7 +210,7 @@ export function DailyExchangeShell() {
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
       <MobileScreenHeader
-        title="Daily exchange"
+        title="Daily exchange and badge"
         accent={t.ACCENT}
         icon={<Repeat size={18} color={t.ACCENT} />}
       />
@@ -374,11 +275,7 @@ export function DailyExchangeShell() {
               ))}
             </ul>
 
-            {weavers && <WeaversWidget weavers={weavers} tokens={t} />}
-
             <TodayRoster roster={reading.todayRoster} tokens={t} />
-
-            <WeightsPanel events={reading.events} tokens={t} />
 
             <p style={{ fontSize: 12, color: t.TEXT, marginTop: 14, lineHeight: 1.6 }}>
               The goal is the median day over a year at or above {reading.target}. It reads{' '}
@@ -403,6 +300,8 @@ export function DailyExchangeShell() {
             </p>
           </>
         )}
+
+        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} onConfigSaved={reloadDay} />
       </div>
     </div>
   );
