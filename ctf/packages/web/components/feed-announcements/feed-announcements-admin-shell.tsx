@@ -202,7 +202,7 @@ function AnnouncementCard({
         <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{a.title}</span>
         <Pill label={a.status} color={STATUS_COLOR[a.status] ?? t.MUTED} />
       </div>
-      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: a.linkedPluginSlugs.length > 0 ? 6 : (a.status === 'archived' ? 0 : 8) }}>{a.body}</div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: a.linkedPluginSlugs.length > 0 ? 6 : (a.status === 'archived' ? 0 : 8), overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{a.body}</div>
       {a.linkedPluginSlugs.length > 0 ? (
         <div style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 5, fontSize: 12, color: t.ACCENT, marginBottom: a.status === 'archived' ? 0 : 8 }}>
           <Link2 size={12} /> Links to{' '}
