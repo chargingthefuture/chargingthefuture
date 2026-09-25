@@ -9,6 +9,7 @@ import { PeerProgrammingLoading } from "./pp-loading";
 import { PeerProgrammingCohortsTab } from "./pp-cohorts-tab";
 import { PeerProgrammingSessionTab } from "./pp-session-tab";
 import { PeerProgrammingChatTab } from "./pp-chat-tab";
+import { PeerProgrammingGoalsTab } from "./pp-goals-tab";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
@@ -120,7 +121,15 @@ function initialCohortIdFromUrl(): string | null {
   return new URLSearchParams(window.location.search).get("cohortId");
 }
 
+// A notification about the goal board links with ?tab=goals, so it opens on the board rather than
+// on the conversation a cohort deep link otherwise opens.
+function goalsTabRequested(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("tab") === "goals";
+}
+
 const TABS: { key: Tab; label: string }[] = [
+  { key: "goals", label: "Goals" },
   { key: "cohorts", label: "Cohorts" },
   { key: "session", label: "Session" },
   { key: "chat", label: "Direct Line" },
@@ -200,6 +209,7 @@ function PeerProgrammingTabContent(props: {
   const participants = room?.participants ?? [];
   return (
     <>
+      {tab === "goals" && <PeerProgrammingGoalsTab />}
       {tab === "cohorts" && (
         <PeerProgrammingCohortsTab
           room={room}
@@ -251,7 +261,8 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [activeCohortId, setActiveCohortId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [tab, setTab] = useState<Tab>("cohorts");
+  // The goal board is where the room opens (owner decision, 2026-09-25).
+  const [tab, setTab] = useState<Tab>("goals");
   const [messageInput, setMessageInput] = useState("");
   const [feedbackInput, setFeedbackInput] = useState("");
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
@@ -275,7 +286,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     const deepLinked = initialCohortIdFromUrl();
     if (deepLinked) {
       setActiveCohortId(deepLinked);
-      setTab("chat");
+      setTab(goalsTabRequested() ? "goals" : "chat");
     }
     async function fetchData() {
       setLoading(true);

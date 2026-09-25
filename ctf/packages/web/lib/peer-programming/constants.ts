@@ -6,10 +6,24 @@ export const PEER_PROGRAMMING_ERROR_CODE = {
   persistenceUnavailable: 'peer_programming_persistence_unavailable',
   streamUnavailable: 'peer_programming_stream_unavailable',
   cohortEnded: 'peer_programming_cohort_ended',
+  goalAlreadyOpen: 'peer_programming_goal_already_open',
+  taskUnavailable: 'peer_programming_task_unavailable',
 } as const;
 
 export const PEER_PROGRAMMING_MAX_MESSAGE_LENGTH = 2000;
 export const PEER_PROGRAMMING_MAX_FEEDBACK_LENGTH = 1000;
+
+// The goal board. A goal names a finish line in a sentence; a task is something another member can do
+// from a phone in under half an hour; a result is what they found (numbers, a link, what a call said).
+export const PEER_PROGRAMMING_MAX_GOAL_TITLE_LENGTH = 200;
+export const PEER_PROGRAMMING_MAX_TASK_LENGTH = 300;
+export const PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH = 1000;
+export const PEER_PROGRAMMING_MAX_TASKS_PER_GOAL = 30;
+// A task somebody took and has not finished opens again for anyone after this many hours, so one
+// person who took it and then had a bad week does not hold it indefinitely.
+export const PEER_PROGRAMMING_TASK_HOLD_HOURS = 24;
+// How long a reached goal stays on the board after its owner closes it.
+export const PEER_PROGRAMMING_REACHED_GOAL_VISIBLE_DAYS = 14;
 // Target headcount placed into each weekly cohort. Cohorts are formed at 12 members because
 // participation is voluntary and asynchronous — placing ~12 gives a working group even when only
 // about 5 actually show up and take part in a given week. This is the size of the weekly split in

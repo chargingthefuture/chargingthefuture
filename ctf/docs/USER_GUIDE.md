@@ -216,11 +216,13 @@ After the event ends, the recording stays on Beacon and gets posted to the Commo
 
 ## PeerProgramming
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-25_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
 Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.
+
+The PeerProgramming screen opens on the Goals tab, your cohort's goal board. You can post one goal with a finish line, such as a yard jockey job in Texas or a camper, and break it into small tasks somebody else could do from a phone in under half an hour. Other members take a task, do it, and post what they found: phone numbers, a link, what a call said. You keep a result or send the task back for somebody else, and each finished task shows who did it. The top of the board shows how many tasks were done across your cohort in the last 24 hours. There is no conversation on the board, only goals, tasks and results.
 
 Your cohort meets by live video. On the Session tab, 'Join Session' opens the cohort's own call — you see and hear each other like any video meeting, with mute, camera and leave controls. Your camera and microphone start on, so joining puts you on screen. There is one call per cohort, for its members only, and it is open whenever the cohort is running rather than at a set hour: a cohort holds as many or as few sessions as it wants, arranged between its members.
 
@@ -231,9 +233,11 @@ After your cohort ends, a feedback box appears where you can write a note about 
 **How to use it**
 
 1. Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.
-2. To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.
-3. When you're in a cohort, open the chat room and post or reply to other members' messages.
-4. After your cohort ends, use the feedback box to write about your experience.
+2. On the Goals tab, write your goal and its tasks, one per line, and press 'Post goal'. You can have one open goal at a time; press 'Reached it' or 'Take it down' to close it.
+3. To help someone else, press 'Take it' on a task on their goal, do it, and post what you found. If you cannot finish it, press 'Let it go'. A task you hold for a day without a result opens again for anyone.
+4. To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.
+5. When you're in a cohort, open the chat room and post or reply to other members' messages.
+6. After your cohort ends, use the feedback box to write about your experience.
 
 ## Mood
 

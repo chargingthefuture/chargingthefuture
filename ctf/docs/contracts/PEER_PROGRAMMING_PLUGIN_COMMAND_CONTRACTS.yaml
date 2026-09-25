@@ -496,3 +496,120 @@ contracts:
     purpose: cohort_lifecycle_governance
     retentionClass: audit_long_lived
     idempotency: true
+
+  # The goal board (2026-09-25). A cohort member posts one goal with tasks; other members take tasks
+  # and post results; the goal's owner keeps a result or sends it back. No conversation surface.
+  - pluginId: peer-programming
+    command: goal.board.read
+    version: 1.0.0
+    description: Read the goal board for the caller's own cohort — open goals, goals reached in the last 14 days, their tasks, resolved names of owners and helpers, and the count of tasks finished in the last 24 hours. Joins the standing Cohort 1 after the access gate (single-open mode), like the room read. Route GET /api/peer-programming/goals.
+    inputSchema: {}
+    outputSchema:
+      cohortId:
+        type: string
+      ended:
+        type: boolean
+      goals:
+        type: array
+      names:
+        type: object
+      finishedLastDay:
+        type: integer
+    dataAccess:
+      - peer_programming_cohorts
+      - peer_programming_cohort_members
+      - peer_programming_goals
+      - peer_programming_goal_tasks
+      - canonical_user_profile
+    purpose: async_collaboration
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: peer-programming
+    command: goal.create
+    version: 1.0.0
+    description: Post a goal with its first tasks on the caller's own cohort board. One open goal per member, enforced by the partial-unique index uq_peer_programming_goals_one_open; a second is refused with 409 peer_programming_goal_already_open. Route POST /api/peer-programming/goals.
+    inputSchema:
+      title:
+        type: string
+        required: true
+        maxLength: 200
+      tasks:
+        type: array
+        required: false
+        maxItems: 30
+        itemMaxLength: 300
+    outputSchema:
+      goalId:
+        type: string
+    dataAccess:
+      - peer_programming_cohorts
+      - peer_programming_cohort_members
+      - peer_programming_goals
+      - peer_programming_goal_tasks
+      - peer_programming_admin_audit_trail
+    purpose: async_collaboration
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: peer-programming
+    command: goal.update
+    version: 1.0.0
+    description: The goal's owner adds a task (action add_task, up to 30 per goal) or closes the goal (action close, outcome reached or withdrawn). Only while the goal is open and the cohort has not ended. Route POST /api/peer-programming/goals/[goalId].
+    inputSchema:
+      goalId:
+        type: string
+        required: true
+      action:
+        type: string
+        required: true
+        enum: [add_task, close]
+      description:
+        type: string
+        required: false
+        maxLength: 300
+      outcome:
+        type: string
+        required: false
+        enum: [reached, withdrawn]
+    outputSchema:
+      taskId:
+        type: string
+    dataAccess:
+      - peer_programming_goals
+      - peer_programming_goal_tasks
+      - peer_programming_cohorts
+      - peer_programming_admin_audit_trail
+    purpose: async_collaboration
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: peer-programming
+    command: goal.task.update
+    version: 1.0.0
+    description: Act on one task. A member of the goal's cohort other than its owner may take an open task (or one held more than 24 hours without a result), and the holder may release it or finish it with a result. The goal's owner may keep or send back a finished result, or remove a task nobody has finished. Each action is one conditional update; a lost race answers 409 peer_programming_task_unavailable. finish notifies the goal's owner (peer-programming.goal.task-finished). Route POST /api/peer-programming/goals/tasks/[taskId].
+    inputSchema:
+      taskId:
+        type: string
+        required: true
+      action:
+        type: string
+        required: true
+        enum: [take, release, finish, keep, send_back, remove]
+      result:
+        type: string
+        required: false
+        maxLength: 1000
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - peer_programming_goal_tasks
+      - peer_programming_goals
+      - peer_programming_cohort_members
+      - peer_programming_cohorts
+      - notifications
+      - peer_programming_admin_audit_trail
+    purpose: async_collaboration
+    retentionClass: transactional_long_lived
+    idempotency: false

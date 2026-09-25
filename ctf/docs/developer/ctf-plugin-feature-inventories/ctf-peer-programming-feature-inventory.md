@@ -26,6 +26,16 @@ signed in during the last 7 days is placed in a cohort of up to 12, and in pract
 take part in a given week. The app tells a member when they have been placed, and tells the rest of
 the cohort when someone posts.
 
+The room opens on a Goals tab: the cohort's goal board (owner decision, 2026-09-25). Each member
+can post one goal with a finish line — a yard jockey job in Texas, a camper — and break it into small
+tasks somebody else could do from a phone in under half an hour, like finding three yards hiring near
+Dallas and adding their numbers. Other members of the cohort take a task, do it, and post what they
+found: phone numbers, a link, what a call said. The goal's owner keeps the result or sends the task
+back for somebody else, and each finished task shows who did it. The top of the board counts the
+tasks finished across the cohort in the last 24 hours. There is no conversation on the board: a
+goal, its tasks and their results are the only things anyone can write there. The conversation and
+the call stay on their own tabs, and using any of them is optional.
+
 The topic for the week is set by an admin today and shown in the room header. Cohorts choosing their
 own topic is the intent but is not built — see Gaps and Known Technical Debt.
 
@@ -138,6 +148,30 @@ to the env flag, then the default. With no admin setting and no env override, th
 4. Fallback open mode activates when fewer than 2 cohort members are present/active.
 5. The Cohorts tab card for your own cohort shows an "Active" badge with a "Join Session" button while the cohort is running, and an "Ended" badge with no "Join Session" button once it has ended.
 
+### Goal Board
+
+1. The Goals tab is the first tab and the one the room opens on. A notification about the board
+   links with `?tab=goals` and opens it directly.
+2. A member with no open goal sees a "Your goal" form: one line for the goal and a box for its first
+   tasks, one per line. "Post goal" puts it on the board. A member can have one open goal at a time;
+   posting a second is refused with a message saying to close the first.
+3. Every member of the cohort sees every open goal, newest first, plus goals reached in the last two
+   weeks. A goal taken down unfinished leaves the board.
+4. Each task shows its state: Open; "@name is on it"; "Done by @name, waiting on the goal's owner";
+   or "Done by @name" once kept. The helper's name is shown on every finished task (owner decision,
+   2026-09-25).
+5. Another member presses "Take it" on an open task. While they hold it, they see a box for the
+   result with "Post result" and "Let it go". A task taken and not finished within 24 hours opens
+   again for anyone.
+6. The goal's owner cannot take tasks on their own goal. On a finished task they press "Keep" or
+   "Send back". Sending back clears the helper and the result and opens the task again, and the
+   result no longer counts. They can remove a task nobody has finished, add tasks (up to 30 on a
+   goal), and close the goal with "Reached it" or "Take it down".
+7. The top of the board shows how many tasks were finished across the cohort in the last 24 hours.
+8. When a helper posts a result, the goal's owner gets a notifications-center notification
+   (`peer-programming.goal.task-finished`, category `community`) linking to the board.
+9. On an ended cohort the board is read-only.
+
 ### Tiered Participation Visibility
 
 1. Cohort members can create posts and threaded replies.
@@ -181,6 +215,11 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `POST /api/peer-programming/messages/[messageId]/replies` — Reply to a message thread. Same cohort-membership check as the post route.
 - `POST /api/peer-programming/feedback` — Submit structured feedback for the iteration loop.
 - `POST /api/peer-programming/session/join` — Mint live video session credentials (GetStream) for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member gets a call token and the call is always scoped to that member's cohort. Returns 404 when the caller has no cohort and 503 when Stream is not configured.
+
+- `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId }`. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks; `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours. `cohortId` is null when the caller has no cohort.
+- `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_goal_already_open` when the caller already has an open goal (enforced by a partial-unique index); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
+- `POST /api/peer-programming/goals/[goalId]` — The goal owner only. Body `{ action: "add_task", description }` or `{ action: "close", outcome: "reached" | "withdrawn" }`. Audited as `peer-programming.goal.task.add` / `peer-programming.goal.close`.
+- `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may `keep` or `send_back` a finished result, or `remove` a task nobody has finished. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
 
 ### Admin Routes
 
@@ -237,6 +276,9 @@ somebody is using the app but not being selected, the sign-in record is what to 
 7. `peer_programming_admin_audit_trail` — immutable admin-action audit trail (id, actor_id, command, policy_status, reason, target_type, target_id, metadata jsonb, created_at). One row per privileged peer-programming command, capturing the `allow`/`deny` outcome; written by the repository audit helper. **Retained** on account deletion for compliance (`retain` in `lib/account/deletion-registry.ts`), not removed with the member's own rows.
 8. `peer_programming_settings` — one-row settings singleton for admin-flippable plugin toggles (singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE with `CHECK (singleton_id)` so only one row can exist, single_open_cohort_enabled BOOLEAN nullable, updated_by_user_id TEXT, updated_at TIMESTAMPTZ). `single_open_cohort_enabled` is the admin's stored choice for single standing, always-open Cohort 1 mode: `TRUE`/`FALSE` is an explicit choice that supersedes the env flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, and `NULL` (the default / unset) means fall back to the env flag, then the built-in default (ON). Read by `getPeerProgrammingSettings`/`resolveSingleOpenCohortMode`/`isSingleOpenCohortModeEnabled` and written by `setPeerProgrammingSingleOpenCohort` in `lib/peer-programming/repository.ts`. Not member-owned data; not seeded (absent row = unset = default ON). The async resolver `isSingleOpenCohortModeEnabled()` is what `getMyCohort`, `listActiveCohorts`, and `runWeeklyAssignment` now await to decide the mode.
 
+9. `peer_programming_goals` — The goal board's goals (id, cohort_id, owner_user_id, title, status, closed_at, created_at, updated_at). `status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reached','withdrawn'))`. Partial-unique index `uq_peer_programming_goals_one_open ON (owner_user_id) WHERE status = 'open'` holds a member to one open goal; index `idx_peer_programming_goals_cohort_created ON (cohort_id, created_at)` backs the board read. Deleted with the member's account (`del` on `owner_user_id`), which removes its tasks by cascade.
+10. `peer_programming_goal_tasks` — Tasks on a goal (id, goal_id → `peer_programming_goals(id) ON DELETE CASCADE`, description, taken_by_user_id, taken_at, result, finished_at, kept_at, created_at, updated_at). A task is open when `taken_by_user_id` is null or `taken_at` is more than 24 hours old with no `finished_at`; taken while held; finished once `finished_at` is set; kept once `kept_at` is set. Sending back clears the helper, the result and `finished_at`. Indexes `idx_peer_programming_goal_tasks_goal ON (goal_id, created_at)` and a partial `idx_peer_programming_goal_tasks_finished ON (finished_at) WHERE finished_at IS NOT NULL` for the 24-hour count. On account deletion a helper's id is pseudonymized (`pseudo` on `taken_by_user_id`) and the result stays with the goal; the board then shows "A former member".
+
 ### Storage and Persistence Constraints
 
 1. Messages and replies are append-only and persist continuously.
@@ -252,6 +294,8 @@ somebody is using the app but not being selected, the sign-in record is what to 
 4. Audit capture for allow/deny policy decisions and mutation results, including `not_cohort_member` and `cohort_ended` denials on write, `no_cohort` / `stream_not_configured` denials on session join, and `peer-programming.cohort.end` (allow, plus `standing_cohort_cannot_end` deny) on the admin end-cohort action.
 5. **Ended cohorts are read-only server-side.** `POST /messages` and `/replies` reject an ended cohort (`isCohortEnded`) with 409 `peer_programming_cohort_ended`, even for a member — so a closed cohort cannot be posted into via a leftover link, not just hidden in the UI.
 6. Data minimization for room rendering and feedback metadata.
+7. **The goal board is written server-side by role, never by client claim.** Goal changes require the caller to be the goal's owner; taking, releasing and finishing a task require membership of the goal's cohort and exclude the owner; keeping, sending back and removing require the owner. Each is a single conditional update, and ids that are not UUIDs are answered 404 before any query. An ended cohort's board rejects every write with 409.
+8. The goal board has no free conversation: its only writable text is a goal title, a task, and a task result, each length-capped. Nothing on it addresses a member directly.
 
 ## Web and Android Delivery Status
 
@@ -301,6 +345,16 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-09-25: Goal board added as the Goals tab, which the room now opens on (owner decision). A
+  member posts one goal with a finish line and tasks another member can do from a phone; other
+  members take tasks, post results, and the goal's owner keeps a result or sends it back. Finished
+  tasks show the helper's name, one open goal per member, and the board counts tasks finished in the
+  last 24 hours. New tables `peer_programming_goals` and `peer_programming_goal_tasks`; routes
+  `GET/POST /api/peer-programming/goals`, `POST /api/peer-programming/goals/[goalId]`,
+  `POST /api/peer-programming/goals/tasks/[taskId]`; account deletion deletes a member's goals and
+  pseudonymizes their name on tasks they did for others. The existing PeerProgramming Trust signal
+  (cohorts joined) is unchanged; no new Trust signal. The conversation and the call are unchanged.
 
 - 2026-08-27: The active set this plugin selects from now sees a member on any day they signed in,
   not only days a plugin access check happened to run: `recordLoginEvent` moved from

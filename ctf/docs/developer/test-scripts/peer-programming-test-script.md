@@ -35,6 +35,11 @@ about it, being able to join the call, and being able to post and reply whenever
 quiet text room is not by itself a failure. While the community is small this normally runs as one
 standing room, Cohort 1, that everyone joins (inventory Intent and Outcome, 2026-08-18).
 
+The room opens on the Goals tab: the cohort's goal board (2026-09-25). A member posts one goal with a
+finish line and small tasks, other members take a task and post what they found, and the goal's owner
+keeps the result or sends it back. There is no conversation on the board by design, so the absence of
+a reply box there is not a bug to file.
+
 Session timing is ad hoc by decision: a cohort holds as many or as few calls as it wants, whenever
 its members want them. There is no scheduled meeting hour and no reminder, so the absence of one is
 not a bug to file. The week's topic is admin-set for the same reason — a cohort cannot pick or vote
@@ -64,6 +69,13 @@ own camera tile, and mute, camera, and leave controls are visible; leaving retur
 without an error. If live video is not configured in this environment, the readable "live video
 unavailable" notice counts as a pass here — the full walkthrough covers both paths in PP-10 and
 PP-11.
+web ☐
+
+**6. The goal board opens and takes a goal**
+Signed in as a cohort member with no open goal, open `/apps/peer-programming`. The Goals tab is
+selected, the top card shows how many tasks were done in the last 24 hours, and the "Your goal" form
+is visible. Post a goal with two tasks, one per line. It appears on the board as "Your goal" with
+"0 of 2 tasks done", and the form is gone.
 web ☐
 
 ---
@@ -330,6 +342,104 @@ Result: web ☐
 
 ---
 
+### PP-15 — Another member takes a task and posts a result
+
+**Role:** member (two accounts) · **Surfaces:** web
+
+**Precondition:** Member A has an open goal with at least one open task (core smoke 6). Member B is a
+member of the same cohort.
+
+**Steps:**
+1. As B, open the Goals tab and press "Take it" on A's task.
+2. Type a result, such as a phone number and a yard name, and press "Post result".
+3. As A, open the notifications center, then the Goals tab.
+
+**Expected:** After step 1 the task reads "@B is on it" and B sees a result box with "Post result"
+and "Let it go". After step 2 the task reads "Done by @B, waiting on the goal's owner" with the
+result shown, and the count at the top goes up by one. A has a notification that somebody finished a
+task on their goal, and it opens the Goals tab.
+
+Result: web ☐
+
+---
+
+### PP-16 — The owner keeps one result and sends another back
+
+**Role:** member (two accounts) · **Surfaces:** web
+
+**Precondition:** A's goal has two tasks B finished (PP-15, twice).
+
+**Steps:**
+1. As A, press "Keep" on the first result.
+2. As A, press "Send back" on the second.
+
+**Expected:** The first task reads "Done by @B" and keeps its result. The second task reads "Open"
+with no result and no name, anybody can take it again, and the count at the top drops by one.
+
+Result: web ☐
+
+---
+
+### PP-17 — One open goal per member
+
+**Role:** member · **Surfaces:** web
+
+**Steps:**
+1. With an open goal, look for the "Your goal" form.
+2. Press "Reached it" on your goal.
+
+**Expected:** While the goal is open there is no form to post a second one. After "Reached it" the
+goal stays on the board marked Reached, with no task controls, and the "Your goal" form is back.
+"Take it down" instead removes the goal from the board.
+
+Result: web ☐
+
+---
+
+### PP-18 — The owner cannot take tasks on their own goal
+
+**Role:** member · **Surfaces:** web
+
+**Steps:**
+1. On your own open goal, look at an open task.
+
+**Expected:** There is no "Take it" button on your own tasks, only "Remove". Removing it takes it off
+the goal. A task with a posted result shows "Keep" and "Send back" instead, never "Remove".
+
+Result: web ☐
+
+---
+
+### PP-19 — Two members pressing "Take it" at once
+
+**Role:** member (two accounts) · **Surfaces:** web
+
+**Steps:**
+1. With the board open as B and C, both press "Take it" on the same open task.
+
+**Expected:** One of them holds the task. The other sees "Somebody took this task a moment before
+you." and the board reloads showing who has it. Nothing breaks.
+
+Result: web ☐
+
+---
+
+### PP-20 — A held task opens again after 24 hours
+
+**Role:** member (two accounts) · **Surfaces:** web
+
+**Precondition:** B took a task on A's goal more than 24 hours ago and did not post a result.
+
+**Steps:**
+1. As C, open the Goals tab.
+
+**Expected:** The task reads "Open" with a "Take it" button. C can take it. B can no longer post a
+result on it once C holds it.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### PP-A1 — Set or update the weekly topic
@@ -548,6 +658,9 @@ browser and the phone-width layout — but a missing Android result is never a b
 | PP-12 | Member with no cohort sees empty state, not a crash |
 | PP-13 | Refresh reloads room without full-screen loading flash |
 | PP-14 | Fresh member auto-joins Cohort 1 in single standing mode |
+| PP-15 | Another member takes a task, posts a result, and the owner is notified |
+| PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
+| PP-17 | One open goal at a time; the form returns after the goal is closed |
 | PP-A3 | Admin can run weekly assignment and see the result count |
 | PP-A5 | Admin cohort list shows cross-week cohorts with week labels |
 | PP-A6 | Admin cohort roster shows usernames |

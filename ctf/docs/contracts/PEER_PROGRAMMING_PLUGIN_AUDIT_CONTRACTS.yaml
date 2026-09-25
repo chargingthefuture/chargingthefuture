@@ -334,3 +334,67 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: peer-programming
+    command: goal.create
+    commandVersion: 1.0.0
+    purpose: async_collaboration
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - goal_board_mutation
+    targetContext:
+      goalId: goal_identifier
+      taskCount: task_count
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: peer-programming
+    command: goal.update
+    commandVersion: 1.0.0
+    purpose: async_collaboration
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - goal_board_mutation
+    targetContext:
+      goalId: goal_identifier
+      action: add_task_or_close
+      outcome: reached_or_withdrawn
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: peer-programming
+    command: goal.task.update
+    commandVersion: 1.0.0
+    purpose: async_collaboration
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - goal_board_mutation
+    targetContext:
+      taskId: task_identifier
+      action: take_release_finish_keep_send_back_or_remove
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
