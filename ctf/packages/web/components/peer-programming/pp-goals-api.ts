@@ -9,6 +9,7 @@ export type BoardTask = {
   description: string;
   status: BoardTaskStatus;
   takenByUserId: string | null;
+  takenAtIso: string | null;
   result: string | null;
   finishedAtIso: string | null;
   // Present only for the goal's owner and the member who did the card; everyone else reads false.
@@ -31,6 +32,9 @@ export type Board = {
   names: Record<string, string>;
   finishedLastDay: number;
   viewerUserId: string;
+  // How many hours a taken card holds before it reopens for anyone. Shown to a member before and
+  // after they take a card, so nobody does the work and comes back to find it already reopened.
+  taskHoldHours: number;
 };
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -71,6 +75,7 @@ export async function loadBoard(signal?: AbortSignal): Promise<{ ok: true; board
       names: data.names ?? {},
       finishedLastDay: data.finishedLastDay ?? 0,
       viewerUserId: data.viewerUserId,
+      taskHoldHours: data.taskHoldHours,
     },
   };
 }

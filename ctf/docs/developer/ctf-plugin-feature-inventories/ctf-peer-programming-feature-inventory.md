@@ -82,17 +82,21 @@ to the env flag, then the default. With no admin setting and no env override, th
 
 - **When ON (default):** there is a single standing cohort — the one row with `is_standing = TRUE`,
   label `C1`, always open (`fallback_open = TRUE`). It is not week-scoped: it persists across weeks
-  and is found by `is_standing = TRUE`, not by the current week. Opening PeerProgramming auto-joins the
-  member to Cohort 1 so they can post, not just listen: the membership WRITE is `joinStandingCohort`,
-  called by the gated routes (`GET /room`, `POST /session/join`) **after** their access gate authorizes
-  the request — a find-or-create plus an `ON CONFLICT DO NOTHING` membership insert. `getMyCohort` is
-  read-only and never writes, so a plain read can never place a member; it returns the standing cohort
-  only once the caller is a member. `listActiveCohorts`/`getCohortById`/`listManagedCohorts` include the standing cohort
-  regardless of week so the room's cohort list and `?cohortId=` listen-in resolve it. The weekly
-  auto-split is paused: `runWeeklyAssignment` (cron and admin manual run) ensures the standing cohort
-  exists and idempotently joins all the provided active members into it (same idempotent assignment
-  notifications), creating no `C2`/`C3`. The find-or-create helper `ensureStandingCohort(actorId)` is
-  idempotent and races safely against the partial-unique standing index.
+  and is found by `is_standing = TRUE`, not by the current week. Placement into it is decided solely
+  by `runWeeklyAssignment` (the cron, and an admin's manual run) from the same last-7-days-active,
+  Unlock-approved set weekly mode uses — non-deterministic pairing of whoever has been active, not a
+  choice a member makes. It idempotently ensures the standing cohort exists (`ensureStandingCohort`,
+  a find-or-create that races safely against the partial-unique standing index) and joins every
+  provided active member into it (`ON CONFLICT DO NOTHING`), sending the same idempotent assignment
+  notifications, creating no `C2`/`C3`. `GET /room`, `GET`/`POST /goals`, and `POST /session/join` are
+  reads with respect to membership: they never place anyone. `getMyCohort` returns the standing
+  cohort only once `runWeeklyAssignment` has already placed the caller — a member who is active but
+  not yet processed by that run reads as unassigned, exactly like weekly mode. (A prior version of
+  this mode auto-joined a member the moment they opened PeerProgramming; that made mere viewing look
+  like joining and drifted from the intended non-deterministic, activity-based placement, so it was
+  removed 2026-09-25 — see Change Log.) `listActiveCohorts`/`getCohortById`/`listManagedCohorts`
+  include the standing cohort regardless of week so the room's cohort list and `?cohortId=` listen-in
+  resolve it.
 - **When OFF (admin toggle set to off, or `PEER_PROGRAMMING_SINGLE_OPEN_COHORT=0` with no admin
   setting):** behavior is exactly the original weekly cohorting — members are sliced into week-scoped
   cohorts of twelve, `getMyCohort` resolves the current week's cohort, and `runWeeklyAssignment` forms
@@ -173,7 +177,11 @@ to the env flag, then the default. With no admin setting and no env override, th
    did not count. The helper's name is shown on every done card (owner decision, 2026-09-25).
 6. Another member presses "Take it" on an open card. While they hold it, they see a box for the
    result with "Post result" and "Let it go". A card held for 24 hours without a result goes back to
-   Up for grabs for anyone.
+   Up for grabs for anyone. The 24-hour rule is shown on the card itself, not only enforced silently:
+   an open card already says "Post a result within 24 hours of taking it, or it goes back to Up for
+   grabs for someone else," and once held the card names the actual deadline ("Post by \<day, time\>
+   or this goes back to Up for grabs for someone else to take"), so nobody does the work and comes
+   back later to find someone else already has the credit (owner report, 2026-09-25).
 7. The goal's owner cannot take cards on their own goal. On a done card they press "It helped",
    "Keep" or "Send back". "It helped" and "Keep" both keep the result on the card for good; only "It
    helped" counts, for the member who did the card, toward the Weavers of the Commons badge (weight
@@ -232,7 +240,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `POST /api/peer-programming/feedback` — Submit structured feedback for the iteration loop.
 - `POST /api/peer-programming/session/join` — Mint live video session credentials (GetStream) for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member gets a call token and the call is always scoped to that member's cohort. Returns 404 when the caller has no cohort and 503 when Stream is not configured.
 
-- `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId }`. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks; `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours. `cohortId` is null when the caller has no cohort.
+- `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId, taskHoldHours }`. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks (each task now also carries `takenAtIso`, null unless it is currently held); `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours; `taskHoldHours` echoes `PEER_PROGRAMMING_TASK_HOLD_HOURS` so the client states the hold rule and a held card's actual deadline instead of hardcoding the number. `cohortId` is null when the caller has no cohort.
 - `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_goal_already_open` when the caller already has an open goal (enforced by a partial-unique index); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
 - `POST /api/peer-programming/goals/[goalId]` — The goal owner only. Body `{ action: "add_task", description }` or `{ action: "close", outcome: "reached" | "withdrawn" }`. Audited as `peer-programming.goal.task.add` / `peer-programming.goal.close`.
 - `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may mark a finished result `helped`, `keep` it without that mark, or `send_back` it, or `remove` a task nobody has finished. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
@@ -361,6 +369,28 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-09-25: The 24-hour hold rule is now shown on the card, not only enforced silently (owner
+  report: a member could do the work and come back to find the card already reopened for someone
+  else, with no way to have known a clock was running). An open card now states the rule under
+  "Take it"; once held, the card names the actual deadline instead of a vague reminder. New field
+  `takenAtIso` on each task in `GET /api/peer-programming/goals` (null unless currently held), and a
+  new `taskHoldHours` field on the board response so the client never hardcodes the number. No schema
+  or route change — the server already tracked `taken_at`, it just was not returned to the client.
+
+- 2026-09-25: Removed view-triggered auto-join to standing Cohort 1 (owner directive — placement
+  drifted from intent). `joinStandingCohort` had `GET /room`, `GET`/`POST /goals`, and
+  `POST /session/join` write a membership row the moment an authorized member merely opened
+  PeerProgramming — a member never chose to join, they were enrolled by looking. The intended
+  mechanism is `runWeeklyAssignment` alone: non-deterministic placement of whoever has signed in
+  within the last 7 days and is Unlock-approved, the same set weekly mode uses, run by the existing
+  cron (`peer-programming-weekly-assignment.yml`) or an admin's manual run. Deleted
+  `joinStandingCohort` (now unused) from `lib/peer-programming/repository.ts`; the three call sites
+  above are now membership-reads only. No schema or contract change — `ensureStandingCohort` and
+  `runWeeklyAssignment` are unchanged and remain the only membership writers. A member who is active
+  but not yet processed by an assignment run now correctly reads as unassigned, matching the Cohorts
+  tab's existing "Assignments happen every Monday" copy, which the removed code had been silently
+  bypassing.
 
 - 2026-09-25: "It helped" on the goal board (owner decision). On a done card the goal's owner now
   picks "It helped", "Keep" or "Send back". A card marked as helped counts 3 toward the helper's
