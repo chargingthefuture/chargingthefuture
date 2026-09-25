@@ -105,7 +105,7 @@ Legend — **Build**: in scope, not yet shipped · **Done**: shipped · **Exclud
 | 10 | Slash commands | Deferred | The only configured command is `giphy`, which is excluded (#16). No active command to surface; revisit if we add non-giphy commands. |
 | 11 | Emoji picker in the composer | Build | All surfaces. |
 | 12 | Voice / audio messages | **PP-only** | Excluded everywhere except PeerProgramming. PP is a scoped async+sync environment that is easier to moderate, so voice is allowed there only. |
-| 13 | Image upload + inline preview | **Excluded** | — |
+| 13 | Image upload + inline preview | **Excluded** (members) / **Admin-only** (Commons) | Excluded for members on every surface. One exception (owner decision, 2026-09-25): admins can post a picture in the Commons to explain the product with screenshots. Stored in our own database (`feed_community_post_images`), not Stream; see the Commons inventory. |
 | 14 | File upload (docs/PDFs) | **Excluded** | — |
 | 15 | Link preview cards (URL enrichment) | Done (plugin chats) / Build (Commons) | Plugin chats shipped in the shared StreamChatPanel: URL enrichment is on in the composer (`enrichURLForPreview`) and the og-scrape attachment renders through Stream's default Attachment card in the message list. Commons (custom UI) is a separate follow-up. |
 | 16 | Giphy picker | **Excluded** | Remove/skip the `giphy` command surface. |
@@ -179,7 +179,7 @@ across the relevant surfaces. A task with no dependency can run anytime / in par
 
 ## Excluded (do not build)
 
-Image upload (#13), file upload (#14), Giphy (#16), web push (#32), Android push (#33), unread
+Image upload (#13) for members (admins can post a picture in the Commons, 2026-09-25), file upload (#14), Giphy (#16), web push (#32), Android push (#33), unread
 reminder pings (#34), location sharing (#37). Voice (#12) is excluded everywhere except Peer
 Programming.
 

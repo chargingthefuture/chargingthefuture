@@ -28,6 +28,8 @@ import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
 import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
+import { ChatMessageImage } from './chat-message-image';
+import { CommonsImageShare } from './commons-image-share';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
 // official house account used to get a hardcoded "SH" here; now that official posts are signed with
@@ -211,6 +213,7 @@ function PublicCommunityRow({ post }: { post: PublicCommunityPost }) {
           <span className={styles.chatSender}>{authorLabel}</span>
           <span className={styles.publicChatTime}>{formatPostTime(post.createdAtIso)}</span>
         </div>
+        {post.image ? <ChatMessageImage image={post.image} /> : null}
         <div className={styles.publicChatBody}>{post.body}</div>
       </div>
     </div>
@@ -341,6 +344,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
     notifyTyping,
     typingUsers,
     sendMessage,
+    addSavedMessage,
     askComic,
     answerChip,
     suggestionChips,
@@ -553,6 +557,8 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         onAsk={askComic}
         onAnswer={answerChip}
       />
+
+      {isAdmin && !notificationsOpen ? <CommonsImageShare onShared={addSavedMessage} /> : null}
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
           there, you don't post into them. The chip row above stays so 🔔 can toggle back. */}
@@ -806,6 +812,7 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
         <div className={styles.chatBubbleGroup} data-post-id={msg.communityPostId ?? undefined}>
           <span className={msg.from === 'user' ? `${styles.chatSender} ${styles.chatSenderUser}` : styles.chatSender}>{senderName}</span>
           <QuotedBlock quoted={msg.quotedMessage} onJump={onJumpToQuoted} />
+          {msg.image ? <ChatMessageImage image={msg.image} /> : null}
           <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
             {msg.text}
           </div>
@@ -879,6 +886,9 @@ function MessageMetaRow({
   const canReply = Boolean(msg.communityPostId);
   // The member can delete their own peer post (there is no edit — delete and repost instead).
   const canDelete = msg.from === 'user' && Boolean(msg.communityPostId);
+  // Edit is delete and repost of the text alone, so on a post with a picture it would lose the
+  // picture. Those can only be deleted and shared again.
+  const canEdit = canDelete && !msg.image;
   return (
     <div className={msg.from === 'user' ? `${styles.chatMetaRow} ${styles.chatMetaRowUser}` : styles.chatMetaRow}>
       <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
@@ -894,7 +904,7 @@ function MessageMetaRow({
           <Reply size={12} /> Reply
         </button>
       ) : null}
-      {canDelete && msg.communityPostId ? (
+      {canEdit && msg.communityPostId ? (
         <button
           type="button"
           className={styles.chatEditBtn}

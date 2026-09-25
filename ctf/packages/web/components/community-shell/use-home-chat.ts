@@ -140,6 +140,7 @@ function mapStoredMessage(message: CommonsMessage, currentUserId: string): ChatM
     quotedMessage: message.quotedMessage,
     reactions: message.reactions ?? [],
     replyCount: message.replyCount,
+    image: message.image ?? null,
   };
 }
 
@@ -904,6 +905,15 @@ function teardownBootstrap(controller: BootstrapController, liveConnectionRef: R
   }
 }
 
+// A message posted outside the composer (an admin's picture, from CommonsImageShare) joins the stream
+// straight away rather than on the next poll.
+function useAddSavedMessage(setMessages: Dispatch<SetStateAction<ChatMessage[]>>, currentUserId: string) {
+  return useCallback(
+    (message: CommonsMessage) => setMessages((previous) => mergeMessages(previous, [mapStoredMessage(message, currentUserId)])),
+    [setMessages, currentUserId],
+  );
+}
+
 export function useHomeChat(currentUser: ShellCurrentUser) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [comicItems, setComicItems] = useState<ComicStreamItem[]>([]);
@@ -1177,6 +1187,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     typingUsers,
     sendMessage,
     sendConciergeAsk,
+    // Called unconditionally, as every hook here is; it only builds a stable callback.
+    addSavedMessage: useAddSavedMessage(setMessages, currentUser.userId),
     askComic,
     answerChip,
     starterPrompts,

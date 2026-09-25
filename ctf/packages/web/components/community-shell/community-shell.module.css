@@ -535,6 +535,79 @@
   gap: 6px;
 }
 
+/* A picture an admin attached to a Commons post. Full width of the bubble column, never taller than
+   most of a phone screen; the width/height attributes on the img hold its space while it loads. */
+.chatImageLink {
+  display: block;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.chatImage {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* The admin-only "Share a picture" control above the composer, and the panel it opens. */
+.imageShareToggle {
+  margin: 0 20px 8px;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.imageSharePanel {
+  margin: 0 20px 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  flex-shrink: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.imageShareLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ctf-text-secondary);
+}
+
+.imageShareField {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ctf-text-shell);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.imageSharePreview {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  width: auto;
+  border-radius: 8px;
+}
+
+.imageShareError {
+  margin: 0;
+  font-size: 13px;
+  color: #EF4444;
+}
+
 /* Official announcement card. Emerald treatment + a left accent + a shield "Official"
    badge so an official post reads as a distinct, must-see message instead of blending into the
    purple peer bubbles or the cyan AI card. Mirrors the comic card's header structure. */
