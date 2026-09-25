@@ -405,8 +405,9 @@ contracts:
       Route POST /api/commons/images, multipart. The picture's type is read from its first bytes and
       must be PNG, JPEG or WebP, at most 3 MB; the description (alt text) is required. The post and
       its picture are written in one transaction, under the same moderation and rate limit as any
-      community post. The picture is served by GET /api/commons/images/:postId to signed-in members
-      while the post is up, and deleted with the post.
+      community post. The picture is served by GET /api/commons/images/:postId while the post is up:
+      to signed-in members, and to signed-out visitors while public viewing of the Commons is on. It
+      is deleted with the post.
     inputSchema:
       image:
         type: file

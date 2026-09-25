@@ -1,4 +1,5 @@
 import type { CommunityPostImageUpload, FeedCommunityImage } from './community-images';
+import type { CommonsMessageImage } from 'lib/commons/types';
 
 export type FeedRenderMode = 'card_only' | 'card_toast';
 
@@ -133,6 +134,8 @@ export type PublicCommunityPost = {
   body: string;
   category: FeedCommunityCategory;
   createdAtIso: string;
+  // The picture an admin attached, or null. Public along with the post.
+  image: CommonsMessageImage | null;
 };
 
 export type FeedPagination = {

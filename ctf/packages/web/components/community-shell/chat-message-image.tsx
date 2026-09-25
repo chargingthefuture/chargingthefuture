@@ -8,8 +8,8 @@ import type { ChatMessageImage as ChatMessageImageData } from "./shell-types";
 export function ChatMessageImage({ image }: { image: ChatMessageImageData }) {
   return (
     <a href={image.url} target="_blank" rel="noopener" className={styles.chatImageLink}>
-      {/* A plain img, not next/image: the source is a member-gated route the image pipeline cannot
-          fetch on the member's behalf. */}
+      {/* A plain img, not next/image: the source is an API route whose access depends on the viewer's
+          sign-in and the Commons public-viewing setting, which the image pipeline cannot judge. */}
       <img
         src={image.url}
         alt={image.alt}

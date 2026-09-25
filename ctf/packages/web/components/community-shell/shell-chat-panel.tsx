@@ -213,6 +213,7 @@ function PublicCommunityRow({ post }: { post: PublicCommunityPost }) {
           <span className={styles.chatSender}>{authorLabel}</span>
           <span className={styles.publicChatTime}>{formatPostTime(post.createdAtIso)}</span>
         </div>
+        {post.image ? <ChatMessageImage image={post.image} /> : null}
         <div className={styles.publicChatBody}>{post.body}</div>
       </div>
     </div>

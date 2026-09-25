@@ -341,7 +341,8 @@
 - Step 6: the member sees the same picture and message. There is no Share a picture button for the member.
 - Step 7: 403, "Only admins can share pictures in the Commons."
 - Step 8: the post and its picture are gone; the picture's address returns 404.
-- Signed out, the public Commons shows the message text without the picture.
+- Signed out, with public viewing on, the public Commons shows the picture above the message text, and the picture's address opens without signing in.
+- Signed out, with public viewing off, the picture's address returns 401.
 
 **Result:** web ☐
 

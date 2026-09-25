@@ -1,10 +1,11 @@
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
 
-// Pictures on Commons posts. Admins only (owner decision, 2026-09-25): the owner explains the product
-// with screenshots, and the Commons is where those are shown now that Quora erases the accounts they
-// were shared from. One picture per post, stored against the post in feed_community_post_images, so it
-// is deleted with the post.
+// Pictures on Commons posts. Admins only to post (owner decision, 2026-09-25): the owner explains the
+// product with screenshots, and the Commons is where those are shown now that Quora erases the accounts
+// they were shared from. Public along with the post, so signed-out visitors see them too while public
+// viewing is on. One picture per post, stored against the post in feed_community_post_images, so it is
+// deleted with the post.
 
 export const COMMUNITY_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export type CommunityImageContentType = (typeof COMMUNITY_IMAGE_TYPES)[number];
@@ -90,8 +91,11 @@ export async function loadCommunityPostImages(
 
 // The picture itself, for the image route. Only a post that is still up is served: a post taken down
 // by moderation keeps its row until it is deleted, and its picture must not stay reachable by address.
+// A signed-out read (`publicOnly`) additionally needs the post to be one the public Commons lists:
+// its timeline item active, published, not expired, and addressed to the general audience.
 export async function readCommunityPostImage(
   postId: string,
+  { publicOnly }: { publicOnly: boolean },
 ): Promise<{ contentType: CommunityImageContentType; bytes: Buffer } | null> {
   const result = await queryDb<{ content_type: CommunityImageContentType; bytes: Buffer }>(
     `
@@ -100,9 +104,23 @@ export async function readCommunityPostImage(
       JOIN feed_community_posts p ON p.id = i.post_id
       WHERE i.post_id = $1::uuid
         AND p.moderation_status = 'accepted'
+        AND (
+          NOT $2::boolean
+          OR EXISTS (
+            SELECT 1
+            FROM feed_items f
+            JOIN feed_item_targets t ON t.item_id = f.id
+            WHERE f.source_community_post_id = p.id
+              AND f.item_type = 'community'
+              AND f.is_active = TRUE
+              AND f.published_at <= NOW()
+              AND (f.expires_at IS NULL OR f.expires_at > NOW())
+              AND t.target_role IN ('member', 'admin', 'all')
+          )
+        )
       LIMIT 1
     `,
-    [postId],
+    [postId, publicOnly],
   );
   const row = result.rows[0];
   return row ? { contentType: row.content_type, bytes: row.bytes } : null;

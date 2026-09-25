@@ -62,7 +62,7 @@ export type CommonsMessage = {
   image: CommonsMessageImage | null;
 };
 
-// A picture on a Commons message. `url` is the member-gated image route; the width and height are
+// A picture on a Commons message. `url` is the image route; the width and height are
 // there to reserve the picture's space before it loads so the message list does not jump.
 export type CommonsMessageImage = {
   url: string;

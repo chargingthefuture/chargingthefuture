@@ -30,6 +30,7 @@ import {
 import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './author-handle';
 import { normalizeMultilineText } from './normalize';
 import { insertCommunityPostImage, loadCommunityPostImages, type FeedCommunityImage } from './community-images';
+import { toCommonsMessageImage } from 'lib/commons/message-image';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
@@ -814,6 +815,11 @@ export async function getFeedConfig(): Promise<FeedConfig> {
   return mapFeedConfig(result.rows[0]);
 }
 
+function publicImageOf(row: { image_alt: string | null; image_width: number | null; image_height: number | null }): FeedCommunityImage | null {
+  if (row.image_alt === null || row.image_width === null || row.image_height === null) return null;
+  return { altText: row.image_alt, width: row.image_width, height: row.image_height };
+}
+
 // Read-only Commons for signed-out visitors. Community (peer) posts are public the way Quora posts
 // are, so an anonymous visitor can read them — but only community posts (never announcements or AI
 // Q&A), and only when an admin has turned public viewing on (feed_render_config.is_public) and the
@@ -821,19 +827,24 @@ export async function getFeedConfig(): Promise<FeedConfig> {
 // the config row is missing, or community is disabled — the caller then shows the sign-in prompt
 // instead. Mirrors the member-visible filter (active, published, not expired, targeted to the
 // general audience) but carries no per-user state and no author user id.
-export async function listPublicCommunityPosts(
-  limit = FEED_DEFAULT_PAGE_SIZE,
-): Promise<{ isPublic: boolean; posts: PublicCommunityPost[] }> {
-  const safeLimit = Math.min(Math.max(limit, 1), FEED_MAX_PAGE_SIZE);
-
+// Whether signed-out visitors may read the Commons: an admin has turned public viewing on and the
+// community channel is enabled. A missing or unreadable config row reads as off.
+export async function isPublicCommunityReadOn(): Promise<boolean> {
   let config: FeedConfig | null = null;
   try {
     config = await getFeedConfig();
   } catch {
     config = null;
   }
+  return Boolean(config && config.isPublic && config.enabledChannels.includes('community'));
+}
 
-  if (!config || !config.isPublic || !config.enabledChannels.includes('community')) {
+export async function listPublicCommunityPosts(
+  limit = FEED_DEFAULT_PAGE_SIZE,
+): Promise<{ isPublic: boolean; posts: PublicCommunityPost[] }> {
+  const safeLimit = Math.min(Math.max(limit, 1), FEED_MAX_PAGE_SIZE);
+
+  if (!(await isPublicCommunityReadOn())) {
     return { isPublic: false, posts: [] };
   }
 
@@ -843,11 +854,16 @@ export async function listPublicCommunityPosts(
     body: string;
     category: FeedCommunityCategory;
     created_at: Date;
+    image_alt: string | null;
+    image_width: number | null;
+    image_height: number | null;
   }>(
     `
-      SELECT c.id, c.author_username, c.body, c.category, c.created_at
+      SELECT c.id, c.author_username, c.body, c.category, c.created_at,
+             i.alt_text AS image_alt, i.width AS image_width, i.height AS image_height
       FROM feed_items f
       JOIN feed_community_posts c ON c.id = f.source_community_post_id
+      LEFT JOIN feed_community_post_images i ON i.post_id = c.id
       WHERE f.item_type = 'community'
         AND f.is_active = TRUE
         AND c.moderation_status = 'accepted'
@@ -871,6 +887,9 @@ export async function listPublicCommunityPosts(
     body: row.body,
     category: row.category,
     createdAtIso: toIso(row.created_at),
+    // An admin's picture is public along with the post, so a screenshot shared here can be seen
+    // without an account, the way it could on Quora before the account was erased.
+    image: toCommonsMessageImage(row.id, publicImageOf(row)),
   }));
 
   return { isPublic: true, posts };

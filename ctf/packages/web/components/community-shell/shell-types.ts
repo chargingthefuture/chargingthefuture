@@ -40,7 +40,7 @@ export type ChatMessageKind = 'announcement' | 'question' | 'community';
 
 export type ChatMessageAction = { label: string; href: string };
 
-// A picture an admin attached to a Commons post: the member-gated address it is served from, what it
+// A picture an admin attached to a Commons post: the address it is served from, what it
 // shows (read aloud by a screen reader), and its size, so its space is held before it loads.
 export type ChatMessageImage = { url: string; alt: string; width: number; height: number };
 
