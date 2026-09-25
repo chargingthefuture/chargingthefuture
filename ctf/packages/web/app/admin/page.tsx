@@ -41,6 +41,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // their skills, and a control that copies the list as plain text. It had no row here, which
   // left it reachable only by typing the address.
   { href: '/admin/directory/invite-queue', name: 'Directory: Invite Queue' },
+  // Every profile still carrying a free-text skill that was proposed and not promoted, with a
+  // control to drop the chip. A non-promotion used to leave the chip on the profile for good, with
+  // no way to clear it short of a statement against the database.
+  { href: '/admin/directory/pending-skill-proposals', name: 'Directory: Pending Skill Proposals' },
   // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
   // announcements area below, which is an authoring tool for the owner's own announcements — this
   // one carries a different power, over someone else's words.

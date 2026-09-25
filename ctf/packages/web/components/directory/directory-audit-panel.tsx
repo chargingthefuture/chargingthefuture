@@ -33,6 +33,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "directory.admin.profile.assign": "Attached a profile to an account",
   "directory.admin.profile.takedown": "Removed a profile at the person's request",
   "directory.admin.takedown.override": "Lifted a Quora URL block",
+  "directory.admin.pending_skill_proposal.drop": "Dropped a pending skill proposal",
   "directory.admin.announcement.upsert": "Saved an announcement",
   "directory.admin.announcement.deactivate": "Took down an announcement",
 };

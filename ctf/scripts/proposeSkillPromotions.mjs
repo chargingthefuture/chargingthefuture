@@ -586,9 +586,11 @@ async function main() {
        FROM ranked r
        WHERE r.rn = 1
          AND r.normalized_skill NOT IN (SELECT normalized_skill FROM taxonomy_names)
+         -- A row the admin dropped (status 'dropped', set from the Directory admin's Pending skill
+         -- proposals screen) is a decision not to promote, so it is never re-filed either.
          AND r.normalized_skill NOT IN (
            SELECT normalized_skill FROM skills_hunt_proposed_skill_promotions
-           WHERE issue_number IS NOT NULL
+           WHERE issue_number IS NOT NULL OR status = 'dropped'
          )
        ORDER BY r.skill_label ASC
        LIMIT $1`,
@@ -654,6 +656,7 @@ async function main() {
                  status = 'proposed',
                  updated_at = NOW()
              WHERE skills_hunt_proposed_skill_promotions.issue_number IS NULL
+               AND skills_hunt_proposed_skill_promotions.status <> 'dropped'
                AND skills_hunt_proposed_skill_promotions.updated_at
                      < NOW() - make_interval(mins => $5::int)
            RETURNING id`,

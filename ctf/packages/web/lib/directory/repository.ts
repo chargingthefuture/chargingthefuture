@@ -155,7 +155,9 @@ async function loadProfilePendingSkills(client: PoolClient, profileId: string): 
       JOIN skills_hunt_proposed_skill_promotions prom
         ON prom.source_submission_id = shdp.submission_id
       WHERE shdp.directory_profile_id = $1
-        AND prom.status <> 'promoted'
+        -- 'dropped' is the admin's decision not to promote (lib/directory/pending-skill-proposals.ts);
+        -- the chip goes with it, or a non-promotion would leave it on the profile for good.
+        AND prom.status NOT IN ('promoted', 'dropped')
         AND btrim(prom.skill_label) <> ''
       ORDER BY prom.skill_label ASC
     `,
@@ -313,7 +315,7 @@ async function loadPendingSkillsForProfiles(client: PoolClient, profileIds: stri
       JOIN skills_hunt_proposed_skill_promotions prom
         ON prom.source_submission_id = shdp.submission_id
       WHERE shdp.directory_profile_id::text = ANY($1::text[])
-        AND prom.status <> 'promoted'
+        AND prom.status NOT IN ('promoted', 'dropped')
         AND btrim(prom.skill_label) <> ''
       ORDER BY prom.skill_label ASC
     `,

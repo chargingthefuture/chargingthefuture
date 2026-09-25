@@ -615,6 +615,47 @@ the Advocacy placeholder and one carrying only that placeholder.
   object from the public sources it was built from, which is why it is admin-only here.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A8 · Pending skill proposals list, and dropping a chip after a non-promotion
+**Role:** admin · **Surfaces:** web (admin surface)
+**Precondition:** One profile carrying a member-added "skill not listed" chip (DIR-3), and one
+community-generated profile whose nomination proposed a free-text skill that is not in the taxonomy
+(SkillsHunt SH-7, accepted). Ideally one of the two labels matches an existing taxonomy skill name
+exactly (for example a chip reading `Librarianship`).
+**Steps:**
+1. As the admin, open `/admin/directory`, scroll to the foot, and press **Pending skill proposals**.
+   Then go back to `/admin` and check the list there for the same destination.
+2. Read the counts line, then switch between the three filter chips.
+3. Find the row whose label matches a taxonomy skill exactly.
+4. On the member-added chip, press **Drop** once. Then press **Keep it**. Then press **Drop** twice.
+5. Open that member's profile in the Directory, and open their edit form.
+6. On the nominated chip, press **Drop** twice. Open that community-generated profile.
+7. Open the Audit log panel on `/admin/directory`.
+8. Wait for (or start) the `Skills Hunt — Propose Skill Promotions` workflow and read its log.
+9. Press **Copy this list** and paste into any text field.
+10. Sign in as an approved member who is not an admin and open the same address.
+**Expected:**
+- Step 1: both routes lead to the list. The row on Directory Admin sits directly under Invite queue.
+- Step 2: every chip from both sources is listed, with the person's name and handle, the chip label,
+  a line saying where it came from, the issue link and tracker status when an issue was filed, and
+  "Holds: …" with the taxonomy skills the person already has. **All** is the initial state; the other
+  two chips narrow to one source. An unclaimed profile carries an "Unclaimed" badge and a removed
+  one an "Inactive profile" badge — listed and marked, never hidden.
+- Step 3: the row carries an "Already a taxonomy skill" badge. The member's profile detail does not
+  show that chip (it hides a duplicate of a held taxonomy name), but the admin sees it here, because
+  it is exactly the row that needs dropping.
+- Step 4: the first press arms the control ("Press again to drop this chip") and shows **Keep it**;
+  **Keep it** disarms it; the second press removes the row from the list with no page reload.
+- Step 5: the chip is gone from the profile detail and from the edit form's "skill not listed"
+  box, so a later save does not put it back.
+- Step 6: the chip is gone from the community-generated profile's Specializations section.
+- Step 7: two entries read "Dropped a pending skill proposal", each with the profile, label, source,
+  and the state before and after in the detail.
+- Step 8: the dropped nominated label is not filed as a new issue and not re-claimed — the tracker
+  row is `dropped`, which the intake treats as a decision, not a gap.
+- Step 9: plain text, one block per chip, in the order shown under the current filter.
+- Step 10: redirected to `/apps/directory`.
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ## Known gaps — do not file these as bugs

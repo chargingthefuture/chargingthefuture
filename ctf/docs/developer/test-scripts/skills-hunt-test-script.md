@@ -1211,7 +1211,7 @@ Result: web ☐
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
 - Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue.
-- Step 8: the scheduled workflow files no second issue for that skill (its row already carries an issue number). The scheduled workflow itself is unchanged: it still classifies with the API and still goes red while the account is unfunded.
+- Step 8: the scheduled workflow files no second issue for that skill (its row already carries an issue number). The scheduled workflow itself is unchanged: it still classifies with the API and still goes red while the account is unfunded. A label the admin dropped from the Directory's Pending skill proposals screen (tracker row `status = 'dropped'`, Directory DIR-A8) is likewise never filed again, even when its row carries no issue number.
 
 **Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
 - a 403 `permission_error` → `access_denied`, and the text says outright it is NOT a funding problem;
