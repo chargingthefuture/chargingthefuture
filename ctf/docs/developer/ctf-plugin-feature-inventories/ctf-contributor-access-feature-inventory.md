@@ -355,6 +355,17 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-09-25 — PeerProgramming goal cards that helped added as a value event (owner decision).
+  `value.peer_programming_tasks_helped`, weight 3, delivering: a card on the PeerProgramming goal
+  board that one member did for another and the goal's owner marked "It helped", credited to the
+  member who did it. Three sits above a message or a tip (1) and below a ride (5) or a delivered
+  request (8): somebody did real work another member used, and a card is under half an hour from a
+  phone. Only the goal's owner confirms, so at most three per owner-and-helper pair per calendar
+  week count, and helped cards join the counterparty read (helper and owner), so one pair trading
+  cards cannot clear the five-counterparty gate alone. A card whose helper deleted their account
+  credits nobody; a goal whose owner deleted their account takes its cards with it. Fourteen
+  events now, twelve of them delivering.
+
 - 2026-09-20 — WhatWorks endorsements removed from the value events. Owner directive, and the
   reason is what WhatWorks is for: somebody lists a tool or resource, and others mark whether it
   worked for them. The recommendation is the thing of value, so listing a tool that gets approved

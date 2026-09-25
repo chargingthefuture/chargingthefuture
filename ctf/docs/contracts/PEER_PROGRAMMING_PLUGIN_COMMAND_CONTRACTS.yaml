@@ -587,7 +587,7 @@ contracts:
   - pluginId: peer-programming
     command: goal.task.update
     version: 1.0.0
-    description: Act on one task. A member of the goal's cohort other than its owner may take an open task (or one held more than 24 hours without a result), and the holder may release it or finish it with a result. The goal's owner may keep or send back a finished result, or remove a task nobody has finished. Each action is one conditional update; a lost race answers 409 peer_programming_task_unavailable. finish notifies the goal's owner (peer-programming.goal.task-finished). Route POST /api/peer-programming/goals/tasks/[taskId].
+    description: Act on one task. A member of the goal's cohort other than its owner may take an open task (or one held more than 24 hours without a result), and the holder may release it or finish it with a result. The goal's owner may mark a finished result as helped, keep it without that mark, or send it back, or remove a task nobody has finished. Only a helped result counts toward the Weavers of the Commons badge and the daily exchange count, for the member who did it; the mark is returned only to the goal's owner and that member. Each action is one conditional update; a lost race answers 409 peer_programming_task_unavailable. finish notifies the goal's owner (peer-programming.goal.task-finished). Route POST /api/peer-programming/goals/tasks/[taskId].
     inputSchema:
       taskId:
         type: string
@@ -595,7 +595,7 @@ contracts:
       action:
         type: string
         required: true
-        enum: [take, release, finish, keep, send_back, remove]
+        enum: [take, release, finish, helped, keep, send_back, remove]
       result:
         type: string
         required: false

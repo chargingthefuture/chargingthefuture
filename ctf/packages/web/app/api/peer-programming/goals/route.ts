@@ -7,7 +7,7 @@ import {
   PEER_PROGRAMMING_MAX_TASKS_PER_GOAL,
 } from 'lib/peer-programming/constants';
 import { countTasksFinishedLastDay, createGoal, listCohortGoals } from 'lib/peer-programming/goals';
-import { conflict, invalidPayload, policyDenied, readJsonBody, readText, resolveBoardNames } from 'lib/peer-programming/goal-route-helpers';
+import { conflict, invalidPayload, policyDenied, readJsonBody, readText, resolveBoardNames, withPrivateHelpedMarks } from 'lib/peer-programming/goal-route-helpers';
 import { getMyCohort, insertPeerProgrammingAudit, joinStandingCohort } from 'lib/peer-programming/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -30,7 +30,7 @@ export async function GET() {
       ok: true,
       cohortId: cohort.id,
       ended: cohort.status === 'ended',
-      goals,
+      goals: withPrivateHelpedMarks(goals, gate.auth.userId),
       names,
       finishedLastDay,
       viewerUserId: gate.auth.userId,

@@ -110,7 +110,7 @@ function WeaversWidget({ weavers, tokens }: { weavers: WeaversReading; tokens: T
     >
       <div style={{ fontSize: 13, fontWeight: 700, color: tokens.TITLE }}>Weavers of the Commons</div>
       <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4, lineHeight: 1.5 }}>
-        Every one of the thirteen events, at the same weights, asked of a member&apos;s entire time
+        Every one of the fourteen events, at the same weights, asked of a member&apos;s entire time
         here instead of one day. Earned once and kept, and only after five different counterparties.
       </div>
       <div style={{ fontSize: 20, fontWeight: 700, color: tokens.TITLE, marginTop: 8 }}>
@@ -393,7 +393,7 @@ export function DailyExchangeShell() {
               Both readings use one shared definition and one set of weights, so adding a feature
               updates both at once. They differ in one stated way: the badge scores every event,
               because earning it already requires five different counterparties, while this count
-              draws only on the events where somebody received something — eleven of the thirteen.
+              draws only on the events where somebody received something — twelve of the fourteen.
               Finishing a course somebody else taught and posting in a cohort are both real, and
               neither is a thing another member received. Value is credited to whoever
               delivered it, which is what the badge has always done: a ride counts its driver, so

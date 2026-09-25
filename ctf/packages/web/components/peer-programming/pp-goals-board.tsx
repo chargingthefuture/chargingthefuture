@@ -37,13 +37,15 @@ export function sortIntoColumns(goals: BoardGoal[]): Columns {
 }
 
 function statusLine(card: Card, viewerUserId: string, names: Record<string, string>): string | null {
-  const helper = card.task.takenByUserId === viewerUserId ? "You" : nameOf(card.task.takenByUserId, names);
+  const mine = card.task.takenByUserId === viewerUserId;
+  const helper = mine ? "you" : nameOf(card.task.takenByUserId, names);
   if (card.task.status === "open") return null;
-  if (card.task.status === "taken") return helper === "You" ? "You are on it" : `${helper} is on it`;
+  if (card.task.status === "taken") return mine ? "You are on it" : `${helper} is on it`;
   if (card.task.status === "finished") {
-    return card.goal.ownerUserId === viewerUserId ? `Done by ${helper}. Keep it or send it back.` : `Done by ${helper}, waiting on the goal's owner`;
+    return card.goal.ownerUserId === viewerUserId ? `Done by ${helper}. Did it help?` : `Done by ${helper}, waiting on the goal's owner`;
   }
-  return `Done by ${helper}`;
+  // Whether it helped reaches only the goal's owner and the helper; the route clears it for others.
+  return card.task.helped ? `Done by ${helper} · it helped` : `Done by ${helper}`;
 }
 
 type BoardProps = {

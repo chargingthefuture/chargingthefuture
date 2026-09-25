@@ -1949,6 +1949,45 @@ canonical_metrics:
     allowed_thresholds:
       min: 0
 
+  - id: wp_value_peer_programming_tasks_helped
+    name: Weekly PeerProgramming Goal Cards That Helped
+    description: Count of goal-board cards in PeerProgramming that one member did for another and the goal's owner marked as helped, within the week window, dated by when the owner marked them. At most three per owner-and-helper pair per week count, the same rule the Weavers of the Commons badge and the daily exchange count apply, since all three read one shared definition (lib/contributor-access/value-events.ts).
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: cards
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM (SELECT t.kept_at,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY g.owner_user_id, t.taken_by_user_id, DATE_TRUNC('week', t.kept_at)
+                     ORDER BY t.kept_at, t.id
+                   ) AS pair_rank
+              FROM peer_programming_goal_tasks t
+              JOIN peer_programming_goals g ON g.id = t.goal_id
+             WHERE t.helped AND t.kept_at IS NOT NULL AND t.taken_by_user_id IS NOT NULL
+               AND t.taken_by_user_id <> 'deleted_member'
+               AND t.taken_by_user_id <> g.owner_user_id) AS helped_cards
+      WHERE pair_rank <= 3
+        AND kept_at >= :week_start
+        AND kept_at < :week_end;
+    inputs:
+      - name: peer_programming_goal_tasks.helped
+        type: boolean
+      - name: peer_programming_goal_tasks.kept_at
+        type: datetime
+      - name: peer_programming_goal_tasks.taken_by_user_id
+        type: string
+      - name: peer_programming_goals.owner_user_id
+        type: string
+    example_values:
+      - 0
+      - 14
+    last_updated: "2026-09-25T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
   - id: wp_adoption_active_members
     name: Weekly Active Members
     description: How many different members signed in during the week window — the plain turnout headcount. A member is active on a day when the sign-in record (login_events) holds a row for them that day, and nothing else (owner decision, 2026-08-27); what a member did once here is measured per plugin by that plugin's own cards. Aggregate only — never a per-member figure. Adoption, not value; turning up is not a plugin's defining action and carries no positive weight in value scoring.

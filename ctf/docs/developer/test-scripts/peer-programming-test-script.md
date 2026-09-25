@@ -447,6 +447,28 @@ Result: web ☐
 
 ---
 
+### PP-21 — "It helped" counts, and only the two people involved see it
+
+**Role:** member (three accounts) · **Surfaces:** web
+
+**Precondition:** A's goal has a card B finished (PP-15). C is in the same cohort.
+
+**Steps:**
+1. As A, look at the card in Done.
+2. Press "It helped".
+3. As B, then as C, open the Goals tab and find the card in Done.
+4. As an admin, open `/admin/daily-exchange` and look at Delivering today.
+
+**Expected:** Before step 2 A sees "Done by @B. Did it help?" with "It helped", "Keep" and "Send
+back". After step 2 the buttons are gone and A sees "Done by @B · it helped". B sees "Done by you ·
+it helped". C sees "Done by @B" with no mark. B appears in Delivering today. "Keep" instead leaves the
+card done with no mark for anyone and B is not credited for it. A fourth "It helped" from A to B in
+the same week keeps the card but adds nothing to B's count.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### PP-A1 — Set or update the weekly topic
@@ -668,6 +690,7 @@ browser and the phone-width layout — but a missing Android result is never a b
 | PP-15 | Another member takes a task, posts a result, and the owner is notified |
 | PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
 | PP-17 | One open goal at a time; the form returns after the goal is closed |
+| PP-21 | "It helped" shows to the goal's owner and the helper only; the helper is credited |
 | PP-A3 | Admin can run weekly assignment and see the result count |
 | PP-A5 | Admin cohort list shows cross-week cohorts with week labels |
 | PP-A6 | Admin cohort roster shows usernames |

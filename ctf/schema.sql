@@ -4884,6 +4884,7 @@ CREATE TABLE IF NOT EXISTS peer_programming_goal_tasks (
   result TEXT,
   finished_at TIMESTAMPTZ,
   kept_at TIMESTAMPTZ,
+  helped BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -4895,6 +4896,7 @@ ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS taken
 ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS result TEXT;
 ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS kept_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS helped BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_goal
@@ -4903,6 +4905,10 @@ CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_goal
 CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_finished
   ON peer_programming_goal_tasks (finished_at)
   WHERE finished_at IS NOT NULL;
+-- The Weavers of the Commons badge and the daily count read the cards a goal's owner said helped.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goal_tasks_helped
+  ON peer_programming_goal_tasks (kept_at)
+  WHERE helped;
 
 CREATE TABLE IF NOT EXISTS peer_programming_assignment_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

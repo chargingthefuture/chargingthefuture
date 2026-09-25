@@ -1,6 +1,6 @@
 import type { ContributorValueEventKey } from './weights';
 
-// The thirteen value events, defined once, in the shape every reading needs.
+// The fourteen value events, defined once, in the shape every reading needs.
 //
 // Three things read these events and they must never disagree:
 //
@@ -230,6 +230,30 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
                FROM peer_programming_messages`,
     aggregate: 'distinctWeek',
     occurrences: 'distinctMembers',
+  },
+  {
+    // A goal card another member did and the goal's owner marked as helped, credited to the member
+    // who did it. Only the owner confirms, so two members could trade cards for points: at most
+    // three per owner-and-helper pair per calendar week count, and the badge's counterparty gate
+    // stops one pair earning it alone. A card whose helper deleted their account carries the
+    // placeholder and credits nobody.
+    key: 'value.peer_programming_tasks_helped',
+    delivers: true,
+    tables: ['peer_programming_goal_tasks', 'peer_programming_goals'],
+    rowSql: `SELECT member_id, at, 1::numeric AS value, ref
+               FROM (SELECT t.taken_by_user_id AS member_id, t.kept_at AS at, t.id::text AS ref,
+                            ROW_NUMBER() OVER (
+                              PARTITION BY g.owner_user_id, t.taken_by_user_id, DATE_TRUNC('week', t.kept_at)
+                              ORDER BY t.kept_at, t.id
+                            ) AS pair_rank
+                       FROM peer_programming_goal_tasks t
+                       JOIN peer_programming_goals g ON g.id = t.goal_id
+                      WHERE t.helped AND t.kept_at IS NOT NULL AND t.taken_by_user_id IS NOT NULL
+                        AND t.taken_by_user_id <> 'deleted_member'
+                        AND t.taken_by_user_id <> g.owner_user_id) AS helped_cards
+              WHERE pair_rank <= 3`,
+    aggregate: 'count',
+    occurrences: 'rows',
   },
 ];
 

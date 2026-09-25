@@ -16,16 +16,16 @@ import { insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/p
 import { reportError } from 'lib/observability/report';
 
 type HelperAction = 'take' | 'release' | 'finish';
-type OwnerAction = 'keep' | 'send_back' | 'remove';
+type OwnerAction = 'helped' | 'keep' | 'send_back' | 'remove';
 type Action = { kind: HelperAction | OwnerAction; result?: string };
 
 const HELPER_ACTIONS: readonly string[] = ['take', 'release', 'finish'];
-const OWNER_ACTIONS: readonly string[] = ['keep', 'send_back', 'remove'];
+const OWNER_ACTIONS: readonly string[] = ['helped', 'keep', 'send_back', 'remove'];
 
 function parseAction(body: Record<string, unknown>): { ok: true; action: Action } | { ok: false; response: NextResponse } {
   const kind = body.action;
   if (typeof kind !== 'string' || (!HELPER_ACTIONS.includes(kind) && !OWNER_ACTIONS.includes(kind))) {
-    return { ok: false, response: invalidPayload('action must be one of take, release, finish, keep, send_back, remove.') };
+    return { ok: false, response: invalidPayload('action must be one of take, release, finish, helped, keep, send_back, remove.') };
   }
   if (kind === 'finish') {
     const result = readText(body.result, 'The result', PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH);
@@ -41,7 +41,7 @@ function parseAction(body: Record<string, unknown>): { ok: true; action: Action 
 async function denyReason(found: TaskWithGoal, action: Action, userId: string): Promise<NextResponse | null> {
   const isOwner = found.goalOwnerUserId === userId;
   if (OWNER_ACTIONS.includes(action.kind) && !isOwner) {
-    return policyDenied('Only the member who posted this goal can keep, send back, or remove its tasks.');
+    return policyDenied('Only the member who posted this goal can mark, keep, send back, or remove its tasks.');
   }
   if (HELPER_ACTIONS.includes(action.kind)) {
     if (isOwner) return policyDenied('Tasks on your own goal are for other members to take.');
@@ -75,7 +75,8 @@ async function apply(found: TaskWithGoal, action: Action, userId: string): Promi
     case 'take': return takeTask({ taskId, userId });
     case 'release': return releaseTask({ taskId, userId });
     case 'finish': return finishTask({ taskId, userId, result: action.result ?? '' });
-    case 'keep': return keepResult({ taskId, ownerUserId: userId });
+    case 'helped': return keepResult({ taskId, ownerUserId: userId, helped: true });
+    case 'keep': return keepResult({ taskId, ownerUserId: userId, helped: false });
     case 'send_back': return sendTaskBack({ taskId, ownerUserId: userId });
     default: return removeTask({ taskId, ownerUserId: userId });
   }
@@ -101,7 +102,8 @@ async function applyAndRecord(found: TaskWithGoal, action: Action, userId: strin
   return NextResponse.json({ ok: true });
 }
 
-// Take, let go of, or finish a task (a helper), or keep, send back, or remove it (the goal's owner).
+// Take, let go of, or finish a task (a helper), or mark it as helped, keep, send back, or remove it
+// (the goal's owner).
 export async function POST(request: Request, context: { params: Promise<{ taskId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;

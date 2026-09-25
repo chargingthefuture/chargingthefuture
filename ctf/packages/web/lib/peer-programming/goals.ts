@@ -26,6 +26,9 @@ export type GoalTask = {
   takenByUserId: string | null;
   result: string | null;
   finishedAtIso: string | null;
+  // The goal's owner said the result helped, not only that it was done. Only a helped card counts
+  // toward the Weavers of the Commons badge and the daily count (owner decision, 2026-09-25).
+  helped: boolean;
   createdAtIso: string;
 };
 
@@ -59,6 +62,7 @@ type TaskRow = {
   result: string | null;
   finished_at: Date | null;
   kept_at: Date | null;
+  helped: boolean;
   created_at: Date;
 };
 
@@ -90,6 +94,7 @@ function mapTask(row: TaskRow, now: number): GoalTask {
     takenByUserId: status === 'open' ? null : row.taken_by_user_id,
     result: row.result,
     finishedAtIso: row.finished_at ? row.finished_at.toISOString() : null,
+    helped: row.helped === true,
     createdAtIso: row.created_at.toISOString(),
   };
 }
@@ -107,7 +112,7 @@ function mapGoal(row: GoalRow, tasks: GoalTask[]): Goal {
   };
 }
 
-const TASK_COLUMNS = `id, goal_id, description, taken_by_user_id, taken_at, result, finished_at, kept_at, created_at`;
+const TASK_COLUMNS = `id, goal_id, description, taken_by_user_id, taken_at, result, finished_at, kept_at, helped, created_at`;
 const GOAL_COLUMNS = `id, cohort_id, owner_user_id, title, status, created_at, closed_at`;
 
 async function listTasksForGoals(goalIds: string[]): Promise<Map<string, GoalTask[]>> {
@@ -174,7 +179,7 @@ export async function getGoal(goalId: string): Promise<Goal | null> {
 export async function getTaskWithGoal(taskId: string): Promise<TaskWithGoal | null> {
   const result = await queryDb<TaskRow & { owner_user_id: string; goal_status: GoalStatus; cohort_id: string }>(
     `SELECT t.id, t.goal_id, t.description, t.taken_by_user_id, t.taken_at, t.result,
-            t.finished_at, t.kept_at, t.created_at,
+            t.finished_at, t.kept_at, t.helped, t.created_at,
             g.owner_user_id, g.status AS goal_status, g.cohort_id
      FROM peer_programming_goal_tasks t
      INNER JOIN peer_programming_goals g ON g.id = t.goal_id
@@ -302,15 +307,17 @@ export async function finishTask(input: { taskId: string; userId: string; result
   return (result.rowCount ?? 0) > 0;
 }
 
-// The goal's owner keeps a finished result.
-export async function keepResult(input: { taskId: string; ownerUserId: string }): Promise<boolean> {
+// The goal's owner keeps a finished result, and says whether it helped. Either way the result stays
+// on the card and can no longer be sent back; only a helped one counts toward the badge and the
+// daily count. One decision, made once.
+export async function keepResult(input: { taskId: string; ownerUserId: string; helped: boolean }): Promise<boolean> {
   const result = await queryDb(
     `UPDATE peer_programming_goal_tasks t
-     SET kept_at = NOW(), updated_at = NOW()
+     SET kept_at = NOW(), helped = $3, updated_at = NOW()
      FROM peer_programming_goals g
      WHERE t.id = $1 AND g.id = t.goal_id AND g.owner_user_id = $2
        AND t.finished_at IS NOT NULL AND t.kept_at IS NULL`,
-    [input.taskId, input.ownerUserId],
+    [input.taskId, input.ownerUserId, input.helped],
   );
   return (result.rowCount ?? 0) > 0;
 }

@@ -140,6 +140,7 @@ const VALUE_EVENT_UNITS: Record<ContributorValueEventKey, string> = {
   'value.skill_up_trainer_payouts': 'payouts',
   'value.recurring_ties_confirmed': 'ties',
   'value.peer_programming_active_posters': 'members',
+  'value.peer_programming_tasks_helped': 'cards',
 };
 
 function valueEventInWeek(source: ValueEventSource): (weekStart: string) => Promise<number> {

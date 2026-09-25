@@ -110,3 +110,15 @@ export async function resolveBoardNames(goals: Goal[]): Promise<Record<string, s
     return {};
   }
 }
+
+// Whether a result helped is between the goal's owner and the member who did the card. The rest of
+// the cohort sees the card as done either way, so no member reads as the one whose work did not
+// count (owner decision, 2026-09-25).
+export function withPrivateHelpedMarks(goals: Goal[], viewerUserId: string): Goal[] {
+  return goals.map((goal) => ({
+    ...goal,
+    tasks: goal.tasks.map((task) =>
+      goal.ownerUserId === viewerUserId || task.takenByUserId === viewerUserId ? task : { ...task, helped: false },
+    ),
+  }));
+}

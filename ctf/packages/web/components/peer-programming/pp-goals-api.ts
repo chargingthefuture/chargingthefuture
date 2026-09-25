@@ -11,6 +11,8 @@ export type BoardTask = {
   takenByUserId: string | null;
   result: string | null;
   finishedAtIso: string | null;
+  // Present only for the goal's owner and the member who did the card; everyone else reads false.
+  helped: boolean;
 };
 
 export type BoardGoal = {
@@ -33,7 +35,7 @@ export type Board = {
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
-export type TaskAction = "take" | "release" | "finish" | "keep" | "send_back" | "remove";
+export type TaskAction = "take" | "release" | "finish" | "helped" | "keep" | "send_back" | "remove";
 
 const JSON_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 

@@ -72,13 +72,15 @@ export type CardControlProps = {
   onAction: (taskId: string, action: TaskAction, result?: string) => void;
 };
 
-// What the goal's owner can do with a card: keep or send back a result, or remove a card nobody has
-// finished.
+// What the goal's owner can do with a card: say a result helped, keep it without that, or send it
+// back; or remove a card nobody has finished. Only "It helped" counts toward the Weavers of the
+// Commons badge and the daily count, for the member who did the card.
 function OwnerControls({ task, busy, onAction }: CardControlProps) {
   if (task.status === "finished") {
     return (
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <SmallButton label="Keep" primary disabled={busy} onClick={() => onAction(task.id, "keep")} />
+        <SmallButton label="It helped" primary disabled={busy} onClick={() => onAction(task.id, "helped")} />
+        <SmallButton label="Keep" disabled={busy} onClick={() => onAction(task.id, "keep")} />
         <SmallButton label="Send back" disabled={busy} onClick={() => onAction(task.id, "send_back")} />
       </div>
     );
