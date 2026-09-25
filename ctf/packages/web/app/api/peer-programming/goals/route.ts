@@ -8,18 +8,17 @@ import {
 } from 'lib/peer-programming/constants';
 import { countTasksFinishedLastDay, createGoal, listCohortGoals } from 'lib/peer-programming/goals';
 import { conflict, invalidPayload, policyDenied, readJsonBody, readText, resolveBoardNames, withPrivateHelpedMarks } from 'lib/peer-programming/goal-route-helpers';
-import { getMyCohort, insertPeerProgrammingAudit, joinStandingCohort } from 'lib/peer-programming/repository';
+import { getMyCohort, insertPeerProgrammingAudit } from 'lib/peer-programming/repository';
 import { reportError } from 'lib/observability/report';
 
-// The goal board for the caller's own cohort. Opening it joins the standing Cohort 1 the same way
-// opening the room does (single-open mode only), after the access gate.
+// The goal board for the caller's own cohort. Opening it is a read; it never places the caller into
+// a cohort — placement comes only from runWeeklyAssignment.
 export async function GET() {
   const gate = await requirePeerProgrammingReadAccess();
   if (!gate.allowed) {
     return gate.response;
   }
   try {
-    await joinStandingCohort(gate.auth.userId);
     const cohort = await getMyCohort(gate.auth.userId);
     if (!cohort) {
       return NextResponse.json({ ok: true, cohortId: null, ended: false, goals: [], names: {}, finishedLastDay: 0, viewerUserId: gate.auth.userId });
@@ -73,7 +72,6 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
 
   try {
-    await joinStandingCohort(gate.auth.userId);
     const cohort = await getMyCohort(gate.auth.userId);
     if (!cohort) {
       return policyDenied('You are not in a cohort yet, so there is no board to post a goal on.');

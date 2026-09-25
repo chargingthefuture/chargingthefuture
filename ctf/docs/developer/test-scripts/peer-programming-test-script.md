@@ -112,7 +112,7 @@ Result: web ☐
 2. Type a short message, e.g. "Test post from manual run".
 3. Tap/click Send.
 
-**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. Each message's stamp shows **both a date and a time** (e.g. "Jul 21, 09:21 PM"), not a time alone, so messages from different days can be told apart. In single standing Cohort 1 mode, simply opening the room (or the live session) is what enrolls you in Cohort 1 so you can post — a member who has opened PeerProgramming at least once can post; a pure listen-in / read never enrolls anyone.
+**Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. Each message's stamp shows **both a date and a time** (e.g. "Jul 21, 09:21 PM"), not a time alone, so messages from different days can be told apart. Posting requires already being a member of the cohort — placement comes only from the weekly assignment run (cron or admin manual run), never from opening the room or the live session.
 
 Result: web ☐
 
@@ -330,16 +330,18 @@ Result: web ☐
 
 ---
 
-### PP-14 — Auto-join to standing Cohort 1 in single standing mode
+### PP-14 — Weekly assignment places an active member into standing Cohort 1
 
-**Role:** member · **Surfaces:** web
+**Role:** member, admin · **Surfaces:** web
 
-**Precondition:** Single standing Cohort 1 mode is ON (the default). Sign in as a member who has NOT previously opened PeerProgramming. (Create a fresh test account or use one not in any cohort.)
+**Precondition:** Single standing Cohort 1 mode is ON (the default). Sign in as a member who has NOT previously opened PeerProgramming and has never been assigned to a cohort. (Create a fresh test account or use one not in any cohort.) That member signs in at least once so a `login_events` row exists for them.
 
 **Steps:**
-1. Open `/apps/peer-programming`.
+1. As that member, open `/apps/peer-programming`. Confirm they read as unassigned ("Not yet assigned to a cohort") — opening the page alone must not place them.
+2. As an admin, run the weekly assignment (admin Cohorts screen "Run weekly assignment", or the cron).
+3. As the member, open `/apps/peer-programming` again (or press Refresh).
 
-**Expected:** The member is placed into Cohort 1 automatically — no "assign me" button needed. The room loads with cohort C1 visible and the member can post.
+**Expected:** After step 1, the member sees "Not yet assigned to a cohort" and cannot post — merely opening the page did not enroll them. After step 2/3, the member is placed into Cohort 1 automatically because they signed in within the last 7 days — no "assign me" button needed. The room loads with cohort C1 visible and the member can post.
 
 Result: web ☐
 
@@ -686,7 +688,7 @@ browser and the phone-width layout — but a missing Android result is never a b
 | PP-10 | Join Session launches video call |
 | PP-12 | Member with no cohort sees empty state, not a crash |
 | PP-13 | Refresh reloads room without full-screen loading flash |
-| PP-14 | Fresh member auto-joins Cohort 1 in single standing mode |
+| PP-14 | Weekly assignment (not merely opening the page) places an active member into standing Cohort 1 |
 | PP-15 | Another member takes a task, posts a result, and the owner is notified |
 | PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
 | PP-17 | One open goal at a time; the form returns after the goal is closed |
