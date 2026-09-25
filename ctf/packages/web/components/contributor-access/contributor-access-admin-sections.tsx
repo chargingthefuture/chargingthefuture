@@ -1,17 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { KeyRound } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getContributorAccessTokens } from './contributor-access-shared';
 import { EligibleMembersSection, type EligibleMember } from './eligible-members-section';
 import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
 
-// Contributor Access admin dashboard (module slug contributor-access). Three sections: the eligible
-// members list (revoke/reinstate), the owner-tunable eligibility settings (including the gated
-// channel's launch-gated open toggle), and the channel status card (open/closed + synced member
-// count). Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
+// Contributor Access admin sections (module slug contributor-access), rendered at the foot of the
+// Daily exchange screen (/admin/daily-exchange#weavers). The badge and the daily count score the
+// same events with the same weights, so they share one admin page rather than two (owner decision,
+// 2026-09-25). Three sections: the eligible members list (revoke/reinstate), the owner-tunable
+// eligibility settings (including the gated channel's launch-gated open toggle), and the channel
+// status card (open/closed + synced member count). Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
 // The member surface is the gated #contributors channel inside the Commons shell, not here.
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -77,7 +77,15 @@ function StatusCard({
   );
 }
 
-export function ContributorAccessAdminShell() {
+// `badgeOnlyKeys` marks the weights that reach the badge but never a day's count, and `onConfigSaved`
+// lets the page re-read the day, since a saved weight changes both readings at once.
+export function ContributorAccessAdminSections({
+  badgeOnlyKeys,
+  onConfigSaved,
+}: {
+  badgeOnlyKeys: ReadonlySet<string>;
+  onConfigSaved: () => void;
+}) {
   const { theme } = useTheme();
   const t = getContributorAccessTokens(theme);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -169,57 +177,44 @@ export function ContributorAccessAdminShell() {
           body: JSON.stringify(update),
         });
         await refresh();
+        onConfigSaved();
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Unable to save settings.');
       } finally {
         setSaving(false);
       }
     },
-    [refresh],
+    [refresh, onConfigSaved],
   );
 
   return (
-    <div
-      style={{
-        // At least one viewport tall, never exactly one: the document is the scroller at every
-        // width, so a min-height fills a short page without hiding a long one's real length.
-        minHeight: '100dvh',
-        background: t.BG,
-        color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
-      }}
-    >
-      <MobileScreenHeader title="Contributor Access Admin" accent={t.ACCENT} icon={<KeyRound size={18} color={t.ACCENT} />} />
-      <div style={{ maxWidth: 880, margin: '0 auto', padding: '24px 16px 48px' }}>
-        {/* No in-page title card here: MobileScreenHeader above already names the screen and
-            carries the icon, back control, and Member view. Repeating it cost a screen of phone
-            height for no new information (owner report, 2026-07-27). */}
-        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
-          Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
-          plugins. The weekly recompute only ever admits; revoking is for cause only, never for going quiet. No score is
-          shown anywhere, to admins or members.
-        </p>
+    <section id="weavers" aria-labelledby="weavers-heading" style={{ marginTop: 28, color: t.TITLE }}>
+      <h2 id="weavers-heading" style={{ fontSize: 16, fontWeight: 800, color: t.TITLE, margin: '0 0 6px' }}>Weavers of the Commons</h2>
+      <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
+        Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
+        plugins. The weekly recompute only ever admits; revoking is for cause only, never for going quiet. No badge
+        score is shown anywhere, to admins or members.
+      </p>
 
-        {error ? (
-          <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-            {error}
-          </div>
-        ) : null}
+      {error ? (
+        <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+          {error}
+        </div>
+      ) : null}
 
-        {loadState === 'loading' ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-            Loading…
-          </div>
-        ) : null}
+      {loadState === 'loading' ? (
+        <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+          Loading…
+        </div>
+      ) : null}
 
-        {loadState === 'ready' && config ? (
-          <>
-            <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
-            <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} saving={saving} onSave={(update) => void saveConfig(update)} />
-            <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
-          </>
-        ) : null}
-      </div>
-    </div>
+      {loadState === 'ready' && config ? (
+        <>
+          <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
+          <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} saving={saving} onSave={(update) => void saveConfig(update)} />
+          <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
+        </>
+      ) : null}
+    </section>
   );
 }

@@ -84,12 +84,14 @@ export function ConfigEditorSection({
   t,
   config,
   eligibleCount,
+  badgeOnlyKeys,
   saving,
   onSave,
 }: {
   t: ContributorAccessTokens;
   config: ContributorAccessConfigView;
   eligibleCount: number;
+  badgeOnlyKeys: ReadonlySet<string>;
   saving: boolean;
   onSave: (update: ContributorAccessConfigView) => void;
 }) {
@@ -155,10 +157,20 @@ export function ConfigEditorSection({
         <NumberField t={t} label="Eligible members needed to open the channel" value={form.minEligibleToOpenChannel} onChange={(v) => setField('minEligibleToOpenChannel', v)} />
       </div>
 
-      <h3 style={{ fontSize: 12, fontWeight: 700, color: t.TITLE, margin: '0 0 8px' }}>Per-event weights</h3>
+      <h3 style={{ fontSize: 12, fontWeight: 700, color: t.TITLE, margin: '0 0 4px' }}>Per-event weights</h3>
+      <p style={{ fontSize: 12, color: t.MUTED, margin: '0 0 8px', lineHeight: 1.5 }}>
+        Both readings score from this list: the badge, and the daily count above. Events marked badge only never reach
+        a day&apos;s count, because nobody receives a thing from them.
+      </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
         {CONTRIBUTOR_VALUE_EVENT_KEYS.map((key) => (
-          <NumberField key={key} t={t} label={EVENT_LABEL[key]} value={form.weights[key] ?? ''} onChange={(v) => setWeight(key, v)} />
+          <NumberField
+            key={key}
+            t={t}
+            label={badgeOnlyKeys.has(key) ? `${EVENT_LABEL[key]} · badge only` : EVENT_LABEL[key]}
+            value={form.weights[key] ?? ''}
+            onChange={(v) => setWeight(key, v)}
+          />
         ))}
       </div>
 

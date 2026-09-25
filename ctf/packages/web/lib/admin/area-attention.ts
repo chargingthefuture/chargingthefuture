@@ -12,7 +12,7 @@ import { reportError } from 'lib/observability/report';
 // shows what is new. (Mutual Time's admin page is `/apps/mutual-time`, not `/admin/*`, so its slug is
 // still `mutual-time` — the last segment of the tile's href.) Areas that are read-only dashboards,
 // config editors, or browse views (directory, beacon, lighthouse, foundation, socket-relay,
-// weekly-performance, workforce, feed-announcements, contributor-access) have no entry and never get
+// weekly-performance, workforce, feed-announcements, daily-exchange) have no entry and never get
 // a dot.
 //
 // Each query takes $1 = the admin's last-seen timestamp for that area (nullable; null = never opened,
