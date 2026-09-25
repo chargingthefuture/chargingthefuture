@@ -5,6 +5,7 @@ import {
   PEER_PROGRAMMING_MAX_GOAL_TITLE_LENGTH,
   PEER_PROGRAMMING_MAX_TASK_LENGTH,
   PEER_PROGRAMMING_MAX_TASKS_PER_GOAL,
+  PEER_PROGRAMMING_TASK_HOLD_HOURS,
 } from 'lib/peer-programming/constants';
 import { countTasksFinishedLastDay, createGoal, listCohortGoals } from 'lib/peer-programming/goals';
 import { conflict, invalidPayload, policyDenied, readJsonBody, readText, resolveBoardNames, withPrivateHelpedMarks } from 'lib/peer-programming/goal-route-helpers';
@@ -21,7 +22,16 @@ export async function GET() {
   try {
     const cohort = await getMyCohort(gate.auth.userId);
     if (!cohort) {
-      return NextResponse.json({ ok: true, cohortId: null, ended: false, goals: [], names: {}, finishedLastDay: 0, viewerUserId: gate.auth.userId });
+      return NextResponse.json({
+        ok: true,
+        cohortId: null,
+        ended: false,
+        goals: [],
+        names: {},
+        finishedLastDay: 0,
+        viewerUserId: gate.auth.userId,
+        taskHoldHours: PEER_PROGRAMMING_TASK_HOLD_HOURS,
+      });
     }
     const [goals, finishedLastDay] = await Promise.all([listCohortGoals(cohort.id), countTasksFinishedLastDay(cohort.id)]);
     const names = await resolveBoardNames(goals);
@@ -33,6 +43,7 @@ export async function GET() {
       names,
       finishedLastDay,
       viewerUserId: gate.auth.userId,
+      taskHoldHours: PEER_PROGRAMMING_TASK_HOLD_HOURS,
     });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'goals_list' });

@@ -53,6 +53,7 @@ type BoardProps = {
   names: Record<string, string>;
   readOnly: boolean;
   busy: boolean;
+  taskHoldHours: number;
   onAction: (taskId: string, action: TaskAction, result?: string) => void;
 };
 
@@ -73,7 +74,16 @@ function TaskCard({ card, ...props }: BoardProps & { card: Card }) {
       {task.result && (
         <div style={{ fontSize: 13, color: t.TEXT, padding: "6px 8px", borderRadius: 8, background: t.ACCENT_TINT_BG, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{task.result}</div>
       )}
-      {canAct && <CardControls task={task} isOwner={isOwner} viewerUserId={props.viewerUserId} busy={props.busy} onAction={props.onAction} />}
+      {canAct && (
+        <CardControls
+          task={task}
+          isOwner={isOwner}
+          viewerUserId={props.viewerUserId}
+          busy={props.busy}
+          taskHoldHours={props.taskHoldHours}
+          onAction={props.onAction}
+        />
+      )}
     </li>
   );
 }
@@ -127,7 +137,14 @@ export type GoalsBoardViewProps = {
 export function GoalsBoardView({ board, busy, onAction, onAddTask, onClose, onPost }: GoalsBoardViewProps) {
   const myGoal = board.goals.find((goal) => goal.ownerUserId === board.viewerUserId && goal.status === "open");
   const columns = sortIntoColumns(board.goals);
-  const props: BoardProps = { viewerUserId: board.viewerUserId, names: board.names, readOnly: board.ended, busy, onAction };
+  const props: BoardProps = {
+    viewerUserId: board.viewerUserId,
+    names: board.names,
+    readOnly: board.ended,
+    busy,
+    taskHoldHours: board.taskHoldHours,
+    onAction,
+  };
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <BoardIntro finishedLastDay={board.finishedLastDay} />

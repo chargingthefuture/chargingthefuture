@@ -24,6 +24,9 @@ export type GoalTask = {
   description: string;
   status: GoalTaskStatus;
   takenByUserId: string | null;
+  // Null once the hold lapses, alongside takenByUserId, so the board never shows a deadline for a
+  // card that already reopened. The client uses this to tell the holder when it goes back.
+  takenAtIso: string | null;
   result: string | null;
   finishedAtIso: string | null;
   // The goal's owner said the result helped, not only that it was done. Only a helped card counts
@@ -92,6 +95,7 @@ function mapTask(row: TaskRow, now: number): GoalTask {
     status,
     // A lapsed hold reads as open, so it no longer names the member who let it lapse.
     takenByUserId: status === 'open' ? null : row.taken_by_user_id,
+    takenAtIso: status === 'open' ? null : row.taken_at ? row.taken_at.toISOString() : null,
     result: row.result,
     finishedAtIso: row.finished_at ? row.finished_at.toISOString() : null,
     helped: row.helped === true,

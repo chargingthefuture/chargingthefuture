@@ -355,15 +355,19 @@ Result: web ☐
 member of the same cohort.
 
 **Steps:**
-1. As B, open the Goals tab and press "Take it" on A's card in Up for grabs.
-2. Type a result, such as a phone number and a yard name, and press "Post result".
-3. As A, open the notifications center, then the Goals tab.
+1. As B, before pressing anything, look at an open card in Up for grabs.
+2. Press "Take it" on A's card.
+3. Type a result, such as a phone number and a yard name, and press "Post result".
+4. As A, open the notifications center, then the Goals tab.
 
-**Expected:** After step 1 the card moves to Doing; B sees "You are on it", a result box, "Post
-result" and "Let it go", and everyone else sees "@B is on it". After step 2 the card moves to Done and
-reads "Done by @B, waiting on the goal's owner" with the result shown (A sees "Done by @B. Keep it or
-send it back."), and the count at the top goes up by one. A has a notification that somebody finished a
-task on their goal, and it opens the Goals tab.
+**Expected:** In step 1, under "Take it" the card already says "Post a result within 24 hours of
+taking it, or it goes back to Up for grabs for someone else." After step 2 the card moves to Doing; B
+sees "You are on it", a line naming when they must post by ("Post by \<day, time\> or this goes back to
+Up for grabs for someone else to take."), a result box, "Post result" and "Let it go", and everyone
+else sees "@B is on it". After step 3 the card moves to Done and reads "Done by @B, waiting on the
+goal's owner" with the result shown (A sees "Done by @B. Keep it or send it back."), and the count at
+the top goes up by one. A has a notification that somebody finished a task on their goal, and it opens
+the Goals tab.
 
 Result: web ☐
 
