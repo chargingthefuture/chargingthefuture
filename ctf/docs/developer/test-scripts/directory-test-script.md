@@ -639,7 +639,8 @@ exactly (for example a chip reading `Librarianship`).
   a line saying where it came from, the issue link and tracker status when an issue was filed, and
   "Holds: …" with the taxonomy skills the person already has. **All** is the initial state; the other
   two chips narrow to one source. An unclaimed profile carries an "Unclaimed" badge and a removed
-  one an "Inactive profile" badge — listed and marked, never hidden.
+  a proposal whose profile has been deleted a "Profile deleted" badge — listed and marked, never
+  hidden. The list loads without an error (an earlier build failed here on a dropped column).
 - Step 3: the row carries an "Already a taxonomy skill" badge. The member's profile detail does not
   show that chip (it hides a duplicate of a held taxonomy name), but the admin sees it here, because
   it is exactly the row that needs dropping.
