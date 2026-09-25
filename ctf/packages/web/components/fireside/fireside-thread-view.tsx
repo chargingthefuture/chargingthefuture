@@ -62,6 +62,16 @@ const VIEWER_STATE_NOTE: Record<
   withdrawn: { text: "You took this down.", color: "#94A3B8" },
 };
 
+// The exact date and time a comment was posted, never a relative "2 hours ago" — an absolute
+// stamp is the only one that still means the same thing when read a year later (owner request:
+// this is how Quora shows it).
+function formatCommentTimestamp(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
 function ViewerStateNote({ comment }: { comment: ThreadComment }) {
   const note = comment.viewerState ? VIEWER_STATE_NOTE[comment.viewerState] : null;
   if (!note) return null;
@@ -330,7 +340,9 @@ function ThreadComments({
       {top.map((comment) => (
         <div key={comment.id} style={{ marginBottom: 16 }}>
           <div style={{ background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 14 }}>
-            <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{comment.authorName}</div>
+            <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>
+              {comment.authorName} <span style={{ color: t.SUBTLE, opacity: 0.7 }}>· {formatCommentTimestamp(comment.createdAt)}</span>
+            </div>
             {isOrphan(comment) && (
               <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.6 }}>
                 Answering a comment that is no longer shown here.
@@ -359,7 +371,9 @@ function ThreadComments({
           </div>
           {comments.filter((reply) => reply.parentCommentId === comment.id).map((reply) => (
             <div key={reply.id} style={{ marginLeft: 16, marginTop: 8, background: t.SURFACE, border: `1px solid ${t.BORDER}`, borderRadius: 10, padding: 12 }}>
-              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>{reply.authorName}</div>
+              <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6 }}>
+                {reply.authorName} <span style={{ color: t.SUBTLE, opacity: 0.7 }}>· {formatCommentTimestamp(reply.createdAt)}</span>
+              </div>
               <CommentBody comment={reply} t={t} editing={editingId === reply.id} busy={busy}
                 onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />
               <ViewerStateNote comment={reply} />
