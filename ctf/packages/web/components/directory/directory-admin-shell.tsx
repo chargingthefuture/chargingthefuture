@@ -40,6 +40,7 @@ import {
   ShieldOff,
   RotateCcw,
   MailPlus,
+  Tags,
   ChevronRight,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
@@ -919,6 +920,35 @@ function InviteQueueLink() {
   );
 }
 
+// Same shape as the invite queue row, for the same reason: the person who has just closed a
+// skill-proposal issue without promoting it is on this screen, and the chip that issue left on
+// the profile is cleared from the screen this links to.
+function PendingSkillProposalsLink() {
+  return (
+    <Link
+      href="/admin/directory/pending-skill-proposals"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        margin: "0 16px 16px",
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: "#0D0F14",
+        color: TEXT,
+        textDecoration: "none",
+      }}
+    >
+      <Tags size={15} color={COMMUNITY} />
+      <span style={{ fontSize: 13, fontWeight: 700 }}>Pending skill proposals</span>
+      <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, color: SUBTLE }}>
+        Open <ChevronRight size={14} />
+      </span>
+    </Link>
+  );
+}
+
 function ProfileListView(props: ProfileListViewProps) {
   const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, profiles, page, pageCount, onPageChange, saving, onEdit, onTakedown, onDelete } = props;
   return (
@@ -967,6 +997,7 @@ function ProfileListView(props: ProfileListViewProps) {
         />
         <Pager page={page} pageCount={pageCount} loading={loading} onPageChange={onPageChange} accent={COLOR} subtle={SUBTLE} border={BORDER} />
         <InviteQueueLink />
+        <PendingSkillProposalsLink />
         <SuppressionPanel />
         <DirectoryAuditPanel />
       </div>
