@@ -191,6 +191,7 @@ export function DailyExchangeShell() {
     () => new Set((reading?.events ?? []).filter((event) => !event.delivers).map((event) => event.key)),
     [reading],
   );
+  const weightOrder = useMemo(() => (reading?.events ?? []).map((event) => event.key), [reading]);
   const reloadDay = useCallback(() => void load(), [load]);
 
   const onCopy = useCallback(async () => {
@@ -300,7 +301,7 @@ export function DailyExchangeShell() {
           </>
         )}
 
-        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} onConfigSaved={reloadDay} />
+        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} onConfigSaved={reloadDay} />
       </div>
     </div>
   );

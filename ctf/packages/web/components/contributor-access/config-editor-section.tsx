@@ -6,6 +6,7 @@ import {
   CONTRIBUTOR_VALUE_EVENT_KEYS,
   DEFAULT_WEIGHTS,
   EVENT_LABEL,
+  type ContributorValueEventKey,
 } from 'lib/contributor-access/weights';
 
 // Owner-tunable config editor: threshold, gate minimums, per-event weights from the fixed key
@@ -49,6 +50,15 @@ function toFormState(config: ContributorAccessConfigView): FormState {
   };
 }
 
+// The weights in the order the daily reading lists them (delivering events first, heaviest first),
+// then any key that reading did not name, so no weight is ever left off the form.
+function orderedKeys(weightOrder: readonly string[]): ContributorValueEventKey[] {
+  const known = new Set<string>(CONTRIBUTOR_VALUE_EVENT_KEYS);
+  const first = weightOrder.filter((key): key is ContributorValueEventKey => known.has(key));
+  const rest = CONTRIBUTOR_VALUE_EVENT_KEYS.filter((key) => !first.includes(key));
+  return [...first, ...rest];
+}
+
 function parseNonNegative(raw: string): number | null {
   const value = Number(raw);
   return Number.isFinite(value) && value >= 0 ? value : null;
@@ -80,11 +90,47 @@ function NumberField({
   );
 }
 
+// One weight as a row, the way the daily screen's old What is weighted list read: the event on the
+// left, its number on the right. Badge-only events are dimmed and marked, as that list did.
+function WeightRow({
+  t,
+  label,
+  badgeOnly,
+  value,
+  onChange,
+}: {
+  t: ContributorAccessTokens;
+  label: string;
+  badgeOnly: boolean;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <li style={{ borderTop: `1px solid ${t.BORDER}` }}>
+      <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13, color: badgeOnly ? t.SUBTLE : t.TEXT }}>
+        <span>
+          {label}
+          {badgeOnly ? <span style={{ fontSize: 12, color: t.SUBTLE }}> · badge only</span> : null}
+        </span>
+        <input
+          type="number"
+          min={0}
+          step="any"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          style={{ width: 72, flexShrink: 0, padding: '6px 8px', borderRadius: 8, background: t.BG, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, textAlign: 'right' }}
+        />
+      </label>
+    </li>
+  );
+}
+
 export function ConfigEditorSection({
   t,
   config,
   eligibleCount,
   badgeOnlyKeys,
+  weightOrder,
   saving,
   onSave,
 }: {
@@ -92,6 +138,7 @@ export function ConfigEditorSection({
   config: ContributorAccessConfigView;
   eligibleCount: number;
   badgeOnlyKeys: ReadonlySet<string>;
+  weightOrder: readonly string[];
   saving: boolean;
   onSave: (update: ContributorAccessConfigView) => void;
 }) {
@@ -162,17 +209,18 @@ export function ConfigEditorSection({
         Both readings score from this list: the badge, and the daily count above. Events marked badge only never reach
         a day&apos;s count, because nobody receives a thing from them.
       </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
-        {CONTRIBUTOR_VALUE_EVENT_KEYS.map((key) => (
-          <NumberField
+      <ul style={{ listStyle: 'none', margin: '0 0 12px', padding: 0 }}>
+        {orderedKeys(weightOrder).map((key) => (
+          <WeightRow
             key={key}
             t={t}
-            label={badgeOnlyKeys.has(key) ? `${EVENT_LABEL[key]} · badge only` : EVENT_LABEL[key]}
+            label={EVENT_LABEL[key]}
+            badgeOnly={badgeOnlyKeys.has(key)}
             value={form.weights[key] ?? ''}
             onChange={(v) => setWeight(key, v)}
           />
         ))}
-      </div>
+      </ul>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: t.MUTED, marginBottom: toggleLocked ? 6 : 12 }}>
         <input

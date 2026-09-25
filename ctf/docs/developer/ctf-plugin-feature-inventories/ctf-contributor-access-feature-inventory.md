@@ -92,9 +92,10 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    screen, `/admin/daily-exchange#weavers` (server-side admin gate; non-admins redirect to `/apps`),
    from `components/contributor-access/contributor-access-admin-sections.tsx`, with
    loading/error/populated states. The badge and the daily count score the same events with the
-   same weights, so they share one admin page (owner decision, 2026-09-25). The weights editor marks
-   the events that reach the badge but never a day's count "badge only", and saving it re-reads the
-   day above. The old address `/admin/contributor-access` redirects to that section.
+   same weights, so they share one admin page (owner decision, 2026-09-25). The weights are edited as
+   a list, one event per row with its number on the right, in the order the daily reading lists them
+   (delivering events first, heaviest first); the events that reach the badge but never a day's
+   count are dimmed and marked "badge only", and saving re-reads the day above. The old address `/admin/contributor-access` redirects to that section.
 
 ## API Surface and Route Map
 
@@ -365,7 +366,8 @@ fill on the first recompute / config save / member post.
   both readings score the same events with the same weights and were shown on two pages. That
   screen's read-only What is weighted panel and its Weavers of the Commons widget (holder count and
   recent earners) are removed, since the editable weights and the eligible members list now sit on
-  the same page; the editor marks the badge-only events instead, and a save re-reads the day.
+  the same page; the editor takes that panel's list layout instead (one row per event, the number on
+  the right, the same order, badge-only events dimmed and marked), and a save re-reads the day.
   `contributor-access-admin-shell.tsx` becomes `contributor-access-admin-sections.tsx` with no page
   header of its own, `/admin/contributor-access` redirects to `/admin/daily-exchange#weavers`, and
   the admin directory lists one row, Daily Exchange and Badge. No route, contract, or schema change

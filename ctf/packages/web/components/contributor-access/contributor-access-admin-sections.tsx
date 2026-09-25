@@ -77,13 +77,16 @@ function StatusCard({
   );
 }
 
-// `badgeOnlyKeys` marks the weights that reach the badge but never a day's count, and `onConfigSaved`
+// `badgeOnlyKeys` marks the weights that reach the badge but never a day's count, `weightOrder` is
+// the order the daily reading lists them in, and `onConfigSaved`
 // lets the page re-read the day, since a saved weight changes both readings at once.
 export function ContributorAccessAdminSections({
   badgeOnlyKeys,
+  weightOrder,
   onConfigSaved,
 }: {
   badgeOnlyKeys: ReadonlySet<string>;
+  weightOrder: readonly string[];
   onConfigSaved: () => void;
 }) {
   const { theme } = useTheme();
@@ -211,7 +214,7 @@ export function ContributorAccessAdminSections({
       {loadState === 'ready' && config ? (
         <>
           <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
-          <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} saving={saving} onSave={(update) => void saveConfig(update)} />
+          <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} saving={saving} onSave={(update) => void saveConfig(update)} />
           <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
         </>
       ) : null}
