@@ -316,6 +316,15 @@ function streamEntryKey(entry: StreamEntry): string {
   return entry.kind === 'comic' ? `comic-${entry.item.questionTurnId}` : entry.message.id;
 }
 
+// The nudge shown to a member posting under the generated handle: where to set a real username.
+function UsernameNudge({ ownHandle }: { ownHandle: string }) {
+  return (
+    <section className={styles.usernameAlert} role="status">
+      You&apos;re posting as <strong>{ownHandle}</strong>. To pick a username members recognize, click the person icon at the top right, then <strong>Manage account</strong> — you can edit your username there.
+    </section>
+  );
+}
+
 function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
@@ -333,6 +342,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
     typingUsers,
     sendMessage,
     askComic,
+    answerChip,
     suggestionChips,
     rateComicAnswer,
     composerMentionsComic,
@@ -503,11 +513,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         </section>
       ) : null}
 
-      {needsUsername ? (
-        <section className={styles.usernameAlert} role="status">
-          You&apos;re posting as <strong>{ownHandle}</strong>. To pick a username members recognize, click the person icon at the top right, then <strong>Manage account</strong> — you can edit your username there.
-        </section>
-      ) : null}
+      {needsUsername ? <UsernameNudge ownHandle={ownHandle} /> : null}
 
       {notificationsOpen ? (
         <NotificationsPanel onOpenDeepLink={handleNotificationOpen} />
@@ -545,6 +551,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         onToggleAnnouncements={() => { setNotificationsOpen(false); toggleAnnouncementsOnly(); }}
         onToggleNotifications={() => setNotificationsOpen((open) => !open)}
         onAsk={askComic}
+        onAnswer={answerChip}
       />
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
@@ -802,10 +809,14 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
           <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
             {msg.text}
           </div>
-          {msg.actionLabel && msg.actionSlug ? (
-            <Link href={`/apps/${msg.actionSlug}`} className={styles.chatActionBtn}>
-              {msg.actionLabel}
-            </Link>
+          {msg.actions && msg.actions.length > 0 ? (
+            <div className={styles.chatActionRow}>
+              {msg.actions.map((action) => (
+                <Link key={action.href} href={action.href} className={styles.chatActionBtn}>
+                  {action.label}
+                </Link>
+              ))}
+            </div>
           ) : null}
           <MessageMetaRow msg={msg} senderName={senderName} inputRef={inputRef} onBeginReply={onBeginReply} onEdit={onEdit} onDelete={onDelete} />
           {msg.communityPostId ? (
@@ -925,6 +936,7 @@ type ConciergeChipRailProps = {
   onToggleAnnouncements: () => void;
   onToggleNotifications: () => void;
   onAsk: (question: string) => void;
+  onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
 };
 
 // One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has messages),
@@ -943,6 +955,7 @@ function ConciergeChipRail({
   onToggleAnnouncements,
   onToggleNotifications,
   onAsk,
+  onAnswer,
 }: ConciergeChipRailProps) {
   return (
     <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
@@ -954,7 +967,7 @@ function ConciergeChipRail({
           and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
           It stays visible with the notifications feed open, like the three glyph chips before it. */}
       <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
-      {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} />}
+      {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} onAnswer={onAnswer} />}
     </div>
   );
 }
@@ -1013,20 +1026,30 @@ function NotificationsFilterButton({ open, onClick }: { open: boolean; onClick: 
   );
 }
 
-function SuggestionChips({ chips, onAsk }: { chips: CommonsSuggestionChip[]; onAsk: (question: string) => void }) {
+type SuggestionChipsProps = {
+  chips: CommonsSuggestionChip[];
+  onAsk: (question: string) => void;
+  onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
+};
+
+function SuggestionChips({ chips, onAsk, onAnswer }: SuggestionChipsProps) {
   return (
     <>
-      {chips.map((chip) =>
-        chip.kind === 'navigate' ? (
-          <Link key={chip.id} href={`/apps/${chip.slug}`} className={styles.conciergeChip} title={chip.label}>
-            {chip.label}
-          </Link>
-        ) : (
-          <button key={chip.id} type="button" className={styles.conciergeChip} title={chip.label} onClick={() => onAsk(chip.question)}>
+      {chips.map((chip) => {
+        if (chip.kind === 'navigate') {
+          return (
+            <Link key={chip.id} href={`/apps/${chip.slug}`} className={styles.conciergeChip} title={chip.label}>
+              {chip.label}
+            </Link>
+          );
+        }
+        const onClick = chip.kind === 'answer' ? () => onAnswer(chip) : () => onAsk(chip.question);
+        return (
+          <button key={chip.id} type="button" className={styles.conciergeChip} title={chip.label} onClick={onClick}>
             {chip.label}
           </button>
-        ),
-      )}
+        );
+      })}
     </>
   );
 }
