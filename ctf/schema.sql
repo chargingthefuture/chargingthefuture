@@ -1493,6 +1493,35 @@ ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS use
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS feed_community_post_reactions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- A picture attached to a Commons post (owner decision, 2026-09-25). Admins only: the owner explains
+-- the product with screenshots, and Quora erases the accounts those screenshots were shared from, so the
+-- Commons is where they are shown now. Members cannot attach one, which is also why STREAM_FEATURE_ADOPTION
+-- still lists image upload as excluded for members.
+--
+-- One picture per post, keyed on the post, so deleting the post (by its author, by moderation, or with
+-- the account) deletes the picture with it and nothing needs a second deletion rule. The bytes live here
+-- rather than in object storage because there is no image store in this project and the volume is a
+-- handful of screenshots; the browser has already scaled each one down and re-encoded it, which also
+-- drops the location and camera data a phone writes into a photo.
+CREATE TABLE IF NOT EXISTS feed_community_post_images (
+  post_id UUID PRIMARY KEY REFERENCES feed_community_posts(id) ON DELETE CASCADE,
+  content_type TEXT NOT NULL CHECK (content_type IN ('image/png', 'image/jpeg', 'image/webp')),
+  bytes BYTEA NOT NULL,
+  byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+  width INTEGER NOT NULL CHECK (width > 0),
+  height INTEGER NOT NULL CHECK (height > 0),
+  alt_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS post_id UUID;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'image/webp';
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS bytes BYTEA;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS byte_size INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS width INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS height INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS alt_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS feed_community_post_images ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Per-member "last seen" marker for the Commons home channel, used to draw a single
 -- "New messages" divider where a member left off. One row per member; updated to NOW()
 -- after the member views the chat. Best-effort: a read/write failure must never break chat.

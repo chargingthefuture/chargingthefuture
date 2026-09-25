@@ -58,6 +58,17 @@ export type CommonsMessage = {
   // The number of replies on this announcement (announcements only). 0 for peer posts and AI
   // answers, which are not replied to through the announcement thread.
   replyCount: number;
+  // The picture an admin attached to this peer post, or null. Null for everything else.
+  image: CommonsMessageImage | null;
+};
+
+// A picture on a Commons message. `url` is the image route; the width and height are
+// there to reserve the picture's space before it loads so the message list does not jump.
+export type CommonsMessageImage = {
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
 };
 
 // One reply on an official announcement, returned by the announcement replies endpoint. `author`

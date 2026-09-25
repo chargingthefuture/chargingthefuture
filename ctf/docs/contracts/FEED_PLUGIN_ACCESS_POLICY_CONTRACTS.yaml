@@ -374,6 +374,37 @@ policies:
       - content_policy_violation
 
   - pluginId: feed
+    command: feed.community.post.image.create
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      contentModeration: required
+      rateLimiting: required
+      csrf: required
+      fileTypeFromBytes: required
+    consentRequirements:
+      scopes:
+        - feed_consumption
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+      - image_missing_or_too_large
+      - image_type_not_allowed
+      - alt_text_missing
+      - rate_limit_exceeded
+      - content_policy_violation
+
+  - pluginId: feed
     command: feed.community.post.reply
     version: 1.0.0
     requiredRoles:

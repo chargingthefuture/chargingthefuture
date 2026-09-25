@@ -166,7 +166,7 @@ User routes:
 
 Public (unauthenticated) routes:
 
-- `GET /api/feed/public/community` — read-only Commons for signed-out visitors. Returns `{ isPublic, posts }` where `posts` are community (peer) posts only — no announcements, AI answers, replies, per-user state, or author user ids. Returns `isPublic: false` (empty) unless `feed_render_config.is_public` is on and the community channel is enabled. Backs the signed-out home panel (community posts are public the way Quora posts are; visitors read but cannot post without signing in). Rate-limited per IP (2026-07-16): 30 requests/minute via the shared in-memory limiter `lib/security/rate-limit.ts`; over-limit callers get `429` with a `Retry-After` header.
+- `GET /api/feed/public/community` — read-only Commons for signed-out visitors. Returns `{ isPublic, posts }` where `posts` are community (peer) posts only — no announcements, AI answers, replies, per-user state, or author user ids. Returns `isPublic: false` (empty) unless `feed_render_config.is_public` is on and the community channel is enabled. Backs the signed-out home panel (community posts are public the way Quora posts are; visitors read but cannot post without signing in). Each post carries `image` (`{ url, alt, width, height }` or null): the picture an admin attached, served signed out by `GET /api/commons/images/:postId` under the same public-viewing rule (2026-09-25, see the Commons inventory). The on/off check is `isPublicCommunityReadOn`, shared by both routes. Rate-limited per IP (2026-07-16): 30 requests/minute via the shared in-memory limiter `lib/security/rate-limit.ts`; over-limit callers get `429` with a `Retry-After` header.
 
 Admin routes:
 
