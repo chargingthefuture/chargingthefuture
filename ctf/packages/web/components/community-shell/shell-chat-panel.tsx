@@ -885,6 +885,9 @@ function MessageMetaRow({
   const canReply = Boolean(msg.communityPostId);
   // The member can delete their own peer post (there is no edit — delete and repost instead).
   const canDelete = msg.from === 'user' && Boolean(msg.communityPostId);
+  // Edit is delete and repost of the text alone, so on a post with a picture it would lose the
+  // picture. Those can only be deleted and shared again.
+  const canEdit = canDelete && !msg.image;
   return (
     <div className={msg.from === 'user' ? `${styles.chatMetaRow} ${styles.chatMetaRowUser}` : styles.chatMetaRow}>
       <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
@@ -900,7 +903,7 @@ function MessageMetaRow({
           <Reply size={12} /> Reply
         </button>
       ) : null}
-      {canDelete && msg.communityPostId ? (
+      {canEdit && msg.communityPostId ? (
         <button
           type="button"
           className={styles.chatEditBtn}

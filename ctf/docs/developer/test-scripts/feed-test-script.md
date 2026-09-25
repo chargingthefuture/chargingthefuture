@@ -319,6 +319,34 @@
 
 ---
 
+### FD-12b — Admin shares a picture in the Commons (added 2026-09-25)
+**Role:** admin, then member | **Surface:** web
+
+**Precondition:** Signed in as an admin, with a screenshot saved on the device. A second, non-admin member account to check from.
+
+**Steps:**
+1. As the admin, open the Commons. Above the message box, tap **Share a picture (admins)**.
+2. Choose the screenshot. A preview appears.
+3. Leave the description empty and fill in the message. Confirm **Share** stays disabled.
+4. Fill in the description ("What it shows") and tap **Share**.
+5. Tap the picture in the new message.
+6. Sign in as the member and open the Commons.
+7. As the member, send `POST /api/commons/images` from the browser's developer tools with any file.
+8. As the admin, delete the post with the picture.
+
+**Expected:**
+- Step 4: the message appears straight away with the picture above its text. The panel closes.
+- Step 5: the full-size picture opens in a new tab.
+- The admin's own picture post shows Delete but no Edit.
+- Step 6: the member sees the same picture and message. There is no Share a picture button for the member.
+- Step 7: 403, "Only admins can share pictures in the Commons."
+- Step 8: the post and its picture are gone; the picture's address returns 404.
+- Signed out, the public Commons shows the message text without the picture.
+
+**Result:** web ☐
+
+---
+
 ### FD-13 — Edit a community post (delete + repost)
 **Role:** member | **Surface:** web
 
