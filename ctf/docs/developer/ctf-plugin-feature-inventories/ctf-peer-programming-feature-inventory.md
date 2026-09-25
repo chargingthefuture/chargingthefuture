@@ -82,17 +82,21 @@ to the env flag, then the default. With no admin setting and no env override, th
 
 - **When ON (default):** there is a single standing cohort — the one row with `is_standing = TRUE`,
   label `C1`, always open (`fallback_open = TRUE`). It is not week-scoped: it persists across weeks
-  and is found by `is_standing = TRUE`, not by the current week. Opening PeerProgramming auto-joins the
-  member to Cohort 1 so they can post, not just listen: the membership WRITE is `joinStandingCohort`,
-  called by the gated routes (`GET /room`, `POST /session/join`) **after** their access gate authorizes
-  the request — a find-or-create plus an `ON CONFLICT DO NOTHING` membership insert. `getMyCohort` is
-  read-only and never writes, so a plain read can never place a member; it returns the standing cohort
-  only once the caller is a member. `listActiveCohorts`/`getCohortById`/`listManagedCohorts` include the standing cohort
-  regardless of week so the room's cohort list and `?cohortId=` listen-in resolve it. The weekly
-  auto-split is paused: `runWeeklyAssignment` (cron and admin manual run) ensures the standing cohort
-  exists and idempotently joins all the provided active members into it (same idempotent assignment
-  notifications), creating no `C2`/`C3`. The find-or-create helper `ensureStandingCohort(actorId)` is
-  idempotent and races safely against the partial-unique standing index.
+  and is found by `is_standing = TRUE`, not by the current week. Placement into it is decided solely
+  by `runWeeklyAssignment` (the cron, and an admin's manual run) from the same last-7-days-active,
+  Unlock-approved set weekly mode uses — non-deterministic pairing of whoever has been active, not a
+  choice a member makes. It idempotently ensures the standing cohort exists (`ensureStandingCohort`,
+  a find-or-create that races safely against the partial-unique standing index) and joins every
+  provided active member into it (`ON CONFLICT DO NOTHING`), sending the same idempotent assignment
+  notifications, creating no `C2`/`C3`. `GET /room`, `GET`/`POST /goals`, and `POST /session/join` are
+  reads with respect to membership: they never place anyone. `getMyCohort` returns the standing
+  cohort only once `runWeeklyAssignment` has already placed the caller — a member who is active but
+  not yet processed by that run reads as unassigned, exactly like weekly mode. (A prior version of
+  this mode auto-joined a member the moment they opened PeerProgramming; that made mere viewing look
+  like joining and drifted from the intended non-deterministic, activity-based placement, so it was
+  removed 2026-09-25 — see Change Log.) `listActiveCohorts`/`getCohortById`/`listManagedCohorts`
+  include the standing cohort regardless of week so the room's cohort list and `?cohortId=` listen-in
+  resolve it.
 - **When OFF (admin toggle set to off, or `PEER_PROGRAMMING_SINGLE_OPEN_COHORT=0` with no admin
   setting):** behavior is exactly the original weekly cohorting — members are sliced into week-scoped
   cohorts of twelve, `getMyCohort` resolves the current week's cohort, and `runWeeklyAssignment` forms
@@ -373,6 +377,20 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
   `takenAtIso` on each task in `GET /api/peer-programming/goals` (null unless currently held), and a
   new `taskHoldHours` field on the board response so the client never hardcodes the number. No schema
   or route change — the server already tracked `taken_at`, it just was not returned to the client.
+
+- 2026-09-25: Removed view-triggered auto-join to standing Cohort 1 (owner directive — placement
+  drifted from intent). `joinStandingCohort` had `GET /room`, `GET`/`POST /goals`, and
+  `POST /session/join` write a membership row the moment an authorized member merely opened
+  PeerProgramming — a member never chose to join, they were enrolled by looking. The intended
+  mechanism is `runWeeklyAssignment` alone: non-deterministic placement of whoever has signed in
+  within the last 7 days and is Unlock-approved, the same set weekly mode uses, run by the existing
+  cron (`peer-programming-weekly-assignment.yml`) or an admin's manual run. Deleted
+  `joinStandingCohort` (now unused) from `lib/peer-programming/repository.ts`; the three call sites
+  above are now membership-reads only. No schema or contract change — `ensureStandingCohort` and
+  `runWeeklyAssignment` are unchanged and remain the only membership writers. A member who is active
+  but not yet processed by an assignment run now correctly reads as unassigned, matching the Cohorts
+  tab's existing "Assignments happen every Monday" copy, which the removed code had been silently
+  bypassing.
 
 - 2026-09-25: "It helped" on the goal board (owner decision). On a done card the goal's owner now
   picks "It helped", "Keep" or "Send back". A card marked as helped counts 3 toward the helper's

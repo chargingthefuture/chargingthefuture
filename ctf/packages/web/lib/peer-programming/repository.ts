@@ -254,28 +254,12 @@ export async function ensureStandingCohort(actorId: string): Promise<PeerProgram
   return mapCohortRow(reread.rows[0]);
 }
 
-// Ensure the caller is a member of the single standing cohort (single-open mode only), creating the
-// standing cohort if needed and idempotently inserting the membership row. This is a WRITE and must
-// only be called by a route AFTER its access gate has authorized the user — it is deliberately kept
-// out of the read path (getMyCohort) so a plain read can never place a member. No-op in weekly mode,
-// where membership comes from runWeeklyAssignment, not from opening the room.
-export async function joinStandingCohort(userId: string): Promise<void> {
-  if (!userId || !(await isSingleOpenCohortModeEnabled())) {
-    return;
-  }
-  const standing = await ensureStandingCohort(userId);
-  await queryDb(
-    `INSERT INTO peer_programming_cohort_members (id, cohort_id, user_id)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (cohort_id, user_id) DO NOTHING`,
-    [randomUUID(), standing.id, userId],
-  );
-}
-
 // Resolve the caller's current cohort. READ-ONLY: it never writes, so it is safe to call from any
-// path regardless of the access gate. In single-open mode the caller is a member of the standing
-// cohort only once a gated route has called joinStandingCohort (that is where the write lives); until
-// then this returns null, exactly like the weekly path returns null for an unassigned user.
+// path regardless of the access gate. Membership — in single-open mode and in weekly mode alike —
+// comes only from runWeeklyAssignment (the cron, or an admin's manual run), which places every
+// member active in the last 7 days. Opening PeerProgramming is a read and never places anyone: a
+// member who has signed in recently but whom no assignment run has processed yet reads as
+// unassigned here, the same as the weekly path returns null for an unassigned user.
 export async function getMyCohort(userId: string): Promise<PeerProgrammingCohort | null> {
   if (!userId) {
     return null;
