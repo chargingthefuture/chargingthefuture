@@ -1201,6 +1201,8 @@ Result: web ☐
 4. Query `skills_hunt_proposed_skill_promotions` for that skill.
 5. Restore a working key with credit and run the workflow again.
 6. Run it a third time with nothing else changed.
+7. With the API still unavailable and a second unfiled proposed skill in place, run the workflow by hand with the `skip_classification` input ticked (optionally set `proposal_limit`).
+8. Restore credit and let the next scheduled run happen.
 
 **Expected:**
 - Step 2: the run stops at the first candidate instead of trying the rest, and the job **fails** — a run that files nothing must never report success. The log names which state it is (`no_credit`, `key_rejected`, `access_denied`, `rate_limited`, `vendor_down`, or `unclassified`), quotes the vendor's own sentence with the HTTP status, says nothing is broken and no proposal is lost, and says what to do. The state is read from the vendor's `error.type`, so a `permission_error` and a `billing_error` — which share HTTP 403 — never get the same label. For an unfunded account that reads as "add funds whenever suits; nothing in this repo needs changing".
@@ -1208,6 +1210,8 @@ Result: web ☐
 - Step 4: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
+- Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue.
+- Step 8: the scheduled run files no second issue for that skill (its row already carries an issue number) and does not read the inputs — they are empty on a schedule.
 
 **Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
 - a 403 `permission_error` → `access_denied`, and the text says outright it is NOT a funding problem;
