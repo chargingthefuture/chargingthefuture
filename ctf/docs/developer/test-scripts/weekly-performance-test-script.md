@@ -125,8 +125,8 @@ is no "set active week" action and no per-week status.
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
    USD, SkillsHunt accepted nominations, WhatWorks approved tools, SkillUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters — the thirteen events of the shared value-event list, so no endorsement or Beacon card
-   appears); **Adoption** — Active Members, Daily Active
+   posters, PeerProgramming goal cards that helped (read in "cards") — the fourteen events of the
+   shared value-event list, so no endorsement or Beacon card appears); **Adoption** — Active Members, Daily Active
    Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
    incidents + distinct
    loggers. The Active Members card reads "N members": how many different members signed in

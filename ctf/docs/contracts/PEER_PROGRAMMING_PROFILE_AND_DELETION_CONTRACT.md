@@ -63,6 +63,14 @@ Rule 114 baseline: PeerProgramming uses one canonical profile and plugin extensi
   - Contains personal data? yes (user-authored content)
   - Retention period: user-controlled with policy minimums
   - Legal/compliance note: generated/user content controls apply
+- Table/entity: `peer_programming_goals`
+  - Contains personal data? yes (`owner_user_id`, the goal the member wrote)
+  - Retention period: until the member deletes their account or the PeerProgramming data
+  - Legal/compliance note: member-authored; deleted with the member (`del` on `owner_user_id` in `lib/account/deletion-registry.ts`), its tasks go by `ON DELETE CASCADE`
+- Table/entity: `peer_programming_goal_tasks`
+  - Contains personal data? yes (`taken_by_user_id`, the result a helper wrote)
+  - Retention period: lives with its goal
+  - Legal/compliance note: a task belongs to the goal's owner; when a helper deletes their account their id is pseudonymized (`pseudo` on `taken_by_user_id`) and the result stays with the goal
 - Table/entity: `peer_programming_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps)
   - Retention period: compliance retention window
@@ -76,8 +84,10 @@ When user deletes PeerProgramming usage only:
   - `peer_programming_user_extension`
   - user availability and pairing preferences
   - removable user session notes
+  - the member's own goal-board goals (`peer_programming_goals`), with their tasks
 - Anonymize/pseudonymize:
   - historical session participant references where retention is required
+  - the helper's id on goal-board tasks they did for other members (`peer_programming_goal_tasks.taken_by_user_id`)
 - Retain for compliance/fraud/finance:
   - policy-required collaboration audit traces
   - `peer_programming_deletion_events`
@@ -152,3 +162,4 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-09-25: Added the goal board tables. A member's own goals are deleted with their tasks; their id on tasks they did for other members is pseudonymized and the result stays with that goal.

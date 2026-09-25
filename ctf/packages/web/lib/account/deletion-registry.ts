@@ -349,13 +349,23 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'peer-programming',
     name: 'PeerProgramming',
-    dataSummary: 'Your cohort membership, room messages, feedback, and notifications.',
+    dataSummary: 'Your cohort membership, room messages, goals, feedback, and notifications.',
     serviceScopeSupported: true,
     tables: [
       del('peer_programming_assignment_notifications', 'user_id', 'Your notifications.'),
       del('peer_programming_feedback', 'user_id', 'Feedback you gave.'),
       del('peer_programming_messages', 'author_user_id', 'Your room messages.'),
       del('peer_programming_cohort_members', 'user_id', 'Your cohort membership.'),
+      // A task you did on somebody else's goal belongs to that goal: the result stays as their lead,
+      // and your id on it is overwritten. Listed before the goals delete below, whose ON DELETE
+      // CASCADE removes the tasks on your own goals.
+      pseudo(
+        'peer_programming_goal_tasks',
+        'taken_by_user_id',
+        [],
+        'Tasks you did on other members\' goals — the result stays with the goal, your identity does not.',
+      ),
+      del('peer_programming_goals', 'owner_user_id', 'Goals you posted, with their tasks.'),
       retain('peer_programming_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
       retain('peer_programming_cohorts', 'Shared cohorts; assigned_by/ended_by are the admin audit.'),
       retain('peer_programming_settings', 'Global settings and the admin audit of who changed them.'),

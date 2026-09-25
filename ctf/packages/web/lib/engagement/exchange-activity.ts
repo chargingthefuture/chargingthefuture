@@ -22,8 +22,8 @@ import { EVENT_LABEL, EVENT_SOURCE_PLUGIN, effectiveWeight } from 'lib/contribut
 // One difference, stated rather than hidden. The badge scores every event, because it is already
 // gated on five distinct counterparties and a member who only talks can never clear that however
 // long they keep talking. The daily count has no such gate — a single event would put somebody on
-// the day's roster — so it draws only on the events marked as delivering something: eleven of the
-// thirteen. Finishing a course somebody else taught and posting in a cohort are both real, and
+// the day's roster — so it draws only on the events marked as delivering something: twelve of the
+// fourteen. Finishing a course somebody else taught and posting in a cohort are both real, and
 // neither is a thing another member received.
 //
 // Read-only. The per-day figure is a count of people; the roster carries a member id and that day's

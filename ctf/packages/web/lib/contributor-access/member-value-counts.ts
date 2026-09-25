@@ -2,7 +2,7 @@ import { queryDb } from 'lib/db/postgres';
 import type { ContributorValueEventKey } from './weights';
 import { VALUE_EVENT_SOURCES, aggregateExpression, type ValueEventSource } from './value-events';
 
-// Contributor Access — per-member ALL-TIME counts of the thirteen value events.
+// Contributor Access — per-member ALL-TIME counts of the fourteen value events.
 //
 // Each query counts the SAME events as lib/weekly-performance/live-metrics.ts (same tables, same
 // fixed filters), with two differences: no week window (all-time), and grouped per the member who
@@ -78,8 +78,10 @@ export async function computeMemberEventCounts(): Promise<MemberEventCounts> {
 // origin_plugin, never self-to-self), trust_transport_trips (requester_user_id /
 // provider_user_id — both-sides-confirmed completions), socket_relay_fulfillments
 // (requester_user_id / fulfiller_user_id — closed successful), lighthouse_matches
-// (seeker_user_id / host_user_id — completed stays), and recurring_activities (owner_user_id /
-// counterparty_user_id — confirmed active ties). Foundation call sessions are deliberately NOT
+// (seeker_user_id / host_user_id — completed stays), recurring_activities (owner_user_id /
+// counterparty_user_id — confirmed active ties), and PeerProgramming goal cards marked as helped
+// (the helper / the goal's owner; the goals table is created with the tasks table, so checking the
+// tasks table covers the join). Foundation call sessions are deliberately NOT
 // read here: their per-member counts already feed the score internally, and keeping the sensitive
 // table out of the diversity read minimizes its access surface (rule 132).
 export async function computeMemberCounterpartyCounts(): Promise<Map<string, number>> {
@@ -117,6 +119,16 @@ export async function computeMemberCounterpartyCounts(): Promise<Map<string, num
             UNION
             SELECT seeker_user_id, host_user_id FROM lighthouse_matches
             WHERE status = 'completed'`,
+    },
+    {
+      tables: 'peer_programming_goal_tasks',
+      sql: `SELECT t.taken_by_user_id AS member_id, g.owner_user_id AS other_id
+              FROM peer_programming_goal_tasks t JOIN peer_programming_goals g ON g.id = t.goal_id
+             WHERE t.helped AND t.taken_by_user_id IS NOT NULL AND t.taken_by_user_id <> 'deleted_member'
+            UNION
+            SELECT g.owner_user_id, t.taken_by_user_id
+              FROM peer_programming_goal_tasks t JOIN peer_programming_goals g ON g.id = t.goal_id
+             WHERE t.helped AND t.taken_by_user_id IS NOT NULL AND t.taken_by_user_id <> 'deleted_member'`,
     },
     {
       tables: 'recurring_activities',

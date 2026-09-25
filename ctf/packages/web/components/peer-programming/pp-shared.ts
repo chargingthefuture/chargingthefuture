@@ -62,7 +62,7 @@ export interface Message {
   metadata?: Record<string, unknown>;
 }
 
-export type Tab = "cohorts" | "session" | "chat";
+export type Tab = "goals" | "cohorts" | "session" | "chat";
 
 // How the viewer relates to the cohort they currently have open (mirrors the room API).
 export type RoomAccess = "member" | "admin" | "listener";

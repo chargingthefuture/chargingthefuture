@@ -216,11 +216,13 @@ After the event ends, the recording stays on Beacon and gets posted to the Commo
 
 ## PeerProgramming
 
-_Last updated: 2026-09-21_
+_Last updated: 2026-09-25_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
 Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.
+
+The PeerProgramming screen opens on the Goals tab, your cohort's goal board. It is laid out as three columns of cards: Up for grabs, Doing and Done. Each card is one small task toward somebody's goal, such as a yard jockey job in Texas or a camper, and can be done from a phone in under half an hour. You pick any one card, never a goal as a unit: take it, do it, and post what you found, such as phone numbers, a link, or what a call said. You can also post one goal of your own and break it into cards. When a result helped, press 'It helped': that counts toward the helper's Weavers of the Commons badge. You can also keep a result without that mark or send the card back for somebody else, and each done card shows who did it. The top of the board shows how many cards were done across your cohort in the last 24 hours. There is no conversation on the board, only goals, cards and results.
 
 Your cohort meets by live video. On the Session tab, 'Join Session' opens the cohort's own call — you see and hear each other like any video meeting, with mute, camera and leave controls. Your camera and microphone start on, so joining puts you on screen. There is one call per cohort, for its members only, and it is open whenever the cohort is running rather than at a set hour: a cohort holds as many or as few sessions as it wants, arranged between its members.
 
@@ -231,9 +233,11 @@ After your cohort ends, a feedback box appears where you can write a note about 
 **How to use it**
 
 1. Sign in and go to the PeerProgramming screen. You'll see your cohort if you're assigned to one, or a message that you're not in a cohort yet.
-2. To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.
-3. When you're in a cohort, open the chat room and post or reply to other members' messages.
-4. After your cohort ends, use the feedback box to write about your experience.
+2. On the Goals tab, press '+ Add your goal', write your goal and its cards, one per line, and press 'Post goal'. You can have one open goal at a time; press 'Reached it' or 'Take it down' to close it.
+3. To help someone else, press 'Take it' on any card in Up for grabs, do it, and post what you found. One card is enough. If you cannot finish it, press 'Let it go'. A card you hold for a day without a result goes back to Up for grabs.
+4. To meet, open the Session tab and press 'Join Session'. Anyone in your cohort who joins lands in the same call.
+5. When you're in a cohort, open the chat room and post or reply to other members' messages.
+6. After your cohort ends, use the feedback box to write about your experience.
 
 ## Mood
 

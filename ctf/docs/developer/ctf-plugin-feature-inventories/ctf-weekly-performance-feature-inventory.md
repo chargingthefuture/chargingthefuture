@@ -168,6 +168,7 @@ is no dashboard-side copy of the SQL; changing a value event changes every readi
 - `value.skill_up_completions` / `value.skill_up_trainer_payouts` — completed enrollments and trainer payouts.
 - `value.recurring_ties_confirmed` — ties the counterparty confirmed (one per tie, though the shared rows credit both sides).
 - `value.peer_programming_active_posters` — distinct members who posted in their cohort.
+- `value.peer_programming_tasks_helped` — goal-board cards the goal's owner marked as helped (at most three per owner-and-helper pair per week).
 
 Adoption (honest non-value rows):
 

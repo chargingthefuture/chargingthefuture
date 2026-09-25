@@ -290,7 +290,7 @@ export function DailyExchangeShell() {
               Both readings use one shared definition and one set of weights, so adding a feature
               updates both at once. They differ in one stated way: the badge scores every event,
               because earning it already requires five different counterparties, while this count
-              draws only on the events where somebody received something — eleven of the thirteen.
+              draws only on the events where somebody received something — twelve of the fourteen.
               Finishing a course somebody else taught and posting in a cohort are both real, and
               neither is a thing another member received. Value is credited to whoever
               delivered it, which is what the badge has always done: a ride counts its driver, so
