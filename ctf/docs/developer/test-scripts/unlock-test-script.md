@@ -120,8 +120,8 @@ not see this banner. On android the client Unlock gate lets a treatment member t
    chips under the chat are only "I can’t find my Quora profile URL" and "I'm new. What do I do first?".
 3. Open an announcement or an @comic answer that carries plugin links. Confirm the "Explore:" / plugin
    chips are not shown.
-4. Tap "I can’t find my Quora profile URL". Confirm the consent step (first time), then the "Reviewing
-   for safety" card for that question.
+4. Tap "I can’t find my Quora profile URL". Confirm the consent step (first time), then an @comic
+   answer card with the browser steps within a second or two (sent without review; see CMC-U1).
 5. As admin, approve the member in `/admin/unlock`. As the member, reload the home page.
 6. Confirm everything from step 2 is back: Apps tab, grid, sort and search, the locked chip, the full
    chip row, plugin links under answers and announcements.

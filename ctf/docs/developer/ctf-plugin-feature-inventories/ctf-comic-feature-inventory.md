@@ -177,9 +177,13 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
      Quora, verifying, Unlock or approval goes to the model as usual, with a short list of true facts
      about Unlock added to its instructions (a person reviews every submission; the assistant cannot
      approve anyone; not finishing never costs the account; the hint box is the way in when the URL
-     cannot be found). **Every one of these answers is still held for the owner's review** (owner
-     decision, 2026-09-26: this path is not an exception). The assistant has no tool that approves
-     anybody. A member not yet approved also sees an "I can’t find my Quora profile URL" chip under
+     cannot be found). **These answers are sent without review** (owner decision, 2026-09-26: volume
+     is low, the assistant cannot approve anybody, and the decision is reversible). This is the only
+     @comic path that skips review; everything else is held exactly as before. A scripted answer is
+     on screen as soon as the question is sent; a model answer appears when it is drafted, and if
+     the model fails a fixed fallback is sent instead, so an Unlock question never waits in the
+     review queue. The switch is on the Unlock help log page; off puts these answers back in the
+     queue with the draft attached. The assistant has no tool that approves anybody. A member not yet approved also sees an "I can’t find my Quora profile URL" chip under
      the chat that sends that question to @comic in one tap.
 2. Peer-to-peer messages (no `@`) are never sent to the bot.
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
@@ -236,15 +240,19 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 
 ### Unlock help log (shipped 2026-09-26)
 
-`/admin/comic/unlock-help` (admin-only, read-only, linked from `/admin` as **Unlock Help Log**)
-lists every @comic question about Unlock asked by a member who was not yet approved, newest first
+`/admin/comic/unlock-help` (admin-only, linked from `/admin` as **Unlock Help Log**). At the top, the
+**Send without review** switch (on by default; see User Features 1) — the one control on the page,
+writing `comic_runtime_config` through `POST /api/comic/admin/unlock-help-setting` and recorded in
+the audit log. Below it, read-only, the page lists every @comic question about Unlock asked by a member who was not yet approved, newest first
 (most recent 500): the case it was tagged with, the question, the answer actually sent (or the review
-status when none was), and the outcome read live from `unlock_verification_submissions` — approved
+status when none was), whether it was sent without review, the member's own rating of it, and the
+outcome read live from `unlock_verification_submissions` — approved
 (with how many days after asking), submitted and waiting, submitted and not approved, or no
-submission yet. A table on top counts, per case, how often it was asked, answered, corrected by the
-reviewer, and followed by approval. **Copy as text** puts all of it on the clipboard for pasting from
-a phone. Rendered on the server from `lib/comic/unlock-help-log.ts`; there is no API route behind it.
-Nothing on it can change a review or a member's Unlock status.
+submission yet. A table on top counts, per case, how often it was asked, answered, corrected by a
+reviewer, rated not helpful (or flagged) by the member, and followed by approval — the evidence for
+keeping the switch on or turning it off. **Copy as text** puts all of it on the clipboard for pasting from
+a phone. Rendered on the server from `lib/comic/unlock-help-log.ts`. Nothing on it can change a
+review or a member's Unlock status.
 
 ### Audit log (shipped 2026-08-28)
 
@@ -296,8 +304,12 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
   **Rasa NLU YAML export**.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
   `POST /api/commons/messages` is a stub).
-- `GET /admin/comic/unlock-help` — admin page (server-rendered, no API route) for the Unlock help
-  log. Reads `comic_turns` (user turns whose `intent` starts `unlock_help:`), `comic_conversations`,
+- `POST /api/comic/admin/unlock-help-setting` — admin, CSRF-guarded (command
+  `comic.admin.unlock-help.set-review`). Body `{ withoutReview: boolean }`; writes
+  `comic_runtime_config.unlock_help_without_review` and an audit row on success and failure. Returns
+  the saved setting.
+- `GET /admin/comic/unlock-help` — admin page (server-rendered) for the Unlock help log and the
+  switch above. Reads `comic_turns` (user turns whose `intent` starts `unlock_help:`), `comic_conversations`,
   `comic_review_queue`, the answer turn, and `unlock_verification_submissions`. Read-only.
 
 ### Implemented (backend foundation, server-only — `comic.*`)
@@ -535,6 +547,17 @@ comic generation is **not** forced into that feed-shaped table; comic captures r
 its own `comic_turns` and emits a structured `[comic.inference]` console audit for parity (revisit
 if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
 for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
+
+**Runtime setting (added 2026-09-26).**
+
+- `comic_runtime_config` — one row (`singleton_id` boolean pk, CHECK true), `unlock_help_without_review`
+  boolean NOT NULL default true, `updated_by_user_id` text null, `updated_at`. No row means the
+  default (on). Read on every Unlock question by `isUnlockHelpSentWithoutReview` in
+  `lib/comic/runtime-config.ts`, which holds the answer for review if the read fails. Holds no member
+  data. Created by `schema.sql` and `db/migrations/post/0041_comic_runtime_config.sql`.
+- An Unlock answer sent without review is an ordinary `comic_review_queue` row with `status`
+  `approved`, `answer_turn_id` = `draft_turn_id`, no `reviewer_user_id`, and `reason`
+  `unlock_help_sent_without_review`.
 
 **Admin audit trail (added 2026-08-28).**
 
@@ -797,7 +820,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
-- 2026-09-26: **A scripted @comic path for members stuck on the Quora profile URL, and a log of how each one turned out.** Owner report: members stop at Unlock because they cannot find their Quora profile URL. `lib/comic/unlock-help-script.ts` classifies a question from a member not yet approved (`lib/comic/unlock-help-plan.ts` reads their tier; an approved member's question is ordinary): the profile-link question gets a scripted draft, attached as the review row's draft in the same transaction that queues it (bot turn, engine `template`, so the model is not asked); any other Unlock question is drafted by the model with `UNLOCK_HELP_MODEL_FACTS` added to its instructions (also used by **Regenerate draft** for those turns). Both tag the member's turn `comic_turns.intent = 'unlock_help:<case>'` (`browser`, `quora_app`, `wrong_link`, `cannot_sign_in`, `model`) — the column already existed and was unused, so there is no schema change. The owner was asked whether this path could send without review and chose to keep every answer held; `forceHumanReview()` is unchanged. Safety-flagged questions skip all of it and stay human-first with no draft. New admin page `/admin/comic/unlock-help` sets each tagged conversation against whether the member was approved afterward, with per-case counts and a copy-as-text button. On the Commons, answer cards hide their plugin links from a member not yet approved (see the commons inventory).
+- 2026-09-26: **A scripted @comic path for members stuck on the Quora profile URL, and a log of how each one turned out.** Owner report: members stop at Unlock because they cannot find their Quora profile URL. `lib/comic/unlock-help-script.ts` classifies a question from a member not yet approved (`lib/comic/unlock-help-plan.ts` reads their tier; an approved member's question is ordinary): the profile-link question gets a scripted answer, attached in the same transaction that queues it (bot turn, engine `template`, so the model is not asked); any other Unlock question is answered by the model with `UNLOCK_HELP_MODEL_FACTS` added to its instructions (also used by **Regenerate draft** for those turns). Both tag the member's turn `comic_turns.intent = 'unlock_help:<case>'` (`browser`, `quora_app`, `wrong_link`, `cannot_sign_in`, `model`) — the column already existed and was unused, so there is no schema change. Owner decision, 2026-09-26: these answers are sent without review — the review row is marked approved with the draft as the answer and no reviewer, in the same step the draft is attached. When the model fails or is not configured, the fixed `UNLOCK_HELP_MODEL_FALLBACK` is sent instead, so nothing lands in the queue. The decision is a switch, not a code path to unpick: new table `comic_runtime_config` (one row, default on), `POST /api/comic/admin/unlock-help-setting`, and a **Send without review** control on the log page; off holds these answers for review with the draft attached. If the setting cannot be read, the answer is held. `forceHumanReview()` is unchanged and every other @comic answer is held exactly as before. No new cap: the existing 12-per-hour @comic limit applies. Safety-flagged questions skip all of it and stay human-first with no draft. New admin page `/admin/comic/unlock-help` sets each tagged conversation against whether the member was approved afterward, with the member's rating, whether it went out without review, per-case counts and a copy-as-text button. On the Commons, answer cards hide their plugin links from a member not yet approved (see the commons inventory).
 
 - 2026-08-28: **Every AI Assistant admin decision is recorded in a table an admin can read, including the ones that were refused.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. `lib/comic/audit.ts` built the entire contract-shaped event and ended in `console.info` — a line in the server's log, which nothing can query, no screen can show, and which ages out of the host's retention window. These are decisions about other people's writing: accepting a contribution, declining one with a reason, regenerating or resolving a draft answer, switching a knowledge entry off. New table `comic_admin_audit_trail` (actor, command, policy status, reason, target, result, error category, metadata, timestamp; indexed newest-first by actor and command). New `recordComicAdminAudit` writes the row **and** the log line, and all four admin mutation routes use it on every outcome. It never throws: an audit write that failed would otherwise turn a completed decision into a 503 and have a reviewer repeat an accept or decline they had already made. **`PUT /api/comic/admin/knowledge/:entryId` had no audit call at all** — not even a log line — so switching a grounding entry on or off was invisible; it now records the success, the not-found refusal, and the persistence failure, each carrying whether the entry was switched on or off. New `GET /api/comic/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/comic/knowledge`, reading the most recent 200 with plain-language labels ("Decided on a contribution", "Switched a knowledge entry on or off", "Refused · Because the record was not there") and the decision or decline reason from the metadata. The member-facing commands keep the log line alone. Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip an accepted contribution, a declined one with its reason, a knowledge entry switched off, and a set-active refused as not-found. Comic's four routes leave the admin-audit-coverage burn-down list.
 - 2026-08-24: **The owner review dashboard scrolls as a page.** Its wrapper was pinned to exactly one

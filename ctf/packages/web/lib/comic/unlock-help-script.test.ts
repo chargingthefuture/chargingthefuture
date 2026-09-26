@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildUnlockHelpAnswer, classifyUnlockHelpQuestion } from './unlock-help-script';
-import { summarizeUnlockHelp, describeUnlockHelpOutcome, type UnlockHelpLogRow } from './unlock-help-log-format';
+import { summarizeUnlockHelp, describeUnlockHelpDelivery, describeUnlockHelpOutcome, type UnlockHelpLogRow } from './unlock-help-log-format';
 import { commonsSuggestionChips } from '../concierge/commons-suggestions';
 
 describe('classifyUnlockHelpQuestion', () => {
@@ -46,7 +46,9 @@ function row(partial: Partial<UnlockHelpLogRow>): UnlockHelpLogRow {
     userId: 'u',
     username: null,
     reviewStatus: 'pending',
+    sentWithoutReview: false,
     answer: null,
+    rating: null,
     outcome: 'no_submission',
     daysToApproval: null,
     ...partial,
@@ -56,13 +58,13 @@ function row(partial: Partial<UnlockHelpLogRow>): UnlockHelpLogRow {
 describe('Unlock help log summary', () => {
   it('counts asked, answered, corrected and approved per case', () => {
     const summary = summarizeUnlockHelp([
-      row({ reviewStatus: 'approved', outcome: 'approved', daysToApproval: 2 }),
-      row({ reviewStatus: 'corrected' }),
+      row({ reviewStatus: 'approved', sentWithoutReview: true, outcome: 'approved', daysToApproval: 2 }),
+      row({ reviewStatus: 'corrected', rating: 'not_helpful' }),
       row({ helpCase: 'model' }),
     ]);
     expect(summary).toEqual([
-      { helpCase: 'browser', asked: 2, answered: 2, corrected: 1, approvedAfter: 1 },
-      { helpCase: 'model', asked: 1, answered: 0, corrected: 0, approvedAfter: 0 },
+      { helpCase: 'browser', asked: 2, answered: 2, corrected: 1, notHelpful: 1, approvedAfter: 1 },
+      { helpCase: 'model', asked: 1, answered: 0, corrected: 0, notHelpful: 0, approvedAfter: 0 },
     ]);
   });
 
@@ -70,6 +72,11 @@ describe('Unlock help log summary', () => {
     expect(describeUnlockHelpOutcome(row({ outcome: 'approved', daysToApproval: 0 }))).toBe('approved the same day');
     expect(describeUnlockHelpOutcome(row({ outcome: 'approved', daysToApproval: 3 }))).toBe('approved 3 days later');
     expect(describeUnlockHelpOutcome(row({ outcome: 'waiting' }))).toBe('submitted, waiting for review');
+  });
+
+  it('says how the answer reached the member', () => {
+    expect(describeUnlockHelpDelivery(row({ reviewStatus: 'approved', sentWithoutReview: true, rating: 'not_helpful' }))).toBe('sent without review, rated not helpful');
+    expect(describeUnlockHelpDelivery(row({ reviewStatus: 'corrected' }))).toBe('reviewed, corrected');
   });
 });
 

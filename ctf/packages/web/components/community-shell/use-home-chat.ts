@@ -283,7 +283,7 @@ type ComicConversationResponse = {
 type ComicMessageResponse = {
   ok: true;
   routedToAssistant: boolean;
-  status?: 'review_pending' | 'human_first';
+  status?: 'review_pending' | 'human_first' | 'answered';
   conversationId?: string;
   holdingResponse?: string;
 };

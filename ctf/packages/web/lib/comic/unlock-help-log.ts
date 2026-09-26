@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { UNLOCK_HELP_INTENT_PREFIX } from './unlock-help-script';
+import { UNLOCK_HELP_INTENT_PREFIX, UNLOCK_HELP_SENT_REASON } from './unlock-help-script';
 import {
   summarizeUnlockHelp,
   type UnlockHelpLog,
@@ -29,7 +29,10 @@ type LogDbRow = {
   user_id: string;
   asker_username: string | null;
   review_status: string | null;
+  review_reason: string | null;
+  reviewer_user_id: string | null;
   answer_body: string | null;
+  rating: string | null;
   unlock_status: string | null;
   unlock_reviewed_at: Date | string | null;
 };
@@ -59,7 +62,9 @@ function toLogRow(row: LogDbRow): UnlockHelpLogRow {
     userId: row.user_id,
     username: row.asker_username,
     reviewStatus: row.review_status,
+    sentWithoutReview: row.review_status === 'approved' && row.reviewer_user_id === null && row.review_reason === UNLOCK_HELP_SENT_REASON,
     answer: row.answer_body,
+    rating: row.rating,
     outcome,
     daysToApproval: outcome === 'approved' ? daysBetween(askedAt, row.unlock_reviewed_at) : null,
   };
@@ -76,13 +81,17 @@ export async function listUnlockHelpLog(): Promise<UnlockHelpLog> {
         c.user_id AS user_id,
         c.asker_username AS asker_username,
         q.status AS review_status,
+        q.reason AS review_reason,
+        q.reviewer_user_id AS reviewer_user_id,
         a.body AS answer_body,
+        r.rating AS rating,
         s.review_status AS unlock_status,
         s.reviewed_at AS unlock_reviewed_at
       FROM comic_turns t
       JOIN comic_conversations c ON c.id = t.conversation_id
       LEFT JOIN comic_review_queue q ON q.turn_id = t.id
       LEFT JOIN comic_turns a ON a.id = q.answer_turn_id
+      LEFT JOIN comic_answer_ratings r ON r.turn_id = q.answer_turn_id AND r.user_id = c.user_id
       LEFT JOIN unlock_verification_submissions s ON s.user_id = c.user_id
       WHERE t.role = 'user'
         AND t.intent LIKE $1

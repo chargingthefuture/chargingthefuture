@@ -55,6 +55,10 @@ export function evaluateComicSafety(text: string): ComicSafetyEvaluation {
 // then this returns true unconditionally so nothing unreviewed is ever surfaced to the asker.
 // (Safety-flagged turns are handled human-first with no draft generated, upstream in
 // routeComicMessage.)
+//
+// The one exception is outside this function on purpose, so nothing here changes: an answer to an
+// Unlock question from a member not yet approved is sent without review while the switch in
+// lib/comic/runtime-config.ts is on (owner decision, 2026-09-26). See lib/comic/unlock-help-plan.ts.
 export function forceHumanReview(): boolean {
   return true;
 }

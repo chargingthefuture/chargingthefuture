@@ -66,8 +66,8 @@ const COMMONS_SUGGESTION_CHIPS: readonly CommonsSuggestionChip[] = [
 ];
 
 // For a member not yet approved through Unlock: the profile-link question, sent to @comic, which
-// answers it from the scripted path in lib/comic/unlock-help-script.ts (still reviewed before it is
-// sent). The Unlock help box above the chat names this chip by its label, so the two must match.
+// answers it from the scripted path in lib/comic/unlock-help-script.ts (sent without review while the
+// switch in lib/comic/runtime-config.ts is on). The Unlock help box above the chat names this chip by its label, so the two must match.
 const QUORA_URL_CHIP: CommonsSuggestionChip = {
   id: 'quora-url',
   label: 'I can’t find my Quora profile URL',

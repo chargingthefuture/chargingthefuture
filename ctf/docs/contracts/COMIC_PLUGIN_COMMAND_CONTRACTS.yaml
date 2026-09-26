@@ -2,8 +2,8 @@ contracts:
   # ─── @comic message routing ────────────────────────────────────────────
   - pluginId: comic
     command: comic.message.route
-    version: 1.1.0
-    description: Route an inbound chat message to the AI Assistant when it mentions @comic; capture the user turn, run consent/moderation/safety checks, and branch to draft+review or human-first. The background draft is grounded in top-ranked comic_knowledge_entries excerpts (retrieval, #504). Messages without an @comic mention are peer-to-peer and never reach the assistant.
+    version: 1.2.0
+    description: Route an inbound chat message to the AI Assistant when it mentions @comic; capture the user turn, run consent/moderation/safety checks, and branch to draft+review or human-first. The background draft is grounded in top-ranked comic_knowledge_entries excerpts (retrieval, #504). Messages without an @comic mention are peer-to-peer and never reach the assistant. One exception to review (2026-09-26) - an Unlock question from a member not yet approved is tagged unlock_help:<case> on the turn, gets a scripted or Unlock-grounded draft, and while comic_runtime_config.unlock_help_without_review is on that answer is published at once (status answered, no reviewer). The assistant cannot approve anybody.
     inputSchema:
       body:
         type: string
@@ -26,7 +26,7 @@ contracts:
         type: boolean
       status:
         type: string
-        enum: [review_pending, human_first, not_mentioned]
+        enum: [review_pending, human_first, answered, not_mentioned]
       conversationId:
         type: string
       holdingResponse:
@@ -36,6 +36,8 @@ contracts:
       - comic_turns
       - comic_review_queue
       - comic_knowledge_entries
+      - comic_runtime_config
+      - unlock_verification_submissions
     purpose: assistant_message_routing
     retentionClass: transactional_long_lived
     idempotency: false
@@ -459,6 +461,29 @@ contracts:
       - comic_knowledge_entries
       - comic_admin_audit_trail
     purpose: assistant_knowledge_curation
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.admin.unlock-help.set-review
+    version: 1.0.0
+    description: >-
+      Admin. Switch whether @comic answers to Unlock questions from members not yet approved are
+      sent without review (owner decision, 2026-09-26: on). Off puts those answers back in the
+      review queue with the draft attached. Every other @comic answer is held for review either way.
+      Implemented by POST /api/comic/admin/unlock-help-setting (CSRF-guarded), from the Unlock help
+      log page /admin/comic/unlock-help.
+    inputSchema:
+      withoutReview:
+        type: boolean
+        required: true
+    outputSchema:
+      setting:
+        type: object
+    dataAccess:
+      - comic_runtime_config
+      - comic_admin_audit_trail
+    purpose: assistant_supervision
     retentionClass: transactional_long_lived
     idempotency: true
 

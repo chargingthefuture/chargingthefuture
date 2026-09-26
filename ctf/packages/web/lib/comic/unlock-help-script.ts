@@ -10,9 +10,11 @@ import { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/unlock/quora-ur
 // to the model, with a short list of facts about Unlock added to its instructions so it does not make
 // them up.
 //
-// Either way the answer is a draft that waits for the owner's review, like every other @comic answer
-// (owner decision, 2026-09-26: this path is not an exception to review). The script only saves the
-// reviewer writing the same steps again.
+// Either way the answer is sent straight to the member without waiting for review (owner decision,
+// 2026-09-26). This is the only @comic path that skips review, and it can be switched off from the
+// Unlock help log (lib/comic/runtime-config.ts), which puts these answers back in the queue with the
+// draft attached. Safe to send unreviewed because the assistant cannot approve anybody: the worst
+// case is a wrong instruction, not a wrong approval.
 //
 // Only for a member who is not yet approved. The question is tagged on the member's turn
 // (comic_turns.intent) as `unlock_help:<case>`, which is what the admin log at /admin/comic/unlock-help
@@ -24,6 +26,10 @@ import { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/unlock/quora-ur
 export type UnlockHelpCase = QuoraUrlHelpCase | 'model';
 
 export const UNLOCK_HELP_INTENT_PREFIX = 'unlock_help:';
+
+// The review-row reason recorded on an Unlock answer that went out without review, so the review
+// history says why no reviewer is named on it, and the Unlock help log can tell it apart.
+export const UNLOCK_HELP_SENT_REASON = 'unlock_help_sent_without_review';
 
 // Is this about Unlock at all? A question that names none of these is an ordinary @comic question.
 const UNLOCK_TOPIC = /\b(quora|verif\w*|unlock\w*|approv\w*)\b/i;
@@ -81,6 +87,11 @@ export function buildUnlockHelpAnswer(helpCase: QuoraUrlHelpCase): string {
   const numbered = block.steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
   return `${block.heading}:\n${numbered}\n\n${ANSWER_TAIL[helpCase]}`;
 }
+
+// Sent instead of a model answer when the model is not reachable and the answer is going out without
+// review, so the question never falls back into the review queue.
+export const UNLOCK_HELP_MODEL_FALLBACK =
+  'A person reviews every Quora profile you send, and nothing expires while you wait. If you cannot find your profile address, the help box at the top of the Commons shows where to look, and you can write the name on your Quora account there instead so a person can look you up.';
 
 // Facts added to the model's instructions for an Unlock question outside the script. Each is true of
 // the product today; the model is told not to go beyond them.

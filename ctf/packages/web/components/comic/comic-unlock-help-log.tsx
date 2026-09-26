@@ -4,7 +4,9 @@ import { useState } from 'react';
 import { Copy, KeyRound } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { useTheme } from '@/hooks/useTheme';
+import type { UnlockHelpReviewSetting } from 'lib/comic/runtime-config';
 import {
+  describeUnlockHelpDelivery,
   describeUnlockHelpOutcome,
   formatUnlockHelpLogText,
   type UnlockHelpCaseSummary,
@@ -14,10 +16,11 @@ import {
 import { failureText } from 'lib/errors/client-failure';
 import { getComicTokens, type ComicTokens } from './comic-shared';
 
-// Read-only screen for the Unlock help log (lib/comic/unlock-help-log.ts). One line per case up top —
-// how often it was asked, answered, corrected, and how many of those members went on to be approved —
-// then each conversation. The copy button puts the entire log on the clipboard as plain text so it
-// can be pasted into a message from a phone.
+// Screen for the Unlock help log (lib/comic/unlock-help-log.ts). The switch at the top decides whether
+// these answers go out without review. Then one line per case — how often it was asked, answered,
+// corrected, rated not helpful, and how many of those members went on to be approved — then each
+// conversation. The copy button puts the entire log on the clipboard as plain text so it can be
+// pasted into a message from a phone.
 
 function SummaryTable({ summary, t }: { summary: UnlockHelpCaseSummary[]; t: ComicTokens }) {
   const cell = { padding: '6px 8px', borderBottom: `1px solid ${t.BORDER_SOLID}`, textAlign: 'left' as const };
@@ -30,6 +33,7 @@ function SummaryTable({ summary, t }: { summary: UnlockHelpCaseSummary[]; t: Com
             <th style={cell}>Asked</th>
             <th style={cell}>Answered</th>
             <th style={cell}>Corrected</th>
+            <th style={cell}>Not helpful</th>
             <th style={cell}>Approved after</th>
           </tr>
         </thead>
@@ -40,6 +44,7 @@ function SummaryTable({ summary, t }: { summary: UnlockHelpCaseSummary[]; t: Com
               <td style={cell}>{s.asked}</td>
               <td style={cell}>{s.answered}</td>
               <td style={cell}>{s.corrected}</td>
+              <td style={cell}>{s.notHelpful}</td>
               <td style={cell}>{s.approvedAfter}</td>
             </tr>
           ))}
@@ -62,7 +67,7 @@ function LogRow({ row, t }: { row: UnlockHelpLogRow; t: ComicTokens }) {
       </div>
       <div style={{ fontSize: 13, color: t.TITLE, marginTop: 6, lineHeight: 1.5 }}>Q: {row.question}</div>
       <div style={{ fontSize: 12, color: t.MUTED, marginTop: 4, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-        {row.answer ? `A: ${row.answer}` : `No answer sent (${row.reviewStatus ?? 'no review row'})`}
+        {row.answer ? `A (${describeUnlockHelpDelivery(row)}): ${row.answer}` : `No answer sent (${row.reviewStatus ?? 'no review row'})`}
       </div>
     </div>
   );
@@ -92,6 +97,56 @@ function CopyLogButton({ log, t }: { log: UnlockHelpLog; t: ComicTokens }) {
   );
 }
 
+async function saveReviewSetting(withoutReview: boolean): Promise<UnlockHelpReviewSetting> {
+  const res = await fetch('/api/comic/admin/unlock-help-setting', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ withoutReview }),
+  });
+  const data = (await res.json().catch(() => null)) as { setting?: UnlockHelpReviewSetting; message?: string; reason?: string } | null;
+  if (!res.ok || !data?.setting) {
+    throw new Error([data?.message ?? `The server answered ${res.status}.`, data?.reason].filter(Boolean).join(' '));
+  }
+  return data.setting;
+}
+
+// The owner's switch for the one @comic path that skips review. On: Unlock answers go straight to the
+// member. Off: they wait in the review queue with the draft attached. Nothing else @comic does changes.
+function ReviewSwitch({ initial, t }: { initial: UnlockHelpReviewSetting; t: ComicTokens }) {
+  const [setting, setSetting] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function flip() {
+    setBusy(true);
+    setError(null);
+    try {
+      setSetting(await saveReviewSetting(!setting.withoutReview));
+    } catch (caught) {
+      setError(failureText(caught, { area: 'comic', op: 'set_unlock_help_review', fallback: 'Could not save the setting.' }));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const state = setting.withoutReview
+    ? 'On: answers to Unlock questions are sent to the member without review.'
+    : 'Off: answers to Unlock questions wait in the review queue, with the draft attached.';
+  return (
+    <div style={{ padding: '12px 14px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Send without review</div>
+      <div style={{ fontSize: 12, color: t.MUTED, margin: '4px 0 10px', lineHeight: 1.55 }}>{state} Every other @comic answer is held for review either way.</div>
+      <button
+        type="button"
+        onClick={() => void flip()}
+        disabled={busy}
+        style={{ padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: busy ? 'default' : 'pointer', background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE }}
+      >
+        {setting.withoutReview ? 'Turn off: hold them for review' : 'Turn on: send without review'}
+      </button>
+      {error ? <div role="alert" style={{ fontSize: 12, color: '#EF4444', marginTop: 8 }}>{error}</div> : null}
+    </div>
+  );
+}
+
 function LogBody({ log, t }: { log: UnlockHelpLog; t: ComicTokens }) {
   if (log.rows.length === 0) {
     return <div style={{ fontSize: 13, color: t.MUTED }}>No Unlock questions to @comic yet.</div>;
@@ -110,7 +165,9 @@ function LogBody({ log, t }: { log: UnlockHelpLog; t: ComicTokens }) {
   );
 }
 
-export function ComicUnlockHelpLog({ log, loadError }: { log: UnlockHelpLog | null; loadError: string | null }) {
+type ComicUnlockHelpLogProps = { log: UnlockHelpLog | null; setting: UnlockHelpReviewSetting | null; loadError: string | null };
+
+export function ComicUnlockHelpLog({ log, setting, loadError }: ComicUnlockHelpLogProps) {
   const { theme } = useTheme();
   const t = getComicTokens(theme);
   return (
@@ -119,10 +176,11 @@ export function ComicUnlockHelpLog({ log, loadError }: { log: UnlockHelpLog | nu
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '20px 16px 48px' }}>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 12, lineHeight: 1.6 }}>
           Every question a member asked @comic about Unlock before they were approved, what they were
-          sent, and whether they were approved afterward. A case whose answers keep being corrected,
+          sent, and whether they were approved afterward. A case whose answers are rated not helpful,
           or whose members stop at &quot;no submission yet&quot;, is the one to rewrite.
         </div>
         {loadError ? <div role="alert" style={{ fontSize: 13, color: '#EF4444' }}>{loadError}</div> : null}
+        {setting ? <ReviewSwitch initial={setting} t={t} /> : null}
         {log ? <LogBody log={log} t={t} /> : null}
       </div>
     </div>
