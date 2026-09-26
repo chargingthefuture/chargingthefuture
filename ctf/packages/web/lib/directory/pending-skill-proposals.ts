@@ -24,8 +24,10 @@ export type DirectoryPendingSkillProposalRow = {
   name: string | null;
   handle: string | null;
   claimed: boolean;
-  // false when the profile has been removed (deleted_at set). Listed and marked rather than hidden:
-  // an admin list hides nothing (rule 131).
+  // false when the profile row is gone. A removed listing is deleted outright (directory_profiles has
+  // no soft-delete column since 2026-09-21), but a nominated proposal still reaches for it through
+  // skills_hunt_directory_profiles. Listed and marked rather than hidden: an admin list hides nothing
+  // (rule 131).
   active: boolean;
   skillLabel: string;
   source: DirectoryPendingSkillSource;
@@ -96,7 +98,7 @@ export async function listDirectoryPendingSkillProposals(): Promise<DirectoryPen
         nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '') AS name,
         p.unclaimed_handle AS handle,
         (p.claimed_by_user_id IS NOT NULL) AS claimed,
-        (p.id IS NOT NULL AND p.deleted_at IS NULL) AS active,
+        (p.id IS NOT NULL) AS active,
         pn.skill_label,
         pn.source,
         prom.issue_number,

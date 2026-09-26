@@ -96,7 +96,7 @@ function PersonLine({ row, tokens }: { row: Row; tokens: Tokens }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: tokens.TITLE }}>{displayName(row)}</span>
         {!row.claimed && <Badge text="Unclaimed" color={tokens.SUBTLE} />}
-        {!row.active && <Badge text="Inactive profile" color="#F59E0B" />}
+        {!row.active && <Badge text="Profile deleted" color="#F59E0B" />}
       </div>
       {row.handle && <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 3 }}>@{row.handle}</div>}
     </>
