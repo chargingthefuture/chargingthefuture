@@ -1,4 +1,4 @@
-import { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/unlock/quora-url-help-steps';
+import { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/shared/unlock-interface';
 
 // The scripted @comic path for the question members get stuck on at Unlock: "where is my Quora
 // profile URL?"

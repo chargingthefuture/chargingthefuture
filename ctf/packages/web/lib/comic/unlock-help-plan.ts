@@ -1,5 +1,5 @@
 import { isOllamaConfigured } from 'lib/chatbot/ollama';
-import { getUnlockAccessTier } from 'lib/unlock/access';
+import { getUnlockAccessTier } from 'lib/shared/unlock-interface';
 import { isUnlockHelpSentWithoutReview } from './runtime-config';
 import {
   buildUnlockHelpAnswer,
