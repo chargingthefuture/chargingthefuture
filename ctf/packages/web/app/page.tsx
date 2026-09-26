@@ -117,9 +117,11 @@ export default async function HomePage() {
   //   - not signed in                         -> anonymous shell (sign-in prompt)
   //   - admin / approved_full / support_only  -> the normal Hub
   //   - pending_readonly / none               -> redirect into the Unlock flow
-  // A support_only member sees the same Hub as everyone else; the general channel is their
-  // support surface, and tapping a plugin they cannot use yet shows that plugin's public
-  // landing page (handled at the plugin route), not a denial wall. Nothing is hidden here.
+  // A signed-in member who is not yet approved (most often support_only) sees the Hub stripped back to the verification banner and the chat: the Apps section, plugin
+  // links and the locked contributor chip are left out, because each leads to something they cannot
+  // use yet (owner decision, 2026-09-26, reversing the earlier "nothing is hidden here"). The shell
+  // does that from `verification` below — non-null exactly for that member — and it all returns on
+  // the first load after approval. See components/community-shell/commons-unlock-focus.ts.
   // A closed account (spam or duplicate) still has a stored access tier, so without this check it would
   // pass the tier branch below and land on a Commons where every call answers 403 — the app looking
   // broken instead of saying a decision was made. Send them to the page that explains it and offers the

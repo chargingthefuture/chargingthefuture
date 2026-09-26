@@ -16,6 +16,7 @@ import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/r
 import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
+import { useCommonsUnlockFocus } from './commons-unlock-focus';
 
 // Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
 // degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
@@ -282,7 +283,7 @@ type ComicConversationResponse = {
 type ComicMessageResponse = {
   ok: true;
   routedToAssistant: boolean;
-  status?: 'review_pending' | 'human_first';
+  status?: 'review_pending' | 'human_first' | 'answered';
   conversationId?: string;
   holdingResponse?: string;
 };
@@ -1290,7 +1291,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
 
   // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
   // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
-  const suggestionChips = useMemo(() => commonsSuggestionChips(), []);
+  // A member not yet approved gets only the chips that help them finish Unlock.
+  const unlockFocus = useCommonsUnlockFocus();
+  const suggestionChips = useMemo(() => commonsSuggestionChips({ unlockFocus }), [unlockFocus]);
 
   // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
   // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local

@@ -19,10 +19,11 @@ export type ComicMessageInput = {
   consentGranted: boolean;
 };
 
-// Outcome of routing an inbound chat message. `outcome` is always `review_pending` (draft enqueued,
-// not surfaced) or `human_first` (safety-flagged, no draft); `not_mentioned` short-circuits before
-// any assistant work happens.
-export type ComicMessageRouteOutcome = 'review_pending' | 'human_first' | 'not_mentioned';
+// Outcome of routing an inbound chat message: `review_pending` (draft enqueued, not surfaced),
+// `human_first` (safety-flagged, no draft), or `answered` — the one exception to review, a scripted
+// Unlock answer sent straight to a member not yet approved while that is switched on (see
+// lib/comic/runtime-config.ts). `not_mentioned` short-circuits before any assistant work happens.
+export type ComicMessageRouteOutcome = 'review_pending' | 'human_first' | 'answered' | 'not_mentioned';
 
 export type ComicMessageRouteResult = {
   outcome: ComicMessageRouteOutcome;

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ExternalLink, Send, ShieldCheck } from 'lucide-react';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
+import { UnlockQuoraHelp } from '../unlock/unlock-quora-help';
 
 // The calm "under review" note shown once a submission is in the queue. The member keeps Commons
 // access while a human reviews.
@@ -25,7 +26,7 @@ type UnlockSubmitFormProps = {
 };
 
 // The inline verification form: prompt copy, the Quora profile URL input, the submit button, any
-// error, and the universal help note for a member who can't find their profile URL.
+// error, and the shared help box for a member who can't find their profile URL.
 function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, onSubmit }: UnlockSubmitFormProps) {
   const disabled = url.trim().length === 0 || submitting;
   const inputBorderColor = url ? 'rgba(192,132,252,0.5)' : 'rgba(255,255,255,0.12)';
@@ -98,24 +99,8 @@ function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, on
       </div>
       {error ? <div style={{ fontSize: 12, color: '#F87171', marginTop: 8 }}>{error}</div> : null}
 
-      {/* Prominent, universal help for a member who can't find their Quora profile URL. */}
-      <div
-        role="note"
-        style={{
-          marginTop: 12,
-          padding: '10px 12px',
-          borderRadius: 10,
-          background: 'rgba(192,132,252,0.12)',
-          border: '1.5px solid rgba(192,132,252,0.45)',
-          fontSize: 12.5,
-          color: 'var(--ctf-text-secondary)',
-          lineHeight: 1.55,
-        }}
-      >
-        <strong style={{ color: 'var(--ctf-text)' }}>Can&apos;t find your Quora profile URL?</strong> Ask
-        in the chat just below — that is what this space is for, and I&apos;ll help you find your
-        profile link. Nothing here expires while you wait.
-      </div>
+      {/* The same help box the Unlock screen shows: steps, picture, and the hint box. */}
+      <UnlockQuoraHelp where="commons" />
     </>
   );
 }
@@ -124,8 +109,8 @@ function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, on
 // verification — including someone who got here by pressing "ask for help" on the Unlock screen, or by
 // coming back a second day. Without it they see the chat with no indication that verification is still
 // wanted. It prompts for the Quora profile URL inline (posting to the same POST /api/unlock/submission
-// the Unlock screen uses) and, because the member is already in the Commons, the help note points at
-// the chat below rather than sending them anywhere else.
+// the Unlock screen uses) and, because the member is already in the Commons, the help box points at
+// @comic in the chat below rather than sending them anywhere else.
 export function UnlockVerifyBanner({
   hasSubmission,
   reviewStatus,
