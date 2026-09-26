@@ -39,7 +39,21 @@ export type DirectoryPendingSkillProposalRow = {
   inTaxonomy: boolean;
   heldSkills: string[];
   addedAt: string;
+  // Who put the chip there, from the record rather than from the chip's source. A 'directory' chip is
+  // written by both the member's own edit form and the admin edit drawer, so its source alone says
+  // nothing about who typed it. See DIRECTORY_ADDED_BY_SQL below for how it is recovered.
+  addedBy: DirectoryPendingSkillAddedBy;
+  addedByUserId: string | null;
+  addedByUsername: string | null;
+  // The signed-in admin reading the list is the one who added it.
+  addedByViewer: boolean;
 };
+
+// 'member'     the profile's owner saved it from their own edit form (directory.profile.upsert)
+// 'admin'      an admin saved it from the Directory admin edit drawer (directory.admin.profile.update)
+// 'scout'      a scout proposed it on the SkillsHunt nomination that generated the profile
+// 'unrecorded' no change event matches; the chip predates the record, so nobody is named
+export type DirectoryPendingSkillAddedBy = 'member' | 'admin' | 'scout' | 'unrecorded';
 
 type DbRow = {
   profile_id: string;
@@ -55,21 +69,46 @@ type DbRow = {
   in_taxonomy: boolean;
   held_skills: string[] | null;
   added_at: string;
+  added_by: DirectoryPendingSkillAddedBy;
+  added_by_user_id: string | null;
+  added_by_username: string | null;
 };
 
-export async function listDirectoryPendingSkillProposals(): Promise<DirectoryPendingSkillProposalRow[]> {
+export async function listDirectoryPendingSkillProposals(viewerId: string): Promise<DirectoryPendingSkillProposalRow[]> {
   const result = await queryDb<DbRow>(
     `
       -- Ids are compared as text throughout: on the cloned production database
       -- skills_hunt_directory_profiles.directory_profile_id is text and several profile-keyed
       -- columns are v2 varchar against a uuid directory_profiles.id (see lib/directory/repository.ts).
       WITH pending AS (
+        -- Who wrote a 'directory' row. The only writer (replaceProfileProposedSkills) runs inside the
+        -- same transaction as the save's directory_profile_change_events insert, and both take their
+        -- created_at from NOW(), which Postgres fixes for the transaction — so the row's created_at
+        -- equals the created_at of the event naming the actor, exactly. Every save rewrites the rows,
+        -- so this names whoever last saved the label, which is the person who put it there.
         SELECT
           d.profile_id::text AS profile_id,
           btrim(d.skill_label) AS skill_label,
           'directory'::text AS source,
-          d.created_at AS added_at
+          d.created_at AS added_at,
+          CASE ce.command
+            WHEN 'directory.profile.upsert' THEN 'member'
+            WHEN 'directory.admin.profile.update' THEN 'admin'
+            WHEN 'directory.admin.profile.create' THEN 'admin'
+            ELSE 'unrecorded'
+          END AS added_by,
+          ce.actor_id AS added_by_user_id,
+          NULL::text AS added_by_username
         FROM directory_profile_proposed_skills d
+        LEFT JOIN LATERAL (
+          SELECT e.command, e.actor_id
+          FROM directory_profile_change_events e
+          WHERE e.target_id::text = d.profile_id::text
+            AND e.created_at = d.created_at
+            AND e.command IN ('directory.profile.upsert', 'directory.admin.profile.update', 'directory.admin.profile.create')
+          ORDER BY e.created_at DESC
+          LIMIT 1
+        ) ce ON TRUE
         WHERE d.status = 'pending'
           AND btrim(d.skill_label) <> ''
         UNION ALL
@@ -77,10 +116,14 @@ export async function listDirectoryPendingSkillProposals(): Promise<DirectoryPen
           shdp.directory_profile_id::text AS profile_id,
           btrim(prom.skill_label) AS skill_label,
           'skills-hunt'::text AS source,
-          prom.created_at AS added_at
+          prom.created_at AS added_at,
+          'scout'::text AS added_by,
+          sub.submitter_user_id AS added_by_user_id,
+          sub.submitter_username AS added_by_username
         FROM skills_hunt_directory_profiles shdp
         JOIN skills_hunt_proposed_skill_promotions prom
           ON prom.source_submission_id = shdp.submission_id
+        LEFT JOIN skills_hunt_submissions sub ON sub.id = shdp.submission_id
         WHERE prom.status NOT IN ('promoted', 'dropped')
           AND btrim(prom.skill_label) <> ''
       ),
@@ -109,7 +152,10 @@ export async function listDirectoryPendingSkillProposals(): Promise<DirectoryPen
           WHERE s.is_active AND lower(btrim(s.name)) = lower(pn.skill_label)
         ) AS in_taxonomy,
         h.skills AS held_skills,
-        pn.added_at
+        pn.added_at,
+        pn.added_by,
+        pn.added_by_user_id,
+        pn.added_by_username
       FROM pending pn
       LEFT JOIN directory_profiles p ON p.id::text = pn.profile_id
       LEFT JOIN held h ON h.profile_id = pn.profile_id
@@ -133,6 +179,10 @@ export async function listDirectoryPendingSkillProposals(): Promise<DirectoryPen
     inTaxonomy: row.in_taxonomy,
     heldSkills: row.held_skills ?? [],
     addedAt: row.added_at,
+    addedBy: row.added_by,
+    addedByUserId: row.added_by_user_id,
+    addedByUsername: row.added_by_username,
+    addedByViewer: row.added_by_user_id !== null && row.added_by_user_id === viewerId,
   }));
 }
 

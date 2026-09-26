@@ -71,6 +71,7 @@ export type CardControlProps = {
   busy: boolean;
   taskHoldHours: number;
   onAction: (taskId: string, action: TaskAction, result?: string) => void;
+  onEditTask: (taskId: string, description: string) => Promise<boolean>;
 };
 
 // When a held card stops being reserved for its holder and reopens for anyone. Shown so a member
@@ -82,8 +83,14 @@ function formatHoldDeadline(takenAtIso: string, holdHours: number): string {
 
 // What the goal's owner can do with a card: say a result helped, keep it without that, or send it
 // back; or remove a card nobody has finished. Only "It helped" counts toward the Weavers of the
-// Commons badge and the daily count, for the member who did the card.
-function OwnerControls({ task, busy, onAction }: CardControlProps) {
+// Commons badge and the daily count, for the member who did the card. While a card is still open
+// (up for grabs — nobody has taken it), the owner can also fix a typo in its words; once somebody
+// takes it, the words are theirs to hold and only Remove is offered.
+function OwnerControls({ task, busy, onAction, onEditTask }: CardControlProps) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState(task.description);
+
   if (task.status === "finished") {
     return (
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -93,7 +100,53 @@ function OwnerControls({ task, busy, onAction }: CardControlProps) {
       </div>
     );
   }
-  if (task.status === "open" || task.status === "taken") {
+  if (task.status === "open") {
+    if (editing) {
+      return (
+        <div style={{ display: "grid", gap: 8 }}>
+          <TextBox value={draft} onChange={setDraft} rows={2} maxLength={300} placeholder="Fix the words on this card" />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <SmallButton
+              label={saving ? "Saving…" : "Save"}
+              primary
+              disabled={busy || saving || draft.trim().length === 0}
+              onClick={() => {
+                setSaving(true);
+                // Only leave edit mode on success — a failure (somebody took the card a moment
+                // before you saved) keeps the box open with your words so nothing is lost.
+                void onEditTask(task.id, draft).then((ok) => {
+                  setSaving(false);
+                  if (ok) setEditing(false);
+                });
+              }}
+            />
+            <SmallButton
+              label="Cancel"
+              disabled={busy || saving}
+              onClick={() => {
+                setDraft(task.description);
+                setEditing(false);
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <SmallButton
+          label="Edit"
+          disabled={busy}
+          onClick={() => {
+            setDraft(task.description);
+            setEditing(true);
+          }}
+        />
+        <SmallButton label="Remove" disabled={busy} onClick={() => onAction(task.id, "remove")} />
+      </div>
+    );
+  }
+  if (task.status === "taken") {
     return <SmallButton label="Remove" disabled={busy} onClick={() => onAction(task.id, "remove")} />;
   }
   return null;

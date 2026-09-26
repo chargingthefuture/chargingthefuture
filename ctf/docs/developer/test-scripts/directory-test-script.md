@@ -636,7 +636,10 @@ exactly (for example a chip reading `Librarianship`).
 **Expected:**
 - Step 1: both routes lead to the list. The row on Directory Admin sits directly under Invite queue.
 - Step 2: every chip from both sources is listed, with the person's name and handle, the chip label,
-  a line saying where it came from, the issue link and tracker status when an issue was filed, and
+  a line saying where it came from and who added it — "Added by you" on a chip you typed into the
+  admin edit drawer (never "Added by the member"), "Added by the member on their own profile" on one the
+  member saved themselves, "Proposed by @scout as the scout" on a nominated chip, and "Who added it was
+  not recorded" only when no change record matches, the issue link and tracker status when an issue was filed, and
   "Holds: …" with the taxonomy skills the person already has. **All** is the initial state; the other
   two chips narrow to one source. An unclaimed profile carries an "Unclaimed" badge and a removed
   a proposal whose profile has been deleted a "Profile deleted" badge — listed and marked, never
