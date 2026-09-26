@@ -507,6 +507,71 @@ export const TAXONOMY_CHANGES = [
   { id: 109, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Stroke technique and race training' },
   { id: 110, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Sports coaching' },
   { id: 111, op: 'addSkill', sector: 'Education', occupation: 'Swimming Instructors / Sports Coaches', skill: 'Fitness and conditioning coaching' },
+
+  // Changes 112-142 (owner-approved 2026-09-26): the skill-proposal batch filed as issues #2535-#2553.
+  // The Anthropic account was out of credit, so the manual no-AI companion workflow filed the queue and
+  // each placement was worked by hand against two reads of the live taxonomy the owner pasted: every
+  // active occupation in all 20 sectors, and every active skill whose name touches one of the proposed
+  // words. Four proposals are not here because the live taxonomy already names them, and adding a
+  // second name for one claim splits its holders (changes 26-34 and 79): Assembler (#2538, live
+  // "Assembly and packaging" under Production Workers), Clothes Designer (#2540, Apparel / Fashion
+  // Designers already carries its ten skills from Pattern making to Fit and sizing), Librarian (#2548,
+  // live "Librarianship" under Education Support Staff). The owner cleans those chips up from the
+  // Directory admin's Pending skill proposals screen.
+  //
+  // Where a proposal is worded as a job title ("pianist", "Caregiver", "Reverend"), the skill that
+  // fulfils it is named as a skill, and its addSkill carries the proposal's label in
+  // proposalNormalizedSkills. The apply run attaches that entry's own skill row to every profile that
+  // proposed the label, so the member's chip is replaced by the real skill rather than simply vanishing.
+  //
+  // Four new occupations, each checked against its sector's live list with isPluralTwin (no twin):
+  //   - Health > Home Health Aides / Caregivers. Health's fourteen live occupations are clinical; none
+  //     is home or personal care, and hanging it off Nurses or Medical Assistants would file people under
+  //     a role they do not hold.
+  //   - Creative & Media > Performing Artists (dancers, models). Music has a home (Musicians /
+  //     Composers); dance and modeling had none among the sector's twelve rows.
+  //   - Creative & Media > Authors / Fiction Writers. The sector's writing rows are commercial and news
+  //     writing (Copywriters / Editors, Journalists / Reporters). "Storytelling" reuses the live label
+  //     under Advocates / Awareness Raisers exactly, inside the same sector, so it joins holders rather
+  //     than splitting them.
+  //   - Housing & Construction > Property Managers. The sector's seven rows are design and trades.
+  // Each is seeded with its skills in the same apply run, so none is inert.
+  //
+  // Musicians / Composers gains six instrument skills (owner decision, 2026-09-26: which instrument
+  // matters — somebody looking for a pianist cannot find one under the general "Instrumental
+  // performance"). The general label stays beside them; the instruments are separate claims, not new
+  // names for it. Applies on the next owner run of the seed-skills-taxonomy apply workflow.
+  { id: 112, op: 'addSkill', sector: 'Professional & Business Services', occupation: 'Marketing Specialists', occupationExisting: true, skill: 'Advertising', proposalNormalizedSkills: ['advertising'] },
+  { id: 113, op: 'addSkill', sector: 'Housing & Construction', occupation: 'Architects', occupationExisting: true, skill: 'Architecture', proposalNormalizedSkills: ['architecture', 'architectural'] },
+  { id: 114, op: 'addOccupation', sector: 'Health', occupation: 'Home Health Aides / Caregivers' },
+  { id: 115, op: 'addSkill', sector: 'Health', occupation: 'Home Health Aides / Caregivers', skill: 'Caregiving', proposalNormalizedSkills: ['caregiver'] },
+  { id: 116, op: 'addSkill', sector: 'Health', occupation: 'Home Health Aides / Caregivers', skill: 'Home health aide care', proposalNormalizedSkills: ['home health aid'] },
+  { id: 117, op: 'addSkill', sector: 'Health', occupation: 'Home Health Aides / Caregivers', skill: 'Personal care and daily living support' },
+  { id: 118, op: 'addOccupation', sector: 'Creative & Media', occupation: 'Performing Artists (dancers, models)' },
+  { id: 119, op: 'addSkill', sector: 'Creative & Media', occupation: 'Performing Artists (dancers, models)', skill: 'Dance', proposalNormalizedSkills: ['dance'] },
+  { id: 120, op: 'addSkill', sector: 'Creative & Media', occupation: 'Performing Artists (dancers, models)', skill: 'Choreography' },
+  { id: 121, op: 'addSkill', sector: 'Creative & Media', occupation: 'Performing Artists (dancers, models)', skill: 'Stage performance' },
+  { id: 122, op: 'addSkill', sector: 'Creative & Media', occupation: 'Performing Artists (dancers, models)', skill: 'Modeling', proposalNormalizedSkills: ['professional model'] },
+  { id: 123, op: 'addSkill', sector: 'Emergency & Reserve Roles', occupation: 'Emergency Planners', occupationExisting: true, skill: 'Emergency Support Function (ESF) coordination', proposalNormalizedSkills: ['emergency support function'] },
+  { id: 124, op: 'addSkill', sector: 'Creative & Media', occupation: 'Apparel / Fashion Designers', occupationExisting: true, skill: 'Fashion consulting and styling', proposalNormalizedSkills: ['fashion consultant'] },
+  { id: 125, op: 'addOccupation', sector: 'Creative & Media', occupation: 'Authors / Fiction Writers' },
+  { id: 126, op: 'addSkill', sector: 'Creative & Media', occupation: 'Authors / Fiction Writers', skill: 'Fiction writing', proposalNormalizedSkills: ['fiction writer'] },
+  { id: 127, op: 'addSkill', sector: 'Creative & Media', occupation: 'Authors / Fiction Writers', skill: 'Storytelling' },
+  { id: 128, op: 'addSkill', sector: 'Creative & Media', occupation: 'Authors / Fiction Writers', skill: 'Manuscript editing and revision' },
+  { id: 129, op: 'addSkill', sector: 'Creative & Media', occupation: 'Apparel / Fashion Designers', occupationExisting: true, skill: 'Jewelry design', proposalNormalizedSkills: ['jewelry designer'] },
+  { id: 130, op: 'addSkill', sector: 'Housing & Construction', occupation: 'Construction Laborers', occupationExisting: true, skill: 'Landscaping and grounds work', proposalNormalizedSkills: ['landscaper'] },
+  { id: 131, op: 'addSkill', sector: 'Retail & Services', occupation: 'Personal Services (hairdressers, repair)', occupationExisting: true, skill: 'Makeup artistry', proposalNormalizedSkills: ['makeup artist'] },
+  { id: 132, op: 'addOccupation', sector: 'Housing & Construction', occupation: 'Property Managers' },
+  { id: 133, op: 'addSkill', sector: 'Housing & Construction', occupation: 'Property Managers', skill: 'Property management', proposalNormalizedSkills: ['property management'] },
+  { id: 134, op: 'addSkill', sector: 'Housing & Construction', occupation: 'Property Managers', skill: 'Tenant relations and leasing' },
+  { id: 135, op: 'addSkill', sector: 'Housing & Construction', occupation: 'Property Managers', skill: 'Building maintenance coordination' },
+  { id: 136, op: 'addSkill', sector: 'Health', occupation: 'Social Workers', occupationExisting: true, skill: 'Pastoral care and chaplaincy', proposalNormalizedSkills: ['reverend'] },
+  { id: 137, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Piano', proposalNormalizedSkills: ['pianist'] },
+  { id: 138, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Guitar' },
+  { id: 139, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Drums and percussion' },
+  { id: 140, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Violin' },
+  { id: 141, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Bass' },
+  { id: 142, op: 'addSkill', sector: 'Creative & Media', occupation: 'Musicians / Composers', occupationExisting: true, skill: 'Voice' },
 ];
 
 // ---------------------------------------------------------------------------

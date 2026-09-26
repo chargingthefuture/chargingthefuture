@@ -101,7 +101,12 @@ async function recordChangeEvent(client, { targetType, targetId, action, reason,
 // attach the now-official skill to every profile that was waiting on it — both self-edit Directory
 // "skill not listed" proposals AND nominated / community-generated profiles whose SkillsHunt nomination
 // proposed the skill — then mark the Directory proposals promoted. Idempotent.
-async function applyProposalPromotions(client, jobTitleId, normalizedSkills, summary) {
+//
+// The skill attached is the addSkill entry's own row (skillId), not a skill found by the proposal's
+// wording. A proposal is often worded as a job title ("pianist", "Caregiver") and promoted under a
+// skill name ("Piano", "Caregiving"); matching by name attached nothing in that case, while the rows
+// below were still marked promoted, so the member's chip vanished and nothing replaced it.
+async function applyProposalPromotions(client, skillId, normalizedSkills, summary) {
   if (!Array.isArray(normalizedSkills) || normalizedSkills.length === 0) {
     return;
   }
@@ -127,13 +132,12 @@ async function applyProposalPromotions(client, jobTitleId, normalizedSkills, sum
        ) + 1
      FROM directory_profile_proposed_skills d
      JOIN skills_taxonomy_skills sk
-       ON sk.job_title_id = $1
-      AND lower(btrim(sk.name)) = lower(btrim(d.skill_label))
+       ON sk.id = $1
       AND sk.is_active = true
      WHERE d.status = 'pending'
        AND lower(btrim(d.skill_label)) = ANY($2::text[])
      ON CONFLICT (profile_id, skill_id) DO NOTHING`,
-    [jobTitleId, labels],
+    [skillId, labels],
   );
   summary.directorySkillsAutoAttached += attached.rowCount ?? 0;
 
@@ -158,13 +162,12 @@ async function applyProposalPromotions(client, jobTitleId, normalizedSkills, sum
      JOIN skills_hunt_proposed_skill_promotions prom
        ON prom.source_submission_id = shdp.submission_id
      JOIN skills_taxonomy_skills sk
-       ON sk.job_title_id = $1
-      AND lower(btrim(sk.name)) = lower(btrim(prom.skill_label))
+       ON sk.id = $1
       AND sk.is_active = true
      WHERE lower(btrim(prom.normalized_skill)) = ANY($2::text[])
        AND shdp.directory_profile_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
      ON CONFLICT (profile_id, skill_id) DO NOTHING`,
-    [jobTitleId, labels],
+    [skillId, labels],
   );
   summary.directorySkillsAutoAttached += attachedNominated.rowCount ?? 0;
 
@@ -333,7 +336,7 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
             summary.noops += 1;
             // The promotion side-effects still run: they are themselves idempotent and a
             // previously-applied addSkill may have new pending Directory proposals to resolve.
-            await applyProposalPromotions(client, jobTitle.id, op.proposalNormalizedSkills, summary);
+            await applyProposalPromotions(client, existing.id, op.proposalNormalizedSkills, summary);
             break;
           }
           const inserted = await client.query(
@@ -347,7 +350,7 @@ export async function applyTaxonomyChanges({ pool, changes = TAXONOMY_CHANGES } 
           });
           summary.skillsCreated += 1;
           summary.applied += 1;
-          await applyProposalPromotions(client, jobTitle.id, op.proposalNormalizedSkills, summary);
+          await applyProposalPromotions(client, inserted.rows[0].id, op.proposalNormalizedSkills, summary);
           break;
         }
 

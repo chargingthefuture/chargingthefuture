@@ -159,6 +159,22 @@ post-processing" and "Post-production and color grading" both remain and are **n
 are the photo side and the video side of this occupation's post-production work. Also expected: **Apparel /
 Fashion Designers** and **Machinists** now read in the plural, keeping every skill they had, because a
 rename moves no rows.
+After changes 112–142 apply (the skill-proposal batch, issues #2535–#2553), four new occupations appear:
+**Health › Home Health Aides / Caregivers** (Caregiving, Home health aide care, Personal care and daily
+living support), **Creative & Media › Performing Artists (dancers, models)** (Dance, Choreography, Stage
+performance, Modeling), **Creative & Media › Authors / Fiction Writers** (Fiction writing, Storytelling,
+Manuscript editing and revision) and **Housing & Construction › Property Managers** (Property management,
+Tenant relations and leasing, Building maintenance coordination). **Musicians / Composers** also lists
+Piano, Guitar, Drums and percussion, Violin, Bass and Voice beside "Instrumental performance", which stays.
+Single additions land on existing rows: Advertising (Marketing Specialists), Architecture (Architects),
+Emergency Support Function (ESF) coordination (Emergency Planners), Fashion consulting and styling and
+Jewelry design (Apparel / Fashion Designers), Landscaping and grounds work (Construction Laborers), Makeup
+artistry (Personal Services), Pastoral care and chaplaincy (Social Workers).
+**A proposal worded differently from the skill that fulfils it still reaches the member.** Open a profile
+that proposed "pianist", "Caregiver" or "Reverend": after the apply run it shows **Piano**, **Caregiving**
+or **Pastoral care and chaplaincy** as a real chip where the "pending review" chip was. Before this batch
+the apply run matched the proposal's wording against skill names, so a differently worded proposal was
+marked promoted and its chip vanished with nothing in its place; it now attaches the entry's own skill row.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-5b · A change that would create a duplicate occupation fails the entire apply run
