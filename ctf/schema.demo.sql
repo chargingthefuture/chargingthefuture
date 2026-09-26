@@ -5230,6 +5230,76 @@ ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS crea
 CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
   ON what_works_admin_audit_trail (created_at DESC, actor_id, command);
 
+-- Running costs (added 2026-09-26), read and edited on /admin/expenses. The owner pays every bill
+-- personally and decides what to cut from this list, so each row is a real amount of money a person
+-- pays, entered by hand: most providers do not report billing through an API.
+--   kind            'recurring' (amount is per month) or 'one_off' (amount is the one payment).
+--   billing         'fixed' (the same every month) or 'usage' (moves with use).
+--   amount_cents    NULL means the amount is not known yet — kept apart from zero, which is a
+--                   checked, free line. For a range ("$18-25") this is the low end.
+--   amount_max_cents  the high end of a range; NULL when the amount is a single figure.
+--   paid_on         the date of a one-off payment.
+--   last_checked_on the day somebody last looked at the provider's bill for this line.
+--   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
+--                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+CREATE TABLE IF NOT EXISTS admin_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL,
+  purpose TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'recurring' CHECK (kind IN ('recurring', 'one_off')),
+  billing TEXT NOT NULL DEFAULT 'fixed' CHECK (billing IN ('fixed', 'usage')),
+  amount_cents INTEGER CHECK (amount_cents IS NULL OR amount_cents >= 0),
+  amount_max_cents INTEGER CHECK (amount_max_cents IS NULL OR amount_max_cents >= 0),
+  paid_on DATE,
+  last_checked_on DATE,
+  stopped_on DATE,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'recurring';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS billing TEXT NOT NULL DEFAULT 'fixed';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_max_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS paid_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS last_checked_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS stopped_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Every add, edit and removal on /admin/expenses (rule 131: every admin action is recorded). The
+-- metadata carries the row before and after, so a changed amount can be read back.
+CREATE TABLE IF NOT EXISTS admin_expenses_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
+  ON admin_expenses_audit_trail (created_at DESC, actor_id, command);
+
 -- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
 -- on every surface. lib/mutual-time/audit.ts builds the entire contract-shaped event and ends in
 -- console.info — a line in the server's log, which nothing can query, no screen can show, and which
@@ -10263,4 +10333,52 @@ BEGIN
   RAISE NOTICE 'Spam denylist entries restored from spam decisions: %.', restored;
 END
 $$;
+
+
+-- ── post migration: 0041_admin_expenses_starting_lines.sql ──
+-- The starting list for /admin/expenses (added 2026-09-26).
+--
+-- Why: the owner pays every running cost of Skills Economy personally and is deciding what to cut,
+-- with no screen that says what anything costs. This fills the new admin_expenses table with every
+-- provider in the stack, so the screen opens with the full list rather than empty.
+--
+-- What it writes:
+--   * The five amounts the owner gave on 2026-09-26 (Render, Railway, Claude Code, the phone, RunPod),
+--     marked checked that day. RunPod's amount was not stated, so it is left blank rather than guessed.
+--   * Infisical, Unleash and the Formance ledger at $0 on their own lines: they are self-hosted on
+--     Railway (docs/spec.md, docs/developer/FORMANCE.md), so what they cost is already inside the
+--     Railway line. Listed so nobody goes looking for a separate bill.
+--   * Every other provider the app uses (Neon, GetStream, Sentry, Clerk, Supabase, Expo, GitHub, ntfy,
+--     the domain) with no amount and no check date. Nobody has read those bills into this list yet;
+--     the screen shows them as "not priced yet" and keeps them out of the total until somebody does.
+--
+-- Safe to re-run: it only writes while admin_expenses_audit_trail is empty, which is true until the
+-- first add, edit or removal on the screen. After that the list belongs to the owner, and a re-run
+-- (every qualifying push runs post/) must never bring back a line they removed. The fixed ids plus
+-- ON CONFLICT DO NOTHING cover two runs landing before anybody has touched the screen.
+INSERT INTO admin_expenses
+  (id, provider, purpose, kind, billing, amount_cents, amount_max_cents, last_checked_on, notes)
+SELECT v.id::uuid, v.provider, v.purpose, 'recurring', v.billing, v.amount_cents, v.amount_max_cents,
+       v.last_checked_on::date, v.notes
+FROM (VALUES
+  ('5e0a1c00-0000-4000-8000-000000000001', 'Render', 'Hosting for the web app, the background worker and the route-weather service', 'fixed', 2500, NULL, '2026-09-26', ''),
+  ('5e0a1c00-0000-4000-8000-000000000002', 'Railway', 'Hosting for Infisical, Unleash and the Formance ledger and its database', 'usage', 1800, 2500, '2026-09-26', 'Moves between $18 and $25 a month.'),
+  ('5e0a1c00-0000-4000-8000-000000000003', 'Claude Code', 'The coding agent that builds and maintains the app', 'fixed', 10000, NULL, '2026-09-26', ''),
+  ('5e0a1c00-0000-4000-8000-000000000004', 'Phone', 'The owner''s only machine; every part of the work is done on it', 'fixed', 6000, NULL, '2026-09-26', ''),
+  ('5e0a1c00-0000-4000-8000-000000000005', 'RunPod', 'GPU for the self-hosted AI model that drafts AI Assistant answers', 'usage', NULL, NULL, '2026-09-26', 'Going up and expected to keep rising. Amount not stated yet.'),
+  ('5e0a1c00-0000-4000-8000-000000000006', 'Infisical', 'Secrets store', 'fixed', 0, NULL, '2026-09-26', 'Self-hosted on Railway; its cost is inside the Railway line.'),
+  ('5e0a1c00-0000-4000-8000-000000000007', 'Unleash', 'Feature flags', 'fixed', 0, NULL, '2026-09-26', 'Self-hosted on Railway; its cost is inside the Railway line.'),
+  ('5e0a1c00-0000-4000-8000-000000000008', 'Formance', 'Ledger for ServiceCredits', 'fixed', 0, NULL, '2026-09-26', 'Self-hosted on Railway; its cost is inside the Railway line.'),
+  ('5e0a1c00-0000-4000-8000-000000000009', 'Neon', 'The main database', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000a', 'GetStream', 'Chat and Chyme live audio', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000b', 'Sentry', 'Error reports', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000c', 'Clerk', 'Sign-in and accounts', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000d', 'Supabase', 'Document storage', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000e', 'Expo', 'Android app builds', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-00000000000f', 'GitHub', 'Code hosting and the Actions that test and deploy it', 'usage', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-000000000010', 'ntfy', 'Alert messages from scheduled jobs', 'fixed', NULL, NULL, NULL, ''),
+  ('5e0a1c00-0000-4000-8000-000000000011', 'Domain name', 'chargingthefuture.com registration', 'fixed', NULL, NULL, NULL, 'Usually billed once a year; enter it as the monthly share.')
+) AS v(id, provider, purpose, billing, amount_cents, amount_max_cents, last_checked_on, notes)
+WHERE NOT EXISTS (SELECT 1 FROM admin_expenses_audit_trail)
+ON CONFLICT (id) DO NOTHING;
 
