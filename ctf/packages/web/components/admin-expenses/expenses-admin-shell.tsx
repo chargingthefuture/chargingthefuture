@@ -27,6 +27,90 @@ const TABS: { key: Tab; label: string }[] = [
 // null = closed, 'new' = adding, an Expense = editing that one.
 type Editing = null | 'new' | Expense;
 
+type Tokens = ReturnType<typeof getPluginShellTokens>;
+
+function TabBar({ tokens: t, tab, onChange }: { tokens: Tokens; tab: Tab; onChange: (tab: Tab) => void }) {
+  return (
+    <div role="tablist" aria-label="Expenses sections" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      {TABS.map((entry) => {
+        const active = tab === entry.key;
+        return (
+          <button
+            key={entry.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(entry.key)}
+            style={{
+              padding: '7px 16px',
+              borderRadius: 20,
+              border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`,
+              background: active ? `${t.ACCENT}25` : t.INPUT_BG,
+              color: active ? t.TITLE : t.SUBTLE,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            {entry.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Toolbar({ tokens: t, copied, canAdd, onCopy, onAdd }: { tokens: Tokens; copied: boolean; canAdd: boolean; onCopy: () => void; onAdd: () => void }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      <button
+        type="button"
+        onClick={onCopy}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: 'none', background: t.ACCENT, color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}
+      >
+        <ClipboardCopy size={15} />
+        {copied ? 'Copied' : 'Copy as text'}
+      </button>
+      {canAdd ? (
+        <button
+          type="button"
+          onClick={onAdd}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `1px solid ${t.BORDER_SOLID}`, background: t.INPUT_BG, color: t.TITLE, fontSize: 13, fontWeight: 600 }}
+        >
+          <Plus size={15} />
+          Add a cost
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ErrorBanner({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
+      {error}
+    </div>
+  );
+}
+
+function Loading({ tokens: t }: { tokens: Tokens }) {
+  return (
+    <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>Loading…</div>
+  );
+}
+
+// A live recurring cost is usually canceled, not mistaken, so the confirm points at the stop date.
+function removeMessage(expense: Expense): string {
+  if (expense.kind !== 'recurring' || expense.stoppedOn) return `Remove ${expense.provider}?`;
+  return `Remove ${expense.provider}? Use this for a line entered by mistake. If you canceled it, edit it and set a stop date instead, so the cut stays on the record.`;
+}
+
+// Where Save sends the form: a new line, or the line being edited.
+function saveRequest(editing: Exclude<Editing, null>, input: ExpenseInput): { id: string; send: () => ReturnType<typeof mutateExpense> } {
+  if (editing === 'new') return { id: 'new', send: () => mutateExpense('/api/admin/expenses', 'POST', input) };
+  return { id: editing.id, send: () => mutateExpense(`/api/admin/expenses/${editing.id}`, 'PATCH', input) };
+}
+
 export function ExpensesAdminShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(EXPENSES_ACCENT, theme);
@@ -71,14 +155,9 @@ export function ExpensesAdminShell() {
   }
 
   async function save(input: ExpenseInput) {
-    const target = editing;
-    const ok =
-      target === 'new'
-        ? await run('new', () => mutateExpense('/api/admin/expenses', 'POST', input))
-        : target
-          ? await run(target.id, () => mutateExpense(`/api/admin/expenses/${target.id}`, 'PATCH', input))
-          : false;
-    if (ok) setEditing(null);
+    if (editing === null) return;
+    const request = saveRequest(editing, input);
+    if (await run(request.id, request.send)) setEditing(null);
   }
 
   function checkedToday(expense: Expense) {
@@ -86,10 +165,7 @@ export function ExpensesAdminShell() {
   }
 
   function remove(expense: Expense) {
-    const message =
-      expense.kind === 'recurring' && !expense.stoppedOn
-        ? `Remove ${expense.provider}? Use this for a line entered by mistake. If you canceled it, edit it and set a stop date instead, so the cut stays on the record.`
-        : `Remove ${expense.provider}?`;
+    const message = removeMessage(expense);
     if (!window.confirm(message)) return;
     void run(expense.id, () => mutateExpense(`/api/admin/expenses/${expense.id}`, 'DELETE'));
   }
@@ -110,66 +186,17 @@ export function ExpensesAdminShell() {
       <MobileScreenHeader title="Expenses" accent={t.ACCENT} icon={<Receipt size={18} color={t.ACCENT} />} />
       {/* No in-page title card: the header above names the screen (rule 131, owner report 2026-07-27). */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 48px' }}>
-        <div role="tablist" aria-label="Expenses sections" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {TABS.map((entry) => {
-            const active = tab === entry.key;
-            return (
-              <button
-                key={entry.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(entry.key)}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: 20,
-                  border: `1px solid ${active ? t.ACCENT : t.BORDER_SOLID}`,
-                  background: active ? `${t.ACCENT}25` : t.INPUT_BG,
-                  color: active ? t.TITLE : t.SUBTLE,
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                {entry.label}
-              </button>
-            );
-          })}
-        </div>
+        <TabBar tokens={t} tab={tab} onChange={setTab} />
 
-        {error ? (
-          <div role="alert" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 13 }}>
-            {error}
-          </div>
-        ) : null}
+        <ErrorBanner error={error} />
 
         {tab === 'audit' ? <ExpensesAudit tokens={t} /> : null}
 
-        {tab === 'costs' && !summary && !error ? (
-          <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>Loading…</div>
-        ) : null}
+        {tab === 'costs' && !summary && !error ? <Loading tokens={t} /> : null}
 
         {tab === 'costs' && summary ? (
           <>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              <button
-                type="button"
-                onClick={() => void copy()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: 'none', background: t.ACCENT, color: '#FFFFFF', fontSize: 13, fontWeight: 700 }}
-              >
-                <ClipboardCopy size={15} />
-                {copied ? 'Copied' : 'Copy as text'}
-              </button>
-              {editing === null ? (
-                <button
-                  type="button"
-                  onClick={() => setEditing('new')}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: `1px solid ${t.BORDER_SOLID}`, background: t.INPUT_BG, color: t.TITLE, fontSize: 13, fontWeight: 600 }}
-                >
-                  <Plus size={15} />
-                  Add a cost
-                </button>
-              ) : null}
-            </div>
+            <Toolbar tokens={t} copied={copied} canAdd={editing === null} onCopy={() => void copy()} onAdd={() => setEditing('new')} />
 
             {editing !== null ? (
               <ExpenseForm

@@ -23,20 +23,32 @@ const COMMAND_LABELS: Record<string, string> = {
 };
 
 function amountOf(snapshot: Snapshot | null | undefined): string {
-  if (!snapshot || snapshot.amountCents === null || snapshot.amountCents === undefined) return 'no amount';
-  return formatDollarRange(snapshot.amountCents, snapshot.amountMaxCents ?? snapshot.amountCents);
+  const low = snapshot?.amountCents;
+  if (low === null || low === undefined) return 'no amount';
+  return formatDollarRange(low, snapshot?.amountMaxCents ?? low);
+}
+
+// What an edit changed: the amount, the stop date, the check date. Other fields (provider, notes)
+// read as "details edited".
+function editChanges(before: Snapshot, after: Snapshot): string[] {
+  const changes: string[] = [];
+  const [was, now] = [amountOf(before), amountOf(after)];
+  if (was !== now) changes.push(`${was} → ${now}`);
+  const stopped = after.stoppedOn ?? null;
+  if ((before.stoppedOn ?? null) !== stopped) changes.push(stopped ? `stopped ${stopped}` : 'no longer stopped');
+  const checked = after.lastCheckedOn ?? null;
+  if ((before.lastCheckedOn ?? null) !== checked) changes.push(`checked ${checked ?? 'cleared'}`);
+  return changes;
 }
 
 // One line saying what changed, read from the before/after the route stored.
 function describe(event: AuditEvent): string {
-  const { before, after } = event.metadata;
-  const name = after?.provider ?? before?.provider ?? event.target_id;
+  const before = event.metadata.before ?? {};
+  const after = event.metadata.after ?? {};
+  const name = after.provider ?? before.provider ?? event.target_id;
   if (event.command === 'admin.expenses.create') return `${name}: ${amountOf(after)}`;
   if (event.command === 'admin.expenses.delete') return `${name}: was ${amountOf(before)}`;
-  const changes: string[] = [];
-  if (amountOf(before) !== amountOf(after)) changes.push(`${amountOf(before)} → ${amountOf(after)}`);
-  if ((before?.stoppedOn ?? null) !== (after?.stoppedOn ?? null)) changes.push(after?.stoppedOn ? `stopped ${after.stoppedOn}` : 'no longer stopped');
-  if ((before?.lastCheckedOn ?? null) !== (after?.lastCheckedOn ?? null)) changes.push(`checked ${after?.lastCheckedOn ?? 'cleared'}`);
+  const changes = editChanges(before, after);
   return `${name}: ${changes.length > 0 ? changes.join(', ') : 'details edited'}`;
 }
 

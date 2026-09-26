@@ -149,61 +149,62 @@ function withDetail(parts: string[], expense: Expense): string {
   return out.join(' · ');
 }
 
-// The screen as plain text, for pasting into a message from a phone. One line per cost, largest
-// first, with the totals at the top because that is what the message is usually about.
-export function expensesAsPlainText(summary: ExpenseSummary, today: string): string {
-  const lines: string[] = [];
-  lines.push(`Skills Economy running costs, as of ${today}`);
-  lines.push(`Monthly total: ${formatDollarRange(summary.monthlyLowCents, summary.monthlyHighCents)}`);
+function headerLines(summary: ExpenseSummary, today: string): string[] {
+  const lines = [
+    `Skills Economy running costs, as of ${today}`,
+    `Monthly total: ${formatDollarRange(summary.monthlyLowCents, summary.monthlyHighCents)}`,
+  ];
   if (summary.unpriced.length > 0) {
     lines.push(`(${summary.unpriced.length} more not priced yet and not in that total)`);
   }
-  if (summary.perMemberLowCents !== null && summary.perMemberHighCents !== null) {
-    lines.push(
-      `Per approved member: ${formatDollarRange(summary.perMemberLowCents, summary.perMemberHighCents)} a month (${summary.approvedMembers} approved)`,
-    );
-  } else {
-    lines.push('Per approved member: no approved members yet');
-  }
+  const { perMemberLowCents: low, perMemberHighCents: high } = summary;
+  lines.push(
+    low !== null && high !== null
+      ? `Per approved member: ${formatDollarRange(low, high)} a month (${summary.approvedMembers} approved)`
+      : 'Per approved member: no approved members yet',
+  );
+  return lines;
+}
 
-  lines.push('', 'Recurring, per month, largest first');
+function recurringLines(summary: ExpenseSummary): string[] {
+  const lines = ['', 'Recurring, per month, largest first'];
   if (summary.priced.length === 0) lines.push('None priced yet.');
   for (const line of summary.priced) {
-    lines.push(
-      withDetail(
-        [
-          line.expense.provider,
-          formatDollarRange(line.lowCents, line.highCents),
-          formatShare(line.share),
-          billingLabel(line.expense.billing),
-          checkedLabel(line.expense),
-        ],
-        line.expense,
-      ),
-    );
+    const { expense } = line;
+    const parts = [expense.provider, formatDollarRange(line.lowCents, line.highCents), formatShare(line.share), billingLabel(expense.billing), checkedLabel(expense)];
+    lines.push(withDetail(parts, expense));
   }
+  return lines;
+}
 
-  if (summary.unpriced.length > 0) {
-    lines.push('', 'Not priced yet');
-    for (const expense of summary.unpriced) {
-      lines.push(withDetail([expense.provider, billingLabel(expense.billing), checkedLabel(expense)], expense));
-    }
-  }
+// A titled group that is left out entirely when it has nothing in it.
+function optionalGroup(title: string, expenses: Expense[], describeOne: (expense: Expense) => string[]): string[] {
+  if (expenses.length === 0) return [];
+  return ['', title, ...expenses.map((expense) => withDetail(describeOne(expense), expense))];
+}
 
-  if (summary.stopped.length > 0) {
-    lines.push('', 'Stopped');
-    for (const expense of summary.stopped) {
-      const amount = expense.amountCents === null ? 'amount not known' : formatDollarRange(expense.amountCents, expense.amountMaxCents ?? expense.amountCents);
-      lines.push(withDetail([expense.provider, amount, `stopped ${expense.stoppedOn}`], expense));
-    }
-  }
+function knownAmount(expense: Expense): string {
+  if (expense.amountCents === null) return 'amount not known';
+  return formatDollarRange(expense.amountCents, expense.amountMaxCents ?? expense.amountCents);
+}
 
-  lines.push('', `One-off payments (last 12 months: ${formatDollars(summary.oneOffLastYearCents)})`);
+function oneOffLines(summary: ExpenseSummary): string[] {
+  const lines = ['', `One-off payments (last 12 months: ${formatDollars(summary.oneOffLastYearCents)})`];
   if (summary.oneOff.length === 0) lines.push('None recorded.');
   for (const expense of summary.oneOff) {
-    const amount = expense.amountCents === null ? 'amount not known' : formatDollars(expense.amountCents);
-    lines.push(withDetail([expense.paidOn ?? 'no date', expense.provider, amount], expense));
+    lines.push(withDetail([expense.paidOn ?? 'no date', expense.provider, knownAmount(expense)], expense));
   }
+  return lines;
+}
 
-  return lines.join('\n');
+// The screen as plain text, for pasting into a message from a phone. One line per cost, largest
+// first, with the totals at the top because that is what the message is usually about.
+export function expensesAsPlainText(summary: ExpenseSummary, today: string): string {
+  return [
+    ...headerLines(summary, today),
+    ...recurringLines(summary),
+    ...optionalGroup('Not priced yet', summary.unpriced, (e) => [e.provider, billingLabel(e.billing), checkedLabel(e)]),
+    ...optionalGroup('Stopped', summary.stopped, (e) => [e.provider, knownAmount(e), `stopped ${e.stoppedOn}`]),
+    ...oneOffLines(summary),
+  ].join('\n');
 }

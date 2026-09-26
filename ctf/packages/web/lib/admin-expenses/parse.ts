@@ -55,57 +55,67 @@ function isError(value: unknown): value is { error: string } {
   return typeof value === 'object' && value !== null && 'error' in value;
 }
 
+type Fields = {
+  provider: string;
+  purpose: string;
+  notes: string;
+  amountCents: number | null;
+  amountMaxCents: number | null;
+  paidOn: string | null;
+  lastCheckedOn: string | null;
+  stoppedOn: string | null;
+};
+
+// Each field read on its own; the first one that does not pass is the message returned.
+function readFields(raw: Record<string, unknown>): Fields | { error: string } {
+  const values = {
+    provider: text(raw.provider, 'Provider', true),
+    purpose: text(raw.purpose, 'What it pays for', false),
+    notes: text(raw.notes, 'Notes', false),
+    amountCents: cents(raw.amountCents, 'Amount'),
+    amountMaxCents: cents(raw.amountMaxCents, 'Upper amount'),
+    paidOn: date(raw.paidOn, 'Paid on'),
+    lastCheckedOn: date(raw.lastCheckedOn, 'Last checked'),
+    stoppedOn: date(raw.stoppedOn, 'Stopped on'),
+  };
+  const failed = Object.values(values).find(isError);
+  return failed ?? (values as Fields);
+}
+
+function rangeProblem(low: number | null, high: number | null): string | null {
+  if (high === null) return null;
+  if (low === null) return 'An upper amount needs a lower amount too.';
+  return high < low ? 'The upper amount is below the lower amount.' : null;
+}
+
+function kindProblem(raw: Record<string, unknown>): string | null {
+  if (raw.kind !== 'recurring' && raw.kind !== 'one_off') return 'Kind must be recurring or one-off.';
+  if (raw.billing !== 'fixed' && raw.billing !== 'usage') return 'Billing must be fixed or usage-based.';
+  return null;
+}
+
+// A one-off payment is one figure, and only a recurring cost can be stopped; anything sent for the
+// other kind is dropped rather than stored where nothing reads it.
+function forKind(fields: Fields, kind: ExpenseKind, billing: ExpenseBilling): ExpenseInput {
+  const recurring = kind === 'recurring';
+  return {
+    ...fields,
+    kind,
+    billing,
+    amountMaxCents: recurring ? fields.amountMaxCents : null,
+    paidOn: recurring ? null : fields.paidOn,
+    stoppedOn: recurring ? fields.stoppedOn : null,
+  };
+}
+
 export function parseExpenseInput(body: unknown): ParseResult {
   if (!body || typeof body !== 'object') {
     return { ok: false, message: 'The cost could not be read: the request body was not an object.' };
   }
   const raw = body as Record<string, unknown>;
-
-  const provider = text(raw.provider, 'Provider', true);
-  const purpose = text(raw.purpose, 'What it pays for', false);
-  const notes = text(raw.notes, 'Notes', false);
-  const amountCents = cents(raw.amountCents, 'Amount');
-  const amountMaxCents = cents(raw.amountMaxCents, 'Upper amount');
-  const paidOn = date(raw.paidOn, 'Paid on');
-  const lastCheckedOn = date(raw.lastCheckedOn, 'Last checked');
-  const stoppedOn = date(raw.stoppedOn, 'Stopped on');
-
-  for (const value of [provider, purpose, notes, amountCents, amountMaxCents, paidOn, lastCheckedOn, stoppedOn]) {
-    if (isError(value)) return { ok: false, message: value.error };
-  }
-
-  if (raw.kind !== 'recurring' && raw.kind !== 'one_off') {
-    return { ok: false, message: 'Kind must be recurring or one-off.' };
-  }
-  if (raw.billing !== 'fixed' && raw.billing !== 'usage') {
-    return { ok: false, message: 'Billing must be fixed or usage-based.' };
-  }
-
-  const low = amountCents as number | null;
-  const high = amountMaxCents as number | null;
-  if (high !== null && low === null) {
-    return { ok: false, message: 'An upper amount needs a lower amount too.' };
-  }
-  if (high !== null && low !== null && high < low) {
-    return { ok: false, message: 'The upper amount is below the lower amount.' };
-  }
-
-  const kind = raw.kind;
-  return {
-    ok: true,
-    value: {
-      provider: provider as string,
-      purpose: purpose as string,
-      kind,
-      billing: raw.billing,
-      amountCents: low,
-      // A one-off payment is one figure, and only a recurring cost can be stopped; anything sent for
-      // the other kind is dropped rather than stored where nothing reads it.
-      amountMaxCents: kind === 'recurring' ? high : null,
-      paidOn: kind === 'one_off' ? (paidOn as string | null) : null,
-      lastCheckedOn: lastCheckedOn as string | null,
-      stoppedOn: kind === 'recurring' ? (stoppedOn as string | null) : null,
-      notes: notes as string,
-    },
-  };
+  const fields = readFields(raw);
+  if (isError(fields)) return { ok: false, message: fields.error };
+  const problem = kindProblem(raw) ?? rangeProblem(fields.amountCents, fields.amountMaxCents);
+  if (problem) return { ok: false, message: problem };
+  return { ok: true, value: forKind(fields, raw.kind as ExpenseKind, raw.billing as ExpenseBilling) };
 }
