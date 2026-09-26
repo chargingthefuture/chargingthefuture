@@ -653,6 +653,40 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: true
 
+  - pluginId: feed
+    command: feed.community.post.edit
+    version: 1.0.0
+    description: >-
+      Rewrite the text of the requesting member's own community (peer) post in place. Author-only, and
+      restricted to a post that carries a picture (feed_community_post_images) — a picture post is
+      always admin-authored, since members cannot attach one, so an in-place edit there carries none of
+      the bait-and-switch risk the delete-and-repost model exists to close for text-only posts. The new
+      text passes the same content-moderation check a fresh post would, and a post a moderator has
+      hidden cannot be edited back into view.
+    inputSchema:
+      postId:
+        type: string
+        required: true
+      text:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      postId:
+        type: string
+      body:
+        type: string
+      editedAtIso:
+        type: string
+    dataAccess:
+      - feed_community_posts
+      - feed_community_post_images
+      - feed_items
+    purpose: community_engagement
+    retentionClass: transactional_long_lived
+    idempotency: true
+
   # ─── Admin / Governance ─────────────────────────────────────────────────
   - pluginId: feed
     command: feed.admin.config.update

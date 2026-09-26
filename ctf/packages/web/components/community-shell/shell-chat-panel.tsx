@@ -14,7 +14,7 @@ import type {
   ShellCurrentUser,
   ShellStats,
 } from './shell-types';
-import { useHomeChat, type ReplyTarget } from './use-home-chat';
+import { useHomeChat, type EditTarget, type ReplyTarget } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
 import { NotificationsPanel } from './notifications-panel';
@@ -356,6 +356,8 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
     replyTarget,
     beginReply,
     cancelReply,
+    editingPost,
+    cancelEditPost,
     toggleReaction,
     toggleAnnouncementReaction,
     deleteMessage,
@@ -570,6 +572,8 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
           inputRef={inputRef}
           replyTarget={replyTarget}
           onCancelReply={cancelReply}
+          editingPost={editingPost}
+          onCancelEdit={cancelEditPost}
           typingLabel={typingLabel}
           composerMentionsComic={composerMentionsComic}
           composerOverBy={composerOverBy}
@@ -884,11 +888,11 @@ function MessageMetaRow({
 }) {
   // A peer post (it carries a community post id) can be replied to Signal-style.
   const canReply = Boolean(msg.communityPostId);
-  // The member can delete their own peer post (there is no edit — delete and repost instead).
+  // The member can delete their own peer post. A text-only post has no in-place edit — delete and
+  // repost instead; a picture post is rewritten in place so the picture survives (see
+  // editCommunityPost / use-home-chat.ts's editMessage).
   const canDelete = msg.from === 'user' && Boolean(msg.communityPostId);
-  // Edit is delete and repost of the text alone, so on a post with a picture it would lose the
-  // picture. Those can only be deleted and shared again.
-  const canEdit = canDelete && !msg.image;
+  const canEdit = canDelete;
   return (
     <div className={msg.from === 'user' ? `${styles.chatMetaRow} ${styles.chatMetaRowUser}` : styles.chatMetaRow}>
       <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
@@ -909,8 +913,10 @@ function MessageMetaRow({
           type="button"
           className={styles.chatEditBtn}
           onClick={() => {
-            // Editing is delete + repost: pull the text back into the composer, delete the original,
-            // and focus the box so the member fixes it and sends a fresh post.
+            // Pull the text back into the composer and focus it. A text-only post is then deleted
+            // (repost the fix as a fresh message); a picture post stays put and is rewritten in place
+            // on send — onEdit (editMessage in use-home-chat.ts) decides which, from whether this
+            // message carries a picture.
             onEdit(msg.communityPostId as string, msg.text);
             inputRef.current?.focus();
           }}
@@ -1071,6 +1077,8 @@ type ChatComposerProps = {
   inputRef: RefObject<HTMLTextAreaElement | null>;
   replyTarget: ReplyTarget | null;
   onCancelReply: () => void;
+  editingPost: EditTarget | null;
+  onCancelEdit: () => void;
   typingLabel: string | null;
   composerMentionsComic: boolean;
   composerOverBy: number;
@@ -1089,6 +1097,8 @@ function ChatComposer({
   inputRef,
   replyTarget,
   onCancelReply,
+  editingPost,
+  onCancelEdit,
   typingLabel,
   composerMentionsComic,
   composerOverBy,
@@ -1111,8 +1121,13 @@ function ChatComposer({
       </div>
 
       {/* "Replying to …" banner: shows a one-line quote preview and a cancel (X). Sending while this
-          is set posts the message as a Signal-style reply to that peer post. */}
+          is set posts the message as a Signal-style reply to that peer post. Mutually exclusive with
+          the edit banner below — starting one clears the other (use-home-chat.ts). */}
       {replyTarget ? <ReplyBanner replyTarget={replyTarget} onCancel={onCancelReply} /> : null}
+
+      {/* "Editing your post" banner: sending while this is set rewrites that picture post's text in
+          place (its picture, reactions, and replies stay) instead of posting a new message. */}
+      {editingPost ? <EditBanner onCancel={onCancelEdit} /> : null}
 
       {/* Subtle "X is typing…" line, only when the live connection surfaces someone typing. Kept on
           one quiet line above the composer so it sits with the existing dark design. */}
@@ -1163,6 +1178,25 @@ function ChatComposer({
         <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
       </p>
     </>
+  );
+}
+
+function EditBanner({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className={styles.composerReplyBanner}>
+      <div className={styles.composerReplyPreview}>
+        <span className={styles.composerReplyLabel}>Editing your post</span>
+        <span className={styles.composerReplySnippet}>Fix the text, then send to save it — the picture stays.</span>
+      </div>
+      <button
+        type="button"
+        className={styles.composerReplyCancel}
+        onClick={onCancel}
+        aria-label="Cancel edit"
+      >
+        <X size={14} />
+      </button>
+    </div>
   );
 }
 

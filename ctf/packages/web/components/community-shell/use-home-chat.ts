@@ -33,6 +33,12 @@ export type ReplyTarget = {
   quote: ChatQuotedMessage;
 };
 
+// The picture post the composer is currently rewriting in place (see editCommunityPost). Only a
+// post with a picture takes this path; a text-only post is still delete + repost (runEditMessage).
+export type EditTarget = {
+  postId: string;
+};
+
 type ChatConnectionState = 'loading' | 'live' | 'fallback';
 
 // The active stream filter: mentions and announcements are mutually exclusive; 'all' is the
@@ -48,6 +54,7 @@ type ChatSetters = {
   setInput: Dispatch<SetStateAction<string>>;
   setError: Dispatch<SetStateAction<string | null>>;
   setReplyTarget: Dispatch<SetStateAction<ReplyTarget | null>>;
+  setEditingPost: Dispatch<SetStateAction<EditTarget | null>>;
   setIsSending: Dispatch<SetStateAction<boolean>>;
   setConsentGranted: Dispatch<SetStateAction<boolean>>;
   setConsentModalOpen: Dispatch<SetStateAction<boolean>>;
@@ -370,16 +377,24 @@ function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
   return { postId: message.communityPostId, quote: { author, snippet, postId: message.communityPostId } };
 }
 
-// Editing IS delete + repost — there is no in-place edit — so load the post's text back into the
-// composer, clear any active reply, and delete the original.
+// Edit a peer message. A text-only post has no in-place edit — load its text back into the composer,
+// clear any active reply, and delete the original; the member retypes and sends a fresh post. A
+// picture post cannot take that path without losing the picture, so it instead loads the text into
+// the composer and marks it as "being edited"; sending PATCHes the same post in place (see
+// patchPeerMessage) rather than creating a new one.
 function runEditMessage(
   postId: string,
   text: string,
+  hasImage: boolean,
   setters: ChatSetters,
   deleteMessage: (postId: string) => Promise<void>,
 ): void {
   setters.setReplyTarget(null);
   setters.setInput(text);
+  if (hasImage) {
+    setters.setEditingPost({ postId });
+    return;
+  }
   void deleteMessage(postId);
 }
 
@@ -452,6 +467,7 @@ type SendMessageContext = {
   isSending: boolean;
   consentGranted: boolean;
   replyTarget: ReplyTarget | null;
+  editingPost: EditTarget | null;
   currentUserId: string;
   routeToComic: (questionText: string) => Promise<void>;
   notifyStopTyping: () => void;
@@ -494,6 +510,27 @@ async function postPeerMessage(text: string, activeReply: ReplyTarget | null, ct
   }
 }
 
+// Save an in-place edit of the caller's own picture post (see editCommunityPost). The picture,
+// reactions, and replies are untouched — only the text changes. On failure the text is restored to
+// the composer and the "being edited" state is restored so the member can retry.
+async function patchPeerMessage(text: string, target: EditTarget, ctx: SendMessageContext): Promise<void> {
+  try {
+    const payload = await requestJson<{ ok: true; postId: string; body: string; editedAtIso: string }>(
+      `/api/commons/messages/${encodeURIComponent(target.postId)}`,
+      { method: 'PATCH', headers: JSON_CSRF_HEADERS, body: JSON.stringify({ text }) },
+    );
+    ctx.setters.setMessages((previous) =>
+      previous.map((message) =>
+        message.communityPostId === payload.postId ? { ...message, text: payload.body } : message,
+      ),
+    );
+  } catch (patchError) {
+    ctx.setters.setInput((current) => (current.trim().length === 0 ? text : current));
+    ctx.setters.setEditingPost(target);
+    ctx.setters.setError(toErrorMessage(patchError, 'Unable to save your edit right now.'));
+  }
+}
+
 // @comic mention → AI Assistant. Gate the first use behind the consent modal, holding the text.
 async function sendComicFromComposer(text: string, ctx: SendMessageContext): Promise<void> {
   if (!ctx.consentGranted) {
@@ -513,16 +550,23 @@ async function sendComicFromComposer(text: string, ctx: SendMessageContext): Pro
 }
 
 // No mention → peer-to-peer community post via the existing hub path. Capture the active reply
-// target (Signal-style quote) before clearing it, and clear the typing indicator right away.
+// target (Signal-style quote) and the active in-place edit before clearing them, and clear the
+// typing indicator right away.
 async function sendPeerFromComposer(text: string, ctx: SendMessageContext): Promise<void> {
   const activeReply = ctx.replyTarget;
+  const activeEdit = ctx.editingPost;
   ctx.setters.setIsSending(true);
   ctx.setters.setError(null);
   ctx.setters.setInput('');
   ctx.setters.setReplyTarget(null);
+  ctx.setters.setEditingPost(null);
   ctx.notifyStopTyping();
   try {
-    await postPeerMessage(text, activeReply, ctx);
+    if (activeEdit) {
+      await patchPeerMessage(text, activeEdit, ctx);
+    } else {
+      await postPeerMessage(text, activeReply, ctx);
+    }
   } finally {
     ctx.setters.setIsSending(false);
   }
@@ -534,7 +578,9 @@ async function runSendMessage(ctx: SendMessageContext): Promise<void> {
     return;
   }
 
-  if (mentionsComic(text)) {
+  // While rewriting a picture post in place, @comic in the text is just text — it never routes to
+  // the AI Assistant. Only a fresh composer message can start that path.
+  if (!ctx.editingPost && mentionsComic(text)) {
     await sendComicFromComposer(text, ctx);
     return;
   }
@@ -927,6 +973,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const [pendingConsentText, setPendingConsentText] = useState<string | null>(null);
   // The peer message the composer is replying to (Signal-style quote), or null when none.
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  // The picture post the composer is currently rewriting in place, or null when none.
+  const [editingPost, setEditingPost] = useState<EditTarget | null>(null);
   // The member's last-seen marker for the Hub channel, used to place the "New messages"
   // divider. Read once on entry; null means "show everything as new" / not yet loaded.
   const [lastSeenAtIso, setLastSeenAtIso] = useState<string | null>(null);
@@ -962,6 +1010,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setInput,
     setError,
     setReplyTarget,
+    setEditingPost,
     setIsSending,
     setConsentGranted,
     setConsentModalOpen,
@@ -1094,12 +1143,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
         isSending,
         consentGranted,
         replyTarget,
+        editingPost,
         currentUserId: currentUser.userId,
         routeToComic,
         notifyStopTyping,
         setters: settersRef.current,
       }),
-    [consentGranted, currentUser.userId, input, isSending, notifyStopTyping, replyTarget, routeToComic],
+    [consentGranted, currentUser.userId, editingPost, input, isSending, notifyStopTyping, replyTarget, routeToComic],
   );
 
   const askComic = useCallback(
@@ -1113,13 +1163,20 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [],
   );
 
-  // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state.
+  // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state. Exits
+  // any in-place picture-post edit in progress — the two composer modes are mutually exclusive.
   const beginReply = useCallback((message: ChatMessage) => {
     const target = buildReplyTarget(message);
-    if (target) setReplyTarget(target);
+    if (target) {
+      setEditingPost(null);
+      setReplyTarget(target);
+    }
   }, []);
 
   const cancelReply = useCallback(() => setReplyTarget(null), []);
+
+  // Back out of rewriting a picture post in place, without touching whatever is now in the composer.
+  const cancelEditPost = useCallback(() => setEditingPost(null), []);
 
   // Toggle the current member's emoji reaction on a peer post, keyed on the community post id.
   const toggleReaction = useCallback(
@@ -1137,11 +1194,15 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // delete and repost — so this removes the post outright.
   const deleteMessage = useCallback((postId: string) => runDeleteMessage(postId, settersRef.current), []);
 
-  // Edit one of the member's own peer posts. Editing IS delete + repost — load the text back into the
-  // composer and delete the original; the member tweaks it and sends a fresh post.
+  // Edit one of the member's own peer posts. A text-only post is delete + repost — load the text
+  // back into the composer and delete the original. A picture post is rewritten in place instead
+  // (see runEditMessage), so the picture, reactions, and replies survive.
   const editMessage = useCallback(
-    (postId: string, text: string) => runEditMessage(postId, text, settersRef.current, deleteMessage),
-    [deleteMessage],
+    (postId: string, text: string) => {
+      const hasImage = Boolean(messages.find((message) => message.communityPostId === postId)?.image);
+      runEditMessage(postId, text, hasImage, settersRef.current, deleteMessage);
+    },
+    [deleteMessage, messages],
   );
 
   // Consent modal "Confirm": persist consent and send the held @comic question.
@@ -1201,6 +1262,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     replyTarget,
     beginReply,
     cancelReply,
+    editingPost,
+    cancelEditPost,
     toggleReaction,
     toggleAnnouncementReaction,
     deleteMessage,

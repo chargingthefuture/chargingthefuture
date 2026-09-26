@@ -2391,6 +2391,72 @@ export async function deleteCommunityPost(actorId: string, postId: string): Prom
   });
 }
 
+// Rewrite the text of the caller's own Commons picture post, in place. Author-only, checked here.
+// Restricted to posts that carry a picture (feed_community_post_images): a text-only peer post keeps
+// the "delete + repost" model above, which exists to close the bait-and-switch edit vector (post
+// something innocuous, gather reactions, then silently rewrite it). A picture post is always
+// admin-authored — members cannot attach one — so there is no bait-and-switch actor to close that
+// vector against, and an admin fixing a typo in a caption should not have to delete and re-share the
+// picture to do it. Mirrors editAnnouncementReply: the new text passes the same moderation a fresh
+// post would, and a post a moderator has hidden cannot be edited back into view.
+export async function editCommunityPost(
+  actorId: string,
+  postId: string,
+  bodyInput: string,
+  isPrivileged: boolean,
+): Promise<{ body: string; editedAtIso: string }> {
+  const normalizedPostId = normalizeUuid(postId);
+  if (normalizedPostId === null) {
+    throw new Error('post_not_found');
+  }
+
+  return withDbTransaction(async (client) => {
+    const body = normalizeMultilineText(bodyInput);
+    const urlCap = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_URLS : FEED_MAX_COMMUNITY_POST_URLS;
+    if (!passesFeedModeration(body, urlCap)) {
+      throw new Error('content_policy_violation');
+    }
+
+    const existing = await client.query<{ author_user_id: string; moderation_status: string; category: string }>(
+      'SELECT author_user_id, moderation_status, category FROM feed_community_posts WHERE id = $1::uuid FOR UPDATE',
+      [normalizedPostId],
+    );
+    if (existing.rows.length === 0) {
+      throw new Error('post_not_found');
+    }
+    if (existing.rows[0].author_user_id !== actorId) {
+      throw new Error('not_post_owner');
+    }
+    if (existing.rows[0].moderation_status === FEED_MODERATION_STATUS.hidden) {
+      throw new Error('post_hidden');
+    }
+
+    const image = await client.query('SELECT 1 FROM feed_community_post_images WHERE post_id = $1::uuid LIMIT 1', [
+      normalizedPostId,
+    ]);
+    if (image.rows.length === 0) {
+      throw new Error('edit_requires_image');
+    }
+
+    const updated = await client.query<{ edited_at: Date }>(
+      `
+        UPDATE feed_community_posts
+        SET body = $2, edited_at = NOW(), updated_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING edited_at
+      `,
+      [normalizedPostId, body],
+    );
+
+    // Keep the projected timeline row's body in sync — the same upsert createFeedCommunityPost uses,
+    // so the edit is visible on the next read without a special-cased UPDATE.
+    const category = normalizeCommunityCategory(existing.rows[0].category);
+    await syncFeedItemForCommunityPost(client, actorId, normalizedPostId, getCommunityTitle(category), body);
+
+    return { body, editedAtIso: toIso(updated.rows[0].edited_at) };
+  });
+}
+
 export async function replyToFeedCommunityPost(
   actorId: string,
   postId: string,

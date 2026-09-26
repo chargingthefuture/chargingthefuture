@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
-import { FEED_ERROR_CODE } from 'lib/feed/constants';
+import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_ERROR_CODE, FEED_MAX_COMMUNITY_POST_LENGTH } from 'lib/feed/constants';
+import { feedPostLength } from 'lib/feed/normalize';
 import { logFeedAudit } from 'lib/feed/audit';
-import { deleteCommunityPost, normalizeUuid } from 'lib/feed/repository';
+import {
+  deleteCommunityPost,
+  editCommunityPost,
+  normalizeUuid,
+  validateFeedCommunityPostInput,
+} from 'lib/feed/repository';
 import { requireCommonsAccess } from '../../_lib';
 import { ensureMutationCsrf } from '../../../feed/_lib';
+import { failureReason } from 'lib/errors/failure';
 
 // Delete the signed-in member's own Commons community (peer) post. Author-only: the repository
 // checks ownership, so a member can only delete their own post. The product deliberately has no
 // edit — to change a post you delete it and post again, so a corrected message is a fresh row with
-// its own moderation and no inherited reactions/replies.
+// its own moderation and no inherited reactions/replies. The one exception is PATCH below, for a
+// post that carries a picture.
 
 export async function DELETE(
   request: Request,
@@ -84,6 +92,135 @@ export async function DELETE(
     reportError(error, { area: 'commons', op: 'delete_post' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to delete your post.' },
+      { status: 503 },
+    );
+  }
+}
+
+type EditPostRequestBody = { text?: unknown };
+
+// Rewrite the text of the signed-in member's own Commons picture post in place — the picture, its
+// reactions, and its replies all stay. Restricted server-side (see editCommunityPost) to a post that
+// carries a picture: those are always admin-authored, since members cannot attach one, so there is no
+// bait-and-switch risk in letting the text change without a fresh moderation row. A text-only peer
+// post has no PATCH path; it keeps the DELETE-then-repost flow above.
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ postId: string }> },
+) {
+  const gate = await requireCommonsAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
+  const { postId: rawPostId } = await context.params;
+  const postId = normalizeUuid(rawPostId);
+  if (!postId) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid post id.' },
+      { status: 400 },
+    );
+  }
+
+  let body: EditPostRequestBody;
+  try {
+    body = (await request.json()) as EditPostRequestBody;
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, message: 'Invalid JSON payload.', reason: failureReason(error) },
+      { status: 400 },
+    );
+  }
+
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const isPrivileged = gate.auth.isAdmin;
+  const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
+  if (!text || !validateFeedCommunityPostInput({ body: text, replyToPostId: null }, maxLength)) {
+    const overBy = feedPostLength(text) - maxLength;
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          overBy > 0
+            ? `That message is ${overBy.toLocaleString()} characters over the ${maxLength.toLocaleString()}-character limit. Shorten it, or split it into two messages.`
+            : 'Message text must be a valid community post.',
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const result = await editCommunityPost(gate.auth.userId, postId, text, isPrivileged);
+
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.community.post.edit',
+      status: 'allow',
+      reason: 'author_edit',
+      targetType: 'feed_community_post',
+      targetId: postId,
+      result: 'success',
+      errorCategory: null,
+    });
+
+    return NextResponse.json({ ok: true, postId, body: result.body, editedAtIso: result.editedAtIso }, { status: 200 });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'unknown_error';
+    if (code === 'post_not_found') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.postNotFound, message: 'That post is no longer available.' },
+        { status: 404 },
+      );
+    }
+    if (code === 'not_post_owner') {
+      logFeedAudit({
+        actorId: gate.auth.userId,
+        pluginId: 'feed',
+        command: 'feed.community.post.edit',
+        status: 'deny',
+        reason: 'actor_not_post_owner',
+        targetType: 'feed_community_post',
+        targetId: postId,
+        result: 'failure',
+        errorCategory: 'authorization',
+      });
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can only edit your own posts.' },
+        { status: 403 },
+      );
+    }
+    if (code === 'post_hidden') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'A post a moderator has hidden cannot be edited.' },
+        { status: 403 },
+      );
+    }
+    if (code === 'edit_requires_image') {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: FEED_ERROR_CODE.forbidden,
+          message: 'Only a post with a picture can be edited in place. Delete and post again instead.',
+        },
+        { status: 403 },
+      );
+    }
+    if (code === 'content_policy_violation') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Post blocked by content moderation.' },
+        { status: 422 },
+      );
+    }
+
+    reportError(error, { area: 'commons', op: 'edit_post' });
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to save your edit.' },
       { status: 503 },
     );
   }
