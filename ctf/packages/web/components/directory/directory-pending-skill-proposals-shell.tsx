@@ -18,13 +18,33 @@ type Tokens = ReturnType<typeof getPluginShellTokens>;
 const FILTERS: Array<{ key: Filter; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'skills-hunt', label: 'From a nomination' },
-  { key: 'directory', label: 'Added by the member' },
+  { key: 'directory', label: 'Entered on the profile' },
 ];
 
+// Where the chip lives, not who put it there. A 'directory' chip is written by the member's own edit
+// form and by the admin edit drawer alike, so this line must not name anybody; addedByText does.
 const SOURCE_LABEL: Record<DirectoryPendingSkillSource, string> = {
   'skills-hunt': 'Proposed on a SkillsHunt nomination',
-  directory: 'Added by the member through "skill not listed"',
+  directory: 'Entered on the Directory profile',
 };
+
+// Who added it, from the change record (lib/directory/pending-skill-proposals.ts). Never a guess: a
+// chip with no matching record says so.
+function addedByText(row: Row): string {
+  if (row.addedByViewer) {
+    return row.addedBy === 'scout' ? 'Proposed by you as the scout' : 'Added by you';
+  }
+  if (row.addedBy === 'scout') {
+    return row.addedByUsername ? `Proposed by @${row.addedByUsername} as the scout` : 'Proposed by the scout';
+  }
+  if (row.addedBy === 'member') {
+    return 'Added by the member on their own profile';
+  }
+  if (row.addedBy === 'admin') {
+    return 'Added by an admin in the Directory admin';
+  }
+  return 'Who added it was not recorded';
+}
 
 function rowKey(row: Row): string {
   return `${row.profileId}|${row.source}|${row.skillLabel.toLowerCase()}`;
@@ -50,6 +70,7 @@ function asPlainText(rows: Row[]): string {
       const parts = [
         `${displayName(row)} — ${row.skillLabel}`,
         `  from: ${SOURCE_LABEL[row.source]}`,
+        `  added: ${addedByText(row)}`,
         issueText(row),
         row.inTaxonomy ? '  note: already a taxonomy skill under this name' : null,
         row.heldSkills.length > 0 ? `  holds: ${row.heldSkills.join('; ')}` : '  holds: nothing yet',
@@ -110,7 +131,9 @@ function ProposalLine({ row, tokens }: { row: Row; tokens: Tokens }) {
         <span style={{ fontSize: 14, fontWeight: 700, color: tokens.ACCENT }}>{row.skillLabel}</span>
         {row.inTaxonomy && <Badge text="Already a taxonomy skill" color="#34D399" />}
       </div>
-      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4 }}>{SOURCE_LABEL[row.source]}</div>
+      <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 4 }}>
+        {SOURCE_LABEL[row.source]} · {addedByText(row)}
+      </div>
     </>
   );
 }

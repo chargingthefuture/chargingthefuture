@@ -62,7 +62,10 @@ contracts:
       skills_hunt_directory_profiles (tracker status neither promoted nor dropped). Each row carries
       the skill label, its source, the skill-proposal issue if one was filed, whether an active
       taxonomy skill already has that exact name, and the taxonomy skills the profile already holds.
-      Nothing is filtered for the admin: unclaimed and inactive profiles are listed and marked.
+      Each row also names who added the chip: for a chip entered on a profile, the actor on the
+      directory_profile_change_events row written in the same transaction (member self-edit or admin
+      edit); for a nominated chip, the submission's scout. Nothing is filtered for the admin:
+      unclaimed profiles and proposals whose profile was deleted are listed and marked.
     inputSchema: {}
     outputSchema:
       rows:
@@ -71,8 +74,10 @@ contracts:
       - directory_profiles
       - directory_profile_skills
       - directory_profile_proposed_skills
+      - directory_profile_change_events
       - skills_hunt_directory_profiles
       - skills_hunt_proposed_skill_promotions
+      - skills_hunt_submissions
       - skills_taxonomy_skills
     purpose: profile_management
     retentionClass: transactional_long_lived

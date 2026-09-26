@@ -271,6 +271,22 @@ export async function removeTask(input: { taskId: string; ownerUserId: string })
   return (result.rowCount ?? 0) > 0;
 }
 
+// Fix the words on a task before anybody starts it. Gated on the same "truly open" condition
+// takeTask uses — not merely unfinished, like removeTask allows — so the text can never change out
+// from under a member who is already holding or has finished the card.
+export async function editTask(input: { taskId: string; ownerUserId: string; description: string }): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE peer_programming_goal_tasks t
+     SET description = $3, updated_at = NOW()
+     FROM peer_programming_goals g
+     WHERE t.id = $1 AND g.id = t.goal_id AND g.owner_user_id = $2
+       AND t.finished_at IS NULL
+       AND (t.taken_by_user_id IS NULL OR t.taken_at < NOW() - make_interval(hours => $4))`,
+    [input.taskId, input.ownerUserId, input.description, PEER_PROGRAMMING_TASK_HOLD_HOURS],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 // Take a task. Allowed when nobody holds it, or when the member who took it has held it past the
 // hold period without finishing. The goal must be open and the taker cannot be its owner. One
 // statement, so two members pressing at once cannot both get it.

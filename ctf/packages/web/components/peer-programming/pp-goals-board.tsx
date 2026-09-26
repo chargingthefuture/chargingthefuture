@@ -55,6 +55,7 @@ type BoardProps = {
   busy: boolean;
   taskHoldHours: number;
   onAction: (taskId: string, action: TaskAction, result?: string) => void;
+  onEditTask: (taskId: string, description: string) => Promise<boolean>;
 };
 
 function TaskCard({ card, ...props }: BoardProps & { card: Card }) {
@@ -82,6 +83,7 @@ function TaskCard({ card, ...props }: BoardProps & { card: Card }) {
           busy={props.busy}
           taskHoldHours={props.taskHoldHours}
           onAction={props.onAction}
+          onEditTask={props.onEditTask}
         />
       )}
     </li>
@@ -129,12 +131,13 @@ export type GoalsBoardViewProps = {
   board: Board;
   busy: boolean;
   onAction: BoardProps["onAction"];
+  onEditTask: BoardProps["onEditTask"];
   onAddTask: (goalId: string, description: string) => Promise<boolean>;
   onClose: (goalId: string, outcome: "reached" | "withdrawn") => void;
   onPost: (title: string, tasks: string[]) => Promise<boolean>;
 };
 
-export function GoalsBoardView({ board, busy, onAction, onAddTask, onClose, onPost }: GoalsBoardViewProps) {
+export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, onClose, onPost }: GoalsBoardViewProps) {
   const myGoal = board.goals.find((goal) => goal.ownerUserId === board.viewerUserId && goal.status === "open");
   const columns = sortIntoColumns(board.goals);
   const props: BoardProps = {
@@ -144,6 +147,7 @@ export function GoalsBoardView({ board, busy, onAction, onAddTask, onClose, onPo
     busy,
     taskHoldHours: board.taskHoldHours,
     onAction,
+    onEditTask,
   };
   return (
     <div style={{ display: "grid", gap: 12 }}>

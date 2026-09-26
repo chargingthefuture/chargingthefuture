@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
-import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH } from 'lib/peer-programming/constants';
+import { PEER_PROGRAMMING_ERROR_CODE, PEER_PROGRAMMING_MAX_TASK_LENGTH, PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH } from 'lib/peer-programming/constants';
 import {
+  editTask,
   finishTask,
   getTaskWithGoal,
   keepResult,
@@ -16,21 +17,26 @@ import { insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/p
 import { reportError } from 'lib/observability/report';
 
 type HelperAction = 'take' | 'release' | 'finish';
-type OwnerAction = 'helped' | 'keep' | 'send_back' | 'remove';
-type Action = { kind: HelperAction | OwnerAction; result?: string };
+type OwnerAction = 'helped' | 'keep' | 'send_back' | 'remove' | 'edit';
+type Action = { kind: HelperAction | OwnerAction; result?: string; description?: string };
 
 const HELPER_ACTIONS: readonly string[] = ['take', 'release', 'finish'];
-const OWNER_ACTIONS: readonly string[] = ['helped', 'keep', 'send_back', 'remove'];
+const OWNER_ACTIONS: readonly string[] = ['helped', 'keep', 'send_back', 'remove', 'edit'];
 
 function parseAction(body: Record<string, unknown>): { ok: true; action: Action } | { ok: false; response: NextResponse } {
   const kind = body.action;
   if (typeof kind !== 'string' || (!HELPER_ACTIONS.includes(kind) && !OWNER_ACTIONS.includes(kind))) {
-    return { ok: false, response: invalidPayload('action must be one of take, release, finish, helped, keep, send_back, remove.') };
+    return { ok: false, response: invalidPayload('action must be one of take, release, finish, helped, keep, send_back, remove, edit.') };
   }
   if (kind === 'finish') {
     const result = readText(body.result, 'The result', PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH);
     if (!result.ok) return { ok: false, response: invalidPayload(result.message) };
     return { ok: true, action: { kind: 'finish', result: result.text } };
+  }
+  if (kind === 'edit') {
+    const description = readText(body.description, 'The task', PEER_PROGRAMMING_MAX_TASK_LENGTH);
+    if (!description.ok) return { ok: false, response: invalidPayload(description.message) };
+    return { ok: true, action: { kind: 'edit', description: description.text } };
   }
   return { ok: true, action: { kind: kind as HelperAction | OwnerAction } };
 }
@@ -41,7 +47,7 @@ function parseAction(body: Record<string, unknown>): { ok: true; action: Action 
 async function denyReason(found: TaskWithGoal, action: Action, userId: string): Promise<NextResponse | null> {
   const isOwner = found.goalOwnerUserId === userId;
   if (OWNER_ACTIONS.includes(action.kind) && !isOwner) {
-    return policyDenied('Only the member who posted this goal can mark, keep, send back, or remove its tasks.');
+    return policyDenied('Only the member who posted this goal can mark, keep, send back, remove, or edit its tasks.');
   }
   if (HELPER_ACTIONS.includes(action.kind)) {
     if (isOwner) return policyDenied('Tasks on your own goal are for other members to take.');
@@ -66,6 +72,7 @@ function staleMessage(found: TaskWithGoal, action: Action): string {
   }
   if (action.kind === 'release' || action.kind === 'finish') return 'This task is not held by you any more, so nothing changed.';
   if (action.kind === 'remove') return 'Somebody already posted a result on this task, so it cannot be removed.';
+  if (action.kind === 'edit') return 'This card is no longer up for grabs, so it can no longer be edited.';
   return 'This result was already kept or sent back, so nothing changed.';
 }
 
@@ -78,6 +85,7 @@ async function apply(found: TaskWithGoal, action: Action, userId: string): Promi
     case 'helped': return keepResult({ taskId, ownerUserId: userId, helped: true });
     case 'keep': return keepResult({ taskId, ownerUserId: userId, helped: false });
     case 'send_back': return sendTaskBack({ taskId, ownerUserId: userId });
+    case 'edit': return editTask({ taskId, ownerUserId: userId, description: action.description ?? '' });
     default: return removeTask({ taskId, ownerUserId: userId });
   }
 }
@@ -102,8 +110,8 @@ async function applyAndRecord(found: TaskWithGoal, action: Action, userId: strin
   return NextResponse.json({ ok: true });
 }
 
-// Take, let go of, or finish a task (a helper), or mark it as helped, keep, send back, or remove it
-// (the goal's owner).
+// Take, let go of, or finish a task (a helper), or mark it as helped, keep, send back, remove, or
+// edit it (the goal's owner).
 export async function POST(request: Request, context: { params: Promise<{ taskId: string }> }) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;

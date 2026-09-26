@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   try {
-    const rows = await listDirectoryPendingSkillProposals();
+    const rows = await listDirectoryPendingSkillProposals(gate.auth.userId);
     return NextResponse.json({ rows }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_pending_skill_proposals' });
