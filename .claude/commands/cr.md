@@ -74,9 +74,10 @@ Set the title and body **at creation** so no check goes red and needs re-trigger
   migrations, new or changed API contracts, a whole new plugin: open it ready but do **not** enable
   auto-merge. Say in the body that it is waiting on my review, and tell me in your summary.
 
-## 7. Drive it to merge — do not stop at "opened"
+## 7. Leave it mergeable — no PR watching
 
-Watch the PR until it is merged or genuinely stuck:
+Do not watch the PR (owner directive, 2026-09-26): no subscription to its activity, no scheduled
+check-in, no waiting for CI. Before stopping, make one pass over every PR you opened in this run:
 
 - **A branch behind `main` stalls auto-merge silently.** This repo requires branches be up to date,
   and every sibling merge pushes the others behind. When a PR reads `behind`, update its branch.
@@ -86,8 +87,8 @@ Watch the PR until it is merged or genuinely stuck:
 - `mergeable_state: blocked` means checks, not conflicts. `dirty` means real conflicts — resolve
   them by rebasing onto `main`.
 
-Keep going until every PR you opened is merged. If one is genuinely stuck, say where and why rather
-than going quiet.
+Then stop. If a check is still running, say so in the report; the owner runs `/pr` when they want
+the next pass. If a PR is genuinely stuck, say where and why rather than going quiet.
 
 ## 8. Report back
 

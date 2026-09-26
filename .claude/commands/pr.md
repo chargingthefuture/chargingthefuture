@@ -49,12 +49,17 @@ Read the actual failure log before touching anything. Then:
 - **Environmental** (rate limit, flaky runner, repo setting): re-run the check. Do not push commits
   to paper over an environmental failure, and say which failures were environmental.
 
-## 4. Keep branches current until merge
+## 4. Bring behind branches current, once
 
-Every sibling merge pushes the remaining PRs behind. After each PR merges, re-check the others and
-update any that dropped to `behind`. Expect to loop: update, wait for checks, update again. A PR in
-the low-risk lane with auto-merge enabled completes itself once it is green and current — your job
-is to keep it green and current.
+Every sibling merge pushes the remaining PRs behind. Update each PR that reads `behind` in this
+pass. A PR in the low-risk lane with auto-merge enabled completes itself once it is green and
+current.
+
+This command is one pass, not a watch (owner directive, 2026-09-26). Do not subscribe to PR
+activity, do not schedule check-ins, and do not wait for checks you just triggered to finish.
+Watching fills the session with notices and check lists, which brings on compaction sooner. Fix what
+is broken now, push, report, and stop; if something is still running, say so in the summary. The
+owner runs `/pr` again when they want the next pass.
 
 If a low-risk PR has no auto-merge enabled, enable it (SQUASH). Do not enable auto-merge on a risky
 PR (ServiceCredits/ledger, auth, CSRF, data deletion, schema or migrations, new or changed API
