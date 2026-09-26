@@ -328,6 +328,52 @@ function UsernameNudge({ ownHandle }: { ownHandle: string }) {
   );
 }
 
+// Deep-link scroll targeting, factored out of AuthenticatedChatPanel to keep that function under the
+// modularity line limit (rule 116). Takes the message list's scroll container and returns the two
+// "find and flash a bubble" callbacks the panel needs: one for a quoted-reply tap (instant, the target
+// is already on screen), one for a cold entry / notification "Open" (the target may still be streaming
+// in, so it retries for a while before giving up quietly).
+function useDeepLinkNavigation(messagesContainerRef: RefObject<HTMLDivElement | null>) {
+  // Tapping a quoted-reply block jumps to the original message (a common chat behavior): find the
+  // rendered bubble with that community post id, scroll it into view, and flash a highlight. No-op
+  // when the quoted post is not in the loaded window (older than the recent page) — the snippet in
+  // the quote block already shows what was said.
+  const jumpToQuotedPost = useCallback((postId: string | null) => {
+    if (!postId) return;
+    const target = messagesContainerRef.current?.querySelector<HTMLElement>(`[data-post-id="${postId}"]`);
+    if (target) scrollAndFlash(target);
+  }, []);
+
+  // Scroll a deep-link target (a post bubble or announcement card) into view and flash it. The target
+  // streams in asynchronously (the recent page, plus the "load around" window for an older one), so it
+  // retries for ~12s, then gives up quietly if the target is genuinely gone. Clears the query param on
+  // success so a refresh or Back does not re-jump. Returns a canceller for effect cleanup.
+  const flashTarget = useCallback((selector: string) => {
+    let attempts = 0;
+    let timer = 0;
+    const tryScroll = () => {
+      const target = messagesContainerRef.current?.querySelector<HTMLElement>(selector);
+      if (target) {
+        scrollAndFlash(target);
+        if (window.location.search) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
+      attempts += 1;
+      if (attempts < 40) {
+        timer = window.setTimeout(tryScroll, 300);
+      }
+    };
+    tryScroll();
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, []);
+
+  return { jumpToQuotedPost, flashTarget };
+}
+
 function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
@@ -390,43 +436,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  // Tapping a quoted-reply block jumps to the original message (a common chat behavior): find the
-  // rendered bubble with that community post id, scroll it into view, and flash a highlight. No-op
-  // when the quoted post is not in the loaded window (older than the recent page) — the snippet in
-  // the quote block already shows what was said.
-  const jumpToQuotedPost = useCallback((postId: string | null) => {
-    if (!postId) return;
-    const target = messagesContainerRef.current?.querySelector<HTMLElement>(`[data-post-id="${postId}"]`);
-    if (target) scrollAndFlash(target);
-  }, []);
-
-  // Scroll a deep-link target (a post bubble or announcement card) into view and flash it. The target
-  // streams in asynchronously (the recent page, plus the "load around" window for an older one), so it
-  // retries for ~12s, then gives up quietly if the target is genuinely gone. Clears the query param on
-  // success so a refresh or Back does not re-jump. Returns a canceller for effect cleanup.
-  const flashTarget = useCallback((selector: string) => {
-    let attempts = 0;
-    let timer = 0;
-    const tryScroll = () => {
-      const target = messagesContainerRef.current?.querySelector<HTMLElement>(selector);
-      if (target) {
-        scrollAndFlash(target);
-        if (window.location.search) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-        return;
-      }
-      attempts += 1;
-      if (attempts < 40) {
-        timer = window.setTimeout(tryScroll, 300);
-      }
-    };
-    tryScroll();
-    return () => {
-      if (timer) window.clearTimeout(timer);
-    };
-  }, []);
+  const { jumpToQuotedPost, flashTarget } = useDeepLinkNavigation(messagesContainerRef);
 
   // Cold entry via URL (a fresh page load / device-push tap opening /?post=<id> or /?announcement=<id>):
   // show the stream and jump to the target. The chat hook has already pulled the target's window on

@@ -99,6 +99,90 @@ export async function DELETE(
 
 type EditPostRequestBody = { text?: unknown };
 
+// Parse and validate the PATCH body, against the same length/URL caps a fresh post uses. Returns a
+// 400 response when the text is missing or over the cap, naming the overage the same way the POST
+// route's validateCommonsPostInput does.
+function validateEditPostInput(
+  body: EditPostRequestBody,
+  isPrivileged: boolean,
+): { error: NextResponse } | { text: string } {
+  const text = typeof body.text === 'string' ? body.text.trim() : '';
+  const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
+  if (!text || !validateFeedCommunityPostInput({ body: text, replyToPostId: null }, maxLength)) {
+    const overBy = feedPostLength(text) - maxLength;
+    return {
+      error: NextResponse.json(
+        {
+          ok: false,
+          message:
+            overBy > 0
+              ? `That message is ${overBy.toLocaleString()} characters over the ${maxLength.toLocaleString()}-character limit. Shorten it, or split it into two messages.`
+              : 'Message text must be a valid community post.',
+        },
+        { status: 400 },
+      ),
+    };
+  }
+  return { text };
+}
+
+// Map an editCommunityPost failure to its response, logging the denied attempt when ownership was
+// the reason (accountability, matching the DELETE handler above).
+function mapEditPostError(error: unknown, actorId: string, postId: string): NextResponse {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'post_not_found') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.postNotFound, message: 'That post is no longer available.' },
+      { status: 404 },
+    );
+  }
+  if (code === 'not_post_owner') {
+    logFeedAudit({
+      actorId,
+      pluginId: 'feed',
+      command: 'feed.community.post.edit',
+      status: 'deny',
+      reason: 'actor_not_post_owner',
+      targetType: 'feed_community_post',
+      targetId: postId,
+      result: 'failure',
+      errorCategory: 'authorization',
+    });
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can only edit your own posts.' },
+      { status: 403 },
+    );
+  }
+  if (code === 'post_hidden') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'A post a moderator has hidden cannot be edited.' },
+      { status: 403 },
+    );
+  }
+  if (code === 'edit_requires_image') {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: FEED_ERROR_CODE.forbidden,
+        message: 'Only a post with a picture can be edited in place. Delete and post again instead.',
+      },
+      { status: 403 },
+    );
+  }
+  if (code === 'content_policy_violation') {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Post blocked by content moderation.' },
+      { status: 422 },
+    );
+  }
+
+  reportError(error, { area: 'commons', op: 'edit_post' });
+  return NextResponse.json(
+    { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to save your edit.' },
+    { status: 503 },
+  );
+}
+
 // Rewrite the text of the signed-in member's own Commons picture post in place — the picture, its
 // reactions, and its replies all stay. Restricted server-side (see editCommunityPost) to a post that
 // carries a picture: those are always admin-authored, since members cannot attach one, so there is no
@@ -137,25 +221,14 @@ export async function PATCH(
     );
   }
 
-  const text = typeof body.text === 'string' ? body.text.trim() : '';
   const isPrivileged = gate.auth.isAdmin;
-  const maxLength = isPrivileged ? FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH : FEED_MAX_COMMUNITY_POST_LENGTH;
-  if (!text || !validateFeedCommunityPostInput({ body: text, replyToPostId: null }, maxLength)) {
-    const overBy = feedPostLength(text) - maxLength;
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          overBy > 0
-            ? `That message is ${overBy.toLocaleString()} characters over the ${maxLength.toLocaleString()}-character limit. Shorten it, or split it into two messages.`
-            : 'Message text must be a valid community post.',
-      },
-      { status: 400 },
-    );
+  const validated = validateEditPostInput(body, isPrivileged);
+  if ('error' in validated) {
+    return validated.error;
   }
 
   try {
-    const result = await editCommunityPost(gate.auth.userId, postId, text, isPrivileged);
+    const result = await editCommunityPost(gate.auth.userId, postId, validated.text, isPrivileged);
 
     logFeedAudit({
       actorId: gate.auth.userId,
@@ -171,57 +244,6 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true, postId, body: result.body, editedAtIso: result.editedAtIso }, { status: 200 });
   } catch (error) {
-    const code = error instanceof Error ? error.message : 'unknown_error';
-    if (code === 'post_not_found') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.postNotFound, message: 'That post is no longer available.' },
-        { status: 404 },
-      );
-    }
-    if (code === 'not_post_owner') {
-      logFeedAudit({
-        actorId: gate.auth.userId,
-        pluginId: 'feed',
-        command: 'feed.community.post.edit',
-        status: 'deny',
-        reason: 'actor_not_post_owner',
-        targetType: 'feed_community_post',
-        targetId: postId,
-        result: 'failure',
-        errorCategory: 'authorization',
-      });
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'You can only edit your own posts.' },
-        { status: 403 },
-      );
-    }
-    if (code === 'post_hidden') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'A post a moderator has hidden cannot be edited.' },
-        { status: 403 },
-      );
-    }
-    if (code === 'edit_requires_image') {
-      return NextResponse.json(
-        {
-          ok: false,
-          code: FEED_ERROR_CODE.forbidden,
-          message: 'Only a post with a picture can be edited in place. Delete and post again instead.',
-        },
-        { status: 403 },
-      );
-    }
-    if (code === 'content_policy_violation') {
-      return NextResponse.json(
-        { ok: false, code: FEED_ERROR_CODE.moderationRejected, message: 'Post blocked by content moderation.' },
-        { status: 422 },
-      );
-    }
-
-    reportError(error, { area: 'commons', op: 'edit_post' });
-    return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to save your edit.' },
-      { status: 503 },
-    );
+    return mapEditPostError(error, gate.auth.userId, postId);
   }
 }

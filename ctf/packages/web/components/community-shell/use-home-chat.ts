@@ -368,6 +368,89 @@ function flipFilter(mentions: boolean, announcements: boolean, refs: FilterRefs,
   refreshForFilterChange();
 }
 
+// The Commons stream filters (@ Mentions / 📣 Announcements — mutually exclusive) plus the history
+// reads they gate: toggling a filter is what drives a re-fetch, so the two are one unit. Factored out
+// of useHomeChat to keep that hook under the modularity line limit (rule 116); reads/writes through
+// settersRef rather than individual setters so it needs nothing beyond the bundle useHomeChat already
+// builds.
+function useCommonsStreamFilters(userId: string, settersRef: RefObject<ChatSetters>) {
+  const [mentionsOnly, setMentionsOnly] = useState(false);
+  const mentionsOnlyRef = useRef(false);
+  const [announcementsOnly, setAnnouncementsOnly] = useState(false);
+  const announcementsOnlyRef = useRef(false);
+  const filtersRef = useRef<FilterRefs>({
+    mentionsOnlyRef,
+    announcementsOnlyRef,
+    setMentionsOnly,
+    setAnnouncementsOnly,
+  });
+
+  // The active stream filter, derived from the refs so the poll/live handlers (which hold older
+  // callback identities) always read the current mode. Mentions and announcements are mutually
+  // exclusive; 'all' is the unfiltered blended stream.
+  const currentFilterKey = (): FilterKey =>
+    mentionsOnlyRef.current ? 'mentions' : announcementsOnlyRef.current ? 'announcements' : 'all';
+
+  const refreshHistory = useCallback(async () => {
+    const filterKey = currentFilterKey();
+    await fetchHistoryIntoState(filterParamForKey(filterKey), currentFilterKey, filterKey, userId, settersRef.current.setMessages);
+  }, [userId, settersRef]);
+
+  // Deep-link "load around": pull a page centered on a specific message/announcement from the server
+  // and merge it in, so a target older than the recent page is present for the stream to scroll to.
+  // Best-effort and additive — the recent page still loads alongside, so the member sees both the old
+  // message and current activity. Only applies to the unfiltered stream (a deep link is not a
+  // mentions/announcements view), so it no-ops while a filter is active.
+  const loadAround = useCallback(async (postId: string | null, announcementId: string | null) => {
+    const aroundParam = aroundParamFor(postId, announcementId);
+    if (!aroundParam || currentFilterKey() !== 'all') return;
+    await fetchHistoryIntoState(aroundParam, currentFilterKey, 'all', userId, settersRef.current.setMessages);
+    // currentFilterKey reads refs, so it is intentionally not a dependency.
+  }, [userId, settersRef]);
+
+  // Bootstrap variant: read the deep link from the entry URL once on cold load and pull its window.
+  const loadAroundDeepLink = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    await loadAround(params.get('post'), params.get('announcement'));
+  }, [loadAround]);
+
+  const refreshForFilterChange = useCallback(
+    () => runFilterRefresh(settersRef.current, refreshHistory),
+    [refreshHistory, settersRef],
+  );
+
+  // Flip the "@ Mentions" filter. Turning it on clears the mutually-exclusive announcements filter.
+  const toggleMentionsOnly = useCallback(
+    () => flipFilter(!mentionsOnlyRef.current, false, filtersRef.current, refreshForFilterChange),
+    [refreshForFilterChange],
+  );
+
+  // Flip the announcements (📣) filter. Turning it on clears the mutually-exclusive mentions filter.
+  const toggleAnnouncementsOnly = useCallback(
+    () => flipFilter(false, !announcementsOnlyRef.current, filtersRef.current, refreshForFilterChange),
+    [refreshForFilterChange],
+  );
+
+  // Force the unfiltered blended stream (used when a deep link must land but a filter is active).
+  // Clears both filters and re-fetches; a no-op when neither filter is on.
+  const showAllStream = useCallback(() => {
+    if (!mentionsOnlyRef.current && !announcementsOnlyRef.current) return;
+    flipFilter(false, false, filtersRef.current, refreshForFilterChange);
+  }, [refreshForFilterChange]);
+
+  return {
+    mentionsOnly,
+    announcementsOnly,
+    toggleMentionsOnly,
+    toggleAnnouncementsOnly,
+    showAllStream,
+    refreshHistory,
+    loadAround,
+    loadAroundDeepLink,
+  };
+}
+
 // The composer's "replying to …" target for a peer message, or null when the message is not a peer
 // post (only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to).
 function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
@@ -951,6 +1034,53 @@ function teardownBootstrap(controller: BootstrapController, liveConnectionRef: R
   }
 }
 
+// Bootstrap the chat on mount (reset state, then history + comic + last-seen + deep-link window +
+// live connection via runChatBootstrap) and tear it down on unmount. Factored out of useHomeChat to
+// keep that hook under the modularity line limit (rule 116); it needs nothing beyond what
+// runChatBootstrap and its teardown already take.
+function useChatBootstrapEffect(params: {
+  userId: string;
+  refreshHistory: () => Promise<void>;
+  refreshComic: () => Promise<void>;
+  refreshLastSeen: () => Promise<void>;
+  loadAroundDeepLink: () => Promise<void>;
+  refreshHistoryRef: RefObject<() => Promise<void>>;
+  liveConnectionRef: RefObject<CommonsLiveConnection | null>;
+  settersRef: RefObject<ChatSetters>;
+  markedSeenRef: RefObject<boolean>;
+}): void {
+  const {
+    userId,
+    refreshHistory,
+    refreshComic,
+    refreshLastSeen,
+    loadAroundDeepLink,
+    refreshHistoryRef,
+    liveConnectionRef,
+    settersRef,
+    markedSeenRef,
+  } = params;
+
+  useEffect(() => {
+    const controller: BootstrapController = { active: true, pollId: undefined };
+    resetChatForMount(settersRef.current, markedSeenRef);
+    void runChatBootstrap({
+      controller,
+      refreshHistory,
+      refreshComic,
+      refreshLastSeen,
+      loadAroundDeepLink,
+      refreshHistoryRef,
+      liveConnectionRef,
+      setters: settersRef.current,
+    });
+    return () => teardownBootstrap(controller, liveConnectionRef);
+    // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
+    // messages carry their own sender name from the server), so listing it here tore down the entire
+    // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
+  }, [userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
+}
+
 // A message posted outside the composer (an admin's picture, from CommonsImageShare) joins the stream
 // straight away rather than on the next poll.
 function useAddSavedMessage(setMessages: Dispatch<SetStateAction<ChatMessage[]>>, currentUserId: string) {
@@ -987,23 +1117,12 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // Held in a ref so the composer's typing emitters and unmount cleanup can reach it without
   // re-rendering or re-subscribing.
   const liveConnectionRef = useRef<CommonsLiveConnection | null>(null);
-  // "@ Mentions" filter: when on, history reads add `mentions=me` so the server returns only
-  // peer messages whose body @-mentions the viewer (server-derived handles, searched beyond the
-  // loaded page). Mirrored in a ref so refreshHistory (and the poll/live handlers that hold an
-  // older callback identity) always read the current mode without re-bootstrapping the chat.
-  const [mentionsOnly, setMentionsOnly] = useState(false);
-  const mentionsOnlyRef = useRef(false);
-  // "Announcements" filter (📣 chip): when on, history reads add `channel=announcements` so the
-  // server returns only official announcements — including ones that scrolled off the recent page,
-  // so a member with limited history can still surface them. Mutually exclusive with mentions.
-  const [announcementsOnly, setAnnouncementsOnly] = useState(false);
-  const announcementsOnlyRef = useRef(false);
   // True while the stream is being re-fetched right after a filter flip, so the panel can
   // show a loading line instead of a premature empty state.
   const [isFilterRefreshing, setIsFilterRefreshing] = useState(false);
 
-  // Stable bundles so module-scope helpers can update state / read filter refs without long argument
-  // lists. Setters and refs never change identity, so each ref is written once on first render.
+  // Stable bundle so module-scope helpers can update state without a long argument list. Setters
+  // never change identity, so this ref is written once on first render.
   const settersRef = useRef<ChatSetters>({
     setMessages,
     setComicItems,
@@ -1020,46 +1139,21 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setTypingUsers,
     setIsFilterRefreshing,
   });
-  const filtersRef = useRef<FilterRefs>({
-    mentionsOnlyRef,
-    announcementsOnlyRef,
-    setMentionsOnly,
-    setAnnouncementsOnly,
-  });
 
   // Whether the composer currently contains an @comic mention — used to show the mention chip
   // affordance live as the asker types.
   const composerMentionsComic = useMemo(() => mentionsComic(input), [input]);
 
-  // The active stream filter, derived from the refs so the poll/live handlers (which hold older
-  // callback identities) always read the current mode. Mentions and announcements are mutually
-  // exclusive; 'all' is the unfiltered blended stream.
-  const currentFilterKey = (): FilterKey =>
-    mentionsOnlyRef.current ? 'mentions' : announcementsOnlyRef.current ? 'announcements' : 'all';
-
-  const refreshHistory = useCallback(async () => {
-    const filterKey = currentFilterKey();
-    await fetchHistoryIntoState(filterParamForKey(filterKey), currentFilterKey, filterKey, currentUser.userId, setMessages);
-  }, [currentUser.userId]);
-
-  // Deep-link "load around": pull a page centered on a specific message/announcement from the server
-  // and merge it in, so a target older than the recent page is present for the stream to scroll to.
-  // Best-effort and additive — the recent page still loads alongside, so the member sees both the old
-  // message and current activity. Only applies to the unfiltered stream (a deep link is not a
-  // mentions/announcements view), so it no-ops while a filter is active.
-  const loadAround = useCallback(async (postId: string | null, announcementId: string | null) => {
-    const aroundParam = aroundParamFor(postId, announcementId);
-    if (!aroundParam || currentFilterKey() !== 'all') return;
-    await fetchHistoryIntoState(aroundParam, currentFilterKey, 'all', currentUser.userId, setMessages);
-    // currentFilterKey reads refs, so it is intentionally not a dependency.
-  }, [currentUser.userId]);
-
-  // Bootstrap variant: read the deep link from the entry URL once on cold load and pull its window.
-  const loadAroundDeepLink = useCallback(async () => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    await loadAround(params.get('post'), params.get('announcement'));
-  }, [loadAround]);
+  const {
+    mentionsOnly,
+    announcementsOnly,
+    toggleMentionsOnly,
+    toggleAnnouncementsOnly,
+    showAllStream,
+    refreshHistory,
+    loadAround,
+    loadAroundDeepLink,
+  } = useCommonsStreamFilters(currentUser.userId, settersRef);
 
   // The live Stream event handler must always call the freshest refreshHistory without resubscribing
   // each time the callback identity changes, so keep the latest reference in a ref.
@@ -1076,30 +1170,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // once per mount; a failure is swallowed so it can never break the chat.
   const markSeen = useCallback(() => markSeenOnce(markedSeenRef), []);
 
-  const refreshForFilterChange = useCallback(
-    () => runFilterRefresh(settersRef.current, refreshHistory),
-    [refreshHistory],
-  );
-
-  // Flip the "@ Mentions" filter. Turning it on clears the mutually-exclusive announcements filter.
-  const toggleMentionsOnly = useCallback(
-    () => flipFilter(!mentionsOnlyRef.current, false, filtersRef.current, refreshForFilterChange),
-    [refreshForFilterChange],
-  );
-
-  // Flip the announcements (📣) filter. Turning it on clears the mutually-exclusive mentions filter.
-  const toggleAnnouncementsOnly = useCallback(
-    () => flipFilter(false, !announcementsOnlyRef.current, filtersRef.current, refreshForFilterChange),
-    [refreshForFilterChange],
-  );
-
-  // Force the unfiltered blended stream (used when a deep link must land but a filter is active).
-  // Clears both filters and re-fetches; a no-op when neither filter is on.
-  const showAllStream = useCallback(() => {
-    if (!mentionsOnlyRef.current && !announcementsOnlyRef.current) return;
-    flipFilter(false, false, filtersRef.current, refreshForFilterChange);
-  }, [refreshForFilterChange]);
-
   // Emit a typing event as the member writes in the composer. No-op when there is no live
   // connection (polling-only mode), so the composer can call it unconditionally on every keystroke.
   const notifyTyping = useCallback(() => liveConnectionRef.current?.sendTyping(), []);
@@ -1112,24 +1182,17 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     setConsentGranted(window.localStorage.getItem(consentStorageKey(currentUser.userId)) === '1');
   }, [currentUser.userId]);
 
-  useEffect(() => {
-    const controller: BootstrapController = { active: true, pollId: undefined };
-    resetChatForMount(settersRef.current, markedSeenRef);
-    void runChatBootstrap({
-      controller,
-      refreshHistory,
-      refreshComic,
-      refreshLastSeen,
-      loadAroundDeepLink,
-      refreshHistoryRef,
-      liveConnectionRef,
-      setters: settersRef.current,
-    });
-    return () => teardownBootstrap(controller, liveConnectionRef);
-    // Deliberately keyed on userId only: nothing in the bootstrap reads the display name (incoming
-    // messages carry their own sender name from the server), so listing it here tore down the entire
-    // chat — cleared messages, re-joined, restarted the poll — every time a member edited their name.
-  }, [currentUser.userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
+  useChatBootstrapEffect({
+    userId: currentUser.userId,
+    refreshHistory,
+    refreshComic,
+    refreshLastSeen,
+    loadAroundDeepLink,
+    refreshHistoryRef,
+    liveConnectionRef,
+    settersRef,
+    markedSeenRef,
+  });
 
   const routeToComic = useCallback(
     (questionText: string) => runRouteToComic(questionText, refreshComic, settersRef.current),
