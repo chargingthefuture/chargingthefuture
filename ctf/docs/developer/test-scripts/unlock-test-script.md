@@ -56,23 +56,23 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
 
 ## Member walkthrough
 
-### UNLOCK-M1 · "Can't find your Quora URL?" help message (universal)
-**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (member Unlock screen), android
-**Precondition:** none — this help shows for **every** member, not just the A/B treatment bucket, and
-regardless of the `feature-unlock-early-commons-access` flag.
+### UNLOCK-M1 · "Can't find your Quora profile URL?" help box (universal; one box, two places — updated 2026-09-26)
+**Role:** member (not yet verified) · **Surfaces:** web + mobile-responsive (Unlock screen and Commons banner)
 **Steps:**
-1. Open the Unlock submission form (a member with no submission).
-2. Confirm a standout callout reads: "Can't find your Quora profile URL? Go to skillseconomy.quora.com
-   and comment on any post asking for help — I'll reply with your profile URL." (First person "I" — it
-   must never read as more than one person maintaining the app.)
-3. Tap the `skillseconomy.quora.com` link and confirm it opens that Quora space (new tab on web;
-   the system browser on android).
-4. On a **rejected** submission, open the status / re-submit view and confirm the same callout appears
-   by the re-submit field.
-**Expected:** The Quora help callout is visible and prominent wherever the Quora URL is requested (the
-submission form, and the re-submit field on a rejected status), for every member regardless of A/B
-bucket or flag state. The link opens the network's Quora space. There is no longer an "Ask in the
-Commons" link on the Unlock screen — help points to Quora.
+1. Open the Unlock submission form as a member with no submission.
+2. Confirm the "Can’t find your Quora profile URL?" box shows, with the hint box ("Anything that helps
+   me find you on Quora (optional)") and the "Ask for help in the Commons" button.
+3. Tap **Show me where to find it**. Confirm a picture (browser address bar with `/profile/`, and the
+   Quora app ⋯ → Share → Copy link menu) and four numbered-step sections: in a web browser, in the
+   Quora app, if your link was not accepted, if you cannot get into your Quora account.
+4. Type a name in the hint box and press the button. Confirm you land on the Commons.
+5. On the Commons, confirm the banner shows the **same** box (same steps and picture, same hint box),
+   with copy that points at @comic and the "I can’t find my Quora profile URL" chip. The button reads
+   "Send this to the team" and stays disabled until the hint box has text.
+6. Type a name and press it. Confirm "Saved. A person will use it to look you up." and that the page
+   does not move. As admin, confirm the hint shows on that member's row in `/admin/unlock`.
+**Expected:** One help box, identical steps and picture in both places, hint box in both. On the
+Unlock screen the button opens the Commons; on the Commons it only saves the hint.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), admins see the shared Admin pill in the member shell header, and the admin screen
 header shows a "Member view" pill that opens the member Unlock screen at `/plugin/unlock` — click it
@@ -90,9 +90,8 @@ submission.
 **Steps (web):**
 1. As an unverified treatment member with **no** submission, open the home page (the Commons).
 2. Confirm a "Verify your account to unlock full access" banner shows at the top of the content area,
-   with a Quora URL input, a "Submit for verification" button, and the standout Quora-URL help callout
-   ("Can't find your Quora profile URL? Go to skillseconomy.quora.com and comment on any post asking
-   for help — I'll reply with your profile URL.").
+   with a Quora URL input, a "Submit for verification" button, and the shared "Can’t find your Quora
+   profile URL?" help box (see UNLOCK-M1).
 3. Paste a valid Quora profile URL and submit.
 4. Confirm the banner switches to an "under review" note without a full reload.
 5. Reload; confirm the banner still shows the "under review" note (pending submission).
@@ -110,6 +109,26 @@ submitting they see the pending note and keep Commons access. A support-only or 
 not see this banner. On android the client Unlock gate lets a treatment member through to `HubHome`
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
+
+### UNLOCK-M4 · The Commons is stripped back until approval (added 2026-09-26)
+**Role:** member not yet approved, then the same member approved; an approved member; admin · **Surfaces:** web + mobile-responsive
+**Steps:**
+1. As a member not yet approved who has reached the Commons (pressed "ask for help", or came back on
+   a later day), open the home page.
+2. Confirm: the verification banner and the chat are what is on screen. There is no Apps tab in the
+   top bar, no Apps button in the icon rail, no locked `#weavers` chip in the channel row, and the
+   chips under the chat are only "I can’t find my Quora profile URL" and "I'm new. What do I do first?".
+3. Open an announcement or an @comic answer that carries plugin links. Confirm the "Explore:" / plugin
+   chips are not shown.
+4. Tap "I can’t find my Quora profile URL". Confirm the consent step (first time), then the "Reviewing
+   for safety" card for that question.
+5. As admin, approve the member in `/admin/unlock`. As the member, reload the home page.
+6. Confirm everything from step 2 is back: Apps tab, grid, sort and search, the locked chip, the full
+   chip row, plugin links under answers and announcements.
+7. As an approved member and as admin, confirm nothing on the Commons changed.
+**Expected:** Stripped back for exactly the not-yet-approved member; all of it returns on the first
+load after approval.
+**Result:** web ☐ — notes:
 
 ### UNLOCK-M3 · Approved status card wording (no "Hub")
 **Role:** member (approved) · **Surfaces:** web + mobile-responsive (member Unlock status screen), android

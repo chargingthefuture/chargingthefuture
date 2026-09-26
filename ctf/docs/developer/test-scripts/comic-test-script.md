@@ -360,6 +360,39 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 
 ---
 
+## CMC-U1 · Scripted answer for the Quora profile URL question (added 2026-09-26)
+**Role:** member not yet approved; approved member; admin
+**Steps:**
+1. As a member not yet approved, send in the Commons: `@comic I can't find my Quora profile URL`.
+2. Then send `@comic I'm on the Quora app, where is my profile link?`, then
+   `@comic my quora link was rejected`, then `@comic I can't log in to quora`.
+3. Then send `@comic how long does verification take?`.
+4. As admin, open `/admin/comic`.
+5. As an approved member, send `@comic where is my quora profile url?`.
+**Expected:**
+- Steps 1–2 → each shows the "Reviewing for safety" card; nothing is sent without review.
+- Step 4 → each of step 1–2's questions is in the queue **with a draft already attached**: browser
+  steps (plus the one-line app version), app steps, the wrong-link steps, and the can't-sign-in steps
+  pointing at the hint box. Approving one sends it to the member as written.
+- Step 3's question has a model draft (when the model is up), not a scripted one, and it does not
+  claim the assistant can approve anybody or promise a review time.
+- Step 5 → an ordinary question: no scripted draft, not tagged.
+- A safety-flagged question from an unapproved member gets no draft of any kind (human-first).
+
+## CMC-A9 · Unlock help log (added 2026-09-26)
+**Role:** admin
+**Steps:**
+1. After CMC-U1, open `/admin` and tap **Unlock Help Log**.
+2. Approve one CMC-U1 answer in `/admin/comic` and reload the log.
+3. Approve the CMC-U1 member in `/admin/unlock` and reload the log.
+4. Tap **Copy as text** and paste into a note.
+**Expected:** One row per CMC-U1 question from the unapproved member (not step 5's approved member),
+tagged `browser`, `quora_app`, `wrong_link`, `cannot_sign_in`, `model`. Before step 2 each row says
+"No answer sent (pending)"; after, that row shows the answer. After step 3 every row for that member
+reads "approved the same day" and the per-case table counts it under "Approved after". The pasted text
+has the per-case lines and each question, answer and outcome. Nothing on the page changes a review
+or a member's status. A non-admin opening the URL is sent to `/`.
+
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)
 **Steps:**

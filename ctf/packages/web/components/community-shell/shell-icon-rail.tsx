@@ -14,9 +14,26 @@ type IconRailProps = {
   initial?: string;
   isAuthenticated?: boolean;
   isAdmin?: boolean;
+  // False for a member not yet approved through Unlock: every app is closed to them (see
+  // commons-unlock-focus.ts), so the Apps button is left out.
+  showApps: boolean;
 };
 
-export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false, isAdmin = false }: IconRailProps) {
+function AppsRailButton({ section, onSectionChange }: Pick<IconRailProps, 'section' | 'onSectionChange'>) {
+  return (
+    <button
+      type="button"
+      className={section === 'apps' ? `${styles.iconRailBtn} ${styles.iconRailBtnActive}` : styles.iconRailBtn}
+      onClick={() => onSectionChange('apps')}
+      aria-label="Apps"
+      aria-pressed={section === 'apps'}
+    >
+      <Zap size={18} />
+    </button>
+  );
+}
+
+export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthenticated = false, isAdmin = false, showApps }: IconRailProps) {
   return (
     <aside className={styles.iconRail}>
       {/* Product mark — the Skills Economy "Stack" logo (matches the site title in layout.tsx). */}
@@ -35,15 +52,7 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
         <Users size={18} />
       </button>
 
-      <button
-        type="button"
-        className={section === 'apps' ? `${styles.iconRailBtn} ${styles.iconRailBtnActive}` : styles.iconRailBtn}
-        onClick={() => onSectionChange('apps')}
-        aria-label="Apps"
-        aria-pressed={section === 'apps'}
-      >
-        <Zap size={18} />
-      </button>
+      {showApps ? <AppsRailButton section={section} onSectionChange={onSectionChange} /> : null}
 
       <div className={styles.iconRailSpacer} aria-hidden="true" />
 
