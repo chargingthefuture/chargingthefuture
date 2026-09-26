@@ -56,6 +56,10 @@ Run the checks CI runs — in `wiki-site` that is `pnpm wiki:validate`, `pnpm wi
 - If it is already merged, branch (`fix/<short-description>`), commit, push, open the PR with the
   title and body set at creation.
 
+Do not watch the PR (owner directive, 2026-09-26): no subscription to its activity, no scheduled
+check-in, no waiting for CI. The checks above are what keep it green. Watching fills the session with
+notices and check lists, which brings on compaction sooner.
+
 The date does not move and no dated correction is published. Nothing a reader acted on was wrong;
 the wording was hard to read. A dated correction is for a wrong claim about the product or the
 world, per `wiki-site/CLAUDE.md`.
