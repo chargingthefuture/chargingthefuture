@@ -5232,6 +5232,76 @@ ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS crea
 CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
   ON what_works_admin_audit_trail (created_at DESC, actor_id, command);
 
+-- Running costs (added 2026-09-26), read and edited on /admin/expenses. The owner pays every bill
+-- personally and decides what to cut from this list, so each row is a real amount of money a person
+-- pays, entered by hand: most providers do not report billing through an API.
+--   kind            'recurring' (amount is per month) or 'one_off' (amount is the one payment).
+--   billing         'fixed' (the same every month) or 'usage' (moves with use).
+--   amount_cents    NULL means the amount is not known yet — kept apart from zero, which is a
+--                   checked, free line. For a range ("$18-25") this is the low end.
+--   amount_max_cents  the high end of a range; NULL when the amount is a single figure.
+--   paid_on         the date of a one-off payment.
+--   last_checked_on the day somebody last looked at the provider's bill for this line.
+--   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
+--                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+CREATE TABLE IF NOT EXISTS admin_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL,
+  purpose TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'recurring' CHECK (kind IN ('recurring', 'one_off')),
+  billing TEXT NOT NULL DEFAULT 'fixed' CHECK (billing IN ('fixed', 'usage')),
+  amount_cents INTEGER CHECK (amount_cents IS NULL OR amount_cents >= 0),
+  amount_max_cents INTEGER CHECK (amount_max_cents IS NULL OR amount_max_cents >= 0),
+  paid_on DATE,
+  last_checked_on DATE,
+  stopped_on DATE,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'recurring';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS billing TEXT NOT NULL DEFAULT 'fixed';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_max_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS paid_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS last_checked_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS stopped_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Every add, edit and removal on /admin/expenses (rule 131: every admin action is recorded). The
+-- metadata carries the row before and after, so a changed amount can be read back.
+CREATE TABLE IF NOT EXISTS admin_expenses_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
+  ON admin_expenses_audit_trail (created_at DESC, actor_id, command);
+
 -- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
 -- on every surface. lib/mutual-time/audit.ts builds the entire contract-shaped event and ends in
 -- console.info — a line in the server's log, which nothing can query, no screen can show, and which
