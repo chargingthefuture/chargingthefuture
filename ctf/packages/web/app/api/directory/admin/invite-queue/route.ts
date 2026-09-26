@@ -9,8 +9,9 @@ import { failureReason } from 'lib/errors/failure';
 // The invite queue, read by the Invite queue screen under the Directory admin area.
 //
 // Read-only and admin-only. It returns every listed person with their Quora address and their
-// skills, minus the owner's own listing and anybody who already has a dedicated invite post on the
-// blog. The blog's INVITE_QUEUE.md tracks what has shipped; this is where the next one comes from.
+// skills, minus anybody who already has a dedicated invite post on the blog. The blog's
+// INVITE_QUEUE.md tracks what has shipped; this is where the next one comes from. The owner is in
+// the queue like everybody else — see the note on DIRECTORY_INVITE_ALREADY_WRITTEN.
 //
 // It also returns how much of the skills catalog the Directory covers, sector by sector. The invite
 // posts argue from those figures and they were being copied forward from an older reading, because

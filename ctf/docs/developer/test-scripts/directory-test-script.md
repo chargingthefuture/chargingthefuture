@@ -600,8 +600,11 @@ the Advocacy placeholder and one carrying only that placeholder.
   rows shown.
 - Step 2: a row whose only skill is the Advocacy placeholder reads **General invitation**. Advocacy
   stands in for a trade nobody has stated, so that row's post cannot name one.
-- Step 3: neither appears. The owner's own listing is not an invitation to anybody, and a second post
-  to somebody already written about is the thing this screen exists to prevent.
+- Step 3: your own listing appears; anybody already written about does not. The owner was excluded
+  until 2026-09-26, on the reasoning that their listing was not an invitation to anybody — there is
+  a product to invite people to now, so they queue like everybody else and get one post in the same
+  format. A second post to somebody already written about is still what this screen exists to
+  prevent.
 - Step 4: the block shows the date it was read, how many people are listed, how many of the
   catalog's skills somebody holds, and how many have nobody, then one line per sector reading
   "held of in catalog". A sector nobody covers is dimmed rather than left out — an empty sector is
