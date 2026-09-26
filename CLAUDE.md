@@ -327,6 +327,17 @@ Never watch a pull request, in any repo. After opening one, do not subscribe to 
 
 Watching fills the session with GitHub notices and full check lists, which brings on compaction sooner, and a compacted session loses what the owner said earlier. The owner merges from their phone and sees the checks there. The local checks run before every push are what keep a PR from going red; when the owner wants to know where open PRs stand, they run `/pr`, which is one pass over them, not a watch.
 
+### Keep sessions from filling up (owner directive, 2026-09-26)
+
+Everything an agent reads stays in the session until compaction, and compaction swaps the earlier conversation for a summary. So spend the session on the owner's words, not on raw output.
+
+- Hand broad searches to a helper agent that returns only its conclusion. Anything that means reading across several files or directories to answer one question goes to a helper; a single lookup in a known file is done directly.
+- Read only the part of a file the task needs, by line range or search, not entire files.
+- Read only failed checks and the failing part of a log. Never pull a full list of passing checks or a full log to confirm something is green.
+- Take a screenshot only when a visual change has to be checked, and look at it once.
+
+The owner can also compact on their own terms: typing `/compact` followed by what to keep (for example, `/compact keep the open PR list and today's rules`) compacts at a moment they choose, with their instructions shaping the summary. `/clear` starts the session over. Rules that must outlive any session go in this file, not in chat.
+
 ### /fix — rewrite the sentence, do not explain it
 
 The owner sends a screenshot with a sentence highlighted and a short remark. It means the sentence reads badly. Rewrite it, push it, and reply in two lines with the new wording.
