@@ -302,16 +302,16 @@ next run. The test is whether it has one.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17, extended 2026-09-22. Four routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-09-26. Four routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
-| `/bpr` | [`.claude/commands/bpr.md`](.claude/commands/bpr.md) | The owner asks for any change to files. |
+| `/br` | [`.claude/commands/br.md`](.claude/commands/br.md) | The owner asks for any change to files. |
 | `/pr` | [`.claude/commands/pr.md`](.claude/commands/pr.md) | Open pull requests are blocked, behind, conflicted, or failing checks. |
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 
-### /bpr — every executed change
+### /br — every executed change
 
 Any request that changes files runs this routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes.
 
@@ -320,6 +320,23 @@ In short: descriptive branch off the latest `main` before any edit, do the work 
 ### /pr — opening a PR is the start of the job, not the end
 
 Agents open pull requests and abandon them. They do not merge themselves once a branch falls behind or a check goes red, so a PR left alone is work that never shipped. Sweep every open PR that is blocked, behind, conflicted, or failing, and drive each one to merge: resolve conflicts by understanding both sides, read the actual failure log before touching anything, update branches that fell behind. Do not report that a PR needs something — do it. Leave alone only a draft someone is actively working, or a risky-lane PR sitting green and waiting on the owner's review, and say which those are.
+
+### No PR watching (owner directive, 2026-09-26)
+
+Never watch a pull request, in any repo. After opening one, do not subscribe to its activity, do not schedule a check-in, and do not wait for its checks to finish. Report once and stop. The harness's default of subscribing to every PR it opens does not apply here.
+
+Watching fills the session with GitHub notices and full check lists, which brings on compaction sooner, and a compacted session loses what the owner said earlier. The owner merges from their phone and sees the checks there. The local checks run before every push are what keep a PR from going red; when the owner wants to know where open PRs stand, they run `/pr`, which is one pass over them, not a watch.
+
+### Keep sessions from filling up (owner directive, 2026-09-26)
+
+Everything an agent reads stays in the session until compaction, and compaction swaps the earlier conversation for a summary. So spend the session on the owner's words, not on raw output.
+
+- Hand broad searches to a helper agent that returns only its conclusion. Anything that means reading across several files or directories to answer one question goes to a helper; a single lookup in a known file is done directly.
+- Read only the part of a file the task needs, by line range or search, not entire files.
+- Read only failed checks and the failing part of a log. Never pull a full list of passing checks or a full log to confirm something is green.
+- Take a screenshot only when a visual change has to be checked, and look at it once.
+
+The owner can also compact on their own terms: typing `/compact` followed by what to keep (for example, `/compact keep the open PR list and today's rules`) compacts at a moment they choose, with their instructions shaping the summary. `/clear` starts the session over. Rules that must outlive any session go in this file, not in chat.
 
 ### /fix — rewrite the sentence, do not explain it
 

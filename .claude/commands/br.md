@@ -54,9 +54,13 @@ Set the title and body **at creation** so no check goes red and needs re-trigger
   migrations, new or changed API contracts, a whole new plugin: open it ready but do **not** enable
   auto-merge. Say in the body that it is waiting on my review, and tell me in your summary.
 
-## 6. Do not stop at "opened"
+## 6. Report and stop — no PR watching
 
-Watch the PR: keep the branch up to date when it falls behind `main`, fix any check that goes red,
-and confirm it merged (low-risk) or is green and waiting on my review (risky). Then report back in
-one short summary: branch name, PR number, lane, and current state. Plain language, no jargon, no
-pleasantries.
+Do not watch the PR (owner directive, 2026-09-26). Do not subscribe to its activity, do not schedule
+a check-in, and do not wait for CI to finish. Watching fills the session with notices and check
+lists, which brings on compaction sooner, and the owner sees the checks on their phone anyway. The
+local checks in step 3 are what keep the PR from going red; that is why they are not optional.
+
+Report once, right after opening, in one short summary: branch name, PR number, lane, and what the
+local checks showed. Plain language, no jargon, no pleasantries. When the owner wants to know where
+open PRs stand, they run `/pr`.
