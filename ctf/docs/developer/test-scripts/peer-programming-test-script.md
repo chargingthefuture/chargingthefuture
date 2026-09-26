@@ -415,9 +415,36 @@ Result: web ☐
 **Steps:**
 1. In Up for grabs, look at a card marked "Your goal".
 
-**Expected:** There is no "Take it" button on your own cards, only "Remove". Removing it takes it off
-the board. A card of yours in Done with a posted result shows "Keep" and "Send back" instead, never
-"Remove".
+**Expected:** There is no "Take it" button on your own cards, only "Edit" and "Remove". Removing it
+takes it off the board. A card of yours in Done with a posted result shows "Keep" and "Send back"
+instead, never "Remove" or "Edit".
+
+Result: web ☐
+
+---
+
+### PP-18b — Fix a typo on your own card before it is claimed (added 2026-09-26)
+
+**Role:** member (two accounts) · **Surfaces:** web
+
+**Precondition:** A has an open card of their own still in Up for grabs.
+
+**Steps:**
+1. As A, on your own card in Up for grabs, press "Edit".
+2. Fix a word and press "Save".
+3. Reload the board.
+4. As A, press "Edit" on the same card again, change the text, then press "Cancel" instead of "Save".
+5. As B, press "Take it" on A's card.
+6. As A, reload the board and look at that same card.
+
+**Expected:** Step 1: the card's text is replaced by an editable box holding the same words — the
+card is not removed or reordered. Step 2: the box closes and the card shows the corrected text; no
+new card appears, and any reaction/history on the card is untouched (there is none to lose here, but
+the card keeps its place in the column). Step 3: the corrected text persists. Step 4: the box closes
+with the card back to its saved text — your unsaved change is discarded, nothing is sent to the
+server. Step 5: B can take the card normally. Step 6: once B holds it, there is no "Edit" button on
+it any more — only "Remove" (matching PP-18's "Doing" behavior); attempting the edit call directly
+against that task id returns 409 with a message that the card is no longer up for grabs.
 
 Result: web ☐
 

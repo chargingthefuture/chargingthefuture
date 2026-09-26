@@ -88,6 +88,12 @@ export function addGoalTask(goalId: string, description: string): Promise<Action
   return post(`/api/peer-programming/goals/${encodeURIComponent(goalId)}`, { action: "add_task", description }, "The task could not be added");
 }
 
+// Fix the words on your own card, while it is still open (nobody has taken it). Once somebody takes
+// it or it is done, the route refuses this the same way it refuses Remove on a finished card.
+export function editGoalTask(taskId: string, description: string): Promise<ActionResult> {
+  return post(`/api/peer-programming/goals/tasks/${encodeURIComponent(taskId)}`, { action: "edit", description }, "The card could not be edited");
+}
+
 export function closeGoal(goalId: string, outcome: "reached" | "withdrawn"): Promise<ActionResult> {
   return post(`/api/peer-programming/goals/${encodeURIComponent(goalId)}`, { action: "close", outcome }, "The goal could not be closed");
 }

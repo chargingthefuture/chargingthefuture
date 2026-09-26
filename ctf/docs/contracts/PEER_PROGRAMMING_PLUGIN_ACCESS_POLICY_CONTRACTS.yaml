@@ -470,6 +470,10 @@ policies:
       cohortMembershipRequired: true
       helperActionsExcludeGoalOwner: true
       ownerActionsGoalOwnerOnly: true
+      # edit (one of the owner actions above) is further restricted in the repository to a task that
+      # reads truly "open" — not merely unfinished, which is all remove requires — so the words can
+      # never change out from under a member already holding or who has finished the task.
+      editRequiresTaskOpen: true
     consentRequirements:
       scopes:
         - peer_programming_room_write

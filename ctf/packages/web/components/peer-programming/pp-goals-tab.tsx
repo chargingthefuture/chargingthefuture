@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { getPeerProgrammingTokens } from "./pp-shared";
 import { GoalsBoardView } from "./pp-goals-board";
-import { actOnTask, addGoalTask, closeGoal, loadBoard, postGoal, type ActionResult, type Board } from "./pp-goals-api";
+import { actOnTask, addGoalTask, closeGoal, editGoalTask, loadBoard, postGoal, type ActionResult, type Board } from "./pp-goals-api";
 
 function Notice({ children, tone }: { children: React.ReactNode; tone: "muted" | "error" }) {
   const { theme } = useTheme();
@@ -65,6 +65,7 @@ export function PeerProgrammingGoalsTab() {
         board={board}
         busy={busy}
         onAction={(taskId, action, result) => void run(() => actOnTask(taskId, action, result))}
+        onEditTask={(taskId, description) => run(() => editGoalTask(taskId, description))}
         onAddTask={(goalId, description) => run(() => addGoalTask(goalId, description))}
         onClose={(goalId, outcome) => void run(() => closeGoal(goalId, outcome))}
         onPost={(title, tasks) => run(() => postGoal(title, tasks))}

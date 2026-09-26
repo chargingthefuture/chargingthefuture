@@ -243,7 +243,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId, taskHoldHours }`. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks (each task now also carries `takenAtIso`, null unless it is currently held); `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours; `taskHoldHours` echoes `PEER_PROGRAMMING_TASK_HOLD_HOURS` so the client states the hold rule and a held card's actual deadline instead of hardcoding the number. `cohortId` is null when the caller has no cohort.
 - `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_goal_already_open` when the caller already has an open goal (enforced by a partial-unique index); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
 - `POST /api/peer-programming/goals/[goalId]` — The goal owner only. Body `{ action: "add_task", description }` or `{ action: "close", outcome: "reached" | "withdrawn" }`. Audited as `peer-programming.goal.task.add` / `peer-programming.goal.close`.
-- `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may mark a finished result `helped`, `keep` it without that mark, or `send_back` it, or `remove` a task nobody has finished. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
+- `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result?, description? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may mark a finished result `helped`, `keep` it without that mark, or `send_back` it, remove a task nobody has finished (`remove`), or fix a typo in an open task's words with `edit` and a `description` (up to 300 characters, same cap as `add_task`) — `edit` is gated on the task reading truly "open" (nobody holds it, or a hold has lapsed), narrower than `remove`'s "nobody has finished it yet", so the words can never change out from under a member already holding or who has finished the task. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
 
 ### Admin Routes
 
@@ -369,6 +369,25 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-09-26: **Bug fix: a typo in a card's words could only be fixed by removing it and starting
+  over.** Owner report: a card is a small task on the goal board (e.g. "Find five places in Houston
+  Texas that have full-time yard jockey roles…"); the author had no way to fix a typo in one before
+  anybody claimed it, short of Remove and re-adding it (which loses its place in "Up for grabs" and,
+  for a goal near its card limit, might not fit again). Added `editTask` (`lib/peer-programming/
+  goals.ts`) and a new `edit` value on the existing `goal.task.update` command
+  (`POST /api/peer-programming/goals/tasks/:taskId`, body `{ action: "edit", description }`).
+  Author-only, and gated on the same "truly open" condition `takeTask` uses (nobody holds it, or the
+  hold has lapsed) rather than merely "unfinished" (which is all Remove requires) — so a card's words
+  can never change out from under a member already holding or who has finished it. No schema change:
+  reuses the existing `description`/`updated_at` columns. Web: the owner's card in "Up for grabs" now
+  shows an "Edit" button alongside "Remove"; pressing it swaps in an inline text box (the same
+  `TextBox` + local `useState` shape `HelperControls`' "Post result" box already uses), and "Save"
+  only closes the editor on success — a failure (somebody took the card a moment before you saved)
+  leaves your words in the box rather than losing them. New client call `editGoalTask`
+  (`pp-goals-api.ts`). Contracts: `edit` added to `goal.task.update`'s `action` enum plus a new
+  `description` input field, in both `PEER_PROGRAMMING_PLUGIN_COMMAND_CONTRACTS.yaml` and
+  `PEER_PROGRAMMING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`.
 
 - 2026-09-25: The 24-hour hold rule is now shown on the card, not only enforced silently (owner
   report: a member could do the work and come back to find the card already reopened for someone
