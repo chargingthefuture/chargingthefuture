@@ -330,17 +330,25 @@
 3. Leave the description empty and fill in the message. Confirm **Share** stays disabled.
 4. Fill in the description ("What it shows") and tap **Share**.
 5. Tap the picture in the new message.
-6. Sign in as the member and open the Commons.
-7. As the member, send `POST /api/commons/images` from the browser's developer tools with any file.
-8. As the admin, delete the post with the picture.
+6. Close the picture.
+7. Sign in as the member and open the Commons.
+8. As the member, send `POST /api/commons/images` from the browser's developer tools with any file.
+9. As the admin, delete the post with the picture.
 
 **Expected:**
 - Step 4: the message appears straight away with the picture above its text. The panel closes.
-- Step 5: the full-size picture opens in a new tab.
-- The admin's own picture post shows Delete but no Edit.
-- Step 6: the member sees the same picture and message. There is no Share a picture button for the member.
-- Step 7: 403, "Only admins can share pictures in the Commons."
-- Step 8: the post and its picture are gone; the picture's address returns 404.
+- Step 5: the picture opens full-size in an in-app lightbox (bug fix, 2026-09-26: not a new tab — the
+  installed app has no browser chrome to navigate back with, so a new tab left no way back short of a
+  force-close).
+- Step 6: the backdrop, the X, and Escape each close the lightbox back to the Commons — no force-close
+  needed.
+- The admin's own picture post shows both Delete and Edit (bug fix, 2026-09-26: Edit used to be
+  hidden on any post with a picture, since the ordinary edit model deletes and reposts, which would
+  have dropped the picture).
+- Step 7: the member sees the same picture and message. There is no Share a picture button for the
+  member.
+- Step 8: 403, "Only admins can share pictures in the Commons."
+- Step 9: the post and its picture are gone; the picture's address returns 404.
 - Signed out, with public viewing on, the public Commons shows the picture above the message text, and the picture's address opens without signing in.
 - Signed out, with public viewing off, the picture's address returns 401.
 
@@ -348,13 +356,14 @@
 
 ---
 
-### FD-13 — Edit a community post (delete + repost)
+### FD-13 — Edit a text-only community post (delete + repost)
 **Role:** member | **Surface:** web
 
-**Precondition:** Signed in as a member with at least one of their own community posts visible.
+**Precondition:** Signed in as a member with at least one of their own community posts visible, with
+no picture attached.
 
 **Steps:**
-1. Find one of your own posts in the Commons.
+1. Find one of your own text-only posts in the Commons.
 2. Click the **Edit** button next to Delete.
 3. Confirm the post's text is loaded back into the composer.
 4. Confirm the original post is deleted (disappears from the feed).
@@ -365,6 +374,35 @@
 - The composer is pre-filled with the original text.
 - Submitting creates a new post (new timestamp, no inherited reactions or replies).
 - Any active quote/reply target is cleared when Edit is activated.
+
+**Result:** web ☐
+
+---
+
+### FD-13b — Edit an admin's picture post in place (added 2026-09-26)
+**Role:** admin | **Surface:** web
+
+**Precondition:** Signed in as an admin with a picture post of your own visible in the Commons (see
+FD-12b), with at least one reaction on it.
+
+**Steps:**
+1. Find your own picture post. Click **Edit**.
+2. Confirm the post's text loads into the composer and an "Editing your post" banner appears above it,
+   and that the original post is NOT removed from the feed.
+3. Change the text (fix a typo) and send.
+4. Reload the Commons.
+5. Click **Edit** on the post again, then tap the banner's cancel (X) instead of sending.
+6. As a different member, try `PATCH /api/commons/messages/:postId` directly on a text-only post you
+   own.
+
+**Expected:**
+- Step 2: the picture post stays put — no delete-then-repost. The banner reads "Editing your post" with
+  a note that the picture stays.
+- Step 3: the same post updates in place with the new text; the picture and the existing reaction are
+  unchanged; no new post appears.
+- Step 4: the corrected text, the picture, and the reaction all persist after reload.
+- Step 5: the banner clears and the composer is left as typed; the post is unchanged.
+- Step 6: 403 — a text-only post has no PATCH edit path (delete and repost instead).
 
 **Result:** web ☐
 

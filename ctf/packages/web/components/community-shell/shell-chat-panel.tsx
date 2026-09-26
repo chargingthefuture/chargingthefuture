@@ -14,7 +14,7 @@ import type {
   ShellCurrentUser,
   ShellStats,
 } from './shell-types';
-import { useHomeChat, type ReplyTarget } from './use-home-chat';
+import { useHomeChat, type EditTarget, type ReplyTarget } from './use-home-chat';
 import { ComicAnswerCard, ComicPendingCard } from './comic-cards';
 import { AnnouncementCard } from './announcement-card';
 import { NotificationsPanel } from './notifications-panel';
@@ -328,67 +328,12 @@ function UsernameNudge({ ownHandle }: { ownHandle: string }) {
   );
 }
 
-function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
-  // A member who hasn't set a username posts under a stable per-user handle
-  // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
-  // and accountable across posts instead of blending into a shared label. We nudge
-  // them to set a real username below.
-  const ownHandle = feedAuthorHandle(currentUser.username, currentUser.userId);
-  const needsUsername = !currentUser.username;
-  const maxLength = maxPostLength(isAdmin);
-  const {
-    messages,
-    comicItems,
-    input,
-    setInput,
-    notifyTyping,
-    typingUsers,
-    sendMessage,
-    addSavedMessage,
-    askComic,
-    answerChip,
-    suggestionChips,
-    rateComicAnswer,
-    composerMentionsComic,
-    consentModalOpen,
-    confirmConsent,
-    dismissConsent,
-    replyTarget,
-    beginReply,
-    cancelReply,
-    toggleReaction,
-    toggleAnnouncementReaction,
-    deleteMessage,
-    editMessage,
-    mentionsOnly,
-    toggleMentionsOnly,
-    announcementsOnly,
-    toggleAnnouncementsOnly,
-    loadAround,
-    showAllStream,
-    isFilterRefreshing,
-    lastSeenAtIso,
-    markSeen,
-    isSending,
-    isLoading,
-    isLive,
-    error,
-  } = useHomeChat(currentUser);
-  // Live length of what is in the composer, measured exactly the way the server measures it: on the
-  // whitespace-normalized text, not the raw characters (see lib/feed/normalize.ts). Counting raw
-  // characters would tell a member who indents or double-spaces that they are over when they are not.
-  const composerLength = useMemo(() => feedPostLength(input), [input]);
-  const composerOverBy = computeComposerOverBy(composerMentionsComic, composerLength, maxLength);
-  const showComposerCount = computeShowComposerCount(composerMentionsComic, composerLength, maxLength);
-  const ownMentionLabel = mentionLabel(ownHandle);
-  const typingLabel = useMemo<string | null>(() => computeTypingLabel(typingUsers), [typingUsers]);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
-  // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-
+// Deep-link scroll targeting, factored out of AuthenticatedChatPanel to keep that function under the
+// modularity line limit (rule 116). Takes the message list's scroll container and returns the two
+// "find and flash a bubble" callbacks the panel needs: one for a quoted-reply tap (instant, the target
+// is already on screen), one for a cold entry / notification "Open" (the target may still be streaming
+// in, so it retries for a while before giving up quietly).
+function useDeepLinkNavigation(messagesContainerRef: RefObject<HTMLDivElement | null>) {
   // Tapping a quoted-reply block jumps to the original message (a common chat behavior): find the
   // rendered bubble with that community post id, scroll it into view, and flash a highlight. No-op
   // when the quoted post is not in the loaded window (older than the recent page) — the snippet in
@@ -425,6 +370,73 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
       if (timer) window.clearTimeout(timer);
     };
   }, []);
+
+  return { jumpToQuotedPost, flashTarget };
+}
+
+function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
+  // A member who hasn't set a username posts under a stable per-user handle
+  // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
+  // and accountable across posts instead of blending into a shared label. We nudge
+  // them to set a real username below.
+  const ownHandle = feedAuthorHandle(currentUser.username, currentUser.userId);
+  const needsUsername = !currentUser.username;
+  const maxLength = maxPostLength(isAdmin);
+  const {
+    messages,
+    comicItems,
+    input,
+    setInput,
+    notifyTyping,
+    typingUsers,
+    sendMessage,
+    addSavedMessage,
+    askComic,
+    answerChip,
+    suggestionChips,
+    rateComicAnswer,
+    composerMentionsComic,
+    consentModalOpen,
+    confirmConsent,
+    dismissConsent,
+    replyTarget,
+    beginReply,
+    cancelReply,
+    editingPost,
+    cancelEditPost,
+    toggleReaction,
+    toggleAnnouncementReaction,
+    deleteMessage,
+    editMessage,
+    mentionsOnly,
+    toggleMentionsOnly,
+    announcementsOnly,
+    toggleAnnouncementsOnly,
+    loadAround,
+    showAllStream,
+    isFilterRefreshing,
+    lastSeenAtIso,
+    markSeen,
+    isSending,
+    isLoading,
+    isLive,
+    error,
+  } = useHomeChat(currentUser);
+  // Live length of what is in the composer, measured exactly the way the server measures it: on the
+  // whitespace-normalized text, not the raw characters (see lib/feed/normalize.ts). Counting raw
+  // characters would tell a member who indents or double-spaces that they are over when they are not.
+  const composerLength = useMemo(() => feedPostLength(input), [input]);
+  const composerOverBy = computeComposerOverBy(composerMentionsComic, composerLength, maxLength);
+  const showComposerCount = computeShowComposerCount(composerMentionsComic, composerLength, maxLength);
+  const ownMentionLabel = mentionLabel(ownHandle);
+  const typingLabel = useMemo<string | null>(() => computeTypingLabel(typingUsers), [typingUsers]);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
+  // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { jumpToQuotedPost, flashTarget } = useDeepLinkNavigation(messagesContainerRef);
 
   // Cold entry via URL (a fresh page load / device-push tap opening /?post=<id> or /?announcement=<id>):
   // show the stream and jump to the target. The chat hook has already pulled the target's window on
@@ -570,6 +582,8 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
           inputRef={inputRef}
           replyTarget={replyTarget}
           onCancelReply={cancelReply}
+          editingPost={editingPost}
+          onCancelEdit={cancelEditPost}
           typingLabel={typingLabel}
           composerMentionsComic={composerMentionsComic}
           composerOverBy={composerOverBy}
@@ -884,11 +898,11 @@ function MessageMetaRow({
 }) {
   // A peer post (it carries a community post id) can be replied to Signal-style.
   const canReply = Boolean(msg.communityPostId);
-  // The member can delete their own peer post (there is no edit — delete and repost instead).
+  // The member can delete their own peer post. A text-only post has no in-place edit — delete and
+  // repost instead; a picture post is rewritten in place so the picture survives (see
+  // editCommunityPost / use-home-chat.ts's editMessage).
   const canDelete = msg.from === 'user' && Boolean(msg.communityPostId);
-  // Edit is delete and repost of the text alone, so on a post with a picture it would lose the
-  // picture. Those can only be deleted and shared again.
-  const canEdit = canDelete && !msg.image;
+  const canEdit = canDelete;
   return (
     <div className={msg.from === 'user' ? `${styles.chatMetaRow} ${styles.chatMetaRowUser}` : styles.chatMetaRow}>
       <span className={msg.from === 'user' ? `${styles.chatTime} ${styles.chatTimeUser}` : styles.chatTime}>
@@ -909,8 +923,10 @@ function MessageMetaRow({
           type="button"
           className={styles.chatEditBtn}
           onClick={() => {
-            // Editing is delete + repost: pull the text back into the composer, delete the original,
-            // and focus the box so the member fixes it and sends a fresh post.
+            // Pull the text back into the composer and focus it. A text-only post is then deleted
+            // (repost the fix as a fresh message); a picture post stays put and is rewritten in place
+            // on send — onEdit (editMessage in use-home-chat.ts) decides which, from whether this
+            // message carries a picture.
             onEdit(msg.communityPostId as string, msg.text);
             inputRef.current?.focus();
           }}
@@ -1071,6 +1087,8 @@ type ChatComposerProps = {
   inputRef: RefObject<HTMLTextAreaElement | null>;
   replyTarget: ReplyTarget | null;
   onCancelReply: () => void;
+  editingPost: EditTarget | null;
+  onCancelEdit: () => void;
   typingLabel: string | null;
   composerMentionsComic: boolean;
   composerOverBy: number;
@@ -1089,6 +1107,8 @@ function ChatComposer({
   inputRef,
   replyTarget,
   onCancelReply,
+  editingPost,
+  onCancelEdit,
   typingLabel,
   composerMentionsComic,
   composerOverBy,
@@ -1111,8 +1131,13 @@ function ChatComposer({
       </div>
 
       {/* "Replying to …" banner: shows a one-line quote preview and a cancel (X). Sending while this
-          is set posts the message as a Signal-style reply to that peer post. */}
+          is set posts the message as a Signal-style reply to that peer post. Mutually exclusive with
+          the edit banner below — starting one clears the other (use-home-chat.ts). */}
       {replyTarget ? <ReplyBanner replyTarget={replyTarget} onCancel={onCancelReply} /> : null}
+
+      {/* "Editing your post" banner: sending while this is set rewrites that picture post's text in
+          place (its picture, reactions, and replies stay) instead of posting a new message. */}
+      {editingPost ? <EditBanner onCancel={onCancelEdit} /> : null}
 
       {/* Subtle "X is typing…" line, only when the live connection surfaces someone typing. Kept on
           one quiet line above the composer so it sits with the existing dark design. */}
@@ -1163,6 +1188,25 @@ function ChatComposer({
         <a href="/guidelines" style={{ color: 'inherit', textDecoration: 'underline' }}>Community guidelines</a>
       </p>
     </>
+  );
+}
+
+function EditBanner({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className={styles.composerReplyBanner}>
+      <div className={styles.composerReplyPreview}>
+        <span className={styles.composerReplyLabel}>Editing your post</span>
+        <span className={styles.composerReplySnippet}>Fix the text, then send to save it — the picture stays.</span>
+      </div>
+      <button
+        type="button"
+        className={styles.composerReplyCancel}
+        onClick={onCancel}
+        aria-label="Cancel edit"
+      >
+        <X size={14} />
+      </button>
+    </div>
   );
 }
 

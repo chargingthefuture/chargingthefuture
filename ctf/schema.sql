@@ -1368,6 +1368,7 @@ CREATE TABLE IF NOT EXISTS feed_community_posts (
   moderation_status TEXT NOT NULL DEFAULT 'accepted',
   reply_count INTEGER NOT NULL DEFAULT 0,
   reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL,
+  edited_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1387,6 +1388,9 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_by
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS reply_to_post_id UUID REFERENCES feed_community_posts(id) ON DELETE SET NULL;
+-- When a picture post's caption was last rewritten in place (see editCommunityPost). Null until an
+-- edit happens; a text-only post is never edited in place (delete + repost instead) so stays null.
+ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
