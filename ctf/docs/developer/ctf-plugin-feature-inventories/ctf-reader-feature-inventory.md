@@ -8,7 +8,8 @@ The reader itself is a separate service — FreshRSS, on its own address at
 rss.chargingthefuture.com, on a server this project pays for. It has its own database, its own
 accounts and its own admin screens, and this repository holds none of them. Signing in there goes
 through the same auth provider this app uses, so a member needs no second password and a ban at the
-provider closes both at once.
+provider closes the reader too, within the reader's sign-in length (seven days; see
+`ctf/docs/developer/FRESHRSS.md`).
 
 What lives here is the page a member reaches from the apps list: what the reader is, what it cannot
 do, what a place on it costs, and a link to it. Nothing about their reading — what they subscribe
@@ -61,7 +62,8 @@ list. No tables of its own, no columns added to anything, and nothing written at
   stored here. An account on the reader is separate and is closed on the reader.
 - The link carries `rel="noopener noreferrer"`, so the opened page gets no handle on this one.
 - A ban at the auth provider (see the Unlock inventory) closes the reader too, because the reader
-  asks the same provider.
+  asks the same provider. It reaches somebody already signed in to the reader when their sign-in
+  there ends, at most seven days later; the settings are in `ctf/ops/freshrss/sign-in.env`.
 
 ## Web and Android Delivery Status
 
@@ -105,3 +107,9 @@ somebody reads is not evidence anybody should be publishing.
   hold an external address — every tile links to `/apps/<slug>` — and because a tile that dropped
   somebody onto another domain and a sign-in prompt would tell them nothing about what it is or
   what a place on it costs.
+- 2026-09-26 — The reader asked for a sign-in on nearly every reload (owner report). Its sign-in ran
+  on the image's defaults: forgotten after 5 minutes idle, dropped when the phone closed the
+  browser, and wiped by every restart. The reader now keeps a sign-in for seven days in an
+  encrypted cookie on the device, and the provider's consent screen for the reader is turned off.
+  Applied by the workflow `FreshRSS — Set how long a reader sign-in lasts` from
+  `ctf/ops/freshrss/sign-in.env`. Nothing in this app's tile or page changed.
