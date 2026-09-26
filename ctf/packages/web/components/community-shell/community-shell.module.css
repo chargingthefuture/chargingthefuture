@@ -536,11 +536,16 @@
 }
 
 /* A picture an admin attached to a Commons post. Full width of the bubble column, never taller than
-   most of a phone screen; the width/height attributes on the img hold its space while it loads. */
+   most of a phone screen; the width/height attributes on the img hold its space while it loads.
+   A <button>, not a link: tapping it opens the in-app lightbox rather than navigating away. */
 .chatImageLink {
   display: block;
   align-self: flex-start;
   max-width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
 }
 
 .chatImage {
@@ -551,6 +556,51 @@
   height: auto;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Commons image lightbox (in-app, replaces the old target="_blank" new-tab link) ────────── */
+.chatImageLightboxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 9, 13, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.chatImageLightboxModal {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+}
+
+.chatImageLightboxClose {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ctf-panel);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ctf-text-shell);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.chatImageLightboxImage {
+  display: block;
+  max-width: 100%;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
 }
 
 /* The admin-only "Share a picture" control above the composer, and the panel it opens. */
