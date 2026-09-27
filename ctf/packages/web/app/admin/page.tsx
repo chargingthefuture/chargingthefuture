@@ -45,6 +45,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // control to drop the chip. A non-promotion used to leave the chip on the profile for good, with
   // no way to clear it short of a statement against the database.
   { href: '/admin/directory/pending-skill-proposals', name: 'Directory: Pending Skill Proposals' },
+  // What Skills Economy costs to run each month: every provider, the monthly total, each line's
+  // share of it, and the cost per approved member. Entered by hand, since most providers do not
+  // report billing through an API.
+  { href: '/admin/expenses', name: 'Expenses' },
   // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
   // announcements area below, which is an authoring tool for the owner's own announcements — this
   // one carries a different power, over someone else's words.

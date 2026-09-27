@@ -553,6 +553,15 @@ async function fetchCycleProgress(cycleId: string | null): Promise<ProgressRow> 
   return result.rows[0] ?? EMPTY_PROGRESS;
 }
 
+// The open drive and the gift-card money confirmed in it, with nothing written. The admin Expenses
+// screen (/admin/expenses) reads this to suggest a money goal that covers the running costs;
+// getFundraiserSnapshot below also records a banner view, so it is not the one to call from there.
+export async function getCurrentCycleMoneyRaised(): Promise<{ cycle: ContributionsCycle | null; fiatConfirmedUsd: number }> {
+  const cycle = await getCurrentCycle();
+  const progress = await fetchCycleProgress(cycle ? cycle.id : null);
+  return { cycle, fiatConfirmedUsd: Number(progress.fiat_confirmed_usd) };
+}
+
 export async function getFundraiserSnapshot(userId: string): Promise<FundraiserSnapshot> {
   const config = await getContributionsConfig();
   const cycle = await getCurrentCycle();
