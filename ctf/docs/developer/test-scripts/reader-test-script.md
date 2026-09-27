@@ -95,3 +95,21 @@ unchanged.
 
 **Expect:** The Unlock nudge, not the page. Reader is not on the exception list and must not read as
 though it were.
+
+---
+
+### RD-5 — The reader keeps its sign-in
+
+**Role:** approved member · **Surfaces:** the reader at rss.chargingthefuture.com, on a phone
+**Precondition:** The workflow `FreshRSS — Set how long a reader sign-in lasts` has run since the
+last change to `ctf/ops/freshrss/sign-in.env`.
+
+**Steps:**
+
+1. Open the reader and sign in.
+2. Reload the page. Wait ten minutes and reload again.
+3. Close the browser (or the home-screen app) and open the reader again.
+
+**Expect:** One sign-in at step 1 and none after it. No screen from the auth provider asking to
+allow "FreshRSS reader" appears at any step. If either shows up again, the service is back on the
+image's default sign-in settings; see `ctf/docs/developer/FRESHRSS.md`.

@@ -1,0 +1,43 @@
+name: FreshRSS — Set how long a reader sign-in lasts
+
+# Applies ctf/ops/freshrss/sign-in.env to the reader's Render service and turns
+# off the auth provider's consent screen for the reader.
+#
+# On the image's defaults a sign-in lasted 5 minutes idle, died when the phone
+# closed the browser, and was wiped by every restart — so the reader asked for
+# a sign-in on nearly every reload.
+#
+# Changing the numbers is a pull request that edits that file, then a run of
+# this. Not a one-shot: it is the control for every later change, so it stays.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type apply to confirm. The reader restarts once and everybody signs in once more.'
+        required: true
+        type: string
+
+jobs:
+  apply:
+    name: Set the sign-in length
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          typed=$(printf '%s' "$CONFIRM" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+          if [ "$typed" != "apply" ]; then
+            echo "::error title=Not confirmed::Type apply in the confirmation box to run this."
+            exit 1
+          fi
+
+      - name: Apply the settings
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          SERVICE_NAME: ctf-freshrss
+        run: bash .github/scripts/freshrss-sign-in-length.sh
