@@ -65,8 +65,24 @@ const COMMONS_SUGGESTION_CHIPS: readonly CommonsSuggestionChip[] = [
   // owner-provided description.
 ];
 
+// For a member not yet approved through Unlock: the profile-link question, sent to @comic, which
+// answers it from the scripted path in lib/comic/unlock-help-script.ts (sent without review while the
+// switch in lib/comic/runtime-config.ts is on). The Unlock help box above the chat names this chip by its label, so the two must match.
+const QUORA_URL_CHIP: CommonsSuggestionChip = {
+  id: 'quora-url',
+  label: 'I can’t find my Quora profile URL',
+  kind: 'ask',
+  question: "I can't find my Quora profile URL. Where is it?",
+};
+
 // The chips shown under the Commons composer, in order. Kept as a function (not a bare export) to
-// match the sibling `conciergeStarterPrompts` shape and leave room for future per-viewer filtering.
-export function commonsSuggestionChips(): CommonsSuggestionChip[] {
+// match the sibling `conciergeStarterPrompts` shape and to filter per viewer.
+//
+// A member not yet approved gets only the two chips that help them finish Unlock. The others open or
+// ask about plugins that are closed to them until they are approved (owner decision, 2026-09-26).
+export function commonsSuggestionChips(options: { unlockFocus?: boolean } = {}): CommonsSuggestionChip[] {
+  if (options.unlockFocus) {
+    return [QUORA_URL_CHIP, ...COMMONS_SUGGESTION_CHIPS.filter((chip) => chip.id === 'new-here')];
+  }
   return [...COMMONS_SUGGESTION_CHIPS];
 }

@@ -26,6 +26,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "comic.review.regenerate": "Regenerated a draft answer",
   "comic.review.resolve": "Resolved a review turn",
   "comic.admin.knowledge.set-active": "Switched a knowledge entry on or off",
+  "comic.admin.unlock-help.set-review": "Switched sending Unlock answers without review",
 };
 
 // The reason codes carried on a denied or failed action, said plainly. These are the lines that

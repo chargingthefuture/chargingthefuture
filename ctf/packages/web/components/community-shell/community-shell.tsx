@@ -20,6 +20,7 @@ import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
 import { ContributionsBanner } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
+import { CommonsUnlockFocusContext } from './commons-unlock-focus';
 import { HelpControl } from '../bug-reports/help-control';
 import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
@@ -114,6 +115,18 @@ function normalizeShellProps(props: CommunityShellProps): NormalizedShellFlags {
   };
 }
 
+// A signed-in member who is not yet approved sees the Commons stripped back to the verification banner
+// and the chat (owner decision, 2026-09-26 — see commons-unlock-focus.ts). `verification` is non-null
+// exactly for that member; an admin is never stripped back.
+function resolveUnlockFocus(props: CommunityShellProps): boolean {
+  return Boolean(props.isAuthenticated && !props.isAdmin && props.verification);
+}
+
+// The Apps section is not reachable while unlockFocus holds, whatever section was last selected.
+function visibleSection(section: ShellSection, unlockFocus: boolean): ShellSection {
+  return unlockFocus ? 'chat' : section;
+}
+
 function sectionTabClass(isActive: boolean): string {
   return isActive ? `${styles.mobileBarSectionBtn} ${styles.mobileBarSectionBtnActive}` : styles.mobileBarSectionBtn;
 }
@@ -169,9 +182,12 @@ type MobileTopBarProps = {
   isAuthenticated: boolean;
   isAdmin: boolean;
   signInUrl: string;
+  // False while the Commons is stripped back for a member not yet approved: with Apps out of reach
+  // there is nothing to switch between.
+  showSections: boolean;
 };
 
-function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, signInUrl }: MobileTopBarProps) {
+function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, signInUrl, showSections }: MobileTopBarProps) {
   return (
     <header className={styles.mobileBar}>
       {/* Brand mark on the phone bar: it is the first product identity a member sees on a phone.
@@ -206,30 +222,32 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
           in the bar is the same square. The words are not lost: the icon carries an aria-label and
           a tooltip, and each destination names itself on arrival — the Apps page heads "All Apps",
           and the Commons page now leads its channel row with a "Commons" label. */}
-      <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === 'chat'}
-          aria-label="Commons"
-          title="Commons — the community channels"
-          className={sectionTabClass(section === 'chat')}
-          onClick={() => onSectionChange('chat')}
-        >
-          <MessagesSquare size={18} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === 'apps'}
-          aria-label="Apps"
-          title="Apps — every app on the platform"
-          className={sectionTabClass(section === 'apps')}
-          onClick={() => onSectionChange('apps')}
-        >
-          <LayoutGrid size={18} aria-hidden="true" />
-        </button>
-      </div>
+      {showSections ? (
+        <div className={styles.mobileBarSections} role="tablist" aria-label="Sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'chat'}
+            aria-label="Commons"
+            title="Commons — the community channels"
+            className={sectionTabClass(section === 'chat')}
+            onClick={() => onSectionChange('chat')}
+          >
+            <MessagesSquare size={18} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={section === 'apps'}
+            aria-label="Apps"
+            title="Apps — every app on the platform"
+            className={sectionTabClass(section === 'apps')}
+            onClick={() => onSectionChange('apps')}
+          >
+            <LayoutGrid size={18} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {/* Admins reach /admin straight from the top bar on phones — the left rail
           (which used to carry this link) is hidden on phones, so this replaces the
           extra tap through the drawer. Admins only; hidden for everyone else. */}
@@ -275,6 +293,8 @@ type ChannelSwitchRowProps = {
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
   onLockedChannelClick: () => void;
+  // False for a member not yet approved: the locked chip explains a channel they cannot reach yet.
+  showLockedChannel: boolean;
 };
 
 // Channel switch pills — phone widths only (the desktop channel rail is hidden there).
@@ -283,7 +303,7 @@ type ChannelSwitchRowProps = {
 // channel list); everyone else gets a locked chip that opens the same "Weavers of the
 // Commons" explainer the Directory braided badge shows — so the space is visible and
 // its bar is public, never a hidden back-room.
-function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedChannelClick }: ChannelSwitchRowProps) {
+function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedChannelClick, showLockedChannel }: ChannelSwitchRowProps) {
   const fallbackSlug = activeChannel ?? channels[0]?.slug;
   const hasGatedChannel = channels.some((ch) => ch.slug === GATED_CHANNEL_SLUG);
 
@@ -307,7 +327,7 @@ function ChannelSwitchRow({ channels, activeChannel, onChannelSelect, onLockedCh
             #{ch.slug}
           </button>
         ))}
-        {!hasGatedChannel ? (
+        {showLockedChannel && !hasGatedChannel ? (
           <button
             type="button"
             className={`${styles.channelSwitchBtn} ${styles.channelSwitchBtnLocked}`}
@@ -345,6 +365,7 @@ type ShellMainContentProps = {
   isAuthenticated: boolean;
   isAdmin: boolean;
   verification: ShellVerification | null;
+  unlockFocus: boolean;
   loadError: string | null;
   channels: CommonsChannelInfo[];
   activeChannel: string | null;
@@ -367,6 +388,7 @@ function ShellMainContent({
   isAuthenticated,
   isAdmin,
   verification,
+  unlockFocus,
   loadError,
   channels,
   activeChannel,
@@ -402,6 +424,7 @@ function ShellMainContent({
           activeChannel={activeChannel}
           onChannelSelect={onChannelSelect}
           onLockedChannelClick={onLockedChannelClick}
+          showLockedChannel={!unlockFocus}
         />
       ) : null}
       {section === 'chat' ? (
@@ -501,7 +524,9 @@ function ContributorExplainerModal({ onClose }: { onClose: () => void }) {
 export function CommunityShell(props: CommunityShellProps) {
   const { initialPlugins, shellStats, currentUser, trust } = props;
   const { initialSection, isAuthenticated, isAdmin, signInUrl, verification } = normalizeShellProps(props);
-  const [section, setSection] = useState<ShellSection>(initialSection);
+  const unlockFocus = resolveUnlockFocus(props);
+  const [selectedSection, setSection] = useState<ShellSection>(initialSection);
+  const section = visibleSection(selectedSection, unlockFocus);
   const [query, setQuery] = useState('');
   const [plugins, setPlugins] = useState(initialPlugins);
   const [channels, setChannels] = useState<CommonsChannelInfo[]>([]);
@@ -659,57 +684,61 @@ export function CommunityShell(props: CommunityShellProps) {
 
 
   return (
-    <div className={`${styles.shell} ctf-self-responsive`}>
-      <MobileTopBar
-        section={section}
-        onSectionChange={setSection}
-        isAuthenticated={isAuthenticated}
-        isAdmin={isAdmin}
-        signInUrl={signInUrl}
-      />
-      <div className={styles.frame}>
-        <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
-        {/* Channel rail — desktop only. It is hidden on phones (single "general"
-            channel, no real navigation value yet), so there is no phone drawer to
-            slide it in; bring one back when there is more than one option to show. */}
-        <ShellSidebar
-          channels={channels}
-          activeChannel={activeChannel}
-          onChannelSelect={handleChannelSelect}
-          shellStats={shellStats}
-          isAdmin={isAdmin}
-        />
-        <ShellMainContent
+    <CommonsUnlockFocusContext.Provider value={unlockFocus}>
+      <div className={`${styles.shell} ctf-self-responsive`}>
+        <MobileTopBar
           section={section}
+          onSectionChange={setSection}
           isAuthenticated={isAuthenticated}
           isAdmin={isAdmin}
-          verification={verification}
-          loadError={loadError}
-          channels={channels}
-          activeChannel={activeChannel}
-          onChannelSelect={handleChannelSelect}
-          onLockedChannelClick={() => setContributorExplainerOpen(true)}
-          shellStats={shellStats}
-          filteredPlugins={filteredPlugins}
-          currentUser={currentUser}
-          activeApp={activeApp}
-          onAppSelect={handleAppSelect}
-          onAppOpen={handleAppOpen}
-          sortMode={sortMode}
-          onSortModeChange={handleSortModeChange}
-          query={query}
-          onQueryChange={setQuery}
-        />
-        <ShellRightRail
-          currentUser={currentUser}
-          trust={trust}
-          isAuthenticated={isAuthenticated}
           signInUrl={signInUrl}
+          showSections={!unlockFocus}
         />
+        <div className={styles.frame}>
+          <ShellIconRail section={section} onSectionChange={setSection} initial={currentUser.initial} isAuthenticated={isAuthenticated} isAdmin={isAdmin} showApps={!unlockFocus} />
+          {/* Channel rail — desktop only. It is hidden on phones (single "general"
+              channel, no real navigation value yet), so there is no phone drawer to
+              slide it in; bring one back when there is more than one option to show. */}
+          <ShellSidebar
+            channels={channels}
+            activeChannel={activeChannel}
+            onChannelSelect={handleChannelSelect}
+            shellStats={shellStats}
+            isAdmin={isAdmin}
+          />
+          <ShellMainContent
+            section={section}
+            isAuthenticated={isAuthenticated}
+            isAdmin={isAdmin}
+            verification={verification}
+            unlockFocus={unlockFocus}
+            loadError={loadError}
+            channels={channels}
+            activeChannel={activeChannel}
+            onChannelSelect={handleChannelSelect}
+            onLockedChannelClick={() => setContributorExplainerOpen(true)}
+            shellStats={shellStats}
+            filteredPlugins={filteredPlugins}
+            currentUser={currentUser}
+            activeApp={activeApp}
+            onAppSelect={handleAppSelect}
+            onAppOpen={handleAppOpen}
+            sortMode={sortMode}
+            onSortModeChange={handleSortModeChange}
+            query={query}
+            onQueryChange={setQuery}
+          />
+          <ShellRightRail
+            currentUser={currentUser}
+            trust={trust}
+            isAuthenticated={isAuthenticated}
+            signInUrl={signInUrl}
+          />
+        </div>
+        {contributorExplainerOpen ? (
+          <ContributorExplainerModal onClose={() => setContributorExplainerOpen(false)} />
+        ) : null}
       </div>
-      {contributorExplainerOpen ? (
-        <ContributorExplainerModal onClose={() => setContributorExplainerOpen(false)} />
-      ) : null}
-    </div>
+    </CommonsUnlockFocusContext.Provider>
   );
 }

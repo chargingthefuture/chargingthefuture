@@ -667,6 +667,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // words. The cascade is a foreign key rather than a step here so it cannot be forgotten.
       del('comic_contributions', 'user_id', 'Writing you contributed to the assistant.'),
       retain('comic_review_queue', 'Answer review queue; reviewer_user_id is the admin review audit.'),
+      retain('comic_runtime_config', 'Global settings and the admin audit of who changed them.'),
       // comic_turns / training_examples are shared/model data.
     ],
   },

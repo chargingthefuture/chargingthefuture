@@ -50,6 +50,17 @@ This plugin must:
    can look up and approve by hand. It is never a gate: the button works with the box empty. Before this the help pointed out to the
    network's Quora space — which asked a person who cannot find their way around Quora to go find their
    way around Quora, and sent them off the app with no way back.
+5. **One help box, on the Unlock screen and above the Commons chat (2026-09-26).** The "Can’t find
+   your Quora profile URL?" box is one component (`components/unlock/unlock-quora-help.tsx`) used in
+   both places; before this the Commons banner carried its own shorter note with no hint box. Both now
+   carry a **"Show me where to find it"** section: a picture of where the address is (in a browser,
+   and in the Quora app's ⋯ → Share → Copy link menu) and numbered steps for four cases — in a web
+   browser, in the Quora app, a link that was not accepted, and an account the member cannot get
+   into. The steps are the same text the scripted @comic answer is built from
+   (`lib/unlock/quora-url-help-steps.ts`). On the Unlock screen the button still records the request
+   and opens the Commons; in the Commons the button reads "Send this to the team", is enabled once
+   the hint box has text, and saves the hint without leaving the page. The Commons copy points at
+   @comic and at the "I can’t find my Quora profile URL" chip under the chat.
 
 ### 1.4 Commons Access Before Verifying
 
@@ -452,6 +463,8 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-09-26: **Help for members stuck on the Quora profile URL.** The Unlock screen's help box and the Commons banner's help note were two versions of the same ask; they are now one component with the hint box in both places, plus a picture (`public/help/quora-profile-url.svg`, an illustration rather than a capture of Quora) and steps for the four ways members get stuck. A member not yet approved who asks @comic about Unlock gets a scripted answer built from the same steps, sent without review (owner decision; switchable from the log page), and `/admin/comic/unlock-help` lists each such conversation against whether the member was approved afterward. No change to who is approved or how: the assistant has no way to approve anybody. See the comic and commons inventories for those halves.
 
 - 2026-09-24: **A database update removed one spam denylist entry and did not put it back.** `post/0028` (the Quora URL re-keying) deleted the denylist rows and re-inserted them from a TEMP table; on the 2026-09-24 "Neon — Update DB" run the connection pooler ran the re-insert on a different session, the TEMP table was not there, and the deleted row stayed deleted. `post/0028` now runs in one transaction, so a failure undoes the delete. `post/0040` rebuilds missing entries from submissions marked `spam`, except a URL an admin removed from the denylist after that decision. An entry whose submission was deleted with its account cannot be rebuilt from the database.
 

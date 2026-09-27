@@ -58,6 +58,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
+  // Read-only: each @comic question about Unlock from a member not yet approved, and whether that
+  // member was approved afterward. What tells a working help path from one to rewrite.
+  { href: '/admin/comic/unlock-help', name: 'Unlock Help Log' },
   // Moderating the conversation under the blog posts: the blog-export queue, every comment, the
   // conversations themselves, and the audit trail.
   { href: '/admin/fireside', name: 'Fireside' },

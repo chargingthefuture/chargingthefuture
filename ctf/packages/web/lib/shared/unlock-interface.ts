@@ -3,6 +3,13 @@
 // it, never lib/unlock directly. Keep it narrow — a new export needs a reason, and re-exporting
 // the entire repository is prohibited. Enforced by ctf/scripts/check-plugin-boundaries.mjs.
 export { isUserUnlocked } from 'lib/unlock/access';
+// The member's tier, for the AI Assistant's Unlock help path (2026-09-26): it answers Unlock questions
+// only for a member not yet approved, and `isUserUnlocked` does not tell those tiers apart from an
+// unreadable one. Read-only.
+export { getUnlockAccessTier } from 'lib/unlock/access';
+// The Quora profile URL steps, shared with the AI Assistant so its scripted answer and the Unlock
+// help box say the same thing (2026-09-26). Pure data.
+export { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/unlock/quora-url-help-steps';
 export { normalizeQuoraProfileUrl } from 'lib/unlock/quora-url';
 export {
   createOrUpdateUnlockSubmission,
