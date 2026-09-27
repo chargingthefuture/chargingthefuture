@@ -147,8 +147,9 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
       <div>
         <label htmlFor="sh-scout-bio" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
           Bio <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400 }}>(optional)</span>
+          <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400, marginLeft: 6 }}>who they are and what they do</span>
         </label>
-        <textarea id="sh-scout-bio" value={form.bio} onChange={(e) => form.onBio(e.target.value.slice(0, BIO_MAX))} rows={2} placeholder="e.g. Lives in Houston, works in construction, connected through mutual contact…"
+        <textarea id="sh-scout-bio" value={form.bio} onChange={(e) => form.onBio(e.target.value.slice(0, BIO_MAX))} rows={2} placeholder="e.g. Carpenter in Houston who builds and repairs homes."
           style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.bio), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
         <div style={{ fontSize: 11, color: form.bio.length > 240 ? "#F59E0B" : t.FAINT, textAlign: "right", marginTop: 3 }}>{form.bio.length}/{BIO_MAX}</div>
       </div>
