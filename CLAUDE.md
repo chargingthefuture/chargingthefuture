@@ -254,6 +254,27 @@ infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --e
 Infisical is the single source of truth for secrets; the bootstrap secrets above are all that is
 needed to authenticate `infisical run`.
 
+### The instance also hosts One Percent, in its own project
+
+One Percent is a separate product — the owner's own paid consultation work, not part of this
+project — and its settings live in a separate project inside this same Infisical instance. It was
+given a project rather than an instance of its own because a project is the access boundary:
+machine identities are scoped to one, so this project's credentials cannot read One Percent's
+secrets, and its credentials cannot read these.
+
+**Never read, write, or copy a value across that line.** An agent working in this repository has
+no reason to touch that project, and a value both products need is two secrets with two lifetimes,
+each rotated on its own. Copying one across makes a later change in one place silently wrong in the
+other.
+
+The instance is this project's infrastructure and its cost stays in this project's figures. One
+Percent counts its expenses separately and includes no share of it. Its own hosting bill is counted
+there the same way, so neither product's numbers carry the other's.
+
+If One Percent ever needs separate ownership, the instance is the thing that would be split and it
+gets its own then. Until that is a real question, a second instance is a second server, database
+and cache to patch, back up and keep online, for a boundary a project already draws.
+
 ## Key Rules (pointers to full detail)
 
 | Topic | Rule file |
