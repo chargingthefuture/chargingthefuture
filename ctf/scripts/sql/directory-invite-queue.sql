@@ -42,7 +42,8 @@ WITH already_written AS (
     'gn0b0dy-pneuma',   -- an-invitation-to-gn0b0dy-pneuma.md
     'tommy-gumbert',    -- an-invitation-to-tommy.md
     'alphelus-allen',   -- an-invitation-to-alphelus.md
-    'lorraine-valente'  -- an-invitation-to-lorraine.md
+    'lorraine-valente', -- an-invitation-to-lorraine.md
+    'krissyy-2'         -- an-invitation-to-krissyy.md
   ]) AS handle
 ),
 listed_skills AS (
