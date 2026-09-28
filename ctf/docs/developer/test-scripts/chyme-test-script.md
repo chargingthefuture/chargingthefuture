@@ -592,6 +592,29 @@ writes a row in `chyme_admin_audit_trail`.
 
 ---
 
+### CH-24 · Readings loop while nobody is live (web)
+**Role:** admin, then a signed-out visitor and a member · **Surfaces:** web
+**Precondition:** nobody in the main room; an https link to an MP3 of a blog reading.
+**Steps:**
+1. As the admin, open `/admin/chyme/readings`. Add a recording with a title, the audio link and the
+   post link. Then add one with a link that is not an audio file.
+2. Tap **Turn on**.
+3. Signed out, open `/apps/chyme`. Tap **Play readings**. In a second browser, do the same.
+4. As a member, open Chyme without joining a room.
+5. As another member, join the main room while the signed-out visitor is still listening. Wait a
+   minute.
+6. As the admin, tap **Turn off**, then reload `/apps/chyme` signed out.
+**Expected:** Step 1: the first recording is listed with its length read from the file; the second
+is refused with a line saying the file could not be loaded. Step 2: the switch reads **On**.
+Step 3: under "No public rooms right now" a "While the room is empty" card says the readings are a
+recording, not a live host; the reading plays with its title and a **Read the post** link; both
+browsers are at the same point in the reading. Step 4: the same card shows on the "Join a Room"
+screen. Step 5: within about a minute the recording stops and the page shows the live room. Step 6:
+the card is gone. Steps 1, 2 and 6 each write a row in `chyme_admin_audit_trail`.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
 ### Account deletion clears the back-channel call log
 
 **Expected:** Deleting the account removes every back-channel call row the member appeared on —

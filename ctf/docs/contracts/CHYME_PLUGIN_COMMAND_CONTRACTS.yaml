@@ -498,6 +498,111 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
+    command: chyme.readings.read
+    version: 1.0.0
+    description: Public, unauthenticated, read-only. Whether the readings loop (recorded readings of the Peace Battle 2 blog posts, a temporary module since 2026-09-28) is on, and its playlist when it is. Rate-limited like the other public Chyme reads.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      enabled:
+        type: boolean
+      tracks:
+        type: array
+    dataAccess:
+      - chyme_readings_config
+      - chyme_readings_tracks
+    purpose: public_listen_access
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.readings.read
+    version: 1.0.0
+    description: Admin-only, read-only. The readings loop switch and its playlist, for /admin/chyme/readings.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      setting:
+        type: object
+      tracks:
+        type: array
+    dataAccess:
+      - chyme_readings_config
+      - chyme_readings_tracks
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.readings.switch
+    version: 1.0.0
+    description: Admin-only. Turn the readings loop on or off.
+    inputSchema: 
+      enabled:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      setting:
+        type: object
+    dataAccess:
+      - chyme_readings_config
+      - chyme_admin_audit_trail
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.readings.track.add
+    version: 1.0.0
+    description: Admin-only. Add a recording to the end of the loop. The audio file is hosted elsewhere; only its https link, a title, an optional https link to the blog post, and its length in seconds (read by the admin's browser) are stored.
+    inputSchema: 
+      title:
+        type: string
+        required: true
+      audioUrl:
+        type: string
+        required: true
+      postUrl:
+        type: string
+        required: false
+      durationSeconds:
+        type: number
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      id:
+        type: string
+    dataAccess:
+      - chyme_readings_tracks
+      - chyme_admin_audit_trail
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: false
+
+  - pluginId: chyme
+    command: chyme.admin.readings.track.remove
+    version: 1.0.0
+    description: Admin-only. Take a recording out of the loop by id. The audio file itself is not touched.
+    inputSchema: 
+      id:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_readings_tracks
+      - chyme_admin_audit_trail
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
     command: chyme.admin.removals.read
     version: 1.0.0
     description: Admin-only, read-only. Every member currently removed from a Chyme room, newest first, for the Chyme admin screen.

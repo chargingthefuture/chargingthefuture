@@ -89,6 +89,19 @@ Lifecycle/governance references applied:
     You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
     Chyme admin screen.
+18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
+    on and no room is live, the Chyme page shows a "While the room is empty" card: recorded readings
+    of the Peace Battle 2 blog posts, on a loop, with a **Play readings** button, the title of the
+    reading playing and a **Read the post** link. It says plainly that it is a recording, not a live
+    host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
+    station. It stops by itself when someone goes live (checked every minute while it plays; the
+    signed-out page then shows the live room). Shown to signed-out visitors under "No public rooms
+    right now" and to members on the "Join a Room" screen. The sound plays in the visitor's own
+    browser from a file hosted elsewhere; nothing touches Stream, so it costs no Stream minutes.
+    Web only. This is a module meant to be deleted once the room has people in it: everything it
+    owns sits in `lib/chyme/readings`, `components/chyme/readings`, `app/api/chyme/readings`,
+    `app/admin/chyme/readings`, the two `chyme_readings_*` tables, and one mount line in each of
+    `chyme-public-shell.tsx` and `chyme-live-shell.tsx`.
 
 ## Admin Features
 
@@ -125,6 +138,13 @@ Lifecycle/governance references applied:
 4. **Removed members, on the Live Audio Usage screen (`/admin/chyme`).** Every live removal across
    both rooms, newest first, with the reason and one control, **Let back in**, which lifts the
    removal (the row stays as the record) and unblocks the member from the call.
+5. **Readings loop (`/admin/chyme/readings`, temporary, 2026-09-28).** Admin index entry "Chyme:
+   Readings Loop". An **On/Off** switch (off until first switched on), the list of recordings with
+   each one's length and a **Remove** control, and an **Add a recording** form: a title, an https
+   link to the audio file (MP3 or M4A, hosted elsewhere, for example on the blog's site), and an
+   optional https link to the blog post. The length is read from the file by the admin's browser, so
+   nobody types it; a link that does not load as audio is refused with the reason. Recordings play
+   in the order added. Every change writes a row in `chyme_admin_audit_trail`.
 
 ## API Surface and Route Map (Target)
 
@@ -164,6 +184,11 @@ side did not apply (the decision is recorded and enforced by this app either way
 - `POST /api/chyme/admin/lift-removal` ← `{ userId }` — let a removed member back in: the removal row is lifted (kept as the record) and the member unblocked from the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when there was no live removal. Audit `chyme.admin.lift-removal`.
 - `POST /api/chyme/admin/role` ← `{ userId, role: 'speaker' | 'listener' }` — hand-raise mode: let a present member speak, or move them back to listening (which also mutes them). Sets `chyme_room_members.role` and, when `CHYME_GUEST_STREAM_ROLE` is set, the member's role on the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when they are not present. Audit `chyme.admin.role`.
 - `POST /api/chyme/admin/speak-mode` ← `{ mode: 'open' | 'hand_raise' }` — switch the room's mode. Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call (`demoted` in the answer). Audit `chyme.admin.speak-mode`.
+- `GET /api/chyme/readings` — **public, unauthenticated, read-only** (command `chyme.readings.read`). Returns `enabled` and, only when on, `tracks` (`id`, `title`, `postUrl`, `audioUrl`, `durationSeconds`, in the order added). Per-IP public read rate limit. A failed read answers 503 with the reason; the player then shows nothing.
+- `GET /api/chyme/readings/admin` — **admin-only** (`requireChymeAdminAccess`), read-only. The switch (`setting`: `enabled`, `updatedBy`, `updatedAtIso`) and every track, for the readings loop admin screen.
+- `POST /api/chyme/readings/admin` ← `{ enabled: boolean }` — turn the readings loop on or off. CSRF-guarded. Audit `chyme.admin.readings.switch`.
+- `POST /api/chyme/readings/admin/tracks` ← `{ title, audioUrl, postUrl?, durationSeconds }` — add a recording to the end of the loop. Both links must be https; the title is at most 200 characters; `durationSeconds` must be positive. Answers 201 with the new `id`. CSRF-guarded. Audit `chyme.admin.readings.track.add`.
+- `DELETE /api/chyme/readings/admin/tracks?id=<uuid>` — take a recording out of the loop (404 when the id is not there). The audio file is not touched. CSRF-guarded. Audit `chyme.admin.readings.track.remove`.
 - `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
 - `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface rows, one row for every day the meter has ever recorded — zero-filled so there are no gaps — and `earliestDateIso`, the first of those days), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
 
@@ -245,6 +270,14 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
       `(created_at DESC, actor_id, command)`. Written by `recordChymeAdminAudit`
       (`lib/chyme/admin-audit.ts`), which never throws. Retained on account deletion (deletion
       registry), as every plugin's admin trail is. Same migration.
+13. `chyme_readings_config` and `chyme_readings_tracks` (2026-09-28, migration
+    `0042_chyme_readings.sql`) — the temporary readings loop. `chyme_readings_config` is one row
+    (`singleton_id` BOOLEAN primary key, CHECK true): `enabled` (default false; no row means off),
+    `updated_by`, `updated_at`. `chyme_readings_tracks`: `id` UUID, `title`, `post_url` (nullable),
+    `audio_url`, `duration_seconds` (CHECK > 0), `added_by`, `created_at`; indexed on
+    `(created_at, id)`, which is the play order. Admin-written reference data holding no member
+    data, so neither table is in the deletion registry. To retire the module, drop both tables in a
+    later migration.
 8. `chyme_back_channel_calls`
    - Back Channel 1:1 call lifecycle (spec #1746). One row per call, keyed by `id`, referencing `chyme_rooms(id)` (`ON DELETE CASCADE`). Columns: `initiator_user_id`, `recipient_user_id`, `initiator_username`, `recipient_username`, `status` (`inviting|active|declined|ended|lapsed`), `stream_call_id`, `created_at`, `answered_at`, `ended_at`, `ended_by_user_id`, `last_heartbeat_at`. A CHECK forbids self-calls; a partial unique index (`status IN ('inviting','active')`) allows only one live call per initiator→recipient direction. Indexed by recipient+status, initiator+status, and room. Holds no chat/history — a row exists only to run one call and is removed on the member's Chyme service deletion (and account deletion). Never surfaced as Trust evidence or in any public feed (rule 132).
 
@@ -380,6 +413,17 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-28: **Readings loop while nobody is live (owner decision).** The owner cannot host the
+  room around the clock until people are there, so while nobody is live the Chyme page now offers
+  recorded readings of the Peace Battle 2 blog posts, played on a loop and switched on and off from
+  `/admin/chyme/readings`. The blog posts were chosen over the Quora message-of-the-day text because
+  they are copy-edited and approved before publishing. It plays in the visitor's browser rather
+  than inside the Stream room: a recording published into the room would need a server-side
+  participant in the call around the clock, which bills Stream minutes every hour of the day and
+  would keep the room "live" so the empty-room state never showed. Built as a separate module
+  (User Features 18, Admin Features 5, the five routes, the two tables) so it can be switched off
+  and then deleted in one piece. Web only; Android is out of scope per rule 105 (the Chyme screen
+  on Android does not carry it).
 - 2026-09-20: **The main room is named for the room, not for one topic.** It shipped as "Chyme
   Main Room: Exit the Gauntlet", a name from before the TI Radio guide existed, when one standing
   subject was the only way to say what the room was for. Hosts now book their own slots and name

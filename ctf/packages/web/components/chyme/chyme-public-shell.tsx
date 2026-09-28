@@ -9,6 +9,7 @@ import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
 import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
+import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
@@ -104,6 +105,8 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }
       <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
         <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide below says when the next one is.</div>
+        {/* The readings loop, only while it is switched on (temporary module, 2026-09-28). */}
+        <ChymeReadingsPlayer onRoomLive={onRoomGone} />
       </div>
     );
   }

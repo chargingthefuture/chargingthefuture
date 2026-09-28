@@ -458,6 +458,84 @@ policies:
       - cross_workspace_access
 
   - pluginId: chyme
+    command: chyme.readings.read
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      tenancy: public
+      approvalGate: none_public_read
+      rateLimit: public_read
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - rate_limited
+
+  - pluginId: chyme
+    command: chyme.admin.readings.read
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: false
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+
+  - pluginId: chyme
+    command: chyme.admin.readings.switch
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+
+  - pluginId: chyme
+    command: chyme.admin.readings.track.add
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+
+  - pluginId: chyme
+    command: chyme.admin.readings.track.remove
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      approvalGate: admin_only
+      csrfSameOriginRequired: true
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin
+
+  - pluginId: chyme
     command: chyme.admin.removals.read
     version: 1.0.0
     requiredRoles:
