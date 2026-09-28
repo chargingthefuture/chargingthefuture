@@ -461,6 +461,8 @@ FD-12b), with at least one reaction on it.
 
 **Expected:**
 - A single "New messages" divider appears before the first post newer than the last-seen marker.
+- The chat opens already scrolled to that divider (or to the latest message when there is nothing new), with no scrolling animation.
+- With the device's reduce-motion setting on, no scroll in the chat animates.
 - After viewing, the divider does not reappear on the next open (the marker has advanced).
 - If the divider fails to render, the chat still loads and functions normally (best-effort).
 
