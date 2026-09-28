@@ -275,6 +275,51 @@ If One Percent ever needs separate ownership, the instance is the thing that wou
 gets its own then. Until that is a real question, a second instance is a second server, database
 and cache to patch, back up and keep online, for a boundary a project already draws.
 
+## One Percent reads the skills taxonomy, and nothing else (owner decision, 2026-09-27)
+
+One Percent — the owner's separate paid consultation work — gets read access to the Skills
+Taxonomy over an authenticated route, so its peer graph can speak the same vocabulary this app
+does: the same sectors, the same job titles, the same skill names.
+
+**What crosses is the taxonomy and only the taxonomy.** The `skills_taxonomy_*` tables are
+reference data: sectors, job titles, skills, aliases, display order, the active flag. The join
+between a person and a skill does not live there — `directory_profile_skills` and
+`directory_profiles.job_title_id` are Directory's tables — so a route reading this plugin alone
+touches nothing about a member. That is the boundary, and it is a property of which tables are
+read rather than a promise about how they are used. Any future route that would join across it
+is not covered by this and needs its own decision.
+
+**It is exclusive, and nobody else may request it.** The reason belongs next to the rule, or it
+gets argued every time somebody asks. Both products are run and paid for by one person, so this
+is an integration between two things under one operator rather than a service offered to
+anybody. Opening it would mean maintaining a public interface, versioning it, and answering for
+it when it changes, and this app is not funded to do any of that.
+
+**It is not a privilege over members.** Every approved member already has this data through the
+app, free, at `/apps/skills-taxonomy`. The route is a machine-readable way to the same thing.
+Nobody is denied anything and no member loses access to anything, and that sentence stays in
+whatever is written about this — "exclusive access" read on its own says something false about a
+free community product.
+
+**The credential is this app's to issue and to revoke.** It is scoped to taxonomy reads and is
+stored in One Percent's own Infisical project, never copied from this project's values, per the
+rule above. If it ever becomes a general-purpose key, the integration has become a hole in the
+boundary rather than a door through it.
+
+**One Percent holds a copy rather than reading live.** Row ids are stable across renames — a
+rename keeps the id and moves the old label into `aliases` — and changes arrive in a few batches
+a month, so a cached copy is correct rather than a compromise. It also keeps the free product
+from becoming a runtime dependency of the paid one: an outage here must not stop paid work
+there.
+
+**No cost is apportioned.** Keeping the taxonomy current is this product's own work and its cost
+stays here. What One Percent counts is what appears on a bill because One Percent exists, and
+this integration adds nothing to one.
+
+The access policy contract already names a `service` role on
+`skills-taxonomy.hierarchy.get` and `.flattened.get` with no code path behind it. Building that
+path is what implements this, not a new design.
+
 ## Key Rules (pointers to full detail)
 
 | Topic | Rule file |
