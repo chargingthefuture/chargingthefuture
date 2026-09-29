@@ -597,14 +597,17 @@ writes a row in `chyme_admin_audit_trail`.
 **Precondition:** nobody in the main room; at least one post in the blog with a recording in
 `content/audio` (so `https://chargingthefuture.github.io/chargingthefuture/readings.json` lists it).
 **Steps:**
-1. As the admin, open `/admin/chyme/readings`.
+1. As the admin, open Chyme and tap **Admin** in the top bar; on the usage screen tap **Readings
+   loop**, and check each admin screen's **Member view** returns to Chyme. Stay on
+   `/admin/chyme/readings`.
 2. Tap **Turn on**.
 3. Signed out, open `/apps/chyme`. Tap **Play readings**. In a second browser, do the same.
 4. As a member, open Chyme and do not press Join Room. Then press Join Room.
 5. As another member, join the main room while the signed-out visitor is still listening. Wait a
    minute.
 6. As the admin, tap **Turn off**, then reload `/apps/chyme` signed out.
-**Expected:** Step 1: the screen lists the blog's recorded posts by title, each linking to its post,
+**Expected:** Step 1: **Admin** shows for the admin only (a member without the admin role does
+not see it), each link lands where it says, and the readings screen lists the blog's recorded posts by title, each linking to its post,
 with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
 switch reads **On**. Step 3: under "No public rooms right now" a "While the room is empty" card
 says the readings are computer-voice readings and a recording, not a live host; the reading plays
