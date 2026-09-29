@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loopPositionAt, type ReadingsTrack } from './schedule';
-
-function track(id: string, durationSeconds: number): ReadingsTrack {
-  return { id, title: id, postUrl: null, audioUrl: `https://example.org/${id}.mp3`, durationSeconds };
-}
+import { loopPositionAt, parseBlogReadings } from './schedule';
 
 describe('loopPositionAt', () => {
   it('returns null when there is nothing to play', () => {
@@ -11,13 +7,30 @@ describe('loopPositionAt', () => {
   });
 
   it('places the clock inside the right track', () => {
-    const tracks = [track('a', 60), track('b', 30)];
-    expect(loopPositionAt(tracks, 10_000)).toEqual({ index: 0, offsetSeconds: 10 });
-    expect(loopPositionAt(tracks, 75_000)).toEqual({ index: 1, offsetSeconds: 15 });
+    expect(loopPositionAt([60, 30], 10_000)).toEqual({ index: 0, offsetSeconds: 10 });
+    expect(loopPositionAt([60, 30], 75_000)).toEqual({ index: 1, offsetSeconds: 15 });
   });
 
   it('wraps around at the end of the loop', () => {
-    const tracks = [track('a', 60), track('b', 30)];
-    expect(loopPositionAt(tracks, 95_000)).toEqual({ index: 0, offsetSeconds: 5 });
+    expect(loopPositionAt([60, 30], 95_000)).toEqual({ index: 0, offsetSeconds: 5 });
+  });
+});
+
+describe('parseBlogReadings', () => {
+  const good = {
+    slug: 'who-teaches-them',
+    title: 'Who teaches them',
+    postUrl: 'https://chargingthefuture.github.io/chargingthefuture/article/wiki-site/who-teaches-them',
+    audioUrl: 'https://chargingthefuture.github.io/chargingthefuture/audio/who-teaches-them.mp3',
+  };
+
+  it('keeps well-formed entries and drops the rest', () => {
+    const list = parseBlogReadings({ readings: [good, { ...good, audioUrl: 'http://example.org/a.mp3' }, null, { title: 'x' }] });
+    expect(list).toEqual([good]);
+  });
+
+  it('returns an empty list for anything that is not the blog list', () => {
+    expect(parseBlogReadings(null)).toEqual([]);
+    expect(parseBlogReadings({ readings: 'no' })).toEqual([]);
   });
 });

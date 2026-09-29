@@ -504,38 +504,6 @@ policies:
       - actor_not_admin
 
   - pluginId: chyme
-    command: chyme.admin.readings.track.add
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      tenancy: same_workspace
-      approvalGate: admin_only
-      csrfSameOriginRequired: true
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - actor_not_authenticated
-      - actor_not_admin
-
-  - pluginId: chyme
-    command: chyme.admin.readings.track.remove
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      tenancy: same_workspace
-      approvalGate: admin_only
-      csrfSameOriginRequired: true
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - actor_not_authenticated
-      - actor_not_admin
-
-  - pluginId: chyme
     command: chyme.admin.removals.read
     version: 1.0.0
     requiredRoles:

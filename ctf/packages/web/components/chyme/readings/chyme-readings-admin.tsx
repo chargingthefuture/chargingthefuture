@@ -8,61 +8,32 @@ import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { requestJson } from '@/components/chyme/chyme-shared';
 import type { ReadingsSetting } from 'lib/chyme/readings/repository';
-import type { ReadingsTrack } from 'lib/chyme/readings/schedule';
+import { BLOG_READINGS_URL, parseBlogReadings, type ReadingsTrack } from 'lib/chyme/readings/schedule';
 
-// The readings loop's admin screen (temporary module, owner decision 2026-09-28): the on/off switch
-// and the playlist. The recordings themselves are hosted elsewhere (for example uploaded to the blog's
-// site); this screen stores the link and reads the file's length in this browser, so nobody has to
-// type a duration.
+// The readings loop's admin screen (temporary module, owner decision 2026-09-28): the on/off switch.
+// The playlist is the blog's own list of recorded posts, so there is nothing to add here: uploading
+// content/audio/<post-slug>.mp3 to the blog adds the reading (owner decision, 2026-09-29). The list
+// is shown read-only so the admin can see what the loop will play.
 
 type Tokens = ReturnType<typeof getPluginShellTokens>;
-type AdminPayload = { ok: true; setting: ReadingsSetting; tracks: ReadingsTrack[] };
-
-function formatDuration(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return `${minutes}:${String(rest).padStart(2, '0')}`;
-}
-
-// Loads only the file's header in a detached audio element, the same way the player will.
-function readAudioDuration(url: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const audio = new Audio();
-    audio.preload = 'metadata';
-    audio.onloadedmetadata = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) resolve(Math.round(audio.duration));
-      else reject(new Error('The file loaded but reported no length. Is it an audio file?'));
-    };
-    audio.onerror = () => reject(new Error('The file could not be loaded from that link. Check that it opens in the browser.'));
-    audio.src = url;
-  });
-}
+type AdminPayload = { ok: true; setting: ReadingsSetting };
+type BlogList = { tracks: ReadingsTrack[] } | { error: string };
 
 function Section({ children, t }: { children: ReactNode; t: Tokens }) {
   return <section style={{ borderRadius: 14, border: `1px solid ${t.BORDER}`, padding: 16, marginBottom: 14 }}>{children}</section>;
 }
 
-const inputStyle = (t: Tokens) => ({
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: 10,
-  border: `1px solid ${t.BORDER}`,
-  background: t.INPUT_BG,
-  color: t.TEXT,
-  fontSize: 14,
-  marginBottom: 8,
-  boxSizing: 'border-box' as const,
-});
+function failureText(err: unknown): string {
+  return err instanceof Error ? err.message : 'the request did not complete.';
+}
 
-type ButtonProps = { busy: boolean; t: Tokens };
-
-function SwitchSection({ enabled, disabled, onToggle, busy, t }: ButtonProps & { enabled: boolean; disabled: boolean; onToggle: () => void }) {
+function SwitchSection({ enabled, disabled, onToggle, busy, t }: { enabled: boolean; disabled: boolean; onToggle: () => void; busy: boolean; t: Tokens }) {
   return (
     <Section t={t}>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{enabled ? 'On' : 'Off'}</div>
       <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, marginBottom: 12 }}>
-        When on, the Chyme page offers these recordings to anyone who arrives while nobody is live. They stop by themselves
-        when someone goes live. Turn it off when the room no longer needs it.
+        When on, the Chyme page offers the recorded blog readings to anyone who arrives while nobody is live. They stop by
+        themselves when someone goes live. Turn it off when the room no longer needs it.
       </div>
       <button
         type="button"
@@ -76,82 +47,43 @@ function SwitchSection({ enabled, disabled, onToggle, busy, t }: ButtonProps & {
   );
 }
 
-function TrackRow({ track, onRemove, busy, t }: ButtonProps & { track: ReadingsTrack; onRemove: (id: string) => void }) {
+function ListBody({ list, t }: { list: BlogList | null; t: Tokens }) {
+  if (list === null) return <div style={{ fontSize: 13, color: t.SUBTLE }}>Reading the blog&apos;s list…</div>;
+  if ('error' in list) return <div style={{ fontSize: 13, color: '#fca5a5', wordBreak: 'break-word' }}>{list.error}</div>;
+  if (list.tracks.length === 0) {
+    return <div style={{ fontSize: 13, color: t.SUBTLE }}>None yet. The loop shows nothing until the blog has at least one recording.</div>;
+  }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${t.BORDER}` }}>
-      <div style={{ flex: 1, minWidth: 0, fontSize: 13 }}>
-        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</div>
-        <div style={{ color: t.SUBTLE }}>{formatDuration(track.durationSeconds)}</div>
-      </div>
-      <button
-        type="button"
-        onClick={() => onRemove(track.id)}
-        disabled={busy}
-        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${t.BORDER}`, background: 'transparent', color: t.TEXT, fontSize: 12, cursor: busy ? 'wait' : 'pointer' }}
-      >
-        Remove
-      </button>
-    </div>
+    <>
+      {list.tracks.map((track) => (
+        <div key={track.slug} style={{ padding: '8px 0', borderTop: `1px solid ${t.BORDER}`, fontSize: 13 }}>
+          <a href={track.postUrl} target="_blank" rel="noreferrer" style={{ color: t.TEXT, fontWeight: 600 }}>{track.title}</a>
+        </div>
+      ))}
+    </>
   );
 }
 
-function TracksSection({ tracks, onRemove, busy, t }: ButtonProps & { tracks: ReadingsTrack[]; onRemove: (id: string) => void }) {
-  const totalSeconds = tracks.reduce((sum, track) => sum + track.durationSeconds, 0);
+function ListSection({ list, t }: { list: BlogList | null; t: Tokens }) {
   return (
     <Section t={t}>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-        Recordings · {tracks.length} · {formatDuration(totalSeconds)} in total
+        Recordings{list && 'tracks' in list ? ` · ${list.tracks.length}` : ''}
       </div>
-      {tracks.length === 0 ? (
-        <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5 }}>None yet. The loop shows nothing until at least one recording is added.</div>
-      ) : (
-        tracks.map((track) => <TrackRow key={track.id} track={track} onRemove={onRemove} busy={busy} t={t} />)
-      )}
-    </Section>
-  );
-}
-
-type NewTrackFields = { title: string; audioUrl: string; postUrl: string };
-const EMPTY_FIELDS: NewTrackFields = { title: '', audioUrl: '', postUrl: '' };
-
-function AddSection({ onAdd, busy, t }: ButtonProps & { onAdd: (fields: NewTrackFields) => Promise<boolean> }) {
-  const [fields, setFields] = useState<NewTrackFields>(EMPTY_FIELDS);
-  const set = (key: keyof NewTrackFields) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
-  const ready = !busy && fields.title.trim() !== '' && fields.audioUrl.trim() !== '' && fields.postUrl.trim() !== '';
-  const submit = async () => {
-    if (await onAdd(fields)) setFields(EMPTY_FIELDS);
-  };
-  return (
-    <Section t={t}>
-      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Add a recording</div>
       <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, marginBottom: 10 }}>
-        Paste an https link to the audio file (MP3 or M4A). It goes to the end of the loop. The length is read from the file. The post link is required: it is the text version for anyone who cannot hear the recording.
+        To add one, upload <code>content/audio/&lt;post-slug&gt;.mp3</code> to the blog repository. After the blog deploys,
+        the post shows a &ldquo;Listen to this post&rdquo; player and the reading joins this list. To take one out, delete the file.
       </div>
-      <input style={inputStyle(t)} placeholder="Title, as listeners should see it" value={fields.title} onChange={(e) => set('title')(e.target.value)} />
-      <input style={inputStyle(t)} placeholder="Link to the audio file (https://…)" value={fields.audioUrl} onChange={(e) => set('audioUrl')(e.target.value)} inputMode="url" />
-      <input style={inputStyle(t)} placeholder="Link to the blog post it reads (https://…)" value={fields.postUrl} onChange={(e) => set('postUrl')(e.target.value)} inputMode="url" />
-      <button
-        type="button"
-        onClick={() => void submit()}
-        disabled={!ready}
-        style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: ready ? 1 : 0.6 }}
-      >
-        {busy ? 'Working…' : 'Add'}
-      </button>
+      <ListBody list={list} t={t} />
     </Section>
   );
 }
-
-function failureText(err: unknown): string {
-  return err instanceof Error ? err.message : 'the request did not complete.';
-}
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 export function ChymeReadingsAdmin() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('chyme', theme), theme);
   const [payload, setPayload] = useState<AdminPayload | null>(null);
+  const [list, setList] = useState<BlogList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -160,58 +92,41 @@ export function ChymeReadingsAdmin() {
       setPayload(await requestJson<AdminPayload>('/api/chyme/readings/admin'));
       setError(null);
     } catch (err) {
-      setError(`Could not load the readings: ${failureText(err)}`);
+      setError(`Could not read the switch: ${failureText(err)}`);
     }
   }, []);
 
   useEffect(() => {
     void load();
-  }, [load]);
-
-  const run = useCallback(async (action: () => Promise<unknown>, failure: string) => {
-    setBusy(true);
-    try {
-      await action();
-      await load();
-      return true;
-    } catch (err) {
-      setError(`${failure}: ${failureText(err)}`);
-      return false;
-    } finally {
-      setBusy(false);
-    }
+    fetch(BLOG_READINGS_URL, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`the blog answered HTTP ${res.status}`);
+        setList({ tracks: parseBlogReadings(await res.json()) });
+      })
+      .catch((err: unknown) => setList({ error: `Could not read the blog's list of recordings: ${failureText(err)}` }));
   }, [load]);
 
   const enabled = payload?.setting.enabled ?? false;
 
-  const toggle = () =>
-    void run(
-      () => requestJson('/api/chyme/readings/admin', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ enabled: !enabled }) }),
-      'Could not change the switch',
-    );
-
-  const add = (fields: NewTrackFields) =>
-    run(async () => {
-      const audioUrl = fields.audioUrl.trim();
-      const durationSeconds = await readAudioDuration(audioUrl);
-      await requestJson('/api/chyme/readings/admin/tracks', {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ title: fields.title, audioUrl, postUrl: fields.postUrl.trim(), durationSeconds }),
-      });
-    }, 'Could not add the recording');
-
-  const remove = (id: string) =>
-    void run(() => requestJson(`/api/chyme/readings/admin/tracks?id=${encodeURIComponent(id)}`, { method: 'DELETE' }), 'Could not remove the recording');
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await requestJson('/api/chyme/readings/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !enabled }) });
+      await load();
+    } catch (err) {
+      setError(`Could not change the switch: ${failureText(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
       <MobileScreenHeader title="Chyme readings loop" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} backHref="/admin" />
       <div style={{ padding: 16 }}>
         {error ? <div style={{ fontSize: 13, color: '#fca5a5', marginBottom: 12, wordBreak: 'break-word' }}>{error}</div> : null}
-        <SwitchSection enabled={enabled} disabled={!payload} onToggle={toggle} busy={busy} t={t} />
-        <TracksSection tracks={payload?.tracks ?? []} onRemove={remove} busy={busy} t={t} />
-        <AddSection onAdd={add} busy={busy} t={t} />
+        <SwitchSection enabled={enabled} disabled={!payload} onToggle={() => void toggle()} busy={busy} t={t} />
+        <ListSection list={list} t={t} />
       </div>
     </div>
   );
