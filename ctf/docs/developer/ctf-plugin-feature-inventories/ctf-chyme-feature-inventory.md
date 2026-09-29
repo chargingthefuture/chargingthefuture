@@ -96,7 +96,8 @@ Lifecycle/governance references applied:
     plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
     station. It stops by itself when someone goes live (checked every minute while it plays; the
     signed-out page then shows the live room). Shown to signed-out visitors under "No public rooms
-    right now" and to members on the "Join a Room" screen. The playlist is every blog post with a
+    right now" and to members on the idle main room's screen (above "On stage", where members land,
+    since the main room opens by itself) and on the "Join a Room" screen. The playlist is every blog post with a
     recording, oldest first: the blog publishes that list at build time
     (`https://chargingthefuture.github.io/chargingthefuture/readings.json`, from the files in the blog's
     `content/audio`), and the browser reads it directly. Uploading `content/audio/<post-slug>.mp3` to
@@ -424,6 +425,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   carries both. The member page's top bar now shows an **Admin** button to admins
   (`PluginAdminButton`, `isAdmin` passed from the plugin route), both Chyme admin screens carry
   **Member view** (`PluginUserShellButton`), and the usage screen links to the readings loop screen.
+- 2026-09-29: **Readings card shows where members actually land (owner report).** The card sat only
+  on the "Join a Room" screen, which members rarely see: the main room opens by itself, so a member
+  lands on the room screen, idle, and the card never appeared. It now also shows there, above "On
+  stage", while the main room is idle and the member has not joined; joining the call removes it
+  and stops the sound.
 - 2026-09-29: **Readings are a computer voice, and the post is one tap away (owner decision).** The
   owner makes the readings with text to speech rather than recording them, so the card now says
   "Computer-voice readings" instead of "Recorded readings". The post link under the title became a
