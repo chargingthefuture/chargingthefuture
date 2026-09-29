@@ -53,3 +53,16 @@ export function loopPositionAt(durations: number[], nowMs: number): LoopPosition
   }
   return { index: 0, offsetSeconds: 0 };
 }
+
+// The address to load for a reading that starts partway in. The #t= fragment (Media Fragments) makes
+// the browser open the file at that point itself, so the player never seeks after loading: on an
+// iPhone, a seek made as the file's header arrived could be taken as the end of the file, which
+// skipped the reading and repeated the next one.
+export function sourceAt(audioUrl: string, offsetSeconds: number): string {
+  return offsetSeconds >= 1 ? `${audioUrl}#t=${offsetSeconds.toFixed(1)}` : audioUrl;
+}
+
+// The reading after this one, wrapping to the first after the last.
+export function nextIndex(current: number, count: number): number {
+  return count > 0 ? (current + 1) % count : 0;
+}

@@ -103,7 +103,10 @@ Lifecycle/governance references applied:
     `content/audio`), and the browser reads it directly. Uploading `content/audio/<post-slug>.mp3` to
     the blog is the only step — the post gets its "Listen to this post" player and this loop gets the
     reading (owner decision, 2026-09-29). Each entry in the list carries the recording's length, read from the file by the blog's
-    build, so the tap starts the sound at once (Safari refuses audio that starts after a network
+    build, so the tap starts the sound at once; until it does, "Audio will begin playing in a few
+    seconds." shows under the button. A listener who joins partway in gets the file opened at that
+    point (`#t=` on its address) rather than a seek after loading, and the readings follow each
+    other in order, wrapping to the first (Safari refuses audio that starts after a network
     wait); an entry without a length is left out. The sound plays in the visitor's own browser; nothing touches
     Stream, so it costs no Stream minutes. Web only. This is a module meant to be deleted once the
     room has people in it: everything it owns sits in `lib/chyme/readings`,
@@ -421,6 +424,14 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **The loop moves through every reading, and says the sound is coming (owner report).**
+  With two recordings on the blog, an iPhone played one of them on repeat, and the first tap gave a
+  silent pause that read as broken. The end-of-file handler now reads the current reading from a
+  ref rather than React state (a handler holding an out-of-date index picked the same "next"
+  reading every time), and a listener joining partway in gets the file opened at that point with a
+  `#t=` fragment instead of a seek made as the header arrived, which an iPhone could take as the
+  end of the file. Checked in Chromium with two short files: A, B, A, B. "Audio will begin
+  playing in a few seconds." shows from the tap until the sound starts.
 - 2026-09-29: **One sign-in button on the signed-out page (owner directive).** The invitation card
   carried **Join Free to Listen** and **Sign In**, both linking the same hosted sign-in page. Only
   **Sign In** stays, as the full-width green button: listening on this page needs no account, so a

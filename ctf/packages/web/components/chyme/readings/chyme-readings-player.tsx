@@ -4,7 +4,7 @@ import { Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from '@/components/chyme/chyme-shared';
-import { BLOG_READINGS_URL, loopPositionAt, parseBlogReadings, type ReadingsTrack } from 'lib/chyme/readings/schedule';
+import { BLOG_READINGS_URL, loopPositionAt, nextIndex, parseBlogReadings, sourceAt, type ReadingsTrack } from 'lib/chyme/readings/schedule';
 
 // The readings loop (a temporary module, owner decision 2026-09-28; see lib/chyme/readings/repository.ts).
 // Shown on the Chyme page only while nobody is live and only while the owner has the loop switched
@@ -49,13 +49,19 @@ async function blogReadings(signal: AbortSignal): Promise<ReadingsTrack[]> {
 
 export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Where to seek once the new file's length is known; setting it earlier is ignored by some browsers.
-  const pendingOffsetRef = useRef(0);
+  // The reading now loaded, and the list, kept outside React's state so the end-of-file handler
+  // always reads the current values: a handler holding an out-of-date index moved to the same
+  // "next" reading every time, which played one reading on repeat.
+  const indexRef = useRef<number | null>(null);
+  const tracksRef = useRef<ReadingsTrack[]>([]);
   const [tracks, setTracks] = useState<ReadingsTrack[]>([]);
   const [index, setIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [wentLive, setWentLive] = useState(false);
+  // Between the tap and the first sound: the file has to arrive first, which takes a few seconds on
+  // a phone, and an empty room with a silent button reads as broken (owner report, 2026-09-29).
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -63,7 +69,10 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     // signal before a member joins a room, and a recording must never be offered over a live one.
     Promise.all([loopEnabled(controller.signal), roomIsLive()])
       .then(async ([enabled, live]) => {
-        if (enabled && !live) setTracks(await blogReadings(controller.signal));
+        if (!enabled || live) return;
+        const list = await blogReadings(controller.signal);
+        tracksRef.current = list;
+        setTracks(list);
       })
       .catch((error: unknown) => {
         // The loop is an extra; when it cannot be read the page shows what it showed before.
@@ -73,40 +82,45 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
   }, []);
 
   // Called inside the tap (or the previous file's end), with no wait before play(): Safari refuses
-  // audio that starts after a network wait. The seek waits for the file's header (handleLoadedMetadata).
+  // audio that starts after a network wait.
   const playFrom = useCallback((trackIndex: number, offsetSeconds: number) => {
     const audio = audioRef.current;
-    const track = tracks[trackIndex];
+    const track = tracksRef.current[trackIndex];
     if (!audio || !track) return;
+    indexRef.current = trackIndex;
     setIndex(trackIndex);
     setProblem(null);
-    pendingOffsetRef.current = offsetSeconds;
-    audio.src = track.audioUrl;
+    audio.src = sourceAt(track.audioUrl, offsetSeconds);
     audio.play().then(
       () => setPlaying(true),
       (error: unknown) => {
         // A newer play() or a stop superseded this one; that one reports its own outcome.
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setPlaying(false);
+        setStarting(false);
         setProblem(`The recording did not start: ${error instanceof Error ? error.message : 'the browser refused to play it.'}`);
       },
     );
-  }, [tracks]);
+  }, []);
 
   const stop = useCallback(() => {
     audioRef.current?.pause();
     setPlaying(false);
+    setStarting(false);
   }, []);
 
   const start = useCallback(() => {
-    const position = loopPositionAt(tracks.map((track) => track.durationSeconds), Date.now());
-    if (position) playFrom(position.index, position.offsetSeconds);
-  }, [tracks, playFrom]);
+    const position = loopPositionAt(tracksRef.current.map((track) => track.durationSeconds), Date.now());
+    if (!position) return;
+    setStarting(true);
+    playFrom(position.index, position.offsetSeconds);
+  }, [playFrom]);
 
   const handleEnded = useCallback(() => {
-    if (index === null || tracks.length === 0) return;
-    playFrom((index + 1) % tracks.length, 0);
-  }, [index, tracks.length, playFrom]);
+    const current = indexRef.current;
+    if (current === null || tracksRef.current.length === 0) return;
+    playFrom(nextIndex(current, tracksRef.current.length), 0);
+  }, [playFrom]);
 
   useEffect(() => {
     if (!playing) return;
@@ -121,18 +135,13 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     return () => window.clearInterval(timer);
   }, [playing, stop, onRoomLive]);
 
-  const handleLoadedMetadata = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio && pendingOffsetRef.current > 0) audio.currentTime = pendingOffsetRef.current;
-    pendingOffsetRef.current = 0;
-  }, []);
-
   // The browser's own reason, so a report from a phone says which failure it was.
   const handleError = useCallback(() => {
     const failure = audioRef.current?.error;
     // A load that a newer file replaced is not a failure of the file.
     if (!failure || failure.code === MediaError.MEDIA_ERR_ABORTED) return;
     setPlaying(false);
+    setStarting(false);
     const reason = MEDIA_ERROR_REASON[failure.code] ?? 'unknown media error';
     setProblem(`The recording could not be loaded (${reason}, code ${failure.code}${failure.message ? `: ${failure.message}` : ''}).`);
   }, []);
@@ -145,12 +154,13 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     <ReadingsCard
       current={index === null ? null : tracks[index] ?? null}
       playing={playing}
+      starting={starting}
       wentLive={wentLive}
       problem={problem}
       onToggle={playing ? stop : start}
     >
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read this post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
-      <audio ref={audioRef} onEnded={handleEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleError} preload="none" />
+      <audio ref={audioRef} onEnded={handleEnded} onPlaying={() => setStarting(false)} onError={handleError} preload="none" />
     </ReadingsCard>
   );
 }
@@ -158,13 +168,14 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
 type ReadingsCardProps = {
   current: ReadingsTrack | null;
   playing: boolean;
+  starting: boolean;
   wentLive: boolean;
   problem: string | null;
   onToggle: () => void;
   children: ReactNode;
 };
 
-function ReadingsCard({ current, playing, wentLive, problem, onToggle, children }: ReadingsCardProps) {
+function ReadingsCard({ current, playing, starting, wentLive, problem, onToggle, children }: ReadingsCardProps) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
@@ -193,6 +204,11 @@ function ReadingsCard({ current, playing, wentLive, problem, onToggle, children 
           </div>
         ) : null}
       </div>
+      {starting ? (
+        <div role="status" style={{ fontSize: 12, color: t.TITLE, marginTop: 8 }}>
+          Audio will begin playing in a few seconds.
+        </div>
+      ) : null}
       {/* A button rather than small text, so a listener can find the post the voice is reading
           without hunting for it (owner decision, 2026-09-29). */}
       {current ? (
