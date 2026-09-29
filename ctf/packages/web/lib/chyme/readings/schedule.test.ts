@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loopPositionAt, parseBlogReadings } from './schedule';
+import { loopPositionAt, nextIndex, parseBlogReadings, sourceAt } from './schedule';
 
 describe('loopPositionAt', () => {
   it('returns null when there is nothing to play', () => {
@@ -35,5 +35,20 @@ describe('parseBlogReadings', () => {
   it('returns an empty list for anything that is not the blog list', () => {
     expect(parseBlogReadings(null)).toEqual([]);
     expect(parseBlogReadings({ readings: 'no' })).toEqual([]);
+  });
+});
+
+describe('sourceAt', () => {
+  it('opens the file at the offset, and plainly from the start', () => {
+    expect(sourceAt('https://example.org/a.mp3', 83.26)).toBe('https://example.org/a.mp3#t=83.3');
+    expect(sourceAt('https://example.org/a.mp3', 0.4)).toBe('https://example.org/a.mp3');
+  });
+});
+
+describe('nextIndex', () => {
+  it('moves through every reading and wraps to the first', () => {
+    expect(nextIndex(0, 2)).toBe(1);
+    expect(nextIndex(1, 2)).toBe(0);
+    expect(nextIndex(0, 1)).toBe(0);
   });
 });

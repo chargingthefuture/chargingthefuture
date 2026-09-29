@@ -611,8 +611,10 @@ not see it), each link lands where it says, and the readings screen lists the bl
 with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
 switch reads **On**. Step 3: under "No public rooms right now" a "While the room is empty" card
 says they are computer-voice readings of posts from the blog and a recording, not a live host; on
-an iPhone in Safari as well as on Android, **Play readings** starts the sound within a second and
-the reading plays
+an iPhone in Safari as well as on Android, **Play readings** shows "Audio will begin playing in a
+few seconds." until the sound starts, and with two or more recordings on the blog the readings
+follow each other in order, each title changing as its reading starts, then wrap to the first (lock
+the phone and let it run through two readings); the reading plays
 with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
 the idle Main Room screen, above "On stage"; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
 live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
