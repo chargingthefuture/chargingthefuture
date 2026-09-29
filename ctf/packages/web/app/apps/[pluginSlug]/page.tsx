@@ -246,6 +246,7 @@ function renderPluginShellA(
           userId: decision.userId,
           username: decision.username,
         }}
+        isAdmin={decision.isAdmin}
       />
     );
   }

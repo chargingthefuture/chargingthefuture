@@ -111,6 +111,11 @@ Lifecycle/governance references applied:
 
 ## Admin Features
 
+Admin and member views link to each other (rule 131): the Chyme member page's top bar shows an
+**Admin** button to admins only, opening `/admin/chyme`; both Chyme admin screens (`/admin/chyme`
+and `/admin/chyme/readings`) carry a **Member view** button back to `/apps/chyme`, and the usage
+screen links to the readings loop screen.
+
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
    month-to-date participant-minutes against the budget, the percent and the band, today's
    minutes, a straight-line projection to month end, the per-surface split (main room, Weavers
@@ -414,6 +419,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **Admin and member views link to each other (owner report).** The Chyme admin screen
+  had no way back to the room, and the room had no way to the admin screen; every other plugin
+  carries both. The member page's top bar now shows an **Admin** button to admins
+  (`PluginAdminButton`, `isAdmin` passed from the plugin route), both Chyme admin screens carry
+  **Member view** (`PluginUserShellButton`), and the usage screen links to the readings loop screen.
 - 2026-09-29: **Readings are a computer voice, and the post is one tap away (owner decision).** The
   owner makes the readings with text to speech rather than recording them, so the card now says
   "Computer-voice readings" instead of "Recorded readings". The post link under the title became a

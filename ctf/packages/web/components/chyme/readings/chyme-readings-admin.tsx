@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { requestJson } from '@/components/chyme/chyme-shared';
@@ -122,7 +123,7 @@ export function ChymeReadingsAdmin() {
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
-      <MobileScreenHeader title="Chyme readings loop" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} backHref="/admin" />
+      <MobileScreenHeader title="Chyme readings loop" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} backHref="/admin" actions={<PluginUserShellButton href="/apps/chyme" accent={t.ACCENT} />} />
       <div style={{ padding: 16 }}>
         {error ? <div style={{ fontSize: 13, color: '#fca5a5', marginBottom: 12, wordBreak: 'break-word' }}>{error}</div> : null}
         <SwitchSection enabled={enabled} disabled={!payload} onToggle={() => void toggle()} busy={busy} t={t} />
