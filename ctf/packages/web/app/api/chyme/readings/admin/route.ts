@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
-import { getReadingsSetting, listReadingsTracks, setReadingsEnabled } from 'lib/chyme/readings/repository';
+import { getReadingsSetting, setReadingsEnabled } from 'lib/chyme/readings/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 import { ensureMutationCsrf, requireChymeAdminAccess } from '../../_lib';
@@ -8,17 +8,18 @@ import { invalid, readJsonBody, recordReadingsAudit } from '../_lib';
 
 export const dynamic = 'force-dynamic';
 
-// GET /api/chyme/readings/admin — the switch and the playlist, for /admin/chyme/readings.
+// GET /api/chyme/readings/admin — the switch, for /admin/chyme/readings. The playlist is the blog's
+// list, which the admin screen reads directly.
 export async function GET() {
   const gate = await requireChymeAdminAccess();
   if (!gate.allowed) return gate.response;
   try {
-    const [setting, tracks] = await Promise.all([getReadingsSetting(), listReadingsTracks()]);
-    return NextResponse.json({ ok: true, setting, tracks });
+    const setting = await getReadingsSetting();
+    return NextResponse.json({ ok: true, setting });
   } catch (error) {
     reportError(error, { area: 'chyme', op: 'readings_admin_read' });
     return NextResponse.json(
-      { ok: false, code: CHYME_ERROR_CODE.persistenceUnavailable, message: `Unable to load the readings: ${failureReason(error)}` },
+      { ok: false, code: CHYME_ERROR_CODE.persistenceUnavailable, message: `Unable to read the readings switch: ${failureReason(error)}` },
       { status: 503 },
     );
   }

@@ -69,9 +69,9 @@ Filled in from audit findings.
       (`jsx-a11y/media-has-caption`). This is a genuine WCAG 1.2.2 gap: captions are not produced for
       recorded broadcasts yet, so a captions pipeline is needed rather than an empty track.
     - 1 audio player for the Chyme readings loop has no captions track (`jsx-a11y/media-has-caption`).
-      Not a gap: each recording reads a published blog post, the player links that post, and the
-      link is required when a recording is added, so every recording has a full text version
-      (WCAG 1.2.1, prerecorded audio only).
+      Not a gap: each recording reads a published blog post, the player links that post, and every
+      entry in the blog's list of recordings carries its post link, so every recording has a full
+      text version (WCAG 1.2.1, prerecorded audio only).
   - Not yet measured (needs the runtime audit): contrast, focus order, keyboard traps, and
     screen-reader announcements.
 - Android: no completed AA audit; a meaningful share of screens still lack accessibility props, and
