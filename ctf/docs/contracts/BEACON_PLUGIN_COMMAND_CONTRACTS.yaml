@@ -57,7 +57,7 @@ contracts:
   - pluginId: beacon
     command: event.replay.recording.get
     version: 1.0.0
-    description: Redirect to the recording file of one ended Beacon event (GET /api/beacon/replays/[id]/recording). Asks Stream for a current file address on each request, because the stored one is signed and can expire; falls back to the stored address. Public; no sign-in. 404 for a draft, live, or unrecorded event.
+    description: Redirect to the recording file of one ended Beacon event (GET /api/beacon/replays/[id]/recording). Prefers this project's own copy (archived_recording_url, a GitHub release asset); otherwise asks Stream for a current file address, because the stored one is signed and can expire; otherwise the stored address. Public; no sign-in. 404 for a draft, live, or unrecorded event.
     inputSchema:
       eventId:
         type: string
@@ -68,6 +68,26 @@ contracts:
     dataAccess:
       - beacon_events
     purpose: public_viewer
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.recording.archive
+    version: 1.0.0
+    description: Cron-only (CRON_SECRET Bearer), GET and POST /api/internal/beacon/recordings-archive. GET lists up to 5 ended, recorded events with no kept copy, each with a signed download address. POST records where the copy now lives; only this repository's beacon-recordings release asset named <eventId>.mp4 is accepted. Run by the beacon-recordings-archive workflow.
+    inputSchema:
+      eventId:
+        type: string
+        required: false
+      archivedUrl:
+        type: string
+        required: false
+    outputSchema:
+      pending:
+        type: array
+    dataAccess:
+      - beacon_events
+    purpose: operational_maintenance
     retentionClass: derived_short_lived
     idempotency: true
 

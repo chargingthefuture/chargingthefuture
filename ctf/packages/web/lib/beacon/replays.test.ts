@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BeaconEvent } from './repository';
-import { buildBeaconReplayFeedXml, isBeaconEventId, toPublicBeaconReplay } from './replays';
+import { buildBeaconReplayFeedXml, isBeaconArchiveUrl, isBeaconEventId, toPublicBeaconReplay } from './replays';
 
 const event: BeaconEvent = {
   id: '6f1c2d3e-4a5b-4c6d-8e7f-901234567890',
@@ -16,6 +16,8 @@ const event: BeaconEvent = {
   recordingReadyAtIso: '2026-09-20T19:35:00.000Z',
   commonsLivePostId: null,
   commonsRecordingPostId: null,
+  archivedRecordingUrl: null,
+  recordingArchivedAtIso: null,
   createdAtIso: '2026-09-20T17:00:00.000Z',
   updatedAtIso: '2026-09-20T19:35:00.000Z',
 };
@@ -46,6 +48,15 @@ describe('buildBeaconReplayFeedXml', () => {
     const xml = buildBeaconReplayFeedXml([], new Date('2026-09-29T00:00:00Z'));
     expect(xml).not.toContain('<item>');
     expect(xml).toContain('</channel>');
+  });
+});
+
+describe('isBeaconArchiveUrl', () => {
+  it('accepts only this repository release asset named for the same event', () => {
+    const good = `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/${event.id}.mp4`;
+    expect(isBeaconArchiveUrl(good, event.id)).toBe(true);
+    expect(isBeaconArchiveUrl(good, '00000000-0000-4000-8000-000000000000')).toBe(false);
+    expect(isBeaconArchiveUrl('https://example.com/x.mp4', event.id)).toBe(false);
   });
 });
 

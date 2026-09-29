@@ -21,6 +21,8 @@ export type BeaconEvent = {
   recordingReadyAtIso: string | null;
   commonsLivePostId: string | null;
   commonsRecordingPostId: string | null;
+  archivedRecordingUrl: string | null;
+  recordingArchivedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -39,6 +41,8 @@ type BeaconEventRow = {
   recording_ready_at: Date | null;
   commons_live_post_id: string | null;
   commons_recording_post_id: string | null;
+  archived_recording_url: string | null;
+  recording_archived_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -62,6 +66,8 @@ function mapEventRow(row: BeaconEventRow): BeaconEvent {
     recordingReadyAtIso: toIso(row.recording_ready_at),
     commonsLivePostId: row.commons_live_post_id,
     commonsRecordingPostId: row.commons_recording_post_id,
+    archivedRecordingUrl: row.archived_recording_url,
+    recordingArchivedAtIso: toIso(row.recording_archived_at),
     createdAtIso: new Date(row.created_at).toISOString(),
     updatedAtIso: new Date(row.updated_at).toISOString(),
   };
@@ -69,7 +75,7 @@ function mapEventRow(row: BeaconEventRow): BeaconEvent {
 
 const EVENT_COLUMNS = `id, title, description, status, host_user_id, stream_call_type, stream_call_id,
   started_at, ended_at, recording_url, recording_ready_at, commons_live_post_id,
-  commons_recording_post_id, created_at, updated_at`;
+  commons_recording_post_id, archived_recording_url, recording_archived_at, created_at, updated_at`;
 
 export async function createBeaconEvent(input: {
   hostUserId: string;
@@ -125,6 +131,35 @@ export async function listBeaconReplays(limit: number, offset: number): Promise<
     [limit, offset],
   );
   return result.rows.map(mapEventRow);
+}
+
+// Recorded events this project has not kept its own copy of yet, oldest first, for the archive
+// workflow. Bounded so one run never takes on more than it can download.
+export async function listUnarchivedBeaconReplays(limit: number): Promise<BeaconEvent[]> {
+  const result = await queryDb<BeaconEventRow>(
+    `SELECT ${EVENT_COLUMNS} FROM beacon_events
+     WHERE status = 'ended' AND recording_url IS NOT NULL AND archived_recording_url IS NULL
+     ORDER BY ended_at ASC NULLS LAST, id ASC
+     LIMIT $1`,
+    [limit],
+  );
+  return result.rows.map(mapEventRow);
+}
+
+// Record where this project's own copy of a recording lives. Only an ended, recorded event can take
+// one, and a second call replaces the first, so re-running the workflow after a failed write is safe.
+export async function setBeaconArchivedRecordingUrl(
+  eventId: string,
+  archivedUrl: string,
+): Promise<BeaconEvent | null> {
+  const result = await queryDb<BeaconEventRow>(
+    `UPDATE beacon_events
+     SET archived_recording_url = $2, recording_archived_at = NOW(), updated_at = NOW()
+     WHERE id = $1::uuid AND status = 'ended' AND recording_url IS NOT NULL
+     RETURNING ${EVENT_COLUMNS}`,
+    [eventId, archivedUrl],
+  );
+  return result.rows[0] ? mapEventRow(result.rows[0]) : null;
 }
 
 export async function countBeaconReplays(): Promise<number> {

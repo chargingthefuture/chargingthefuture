@@ -18,8 +18,11 @@ function notFound(message: string) {
 
 // Public: send the listener to the recording of one ended broadcast. This is the address the podcast
 // feed and the blog's player use, instead of the file address itself, because the file address Stream
-// delivered is signed and can expire; this route asks Stream for a current one on every request and
-// only falls back to the stored address when Stream cannot answer.
+// delivered is signed and can expire.
+//
+// Order: this project's own copy (a GitHub release asset, written by the archive workflow) when one
+// exists, because it does not expire and Stream may delete its copy; otherwise a current address
+// asked from Stream; otherwise the stored address.
 //
 // Not rate-limited: a video player makes several requests while seeking, and a podcast app fetches
 // each episode on its own schedule. It reads one row by id and never lists anything.
@@ -34,8 +37,8 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!event || event.status !== 'ended' || !event.recordingUrl) {
       return notFound('That broadcast has no recording.');
     }
-    const fresh = await getFreshBeaconRecordingUrl(event.id);
-    return NextResponse.redirect(fresh ?? event.recordingUrl, {
+    const target = event.archivedRecordingUrl ?? (await getFreshBeaconRecordingUrl(event.id)) ?? event.recordingUrl;
+    return NextResponse.redirect(target, {
       status: 302,
       // Never cached: the address it points at is the thing that expires.
       headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },
