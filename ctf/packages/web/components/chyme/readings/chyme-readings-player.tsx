@@ -18,6 +18,12 @@ const BLOG_URL = 'https://chargingthefuture.github.io/chargingthefuture';
 // the real room instead of listening to a recording over it.
 const LIVE_CHECK_MS = 60_000;
 
+const MEDIA_ERROR_REASON: Record<number, string> = {
+  2: 'the network failed while downloading it',
+  3: 'the file could not be decoded',
+  4: 'the file or its address is not playable',
+};
+
 async function roomIsLive(): Promise<boolean> {
   try {
     const res = await fetch('/api/chyme/public/room');
@@ -121,9 +127,14 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     pendingOffsetRef.current = 0;
   }, []);
 
+  // The browser's own reason, so a report from a phone says which failure it was.
   const handleError = useCallback(() => {
+    const failure = audioRef.current?.error;
+    // A load that a newer file replaced is not a failure of the file.
+    if (!failure || failure.code === MediaError.MEDIA_ERR_ABORTED) return;
     setPlaying(false);
-    setProblem('The recording could not be loaded. The file may have moved; try again later.');
+    const reason = MEDIA_ERROR_REASON[failure.code] ?? 'unknown media error';
+    setProblem(`The recording could not be loaded (${reason}, code ${failure.code}${failure.message ? `: ${failure.message}` : ''}).`);
   }, []);
 
   // Stop the sound when the player leaves the page (a room went live, or the visitor navigated away).
