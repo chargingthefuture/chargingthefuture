@@ -90,10 +90,10 @@ Lifecycle/governance references applied:
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
     Chyme admin screen.
 18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
-    on and no room is live, the Chyme page shows a "While the room is empty" card: recorded readings
-    of the Peace Battle 2 blog posts, on a loop, with a **Play readings** button, the title of the
-    reading playing and a **Read the post** link. It says plainly that it is a recording, not a live
-    host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
+    on and no room is live, the Chyme page shows a "While the room is empty" card: computer-voice
+    (text-to-speech) readings of the Peace Battle 2 blog posts, on a loop, with a **Play readings**
+    button, the title of the reading playing and a **Read this post** button under it. It says
+    plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
     station. It stops by itself when someone goes live (checked every minute while it plays; the
     signed-out page then shows the live room). Shown to signed-out visitors under "No public rooms
     right now" and to members on the "Join a Room" screen. The playlist is every blog post with a
@@ -414,6 +414,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **Readings are a computer voice, and the post is one tap away (owner decision).** The
+  owner makes the readings with text to speech rather than recording them, so the card now says
+  "Computer-voice readings" instead of "Recorded readings". The post link under the title became a
+  **Read this post** button, because the audio does not say where the post is (reading an address
+  aloud is noise) and a small text link was easy to miss while listening.
 - 2026-09-29: **The readings loop plays the blog's own list (owner decision).** Adding a reading
   took two steps: upload the file to the blog, then paste its link and the post's link into the
   admin screen. Now the blog publishes `readings.json` at build time (every post with a file in its
