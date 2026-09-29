@@ -12,6 +12,9 @@ export type ReadingsTrack = {
   title: string;
   postUrl: string;
   audioUrl: string;
+  // Read from the file by the blog's build. Known before the tap, so the player can start the sound
+  // inside the tap itself; Safari refuses audio that starts after a network wait.
+  durationSeconds: number;
 };
 
 // Keeps only well-formed https entries, so a malformed list plays what it can instead of nothing.
@@ -27,7 +30,9 @@ export function parseBlogReadings(data: unknown): ReadingsTrack[] {
       typeof entry.postUrl === 'string' &&
       typeof entry.audioUrl === 'string' &&
       entry.postUrl.startsWith('https://') &&
-      entry.audioUrl.startsWith('https://')
+      entry.audioUrl.startsWith('https://') &&
+      typeof entry.durationSeconds === 'number' &&
+      entry.durationSeconds > 0
     );
   });
 }

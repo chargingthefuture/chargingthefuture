@@ -91,7 +91,7 @@ Lifecycle/governance references applied:
     Chyme admin screen.
 18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
     on and no room is live, the Chyme page shows a "While the room is empty" card: computer-voice
-    (text-to-speech) readings of the Peace Battle 2 blog posts, on a loop, with a **Play readings**
+    (text-to-speech) readings of posts from the blog, on a loop, with a **Play readings**
     button, the title of the reading playing and a **Read this post** button under it. It says
     plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
     station. It stops by itself when someone goes live (checked every minute while it plays; the
@@ -102,8 +102,9 @@ Lifecycle/governance references applied:
     (`https://chargingthefuture.github.io/chargingthefuture/readings.json`, from the files in the blog's
     `content/audio`), and the browser reads it directly. Uploading `content/audio/<post-slug>.mp3` to
     the blog is the only step — the post gets its "Listen to this post" player and this loop gets the
-    reading (owner decision, 2026-09-29). Lengths are read from the files on the first tap; a file
-    that cannot be read is left out. The sound plays in the visitor's own browser; nothing touches
+    reading (owner decision, 2026-09-29). Each entry in the list carries the recording's length, read from the file by the blog's
+    build, so the tap starts the sound at once (Safari refuses audio that starts after a network
+    wait); an entry without a length is left out. The sound plays in the visitor's own browser; nothing touches
     Stream, so it costs no Stream minutes. Web only. This is a module meant to be deleted once the
     room has people in it: everything it owns sits in `lib/chyme/readings`,
     `components/chyme/readings`, `app/api/chyme/readings`, `app/admin/chyme/readings`, the
@@ -420,6 +421,15 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **Play readings works on the phone, and the card names the blog (owner report).** On
+  the signed-out page the player answered "The recording did not start: The operation was
+  aborted." It read every recording's length in the browser after the tap, and Safari refuses audio
+  that starts after that wait; starting it muted and then switching the file got canceled
+  instead. The blog's `readings.json` now carries each length (`durationSeconds`, read by the
+  build), so the tap starts the sound directly and entries without a length are dropped. A
+  superseded `play()` (the next file loading) no longer shows as an error. The card now says
+  "Computer-voice readings of posts from the blog", linking the blog, instead of naming Peace
+  Battle 2, since the readings are several posts.
 - 2026-09-29: **Admin and member views link to each other (owner report).** The Chyme admin screen
   had no way back to the room, and the room had no way to the admin screen; every other plugin
   carries both. The member page's top bar now shows an **Admin** button to admins
