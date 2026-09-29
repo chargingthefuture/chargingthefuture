@@ -71,6 +71,7 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'tommy-gumbert',
   'alphelus-allen',
   'lorraine-valente',
+  'krissyy-2',
 ] as const;
 
 // Advocacy is a placeholder skill. It was applied to people whose public writing showed only that
