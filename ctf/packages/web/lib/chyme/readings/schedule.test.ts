@@ -22,10 +22,13 @@ describe('parseBlogReadings', () => {
     title: 'Who teaches them',
     postUrl: 'https://chargingthefuture.github.io/chargingthefuture/article/wiki-site/who-teaches-them',
     audioUrl: 'https://chargingthefuture.github.io/chargingthefuture/audio/who-teaches-them.mp3',
+    durationSeconds: 353.1,
   };
 
   it('keeps well-formed entries and drops the rest', () => {
-    const list = parseBlogReadings({ readings: [good, { ...good, audioUrl: 'http://example.org/a.mp3' }, null, { title: 'x' }] });
+    const list = parseBlogReadings({
+      readings: [good, { ...good, audioUrl: 'http://example.org/a.mp3' }, { ...good, durationSeconds: undefined }, { ...good, durationSeconds: 0 }, null, { title: 'x' }],
+    });
     expect(list).toEqual([good]);
   });
 
