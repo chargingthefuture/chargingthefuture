@@ -142,7 +142,8 @@ Lifecycle/governance references applied:
    Readings Loop". An **On/Off** switch (off until first switched on), the list of recordings with
    each one's length and a **Remove** control, and an **Add a recording** form: a title, an https
    link to the audio file (MP3 or M4A, hosted elsewhere, for example on the blog's site), and an
-   optional https link to the blog post. The length is read from the file by the admin's browser, so
+   https link to the blog post it reads — required, because the post is the recording's text
+   version for anyone who cannot hear it (WCAG 1.2.1). The length is read from the file by the admin's browser, so
    nobody types it; a link that does not load as audio is refused with the reason. Recordings play
    in the order added. Every change writes a row in `chyme_admin_audit_trail`.
 
@@ -187,7 +188,7 @@ side did not apply (the decision is recorded and enforced by this app either way
 - `GET /api/chyme/readings` — **public, unauthenticated, read-only** (command `chyme.readings.read`). Returns `enabled` and, only when on, `tracks` (`id`, `title`, `postUrl`, `audioUrl`, `durationSeconds`, in the order added). Per-IP public read rate limit. A failed read answers 503 with the reason; the player then shows nothing.
 - `GET /api/chyme/readings/admin` — **admin-only** (`requireChymeAdminAccess`), read-only. The switch (`setting`: `enabled`, `updatedBy`, `updatedAtIso`) and every track, for the readings loop admin screen.
 - `POST /api/chyme/readings/admin` ← `{ enabled: boolean }` — turn the readings loop on or off. CSRF-guarded. Audit `chyme.admin.readings.switch`.
-- `POST /api/chyme/readings/admin/tracks` ← `{ title, audioUrl, postUrl?, durationSeconds }` — add a recording to the end of the loop. Both links must be https; the title is at most 200 characters; `durationSeconds` must be positive. Answers 201 with the new `id`. CSRF-guarded. Audit `chyme.admin.readings.track.add`.
+- `POST /api/chyme/readings/admin/tracks` ← `{ title, audioUrl, postUrl, durationSeconds }` — add a recording to the end of the loop. Both links are required and must be https (the post link is the recording's text version); the title is at most 200 characters; `durationSeconds` must be positive. Answers 201 with the new `id`. CSRF-guarded. Audit `chyme.admin.readings.track.add`.
 - `DELETE /api/chyme/readings/admin/tracks?id=<uuid>` — take a recording out of the loop (404 when the id is not there). The audio file is not touched. CSRF-guarded. Audit `chyme.admin.readings.track.remove`.
 - `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
 - `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface rows, one row for every day the meter has ever recorded — zero-filled so there are no gaps — and `earliestDateIso`, the first of those days), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
@@ -273,7 +274,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 13. `chyme_readings_config` and `chyme_readings_tracks` (2026-09-28, migration
     `0042_chyme_readings.sql`) — the temporary readings loop. `chyme_readings_config` is one row
     (`singleton_id` BOOLEAN primary key, CHECK true): `enabled` (default false; no row means off),
-    `updated_by`, `updated_at`. `chyme_readings_tracks`: `id` UUID, `title`, `post_url` (nullable),
+    `updated_by`, `updated_at`. `chyme_readings_tracks`: `id` UUID, `title`, `post_url` (nullable in the table; the add route requires it),
     `audio_url`, `duration_seconds` (CHECK > 0), `added_by`, `created_at`; indexed on
     `(created_at, id)`, which is the play order. Admin-written reference data holding no member
     data, so neither table is in the deletion registry. To retire the module, drop both tables in a

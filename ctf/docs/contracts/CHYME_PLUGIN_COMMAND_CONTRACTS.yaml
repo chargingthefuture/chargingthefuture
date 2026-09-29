@@ -558,7 +558,7 @@ contracts:
   - pluginId: chyme
     command: chyme.admin.readings.track.add
     version: 1.0.0
-    description: Admin-only. Add a recording to the end of the loop. The audio file is hosted elsewhere; only its https link, a title, an optional https link to the blog post, and its length in seconds (read by the admin's browser) are stored.
+    description: Admin-only. Add a recording to the end of the loop. The audio file is hosted elsewhere; only its https link, a title, an https link to the blog post it reads (required: the post is the recording's text version), and its length in seconds (read by the admin's browser) are stored.
     inputSchema: 
       title:
         type: string
@@ -568,7 +568,7 @@ contracts:
         required: true
       postUrl:
         type: string
-        required: false
+        required: true
       durationSeconds:
         type: number
         required: true

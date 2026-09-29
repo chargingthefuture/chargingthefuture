@@ -81,7 +81,7 @@ function TrackRow({ track, onRemove, busy, t }: ButtonProps & { track: ReadingsT
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: `1px solid ${t.BORDER}` }}>
       <div style={{ flex: 1, minWidth: 0, fontSize: 13 }}>
         <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</div>
-        <div style={{ color: t.SUBTLE }}>{formatDuration(track.durationSeconds)}{track.postUrl ? ' · linked to its post' : ''}</div>
+        <div style={{ color: t.SUBTLE }}>{formatDuration(track.durationSeconds)}</div>
       </div>
       <button
         type="button"
@@ -117,7 +117,7 @@ const EMPTY_FIELDS: NewTrackFields = { title: '', audioUrl: '', postUrl: '' };
 function AddSection({ onAdd, busy, t }: ButtonProps & { onAdd: (fields: NewTrackFields) => Promise<boolean> }) {
   const [fields, setFields] = useState<NewTrackFields>(EMPTY_FIELDS);
   const set = (key: keyof NewTrackFields) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
-  const ready = !busy && fields.title.trim() !== '' && fields.audioUrl.trim() !== '';
+  const ready = !busy && fields.title.trim() !== '' && fields.audioUrl.trim() !== '' && fields.postUrl.trim() !== '';
   const submit = async () => {
     if (await onAdd(fields)) setFields(EMPTY_FIELDS);
   };
@@ -125,11 +125,11 @@ function AddSection({ onAdd, busy, t }: ButtonProps & { onAdd: (fields: NewTrack
     <Section t={t}>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>Add a recording</div>
       <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, marginBottom: 10 }}>
-        Paste an https link to the audio file (MP3 or M4A). It goes to the end of the loop. The length is read from the file.
+        Paste an https link to the audio file (MP3 or M4A). It goes to the end of the loop. The length is read from the file. The post link is required: it is the text version for anyone who cannot hear the recording.
       </div>
       <input style={inputStyle(t)} placeholder="Title, as listeners should see it" value={fields.title} onChange={(e) => set('title')(e.target.value)} />
       <input style={inputStyle(t)} placeholder="Link to the audio file (https://…)" value={fields.audioUrl} onChange={(e) => set('audioUrl')(e.target.value)} inputMode="url" />
-      <input style={inputStyle(t)} placeholder="Link to the blog post (optional)" value={fields.postUrl} onChange={(e) => set('postUrl')(e.target.value)} inputMode="url" />
+      <input style={inputStyle(t)} placeholder="Link to the blog post it reads (https://…)" value={fields.postUrl} onChange={(e) => set('postUrl')(e.target.value)} inputMode="url" />
       <button
         type="button"
         onClick={() => void submit()}

@@ -11,26 +11,21 @@ export const dynamic = 'force-dynamic';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TITLE_LENGTH = 200;
 
-function optionalHttpsUrl(value: unknown): { url: string | null } | null {
-  if (value === undefined || value === null || value === '') return { url: null };
-  const url = parseHttpsUrl(value);
-  return url ? { url } : null;
-}
-
 // Checks the add-a-recording body field by field and names the first field that is wrong.
 function parseNewTrack(body: Record<string, unknown>): { track: NewReadingsTrack } | { error: string } {
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   if (!title || title.length > MAX_TITLE_LENGTH) return { error: `title is required and must be at most ${MAX_TITLE_LENGTH} characters.` };
   const audioUrl = parseHttpsUrl(body.audioUrl);
   if (!audioUrl) return { error: 'audioUrl must be an https link to the recording.' };
-  const postUrl = optionalHttpsUrl(body.postUrl);
-  if (!postUrl) return { error: 'postUrl must be an https link to the blog post, or left empty.' };
+  // Required: the post is the text version of the recording, for anyone who cannot hear it.
+  const postUrl = parseHttpsUrl(body.postUrl);
+  if (!postUrl) return { error: 'postUrl must be an https link to the blog post the recording reads.' };
   const durationSeconds = typeof body.durationSeconds === 'number' ? Math.round(body.durationSeconds) : NaN;
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return { error: 'durationSeconds must be a positive number.' };
-  return { track: { title, audioUrl, postUrl: postUrl.url, durationSeconds } };
+  return { track: { title, audioUrl, postUrl, durationSeconds } };
 }
 
-// POST /api/chyme/readings/admin/tracks  { title, audioUrl, durationSeconds, postUrl? }
+// POST /api/chyme/readings/admin/tracks  { title, audioUrl, postUrl, durationSeconds }
 // Add a recording to the end of the loop. durationSeconds is read from the file by the admin's browser.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);

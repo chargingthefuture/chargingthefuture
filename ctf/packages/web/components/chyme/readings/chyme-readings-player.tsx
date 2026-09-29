@@ -129,6 +129,7 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
       problem={problem}
       onToggle={playing ? stop : start}
     >
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read the post"; the post link is required when a recording is added). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
       <audio ref={audioRef} onEnded={handleEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleError} preload="none" />
     </ReadingsCard>
   );
