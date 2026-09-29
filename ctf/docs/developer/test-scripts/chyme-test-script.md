@@ -607,8 +607,8 @@ writes a row in `chyme_admin_audit_trail`.
 **Expected:** Step 1: the screen lists the blog's recorded posts by title, each linking to its post,
 with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
 switch reads **On**. Step 3: under "No public rooms right now" a "While the room is empty" card
-says the readings are a recording, not a live host; the reading plays with its title and a **Read
-the post** link; both browsers are at the same point in the reading. Step 4: the same card shows on
+says the readings are computer-voice readings and a recording, not a live host; the reading plays
+with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
 the "Join a Room" screen. Step 5: within about a minute the recording stops and the page shows the
 live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:

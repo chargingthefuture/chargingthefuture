@@ -170,7 +170,7 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
       problem={problem}
       onToggle={playing ? stop : () => void start()}
     >
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read the post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read this post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
       <audio ref={audioRef} onEnded={handleEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleError} preload="none" />
     </ReadingsCard>
   );
@@ -192,7 +192,7 @@ function ReadingsCard({ current, playing, wentLive, problem, onToggle, children 
     <div style={{ marginTop: 12, borderRadius: 10, border: `1px solid ${t.BORDER}`, padding: '14px', textAlign: 'left' }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>While the room is empty</div>
       <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, marginBottom: 10 }}>
-        Recorded readings of the{' '}
+        Computer-voice readings of the{' '}
         <a href={PEACE_BATTLE_URL} target="_blank" rel="noreferrer" style={{ color: t.ACCENT }}>Peace Battle 2</a>{' '}
         blog posts, on a loop. This is a recording, not a live host. It stops when someone goes live.
       </div>
@@ -212,10 +212,21 @@ function ReadingsCard({ current, playing, wentLive, problem, onToggle, children 
         {current ? (
           <div style={{ minWidth: 0, fontSize: 12, color: t.MUTED, lineHeight: 1.4 }}>
             <div style={{ color: t.TITLE, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{current.title}</div>
-            <a href={current.postUrl} target="_blank" rel="noreferrer" style={{ color: t.ACCENT }}>Read the post</a>
           </div>
         ) : null}
       </div>
+      {/* A button rather than small text, so a listener can find the post the voice is reading
+          without hunting for it (owner decision, 2026-09-29). */}
+      {current ? (
+        <a
+          href={current.postUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: 'block', marginTop: 10, padding: '8px 14px', borderRadius: 999, border: `1px solid ${t.ACCENT}`, color: t.ACCENT, fontSize: 13, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+        >
+          Read this post
+        </a>
+      ) : null}
       {problem ? <div style={{ fontSize: 12, color: t.MUTED, marginTop: 8, wordBreak: 'break-word' }}>{problem}</div> : null}
       {children}
     </div>
