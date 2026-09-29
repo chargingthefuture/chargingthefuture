@@ -1,6 +1,6 @@
 'use client';
 
-import { Radio, LogIn, LogOut, UserPlus, RefreshCw } from 'lucide-react';
+import { Radio, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -46,8 +46,7 @@ type GuestListenControl = {
 // card #041a0b, divider #052e16, mint-white title) and the green accent. The old purple/cyan accent
 // made the guest view look like a separate app.
 // Chrome tokens come from getChymeTokens(theme) (t.BG page, t.BORDER divider, t.TITLE bright
-// text, t.MUTED gray, t.ACCENT green). Two values have no token slot and stay static:
-const SURFACE = '#041a0b'; // card surface — no getter field matches this hex
+// text, t.MUTED gray, t.ACCENT green). One value has no token slot and stays static:
 const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter field matches
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
@@ -223,14 +222,11 @@ function ChymePublicView({
               Finish verifying
             </a>
           ) : (
-            <>
-              <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
-                <UserPlus size={13} /> Join Free to Listen
-              </a>
-              <a href={signInUrl} style={{ padding: '9px 14px', borderRadius: 9, background: SURFACE, border: `1px solid ${t.BORDER}`, color: t.MUTED, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-                <LogIn size={13} /> Sign In
-              </a>
-            </>
+            // One button (owner directive, 2026-09-29): "Join Free to Listen" and "Sign In" led to the
+            // same page, and listening here needs no account at all, so only Sign In stays.
+            <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
+              <LogIn size={13} /> Sign In
+            </a>
           )}
         </div>
       </div>

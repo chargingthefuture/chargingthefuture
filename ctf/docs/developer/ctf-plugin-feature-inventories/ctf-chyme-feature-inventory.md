@@ -420,6 +420,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **One sign-in button on the signed-out page (owner directive).** The invitation card
+  carried **Join Free to Listen** and **Sign In**, both linking the same hosted sign-in page. Only
+  **Sign In** stays, as the full-width green button: listening on this page needs no account, so a
+  button promising a join in order to listen described a step nobody needs. The unused `UserPlus`
+  icon import and `SURFACE` color went with it.
 - 2026-09-29: **Admin and member views link to each other (owner report).** The Chyme admin screen
   had no way back to the room, and the room had no way to the admin screen; every other plugin
   carries both. The member page's top bar now shows an **Admin** button to admins
