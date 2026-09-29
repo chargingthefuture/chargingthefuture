@@ -600,7 +600,7 @@ writes a row in `chyme_admin_audit_trail`.
 1. As the admin, open `/admin/chyme/readings`.
 2. Tap **Turn on**.
 3. Signed out, open `/apps/chyme`. Tap **Play readings**. In a second browser, do the same.
-4. As a member, open Chyme without joining a room.
+4. As a member, open Chyme and do not press Join Room. Then press Join Room.
 5. As another member, join the main room while the signed-out visitor is still listening. Wait a
    minute.
 6. As the admin, tap **Turn off**, then reload `/apps/chyme` signed out.
@@ -609,7 +609,7 @@ with how to add one (upload the file to the blog) and no add or remove controls.
 switch reads **On**. Step 3: under "No public rooms right now" a "While the room is empty" card
 says the readings are computer-voice readings and a recording, not a live host; the reading plays
 with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
-the "Join a Room" screen. Step 5: within about a minute the recording stops and the page shows the
+the idle Main Room screen, above "On stage"; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
 live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
