@@ -365,3 +365,71 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.readings.switch
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+    dataClassesAccessed:
+      - readings_loop_config
+    targetContext:
+      targetType: chyme_readings_config_or_track
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.readings.track.add
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+    dataClassesAccessed:
+      - readings_loop_config
+    targetContext:
+      targetType: chyme_readings_config_or_track
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: chyme
+    command: chyme.admin.readings.track.remove
+    commandVersion: 1.0.0
+    purpose: social_audio_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        authenticationCheck: pass_or_fail
+        adminRoleCheck: pass_or_fail
+    dataClassesAccessed:
+      - readings_loop_config
+    targetContext:
+      targetType: chyme_readings_config_or_track
+      targetId: target_identifier
+    durableSink: chyme_admin_audit_trail
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

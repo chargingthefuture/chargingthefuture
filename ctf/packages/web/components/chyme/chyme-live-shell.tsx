@@ -9,6 +9,7 @@ import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
+import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import { responseFailureText } from 'lib/errors/client-failure';
 import type {
@@ -292,6 +293,10 @@ function ChymeJoinRoomPrompt({ t }: { t: ChymeTokens }) {
       <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
       <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
         Select a live room to listen, speak, and connect with survivors worldwide. All rooms are members-only.
+      </div>
+      {/* The readings loop, only while it is switched on and nobody is live (temporary module, 2026-09-28). */}
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <ChymeReadingsPlayer />
       </div>
     </div>
   );
