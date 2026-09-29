@@ -1,6 +1,7 @@
-name: FreshRSS — Give new accounts the blog
+name: FreshRSS — Give new accounts the default feeds
 
-# Puts the blog in every reader account made from now on. Once.
+# Puts the default feeds in every reader account made from now on: the blog,
+# the demo-video channel, and the recorded broadcasts. Once.
 #
 # FreshRSS hands a brand-new account whatever sits in its own default list,
 # which is that project's release notes. It reads data/opml.xml first and only
@@ -24,7 +25,7 @@ name: FreshRSS — Give new accounts the blog
 # link that adds the feed in one step.
 #
 # Delete this workflow, and the script only it uses, once a new account arrives
-# with the blog in it. It does one thing once. Git history keeps it, and a copy
+# with all three feeds in it. It does one thing once. Git history keeps it, and a copy
 # recovered from there gets read in full by whoever recovers it — which is the
 # review a finished workflow sitting in the Actions list never gets.
 
@@ -38,7 +39,7 @@ on:
 
 jobs:
   default-feed:
-    name: Give new accounts the blog
+    name: Give new accounts the default feeds
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

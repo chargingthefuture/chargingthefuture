@@ -100,6 +100,23 @@ and tapping it opens the Beacon viewer. The replay is posted only once (never do
 
 ---
 
+### BCN-4b · Every replay is listed publicly and in the podcast feed
+**Role:** signed-out visitor · **Surfaces:** web
+**Precondition:** at least one event has ended with its recording ready (BCN-4).
+**Steps:**
+1. Signed out, open `https://chargingthefuture.github.io/chargingthefuture/streams`.
+2. Press play on the newest entry.
+3. Open `https://app.chargingthefuture.com/api/beacon/replays/feed` and add it to a feed reader.
+4. Open `https://app.chargingthefuture.com/api/beacon/replays/not-an-id/recording`.
+**Expected:** Step 1 lists every recorded broadcast, newest first, 20 to a page, with the range shown
+and the page number in the address. Step 2 plays the recording with no sign-in. Step 3 is accepted
+by the reader and shows one item per replay, newest first, each with a playable attachment. Step 4
+answers "No recorded broadcast has that id." with a 404. A draft or live event never appears in the
+list or the feed.
+**Result:** web ☐ — notes:
+
+---
+
 ### BCN-DEL · Account deletion clears the member's Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 message in a Beacon event's live chat; access to the Stream dashboard for the app behind `STREAM_API_KEY`.

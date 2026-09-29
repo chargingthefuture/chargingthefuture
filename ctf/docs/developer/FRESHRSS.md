@@ -82,10 +82,13 @@ To change a number: edit the file in a pull request, then run the workflow
 account with that account's own SQLite database and settings, `data/opml.xml`, and the caches.
 
 `data/opml.xml` is what a brand-new account is given instead of the FreshRSS project's own default
-list. It holds two feeds and nothing else: this blog, and the owner's demo-video channel (the
+list. It holds three feeds and nothing else: this blog, the owner's demo-video channel (the
 feed collected by `chargingthefuture/rss-feeds` at
 `https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml`, added 2026-09-23; the
-collected feeds moved out of the blog repository on 2026-09-24).
+collected feeds moved out of the blog repository on 2026-09-24), and the recorded broadcasts
+(`https://app.chargingthefuture.com/api/beacon/replays/feed`, added 2026-09-29, listed on the blog at
+`/streams`). The workflow `FreshRSS — Give new accounts the default feeds` writes all three, because
+the file it writes replaces the one on the disk.
 
 ## What is not backed up
 

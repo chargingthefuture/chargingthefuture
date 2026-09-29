@@ -93,6 +93,12 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 5. **Replay.** After the event, the recording is watchable (and is also posted to the Commons).
 6. **"Live and public" indicator.** A clear marker that the broadcast is public so participants know
    their comments are visible.
+7. **Every past broadcast, listed and subscribable.** The blog's streams page
+   (`https://chargingthefuture.github.io/chargingthefuture/streams`) lists every recorded broadcast,
+   newest first, with a player for each, and anybody can watch there without an account. The same
+   list is a podcast feed at `https://app.chargingthefuture.com/api/beacon/replays/feed`, which a feed
+   reader or podcast app can follow; a new replay is in it as soon as its recording is ready. The
+   viewer at `/apps/beacon` still shows only the latest replay.
 
 ## Admin Features (admin surface, `/admin/beacon`)
 
@@ -116,6 +122,17 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ### Member / public routes
 - `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL.
+- `GET /api/beacon/replays?page=` — every ended event with a recording, newest first, 20 per page,
+  page clamped into range. Public, per-IP rate-limited, open to any origin (the blog reads it from the
+  browser). Returns title, description, start/end times, the app's recording address and the watch
+  page; never the host user id, Stream call id, or Commons post ids.
+- `GET /api/beacon/replays/feed` — the podcast feed: RSS 2.0 with iTunes tags, newest 100 recorded
+  broadcasts, each enclosure the app's recording address typed `video/mp4`. Public, rate-limited.
+- `GET /api/beacon/replays/[id]/recording` — 302 to the recording file. Asks Stream
+  (`GET /api/v2/video/call/livestream/{id}/recordings`) for a current address on every request,
+  because the stored `recording_url` is a signed address that can expire; falls back to the stored
+  one when Stream cannot answer. 404 for a draft, live, or unrecorded event. Public, not rate-limited
+  (a player seeks with several requests), reads one row by id.
 - `POST /api/beacon/[id]/chat-token` — mint a Stream Chat token for the live event chat. **Requires a
   signed-in member** (this is the sign-in-to-chat gate). Anonymous callers get 401.
 
@@ -227,7 +244,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   dashboard) — document the dashboard settings alongside the build.
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel (lean
   read-only so the room feels alive).
-- Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL.
+- Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL. Since
+  2026-09-29 every public link goes through `/api/beacon/replays/[id]/recording`, which asks Stream
+  for a fresh address, so an expired signature no longer breaks an old replay. What is still open:
+  if Stream deletes the file itself after its retention period, nothing here can bring it back —
+  only re-hosting the recording (a storage cost this project would carry) would. Not verified
+  against Stream's retention terms; the docs host was unreachable from the build container.
 - ~~**A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**~~ Closed
   2026-08-10: the Stream webhook now starts egress on `call.session_participant_joined`, so any
   publisher — RTMP from a phone or the in-browser screen-share — starts the public feed and the
@@ -266,6 +288,16 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-09-29: **Every recorded broadcast is listed publicly, with a podcast feed.** Owner request: a
+  record of past streams on the blog that anybody can watch, which also serves as a self-hosted
+  podcast. Added `GET /api/beacon/replays` (paged list), `GET /api/beacon/replays/feed` (RSS with
+  iTunes tags), and `GET /api/beacon/replays/[id]/recording` (redirect to a current recording
+  address), with `listBeaconReplays` / `countBeaconReplays` in `lib/beacon/repository.ts`,
+  `getFreshBeaconRecordingUrl` in `lib/beacon/stream.ts`, and the public shape and feed builder in
+  `lib/beacon/replays.ts`. Contracts `event.replays.list`, `event.replays.feed`,
+  `event.replay.recording.get` added. The FreshRSS default-feeds workflow now writes this feed as a
+  third default beside the blog and the app demo. No schema change. The blog page is in
+  `chargingthefuture/wiki-site`.
 - 2026-08-12: **The Commons notices link straight to Beacon.** The auto-posted "🔴 Live now" and
   "▶️ Watch the replay" entries said "at `/apps/beacon`" — a piece of a web address, which nobody can
   tap and which only works for a reader who already knows the domain. Both now carry the full address

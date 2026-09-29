@@ -114,6 +114,26 @@ export async function getLatestReplayBeaconEvent(): Promise<BeaconEvent | null> 
   return result.rows[0] ? mapEventRow(result.rows[0]) : null;
 }
 
+// Every ended event with a recording, newest first: the public replay list the blog's streams page
+// and the podcast feed read. Paged by offset so the list can grow without one request carrying it all.
+export async function listBeaconReplays(limit: number, offset: number): Promise<BeaconEvent[]> {
+  const result = await queryDb<BeaconEventRow>(
+    `SELECT ${EVENT_COLUMNS} FROM beacon_events
+     WHERE status = 'ended' AND recording_url IS NOT NULL
+     ORDER BY ended_at DESC NULLS LAST, id DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  return result.rows.map(mapEventRow);
+}
+
+export async function countBeaconReplays(): Promise<number> {
+  const result = await queryDb<{ total: string }>(
+    `SELECT COUNT(*)::text AS total FROM beacon_events WHERE status = 'ended' AND recording_url IS NOT NULL`,
+  );
+  return Number(result.rows[0]?.total ?? 0);
+}
+
 export async function listBeaconEvents(limit = 50): Promise<BeaconEvent[]> {
   const result = await queryDb<BeaconEventRow>(
     `SELECT ${EVENT_COLUMNS} FROM beacon_events ORDER BY created_at DESC LIMIT $1`,
