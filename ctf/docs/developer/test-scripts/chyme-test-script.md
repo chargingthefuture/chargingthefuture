@@ -200,9 +200,9 @@ people, and the chat once you open it. The invitations card is not part of this 
 floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
 of the browser session; it is described in the non-plugin feature inventory, section 1.15.
 
-In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
-to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
-link when the visitor has an account part-way through Unlock). The green header carries the back
+In step 4 you find **exactly one** place to sign in — the invitation card, whose single **Sign In**
+button points at the hosted sign-in URL (or a single **Finish verifying** link when the visitor has
+an account part-way through Unlock); there is no separate **Join Free to Listen** button. The green header carries the back
 control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
 grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
 Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room,

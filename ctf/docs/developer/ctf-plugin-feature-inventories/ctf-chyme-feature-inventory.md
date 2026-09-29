@@ -421,6 +421,11 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-29: **One sign-in button on the signed-out page (owner directive).** The invitation card
+  carried **Join Free to Listen** and **Sign In**, both linking the same hosted sign-in page. Only
+  **Sign In** stays, as the full-width green button: listening on this page needs no account, so a
+  button promising a join in order to listen described a step nobody needs. The unused `UserPlus`
+  icon import and `SURFACE` color went with it.
 - 2026-09-29: **Play readings works on the phone, and the card names the blog (owner report).** On
   the signed-out page the player answered "The recording did not start: The operation was
   aborted." It read every recording's length in the browser after the tap, and Safari refuses audio
