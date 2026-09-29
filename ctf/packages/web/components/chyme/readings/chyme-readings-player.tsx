@@ -13,12 +13,16 @@ import { BLOG_READINGS_URL, loopPositionAt, parseBlogReadings, type ReadingsTrac
 // rather than restarting for each visitor. Sound starts on a tap because phone browsers block
 // audio that starts by itself. The file plays in this visitor's browser; nothing touches Stream.
 
-const PEACE_BATTLE_URL = 'https://chargingthefuture.github.io/chargingthefuture/peace-battle-2';
+const BLOG_URL = 'https://chargingthefuture.github.io/chargingthefuture';
 // While a reading plays, check this often whether somebody has gone live, so the visitor is sent to
 // the real room instead of listening to a recording over it.
 const LIVE_CHECK_MS = 60_000;
 
-type PlayableTrack = ReadingsTrack & { durationSeconds: number };
+const MEDIA_ERROR_REASON: Record<number, string> = {
+  2: 'the network failed while downloading it',
+  3: 'the file could not be decoded',
+  4: 'the file or its address is not playable',
+};
 
 async function roomIsLive(): Promise<boolean> {
   try {
@@ -43,33 +47,11 @@ async function blogReadings(signal: AbortSignal): Promise<ReadingsTrack[]> {
   return parseBlogReadings(await res.json());
 }
 
-// The length of one recording, from its header only. The blog list carries no lengths (the build
-// would need an audio parser for that), so they are read here, once, on the visitor's first tap.
-function readDuration(url: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const audio = new Audio();
-    audio.preload = 'metadata';
-    audio.onloadedmetadata = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? resolve(audio.duration) : reject(new Error('no length')));
-    audio.onerror = () => reject(new Error('not loadable'));
-    audio.src = url;
-  });
-}
-
-// Recordings that could not be read are left out rather than stopping the loop.
-async function withDurations(tracks: ReadingsTrack[]): Promise<PlayableTrack[]> {
-  const results = await Promise.allSettled(tracks.map((track) => readDuration(track.audioUrl)));
-  return tracks.flatMap((track, i) => {
-    const result = results[i];
-    return result.status === 'fulfilled' ? [{ ...track, durationSeconds: result.value }] : [];
-  });
-}
-
 export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Where to seek once the new file's length is known; setting it earlier is ignored by some browsers.
   const pendingOffsetRef = useRef(0);
   const [tracks, setTracks] = useState<ReadingsTrack[]>([]);
-  const [playable, setPlayable] = useState<PlayableTrack[] | null>(null);
   const [index, setIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -90,9 +72,11 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     return () => controller.abort();
   }, []);
 
-  const playFrom = useCallback((list: PlayableTrack[], trackIndex: number, offsetSeconds: number) => {
+  // Called inside the tap (or the previous file's end), with no wait before play(): Safari refuses
+  // audio that starts after a network wait. The seek waits for the file's header (handleLoadedMetadata).
+  const playFrom = useCallback((trackIndex: number, offsetSeconds: number) => {
     const audio = audioRef.current;
-    const track = list[trackIndex];
+    const track = tracks[trackIndex];
     if (!audio || !track) return;
     setIndex(trackIndex);
     setProblem(null);
@@ -101,38 +85,28 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     audio.play().then(
       () => setPlaying(true),
       (error: unknown) => {
+        // A newer play() or a stop superseded this one; that one reports its own outcome.
+        if (error instanceof DOMException && error.name === 'AbortError') return;
         setPlaying(false);
         setProblem(`The recording did not start: ${error instanceof Error ? error.message : 'the browser refused to play it.'}`);
       },
     );
-  }, []);
+  }, [tracks]);
 
   const stop = useCallback(() => {
     audioRef.current?.pause();
     setPlaying(false);
   }, []);
 
-  const start = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!playable && audio && tracks[0]) {
-      // Start the element, muted, inside the tap itself: Safari refuses play() once the tap is
-      // followed by a network wait, and reading the recordings' lengths is one.
-      audio.muted = true;
-      audio.src = tracks[0].audioUrl;
-      void audio.play().catch(() => undefined);
-    }
-    const list = playable ?? (await withDurations(tracks));
-    if (audio) audio.muted = false;
-    setPlayable(list);
-    const position = loopPositionAt(list.map((track) => track.durationSeconds), Date.now());
-    if (position) playFrom(list, position.index, position.offsetSeconds);
-    else setProblem('None of the recordings could be loaded. Try again later.');
-  }, [playable, tracks, playFrom]);
+  const start = useCallback(() => {
+    const position = loopPositionAt(tracks.map((track) => track.durationSeconds), Date.now());
+    if (position) playFrom(position.index, position.offsetSeconds);
+  }, [tracks, playFrom]);
 
   const handleEnded = useCallback(() => {
-    if (index === null || !playable || playable.length === 0) return;
-    playFrom(playable, (index + 1) % playable.length, 0);
-  }, [index, playable, playFrom]);
+    if (index === null || tracks.length === 0) return;
+    playFrom((index + 1) % tracks.length, 0);
+  }, [index, tracks.length, playFrom]);
 
   useEffect(() => {
     if (!playing) return;
@@ -153,9 +127,14 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     pendingOffsetRef.current = 0;
   }, []);
 
+  // The browser's own reason, so a report from a phone says which failure it was.
   const handleError = useCallback(() => {
+    const failure = audioRef.current?.error;
+    // A load that a newer file replaced is not a failure of the file.
+    if (!failure || failure.code === MediaError.MEDIA_ERR_ABORTED) return;
     setPlaying(false);
-    setProblem('The recording could not be loaded. The file may have moved; try again later.');
+    const reason = MEDIA_ERROR_REASON[failure.code] ?? 'unknown media error';
+    setProblem(`The recording could not be loaded (${reason}, code ${failure.code}${failure.message ? `: ${failure.message}` : ''}).`);
   }, []);
 
   // Stop the sound when the player leaves the page (a room went live, or the visitor navigated away).
@@ -164,11 +143,11 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
   if (tracks.length === 0) return null;
   return (
     <ReadingsCard
-      current={index === null || !playable ? null : playable[index]}
+      current={index === null ? null : tracks[index] ?? null}
       playing={playing}
       wentLive={wentLive}
       problem={problem}
-      onToggle={playing ? stop : () => void start()}
+      onToggle={playing ? stop : start}
     >
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read this post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
       <audio ref={audioRef} onEnded={handleEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleError} preload="none" />
@@ -192,9 +171,8 @@ function ReadingsCard({ current, playing, wentLive, problem, onToggle, children 
     <div style={{ marginTop: 12, borderRadius: 10, border: `1px solid ${t.BORDER}`, padding: '14px', textAlign: 'left' }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>While the room is empty</div>
       <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, marginBottom: 10 }}>
-        Computer-voice readings of the{' '}
-        <a href={PEACE_BATTLE_URL} target="_blank" rel="noreferrer" style={{ color: t.ACCENT }}>Peace Battle 2</a>{' '}
-        blog posts, on a loop. This is a recording, not a live host. It stops when someone goes live.
+        Computer-voice readings of posts from{' '}
+        <a href={BLOG_URL} target="_blank" rel="noreferrer" style={{ color: t.ACCENT }}>the blog</a>, on a loop. This is a recording, not a live host. It stops when someone goes live.
       </div>
       {wentLive ? (
         <div style={{ fontSize: 12, color: t.TITLE, marginBottom: 8 }}>Someone just went live. The recording has stopped.</div>
