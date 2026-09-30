@@ -227,6 +227,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // so it matches nothing — it stays here because this registry is the statement of record for
       // what happens to the table, and "deleted" is what happens.
       del('directory_profiles', 'claimed_by_user_id', 'The directory listing you claimed.'),
+      // A profile you nominated belongs to the person it is about: it stays, and your id and handle
+      // on it are overwritten, so the Directory stops naming you as its nominator.
+      pseudo(
+        'directory_profiles',
+        'nominated_by_user_id',
+        ['invited_by_username'],
+        'Profiles you nominated for other people — the profile stays, your identity on it does not.',
+      ),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
       // Burn-down batch 4: admin content and abuse-prevention trails, retained.

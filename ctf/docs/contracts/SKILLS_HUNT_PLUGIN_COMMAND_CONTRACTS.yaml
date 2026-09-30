@@ -424,6 +424,7 @@ contracts:
         type: object
     dataAccess:
       - skills_hunt_submissions (select — counts of the caller's own rows only)
+      - directory_profiles (select — count where nominated_by_user_id is the caller)
     purpose: reward_visibility
     retentionClass: derived_medium_lived
     idempotency: true

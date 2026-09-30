@@ -1735,12 +1735,14 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country)
+          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country, nominated_by_user_id)
         VALUES
-          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10)
+          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, $11)
         RETURNING id
       `,
-      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country],
+      // The admin who adds a person's profile is the one who brought them in, so they are recorded
+      // as its nominator; a later claim leaves this in place.
+      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country, actorId],
     );
 
     const profileId = inserted.rows[0].id;

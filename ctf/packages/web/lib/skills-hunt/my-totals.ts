@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 
-// A member's own nomination counts across every round. Only ever read for the signed-in member:
+// A member's own counts across every round. Only ever read for the signed-in member:
 // the route passes the session user id and accepts none from the request, so nobody can see
 // another member's totals. Removed rows (`deleted_at`) are left out, as they are everywhere a
 // member sees their own nominations.
@@ -28,13 +28,13 @@ function toCount(value: string | undefined): number {
 }
 
 export async function getMyTotals(userId: string): Promise<SkillsHuntMyTotals> {
-  // `directory_profile_generated_at` is stamped on the nomination when accepting it created a
-  // community-generated Directory profile, so it still counts after that profile is claimed.
+  // Profiles come from the Directory's `nominated_by_user_id`, not from Skills Hunt rows, so they
+  // include profiles an admin added by hand and keep counting after the person claims theirs.
   const result = await queryDb<MyTotalsRow>(
     `
       SELECT
         COUNT(*)::text AS submitted,
-        COUNT(*) FILTER (WHERE directory_profile_generated_at IS NOT NULL)::text AS profiles_created,
+        (SELECT COUNT(*) FROM directory_profiles WHERE nominated_by_user_id = $1)::text AS profiles_created,
         COUNT(*) FILTER (WHERE status = 'accepted')::text AS accepted,
         COUNT(*) FILTER (WHERE status = 'pending')::text AS pending,
         COUNT(*) FILTER (WHERE status = 'flagged')::text AS flagged,

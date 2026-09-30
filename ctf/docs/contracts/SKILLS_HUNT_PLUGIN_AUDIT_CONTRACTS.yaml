@@ -300,6 +300,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_hunt_submissions
+      - directory_profiles
     targetContext:
       workspaceId: workspace_identifier
       userId: user_identifier
