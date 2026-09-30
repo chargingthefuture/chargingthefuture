@@ -292,6 +292,27 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
+    command: skills-hunt.my-totals.get
+    commandVersion: 1.0.0
+    purpose: reward_visibility
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+    targetContext:
+      workspaceId: workspace_identifier
+      userId: user_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
     command: skills-hunt.achievement.list
     commandVersion: 1.0.0
     purpose: reward_visibility

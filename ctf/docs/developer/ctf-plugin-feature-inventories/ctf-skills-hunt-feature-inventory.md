@@ -64,6 +64,7 @@ Planning constraints applied:
 1. Show the scout leaderboard by accepted points (there is one board — the team view was removed 2026-08-27).
 3. Surface rank, accepted count, and rare-skill bonus impact.
 4. Refresh leaderboard deterministically after review outcomes.
+5. **Your totals, all rounds** — a card at the top of the My Finds tab shows the signed-in member their own counts across every round: profiles created (people they nominated who became community-generated Directory profiles), accepted, pending, and everything submitted, with flagged and rejected counts underneath when there are any. Only the member sees their own numbers; nobody else's are shown or fetched. The card loads each time My Finds opens and on the refresh button. Removed nominations are not counted.
 
 ### 1.5 Rewards, Achievements, and Notifications
 
@@ -153,6 +154,7 @@ Command groups:
 17. `skills-hunt.mission.auto_generate`
 18. `skills-hunt.mission.auto_config_update`
 19. `skills-hunt.mission.image`
+20. `skills-hunt.my-totals.get`
 
 ### 3.2 HTTP Projection Routes
 
@@ -162,6 +164,7 @@ User routes:
 - `POST /api/skills-hunt/rounds/:roundId/submissions`
 - `GET /api/skills-hunt/rounds/:roundId/leaderboard` — scout ranking; optional `?range=all-time`. The `mode` parameter is gone with the team board (2026-08-27); the response still carries `mode: 'individual'` so any older client keeps parsing.
 - `GET /api/skills-hunt/achievements`
+- `GET /api/skills-hunt/my-totals` — the signed-in member's own counts across every round (`getMyTotals` in `lib/skills-hunt/my-totals.ts`). Returns `{ totals: { submitted, profilesCreated, accepted, pending, flagged, rejected } }`. The user id comes from the session only; there is no parameter that could name another member. "Profiles created" counts rows with `directory_profile_generated_at` set, so a profile still counts after its person claims it. Removed rows (`deleted_at`) are left out. Command `skills-hunt.my-totals.get`. Read by the "Your totals, all rounds" card on My Finds (`sh-my-totals-card.tsx`).
 - `GET /api/skills-hunt/notifications`
 - `POST /api/skills-hunt/notifications/:notificationId/read`
 - `GET /api/skills-hunt/feature-reward-card`
@@ -286,6 +289,8 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 8. **A ServiceCredits reward paid on an accepted nomination cannot be reversed from the app.** `credit_granted` is the idempotency marker for the mint and is never unset once a reward is paid, so flipping an accepted nomination to rejected, flagged or removed rolls back its points, its mission progress and its leaderboard place, and leaves the credits with the scout. That is correct as a ledger rule — a minted credit a member may already have sent is not something a moderator should be able to take back silently. Since 2026-09-22 the accept confirmation states it before it happens (§2.2), which is the guard the owner asked for; the remedy after the fact is still manual, the scout or the owner burning the credits by hand. A reversing transfer an admin could raise against a named nomination remains undesigned, and is a decision rather than a build step.
 
 ## 9) Change Log
+
+- 2026-09-30: **A member can see their own all-time totals (owner request).** Every number a member saw was for one round, so nobody could see how many people they had brought into the Directory in total. Added `GET /api/skills-hunt/my-totals` (command `skills-hunt.my-totals.get`, self-scope only) and a "Your totals, all rounds" card at the top of My Finds: profiles created, accepted, pending, submitted, and flagged/rejected when non-zero. Counts are worked out on each load from `skills_hunt_submissions`; nothing new is stored and no schema change. Other members' totals are deliberately not shown. Web only; Android: out of scope (web-only per rule 105).
 
 - 2026-09-25: **The proposal queue can be filed while the Anthropic account is unfunded (owner request).** Every scheduled run of `skills-proposal-issues.yml` since 2026-09-24 has stopped at the first candidate with the vendor's out-of-credit answer, so nineteen proposed skills sat unfiled with nobody able to review them. Two workflows now, by owner decision: the scheduled one is unchanged and stays red while unfunded, and a new manual-only companion, `skills-proposal-issues-manual.yml`, runs the same script with `SKIP_CLASSIFICATION=true` (optional `proposal_limit` input). On that path `proposeSkillPromotions.mjs` does not read `ANTHROPIC_API_KEY`, files each issue with "Placement pending" and a line saying the run was started that way, drops the "AI guess" caveat, and writes the claim row exactly as a normal run does, so a later funded run files no duplicates. The agent session the owner asks to start it then reads each issue and adds the suggested sector and occupation itself; the owner approves from the issue as before. First run filed #2535–#2553. No schema, API-route, or contract change, and the file-an-issue-only boundary is untouched.
 - 2026-09-22: **A nomination reached a round it was not meant for, was accepted, and paid its
