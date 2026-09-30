@@ -3,6 +3,7 @@ import { requireComicReadAccess } from '../_lib';
 import { COMIC_ASKER_STREAM_LIMIT, COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { listComicAskerStream } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
+import { jsonWithEtag } from 'lib/http/json-with-etag';
 
 // Asker-facing read of the current user's own @comic Q&A history. Returns answered AI cards
 // (approved/corrected only) and pending "Reviewing for safety" items. The repository enforces the
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
 
   try {
     const result = await listComicAskerStream(gate.auth.userId, limit);
-    return NextResponse.json({ ok: true, items: result.items }, { status: 200 });
+    // Polled with the home chat every 10-30s; an unchanged stream is answered with a bodiless 304.
+    return jsonWithEtag(request, { ok: true, items: result.items });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'conversation' });
     return NextResponse.json(

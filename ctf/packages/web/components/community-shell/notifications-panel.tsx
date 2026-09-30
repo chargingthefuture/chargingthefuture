@@ -10,6 +10,7 @@ import type {
   NotificationsResponse,
 } from '../../lib/notifications/types';
 import styles from './community-shell.module.css';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
@@ -290,10 +291,11 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
     mountedRef.current = true;
     void load();
     // Poll while the panel is open so a device ping that lands here shows without a manual refresh.
-    const timer = setInterval(() => void load(), 20_000);
+    // A background tab skips its ticks and catches up when shown.
+    const stopPoll = startVisibleInterval(() => void load(), 20_000);
     return () => {
       mountedRef.current = false;
-      clearInterval(timer);
+      stopPoll();
     };
   }, [load]);
 

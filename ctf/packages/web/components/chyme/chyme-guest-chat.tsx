@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Hash, LogIn } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle } from './chyme-shared';
 import type { ChymeMessage } from 'lib/chyme/types';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 // How often the signed-out page re-reads the room chat. The member room polls its own chat too; a
 // guest has no Stream chat identity, so polling the public route is how new messages arrive.
@@ -66,10 +67,11 @@ export function ChymeGuestChat({ signInUrl, refreshKey = 0 }: { signInUrl: strin
       }
     };
     void load();
-    const timer = window.setInterval(() => void load(), POLL_MS);
+    // A background tab skips its ticks and catches up when shown.
+    const stopPoll = startVisibleInterval(() => void load(), POLL_MS);
     return () => {
       canceled = true;
-      window.clearInterval(timer);
+      stopPoll();
     };
   }, [open, refreshKey]);
 

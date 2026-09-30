@@ -44,7 +44,9 @@ const SEARCH_ROOTS = [
 ];
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'coverage', '.expo', 'android', 'ios']);
-const SEARCHABLE = /\.(ts|tsx|js|jsx|mjs|cjs|yml|yaml|md|json)$/;
+// `sh` covers the scripts under .github/scripts that a workflow runs: they call internal routes by
+// full path (the Beacon recordings archive is one), and are as much a caller as the workflow itself.
+const SEARCHABLE = /\.(ts|tsx|js|jsx|mjs|cjs|yml|yaml|md|json|sh)$/;
 
 function walk(dir, out = []) {
   let entries;

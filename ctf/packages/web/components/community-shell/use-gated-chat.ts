@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
 import type { GatedChannelMessage } from '../../lib/contributor-access/channel-repository';
 import type { ShellCurrentUser } from './shell-types';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 // Gated contributor channel — client hook. A deliberately smaller sibling of useHomeChat: same
 // architecture (DB-backed history over polling, Stream as a best-effort live layer for instant
@@ -101,9 +102,10 @@ function disconnectLive(live: CommonsLiveConnection | null): void {
   if (live) void live.disconnect();
 }
 
-// Poll DB-backed history on a fixed cadence; transient failures are covered by the next tick.
-function startHistoryPoll(intervalMs: number, refresh: () => Promise<void>): number {
-  return window.setInterval(() => {
+// Poll DB-backed history on a fixed cadence while the tab is visible (a background tab skips its
+// ticks and catches up when shown); transient failures are covered by the next tick.
+function startHistoryPoll(intervalMs: number, refresh: () => Promise<void>): () => void {
+  return startVisibleInterval(() => {
     void refresh().catch(() => {
       // Keep polling while mounted; transient failures are covered by the next tick.
     });
@@ -158,7 +160,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
 
   useEffect(() => {
     let active = true;
-    let pollId: number | undefined;
+    let stopPoll: (() => void) | undefined;
     setIsLoading(true);
     setError(null);
     setMessages([]);
@@ -200,15 +202,15 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
         if (live) {
           liveConnectionRef.current = live;
           setIsLive(true);
-          pollId = startHistoryPoll(POLL_INTERVAL_LIVE_MS, poll);
+          stopPoll = startHistoryPoll(POLL_INTERVAL_LIVE_MS, poll);
         } else {
           setTypingUsers([]);
-          pollId = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
+          stopPoll = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
         }
       } catch {
         if (!active) return;
         // The live layer is best-effort — polling keeps the channel fully functional.
-        pollId = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
+        stopPoll = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
       }
     }
 
@@ -216,9 +218,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
 
     return () => {
       active = false;
-      if (pollId) {
-        window.clearInterval(pollId);
-      }
+      stopPoll?.();
       const live = liveConnectionRef.current;
       liveConnectionRef.current = null;
       disconnectLive(live);

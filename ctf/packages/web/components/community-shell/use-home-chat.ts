@@ -17,6 +17,7 @@ import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/co
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 import { useCommonsUnlockFocus } from './commons-unlock-focus';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 // Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
 // degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
@@ -312,7 +313,8 @@ async function fetchHistoryIntoState(
   currentUserId: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
 ): Promise<void> {
-  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`);
+  // `no-cache` lets the browser revalidate its copy, so an unchanged page comes back as a 304.
+  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`, { cache: 'no-cache' });
   if (readFilterKey() !== expectedKey) {
     return;
   }
@@ -322,7 +324,8 @@ async function fetchHistoryIntoState(
 
 // Read the comic conversation stream and merge it over the local (optimistic) items.
 async function readComicInto(setters: ChatSetters): Promise<void> {
-  const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
+  // `no-cache` lets the browser revalidate its copy, so an unchanged stream comes back as a 304.
+  const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30', { cache: 'no-cache' });
   const serverItems: ComicStreamItem[] = payload.items.map((item) => ({ ...item }));
   setters.setComicItems((previous) => mergeComicItems(serverItems, previous));
 }
@@ -890,9 +893,9 @@ async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
   }
 }
 
-// A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `pollId`
-// holds the running poll so cleanup can clear it.
-type BootstrapController = { active: boolean; pollId: number | undefined };
+// A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `stopPoll`
+// stops the running poll so cleanup can end it.
+type BootstrapController = { active: boolean; stopPoll: (() => void) | undefined };
 
 // Everything the bootstrap needs from the hook: refresh callbacks, the refs the live handler and
 // cleanup reach through, and the state setters.
@@ -918,9 +921,11 @@ function resetChatForMount(setters: ChatSetters, markedSeenRef: RefObject<boolea
 }
 
 // Both the live path and the polling-only path keep a poll running. `intervalMs` is short when we
-// are polling-only and long when a healthy live connection is the primary refresh path.
+// are polling-only and long when a healthy live connection is the primary refresh path. The poll skips
+// its ticks while the tab is in the background and catches up the moment it is visible again.
 function startChatPoll(ctx: ChatBootstrapContext, intervalMs: number): void {
-  ctx.controller.pollId = window.setInterval(() => {
+  ctx.controller.stopPoll?.();
+  ctx.controller.stopPoll = startVisibleInterval(() => {
     void ctx.refreshHistory().catch(() => {
       // Keep polling while the shell is mounted.
     });
@@ -1025,9 +1030,7 @@ async function runChatBootstrap(ctx: ChatBootstrapContext): Promise<void> {
 // Unmount cleanup: stop the poll and disconnect the live Stream client so we never leak a connection.
 function teardownBootstrap(controller: BootstrapController, liveConnectionRef: RefObject<CommonsLiveConnection | null>): void {
   controller.active = false;
-  if (controller.pollId) {
-    window.clearInterval(controller.pollId);
-  }
+  controller.stopPoll?.();
   const live = liveConnectionRef.current;
   liveConnectionRef.current = null;
   if (live) {
@@ -1063,7 +1066,7 @@ function useChatBootstrapEffect(params: {
   } = params;
 
   useEffect(() => {
-    const controller: BootstrapController = { active: true, pollId: undefined };
+    const controller: BootstrapController = { active: true, stopPoll: undefined };
     resetChatForMount(settersRef.current, markedSeenRef);
     void runChatBootstrap({
       controller,

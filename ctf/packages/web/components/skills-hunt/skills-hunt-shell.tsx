@@ -19,6 +19,7 @@ import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
 import { useNominationForm } from "./sh-use-nomination-form";
+import { startVisibleInterval } from "../../lib/shared/visible-interval";
 
 function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: string; children: React.ReactNode }) {
   return (
@@ -225,8 +226,9 @@ export function SkillsHuntShell({
       } catch { /* ignore polling errors */ }
     }
     void load();
-    const timer = setInterval(load, 30_000);
-    return () => { canceled = true; clearInterval(timer); };
+    // A background tab skips its ticks and catches up when shown.
+    const stopPoll = startVisibleInterval(() => void load(), 30_000);
+    return () => { canceled = true; stopPoll(); };
   }, []);
 
   async function markRead(notificationId: string) {
