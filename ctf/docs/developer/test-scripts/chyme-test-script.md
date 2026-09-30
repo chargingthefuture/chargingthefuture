@@ -194,9 +194,9 @@ itself scrolls: the green header stays pinned at the top while the content moves
 Safari's **Full Page** screenshot reaches the bottom of the content rather than stopping at one
 screenful.
 
-In step 1, on a phone, the first screen carries the header, the invitation card, the **Live Rooms**
-row with its refresh button, the room name and the **Tap to listen** control, the closed **Room
-Chat** row and the **Coming up on TI Radio** rail — nothing of the page's own content needs a scroll
+In step 1, on a phone, the first screen carries the header, the invitation card, the **Coming up
+on TI Radio** rail, the **Live Rooms** row with its refresh button, the room name and the **Tap to
+listen** control, and the closed **Room Chat** row — nothing of the page's own content needs a scroll
 to be found (owner directive, 2026-09-20). What scrolls is the stage when the room holds many
 people, and the chat once you open it. The invitations card is not part of this page at all: it
 floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
@@ -542,7 +542,8 @@ phone read "Joined" after the call had dropped.
 days, and one slot booked for the current 90 minutes if the "On air now" mark is to be checked.
 **Steps:**
 1. As a member, open Chyme and read under the rooms rail. Drag the schedule sideways.
-2. Sign out and open the Chyme route; read under the room list. Drag the schedule sideways.
+2. Sign out and open the Chyme route; read above the **Live Rooms** row (the same place as the
+   member view since 2026-09-30). Drag the schedule sideways.
 3. In the Android app, open Chyme and tap the **Upcoming** tab.
 4. Release every booked slot on the guide, then refresh each of the three screens.
 5. Open the app with the network off (or point it at a stopped server) and read the same places.
@@ -618,7 +619,8 @@ few seconds." until the sound starts, and with two or more recordings on the blo
 follow each other in order, each title changing as its reading starts, then wrap to the first (lock
 the phone and let it run through two readings); the reading plays
 with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
-the idle Main Room screen, above "On stage"; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
+the idle Main Room screen; with nobody in the room there is no "On Stage" block under it (the header
+already reads "0 participants"), and with someone in the room their tiles sit under the card; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
 live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
