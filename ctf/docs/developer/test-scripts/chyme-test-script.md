@@ -34,7 +34,9 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 
 1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room" — the name says
    the room, never a topic; what is being discussed comes from the booked TI Radio slot), the
-   participant list, and the chat panel render — not a spinner or an error. → web ☐ mobile ☐ android ☐
+   participant list, and the **Chat** button render — not a spinner or an error. The chat panel
+   starts closed (since 2026-09-30); press **Chat** and it opens, press it again and it closes.
+   → web ☐ mobile ☐ android ☐
 2. **Join the call.** Press join. You connect to the live audio room, start muted, and can mute
    and unmute your own microphone. → web ☐ mobile ☐ android ☐
 3. **Chat send/read.** Type a message and send it. It appears in the list and persists on
@@ -609,7 +611,7 @@ writes a row in `chyme_admin_audit_trail`.
 **Expected:** Step 1: **Admin** shows for the admin only (a member without the admin role does
 not see it), each link lands where it says, and the readings screen lists the blog's recorded posts by title, each linking to its post,
 with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
-switch reads **On**. Step 3: under "No public rooms right now" a "While the room is empty" card
+switch reads **On**. Step 3: under "No public rooms right now" a "While you wait for someone to go live" card
 says they are computer-voice readings of posts from the blog and a recording, not a live host; on
 an iPhone in Safari as well as on Android, **Play readings** shows "Audio will begin playing in a
 few seconds." until the sound starts, and with two or more recordings on the blog the readings
