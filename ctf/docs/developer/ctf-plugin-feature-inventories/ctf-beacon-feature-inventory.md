@@ -93,6 +93,12 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 5. **Replay.** After the event, the recording is watchable (and is also posted to the Commons).
 6. **"Live and public" indicator.** A clear marker that the broadcast is public so participants know
    their comments are visible.
+7. **Every past broadcast, listed and subscribable.** The blog's streams page
+   (`https://chargingthefuture.github.io/chargingthefuture/streams`) lists every recorded broadcast,
+   newest first, with a player for each, and anybody can watch there without an account. The same
+   list is a podcast feed at `https://app.chargingthefuture.com/api/beacon/replays/feed`, which a feed
+   reader or podcast app can follow; a new replay is in it as soon as its recording is ready. The
+   viewer at `/apps/beacon` still shows only the latest replay.
 
 ## Admin Features (admin surface, `/admin/beacon`)
 
@@ -116,6 +122,18 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ### Member / public routes
 - `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL.
+- `GET /api/beacon/replays?page=` — every ended event with a recording, newest first, 20 per page,
+  page clamped into range. Public, per-IP rate-limited, open to any origin (the blog reads it from the
+  browser). Returns title, description, start/end times, the app's recording address and the watch
+  page; never the host user id, Stream call id, or Commons post ids.
+- `GET /api/beacon/replays/feed` — the podcast feed: RSS 2.0 with iTunes tags, newest 100 recorded
+  broadcasts, each enclosure the app's recording address typed `video/mp4`. Public, rate-limited.
+- `GET /api/beacon/replays/[id]/recording` — 302 to the recording file. Plays this project's own
+  copy (`archived_recording_url`) when there is one. Otherwise asks Stream
+  (`GET /api/v2/video/call/livestream/{id}/recordings`) for a current address on every request,
+  because the stored `recording_url` is a signed address that can expire; falls back to the stored
+  one when Stream cannot answer. 404 for a draft, live, or unrecorded event. Public, not rate-limited
+  (a player seeks with several requests), reads one row by id.
 - `POST /api/beacon/[id]/chat-token` — mint a Stream Chat token for the live event chat. **Requires a
   signed-in member** (this is the sign-in-to-chat gate). Anonymous callers get 401.
 
@@ -136,6 +154,16 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
   `deleteDraftBeaconEvent`. Both the deletion and a refused attempt are written to the audit trail.
 
+### Internal (cron-only)
+- `GET /api/internal/beacon/recordings-archive` — up to 5 ended, recorded events with no kept copy,
+  each with a signed download address. `CRON_SECRET` Bearer.
+- `POST /api/internal/beacon/recordings-archive` — `{ eventId, archivedUrl }`; records where the kept
+  copy lives. Accepts only
+  `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/<eventId>.mp4`.
+  Both are called by `.github/workflows/beacon-recordings-archive.yml` (every six hours, and by hand),
+  which downloads each recording, re-encodes it to 540p if it is 2 GB or more (the release asset
+  limit), uploads it to the `beacon-recordings` release, and reports back.
+
 ### Webhook
 - `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
   acts on three of them. On `call.session_participant_joined` it starts the public HLS feed and the
@@ -154,7 +182,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ### Tables owned by this plugin
 1. `beacon_events` — id, title, description, status (`draft`/`live`/`ended`), host_user_id,
    stream_call_type (`livestream`), stream_call_id, started_at, ended_at, recording_url,
-   recording_ready_at, commons_live_post_id, commons_recording_post_id, created_at, updated_at.
+   recording_ready_at, commons_live_post_id, commons_recording_post_id, archived_recording_url,
+   recording_archived_at, created_at, updated_at. `archived_recording_url` (TEXT, nullable) is this
+   project's own copy of the recording, a GitHub release asset, set by the archive workflow;
+   `recording_archived_at` (TIMESTAMPTZ, nullable) is when.
 2. `beacon_events_admin_audit_trail` — actor_id, command, policy_status, reason, target_type,
    target_id, metadata, created_at.
 
@@ -227,7 +258,13 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   dashboard) — document the dashboard settings alongside the build.
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel (lean
   read-only so the room feels alive).
-- Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL.
+- Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL. Since
+  2026-09-29 every public link goes through `/api/beacon/replays/[id]/recording`, which asks Stream
+  for a fresh address, so an expired signature no longer breaks an old replay. Also since
+  2026-09-29 (owner decision: keep our own copies), every recording is copied to the
+  `beacon-recordings` GitHub release, which costs nothing, and played from there. A recording still
+  2 GB or more after re-encoding to 540p stays on Stream's copy only, and the workflow says so in its
+  summary. A copy has to happen before Stream deletes its file; the workflow runs every six hours.
 - ~~**A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**~~ Closed
   2026-08-10: the Stream webhook now starts egress on `call.session_participant_joined`, so any
   publisher — RTMP from a phone or the in-browser screen-share — starts the public feed and the
@@ -266,6 +303,20 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-09-29: **Every recorded broadcast is listed publicly, with a podcast feed.** Owner request: a
+  record of past streams on the blog that anybody can watch, which also serves as a self-hosted
+  podcast. Added `GET /api/beacon/replays` (paged list), `GET /api/beacon/replays/feed` (RSS with
+  iTunes tags), and `GET /api/beacon/replays/[id]/recording` (redirect to a current recording
+  address), with `listBeaconReplays` / `countBeaconReplays` in `lib/beacon/repository.ts`,
+  `getFreshBeaconRecordingUrl` in `lib/beacon/stream.ts`, and the public shape and feed builder in
+  `lib/beacon/replays.ts`. Contracts `event.replays.list`, `event.replays.feed`,
+  `event.replay.recording.get` added. The FreshRSS default-feeds workflow now writes this feed as a
+  third default beside the blog and the app demo. The blog page is in `chargingthefuture/wiki-site`.
+  Owner decision the same day: keep this project's own copy of every recording. Added
+  `archived_recording_url` and `recording_archived_at` to `beacon_events`, the cron-only
+  `/api/internal/beacon/recordings-archive` (GET list, POST record), and the
+  `beacon-recordings-archive` workflow, which publishes each recording to the `beacon-recordings`
+  GitHub release. The recording route plays the kept copy first. Contract `event.recording.archive`.
 - 2026-08-12: **The Commons notices link straight to Beacon.** The auto-posted "🔴 Live now" and
   "▶️ Watch the replay" entries said "at `/apps/beacon`" — a piece of a web address, which nobody can
   tap and which only works for a reader who already knows the domain. Both now carry the full address

@@ -326,6 +326,40 @@ export async function getBeaconHlsPlaybackUrl(eventId: string): Promise<string |
   return playlistUrl.length > 0 ? playlistUrl : null;
 }
 
+// Ask Stream for a current address for an event's recording. The address the recording-ready webhook
+// delivered is stored on the event, but it is a signed file address, and a signed address can stop
+// working after a while. A replay listed in a podcast feed is fetched weeks or months later, so the
+// public recording route asks Stream again on every play rather than trusting the stored copy.
+//
+// Source: Stream Video recording API, GET /api/v2/video/call/{type}/{id}/recordings, which answers
+// `{ recordings: [{ filename, url, start_time, end_time, session_id }] }`. Not re-checked against
+// Stream's docs from this change (the docs host is unreachable from the build container), so the
+// shape is read defensively and null is returned when anything is missing. Returns the most recent
+// recording's address, or null when Stream is not configured, has none, or the request fails; the
+// caller then falls back to the stored address.
+export async function getFreshBeaconRecordingUrl(eventId: string): Promise<string | null> {
+  const ctx = await resolveStreamRest();
+  if (!ctx) {
+    return null;
+  }
+  const callId = beaconCallIdForEvent(eventId);
+  try {
+    const result = await streamVideoFetch(
+      ctx,
+      `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/recordings`,
+      { method: 'GET' },
+    );
+    const recordings = Array.isArray(result.recordings) ? (result.recordings as Record<string, unknown>[]) : [];
+    const withUrl = recordings
+      .filter((recording) => typeof recording.url === 'string' && recording.url.length > 0)
+      .sort((a, b) => String(b.end_time ?? '').localeCompare(String(a.end_time ?? '')));
+    return withUrl.length > 0 ? (withUrl[0].url as string) : null;
+  } catch (error) {
+    reportError(error, { area: 'beacon', op: 'list_recordings', extra: { eventId } });
+    return null;
+  }
+}
+
 // End the call so Stream stops distribution and billing stops. This is the cost-critical path: the
 // End-event route must call this. Returns false when Stream is not configured (nothing to stop).
 export async function endBeaconCall(eventId: string): Promise<boolean> {

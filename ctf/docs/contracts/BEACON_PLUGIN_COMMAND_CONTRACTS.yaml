@@ -16,6 +16,82 @@ contracts:
     idempotency: true
 
   - pluginId: beacon
+    command: event.replays.list
+    version: 1.0.0
+    description: List every ended Beacon event that has a recording, newest first, one page at a time (GET /api/beacon/replays?page=). Public; no sign-in. Returns title, description, start and end times, the app's recording address, and the watch page. Never returns the host user id or Stream call id. Read by the blog's streams page.
+    inputSchema:
+      page:
+        type: integer
+        required: false
+    outputSchema:
+      replays:
+        type: array
+      page:
+        type: integer
+      pageCount:
+        type: integer
+      total:
+        type: integer
+      feedUrl:
+        type: string
+    dataAccess:
+      - beacon_events
+    purpose: public_viewer
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.replays.feed
+    version: 1.0.0
+    description: Serve the podcast feed (RSS 2.0 with iTunes tags) of the newest 100 recorded Beacon broadcasts (GET /api/beacon/replays/feed). Public; no sign-in. Each item's enclosure is the app's recording address.
+    inputSchema: {}
+    outputSchema:
+      rss:
+        type: string
+    dataAccess:
+      - beacon_events
+    purpose: public_viewer
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.replay.recording.get
+    version: 1.0.0
+    description: Redirect to the recording file of one ended Beacon event (GET /api/beacon/replays/[id]/recording). Prefers this project's own copy (archived_recording_url, a GitHub release asset); otherwise asks Stream for a current file address, because the stored one is signed and can expire; otherwise the stored address. Public; no sign-in. 404 for a draft, live, or unrecorded event.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+    outputSchema:
+      redirect:
+        type: string
+    dataAccess:
+      - beacon_events
+    purpose: public_viewer
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
+    command: event.recording.archive
+    version: 1.0.0
+    description: Cron-only (CRON_SECRET Bearer), GET and POST /api/internal/beacon/recordings-archive. GET lists up to 5 ended, recorded events with no kept copy, each with a signed download address. POST records where the copy now lives; only this repository's beacon-recordings release asset named <eventId>.mp4 is accepted. Run by the beacon-recordings-archive workflow.
+    inputSchema:
+      eventId:
+        type: string
+        required: false
+      archivedUrl:
+        type: string
+        required: false
+    outputSchema:
+      pending:
+        type: array
+    dataAccess:
+      - beacon_events
+    purpose: operational_maintenance
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: beacon
     command: event.chat-token.mint
     version: 1.0.0
     description: Mint a Stream Chat token for the live event chat channel. Requires a signed-in member, so only members can post; this is the sign-in-to-chat gate. Anonymous callers are denied.

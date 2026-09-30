@@ -46,6 +46,11 @@ that Stream user (with `mark_messages_deleted`), removing the copy.
     broadcast, has no recording, and never appeared in the member view.
   - Legal/compliance note: the broadcast and its recording are public by design; the replay is posted
     publicly to the Commons. No private member content is stored here.
+  - Kept copy of the recording (since 2026-09-29): the `beacon-recordings-archive` workflow copies each
+    recording to the public `beacon-recordings` release of `chargingthefuture/chargingthefuture`, one
+    `<eventId>.mp4` per broadcast, and stores that address in `archived_recording_url`. It is the same
+    public broadcast, not new personal data. Removing one is done by deleting that release asset by
+    hand and clearing the column; nothing in the app deletes it.
 - Table/entity: `beacon_events_admin_audit_trail`
   - Contains personal data? minimal — `actor_id` (the admin) and an optional moderated `target_id`.
   - Retention period: compliance retention window.

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Puts the blog in every reader account that gets made from now on. Once.
+# Puts the default feeds in every reader account that gets made from now on:
+# the blog, the demo-video channel, and the recorded broadcasts. Once.
 #
 # Why
 # ───────────────────────────────
@@ -39,15 +40,22 @@
 # Inputs (environment variables)
 #   RENDER_API_KEY   required — Render API key (rnd_…)
 #   SERVICE_NAME     optional — defaults to ctf-freshrss
-#   FEED_URL         optional — defaults to the blog's feed
 #
 # Delete this script and the workflow that runs it once a new account arrives
-# with the blog in it. It does one thing once.
+# with all three feeds in it. It does one thing once.
 set -uo pipefail
 
 service="${SERVICE_NAME:-ctf-freshrss}"
-feed="${FEED_URL:-https://chargingthefuture.github.io/chargingthefuture/feed.xml}"
+blog_feed="https://chargingthefuture.github.io/chargingthefuture/feed.xml"
 site="https://chargingthefuture.github.io/chargingthefuture/"
+# The demo-video channel, collected by chargingthefuture/rss-feeds. Kept here so
+# writing the file does not drop it; it was already in the file on the disk.
+demo_feed="https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml"
+demo_site="https://chargingthefuture.github.io/rss-feeds/"
+# Every recorded broadcast, served by the app so a replay appears the moment it
+# is ready. The blog's streams page lists the same recordings.
+streams_feed="https://app.chargingthefuture.com/api/beacon/replays/feed"
+streams_site="https://chargingthefuture.github.io/chargingthefuture/streams"
 target=/var/www/FreshRSS/data/opml.xml
 
 fail() { echo "::error title=Default feed not set::$1"; exit 1; }
@@ -89,13 +97,16 @@ report() {
 }
 
 # ── The file ──────────────────────────────────────────────────────────────────
-# One feed, named the way it will appear in somebody's list.
+# Three feeds, named the way they will appear in somebody's list. The file
+# replaces the one on the disk, so every default is listed, not only the new one.
 opml=$(printf '%s\n' \
   '<?xml version="1.0" encoding="UTF-8"?>' \
   '<opml version="2.0">' \
   '  <head><title>Charging The Future</title></head>' \
   '  <body>' \
-  "    <outline text=\"Charging The Future\" type=\"rss\" xmlUrl=\"${feed}\" htmlUrl=\"${site}\"/>" \
+  "    <outline text=\"Charging The Future\" type=\"rss\" xmlUrl=\"${blog_feed}\" htmlUrl=\"${site}\"/>" \
+  "    <outline text=\"Charging The Future: app demo\" type=\"rss\" xmlUrl=\"${demo_feed}\" htmlUrl=\"${demo_site}\"/>" \
+  "    <outline text=\"Charging The Future: recorded broadcasts\" type=\"rss\" xmlUrl=\"${streams_feed}\" htmlUrl=\"${streams_site}\"/>" \
   '  </body>' \
   '</opml>')
 
@@ -197,14 +208,14 @@ fi
 report | tee /tmp/report.txt
 
 {
-  echo "### The reader's starting feed"
+  echo "### The reader's starting feeds"
   echo ""
   if [ "$live" = yes ]; then
-    echo "Done, and the reader is serving again. An account made from now on arrives with this blog in it and nothing else."
+    echo "Done, and the reader is serving again. An account made from now on arrives with three feeds in it: the blog, the app demo, and the recorded broadcasts."
     echo ""
     echo "One of the two copy steps was expected to fail — only one of those paths exists. The lines below say which."
     echo ""
-    echo "An account that already exists is unchanged. The announcement post carries a link that adds the feed in one step."
+    echo "An account that already exists is unchanged. Anybody already signed in adds the recorded-broadcast feed themselves."
   else
     echo "The last step did not come back up, so the reader is down."
   fi

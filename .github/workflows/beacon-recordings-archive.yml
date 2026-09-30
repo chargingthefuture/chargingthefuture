@@ -1,0 +1,38 @@
+name: Beacon — Keep a copy of each recording
+
+# Recurring. Stream hosts each Beacon broadcast's recording, and its copy can
+# expire or be deleted. Every six hours this copies any recording not yet kept
+# here to the `beacon-recordings` release of this repository, then tells the
+# app, which plays the copy from then on on the blog's streams page and in the
+# podcast feed. A release asset costs nothing to store or serve.
+#
+# Needs the NEXT_PUBLIC_APP_URL and CRON_SECRET secrets, the same ones the other
+# internal runs use. The signed download address the app hands over is never
+# printed. Work is in .github/scripts/beacon-recordings-archive.sh.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beacon-recordings-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    name: Copy new recordings to the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy recordings
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/beacon-recordings-archive.sh

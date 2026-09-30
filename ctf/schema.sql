@@ -6992,6 +6992,10 @@ CREATE TABLE IF NOT EXISTS beacon_events (
   recording_ready_at TIMESTAMPTZ,
   commons_live_post_id UUID,
   commons_recording_post_id UUID,
+  -- This project's own copy of the recording (a GitHub release asset), written by the
+  -- beacon-recordings-archive workflow. Stream's copy can expire or be deleted; this one is kept.
+  archived_recording_url TEXT,
+  recording_archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7011,6 +7015,8 @@ ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_url TEXT;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_ready_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_live_post_id UUID;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_recording_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS archived_recording_url TEXT;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_archived_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
