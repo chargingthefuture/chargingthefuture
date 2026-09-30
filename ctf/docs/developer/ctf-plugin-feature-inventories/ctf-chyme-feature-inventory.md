@@ -65,8 +65,8 @@ Lifecycle/governance references applied:
     Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
     — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
     by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
-    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
-    room list on the signed-out page (both re-read on the page's refresh control), as a sideways
+    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and above the
+    room list on the signed-out page, the same place as the member view (owner directive, 2026-09-30) (both re-read on the page's refresh control), as a sideways
     rail of cards in the shape of the rooms rail above it (owner directive, 2026-09-20 — stacked,
     five booked slots were a phone screen on their own). Android: the Upcoming tab of the room
     list, which used to be a placeholder sentence; it keeps its stacked list, since it has a tab
@@ -424,6 +424,17 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-30: **The signed-in idle room no longer repeats the participant count (owner directive).**
+  With nobody in the room, an "On Stage · 0 Participants" block and "No participants yet." sat
+  under the readings card, repeating the header's "0 participants · Signed in as …" line.
+  `ChymeStage` (the pre-join preview) now renders nothing when the room is empty; with people in
+  the room it shows their tiles as before. The signed-out page was not affected. Test script
+  readings step 4 updated.
+- 2026-09-30: **The signed-out page puts the TI Radio guide above the room (owner directive).** It
+  sat under the room list, at the bottom of the page; the signed-in page has it above the room. The
+  "Coming up on TI Radio" rail now opens the signed-out room section, above the **Live Rooms** row,
+  and the empty-room line reads "The TI Radio guide above says when the next one is." Test script
+  CH-22 step 2 and the one-screen check updated.
 - 2026-09-30: **The signed-in room opens with chat closed (owner directive).** Chat is a utility,
   not the reason to open Chyme, and open by default it pushed the stage and controls below the fold
   on a phone. `ChymeLiveShell` now starts `showChat` as `false`; the room header's existing **Chat**

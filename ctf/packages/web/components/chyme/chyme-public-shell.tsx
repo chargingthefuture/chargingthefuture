@@ -103,7 +103,7 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }
     return (
       <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
-        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide below says when the next one is.</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide above says when the next one is.</div>
         {/* The readings loop, only while it is switched on (temporary module, 2026-09-28). */}
         <ChymeReadingsPlayer onRoomLive={onRoomGone} />
       </div>
@@ -238,6 +238,12 @@ function ChymePublicView({
           it, a visitor listening in had no way to stop short of closing the tab or reloading a long
           page (owner report, 2026-09-20). It shows only while there is a call to leave. */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
+            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat.
+            Above the room, where the signed-in page has it (owner directive, 2026-09-30). */}
+        <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
+          <ChymeUpcoming refreshKey={refreshKey} compact />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -265,11 +271,6 @@ function ChymePublicView({
           </div>
         </div>
         <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} listen={listen} />
-        {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
-            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat. */}
-        <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
-          <ChymeUpcoming refreshKey={refreshKey} compact />
-        </div>
       </div>
 
       {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement
