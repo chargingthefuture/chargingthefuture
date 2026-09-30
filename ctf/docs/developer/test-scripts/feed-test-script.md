@@ -470,6 +470,24 @@ FD-12b), with at least one reaction on it.
 
 ---
 
+### FD-16b — A background tab catches up when shown (added 2026-09-30)
+**Role:** member | **Surface:** web
+
+**Precondition:** Two members, A and B, each signed in on their own device.
+
+**Steps:**
+1. As A, open the Commons hub home chat, then switch to another browser tab (or lock the phone) for at least a minute.
+2. As B, post a community message.
+3. As A, switch back to the Commons tab.
+
+**Expected:**
+- B's message appears in A's chat right away on returning, without a manual refresh.
+- While nothing new has been posted, the chat stays exactly as it was across several minutes of leaving it open (no flicker, no duplicated messages).
+
+**Result:** web ☐
+
+---
+
 ### FD-19 — Edit and delete your own reply on an announcement (added 2026-08-10)
 **Role:** member | **Surface:** web
 

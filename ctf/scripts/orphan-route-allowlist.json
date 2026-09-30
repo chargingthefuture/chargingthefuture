@@ -437,6 +437,11 @@
       "route": "/api/workforce/admin/audit-events",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
+    },
+    {
+      "route": "/api/beacon/replays",
+      "kind": "external",
+      "reason": "Called from the browser by the blog's streams page (chargingthefuture/wiki-site), which lists every recorded Beacon broadcast. The blog is a separate repository, so the only caller is outside this one. Documented in the route's own header and the Beacon inventory."
     }
   ]
 }
