@@ -54,6 +54,12 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
   // "next" reading every time, which played one reading on repeat.
   const indexRef = useRef<number | null>(null);
   const tracksRef = useRef<ReadingsTrack[]>([]);
+  // Where the loaded file was opened, and how many readings in a row have failed to load. A failed
+  // load is retried once from the start, then the loop moves on, so one file the browser refuses
+  // does not end the loop (owner report, 2026-09-30: an iPhone showed code 4 on a reading a laptop
+  // played). Reset once sound starts.
+  const offsetRef = useRef(0);
+  const failuresRef = useRef(0);
   const [tracks, setTracks] = useState<ReadingsTrack[]>([]);
   const [index, setIndex] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -88,6 +94,7 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     const track = tracksRef.current[trackIndex];
     if (!audio || !track) return;
     indexRef.current = trackIndex;
+    offsetRef.current = offsetSeconds;
     setIndex(trackIndex);
     setProblem(null);
     audio.src = sourceAt(track.audioUrl, offsetSeconds);
@@ -96,6 +103,8 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
       (error: unknown) => {
         // A newer play() or a stop superseded this one; that one reports its own outcome.
         if (error instanceof DOMException && error.name === 'AbortError') return;
+        // The file did not load: the element's error event handles that (retry, or the next reading).
+        if (error instanceof DOMException && error.name === 'NotSupportedError') return;
         setPlaying(false);
         setStarting(false);
         setProblem(`The recording did not start: ${error instanceof Error ? error.message : 'the browser refused to play it.'}`);
@@ -113,6 +122,7 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     const position = loopPositionAt(tracksRef.current.map((track) => track.durationSeconds), Date.now());
     if (!position) return;
     setStarting(true);
+    failuresRef.current = 0;
     playFrom(position.index, position.offsetSeconds);
   }, [playFrom]);
 
@@ -135,16 +145,35 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     return () => window.clearInterval(timer);
   }, [playing, stop, onRoomLive]);
 
-  // The browser's own reason, so a report from a phone says which failure it was.
+  const handlePlaying = useCallback(() => {
+    failuresRef.current = 0;
+    setStarting(false);
+  }, []);
+
+  // A reading that will not load is tried again from its start, without the `#t=` mark, since the
+  // mark is what an iPhone treats differently from a laptop; then the loop moves to the next
+  // reading. The error shows only once every reading has failed in a row, with the browser's own
+  // reason, so a report from a phone says which failure it was.
   const handleError = useCallback(() => {
     const failure = audioRef.current?.error;
     // A load that a newer file replaced is not a failure of the file.
     if (!failure || failure.code === MediaError.MEDIA_ERR_ABORTED) return;
+    const current = indexRef.current;
+    const count = tracksRef.current.length;
+    if (current !== null && offsetRef.current >= 1) {
+      playFrom(current, 0);
+      return;
+    }
+    failuresRef.current += 1;
+    if (current !== null && failuresRef.current < count) {
+      playFrom(nextIndex(current, count), 0);
+      return;
+    }
     setPlaying(false);
     setStarting(false);
     const reason = MEDIA_ERROR_REASON[failure.code] ?? 'unknown media error';
     setProblem(`The recording could not be loaded (${reason}, code ${failure.code}${failure.message ? `: ${failure.message}` : ''}).`);
-  }, []);
+  }, [playFrom]);
 
   // Stop the sound when the player leaves the page (a room went live, or the visitor navigated away).
   useEffect(() => () => audioRef.current?.pause(), []);
@@ -160,7 +189,7 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
       onToggle={playing ? stop : start}
     >
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read this post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
-      <audio ref={audioRef} onEnded={handleEnded} onPlaying={() => setStarting(false)} onError={handleError} preload="none" />
+      <audio ref={audioRef} onEnded={handleEnded} onPlaying={handlePlaying} onError={handleError} preload="none" />
     </ReadingsCard>
   );
 }

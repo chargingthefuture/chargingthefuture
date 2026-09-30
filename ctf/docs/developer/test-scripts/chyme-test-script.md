@@ -617,7 +617,9 @@ says they are computer-voice readings of posts from the blog and a recording, no
 an iPhone in Safari as well as on Android, **Play readings** shows "Audio will begin playing in a
 few seconds." until the sound starts, and with two or more recordings on the blog the readings
 follow each other in order, each title changing as its reading starts, then wrap to the first (lock
-the phone and let it run through two readings); the reading plays
+the phone and let it run through two readings); if a reading will not load, the player tries it
+again from its start and then moves to the next one, and "The recording could not be loaded (…)"
+shows only when no reading will load; the reading plays
 with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
 the idle Main Room screen; with nobody in the room there is no "On Stage" block under it (the header
 already reads "0 participants"), and with someone in the room their tiles sit under the card; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
