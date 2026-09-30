@@ -107,7 +107,9 @@ Lifecycle/governance references applied:
     seconds." shows under the button. A listener who joins partway in gets the file opened at that
     point (`#t=` on its address) rather than a seek after loading, and the readings follow each
     other in order, wrapping to the first (Safari refuses audio that starts after a network
-    wait); an entry without a length is left out. The sound plays in the visitor's own browser; nothing touches
+    wait); an entry without a length is left out. A reading the browser will not load is tried once
+    more from its start without the `#t=` mark, then the loop moves to the next reading; the card
+    shows the browser's reason only when every reading has failed in a row. The sound plays in the visitor's own browser; nothing touches
     Stream, so it costs no Stream minutes. Web only. This is a module meant to be deleted once the
     room has people in it: everything it owns sits in `lib/chyme/readings`,
     `components/chyme/readings`, `app/api/chyme/readings`, `app/admin/chyme/readings`, the
@@ -424,6 +426,18 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-30: **A reading that will not load no longer ends the loop (owner report).** On an iPhone
+  the card showed "The recording could not be loaded (the file or its address is not playable, code
+  4)." for a reading a laptop played. The file is on the blog and is an ordinary MP3; what differs
+  is the address, which carries a `#t=` mark so the phone opens it partway in, a path only tested in
+  Chromium. The player used to stop at the first failed load. Now a failed load is tried once more
+  from the start of the same reading, without the mark, then the loop moves to the next reading, and
+  the error shows only when every reading has failed in a row. A failed load's `play()` rejection
+  ("NotSupportedError") is left to the error handler, so it no longer shows an error or stops the
+  player while the retry runs. Checked in Chromium with the component on its own and the blog's list
+  and files stood in for: a first load that fails then plays from the start; a reading that always
+  fails hands over to the next; three failing readings show the error. Not checked in Safari: no
+  Safari engine was available. Test script CH-24 updated.
 - 2026-09-30: **The signed-in idle room no longer repeats the participant count (owner directive).**
   With nobody in the room, an "On Stage · 0 Participants" block and "No participants yet." sat
   under the readings card, repeating the header's "0 participants · Signed in as …" line.
