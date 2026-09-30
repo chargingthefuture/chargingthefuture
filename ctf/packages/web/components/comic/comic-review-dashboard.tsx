@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 type ReviewListResponse = {
   ok: true;
@@ -233,10 +234,10 @@ function useComicReview() {
     if (selectedId !== null || editing || resolving) {
       return;
     }
-    const intervalId = window.setInterval(() => {
+    // A background tab skips its ticks and catches up when shown.
+    return startVisibleInterval(() => {
       void refresh();
     }, 15000);
-    return () => window.clearInterval(intervalId);
   }, [refresh, selectedId, editing, resolving]);
 
   const selected = useMemo(
