@@ -180,7 +180,7 @@ function ReadingsCard({ current, playing, starting, wentLive, problem, onToggle,
   const t = getChymeTokens(theme);
   return (
     <div style={{ marginTop: 12, borderRadius: 10, border: `1px solid ${t.BORDER}`, padding: '14px', textAlign: 'left' }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>While the room is empty</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>While you wait for someone to go live</div>
       <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5, marginBottom: 10 }}>
         Computer-voice readings of posts from{' '}
         <a href={BLOG_URL} target="_blank" rel="noreferrer" style={{ color: t.ACCENT }}>the blog</a>, on a loop. This is a recording, not a live host. It stops when someone goes live.

@@ -90,7 +90,7 @@ Lifecycle/governance references applied:
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
     Chyme admin screen.
 18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
-    on and no room is live, the Chyme page shows a "While the room is empty" card: computer-voice
+    on and no room is live, the Chyme page shows a "While you wait for someone to go live" card: computer-voice
     (text-to-speech) readings of posts from the blog, on a loop, with a **Play readings**
     button, the title of the reading playing and a **Read this post** button under it. It says
     plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
@@ -424,6 +424,16 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-30: **The signed-in room opens with chat closed (owner directive).** Chat is a utility,
+  not the reason to open Chyme, and open by default it pushed the stage and controls below the fold
+  on a phone. `ChymeLiveShell` now starts `showChat` as `false`; the room header's existing **Chat**
+  button opens and closes it. The signed-out view already started closed (2026-09-20), so both now
+  open to one view. Android is unchanged: its chat was already a separate view behind a button.
+  Test script core smoke step 1 updated.
+- 2026-09-30: **The readings card heading reads "While you wait for someone to go live" (owner
+  directive).** It read "While the room is empty", which put the page's first words on what is
+  missing. "Join" was not used because on this page it means signing in. Inventory and test script
+  updated to the new heading.
 - 2026-09-29: **The loop moves through every reading, and says the sound is coming (owner report).**
   With two recordings on the blog, an iPhone played one of them on repeat, and the first tap gave a
   silent pause that read as broken. The end-of-file handler now reads the current reading from a

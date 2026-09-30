@@ -38,7 +38,10 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
   const [connection, setConnection] = useState<ChymeConnectionState>('joined');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showChat, setShowChat] = useState(true);
+  // Closed until the member presses Chat (owner directive, 2026-09-30): chat is a utility, not the
+  // reason to open Chyme, and open it pushed the stage and controls below the fold. Matches the
+  // signed-out view, which already starts closed (chyme-guest-chat.tsx).
+  const [showChat, setShowChat] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Only the private contributors room can be "locked": a member who is not eligible (or the channel
   // is not open yet) gets a 404 from the room read, and we show the "how it's earned" explainer
