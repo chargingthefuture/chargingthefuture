@@ -43,7 +43,12 @@ WITH already_written AS (
     'tommy-gumbert',    -- an-invitation-to-tommy.md
     'alphelus-allen',   -- an-invitation-to-alphelus.md
     'lorraine-valente', -- an-invitation-to-lorraine.md
-    'krissyy-2'         -- an-invitation-to-krissyy.md
+    'krissyy-2',        -- an-invitation-to-krissyy.md
+    'jessica-goodwin-229', -- an-invitation-to-jessica.md
+    'zack-tom-4',       -- an-invitation-to-zack.md
+    'jerrod-fredrick',  -- an-invitation-to-jerrod.md
+    'eli-paniagua-1',   -- an-invitation-to-eli.md
+    'brecht-corbeel'    -- an-invitation-to-brecht.md
   ]) AS handle
 ),
 listed_skills AS (
