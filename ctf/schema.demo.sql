@@ -632,10 +632,16 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
-  -- An integer-credit reward minted to the scout when a nomination is accepted, capped per scout.
+  -- No longer read or written (2026-10-01): an accept no longer sends credits. Kept one release so
+  -- the revision still running during the deploy can read them; drop in the next release.
   reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
   reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
+  -- End-of-round award (owner decision, 2026-10-01): when the round closes, every scout whose
+  -- score reached award_points_bar shares award_pool_credits ServiceCredits in proportion to their
+  -- points, sent once when an admin presses Send. 0 / NULL = no award set.
+  award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0),
+  award_points_bar INTEGER NULL CHECK (award_points_bar IS NULL OR award_points_bar >= 0),
+  awards_sent_at TIMESTAMPTZ NULL,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3240,6 +3246,8 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_hand
 -- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
 -- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
 -- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+-- Backfilled by post/0044, which joins to directory_profile_change_events.target_id as text: the
+-- two id columns differ in type on production, and a bare = stopped the migration run (2026-10-01).
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
@@ -5281,7 +5289,7 @@ CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
 --   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
 --                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
 -- Starting rows come from db/migrations/post/0041 (one per service) and post/0045 (ElevenLabs);
--- neither writes an amount.
+-- neither writes an amount. post/0047 removes 0041's ntfy line, which nothing uses.
 CREATE TABLE IF NOT EXISTS admin_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider TEXT NOT NULL,
@@ -5549,6 +5557,29 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
+-- One row per scout awarded at the end of a round. Written before any credits move, so the split is
+-- fixed at the first Send and a retry only sends the rows still unsent (sent_at NULL); the ledger
+-- idempotency key makes a repeated send of one row a no-op.
+CREATE TABLE IF NOT EXISTS skills_hunt_round_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username_snapshot TEXT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0),
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  governance_event_id TEXT NULL,
+  sent_at TIMESTAMPTZ NULL,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (round_id, user_id)
+);
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS username_snapshot TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS governance_event_id TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_round_awards_user ON skills_hunt_round_awards (user_id);
 
 -- skills_hunt_proposed_skill_promotions — companion ALTERs for every column so a
 -- legacy copy of the table is healed (the CREATE TABLE IF NOT EXISTS above is skipped
@@ -10506,6 +10537,9 @@ DROP TABLE IF EXISTS chyme_readings_tracks;
 -- Rows with neither record (older than both, or made by hand) are left NULL here; assigning them
 -- is the owner's decision and is done with a separate statement, not by this file.
 -- Idempotent: every step is guarded and re-running it changes nothing.
+-- 2026-10-01: the admin-event join compares as text. Production holds `directory_profiles.id` and
+-- `directory_profile_change_events.target_id` as different types, so the bare `=` failed with
+-- "operator does not exist: uuid = character varying" and stopped every migration after this one.
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by
   ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
@@ -10527,7 +10561,7 @@ FROM (
     AND actor_id <> ''
   ORDER BY target_id, created_at ASC
 ) ev
-WHERE ev.target_id = dp.id
+WHERE ev.target_id::text = dp.id::text
   AND dp.nominated_by_user_id IS NULL;
 
 
@@ -10560,4 +10594,78 @@ WHERE NOT EXISTS (SELECT 1 FROM admin_expenses WHERE lower(provider) = 'elevenla
     WHERE target_id = '5e0a1c00-0000-4000-8000-000000000012'
   )
 ON CONFLICT (id) DO NOTHING;
+
+
+-- ── post migration: 0046_skills_hunt_end_of_round_awards.sql ──
+-- post/0046: Skills Hunt end-of-round awards.
+--
+-- A round is points only (owner decision, 2026-10-01). Accepting a nomination no longer sends
+-- ServiceCredits; when a round closes, every scout whose score reached the round's points bar shares
+-- its ServiceCredits pool in proportion to their points, sent once when an admin presses Send.
+-- Adds the two award settings and the sent marker to skills_hunt_rounds, and the table that fixes
+-- the split before any credits move. The old per-accept columns stay for one release because the
+-- revision still running during the deploy reads them. Guarded and idempotent.
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS skills_hunt_round_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username_snapshot TEXT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0),
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  governance_event_id TEXT NULL,
+  sent_at TIMESTAMPTZ NULL,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (round_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_round_awards_user ON skills_hunt_round_awards (user_id);
+
+
+-- ── post migration: 0047_admin_expenses_remove_ntfy_line.sql ──
+-- Remove the ntfy line from /admin/expenses (added 2026-10-01).
+--
+-- Why: ntfy was only used by the Route Weather Briefing workflow, which was removed because it never
+-- ran (no route was configured, so every scheduled run was skipped). Nothing else in the app sends
+-- ntfy messages, so the line names a service the app does not use. post/0041 is left as it is
+-- because it has already run; this step takes the line out instead.
+--
+-- What it does: deletes the line with post/0041's fixed id for ntfy, and records the removal in
+-- admin_expenses_audit_trail the same way a removal on the screen is recorded (command
+-- admin.expenses.delete, the row before, nothing after), so the list still shows what was cut.
+--
+-- Safe to re-run: it acts only while that row exists. After the first run there is nothing to delete
+-- and nothing is recorded. The audit row also keeps post/0041 from writing its starting list again,
+-- since post/0041 writes only while the audit trail is empty.
+WITH removed AS (
+  DELETE FROM admin_expenses
+  WHERE id = '5e0a1c00-0000-4000-8000-000000000010'::uuid
+  RETURNING id, provider, purpose, kind, billing, amount_cents, amount_max_cents, paid_on,
+            last_checked_on, stopped_on, notes
+)
+INSERT INTO admin_expenses_audit_trail
+  (actor_id, command, policy_status, reason, target_type, target_id, result, error_category, metadata)
+SELECT
+  'migration:post/0047',
+  'admin.expenses.delete',
+  'allow',
+  'migration',
+  'expense',
+  removed.id::text,
+  'success',
+  NULL,
+  jsonb_build_object(
+    'before', jsonb_build_object(
+      'provider', removed.provider, 'purpose', removed.purpose, 'kind', removed.kind,
+      'billing', removed.billing, 'amountCents', removed.amount_cents,
+      'amountMaxCents', removed.amount_max_cents, 'paidOn', removed.paid_on,
+      'lastCheckedOn', removed.last_checked_on, 'stoppedOn', removed.stopped_on,
+      'notes', removed.notes
+    ),
+    'after', NULL
+  )
+FROM removed;
 
