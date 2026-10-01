@@ -57,7 +57,7 @@ BEGIN
         -- Only seed profiles that have NO normalized skills yet. Once a member or
         -- admin edits skills through the app (writing directory_profile_skills), that
         -- junction is authoritative; re-running this backfill must not re-add a skill
-        -- they removed, by copying an out-of-date value from the legacy array.
+        -- they removed, by copying a stale value from the legacy array.
         AND NOT EXISTS (
           SELECT 1 FROM directory_profile_skills existing
           WHERE existing.profile_id::text = lower(dp.id::text)

@@ -27,6 +27,14 @@
     {
       "path": "ctf/agents/skills/supabase-postgres-best-practices/",
       "reason": "A copied third-party skill from Supabase. Its text is theirs, not ours to reword."
+    },
+    {
+      "path": "ctf/db/migrations/post/0005_directory_backfill_skills_from_legacy_array.sql",
+      "reason": "An applied migration. Editing it, even a comment, trips the schema drift gate, and it is a record of what ran."
+    },
+    {
+      "path": "ctf/schema.demo.sql",
+      "reason": "Generated from ctf/schema.sql and the post migrations, which are checked at their source. It copies the applied migration above."
     }
   ],
   "filePatterns": [

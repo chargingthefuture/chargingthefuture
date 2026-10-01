@@ -8,7 +8,7 @@
 //
 // What it skips, each for a stated reason, lives in ctf/config/banned-words-allowlist.json:
 //   - paths: files or folders (a trailing slash means a folder) that define the ban or are not ours.
-//   - filePatterns: licence files and lockfiles, matched by regular expression.
+//   - filePatterns: license files and lockfiles, matched by regular expression.
 //   - phrases: fixed names that contain a banned word and cannot be reworded (an HTTP header
 //     directive, a GitHub setting, a company name). Matched case-insensitively.
 // Any word inside a URL (an http:// or https:// token) is also skipped: an address is not prose.
