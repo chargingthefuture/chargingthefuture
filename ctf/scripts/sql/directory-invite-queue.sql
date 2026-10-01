@@ -48,7 +48,9 @@ WITH already_written AS (
     'zack-tom-4',       -- an-invitation-to-zack.md
     'jerrod-fredrick',  -- an-invitation-to-jerrod.md
     'eli-paniagua-1',   -- an-invitation-to-eli.md
-    'brecht-corbeel'    -- an-invitation-to-brecht.md
+    'brecht-corbeel',   -- an-invitation-to-brecht.md
+    'matthew-a-davis-1', -- an-invitation-to-matthew-a-davis.md
+    'sherri-jenkins-12' -- an-invitation-to-sherri.md
   ]) AS handle
 ),
 listed_skills AS (

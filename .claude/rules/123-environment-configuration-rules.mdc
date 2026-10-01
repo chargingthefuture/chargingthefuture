@@ -135,6 +135,33 @@ is **not allowed** without the owner explicitly asking for it and saying yes.
   name(s) it already has, and why a new one is needed; only add it after the owner says yes. This is the
   same approval bar as renaming a key (above).
 
+### The Skills Taxonomy service credential
+
+`TAXONOMY_SERVICE_TOKENS` holds the credential One Percent reads the taxonomy with. It is the one
+new key the integration needed, and nothing already in Infisical carried this value: every other
+credential here authenticates a person, and this one authenticates a machine.
+
+Format is one entry per consumer, `name:secret`, separated by commas. The name travels inside the
+token the caller sends (`Authorization: Bearer <name>.<secret>`), so a valid secret presented
+under the wrong name authenticates nothing — that is the access policy contract's
+`approved_consumers_only` scope and its `unauthorized_consumer_binding` deny condition, enforced
+rather than described.
+
+**Optional, never required.** Unset or empty means no machine may read anything, which is the
+correct state for an environment that was never given a credential. A product that cannot serve a
+page without it would be a product one integration can take down, and that has happened here
+before with a scheduled job nobody had switched on.
+
+**Revoking it is removing the entry.** That is a settings change, which is the whole reason the
+credential is a setting rather than a row somebody needs a terminal to reach. The credential is
+this app's to issue and to revoke; One Percent stores its copy in its own Infisical project and
+never reads a value out of this one.
+
+It is scoped to taxonomy reads by construction rather than by promise: only
+`/api/skills-taxonomy/hierarchy` and `/api/skills-taxonomy/flattened` hand the request to the
+gate, so no other route can see the header at all. Every admin route and every write stays
+member-only.
+
 ### Stream and Formance staging keys
 The single `production` Infisical environment additionally holds the demo/staging
 credential set for the two integrations that need it:
