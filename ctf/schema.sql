@@ -3248,6 +3248,8 @@ ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_hand
 -- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
 -- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
 -- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+-- Backfilled by post/0044, which joins to directory_profile_change_events.target_id as text: the
+-- two id columns differ in type on production, and a bare = stopped the migration run (2026-10-01).
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and

@@ -11,6 +11,9 @@
 -- Rows with neither record (older than both, or made by hand) are left NULL here; assigning them
 -- is the owner's decision and is done with a separate statement, not by this file.
 -- Idempotent: every step is guarded and re-running it changes nothing.
+-- 2026-10-01: the admin-event join compares as text. Production holds `directory_profiles.id` and
+-- `directory_profile_change_events.target_id` as different types, so the bare `=` failed with
+-- "operator does not exist: uuid = character varying" and stopped every migration after this one.
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by
   ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
@@ -32,5 +35,5 @@ FROM (
     AND actor_id <> ''
   ORDER BY target_id, created_at ASC
 ) ev
-WHERE ev.target_id = dp.id
+WHERE ev.target_id::text = dp.id::text
   AND dp.nominated_by_user_id IS NULL;
