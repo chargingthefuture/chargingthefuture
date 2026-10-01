@@ -5350,6 +5350,31 @@ ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS create
 CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
   ON admin_expenses_audit_trail (created_at DESC, actor_id, command);
 
+-- The RunPod drafting bill, one row per endpoint per UTC day (added 2026-10-01), read from
+-- rest.runpod.io/v1/billing/endpoints by lib/admin-expenses/gpu-bill.ts on a daily schedule and from
+-- the "Read the bill now" control on /admin/expenses. Only this product's own endpoints are read (the
+-- ids come from OLLAMA_BASE_URL); the RunPod account is shared with One Percent, whose spending must
+-- never land here. These are real US dollar amounts the owner pays.
+--   amount_usd      RunPod's figure for the day, kept to the fraction of a cent it reports.
+--   time_billed_ms  GPU time RunPod billed that day.
+--   settled         FALSE while RunPod may still add to the day (it reports about an hour behind, and
+--                   today keeps growing): every read rewrites the row. TRUE once the day was read at
+--                   least three hours after it ended; the row is then written once and never changed.
+--   read_at         when the row was last written.
+CREATE TABLE IF NOT EXISTS admin_expense_gpu_bill_days (
+  endpoint_id TEXT NOT NULL,
+  bill_date DATE NOT NULL,
+  amount_usd NUMERIC(14, 6) NOT NULL DEFAULT 0,
+  time_billed_ms BIGINT NOT NULL DEFAULT 0,
+  settled BOOLEAN NOT NULL DEFAULT FALSE,
+  read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (endpoint_id, bill_date)
+);
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS amount_usd NUMERIC(14, 6) NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS time_billed_ms BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS settled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
 -- on every surface. lib/mutual-time/audit.ts builds the entire contract-shaped event and ends in
 -- console.info — a line in the server's log, which nothing can query, no screen can show, and which

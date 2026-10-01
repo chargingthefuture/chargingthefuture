@@ -250,6 +250,19 @@ They are read at call time, so a change takes effect on the next request after R
 The values in force show on `/admin/chyme`. A non-numeric or non-positive value falls back to the
 default rather than to zero, so a typo cannot close the room.
 
+### Admin expenses: RunPod billing key (2026-10-01)
+
+One optional key lets `/admin/expenses` read the RunPod drafting bill (`ctf/packages/web/lib/admin-expenses/gpu-bill.ts`).
+
+| Key | Default | What it does |
+|---|---|---|
+| `RUNPOD_BILLING_API_KEY` | unset | A RunPod API key that can read billing. Sent as the bearer to `https://rest.runpod.io/v1/billing/endpoints`, one request per endpoint. |
+
+- **Optional, and a secret.** When unset or empty, nothing is requested: the RunPod line keeps the figure typed by hand, the screen says the bill is not being read and why, and the daily schedule (`.github/workflows/runpod-gpu-bill-read.yml`) passes with a note. Never commit, log, or print the value.
+- **This project's Infisical only.** The RunPod account is shared with One Percent, whose settings live in a separate Infisical project. Create this key for this product and store it here; never copy a value across from One Percent's project.
+- **No setting for the endpoint ids.** They are read out of the Ollama address settings already configured (`OLLAMA_BASE_URL`, `https://api.runpod.ai/v2/<endpoint-id>`). The list of settings read is `OLLAMA_URL_SETTINGS` in `lib/admin-expenses/runpod-billing.ts`.
+- It is separate from `OLLAMA_API_KEY`, the key the drafting requests themselves send, so the billing read can be turned off or rotated without touching drafting.
+
 ### PeerProgramming plugin: single standing, always-open Cohort 1 mode
 
 `PEER_PROGRAMMING_SINGLE_OPEN_COHORT` switches the PeerProgramming plugin between two cohort models.

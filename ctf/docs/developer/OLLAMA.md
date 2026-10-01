@@ -89,6 +89,9 @@ low-volume chat; serverless only bills while a worker is actually running.
 - `OLLAMA_BASE_URL` → the endpoint URL, `https://api.runpod.ai/v2/<endpoint-id>`.
 - `OLLAMA_API_KEY` → the RunPod API key (sent as the bearer token).
 - `OLLAMA_MODEL` → the model baked into the worker (e.g. `qwen2.5:32b`).
+- `RUNPOD_BILLING_API_KEY` → optional, a RunPod key that can read billing. `/admin/expenses` uses it to
+  read this endpoint's daily bill; the endpoint id is taken from `OLLAMA_BASE_URL`, so it is not set
+  twice. See rule 123, "Admin expenses: RunPod billing key".
 
 ## Retired: the Render CPU image
 

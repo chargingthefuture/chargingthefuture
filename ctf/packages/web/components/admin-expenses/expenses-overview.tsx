@@ -7,6 +7,7 @@ import {
   formatDollarRange,
   formatDollars,
   formatShare,
+  sourceLabel,
   type Expense,
   type ExpenseSummary,
 } from 'lib/admin-expenses/summary';
@@ -120,7 +121,15 @@ export function ExpensesOverview({ tokens: t, summary, actions, afterTotals }: {
       <Section tokens={t} title="Recurring, largest first">
         {summary.priced.length === 0 ? <Empty tokens={t}>No recurring cost has an amount yet.</Empty> : null}
         {summary.priced.map((line) => (
-          <ExpenseCard key={line.expense.id} tokens={t} expense={line.expense} amount={formatDollarRange(line.lowCents, line.highCents)} share={line.share} actions={actions} />
+          <ExpenseCard
+            key={line.expense.id}
+            tokens={t}
+            expense={line.expense}
+            amount={formatDollarRange(line.lowCents, line.highCents)}
+            share={line.share}
+            actions={actions}
+            marker={sourceLabel(line) ? <Tag tokens={t} color={line.source === 'measured' ? '#10B981' : '#F59E0B'}>{sourceLabel(line)}</Tag> : undefined}
+          />
         ))}
         {summary.priced.some((line) => line.highCents > line.lowCents) ? (
           <div style={{ fontSize: 11, color: t.MUTED }}>Shares use the middle of any range.</div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expensesAsPlainText, formatShare, summarizeExpenses, type Expense } from './summary';
+import { expensesAsPlainText, formatShare, sourceLabel, summarizeExpenses, type Expense } from './summary';
 import { parseExpenseInput } from './parse';
 
 function expense(overrides: Partial<Expense>): Expense {
@@ -95,5 +95,35 @@ describe('parseExpenseInput', () => {
   it('drops fields that do not apply to the kind', () => {
     const oneOff = parseExpenseInput({ ...base, kind: 'one_off', amountMaxCents: 5000, stoppedOn: '2026-09-01', paidOn: '2026-09-02' });
     expect(oneOff.ok && oneOff.value).toMatchObject({ amountMaxCents: null, stoppedOn: null, paidOn: '2026-09-02' });
+  });
+});
+
+describe('the RunPod line, measured or typed', () => {
+  const runpod = expense({ provider: 'RunPod', billing: 'usage', amountCents: 2000, amountMaxCents: 4000 });
+  const render = expense({ provider: 'Render', amountCents: 2500 });
+
+  it('replaces the typed range with the measured figure instead of adding to it', () => {
+    const summary = summarizeExpenses([runpod, render], 0, '2026-10-01', 1234);
+    const line = summary.priced.find((entry) => entry.expense.provider === 'RunPod');
+    expect(line).toMatchObject({ lowCents: 1234, highCents: 1234, source: 'measured' });
+    expect(summary.monthlyLowCents).toBe(1234 + 2500);
+    expect(summary.monthlyHighCents).toBe(1234 + 2500);
+    expect(line && sourceLabel(line)).toBe('measured from the RunPod bill, last 30 days');
+  });
+
+  it('keeps the typed figure, labeled an estimate, when the bill has not been read', () => {
+    const summary = summarizeExpenses([runpod, render], 0, '2026-10-01', null);
+    const line = summary.priced.find((entry) => entry.expense.provider === 'RunPod');
+    expect(line).toMatchObject({ lowCents: 2000, highCents: 4000, source: 'entered' });
+    expect(line && sourceLabel(line)).toBe('estimate, typed by hand');
+    expect(sourceLabel(summary.priced.find((entry) => entry.expense.provider === 'Render')!)).toBeNull();
+  });
+
+  it('prices an unpriced RunPod line once the bill is read', () => {
+    const unpriced = expense({ provider: 'RunPod', billing: 'usage' });
+    expect(summarizeExpenses([unpriced], 0, '2026-10-01', null).unpriced).toHaveLength(1);
+    const measured = summarizeExpenses([unpriced], 0, '2026-10-01', 500);
+    expect(measured.unpriced).toHaveLength(0);
+    expect(measured.monthlyLowCents).toBe(500);
   });
 });

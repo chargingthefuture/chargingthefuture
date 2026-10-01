@@ -6,7 +6,8 @@ import { reportError } from 'lib/observability/report';
 
 export type ExpensesAuditEvent = {
   actorId: string;
-  command: 'admin.expenses.create' | 'admin.expenses.update' | 'admin.expenses.delete';
+  command: 'admin.expenses.create' | 'admin.expenses.update' | 'admin.expenses.delete' | 'admin.expenses.gpu_bill.read';
+  targetType?: 'expense' | 'gpu_bill';
   targetId: string;
   metadata: Record<string, unknown>;
 };
@@ -22,7 +23,7 @@ export async function recordExpensesAdminAudit(event: ExpensesAuditEvent): Promi
         VALUES
           ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
       `,
-      [event.actorId, event.command, 'allow', 'admin_route_guard', 'expense', event.targetId, 'success', null, JSON.stringify(event.metadata)],
+      [event.actorId, event.command, 'allow', 'admin_route_guard', event.targetType ?? 'expense', event.targetId, 'success', null, JSON.stringify(event.metadata)],
     );
   } catch (error) {
     reportError(error, { area: 'admin-expenses', op: 'admin_audit_write' });
