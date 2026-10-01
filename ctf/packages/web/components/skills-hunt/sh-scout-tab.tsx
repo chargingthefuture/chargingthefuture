@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Check, CheckCircle, ExternalLink, Send } from "lucide-react";
+import { Search, CheckCircle, ExternalLink, Send } from "lucide-react";
 import { BIO_MAX, type Tab, type SkillsHuntRound } from "./sh-shared";
 import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
 import { SkillsPicker } from "./sh-skills-picker";
@@ -202,60 +202,26 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
   );
 }
 
-// The round is a field the scout marks, not a dropdown in the header (owner directive,
-// 2026-09-22). The picker set the round from whichever round sorted first and put it in the
-// header above the form, so a nomination could be filed against a round the scout never read.
-// Each round now states what it is looking for beside its own check mark, in the form itself.
-// With more than one round open nothing is marked to begin with and the submit button waits, so
-// the round a nomination lands in is always one somebody chose.
-function RoundChoiceField({ rounds, activeRound, onSelectRound }: {
-  rounds: SkillsHuntRound[];
-  activeRound: SkillsHuntRound | null;
-  onSelectRound: (id: string) => void;
-}) {
+// The round this nomination goes into. Only one round is open at a time (owner decision,
+// 2026-10-01), so there is nothing to choose; the round is named here, with what it is looking for,
+// so the scout still reads it before submitting. Themed asks are missions, on the Missions tab.
+function OpenRoundNote({ round }: { round: SkillsHuntRound | null }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  if (rounds.length === 0) return null;
+  if (!round) return null;
   return (
-    <div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
-        Which round is this for? <span style={{ color: t.ACCENT }}>*</span>
-        {rounds.length > 1 && (
-          <span style={{ fontSize: 11, color: t.FAINT, fontWeight: 400, marginLeft: 6 }}>mark one — each says what it is looking for</span>
-        )}
-      </label>
-      <div role="radiogroup" aria-label="Which round is this for?" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {rounds.map((r) => (
-          <RoundChoiceRow key={r.id} round={r} chosen={activeRound?.id === r.id} onChoose={() => onSelectRound(r.id)} />
-        ))}
-      </div>
+    <div style={{ padding: "12px 14px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, borderRadius: 10 }}>
+      <div style={{ fontSize: 12, color: t.FAINT }}>Nominating for</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: t.TITLE, marginTop: 2 }}>{round.name}</div>
+      {round.description && (
+        <div style={{ fontSize: 12.5, color: t.MUTED, marginTop: 5, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{round.description}</div>
+      )}
     </div>
   );
 }
 
-function RoundChoiceRow({ round, chosen, onChoose }: { round: SkillsHuntRound; chosen: boolean; onChoose: () => void }) {
-  const { theme } = useTheme();
-  const t = getSkillsHuntTokens(theme);
-  const roundWindow = `${new Date(round.startsAtIso).toLocaleDateString()} → ${new Date(round.endsAtIso).toLocaleDateString()}`;
-  return (
-    <button type="button" role="radio" aria-checked={chosen} onClick={onChoose}
-      style={{ display: "flex", alignItems: "flex-start", gap: 10, textAlign: "left", width: "100%", padding: "12px 14px", background: chosen ? `${t.ACCENT}14` : t.INPUT_BG, border: `1px solid ${chosen ? t.ACCENT : t.BORDER_STRONG}`, borderRadius: 10, cursor: "pointer", boxSizing: "border-box" }}>
-      <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 1, width: 18, height: 18, borderRadius: 5, border: `1px solid ${chosen ? t.ACCENT : t.BORDER_STRONG}`, background: chosen ? t.ACCENT : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {chosen && <Check size={13} style={{ color: "#fff" }} />}
-      </span>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: t.TITLE }}>{round.name}</span>
-        <span style={{ display: "block", fontSize: 11.5, color: t.FAINT, marginTop: 2 }}>{roundWindow}</span>
-        {round.description && (
-          <span style={{ display: "block", fontSize: 12.5, color: t.MUTED, marginTop: 5, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{round.description}</span>
-        )}
-      </span>
-    </button>
-  );
-}
-
 // Kept out of the component so the readiness rule stays one readable list rather than a long
-// boolean inside the render. A round must be marked and still open before anything else counts.
+// boolean inside the render. The open round must still be inside its dates before anything else counts.
 function canSubmitNomination(form: ScoutFormModel, activeRound: SkillsHuntRound | null): boolean {
   if (!activeRound || !isRoundOpenForNominations(activeRound)) return false;
   if (form.submitting) return false;
@@ -265,11 +231,9 @@ function canSubmitNomination(form: ScoutFormModel, activeRound: SkillsHuntRound 
     && form.quora.trim().length > 0;
 }
 
-function NominationForm({ form, rounds, activeRound, onSelectRound }: {
+function NominationForm({ form, activeRound }: {
   form: ScoutFormModel;
-  rounds: SkillsHuntRound[];
   activeRound: SkillsHuntRound | null;
-  onSelectRound: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
@@ -290,7 +254,7 @@ function NominationForm({ form, rounds, activeRound, onSelectRound }: {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <RoundChoiceField rounds={rounds} activeRound={activeRound} onSelectRound={onSelectRound} />
+        <OpenRoundNote round={activeRound} />
 
         {roundClosed && activeRound ? <RoundWindowClosed round={activeRound} /> : null}
 
@@ -327,8 +291,6 @@ function NominationForm({ form, rounds, activeRound, onSelectRound }: {
 export function SkillsHuntScoutTab({
   noActiveRound,
   activeRound,
-  rounds,
-  onSelectRound,
   submitted,
   form,
   onReset,
@@ -336,8 +298,6 @@ export function SkillsHuntScoutTab({
 }: {
   noActiveRound: boolean;
   activeRound: SkillsHuntRound | null;
-  rounds: SkillsHuntRound[];
-  onSelectRound: (id: string) => void;
   submitted: boolean;
   form: ScoutFormModel;
   onReset: () => void;
@@ -348,7 +308,7 @@ export function SkillsHuntScoutTab({
   return (
     <div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-        <NominationForm form={form} rounds={rounds} activeRound={activeRound} onSelectRound={onSelectRound} />
+        <NominationForm form={form} activeRound={activeRound} />
         <WhyThisWorks />
       </div>
     </div>

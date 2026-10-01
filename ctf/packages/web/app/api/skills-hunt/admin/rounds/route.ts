@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../_lib';
+import { anotherRoundOpenResponse, ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createRound, insertSkillsHuntAudit, listRounds, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRoundInput } from 'lib/skills-hunt/types';
@@ -20,8 +20,8 @@ function toRoundInput(body: RoundBody): SkillsHuntRoundInput {
     startsAtIso: typeof body.startsAtIso === 'string' ? body.startsAtIso : new Date().toISOString(),
     endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : new Date(Date.now() + 86400000).toISOString(),
     scoringConfig: body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : {},
-    rewardCreditsPerAccept: typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : 0,
-    rewardPerUserRoundCap: typeof body.rewardPerUserRoundCap === 'number' ? body.rewardPerUserRoundCap : null,
+    awardPoolCredits: typeof body.awardPoolCredits === 'number' ? body.awardPoolCredits : 0,
+    awardPointsBar: typeof body.awardPointsBar === 'number' ? body.awardPointsBar : null,
   };
 }
 
@@ -35,6 +35,8 @@ export async function GET() {
     const rounds = await listRounds(null);
     return NextResponse.json({ rounds }, { status: 200 });
   } catch (error) {
+    const refused = anotherRoundOpenResponse(error);
+    if (refused) return refused;
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to list rounds: ${failureReason(error)}` },
@@ -86,6 +88,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, round }, { status: 201 });
   } catch (error) {
+    const refused = anotherRoundOpenResponse(error);
+    if (refused) return refused;
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to create round: ${failureReason(error)}` },

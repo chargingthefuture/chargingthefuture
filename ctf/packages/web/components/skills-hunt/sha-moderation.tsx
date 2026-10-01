@@ -15,19 +15,16 @@ import { Pager } from "@/components/shared/pager";
 // in reach without a long trip back up.
 const MODERATION_PAGE_SIZE = 25;
 
-type RewardSummary = { totalCreditsPaid: number; rewardedSubmissionCount: number };
 
-// Confirm the mass action with the real count before firing — a bulk accept pays each scout and a
+// Confirm the mass action with the real count before firing — a bulk accept scores each scout and a
 // bulk reject can trip the rejection-rate guard, so neither should run on a stray click. The
 // confirm says what will happen; it never withholds the action. Any selected row is included,
 // whatever state it is in, and a removed one is made live again by the review (owner directive
 // 2026-08-28: this is the admin page).
-// Accept is the one review action that mints credits, and the mint cannot be reversed from the
-// app — rejecting or removing the nomination afterwards rolls back its points and its leaderboard
-// place and leaves the credits with the scout. So accept asks a second time and says, in the
-// dialog, what the round wanted and what is about to be paid to whom (owner directive,
-// 2026-09-22: a filter pill naming the round is not enough to stop a wrong accept). Reject, flag
-// and unflag pay nothing and stay one tap.
+// Accept asks a second time and says, in the dialog, what the round is looking for (owner directive,
+// 2026-09-22: a filter pill naming the round is not enough to stop a wrong accept). An accept sends
+// no ServiceCredits since 2026-10-01: a round is points only, and credits are shared out once the
+// round ends (Rounds tab). Reject, flag and unflag stay one tap.
 function acceptConfirmMessage(round: SkillsHuntRound | null, submission: SkillsHuntSubmission | undefined): string {
   const who = submission ? submission.fullName : "this nomination";
   const parts = [round ? `Accept ${who} into ${round.name}?` : `Accept ${who}?`];
@@ -36,19 +33,13 @@ function acceptConfirmMessage(round: SkillsHuntRound | null, submission: SkillsH
     parts.push(`\n${round.name} is looking for: ${round.description}`);
   }
 
-  const reward = round?.rewardCreditsPerAccept ?? 0;
-  if (reward > 0) {
-    const scout = submission?.submitterUsername ? `@${submission.submitterUsername}` : "the scout";
-    parts.push(`\nThis sends ${reward} ServiceCredits to ${scout}. It cannot be undone from here — if this turns out to be the wrong round or the wrong person, the credits have to be burned separately.`);
-  }
-
   return parts.join("\n");
 }
 
 function bulkConfirmMessage(action: "accept" | "reject", count: number): string {
   const verb = action === "accept" ? "Accept" : "Reject";
   const consequence = action === "accept"
-    ? "Each accepted nomination pays the configured reward once, and a paid reward cannot be undone from here."
+    ? "Each accepted nomination adds points to its scout's score for the round."
     : "Each rejected nomination counts toward that scout's rejection rate.";
   return `${verb} ${count} selected submission${count === 1 ? "" : "s"}? ${consequence} Any removed submission in the selection is restored by this.`;
 }
@@ -57,7 +48,6 @@ type SubmissionPage = {
   items: SkillsHuntSubmission[];
   total?: number;
   round?: SkillsHuntRound | null;
-  rewardSummary?: RewardSummary | null;
 };
 
 // One page of the queue. Throws with the route's own sentence when it refuses — this is an
@@ -93,25 +83,6 @@ function RoundPurpose({ round }: { round: SkillsHuntRound | null }) {
   );
 }
 
-function RewardBanner({ round, summary }: { round: SkillsHuntRound | null; summary: RewardSummary | null }) {
-  const { theme } = useTheme();
-  const t = getSkillsHuntAdminTokens(theme);
-  if (!round) return null;
-  const per = round.rewardCreditsPerAccept;
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", padding: "10px 14px", marginBottom: 16, borderRadius: 10, background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.25)", fontSize: 12.5, color: "#D1FAE5" }}>
-      {per > 0 ? (
-        <span>Reward: <b>{per} ServiceCredits</b> per accepted nomination{round.rewardPerUserRoundCap !== null ? ` · cap ${round.rewardPerUserRoundCap} per scout` : ""}.</span>
-      ) : (
-        <span style={{ color: t.SUBTLE }}>No ServiceCredits reward on this round — set one in the Rounds tab. Accepting still awards points and badges.</span>
-      )}
-      {summary && summary.rewardedSubmissionCount > 0 && (
-        <span style={{ color: t.SUBTLE }}>Paid so far: <b style={{ color: "#22C55E" }}>{summary.totalCreditsPaid}</b> to {summary.rewardedSubmissionCount} scout{summary.rewardedSubmissionCount === 1 ? "" : "s"}.</span>
-      )}
-    </div>
-  );
-}
-
 export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   rounds: SkillsHuntRound[];
   activeRoundId: string | null;
@@ -122,7 +93,6 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   const [statusFilter, setStatusFilter] = useState<SkillsHuntAdminStatusFilter>("all");
   const [submissions, setSubmissions] = useState<SkillsHuntSubmission[]>([]);
   const [round, setRound] = useState<SkillsHuntRound | null>(null);
-  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -144,7 +114,6 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
       setSubmissions(data.items);
       setTotal(data.total ?? data.items.length);
       setRound(data.round ?? null);
-      setRewardSummary(data.rewardSummary ?? null);
       setSelected(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load submissions.");
@@ -194,7 +163,7 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   }
 
   async function onRemove(id: string) {
-    if (!window.confirm("Remove this submission? It is soft-deleted and no longer counts toward scores, missions, or the scout's reputation — unlike Reject, it does not count against the scout. This does not reverse any ServiceCredits reward; burn that separately if needed.")) return;
+    if (!window.confirm("Remove this submission? It is soft-deleted and no longer counts toward scores, missions, or the scout's reputation — unlike Reject, it does not count against the scout. ServiceCredits already sent for it stay sent; burn those separately if needed.")) return;
     setActing(id);
     try {
       const res = await fetch(`/api/skills-hunt/admin/submissions/${id}/remove`, {
@@ -276,7 +245,6 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
     <>
       <SkillsHuntAdminFilters rounds={rounds} activeRoundId={activeRoundId} onRound={onRoundChange} statusFilter={statusFilter} onStatus={setStatusFilter} />
       <RoundPurpose round={round} />
-      <RewardBanner round={round} summary={rewardSummary} />
       <SkillsHuntAdminBulkBar count={selected.size} onAccept={() => void bulkReview("accept")} onReject={() => void bulkReview("reject")} onClear={() => setSelected(new Set())} />
 
       {error && <div style={{ marginBottom: 12, color: "#EF4444", fontSize: 13 }}>{error}</div>}

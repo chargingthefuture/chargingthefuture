@@ -70,6 +70,10 @@ SkillsHunt uses canonical profile fields for account identity, role checks, and 
   - Contains personal data? yes (community-sourced profile projection)
   - Retention period: long-lived until claim or policy removal
   - Legal/compliance note: must remain unclaimed projection until Directory ownership flow completes
+- Table/entity: `skills_hunt_round_awards` (added 2026-10-01)
+  - Contains personal data? yes (user linkage, username snapshot, final round score, award amount)
+  - Retention period: until the member's account is deleted
+  - Legal/compliance note: deleted with the member's account; the ServiceCredits ledger entries for an award already sent are handled by ServiceCredits, not by this table
 - Table/entity: `skills_hunt_audit_log`
   - Contains personal data? minimal actor linkage
   - Retention period: compliance retention window
@@ -101,6 +105,7 @@ When user requests full account deletion:
 - Additional records removed vs service-scoped deletion:
   - remaining user-linked SkillsHunt notifications and achievements
   - user ownership links in plugin tables where hard delete is policy-allowed
+  - the member's rows in `skills_hunt_round_awards` (end-of-round award lines); the matching ServiceCredits ledger entries follow ServiceCredits' own deletion contract
 - Cross-service dependencies:
   - full-account orchestrator must coordinate canonical identity and plugin deletions
   - Directory profile ownership/claim logic remains Directory-governed

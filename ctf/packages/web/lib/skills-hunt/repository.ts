@@ -59,6 +59,7 @@ import {
 } from './notifications';
 import { snapshotRareSkillsForRound } from './rare-skill-snapshot';
 import { generateAutoMissionsForNewRound } from './auto-missions';
+import { assertNoOtherOpenRound } from './one-open-round';
 
 type CountRow = { total: string };
 
@@ -70,8 +71,9 @@ type SkillsHuntRoundRow = {
   starts_at: Date;
   ends_at: Date;
   scoring_config: Record<string, unknown>;
-  reward_credits_per_accept?: number | null;
-  reward_per_user_round_cap?: number | null;
+  award_pool_credits?: number | null;
+  award_points_bar?: number | null;
+  awards_sent_at?: Date | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -273,11 +275,12 @@ function mapRound(row: SkillsHuntRoundRow): SkillsHuntRound {
     startsAtIso: toIso(row.starts_at),
     endsAtIso: toIso(row.ends_at),
     scoringConfig: normalizeJsonObject(row.scoring_config),
-    rewardCreditsPerAccept: Number(row.reward_credits_per_accept ?? 0),
-    rewardPerUserRoundCap:
-      row.reward_per_user_round_cap === null || row.reward_per_user_round_cap === undefined
+    awardPoolCredits: Number(row.award_pool_credits ?? 0),
+    awardPointsBar:
+      row.award_points_bar === null || row.award_points_bar === undefined
         ? null
-        : Number(row.reward_per_user_round_cap),
+        : Number(row.award_points_bar),
+    awardsSentAtIso: row.awards_sent_at ? toIso(row.awards_sent_at) : null,
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -402,15 +405,15 @@ export function parsePaginationParams(url: string): SkillsHuntPagination {
   };
 }
 
-// Reward config is entire, non-negative ServiceCredits. Coerce defensively so a
-// stray float/NaN/negative from the client never reaches the ledger: floor to a
-// non-negative integer, and treat absent/blank as the safe default (0 / no cap).
-function normalizeRewardPerAccept(value: number | undefined): number {
+// Award config: the round's ServiceCredits pool and the points a scout needs to share in it, both
+// non-negative integers. Coerce defensively so a stray float/NaN/negative from the client never
+// reaches the ledger: floor, and treat absent/blank as the safe default (no pool / no bar set).
+function normalizeAwardPool(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.floor(value));
 }
 
-function normalizeRewardCap(value: number | null | undefined): number | null {
+function normalizeAwardBar(value: number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(0, Math.floor(value));
@@ -423,7 +426,7 @@ function isValidRewardField(value: number | null | undefined): boolean {
 }
 
 function hasValidRewardConfig(input: SkillsHuntRoundInput): boolean {
-  return isValidRewardField(input.rewardCreditsPerAccept) && isValidRewardField(input.rewardPerUserRoundCap);
+  return isValidRewardField(input.awardPoolCredits) && isValidRewardField(input.awardPointsBar);
 }
 
 export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
@@ -621,8 +624,9 @@ async function getRoundById(client: PoolClient, roundId: string): Promise<Skills
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1421,8 +1425,9 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1439,10 +1444,13 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
 
 export async function createRound(actorId: string, input: SkillsHuntRoundInput): Promise<SkillsHuntRound> {
   const round = await withDbTransaction(async (client) => {
+    if (input.status === 'active') {
+      await assertNoOtherOpenRound(client, null);
+    }
     const row = await client.query<SkillsHuntRoundRow>(
       `
         INSERT INTO skills_hunt_rounds
-          (name, description, status, starts_at, ends_at, scoring_config, reward_credits_per_accept, reward_per_user_round_cap, created_by_user_id, updated_by_user_id)
+          (name, description, status, starts_at, ends_at, scoring_config, award_pool_credits, award_points_bar, created_by_user_id, updated_by_user_id)
         VALUES
           ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6::jsonb, $7, $8, $9, $9)
         RETURNING
@@ -1453,8 +1461,9 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
           starts_at,
           ends_at,
           scoring_config,
-          reward_credits_per_accept,
-          reward_per_user_round_cap,
+          award_pool_credits,
+          award_points_bar,
+          awards_sent_at,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1467,8 +1476,8 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
-        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
-        normalizeRewardCap(input.rewardPerUserRoundCap),
+        normalizeAwardPool(input.awardPoolCredits),
+        normalizeAwardBar(input.awardPointsBar),
         actorId,
       ],
     );
@@ -1497,6 +1506,9 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
     if (!existing) {
       return null;
     }
+    if (input.status === 'active' && existing.status !== 'active') {
+      await assertNoOtherOpenRound(client, roundId);
+    }
 
     const updated = await client.query<SkillsHuntRoundRow>(
       `
@@ -1508,8 +1520,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at = $5::timestamptz,
           ends_at = $6::timestamptz,
           scoring_config = $7::jsonb,
-          reward_credits_per_accept = $8,
-          reward_per_user_round_cap = $9,
+          award_pool_credits = $8,
+          award_points_bar = $9,
           updated_by_user_id = $10,
           updated_at = NOW()
         WHERE id = $1::uuid
@@ -1521,8 +1533,9 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at,
           ends_at,
           scoring_config,
-          reward_credits_per_accept,
-          reward_per_user_round_cap,
+          award_pool_credits,
+          award_points_bar,
+          awards_sent_at,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1536,8 +1549,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
-        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
-        normalizeRewardCap(input.rewardPerUserRoundCap),
+        normalizeAwardPool(input.awardPoolCredits),
+        normalizeAwardBar(input.awardPointsBar),
         actorId,
       ],
     );
@@ -1589,8 +1602,9 @@ export async function getRound(roundId: string): Promise<SkillsHuntRound | null>
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1652,99 +1666,12 @@ export async function getSubmissionById(submissionId: string): Promise<SkillsHun
   return row ? mapSubmission(row) : null;
 }
 
-// Atomically claim the accept reward for a submission under the per-scout,
-// per-round cap. A transaction-scoped advisory lock keyed on (round, scout)
-// serializes concurrent accepts for the same scout so two of them cannot both
-// pass the cap and overpay. On success the submission is marked credited inside
-// the lock (claim-then-mint); the caller mints next and reverts the claim if the
-// mint is rejected. Returns false when already granted or the cap would be crossed.
-export async function claimSkillsHuntRewardUnderCap(input: {
-  submissionId: string;
-  roundId: string;
-  submitterUserId: string;
-  amount: number;
-  cap: number | null;
-}): Promise<boolean> {
-  return withDbTransaction(async (client) => {
-    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`sh-reward:${input.roundId}:${input.submitterUserId}`]);
-
-    const current = await client.query<{ credit_granted: boolean | null; status: string }>(
-      `SELECT credit_granted, status
-       FROM skills_hunt_submissions
-       WHERE id = $1::uuid AND round_id = $2::uuid AND submitter_user_id = $3
-       FOR UPDATE`,
-      [input.submissionId, input.roundId, input.submitterUserId],
-    );
-    const row = current.rows[0];
-    // Re-check inside the lock: the submission must still belong to this
-    // round+scout, still be accepted (a concurrent reject/flag could have moved
-    // it after the route's in-memory check), and not already credited.
-    if (!row || row.status !== 'accepted' || row.credit_granted) {
-      return false;
-    }
-
-    if (input.cap !== null) {
-      const sum = await client.query<{ total: string | null }>(
-        `SELECT COALESCE(SUM(credit_amount), 0)::text AS total
-         FROM skills_hunt_submissions
-         WHERE round_id = $1::uuid AND submitter_user_id = $2 AND credit_granted = TRUE`,
-        [input.roundId, input.submitterUserId],
-      );
-      if (Number(sum.rows[0]?.total ?? 0) + input.amount > input.cap) {
-        return false;
-      }
-    }
-
-    await client.query(
-      `UPDATE skills_hunt_submissions
-       SET credit_granted = TRUE, credit_amount = $2, credit_granted_at = NOW(), updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [input.submissionId, Math.max(0, Math.floor(input.amount))],
-    );
-    return true;
-  });
-}
-
-// Release a reward claim when the mint that should follow it is rejected, so the
-// per-scout cap and the paid flag stay accurate (the mint is transactional, so a
-// rejection means no credits moved).
-export async function revertSkillsHuntCreditClaim(submissionId: string): Promise<void> {
-  await queryDb(
-    `UPDATE skills_hunt_submissions
-     SET credit_granted = FALSE, credit_amount = 0, credit_granted_at = NULL, updated_at = NOW()
-     WHERE id = $1::uuid AND credit_granted = TRUE`,
-    [submissionId],
-  );
-}
-
-// Round-level reward rollup for the admin shell: how many scouts were paid and
-// how many credits in total this round has minted.
-export async function getRoundRewardSummary(
-  roundId: string,
-): Promise<{ totalCreditsPaid: number; rewardedSubmissionCount: number }> {
-  const result = await queryDb<{ total: string | null; count: string | null }>(
-    `
-      SELECT
-        COALESCE(SUM(credit_amount), 0)::text AS total,
-        COUNT(*)::text AS count
-      FROM skills_hunt_submissions
-      WHERE round_id = $1::uuid
-        AND credit_granted = TRUE
-    `,
-    [roundId],
-  );
-  return {
-    totalCreditsPaid: Number(result.rows[0]?.total ?? 0),
-    rewardedSubmissionCount: Number(result.rows[0]?.count ?? 0),
-  };
-}
-
 // A person who asked to have their community-generated Directory profile taken down should not be
 // nominated back into the directory. Directory holds that list; SkillsHunt refuses to take or accept
 // a nomination for a URL on it. Checked at submit (so the scout learns immediately and nobody
 // reviews it) and again at accept (so a takedown that lands while the nomination sits in the queue
-// still stops it). Refusing at accept matters most: an accept awards points and can mint the round's
-// ServiceCredits reward, and before 2026-08-27 it paid both while quietly generating no profile.
+// still stops it). Refusing at accept matters most: an accept awards points toward the round's
+// end-of-round award, and before 2026-08-27 it paid while quietly generating no profile.
 async function assertQuoraUrlNotTakenDown(client: PoolClient, quoraProfileUrl: string | null): Promise<void> {
   if (await isQuoraUrlSuppressed(client, quoraProfileUrl)) {
     throw new Error('skills_hunt_quora_url_taken_down');

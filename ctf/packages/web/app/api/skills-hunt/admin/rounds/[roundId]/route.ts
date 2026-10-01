@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
+import { anotherRoundOpenResponse, ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { getRound, insertSkillsHuntAudit, updateRound, validateRoundInput } from 'lib/skills-hunt/repository';
 import type { SkillsHuntRound, SkillsHuntRoundInput } from 'lib/skills-hunt/types';
@@ -24,13 +24,13 @@ function mergeRoundStatus(existing: SkillsHuntRound, body: RoundBody): SkillsHun
     : existing.status;
 }
 
-// rewardPerUserRoundCap is tri-state like description: absent preserves, a
-// number sets it, anything else clears it to null.
-function mergeRoundRewardCap(existing: SkillsHuntRound, body: RoundBody): number | null {
-  return body.rewardPerUserRoundCap === undefined
-    ? existing.rewardPerUserRoundCap
-    : typeof body.rewardPerUserRoundCap === 'number'
-      ? body.rewardPerUserRoundCap
+// awardPointsBar is tri-state like description: absent preserves, a number sets it, anything else
+// clears it to null.
+function mergeRoundAwardBar(existing: SkillsHuntRound, body: RoundBody): number | null {
+  return body.awardPointsBar === undefined
+    ? existing.awardPointsBar
+    : typeof body.awardPointsBar === 'number'
+      ? body.awardPointsBar
       : null;
 }
 
@@ -46,9 +46,8 @@ function mergeRoundInput(existing: SkillsHuntRound, body: RoundBody): SkillsHunt
     endsAtIso: typeof body.endsAtIso === 'string' ? body.endsAtIso : existing.endsAtIso,
     scoringConfig:
       body.scoringConfig && typeof body.scoringConfig === 'object' ? body.scoringConfig : existing.scoringConfig,
-    rewardCreditsPerAccept:
-      typeof body.rewardCreditsPerAccept === 'number' ? body.rewardCreditsPerAccept : existing.rewardCreditsPerAccept,
-    rewardPerUserRoundCap: mergeRoundRewardCap(existing, body),
+    awardPoolCredits: typeof body.awardPoolCredits === 'number' ? body.awardPoolCredits : existing.awardPoolCredits,
+    awardPointsBar: mergeRoundAwardBar(existing, body),
   };
 }
 
@@ -111,6 +110,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
 
     return NextResponse.json({ ok: true, round }, { status: 200 });
   } catch (error) {
+    const refused = anotherRoundOpenResponse(error);
+    if (refused) return refused;
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid' });
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to update round: ${failureReason(error)}` },
