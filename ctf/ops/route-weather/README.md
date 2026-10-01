@@ -22,12 +22,11 @@ drive/hold verdict for each. The waypoints are inputs *you* supply, not a route
 it computes. The only use of distance here is a rough arrival-time estimate so
 each forecast lines up with roughly when you'll be at that stop — not routing.
 
-## Two halves
+## Where it runs
 
-| Half | What it is | Where it runs | Cost |
+| Part | What it is | Where it runs | Cost |
 |---|---|---|---|
 | **On-demand** | An HTTP endpoint you call (e.g. from an Apple Shortcut) and get plain text back | `ctf-route-weather` web service on Render | one small instance |
-| **Scheduled briefing** | A daily/whenever push of a fixed route to your phone | a GitHub Actions cron → ntfy.sh notification | free |
 
 ## Data sources (all keyless)
 
@@ -162,19 +161,6 @@ No `npm install` — there are no dependencies.
 > A free/idle Render instance can cold-start (~30–60s) on the first request after
 > a quiet spell. If that lag bothers you while driving, run it on a small
 > always-on plan or add a keep-warm ping.
-
-## The scheduled briefing
-
-`.github/workflows/route-weather-briefing.yml` runs `src/briefing.mjs` on a cron.
-It builds the report for a fixed route (from repository **variables**) and pushes
-it to your phone via [ntfy.sh](https://ntfy.sh) (install the ntfy app, subscribe
-to your topic). Configure under the repo's Settings → Secrets and variables →
-Actions:
-
-- Variables: `ROUTE_FROM`, `ROUTE_TO`, `ROUTE_VIA` (optional, `;`-separated), `ROUTE_DEPART` (optional), `ROUTE_MPH` (optional), `ALERT_ONLY` (optional — set to `1` to push **only** when the verdict is not DRIVE, so it stays quiet on clear days).
-- Secret: `NTFY_TOPIC` (the topic name; treat it as private since anyone who knows it can read your pushes).
-
-If `NTFY_TOPIC` is absent the report is just printed in the Action log.
 
 ## Apple Shortcut (voice, no app to install)
 
