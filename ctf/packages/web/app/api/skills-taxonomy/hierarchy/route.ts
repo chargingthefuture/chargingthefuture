@@ -15,7 +15,7 @@ function parseIncludeInactive(url: string): boolean {
 }
 
 export async function GET(request: Request) {
-  const gate = await requireTaxonomyReadAccess();
+  const gate = await requireTaxonomyReadAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -26,9 +26,9 @@ export async function GET(request: Request) {
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.hierarchy.get',
-      actorId: gate.auth.userId,
+      actorId: gate.reader.actorId,
       status: 'allow',
-      reason: 'approved_user_or_admin',
+      reason: gate.reader.reason,
       target: {
         includeInactive: String(parseIncludeInactive(request.url)),
       },
@@ -48,9 +48,9 @@ export async function GET(request: Request) {
     logSkillsTaxonomyAudit({
       pluginId: 'skills-taxonomy',
       command: 'skills-taxonomy.hierarchy.get',
-      actorId: gate.auth.userId,
+      actorId: gate.reader.actorId,
       status: 'allow',
-      reason: 'approved_user_or_admin',
+      reason: gate.reader.reason,
       target: {},
       result: 'failure',
       errorCategory: 'persistence_error',
