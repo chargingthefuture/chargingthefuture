@@ -5282,6 +5282,8 @@ CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
 --   last_checked_on the day somebody last looked at the provider's bill for this line.
 --   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
 --                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+-- Starting rows come from db/migrations/post/0041 (one per service) and post/0045 (ElevenLabs);
+-- neither writes an amount.
 CREATE TABLE IF NOT EXISTS admin_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider TEXT NOT NULL,
