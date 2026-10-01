@@ -316,9 +316,16 @@ there.
 stays here. What One Percent counts is what appears on a bill because One Percent exists, and
 this integration adds nothing to one.
 
-The access policy contract already names a `service` role on
-`skills-taxonomy.hierarchy.get` and `.flattened.get` with no code path behind it. Building that
-path is what implements this, not a new design.
+The access policy contract names a `service` role on `skills-taxonomy.hierarchy.get` and
+`.flattened.get`, and that role is load-bearing now rather than decorative. The path behind it is
+`ctf/packages/web/lib/auth/service-consumer.ts` (who a credential belongs to) and
+`ctf/packages/web/lib/skills-taxonomy/read-gate.ts` (the branch in front of the two read routes).
+Nothing else in the app has a machine caller, and nothing else should: the credential is read by
+those two routes alone, because they are the only ones that hand the request to the gate.
+
+The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per consumer, and
+removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
+without one simply has no machine reader rather than no app.
 
 ## Key Rules (pointers to full detail)
 
