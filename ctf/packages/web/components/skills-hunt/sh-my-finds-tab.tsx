@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { initials, submissionStatusStyle, type SkillsHuntSubmission, type Tab } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
+import { SkillsHuntMyTotalsCard } from './sh-my-totals-card';
 
 function FindCard({ find }: { find: SkillsHuntSubmission }) {
   const { theme } = useTheme();
@@ -41,11 +42,13 @@ export function SkillsHuntMyFindsTab({
   noActiveRound,
   loading,
   myFinds,
+  refreshKey,
   onNavTab,
 }: {
   noActiveRound: boolean;
   loading: boolean;
   myFinds: SkillsHuntSubmission[];
+  refreshKey: number;
   onNavTab: (tab: Tab) => void;
 }) {
   const { theme } = useTheme();
@@ -54,6 +57,7 @@ export function SkillsHuntMyFindsTab({
     <>
       <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>My Finds</div>
       <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 20 }}>People you&apos;ve nominated · full names only for privacy</div>
+      <SkillsHuntMyTotalsCard refreshKey={refreshKey} />
       {noActiveRound ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>No active round — no finds to display.</div>
       ) : loading ? (

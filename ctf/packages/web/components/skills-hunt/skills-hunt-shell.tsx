@@ -46,6 +46,7 @@ interface ShellData {
   missions: SkillsHuntMissionWithCommunityProgress[];
   loadingFinds: boolean;
   myFinds: SkillsHuntSubmission[];
+  refreshKey: number;
 }
 
 function roundsLoadErrorMessage(e: unknown): string {
@@ -74,7 +75,7 @@ function ShellContent(d: ShellData) {
   if (d.tab === "missions") {
     return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} />;
   }
-  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} onNavTab={d.setTab} />;
+  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} refreshKey={d.refreshKey} onNavTab={d.setTab} />;
 }
 
 export function SkillsHuntShell({
@@ -251,7 +252,7 @@ export function SkillsHuntShell({
       onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
       loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
       loadingMissions={loadingMissions} missions={missions}
-      loadingFinds={loadingFinds} myFinds={myFinds}
+      loadingFinds={loadingFinds} myFinds={myFinds} refreshKey={refreshKey}
     />
   );
 

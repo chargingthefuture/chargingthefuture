@@ -524,6 +524,23 @@ Result: web ☐
 
 ---
 
+### SH-10b — My Finds shows your own totals across all rounds
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Member has at least one nomination (from SH-2), ideally one accepted in SH-A2 so a Directory profile was created.
+
+**Steps:**
+1. Open the My Finds tab.
+2. Read the "Your totals, all rounds" card at the top.
+3. Have an admin accept one of the member's pending nominations, then press refresh.
+
+**Expected:** The card reads "Only you can see these." and shows Profiles created, Accepted, Pending, and Submitted. The numbers cover every round, not only the selected one. After the acceptance and refresh, Pending drops by one and Accepted and Profiles created each rise by one. Signed in as a different member, the card shows that member's own numbers, never the first member's. A removed nomination is not counted.
+
+Result: web ☐
+
+---
+
 ### SH-11 — Status panel (notifications): unread entries are accented, mark-read works
 
 **Role:** member · **Surfaces:** web, android

@@ -256,6 +256,31 @@ policies:
       - invalid_leaderboard_mode
 
   - pluginId: skills-hunt
+    command: skills-hunt.my-totals.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - contributor
+      - moderator
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      selfScopeOnly: true
+    consentRequirements:
+      scopes:
+        - skills_hunt_rewards_read
+      fallbackLawfulBasis: contract_performance
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthorized_scope
+
+  - pluginId: skills-hunt
     command: skills-hunt.achievement.list
     version: 1.0.0
     requiredRoles:

@@ -3239,6 +3239,11 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
+-- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
+-- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
+-- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
