@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
-import { getRound, getRoundRewardSummary, listSubmissions, parsePaginationParams } from 'lib/skills-hunt/repository';
+import { getRound, listSubmissions, parsePaginationParams } from 'lib/skills-hunt/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -21,17 +21,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
 
   try {
     const pagination = parsePaginationParams(request.url);
-    // Load the submission page alongside the round's reward config and the
-    // running reward total so the moderation view can show what scouts are paid.
-    const [result, round, rewardSummary] = await Promise.all([
+    // Load the submission page alongside the round, which the moderation view shows above the list.
+    const [result, round] = await Promise.all([
       listSubmissions(roundId, status, pagination, {
         userId: gate.auth.userId,
         isModeratorOrAdmin: true,
       }),
       getRound(roundId),
-      getRoundRewardSummary(roundId),
     ]);
-    return NextResponse.json({ ...result, round, rewardSummary }, { status: 200 });
+    return NextResponse.json({ ...result, round }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_submissions' });
     return NextResponse.json(

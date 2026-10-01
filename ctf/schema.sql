@@ -634,10 +634,16 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
-  -- An integer-credit reward minted to the scout when a nomination is accepted, capped per scout.
+  -- No longer read or written (2026-10-01): an accept no longer sends credits. Kept one release so
+  -- the revision still running during the deploy can read them; drop in the next release.
   reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
   reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
+  -- End-of-round award (owner decision, 2026-10-01): when the round closes, every scout whose
+  -- score reached award_points_bar shares award_pool_credits ServiceCredits in proportion to their
+  -- points, sent once when an admin presses Send. 0 / NULL = no award set.
+  award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0),
+  award_points_bar INTEGER NULL CHECK (award_points_bar IS NULL OR award_points_bar >= 0),
+  awards_sent_at TIMESTAMPTZ NULL,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -5551,6 +5557,29 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
+-- One row per scout awarded at the end of a round. Written before any credits move, so the split is
+-- fixed at the first Send and a retry only sends the rows still unsent (sent_at NULL); the ledger
+-- idempotency key makes a repeated send of one row a no-op.
+CREATE TABLE IF NOT EXISTS skills_hunt_round_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username_snapshot TEXT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0),
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  governance_event_id TEXT NULL,
+  sent_at TIMESTAMPTZ NULL,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (round_id, user_id)
+);
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS username_snapshot TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS governance_event_id TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_round_awards_user ON skills_hunt_round_awards (user_id);
 
 -- skills_hunt_proposed_skill_promotions — companion ALTERs for every column so a
 -- legacy copy of the table is healed (the CREATE TABLE IF NOT EXISTS above is skipped

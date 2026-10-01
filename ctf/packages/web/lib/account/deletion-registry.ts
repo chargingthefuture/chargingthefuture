@@ -558,13 +558,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'skills-hunt',
     name: 'SkillsHunt',
-    dataSummary: 'Your submissions, achievements, notifications, leaderboard entries, and mission progress.',
+    dataSummary: 'Your submissions, achievements, notifications, leaderboard entries, mission progress, and end-of-round awards.',
     serviceScopeSupported: true,
     tables: [
       del('skills_hunt_notifications', 'user_id', 'Your notifications.'),
       del('skills_hunt_mission_progress', 'user_id', 'Your mission progress.'),
       del('skills_hunt_achievements', 'user_id', 'Your achievements.'),
       del('skills_hunt_leaderboard', 'user_id', 'Your leaderboard entries.'),
+      del('skills_hunt_round_awards', 'user_id', 'Your end-of-round awards (credits already sent are handled by ServiceCredits).'),
       soft('skills_hunt_submissions', 'submitter_user_id', 'deleted_at', 'Your submissions (soft-deleted; audit log retained).'),
       retain('skills_hunt_audit_log', 'Compliance audit log; retained.'),
       retain('skills_hunt_rounds', 'Shared rounds; authorship columns are the admin audit.'),

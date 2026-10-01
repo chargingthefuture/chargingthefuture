@@ -90,4 +90,7 @@ export const SKILLS_HUNT_ERROR_CODE = {
   quoraUrlTakenDown: 'SKILLS_HUNT_QUORA_URL_TAKEN_DOWN',
   reservedUsername: 'SKILLS_HUNT_RESERVED_USERNAME',
   preApprovalRequired: 'SKILLS_HUNT_PRE_APPROVAL_REQUIRED',
+  // Only one round may be open at a time; opening a second is refused.
+  anotherRoundOpen: 'SKILLS_HUNT_ANOTHER_ROUND_OPEN',
+  roundAwardNotReady: 'SKILLS_HUNT_ROUND_AWARD_NOT_READY',
 } as const;
