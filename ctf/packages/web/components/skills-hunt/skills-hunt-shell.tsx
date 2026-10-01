@@ -18,6 +18,7 @@ import { SkillsHuntScoutTab, type ScoutFormModel } from "./sh-scout-tab";
 import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
+import { SkillsHuntViewRoundPicker, useViewRound } from "./sh-view-round-picker";
 import { useNominationForm } from "./sh-use-nomination-form";
 import { startVisibleInterval } from "../../lib/shared/visible-interval";
 
@@ -109,6 +110,7 @@ export function SkillsHuntShell({
   const t = getSkillsHuntTokens(theme);
 
   const { form, submitted, resetForm } = useNominationForm(activeRound);
+  const { viewRoundKey, setViewRoundId } = useViewRound(rounds, activeRound);
 
   const initialTabRead = useRef(false);
   useEffect(() => {
@@ -161,12 +163,12 @@ export function SkillsHuntShell({
   }, [refreshKey]);
 
   useEffect(() => {
-    if (!activeRound) return;
+    if (!viewRoundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingLeaderboard(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${viewRoundKey}/leaderboard`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
         setLeaderboard(data.items);
@@ -177,15 +179,15 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [activeRound, refreshKey]);
+  }, [viewRoundKey, refreshKey]);
 
   useEffect(() => {
-    if (tab !== "my-finds" || !activeRound) return;
+    if (tab !== "my-finds" || !viewRoundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingFinds(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/submissions`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${viewRoundKey}/submissions`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntSubmission[] };
         setMyFinds(data.items);
@@ -195,15 +197,15 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
+  }, [tab, viewRoundKey, refreshKey]);
 
   useEffect(() => {
-    if (tab !== "missions" || !activeRound) return;
+    if (tab !== "missions" || !viewRoundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingMissions(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/missions`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${viewRoundKey}/missions`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntMissionWithCommunityProgress[] };
         setMissions(data.items);
@@ -213,7 +215,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
+  }, [tab, viewRoundKey, refreshKey]);
 
   // Notifications: poll every 30s for unread (GetStream is out of scope; continuity §2.11).
   useEffect(() => {
@@ -284,7 +286,10 @@ export function SkillsHuntShell({
         {notifOpen && (
           <SkillsHuntNotifications placement="mobile" notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
         )}
-        <div style={{ padding: 16 }}>{content}</div>
+        <div style={{ padding: 16 }}>
+          <SkillsHuntViewRoundPicker show={tab !== "scout"} rounds={rounds} viewRoundId={viewRoundKey} onSelect={setViewRoundId} />
+          {content}
+        </div>
       </div>
     );
 }

@@ -524,6 +524,24 @@ Result: web ☐
 
 ---
 
+### SH-10c — With two rounds open, Leaderboard, Missions and My Finds still show a round
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** At least two rounds are active, and the member has nominations in at least one.
+
+**Steps:**
+1. Open Skills Hunt fresh, without choosing a round in the Scout form.
+2. Open Leaderboard, then Missions, then My Finds.
+3. Tap the other round's chip above the tab.
+4. Go back to Scout.
+
+**Expected:** Each of the three tabs shows a row of round chips with one marked, and shows that round's leaderboard, missions or nominations — never an empty state just because two rounds are open. Tapping the other chip switches all three tabs to that round. The Scout form's round choice is unchanged by the chip: if none was marked before, none is marked now.
+
+Result: web ☐
+
+---
+
 ### SH-10b — My Finds shows your own totals across all rounds
 
 **Role:** member · **Surfaces:** web
