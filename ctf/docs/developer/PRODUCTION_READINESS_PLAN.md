@@ -326,7 +326,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   PR #86 Render merge commit this branch carried was dropped during rebase — its infra is superseded by
   `main`'s GHCR-image model. Rebase was conflict-free (my work and the infra migration touched disjoint
   files). Post-rebase verification: typecheck green, schema-drift gate green (incl. CI `--ref-range`),
-  EOF clean, workforce dedupe index intact. Refreshed all stale infra framing (PR #86 / incremental Render
+  EOF clean, workforce dedupe index intact. Refreshed all out-of-date infra framing (PR #86 / incremental Render
   waves → single prod + Unleash/OpenFeature feature-flag release gating; `rewrite-ci.yml` → `ci.yml`).
   Aligned the plan with the new feature-flag epic (#103) and dependents #101 (unlock-as-flag) and #102
   (public-screen gating + demo-safe data).
@@ -354,7 +354,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   complete and accurate (nightly `pg_dump -Fc` → Supabase, with verification) and added the missing
   restore half: `restoreFormanceFromSupabase.mjs` (`pnpm formance:restore`) pulls the latest/specified dump
   and `pg_restore`s it into a target DB (confirm-gated), so a fresh Formance env can be stood up
-  automatically (provision Neon → restore → deploy `Dockerfile.ledger`). Removed the stale duplicate
+  automatically (provision Neon → restore → deploy `Dockerfile.ledger`). Removed the out-of-date duplicate
   `formance-backup.sh`; added `formance:backup`/`formance:restore` npm scripts. Set
   `workforce_recruited_events.inference_dedupe_key` `NOT NULL` (deterministic backfill) so the dedupe
   upsert can't be bypassed by a null key.
@@ -362,7 +362,7 @@ known-open item — sign-in via Clerk (auth) — is owned by the owner's separat
   "phase" naming (`seed<Plugin>.mjs`), updating `package.json` and current docs. Reconciled the 5 flagged
   inventories whose `web+android complete` status contradicted unchecked web-first/Android-deferral
   checklist items (added a note pointing to this plan as authoritative). Corrected the peer-programming
-  inventory's stale "no seed script" claim. (GitHub issues #101/#102/#103/#106 close-out is pending —
+  inventory's out-of-date "no seed script" claim. (GitHub issues #101/#102/#103/#106 close-out is pending —
   GitHub MCP auth is currently down; close text prepared for the owner.)
 - 2026-05-26: **#106 auto-bootstrap entrypoint.** Per the issue's exact spec, added
   `ctf/ops/formance/formance-entrypoint.sh` and wired it into `Dockerfile.ledger`: it starts

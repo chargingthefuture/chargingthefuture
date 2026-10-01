@@ -396,7 +396,7 @@ jobs:
 
       # Unlock approval is what grants access to this app, and `minUnlockTier: 'any_authenticated'`
       # bypasses it. An agent building a new surface copies whatever nearby code does, so every
-      # unreviewed bypass makes the next one likelier and the whole gate weaker. The exceptions are
+      # unreviewed bypass makes the next one likelier and the gate weaker. The exceptions are
       # a closed, owner-approved list; this fails the build on any that is not on it.
       - name: Fail on unapproved Unlock tier bypasses
         run: node ctf/scripts/check-unlock-tier-exceptions.mjs
@@ -416,6 +416,20 @@ jobs:
       # example the next writer copies.
       - name: Fail on British spellings
         run: node ctf/scripts/check-us-spelling.mjs
+
+  banned-words-gate:
+    name: Banned Words Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Two words are on the banned-term list in CLAUDE.md. The Stop hook keeps them out of agent
+      # replies but not out of committed text, which is what the next writer copies. This scans
+      # every tracked file; what is exempt, and why, is in ctf/config/banned-words-allowlist.json.
+      - name: Fail on banned words
+        run: node ctf/scripts/check-banned-words.mjs
 
   plugin-registry-seed-gate:
     name: Plugin Registry Seed Gate
@@ -490,7 +504,7 @@ jobs:
       # surface ships. That record is what lets the owner check their own admins, and it is why an admin
       # screen can offer every action on every row instead of withholding some to prevent misuse. A
       # sweep the same day found 37 admin routes that change data and write no durable row — five
-      # surfaces had an audit.ts that builds the whole event and ends in console.info, which nothing can
+      # surfaces had an audit.ts that builds the full event and ends in console.info, which nothing can
       # query and no screen can show. Those are on a burn-down list; this gate stops a new one appearing.
       - name: Fail on admin routes that change data without writing an audit row
         run: node ctf/scripts/check-admin-audit-coverage.mjs

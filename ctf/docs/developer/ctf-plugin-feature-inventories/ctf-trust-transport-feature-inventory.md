@@ -304,7 +304,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
    automated gate.
 3. No admin trip-approval queue: the `design/` mockup shows an "approve/reject trip request queue" but no
    backend route exists for it. The incident queue is the real, shipped moderation surface; the mockup
-   predates the incident-queue design and is stale, not a missing feature.
+   predates the incident-queue design and is out of date, not a missing feature.
 4. Nearby Drivers list, driver ratings, ETAs, and vehicle info are intentionally absent from both
    platforms — no backend endpoint returns any of these fields, per the real-data-only rule. Ratings of
    people specifically are never shown anywhere in this plugin: reputation is transparent completion
@@ -462,7 +462,7 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
   treatment. Documentation only for that file. Resolved the "Gaps and Known Technical Debt" list down to
   the items that are genuinely still open or intentionally not built (see that section) — closed the
   status-vocabulary item (the three-mode vocabulary has been stable and consistent throughout the shipped
-  code; nothing concrete has needed a change) and the stale service-delete-endpoint item.
+  code; nothing concrete has needed a change) and the out-of-date service-delete-endpoint item.
 
 - 2026-07-01: Android view-offers + accept (parity with web slice 3, issue #1250). New
   `TrustTransportOffersSection.tsx` — shown on each of the caller's own **open** requests in the Track

@@ -31,7 +31,7 @@ export type SkillsHuntRoundAwardPlan = {
   poolCredits: number;
   // Who gets what. Once a Send has started this is the stored split, not a fresh calculation.
   lines: SkillsHuntAwardLine[];
-  // Credits in the plan, and the part of the pool left over because shares are whole credits.
+  // Credits in the plan, and the part of the pool left over because shares are rounded down to full credits.
   plannedCredits: number;
   remainder: number;
   sentAtIso: string | null;
@@ -39,7 +39,7 @@ export type SkillsHuntRoundAwardPlan = {
   notReadyReason: string | null;
 };
 
-// Shares are whole credits, rounded down, so the total never exceeds the pool. What rounding leaves
+// Shares are full credits, rounded down, so the total never exceeds the pool. What rounding leaves
 // over stays unsent and is shown as the remainder. A scout whose share rounds to 0 is left out.
 export function splitAwardPool(
   standings: SkillsHuntAwardStanding[],

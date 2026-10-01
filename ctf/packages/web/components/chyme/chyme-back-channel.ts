@@ -10,7 +10,7 @@ import type { ChymeBackChannelState, ChymeBackChannelJoinCredentials } from 'lib
 // button, the incoming toast/sheet, and the active-call panel.
 
 // Poll cadence for an invite "ring": fast enough to feel like a ring, slow enough to be cheap. The
-// server reaps stale rows on every read, so a lapsed invite disappears within one interval.
+// server reaps expired rows on every read, so a lapsed invite disappears within one interval.
 const BACK_CHANNEL_POLL_MS = 3000;
 // Heartbeat cadence for a live call — comfortably inside CHYME_BACK_CHANNEL_CALL_TTL_SECONDS (90s).
 const BACK_CHANNEL_HEARTBEAT_MS = 30000;

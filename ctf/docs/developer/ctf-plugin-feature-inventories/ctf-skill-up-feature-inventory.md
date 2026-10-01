@@ -565,7 +565,7 @@ that exist today.
   superseded; one pending per occupation). `skill_up_auto_cohort_config` gains `generation_interval_days`
   (default 90 — the re-read cadence) and `last_generated_at` (cadence guard); `max_concurrent` is no
   longer used by generation (retained for the future full-auto model). `lib/skill-up/auto-cohort.ts` was
-  rewritten: `generateCohortProposals` (sector-diverse round-robin, per-sector cap, supersede-stale),
+  rewritten: `generateCohortProposals` (sector-diverse round-robin, per-sector cap, supersede out-of-date proposals),
   `runAutoCohortProposals` (always close expired cohorts; regenerate only when forced or the 90-day
   cadence is due), `approveCohortProposal` (admin picks a **1/3/5-month** term → opens a cohort;
   double-approve-guarded; already-covered → superseded), `dismissCohortProposal`, `listPendingProposals`.

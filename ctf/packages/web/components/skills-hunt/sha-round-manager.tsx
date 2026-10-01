@@ -71,7 +71,7 @@ function buildPayloadOrError(v: FormValues): { error: string } | { payload: Subm
   const endIso = endDate.toISOString();
   const pool = parseWholeNonNegative(v.awardPool) ?? 0;
   const bar = parseWholeNonNegative(v.awardBar);
-  if (Number.isNaN(pool) || Number.isNaN(bar)) return { error: "The pool and the points bar must be whole numbers, and never negative." };
+  if (Number.isNaN(pool) || Number.isNaN(bar)) return { error: "The pool and the points bar must be numbers with no decimals, and never negative." };
   return {
     payload: {
       name: v.name.trim(), description: v.description.trim() || null, status: v.status,

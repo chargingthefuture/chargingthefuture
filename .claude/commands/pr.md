@@ -63,7 +63,7 @@ owner runs `/pr` again when they want the next pass.
 
 If a low-risk PR has no auto-merge enabled, enable it (SQUASH). Do not enable auto-merge on a risky
 PR (ServiceCredits/ledger, auth, CSRF, data deletion, schema or migrations, new or changed API
-contracts, a whole new plugin) — those wait for owner review, and that is the one kind of "stuck"
+contracts, a brand-new plugin) — those wait for owner review, and that is the one kind of "stuck"
 that is correct.
 
 ## 5. Address review comments

@@ -28,7 +28,7 @@ asks for a plain restatement.
 
 The Stop hook `.claude/hooks/check-no-pleasantries.mjs` holds the canonical list and is the source of
 truth; if this copy and the hook ever differ, the hook wins. Keep the two in sync — when you change
-one, change the other. The hook scans the whole reply and matches the term even inside quotes, so do
+one, change the other. The hook scans the entire reply and matches the term even inside quotes, so do
 not reach for a banned word even to talk about it; use the replacement below instead.
 
 **Pleasantries, feelings, and sign-offs — never use any of these (in any reply):**
@@ -89,7 +89,7 @@ start so no rewrite is ever needed (owner directive, 2026-08-04).
 **Production-era policy (owner-directed, 2026-06-17): production is the single source of truth; the design gate is loosened; the design repo and Replit design agent are deprecated.** We no longer maintain two design versions. Do **not** stop for a design pass, do **not** require a mockup in the `design/` submodule before building UI, and do **not** announce `DESIGN PASS REQUIRED`. The `design/` submodule and `ctf/agents/design.agent.md` are **reference/inspiration only** (design guide, tokens, component patterns) — not authoritative, not synced.
 
 - **New surface?** Build it yourself, following (in order): the design guide / design system, the look and structure of already-shipped sibling screens, and the plugin inventory. Cover the real states (loading/empty/error/populated) and the mobile-responsive layout; keep it consistent with shipped screens.
-- **Hard guardrail (critical): never overwrite approved production design or copy without explicit owner approval.** When a task is to add or fix something, be additive/surgical — change only what the task requires and leave surrounding shipped copy/layout exactly as it ships. Production wins over any old `design/` mockup; never "restore" a screen to a stale mockup. If you think shipped copy/design is wrong, surface it to the owner and get approval before changing it.
+- **Hard guardrail (critical): never overwrite approved production design or copy without explicit owner approval.** When a task is to add or fix something, be additive/surgical — change only what the task requires and leave surrounding shipped copy/layout exactly as it ships. Production wins over any old `design/` mockup; never "restore" a screen to an old mockup. If you think shipped copy/design is wrong, surface it to the owner and get approval before changing it.
 
 Iterate in code (NOT gated): any change to an already-shipped screen — copy, color, spacing, reordering, an empty/loading/error state, the mobile-responsive layout, bug fixes — within the guardrail above. Never gated: changes with no rendered surface — schema, libraries, server-only API routes, infra/CI, refactors, type/lint/test changes.
 
@@ -664,7 +664,7 @@ issues) and `code-review-implement.yml` (turns an actionable finding into a PR).
 repo files does not uninstall the CodeRabbit GitHub App — if it is still installed at the org/UI
 level, uninstall it there so it cannot resume reviewing with default settings.
 
-**Working the findings by hand: `/cr`.** The owner asks for this most days, so the whole routine —
+**Working the findings by hand: `/cr`.** The owner asks for this most days, so the routine —
 find the open findings, verify each one against the code before acting, fix the real ones on a
 descriptive branch, open the PR with the title and `Parity Status:` line set at creation, pick the
 auto-merge or owner-review lane, then keep the branch up to date until it merges — lives in
@@ -685,7 +685,7 @@ shipped screens, rule-116 decompositions, docs, refactors, type/lint/test change
 
 **Owner-review lane (risky).** Anything that touches money / ServiceCredits ledger, auth/authz, CSRF,
 data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
-whole new plugin. For these:
+new plugin. For these:
 
 - Open the PR **ready for review** (not a draft), with the title and `Parity Status:` line set at
   creation, but do **not** enable auto-merge — leave it for the owner to review with their tool and
@@ -785,7 +785,7 @@ This applies to all development: deploy scripts, CI/CD workflows, seed scripts, 
 ## Remove What Nothing Uses, In the Same Change (Critical — all agents)
 
 Owner directive, 2026-09-21. When a change leaves something with no users — a database column, a
-function, a query parameter, a flag, a toggle, a whole screen — delete it as part of that change. Do
+function, a query parameter, a flag, a toggle, an entire screen — delete it as part of that change. Do
 not describe it as a follow-up, do not open an issue for it, and do not end the work by asking whether
 the owner would like it removed.
 

@@ -2,7 +2,7 @@
 description: Work the open code-review issues end to end — verify, fix on a descriptive branch, open the PR, drive it to merge.
 ---
 
-Work the repository's open code-review findings from start to finish. Do the whole routine below
+Work the repository's open code-review findings from start to finish. Do every step of the routine below
 without asking me to confirm each step. `$ARGUMENTS` may name a specific issue number, plugin, or
 slice — if it is empty, take whatever is open.
 
@@ -71,7 +71,7 @@ Set the title and body **at creation** so no check goes red and needs re-trigger
 - **Low-risk** — copy, styling, responsive layout, types, refactors, docs, dead code, test-only
   changes: enable auto-merge (SQUASH) right after opening. It merges itself.
 - **Risky** — ServiceCredits/ledger, auth or access gates, CSRF, data deletion, schema or
-  migrations, new or changed API contracts, a whole new plugin: open it ready but do **not** enable
+  migrations, new or changed API contracts, a brand-new plugin: open it ready but do **not** enable
   auto-merge. Say in the body that it is waiting on my review, and tell me in your summary.
 
 ## 7. Leave it mergeable — no PR watching

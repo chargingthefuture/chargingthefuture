@@ -2,7 +2,7 @@
 // client component: the screen and the copy-as-text control both read from here, so the figures a
 // person sees and the figures they paste into a message cannot disagree.
 //
-// These are real US dollar amounts a person pays. Amounts travel as whole cents to keep sums exact.
+// These are real US dollar amounts a person pays. Amounts travel as exact cents to keep sums exact.
 
 import { isGpuBillProvider } from './gpu-bill-shared';
 

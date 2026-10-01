@@ -116,9 +116,9 @@ status=$(api PUT "/services/${service_id}/secret-files/opml.xml" "$payload" || t
 case "$status" in
   2*) ;;
   *)
-    # Older shape: the whole set is replaced at once. Read what is there and
+    # Older shape: the entire set is replaced at once. Read what is there and
     # add to it rather than writing over somebody else's file.
-    echo "  the per-file write was refused (HTTP ${status:-none}); trying the whole-set write."
+    echo "  the per-file write was refused (HTTP ${status:-none}); trying the full-set write."
     status=$(api GET "/services/${service_id}/secret-files?limit=100" || true)
     case "$status" in
       2*) ;;

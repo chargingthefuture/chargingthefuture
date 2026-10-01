@@ -75,7 +75,7 @@ async function isFreshInRoom(client: PoolClient, roomId: string, userId: string)
   return { present: (result.rowCount ?? 0) > 0, username: result.rows[0]?.username ?? null };
 }
 
-// Reap stale rows before any read/state computation, so callers never see a "live" call whose people
+// Reap expired rows before any read/state computation, so callers never see a "live" call whose people
 // are gone. Two rules, both idempotent:
 //   1. a pending invite lapses if it has aged out OR either party is no longer fresh in the room
 //   2. a live call ends if both apps stopped heart-beating past the call TTL
@@ -199,7 +199,7 @@ export async function inviteBackChannel(
 }
 
 // The poll-driven state for one member: an incoming invite to answer, a pending outgoing invite (the
-// "Invite sent…" badge), and/or a live call to show the panel for. Reaps first so nothing shown is stale.
+// "Invite sent…" badge), and/or a live call to show the panel for. Reaps first so nothing shown has expired.
 export async function getBackChannelState(userId: string): Promise<ChymeBackChannelState> {
   return withDbTransaction(async (client) => {
     await reapStale(client);

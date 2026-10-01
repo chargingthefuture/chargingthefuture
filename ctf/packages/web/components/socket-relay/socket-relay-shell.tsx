@@ -445,7 +445,7 @@ function useSocketRelay() {
       setChatCredentials(null);
       await fetchData(false);
     } catch (e) {
-      // Surface the failure and still refresh so the chat doesn't sit on stale state.
+      // Surface the failure and still refresh so the chat doesn't sit on out-of-date state.
       setChatError(e instanceof Error ? e.message : "Couldn't resolve this request. Please try again.");
       await fetchData(false);
     } finally {

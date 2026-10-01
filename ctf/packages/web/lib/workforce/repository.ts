@@ -160,7 +160,7 @@ export type WorkforceModel = {
 // The model has NO per-user/per-workspace input — it is the same global workforce aggregate for every
 // caller (the product is single-tenant; see lib/auth/server-authz AllowDecision, which carries no
 // workspaceId). So a process-global cache is correct here. If the product ever becomes multi-tenant,
-// this cache must be keyed per workspace. To avoid serving stale numbers right after an admin edits
+// this cache must be keyed per workspace. To avoid serving out-of-date numbers right after an admin edits
 // the config, updateWorkforceConfig() calls invalidateWorkforceModelCache().
 const WORKFORCE_MODEL_CACHE_MS = 1000;
 let workforceModelInFlight: Promise<WorkforceModel> | null = null;

@@ -56,7 +56,7 @@ rule: a missing sector is a mis-named entry, not a creation request).
 - No duplicate skill (normalized name) under the same occupation after replaying the entire list.
 - A `deactivate*` change must carry an `acknowledgedImpact` note when the target is above the
   dependency threshold (the apply step re-checks live counts via the same query the
-  `dependency-impact` endpoint uses and aborts if the note is missing or stale).
+  `dependency-impact` endpoint uses and aborts if the note is missing or out of date).
 - A deactivated target cannot be referenced by later changes (except `reactivate*`).
 
 ## Apply-time checks (what the static check cannot see)

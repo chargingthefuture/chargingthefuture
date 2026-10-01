@@ -51,7 +51,7 @@ Set the title and body **at creation** so no check goes red and needs re-trigger
 - **Low-risk** — copy, styling, responsive layout, types, refactors, docs, dead code, test-only
   changes: enable auto-merge (SQUASH) right after opening.
 - **Risky** — ServiceCredits/ledger, auth or access gates, CSRF, data deletion, schema or
-  migrations, new or changed API contracts, a whole new plugin: open it ready but do **not** enable
+  migrations, new or changed API contracts, a brand-new plugin: open it ready but do **not** enable
   auto-merge. Say in the body that it is waiting on my review, and tell me in your summary.
 
 ## 6. Report and stop — no PR watching

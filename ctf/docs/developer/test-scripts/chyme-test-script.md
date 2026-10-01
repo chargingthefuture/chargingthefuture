@@ -73,7 +73,7 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 2. Note who is shown and how each name renders.
 **Expected:** The single shared room loads with its name. Each participant is shown by their handle
 as `@username`, falling back to `user-<first 8 of the id>` when there is no username. Only members
-seen recently (within the 45-second presence window) appear; a stale member drops off.
+seen recently (within the 45-second presence window) appear; a member not seen within that window drops off.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
@@ -121,9 +121,9 @@ shows "Live" only while at least one fresh member is present.
 **Precondition:** a second test member in the same room to observe.
 **Steps:**
 1. Raise your hand. Have the second member look at your tile.
-2. Lower your hand, leave, or go stale.
+2. Lower your hand, leave, or let your presence lapse (no heartbeat for 45 seconds).
 **Expected:** The raised hand stays visible to everyone until you lower it, leave, or your presence
-goes stale — not just for a couple of seconds. On web AND android the other member's tile shows the
+lapses — not just for a couple of seconds. On web AND android the other member's tile shows the
 persistent hand: android polls `GET /api/chyme/room` every 15s while in the room and renders every
 other member's server-persisted raised hand, so the hand stays up after the short-lived Stream
 reaction clears (#1599). Verify from an android device: with a second member's hand raised on web,

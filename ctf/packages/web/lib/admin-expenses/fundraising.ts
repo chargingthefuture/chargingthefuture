@@ -2,7 +2,7 @@
 // Pure and import-safe from a client component, like summary.ts beside it.
 //
 // The suggestion is the monthly total at the high end of every range, times the length of the drive
-// in months, rounded up to a whole dollar. Lines not priced yet and one-off payments are not in it,
+// in months, rounded up to the next dollar. Lines not priced yet and one-off payments are not in it,
 // and the screen says so, because a goal set from an incomplete list is set too low.
 
 import { formatDollars, type ExpenseSummary } from './summary';
@@ -12,7 +12,7 @@ import { formatDollars, type ExpenseSummary } from './summary';
 export const DEFAULT_DRIVE_MONTHS = 3;
 const DAYS_PER_MONTH = 365.25 / 12;
 
-// The open Contributions drive, as the expenses route sends it. Dollars here are whole US dollars,
+// The open Contributions drive, as the expenses route sends it. Dollars here are US dollars with no cents,
 // the unit Contributions stores its goal and its confirmed gift-card money in.
 export type DriveProgress = {
   startsAt: string;
@@ -60,7 +60,7 @@ export function suggestFundraisingGoal(summary: ExpenseSummary, drive: DriveProg
   };
 }
 
-// "3.0 months" reads as precise; a drive is planned in whole weeks at best, so one decimal.
+// "3.0 months" reads as precise; a drive is planned in weeks at best, so one decimal.
 export function formatMonths(months: number): string {
   const rounded = Math.round(months * 10) / 10;
   return `${rounded} month${rounded === 1 ? '' : 's'}`;
