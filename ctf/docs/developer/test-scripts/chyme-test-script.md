@@ -34,7 +34,9 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 
 1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room" — the name says
    the room, never a topic; what is being discussed comes from the booked TI Radio slot), the
-   participant list, and the chat panel render — not a spinner or an error. → web ☐ mobile ☐ android ☐
+   participant list, and the **Chat** button render — not a spinner or an error. The chat panel
+   starts closed (since 2026-09-30); press **Chat** and it opens, press it again and it closes.
+   → web ☐ mobile ☐ android ☐
 2. **Join the call.** Press join. You connect to the live audio room, start muted, and can mute
    and unmute your own microphone. → web ☐ mobile ☐ android ☐
 3. **Chat send/read.** Type a message and send it. It appears in the list and persists on
@@ -192,17 +194,17 @@ itself scrolls: the green header stays pinned at the top while the content moves
 Safari's **Full Page** screenshot reaches the bottom of the content rather than stopping at one
 screenful.
 
-In step 1, on a phone, the first screen carries the header, the invitation card, the **Live Rooms**
-row with its refresh button, the room name and the **Tap to listen** control, the closed **Room
-Chat** row and the **Coming up on TI Radio** rail — nothing of the page's own content needs a scroll
+In step 1, on a phone, the first screen carries the header, the invitation card, the **Coming up
+on TI Radio** rail, the **Live Rooms** row with its refresh button, the room name and the **Tap to
+listen** control, and the closed **Room Chat** row — nothing of the page's own content needs a scroll
 to be found (owner directive, 2026-09-20). What scrolls is the stage when the room holds many
 people, and the chat once you open it. The invitations card is not part of this page at all: it
 floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
 of the browser session; it is described in the non-plugin feature inventory, section 1.15.
 
-In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
-to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
-link when the visitor has an account part-way through Unlock). The green header carries the back
+In step 4 you find **exactly one** place to sign in — the invitation card, whose single **Sign In**
+button points at the hosted sign-in URL (or a single **Finish verifying** link when the visitor has
+an account part-way through Unlock); there is no separate **Join Free to Listen** button. The green header carries the back
 control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
 grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
 Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room,
@@ -540,7 +542,8 @@ phone read "Joined" after the call had dropped.
 days, and one slot booked for the current 90 minutes if the "On air now" mark is to be checked.
 **Steps:**
 1. As a member, open Chyme and read under the rooms rail. Drag the schedule sideways.
-2. Sign out and open the Chyme route; read under the room list. Drag the schedule sideways.
+2. Sign out and open the Chyme route; read above the **Live Rooms** row (the same place as the
+   member view since 2026-09-30). Drag the schedule sideways.
 3. In the Android app, open Chyme and tap the **Upcoming** tab.
 4. Release every booked slot on the guide, then refresh each of the three screens.
 5. Open the app with the network off (or point it at a stopped server) and read the same places.
@@ -588,6 +591,39 @@ in** B's Join works. Step 6: everyone's microphone control is back and A can unm
 action is recorded and the control shows one amber line beginning "Recorded, but Stream did not
 apply it in the call:" with Stream's reason — never a silent failure and never a 500. Every step
 writes a row in `chyme_admin_audit_trail`.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+### CH-24 · Readings loop while nobody is live (web)
+**Role:** admin, then a signed-out visitor and a member · **Surfaces:** web
+**Precondition:** nobody in the main room; at least one post in the blog with a recording in
+`content/audio` (so `https://chargingthefuture.github.io/chargingthefuture/readings.json` lists it).
+**Steps:**
+1. As the admin, open Chyme and tap **Admin** in the top bar; on the usage screen tap **Readings
+   loop**, and check each admin screen's **Member view** returns to Chyme. Stay on
+   `/admin/chyme/readings`.
+2. Tap **Turn on**.
+3. Signed out, open `/apps/chyme`. Tap **Play readings**. In a second browser, do the same.
+4. As a member, open Chyme and do not press Join Room. Then press Join Room.
+5. As another member, join the main room while the signed-out visitor is still listening. Wait a
+   minute.
+6. As the admin, tap **Turn off**, then reload `/apps/chyme` signed out.
+**Expected:** Step 1: **Admin** shows for the admin only (a member without the admin role does
+not see it), each link lands where it says, and the readings screen lists the blog's recorded posts by title, each linking to its post,
+with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
+switch reads **On**. Step 3: under "No public rooms right now" a "While you wait for someone to go live" card
+says they are computer-voice readings of posts from the blog and a recording, not a live host; on
+an iPhone in Safari as well as on Android, **Play readings** shows "Audio will begin playing in a
+few seconds." until the sound starts, and with two or more recordings on the blog the readings
+follow each other in order, each title changing as its reading starts, then wrap to the first (lock
+the phone and let it run through two readings); if a reading will not load, the player tries it
+again from its start and then moves to the next one, and "The recording could not be loaded (…)"
+shows only when no reading will load; the reading plays
+with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
+the idle Main Room screen; with nobody in the room there is no "On Stage" block under it (the header
+already reads "0 participants"), and with someone in the room their tiles sit under the card; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
+live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---

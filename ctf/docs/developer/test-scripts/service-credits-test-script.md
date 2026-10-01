@@ -28,9 +28,11 @@
 - Run `pnpm --dir ctf seed:demo` once before the session and do not re-seed mid-session unless a case says to.
 - **"Ways to earn" is accurate (2026-08-28):** on web (signed-out landing + member shell) and the
   Android Earn tab, the list is: Verify your account (+100), Help another member — they send you
-  credits (Per exchange), Take part in SkillsHunt (Per acceptance), Contribute during a fundraiser
-  (Varies). SkillsHunt reads "Per acceptance", not "Per round" — credits are granted on each
-  accepted nomination, so a tester seeing "Per round" is looking at deprecated copy. The fundraiser
+  credits (Per exchange), Take part in SkillsHunt (End of round), Contribute during a fundraiser
+  (Varies). SkillsHunt reads "End of round" with the detail "Nominate survivors to earn points. When
+  a round ends, scouts above its points bar share its ServiceCredits." (2026-10-01: an accepted
+  nomination no longer sends credits; the round's pool is shared out once it ends). A tester seeing
+  "Per acceptance" or "Per round" is looking at deprecated copy. The fundraiser
   row names no month: it reads "Pitch in when the community runs a fundraiser." and stops there. A
   tester seeing any month in that row — "The next one starts in July" was the old wording — is
   looking at deprecated copy, and a month reappearing there is a bug however current it happens to

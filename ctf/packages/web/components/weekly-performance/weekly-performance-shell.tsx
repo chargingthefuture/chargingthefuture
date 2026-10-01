@@ -19,6 +19,7 @@ import { WeeklyPerformanceLoading } from "./wp-loading";
 import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { startVisibleInterval } from "../../lib/shared/visible-interval";
 
 type ShellData = {
   weeks: WpWeek[];
@@ -124,13 +125,12 @@ export function WeeklyPerformanceShell() {
     if (!selectedWeekStart || !selectedIsCurrent) return;
     const compare = priorWeekStart(weeks, selectedWeekStart);
     const refresh = () => { void loadWeekData(selectedWeekStart, compare, true); };
-    const interval = window.setInterval(refresh, 60_000);
+    // Ticks only while the tab is visible, and refreshes once when it is shown again.
+    const stopPoll = startVisibleInterval(refresh, 60_000);
     const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
-    document.addEventListener("visibilitychange", onFocus);
     window.addEventListener("focus", onFocus);
     return () => {
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onFocus);
+      stopPoll();
       window.removeEventListener("focus", onFocus);
     };
   }, [selectedWeekStart, selectedIsCurrent, weeks, loadWeekData]);

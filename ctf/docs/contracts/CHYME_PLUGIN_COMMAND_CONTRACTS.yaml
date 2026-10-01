@@ -498,6 +498,58 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
+    command: chyme.readings.read
+    version: 1.0.0
+    description: Public, unauthenticated, read-only. Whether the readings loop (recorded readings of the Peace Battle 2 blog posts, a temporary module since 2026-09-28) is switched on. The playlist itself is the blog's published readings.json, read by the browser, not by this route. Rate-limited like the other public Chyme reads.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      enabled:
+        type: boolean
+    dataAccess:
+      - chyme_readings_config
+    purpose: public_listen_access
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.readings.read
+    version: 1.0.0
+    description: Admin-only, read-only. The readings loop switch, for /admin/chyme/readings. The screen reads the playlist from the blog's readings.json directly.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      setting:
+        type: object
+    dataAccess:
+      - chyme_readings_config
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.admin.readings.switch
+    version: 1.0.0
+    description: Admin-only. Turn the readings loop on or off.
+    inputSchema: 
+      enabled:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      setting:
+        type: object
+    dataAccess:
+      - chyme_readings_config
+      - chyme_admin_audit_trail
+    purpose: social_audio_moderation
+    retentionClass: compliance_long_lived
+    idempotency: true
+
+  - pluginId: chyme
     command: chyme.admin.removals.read
     version: 1.0.0
     description: Admin-only, read-only. Every member currently removed from a Chyme room, newest first, for the Chyme admin screen.

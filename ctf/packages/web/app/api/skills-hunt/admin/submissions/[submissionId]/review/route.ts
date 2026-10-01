@@ -3,24 +3,14 @@ import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../.
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import {
-  claimSkillsHuntRewardUnderCap,
-  getRound,
-  getSubmissionById,
   insertSkillsHuntAudit,
-  revertSkillsHuntCreditClaim,
   reviewSubmission,
   validateReviewInput,
 } from 'lib/skills-hunt/repository';
-import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
 import { SKILLS_HUNT_REVIEW_ACTIONS } from 'lib/skills-hunt/types';
-import type { SkillsHuntReviewAction, SkillsHuntSubmission, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
+import type { SkillsHuntReviewAction, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
-
-// System actor recorded on the ServiceCredits mint for an accepted nomination —
-// mirrors Unlock's 'unlock-incentive-system'. The human reviewer is captured
-// separately in the admin audit trail.
-const SKILLS_HUNT_INCENTIVE_ACTOR_ID = 'skills-hunt-incentive-system';
 
 type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
@@ -31,82 +21,6 @@ function toReviewInput(body: ReviewBody): SkillsHuntSubmissionReviewInput {
       : 'flag',
     notes: typeof body.notes === 'string' ? body.notes : null,
   };
-}
-
-// Best-effort ServiceCredits reward for an accepted nomination — mirrors the
-// Unlock approval reward. Idempotent (the credit_granted guard plus the ledger
-// idempotency key), pays only when the round configures a per-accept reward, and
-// respects the per-scout round cap. A ledger outage is reported but never thrown,
-// so it can never fail the review decision. Mutates `submission` once paid.
-async function grantAcceptRewardBestEffort(submission: SkillsHuntSubmission, reviewerUserId: string): Promise<void> {
-  if (submission.status !== 'accepted' || submission.creditGranted) {
-    return;
-  }
-  try {
-    const round = await getRound(submission.roundId);
-    if (!round || round.rewardCreditsPerAccept <= 0) {
-      return;
-    }
-    const perAccept = round.rewardCreditsPerAccept;
-
-    // Claim the reward atomically under the per-scout round cap (advisory-locked
-    // per round+scout) so two concurrent accepts can't overpay. The claim marks
-    // the submission credited; we mint next and revert the claim if it fails.
-    const claimed = await claimSkillsHuntRewardUnderCap({
-      submissionId: submission.id,
-      roundId: round.id,
-      submitterUserId: submission.submitterUserId,
-      amount: perAccept,
-      cap: round.rewardPerUserRoundCap,
-    });
-    if (!claimed) {
-      return;
-    }
-
-    const idempotencyKey = `skills-hunt-accept-submission-${submission.id}`;
-    let grant: Awaited<ReturnType<typeof mintGrant>>;
-    try {
-      grant = await mintGrant({
-        actorId: SKILLS_HUNT_INCENTIVE_ACTOR_ID,
-        targetUserId: submission.submitterUserId,
-        amount: perAccept,
-        grantReason: 'skills_hunt_accept_reward',
-        governanceTicketId: `skills-hunt:submission:${submission.id}`,
-        idempotencyKey,
-      });
-    } catch (mintError) {
-      // Mint rejected (e.g. mint budget) — release the claim so the cap and the
-      // paid flag stay accurate, then surface via the outer best-effort handler.
-      await revertSkillsHuntCreditClaim(submission.id);
-      throw mintError;
-    }
-
-    submission.creditGranted = true;
-    submission.creditAmount = perAccept;
-    submission.creditGrantedAtIso = new Date().toISOString();
-
-    await insertServiceCreditsAudit({
-      actorId: reviewerUserId,
-      command: 'service-credits.governance.mint.grant.skills-hunt',
-      policyStatus: 'allow',
-      reason: 'skills_hunt_accept_reward',
-      targetType: 'governance_event',
-      targetId: grant.governanceEventId,
-      metadata: {
-        skillsHuntSubmissionId: submission.id,
-        roundId: round.id,
-        targetUserId: submission.submitterUserId,
-        amount: perAccept,
-        idempotencyKey,
-      },
-    });
-  } catch (rewardError) {
-    reportError(rewardError, {
-      area: 'skills-hunt',
-      op: 'admin_submissions_submissionid_review_reward',
-      extra: { submissionId: submission.id },
-    });
-  }
 }
 
 // The three ways a review can fail for the caller: the submission is gone, the nominee has been
@@ -214,16 +128,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       metadata: auditDetail,
     });
 
-    // The review decision is already committed and audited above; paying the
-    // accept reward is a best-effort follow-up (see grantAcceptRewardBestEffort).
-    await grantAcceptRewardBestEffort(submission, gate.auth.userId);
-
-    // Re-read from the database so the response reflects the committed reward
-    // state (credit_granted / credit_amount) rather than the in-memory mutation,
-    // which could diverge if the claim-then-mint sequence partially failed.
-    const fresh = await getSubmissionById(submission.id);
-
-    return NextResponse.json({ ok: true, submission: fresh ?? submission }, { status: 200 });
+    // An accept sends no ServiceCredits: a round is points only, and credits are shared out when
+    // the round ends (owner decision, 2026-10-01; see lib/skills-hunt/round-awards.ts).
+    return NextResponse.json({ ok: true, submission }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_review' });
     const message = error instanceof Error ? error.message : 'unknown';

@@ -30,6 +30,7 @@ import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } 
 import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 import { ChatMessageImage } from './chat-message-image';
 import { CommonsImageShare } from './commons-image-share';
+import { motionAwareBehavior, useChatScrollPosition } from './chat-scroll';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
 // official house account used to get a hardcoded "SH" here; now that official posts are signed with
@@ -254,6 +255,13 @@ function computeTypingLabel(typingUsers: CommonsTypingUser[]): string | null {
   return `${typingUsers[0].name} and ${typingUsers.length - 1} others are typing…`;
 }
 
+// True when the page opened on /?post=<id> or /?announcement=<id>; that jump positions the list.
+function hasDeepLinkInUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has('post') || params.has('announcement');
+}
+
 function selectorForDeepLink(postId: string | null, announcementId: string | null): string | null {
   if (postId) return `[data-post-id="${postId}"]`;
   if (announcementId) return `[data-announcement-id="${announcementId}"]`;
@@ -263,7 +271,7 @@ function selectorForDeepLink(postId: string | null, announcementId: string | nul
 // Scroll a target element into view and flash it, so the eye lands on it. Shared by the quoted-reply
 // jump and the deep-link jump.
 function scrollAndFlash(target: HTMLElement): void {
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.scrollIntoView({ behavior: motionAwareBehavior(), block: 'center' });
   target.classList.add(styles.chatBubbleFlash);
   window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
 }
@@ -312,6 +320,12 @@ function computeUnreadDividerIndex(streamEntries: StreamEntry[], lastSeenAtIso: 
   const lastSeenEpoch = new Date(lastSeenAtIso).getTime();
   if (Number.isNaN(lastSeenEpoch)) return -1;
   return streamEntries.findIndex((entry) => entry.epoch > lastSeenEpoch);
+}
+
+// True when the entry is the member's own: a post they sent, or an @comic question they asked.
+function isOwnEntry(entry: StreamEntry | undefined): boolean {
+  if (!entry) return false;
+  return entry.kind === 'comic' || entry.message.from === 'user';
 }
 
 // The React key for a stream entry, matching the per-branch keys the entries used to carry inline.
@@ -431,7 +445,6 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   const ownMentionLabel = mentionLabel(ownHandle);
   const typingLabel = useMemo<string | null>(() => computeTypingLabel(typingUsers), [typingUsers]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
   // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -501,11 +514,16 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   // does not creep down as the member reads or as best-effort "mark seen" runs.
   const unreadDividerIndex = useMemo<number>(() => computeUnreadDividerIndex(streamEntries, lastSeenAtIso), [streamEntries, lastSeenAtIso]);
 
-  // Auto-scroll the chat to the latest entry when the stream grows (a sent message, a concierge
-  // reply, or new polled history), so members always land on what they saw last — like a normal chat.
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [streamEntries.length]);
+  // Open on the "New messages" divider (or the latest message) with no animation, then follow new
+  // entries only while the member is at the bottom or has just posted. A deep link positions itself.
+  useChatScrollPosition({
+    containerRef: messagesContainerRef,
+    entryCount: streamEntries.length,
+    isReady: !isLoading,
+    dividerSelector: unreadDividerIndex >= 0 ? '[data-unread-divider]' : null,
+    lastEntryIsOwn: isOwnEntry(streamEntries[streamEntries.length - 1]),
+    skipInitial: hasDeepLinkInUrl(),
+  });
 
   // Once the chat has content on screen, mark the channel as seen (best-effort, once per mount)
   // so the next visit's "New messages" divider reflects where the member left off.
@@ -536,7 +554,6 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
       ) : (
         <MessageStream
           messagesContainerRef={messagesContainerRef}
-          messagesEndRef={messagesEndRef}
           inputRef={inputRef}
           isLoading={isLoading}
           isFilterRefreshing={isFilterRefreshing}
@@ -613,7 +630,6 @@ type StreamCallbacks = {
 
 type MessageStreamProps = StreamCallbacks & {
   messagesContainerRef: RefObject<HTMLDivElement | null>;
-  messagesEndRef: RefObject<HTMLDivElement | null>;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   isLoading: boolean;
   isFilterRefreshing: boolean;
@@ -629,7 +645,6 @@ type MessageStreamProps = StreamCallbacks & {
 
 function MessageStream({
   messagesContainerRef,
-  messagesEndRef,
   inputRef,
   isLoading,
   isFilterRefreshing,
@@ -664,7 +679,6 @@ function MessageStream({
           {...callbacks}
         />
       ))}
-      <div ref={messagesEndRef} />
     </div>
   );
 }
@@ -694,7 +708,7 @@ function StreamEmptyState({ mentionsOnly, announcementsOnly, ownMentionLabel }: 
 // last-seen marker. Rendered ahead of whichever entry follows it.
 function UnreadDivider() {
   return (
-    <div className={styles.unreadDivider} role="separator" aria-label="New messages">
+    <div className={styles.unreadDivider} role="separator" aria-label="New messages" data-unread-divider="">
       <span className={styles.unreadDividerLabel}>New messages</span>
     </div>
   );

@@ -546,6 +546,23 @@ ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS error_cat
 ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS idx_chyme_admin_audit_trail_lookup
   ON chyme_admin_audit_trail (created_at DESC, actor_id, command);
+-- Chyme readings loop: recorded readings of the blog posts, played on the Chyme page while nobody is
+-- live. A temporary module (owner decision, 2026-09-28): switched off once people start showing up,
+-- then deleted. To remove it, drop chyme_readings_config in a later migration.
+--
+-- chyme_readings_config: one row, the on/off switch. No row means off.
+CREATE TABLE IF NOT EXISTS chyme_readings_config (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_by TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_by TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The loop's playlist is the list the blog publishes (readings.json), not a table here; the table
+-- that held admin-entered links was dropped on 2026-09-29 (migration 0043).
+DROP TABLE IF EXISTS chyme_readings_tracks;
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
@@ -3220,6 +3237,11 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
+-- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
+-- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
+-- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
@@ -5258,6 +5280,8 @@ CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
 --   last_checked_on the day somebody last looked at the provider's bill for this line.
 --   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
 --                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+-- Starting rows come from db/migrations/post/0041 (one per service) and post/0045 (ElevenLabs);
+-- neither writes an amount.
 CREATE TABLE IF NOT EXISTS admin_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider TEXT NOT NULL,
@@ -6973,6 +6997,10 @@ CREATE TABLE IF NOT EXISTS beacon_events (
   recording_ready_at TIMESTAMPTZ,
   commons_live_post_id UUID,
   commons_recording_post_id UUID,
+  -- This project's own copy of the recording (a GitHub release asset), written by the
+  -- beacon-recordings-archive workflow. Stream's copy can expire or be deleted; this one is kept.
+  archived_recording_url TEXT,
+  recording_archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -6992,6 +7020,8 @@ ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_url TEXT;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_ready_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_live_post_id UUID;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_recording_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS archived_recording_url TEXT;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_archived_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -10411,4 +10441,123 @@ CREATE TABLE IF NOT EXISTS comic_runtime_config (
 ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS unlock_help_without_review BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NULL;
 ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ── post migration: 0042_chyme_readings.sql ──
+-- schema.sql carries the same CREATE TABLEs. This migration makes the tables appear in production on
+-- the same run, alongside the other post migrations.
+-- Chyme readings loop: recorded readings of the blog posts, played on the Chyme page while nobody is
+-- live. A temporary module (owner decision, 2026-09-28): switched off once people start showing up,
+-- then deleted. To remove it, drop both tables in a later migration.
+--
+-- chyme_readings_config: one row, the on/off switch. No row means off.
+CREATE TABLE IF NOT EXISTS chyme_readings_config (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_by TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_by TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- chyme_readings_tracks: the playlist, played in the order added. audio_url points at a file hosted
+-- elsewhere (for example the blog's own site); duration_seconds is read from the file by the admin's
+-- browser when the track is added, so every listener can be placed at the same point in the loop.
+CREATE TABLE IF NOT EXISTS chyme_readings_tracks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  post_url TEXT NULL,
+  audio_url TEXT NOT NULL,
+  duration_seconds INTEGER NOT NULL CHECK (duration_seconds > 0),
+  added_by TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS title TEXT NOT NULL;
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS post_url TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS audio_url TEXT NOT NULL;
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS duration_seconds INTEGER NOT NULL;
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS added_by TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_tracks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_chyme_readings_tracks_order ON chyme_readings_tracks (created_at, id);
+
+
+-- ── post migration: 0043_drop_chyme_readings_tracks.sql ──
+-- post/0043: Drop chyme_readings_tracks.
+--
+-- The Chyme readings loop no longer keeps its own playlist. It plays the list the blog publishes at
+-- build time (readings.json: every post with a recording in the blog's content/audio), so uploading
+-- the audio file to the blog is the only step and there is nothing to type into the app (owner
+-- decision, 2026-09-29). The table held admin-entered links only, no member data. Guarded with
+-- IF EXISTS so it no-ops on a database that never had it, and idempotent.
+DROP TABLE IF EXISTS chyme_readings_tracks;
+
+
+-- ── post migration: 0044_directory_profiles_nominated_by.sql ──
+-- post/0044: Record who nominated each Directory profile, and backfill it.
+--
+-- `nominated_by_user_id` is the member who brought the person into the Directory: the Skills Hunt
+-- nominator, or the admin who added the profile. It stays when the profile is claimed, so a
+-- nomination keeps counting after its "Community-generated" line drops. The Skills Hunt
+-- "Your totals, all rounds" card counts profiles by this column.
+--
+-- Backfill, only where the column is still NULL, from records the database already holds:
+--   1. Skills Hunt profiles: the nomination's submitter.
+--   2. Admin-added profiles: the admin on the `directory.admin.profile.create` change event.
+-- Rows with neither record (older than both, or made by hand) are left NULL here; assigning them
+-- is the owner's decision and is done with a separate statement, not by this file.
+-- Idempotent: every step is guarded and re-running it changes nothing.
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by
+  ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
+
+UPDATE directory_profiles dp
+SET nominated_by_user_id = s.submitter_user_id
+FROM skills_hunt_directory_profiles link
+JOIN skills_hunt_submissions s ON s.id = link.submission_id
+WHERE link.directory_profile_id = dp.id::text
+  AND dp.nominated_by_user_id IS NULL;
+
+UPDATE directory_profiles dp
+SET nominated_by_user_id = ev.actor_id
+FROM (
+  SELECT DISTINCT ON (target_id) target_id, actor_id
+  FROM directory_profile_change_events
+  WHERE command = 'directory.admin.profile.create'
+    AND policy_status = 'allow'
+    AND actor_id <> ''
+  ORDER BY target_id, created_at ASC
+) ev
+WHERE ev.target_id = dp.id
+  AND dp.nominated_by_user_id IS NULL;
+
+
+-- ── post migration: 0045_admin_expenses_elevenlabs_line.sql ──
+-- Add the ElevenLabs line to /admin/expenses (added 2026-10-01).
+--
+-- Why: the owner subscribes to ElevenLabs (Creator plan, billed monthly through the App Store) to
+-- make the audio versions of blog posts. It is not on the starting list in post/0041, and post/0041
+-- no longer writes once the list has been edited, so the line needs its own step.
+--
+-- What it writes: one recurring, fixed-price line with what it pays for and a note that some months
+-- are skipped. No amount: what each line costs is the owner's own data and is entered on the screen,
+-- never in this repository, which is public (same rule as post/0041).
+--
+-- Safe to re-run: it writes only when no line for ElevenLabs exists yet and the audit trail holds
+-- nothing for this line's fixed id. So a re-run (every qualifying push runs post/) never adds a
+-- second ElevenLabs line next to one entered by hand, and never brings the line back after it was
+-- removed on the screen. ON CONFLICT DO NOTHING covers two runs landing at once.
+INSERT INTO admin_expenses (id, provider, purpose, kind, billing, notes)
+SELECT
+  '5e0a1c00-0000-4000-8000-000000000012'::uuid,
+  'ElevenLabs',
+  'Text to speech for the audio versions of blog posts',
+  'recurring',
+  'fixed',
+  'Creator plan, billed monthly through the App Store. Some months are skipped: mark it stopped for a month it is not renewed.'
+WHERE NOT EXISTS (SELECT 1 FROM admin_expenses WHERE lower(provider) = 'elevenlabs')
+  AND NOT EXISTS (
+    SELECT 1 FROM admin_expenses_audit_trail
+    WHERE target_id = '5e0a1c00-0000-4000-8000-000000000012'
+  )
+ON CONFLICT (id) DO NOTHING;
 

@@ -3,6 +3,7 @@
 import type { SkillsHuntMissionGoalType } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { SectorGoalPicker, SkillGoalPicker } from "./sha-mission-goal-pickers";
 
 export const MISSION_GOAL_TYPES: SkillsHuntMissionGoalType[] = [
   "count_total_accepted", "count_skills_in_sector", "count_rare_skill_finds", "count_skill_matches",
@@ -26,9 +27,6 @@ const fieldStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
 const labelStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({
   display: "block", fontSize: 12, fontWeight: 600, color: t.SUBTLE, marginBottom: 5,
 });
-const row: React.CSSProperties = {
-  display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12,
-};
 
 export type MissionGoalFieldsValue = {
   goalType: SkillsHuntMissionGoalType;
@@ -54,10 +52,10 @@ export function missionGoalMetadata(value: MissionGoalFieldsValue): Record<strin
 
 export function missionGoalError(value: MissionGoalFieldsValue): string | null {
   if (value.goalType === "count_skills_in_sector" && !value.sectorName.trim()) {
-    return "Sector name is required for this goal type.";
+    return "Choose the sector this mission counts.";
   }
   if (value.goalType === "count_skill_matches" && !value.skillName.trim()) {
-    return "Skill name is required for this goal type. It must match the taxonomy skill exactly — that name is what is compared against each nomination.";
+    return "Choose the skill this mission counts.";
   }
   return null;
 }
@@ -87,36 +85,10 @@ export function MissionGoalFields({ idPrefix, value, onChange }: {
         </div>
       </div>
       {value.goalType === "count_skills_in_sector" && (
-        <div style={row}>
-          <div>
-            <label style={labelStyle(t)} htmlFor={`${idPrefix}-sector-name`}>Sector name</label>
-            <input id={`${idPrefix}-sector-name`} style={field} value={value.sectorName}
-              onChange={(e) => onChange({ ...value, sectorName: e.target.value })} placeholder="e.g. Healthcare" />
-          </div>
-          <div>
-            <label style={labelStyle(t)} htmlFor={`${idPrefix}-sector-id`}>Sector id (optional)</label>
-            <input id={`${idPrefix}-sector-id`} style={field} value={value.sectorId}
-              onChange={(e) => onChange({ ...value, sectorId: e.target.value })} />
-          </div>
-        </div>
+        <SectorGoalPicker idPrefix={idPrefix} value={value} onChange={onChange} field={field} label={labelStyle(t)} t={t} />
       )}
       {value.goalType === "count_skill_matches" && (
-        <div style={row}>
-          <div>
-            <label style={labelStyle(t)} htmlFor={`${idPrefix}-skill-name`}>Skill name</label>
-            <input id={`${idPrefix}-skill-name`} style={field} value={value.skillName}
-              onChange={(e) => onChange({ ...value, skillName: e.target.value })} placeholder="e.g. Automotive repair" />
-            <div style={{ fontSize: 11, color: t.MUTED, marginTop: 5 }}>
-              Matched against the taxonomy skills picked on each accepted nomination, ignoring case.
-              Free-text proposed skills are not counted.
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle(t)} htmlFor={`${idPrefix}-skill-id`}>Skill id (optional)</label>
-            <input id={`${idPrefix}-skill-id`} style={field} value={value.skillId}
-              onChange={(e) => onChange({ ...value, skillId: e.target.value })} />
-          </div>
-        </div>
+        <SkillGoalPicker idPrefix={idPrefix} value={value} onChange={onChange} field={field} label={labelStyle(t)} t={t} />
       )}
     </>
   );

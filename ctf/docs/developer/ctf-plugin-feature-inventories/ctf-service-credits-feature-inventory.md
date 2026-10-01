@@ -302,6 +302,8 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-01: **SkillsHunt sends credits at the end of a round, not on each accept (owner decision).** A SkillsHunt round is now points only: accepting a nomination no longer mints ServiceCredits (the per-accept reward and its per-scout cap are removed from SkillsHunt). When a round closes, an admin sends its end-of-round award: the scouts whose final score reached the round's points bar share its ServiceCredits pool in proportion to their points. Each share is minted from the treasury through `mintGrant` with the new grant reason `skills_hunt_round_award` (actor `skills-hunt-incentive-system`, idempotency key `skills-hunt-round-award-<roundId>-<userId>`) and recorded in `service_credits_admin_audit_trail` as `service-credits.governance.mint.grant.skills-hunt`. Credits already sent per accept stay sent. The Earn tab card for SkillsHunt (`components/service-credits/service-credits.constants.ts`) now reads "Nominate survivors to earn points. When a round ends, scouts above its points bar share its ServiceCredits." with "End of round" in place of "Per acceptance". See the SkillsHunt inventory for the award rules.
+
 - 2026-08-28: **The Earn tab's fundraiser card no longer names a month.** It read "The next one
   starts in July", which was still on the screen at the end of August. A hard-coded date in static
   copy goes wrong the moment it passes and nothing prompts anyone to correct it, so the sentence was

@@ -1,8 +1,12 @@
 contracts:
   - pluginId: skills-hunt
     command: skills-hunt.round.create
-    version: 1.1.0
-    description: Create a SkillsHunt round with scoring config, ServiceCredits reward config, schedule window, and governance metadata.
+    version: 2.0.0
+    description: >-
+      Create a SkillsHunt round with scoring config, end-of-round award settings, schedule window,
+      and governance metadata. Refused with SKILLS_HUNT_ANOTHER_ROUND_OPEN (409, naming the open
+      round) when the new round is active and another round is already active: only one round is
+      open at a time.
     inputSchema:
       name:
         type: string
@@ -19,14 +23,14 @@ contracts:
       scoringConfig:
         type: object
         required: false
-      rewardCreditsPerAccept:
+      awardPoolCredits:
         type: integer
         required: false
-        description: Entire ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
-      rewardPerUserRoundCap:
+        description: ServiceCredits shared at the end of the round by the scouts at or above the points bar. Default 0 (points only, no award).
+      awardPointsBar:
         type: integer
         required: false
-        description: Optional ceiling on total reward credits one scout can earn in this round. Null = no cap.
+        description: Final score a scout needs to share the pool. Null = no award.
     outputSchema:
       roundId:
         type: string
@@ -34,6 +38,13 @@ contracts:
         type: string
       createdAt:
         type: string
+      awardPoolCredits:
+        type: integer
+      awardPointsBar:
+        type: integer
+      awardsSentAtIso:
+        type: string
+        description: When every award row for the round was sent; null until then.
     dataAccess:
       - skills_hunt_rounds
       - skills_hunt_audit_log
@@ -43,8 +54,11 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.round.update
-    version: 1.1.0
-    description: Update round schedule, status, scoring controls, and ServiceCredits reward config for an existing SkillsHunt campaign.
+    version: 2.0.0
+    description: >-
+      Update round schedule, status, scoring controls, and end-of-round award settings for an
+      existing SkillsHunt campaign. Refused with SKILLS_HUNT_ANOTHER_ROUND_OPEN (409, naming the
+      open round) when the update would leave two rounds active.
     inputSchema:
       roundId:
         type: string
@@ -67,14 +81,14 @@ contracts:
       scoringConfig:
         type: object
         required: false
-      rewardCreditsPerAccept:
+      awardPoolCredits:
         type: integer
         required: false
-        description: Entire ServiceCredits minted to the scout on each accepted nomination. Default 0 (no reward).
-      rewardPerUserRoundCap:
+        description: ServiceCredits shared at the end of the round by the scouts at or above the points bar. Default 0 (points only, no award).
+      awardPointsBar:
         type: integer
         required: false
-        description: Optional ceiling on total reward credits one scout can earn in this round. Null = no cap.
+        description: Final score a scout needs to share the pool. Null = no award.
     outputSchema:
       roundId:
         type: string
@@ -82,6 +96,13 @@ contracts:
         type: string
       updatedAt:
         type: string
+      awardPoolCredits:
+        type: integer
+      awardPointsBar:
+        type: integer
+      awardsSentAtIso:
+        type: string
+        description: When every award row for the round was sent; null until then.
     dataAccess:
       - skills_hunt_rounds
       - skills_hunt_audit_log
@@ -202,12 +223,11 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.submission.review
-    version: 1.1.0
+    version: 2.0.0
     description: >-
       Apply moderator/admin review decision including accept/reject/edit/flag/unflag and scoring updates.
-      On accept, when the round has a ServiceCredits reward configured, mint that reward to the
-      scout via the ServiceCredits treasury (best-effort, idempotent per submission, bounded by the
-      per-scout round cap and the per-period mint budget). The mint never fails the review decision.
+      An accept awards points only and sends no ServiceCredits (since 2026-10-01); credits come from
+      the end-of-round award (skills-hunt.round.award.send).
     inputSchema:
       submissionId:
         type: string
@@ -234,21 +254,16 @@ contracts:
         type: integer
       creditGranted:
         type: boolean
+        description: History only. True when a per-accept reward was sent before 2026-10-01; nothing sets it now.
       creditAmount:
         type: integer
+        description: History only. The per-accept reward sent before 2026-10-01, else 0.
       reviewedAt:
         type: string
     dataAccess:
       - skills_hunt_submissions
       - skills_hunt_leaderboard
       - skills_hunt_audit_log
-      # ServiceCredits reward on accept (mirrors the Unlock approval reward).
-      - service_credits_wallets
-      - service_credits_governance_events
-      - service_credits_ledger_entries
-      - service_credits_command_idempotency
-      - service_credits_adapter_outbox
-      - service_credits_admin_audit_trail
       # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
       # person's Quora URL is on Directory's takedown list.
       - directory_suppressed_quora_urls
@@ -406,6 +421,27 @@ contracts:
       - skills_hunt_audit_log
     purpose: campaign_governance
     retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.my-totals.get
+    version: 1.0.0
+    description: >-
+      The authenticated member's own nomination counts across every round (submitted, profiles
+      created, accepted, pending, flagged, rejected). Removed rows are left out. No other member's
+      counts are ever returned; the user id comes from the session, never the request.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+    outputSchema:
+      totals:
+        type: object
+    dataAccess:
+      - skills_hunt_submissions (select — counts of the caller's own rows only)
+      - directory_profiles (select — count where nominated_by_user_id is the caller)
+    purpose: reward_visibility
+    retentionClass: derived_medium_lived
     idempotency: true
 
   - pluginId: skills-hunt
@@ -747,6 +783,83 @@ contracts:
     retentionClass: transactional_long_lived
     idempotency: true
 
+  - pluginId: skills-hunt
+    command: skills-hunt.round.award.preview
+    version: 1.0.0
+    description: >-
+      Admin reads a round's end-of-round award plan: each scout whose final score is at or above the
+      round's points bar, their share of the ServiceCredits pool (floor(pool × score ÷ sum of
+      eligible scores), shares of 0 left out), the total planned, the remainder that is not sent,
+      and a plain reason when sending is not ready (round not closed, no bar, pool of 0, or no scout
+      reached the bar). Before any row is stored it rebuilds the round's cached leaderboard so the
+      split uses final scores; once sending has started the plan is the stored rows, not a fresh
+      split. Changes no award row and sends nothing.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+    outputSchema:
+      plan:
+        type: object
+        description: >-
+          { roundId, roundName, roundStatus, pointsBar, poolCredits, lines: [{ userId, username,
+          score, amount, sentAtIso }], plannedCredits, remainder, sentAtIso, notReadyReason }
+    dataAccess:
+      - skills_hunt_rounds
+      - skills_hunt_round_awards
+      - skills_hunt_leaderboard
+      - skills_hunt_submissions
+      - skills_hunt_mission_progress
+      - skills_hunt_missions
+    purpose: campaign_governance
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
+    command: skills-hunt.round.award.send
+    version: 1.0.0
+    description: >-
+      Admin sends a closed round's end-of-round award. Rebuilds the round's final scores (accepted
+      points plus mission bonuses), writes the split to skills_hunt_round_awards if it is not there
+      yet (fixed from then on), then mints each unsent row from the treasury via mintGrant (actor
+      skills-hunt-incentive-system, grant reason skills_hunt_round_award, idempotency key
+      skills-hunt-round-award-<roundId>-<userId>) and sets awards_sent_at once every row is sent.
+      A failed row is reported and retried by sending again; a row already sent is never sent
+      twice. Refused with SKILLS_HUNT_ROUND_AWARD_NOT_READY (409) and the plain reason when the
+      plan is not ready.
+    inputSchema:
+      roundId:
+        type: string
+        required: true
+    outputSchema:
+      sentNow:
+        type: integer
+        description: Rows sent by this call.
+      failed:
+        type: integer
+        description: Rows that could not be sent this time; each is reported and retried by the next send.
+      plan:
+        type: object
+        description: The plan after this call, same shape as skills-hunt.round.award.preview.
+    dataAccess:
+      - skills_hunt_rounds
+      - skills_hunt_round_awards
+      - skills_hunt_leaderboard
+      - skills_hunt_submissions
+      - skills_hunt_mission_progress
+      - skills_hunt_missions
+      - skills_hunt_audit_log
+      # ServiceCredits mint for the end-of-round award.
+      - service_credits_wallets
+      - service_credits_governance_events
+      - service_credits_ledger_entries
+      - service_credits_command_idempotency
+      - service_credits_adapter_outbox
+      - service_credits_admin_audit_trail
+    purpose: campaign_governance
+    retentionClass: audit_long_lived
+    idempotency: true
+
 changelog:
   - date: 2026-02-24
     change: Initial SkillsHunt v1 command contracts added for round governance, submission/review flows, leaderboard/reward surfaces, and Directory unclaimed-profile generation.
@@ -842,3 +955,12 @@ changelog:
       the normalizer inside createSubmission, as "Invalid Quora profile URL.". The rule now sits
       with the other six, so a scout reads a sentence naming the field. Owner decision: the field
       is mandatory, and the Scout tab's label carries the required marker. No schema change.
+  - date: 2026-10-01
+    change: >-
+      One open round, points only, and an end-of-round award. skills-hunt.round.create and
+      skills-hunt.round.update go to 2.0.0: awardPoolCredits and awardPointsBar (and awardsSentAtIso
+      on output) replace rewardCreditsPerAccept and rewardPerUserRoundCap, and both refuse with
+      SKILLS_HUNT_ANOTHER_ROUND_OPEN when the call would leave two rounds active.
+      skills-hunt.submission.review goes to 2.0.0: an accept no longer mints ServiceCredits, so the
+      ServiceCredits tables leave its dataAccess. Added skills-hunt.round.award.preview and
+      skills-hunt.round.award.send.

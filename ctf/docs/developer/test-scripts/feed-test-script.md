@@ -461,8 +461,28 @@ FD-12b), with at least one reaction on it.
 
 **Expected:**
 - A single "New messages" divider appears before the first post newer than the last-seen marker.
+- The chat opens already scrolled to that divider (or to the latest message when there is nothing new), with no scrolling animation.
+- With the device's reduce-motion setting on, no scroll in the chat animates.
 - After viewing, the divider does not reappear on the next open (the marker has advanced).
 - If the divider fails to render, the chat still loads and functions normally (best-effort).
+
+**Result:** web ☐
+
+---
+
+### FD-16b — A background tab catches up when shown (added 2026-09-30)
+**Role:** member | **Surface:** web
+
+**Precondition:** Two members, A and B, each signed in on their own device.
+
+**Steps:**
+1. As A, open the Commons hub home chat, then switch to another browser tab (or lock the phone) for at least a minute.
+2. As B, post a community message.
+3. As A, switch back to the Commons tab.
+
+**Expected:**
+- B's message appears in A's chat right away on returning, without a manual refresh.
+- While nothing new has been posted, the chat stays exactly as it was across several minutes of leaving it open (no flicker, no duplicated messages).
 
 **Result:** web ☐
 

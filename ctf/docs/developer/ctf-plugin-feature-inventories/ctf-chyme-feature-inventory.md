@@ -65,8 +65,8 @@ Lifecycle/governance references applied:
     Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
     — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
     by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
-    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
-    room list on the signed-out page (both re-read on the page's refresh control), as a sideways
+    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and above the
+    room list on the signed-out page, the same place as the member view (owner directive, 2026-09-30) (both re-read on the page's refresh control), as a sideways
     rail of cards in the shape of the rooms rail above it (owner directive, 2026-09-20 — stacked,
     five booked slots were a phone screen on their own). Android: the Upcoming tab of the room
     list, which used to be a placeholder sentence; it keeps its stacked list, since it has a tab
@@ -89,8 +89,39 @@ Lifecycle/governance references applied:
     You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
     Chyme admin screen.
+18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
+    on and no room is live, the Chyme page shows a "While you wait for someone to go live" card: computer-voice
+    (text-to-speech) readings of posts from the blog, on a loop, with a **Play readings**
+    button, the title of the reading playing and a **Read this post** button under it. It says
+    plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
+    station. It stops by itself when someone goes live (checked every minute while it plays; the
+    signed-out page then shows the live room). Shown to signed-out visitors under "No public rooms
+    right now" and to members on the idle main room's screen (above "On stage", where members land,
+    since the main room opens by itself) and on the "Join a Room" screen. The playlist is every blog post with a
+    recording, oldest first: the blog publishes that list at build time
+    (`https://chargingthefuture.github.io/chargingthefuture/readings.json`, from the files in the blog's
+    `content/audio`), and the browser reads it directly. Uploading `content/audio/<post-slug>.mp3` to
+    the blog is the only step — the post gets its "Listen to this post" player and this loop gets the
+    reading (owner decision, 2026-09-29). Each entry in the list carries the recording's length, read from the file by the blog's
+    build, so the tap starts the sound at once; until it does, "Audio will begin playing in a few
+    seconds." shows under the button. A listener who joins partway in gets the file opened at that
+    point (`#t=` on its address) rather than a seek after loading, and the readings follow each
+    other in order, wrapping to the first (Safari refuses audio that starts after a network
+    wait); an entry without a length is left out. A reading the browser will not load is tried once
+    more from its start without the `#t=` mark, then the loop moves to the next reading; the card
+    shows the browser's reason only when every reading has failed in a row. The sound plays in the visitor's own browser; nothing touches
+    Stream, so it costs no Stream minutes. Web only. This is a module meant to be deleted once the
+    room has people in it: everything it owns sits in `lib/chyme/readings`,
+    `components/chyme/readings`, `app/api/chyme/readings`, `app/admin/chyme/readings`, the
+    `chyme_readings_config` table, and one mount line in each of `chyme-public-shell.tsx` and
+    `chyme-live-shell.tsx`.
 
 ## Admin Features
+
+Admin and member views link to each other (rule 131): the Chyme member page's top bar shows an
+**Admin** button to admins only, opening `/admin/chyme`; both Chyme admin screens (`/admin/chyme`
+and `/admin/chyme/readings`) carry a **Member view** button back to `/apps/chyme`, and the usage
+screen links to the readings loop screen.
 
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
    month-to-date participant-minutes against the budget, the percent and the band, today's
@@ -125,6 +156,12 @@ Lifecycle/governance references applied:
 4. **Removed members, on the Live Audio Usage screen (`/admin/chyme`).** Every live removal across
    both rooms, newest first, with the reason and one control, **Let back in**, which lifts the
    removal (the row stays as the record) and unblocks the member from the call.
+5. **Readings loop (`/admin/chyme/readings`, temporary, 2026-09-28).** Admin index entry "Chyme:
+   Readings Loop". An **On/Off** switch (off until first switched on; every change writes a row in
+   `chyme_admin_audit_trail`) and, read-only, the blog's list of recorded posts, each linking to its
+   post, with how to add one (upload `content/audio/<post-slug>.mp3` to the blog) and take one out
+   (delete the file). A list that cannot be read is shown with the reason. Nothing is added or
+   removed from this screen (owner decision, 2026-09-29: uploading the file is the only step).
 
 ## API Surface and Route Map (Target)
 
@@ -164,6 +201,9 @@ side did not apply (the decision is recorded and enforced by this app either way
 - `POST /api/chyme/admin/lift-removal` ← `{ userId }` — let a removed member back in: the removal row is lifted (kept as the record) and the member unblocked from the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when there was no live removal. Audit `chyme.admin.lift-removal`.
 - `POST /api/chyme/admin/role` ← `{ userId, role: 'speaker' | 'listener' }` — hand-raise mode: let a present member speak, or move them back to listening (which also mutes them). Sets `chyme_room_members.role` and, when `CHYME_GUEST_STREAM_ROLE` is set, the member's role on the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when they are not present. Audit `chyme.admin.role`.
 - `POST /api/chyme/admin/speak-mode` ← `{ mode: 'open' | 'hand_raise' }` — switch the room's mode. Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call (`demoted` in the answer). Audit `chyme.admin.speak-mode`.
+- `GET /api/chyme/readings` — **public, unauthenticated, read-only** (command `chyme.readings.read`). Returns `enabled`. The playlist is not served by the app: the browser reads the blog's `readings.json`. Per-IP public read rate limit. A failed read answers 503 with the reason; the player then shows nothing.
+- `GET /api/chyme/readings/admin` — **admin-only** (`requireChymeAdminAccess`), read-only. The switch (`setting`: `enabled`, `updatedBy`, `updatedAtIso`), for the readings loop admin screen.
+- `POST /api/chyme/readings/admin` ← `{ enabled: boolean }` — turn the readings loop on or off. CSRF-guarded. Audit `chyme.admin.readings.switch`.
 - `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
 - `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface rows, one row for every day the meter has ever recorded — zero-filled so there are no gaps — and `earliestDateIso`, the first of those days), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
 
@@ -245,6 +285,12 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
       `(created_at DESC, actor_id, command)`. Written by `recordChymeAdminAudit`
       (`lib/chyme/admin-audit.ts`), which never throws. Retained on account deletion (deletion
       registry), as every plugin's admin trail is. Same migration.
+13. `chyme_readings_config` (2026-09-28, migration `0042_chyme_readings.sql`) — the temporary
+    readings loop's switch. One row (`singleton_id` BOOLEAN primary key, CHECK true): `enabled`
+    (default false; no row means off), `updated_by`, `updated_at`. No member data, so it is not in the
+    deletion registry. To retire the module, drop it in a later migration. The playlist table that
+    shipped beside it, `chyme_readings_tracks`, was dropped on 2026-09-29
+    (`0043_drop_chyme_readings_tracks.sql`) when the loop moved to the blog's own list.
 8. `chyme_back_channel_calls`
    - Back Channel 1:1 call lifecycle (spec #1746). One row per call, keyed by `id`, referencing `chyme_rooms(id)` (`ON DELETE CASCADE`). Columns: `initiator_user_id`, `recipient_user_id`, `initiator_username`, `recipient_username`, `status` (`inviting|active|declined|ended|lapsed`), `stream_call_id`, `created_at`, `answered_at`, `ended_at`, `ended_by_user_id`, `last_heartbeat_at`. A CHECK forbids self-calls; a partial unique index (`status IN ('inviting','active')`) allows only one live call per initiator→recipient direction. Indexed by recipient+status, initiator+status, and room. Holds no chat/history — a row exists only to run one call and is removed on the member's Chyme service deletion (and account deletion). Never surfaced as Trust evidence or in any public feed (rule 132).
 
@@ -380,6 +426,95 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-09-30: **A reading that will not load no longer ends the loop (owner report).** On an iPhone
+  the card showed "The recording could not be loaded (the file or its address is not playable, code
+  4)." for a reading a laptop played. The file is on the blog and is an ordinary MP3; what differs
+  is the address, which carries a `#t=` mark so the phone opens it partway in, a path only tested in
+  Chromium. The player used to stop at the first failed load. Now a failed load is tried once more
+  from the start of the same reading, without the mark, then the loop moves to the next reading, and
+  the error shows only when every reading has failed in a row. A failed load's `play()` rejection
+  ("NotSupportedError") is left to the error handler, so it no longer shows an error or stops the
+  player while the retry runs. Checked in Chromium with the component on its own and the blog's list
+  and files stood in for: a first load that fails then plays from the start; a reading that always
+  fails hands over to the next; three failing readings show the error. Not checked in Safari: no
+  Safari engine was available. Test script CH-24 updated.
+- 2026-09-30: **The signed-in idle room no longer repeats the participant count (owner directive).**
+  With nobody in the room, an "On Stage · 0 Participants" block and "No participants yet." sat
+  under the readings card, repeating the header's "0 participants · Signed in as …" line.
+  `ChymeStage` (the pre-join preview) now renders nothing when the room is empty; with people in
+  the room it shows their tiles as before. The signed-out page was not affected. Test script
+  readings step 4 updated.
+- 2026-09-30: **The signed-out page puts the TI Radio guide above the room (owner directive).** It
+  sat under the room list, at the bottom of the page; the signed-in page has it above the room. The
+  "Coming up on TI Radio" rail now opens the signed-out room section, above the **Live Rooms** row,
+  and the empty-room line reads "The TI Radio guide above says when the next one is." Test script
+  CH-22 step 2 and the one-screen check updated.
+- 2026-09-30: **The signed-in room opens with chat closed (owner directive).** Chat is a utility,
+  not the reason to open Chyme, and open by default it pushed the stage and controls below the fold
+  on a phone. `ChymeLiveShell` now starts `showChat` as `false`; the room header's existing **Chat**
+  button opens and closes it. The signed-out view already started closed (2026-09-20), so both now
+  open to one view. Android is unchanged: its chat was already a separate view behind a button.
+  Test script core smoke step 1 updated.
+- 2026-09-30: **The readings card heading reads "While you wait for someone to go live" (owner
+  directive).** It read "While the room is empty", which put the page's first words on what is
+  missing. "Join" was not used because on this page it means signing in. Inventory and test script
+  updated to the new heading.
+- 2026-09-29: **The loop moves through every reading, and says the sound is coming (owner report).**
+  With two recordings on the blog, an iPhone played one of them on repeat, and the first tap gave a
+  silent pause that read as broken. The end-of-file handler now reads the current reading from a
+  ref rather than React state (a handler holding an out-of-date index picked the same "next"
+  reading every time), and a listener joining partway in gets the file opened at that point with a
+  `#t=` fragment instead of a seek made as the header arrived, which an iPhone could take as the
+  end of the file. Checked in Chromium with two short files: A, B, A, B. "Audio will begin
+  playing in a few seconds." shows from the tap until the sound starts.
+- 2026-09-29: **One sign-in button on the signed-out page (owner directive).** The invitation card
+  carried **Join Free to Listen** and **Sign In**, both linking the same hosted sign-in page. Only
+  **Sign In** stays, as the full-width green button: listening on this page needs no account, so a
+  button promising a join in order to listen described a step nobody needs. The unused `UserPlus`
+  icon import and `SURFACE` color went with it.
+- 2026-09-29: **Play readings works on the phone, and the card names the blog (owner report).** On
+  the signed-out page the player answered "The recording did not start: The operation was
+  aborted." It read every recording's length in the browser after the tap, and Safari refuses audio
+  that starts after that wait; starting it muted and then switching the file got canceled
+  instead. The blog's `readings.json` now carries each length (`durationSeconds`, read by the
+  build), so the tap starts the sound directly and entries without a length are dropped. A
+  superseded `play()` (the next file loading) no longer shows as an error. The card now says
+  "Computer-voice readings of posts from the blog", linking the blog, instead of naming Peace
+  Battle 2, since the readings are several posts.
+- 2026-09-29: **Admin and member views link to each other (owner report).** The Chyme admin screen
+  had no way back to the room, and the room had no way to the admin screen; every other plugin
+  carries both. The member page's top bar now shows an **Admin** button to admins
+  (`PluginAdminButton`, `isAdmin` passed from the plugin route), both Chyme admin screens carry
+  **Member view** (`PluginUserShellButton`), and the usage screen links to the readings loop screen.
+- 2026-09-29: **Readings card shows where members actually land (owner report).** The card sat only
+  on the "Join a Room" screen, which members rarely see: the main room opens by itself, so a member
+  lands on the room screen, idle, and the card never appeared. It now also shows there, above "On
+  stage", while the main room is idle and the member has not joined; joining the call removes it
+  and stops the sound.
+- 2026-09-29: **Readings are a computer voice, and the post is one tap away (owner decision).** The
+  owner makes the readings with text to speech rather than recording them, so the card now says
+  "Computer-voice readings" instead of "Recorded readings". The post link under the title became a
+  **Read this post** button, because the audio does not say where the post is (reading an address
+  aloud is noise) and a small text link was easy to miss while listening.
+- 2026-09-29: **The readings loop plays the blog's own list (owner decision).** Adding a reading
+  took two steps: upload the file to the blog, then paste its link and the post's link into the
+  admin screen. Now the blog publishes `readings.json` at build time (every post with a file in its
+  `content/audio`, oldest first) and the Chyme page reads that list directly, so uploading the file
+  is the only step. Removed with it: the `chyme_readings_tracks` table (migration 0043), the
+  `POST`/`DELETE /api/chyme/readings/admin/tracks` routes, their two audit commands, and the add
+  form; the public route now answers only whether the loop is on. Every entry in the blog's list
+  carries its post link, so each recording still has its text version (WCAG 1.2.1).
+- 2026-09-28: **Readings loop while nobody is live (owner decision).** The owner cannot host the
+  room around the clock until people are there, so while nobody is live the Chyme page now offers
+  recorded readings of the Peace Battle 2 blog posts, played on a loop and switched on and off from
+  `/admin/chyme/readings`. The blog posts were chosen over the Quora message-of-the-day text because
+  they are copy-edited and approved before publishing. It plays in the visitor's browser rather
+  than inside the Stream room: a recording published into the room would need a server-side
+  participant in the call around the clock, which bills Stream minutes every hour of the day and
+  would keep the room "live" so the empty-room state never showed. Built as a separate module
+  (User Features 18, Admin Features 5, the five routes, the two tables) so it can be switched off
+  and then deleted in one piece. Web only; Android is out of scope per rule 105 (the Chyme screen
+  on Android does not carry it).
 - 2026-09-20: **The main room is named for the room, not for one topic.** It shipped as "Chyme
   Main Room: Exit the Gauntlet", a name from before the TI Radio guide existed, when one standing
   subject was the only way to say what the room was for. Hosts now book their own slots and name

@@ -3,6 +3,7 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { ensureSkillsHuntAdmin, ensureSkillsHuntModeratorOrAdmin } from 'lib/skills-hunt/policy';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { SkillsHuntAnotherRoundOpenError } from 'lib/skills-hunt/one-open-round';
 
 export type SkillsHuntApiGate =
   | {
@@ -123,4 +124,18 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
   }
 
   return null;
+}
+
+// Opening a round while another is open is refused (one round at a time). Returns the 409 for that
+// case, naming the open round so the admin knows which one to close first; null for anything else.
+export function anotherRoundOpenResponse(error: unknown): NextResponse | null {
+  if (!(error instanceof SkillsHuntAnotherRoundOpenError)) return null;
+  return NextResponse.json(
+    {
+      ok: false,
+      code: SKILLS_HUNT_ERROR_CODE.anotherRoundOpen,
+      message: `"${error.openRoundName}" is already open. Only one round can be open at a time, so close it before opening this one.`,
+    },
+    { status: 409 },
+  );
 }

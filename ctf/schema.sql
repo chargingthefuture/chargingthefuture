@@ -531,6 +531,23 @@ ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS error_cat
 ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS idx_chyme_admin_audit_trail_lookup
   ON chyme_admin_audit_trail (created_at DESC, actor_id, command);
+-- Chyme readings loop: recorded readings of the blog posts, played on the Chyme page while nobody is
+-- live. A temporary module (owner decision, 2026-09-28): switched off once people start showing up,
+-- then deleted. To remove it, drop chyme_readings_config in a later migration.
+--
+-- chyme_readings_config: one row, the on/off switch. No row means off.
+CREATE TABLE IF NOT EXISTS chyme_readings_config (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_by TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_by TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The loop's playlist is the list the blog publishes (readings.json), not a table here; the table
+-- that held admin-entered links was dropped on 2026-09-29 (migration 0043).
+DROP TABLE IF EXISTS chyme_readings_tracks;
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
@@ -617,10 +634,16 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
-  -- An integer-credit reward minted to the scout when a nomination is accepted, capped per scout.
+  -- No longer read or written (2026-10-01): an accept no longer sends credits. Kept one release so
+  -- the revision still running during the deploy can read them; drop in the next release.
   reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
   reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
+  -- End-of-round award (owner decision, 2026-10-01): when the round closes, every scout whose
+  -- score reached award_points_bar shares award_pool_credits ServiceCredits in proportion to their
+  -- points, sent once when an admin presses Send. 0 / NULL = no award set.
+  award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0),
+  award_points_bar INTEGER NULL CHECK (award_points_bar IS NULL OR award_points_bar >= 0),
+  awards_sent_at TIMESTAMPTZ NULL,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -3222,6 +3245,13 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
+-- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
+-- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
+-- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+-- Backfilled by post/0044, which joins to directory_profile_change_events.target_id as text: the
+-- two id columns differ in type on production, and a bare = stopped the migration run (2026-10-01).
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
@@ -5260,6 +5290,8 @@ CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
 --   last_checked_on the day somebody last looked at the provider's bill for this line.
 --   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
 --                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+-- Starting rows come from db/migrations/post/0041 (one per service) and post/0045 (ElevenLabs);
+-- neither writes an amount.
 CREATE TABLE IF NOT EXISTS admin_expenses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   provider TEXT NOT NULL,
@@ -5527,6 +5559,29 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
+-- One row per scout awarded at the end of a round. Written before any credits move, so the split is
+-- fixed at the first Send and a retry only sends the rows still unsent (sent_at NULL); the ledger
+-- idempotency key makes a repeated send of one row a no-op.
+CREATE TABLE IF NOT EXISTS skills_hunt_round_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username_snapshot TEXT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0),
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  governance_event_id TEXT NULL,
+  sent_at TIMESTAMPTZ NULL,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (round_id, user_id)
+);
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS username_snapshot TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS governance_event_id TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_round_awards_user ON skills_hunt_round_awards (user_id);
 
 -- skills_hunt_proposed_skill_promotions — companion ALTERs for every column so a
 -- legacy copy of the table is healed (the CREATE TABLE IF NOT EXISTS above is skipped
@@ -6975,6 +7030,10 @@ CREATE TABLE IF NOT EXISTS beacon_events (
   recording_ready_at TIMESTAMPTZ,
   commons_live_post_id UUID,
   commons_recording_post_id UUID,
+  -- This project's own copy of the recording (a GitHub release asset), written by the
+  -- beacon-recordings-archive workflow. Stream's copy can expire or be deleted; this one is kept.
+  archived_recording_url TEXT,
+  recording_archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -6994,6 +7053,8 @@ ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_url TEXT;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_ready_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_live_post_id UUID;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_recording_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS archived_recording_url TEXT;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_archived_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

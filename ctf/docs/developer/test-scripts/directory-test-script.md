@@ -491,6 +491,19 @@ that is already claimed by another member is blocked (a `409` / claimed-profile 
 deny event) — an admin cannot silently overwrite another member's claim.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A2b · A profile keeps its nominator after it is claimed (added 2026-09-30)
+**Role:** admin, then the same admin as a member · **Surfaces:** web
+**Precondition:** The admin has nominated at least one person in Skills Hunt.
+**Steps:**
+1. As the admin, create a profile on `/admin/directory`.
+2. Open Skills Hunt → My Finds and note "Profiles created" on the "Your totals, all rounds" card.
+3. Attach that profile to a member's account (DIR-A2), then reload My Finds.
+**Expected:** After step 1, "Profiles created" counts the new profile, because the admin who adds a
+profile is recorded as its nominator (`directory_profiles.nominated_by_user_id`). After the attach in
+step 3 the number does not change: claiming hides the "Community-generated profile" line, but the
+nomination stays.
+**Result:** web ☐ — notes:
+
 ### DIR-A3 · Unclaimed-only delete
 **Role:** admin · **Surfaces:** web
 **Steps:**

@@ -19,6 +19,7 @@ import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
 import { useNominationForm } from "./sh-use-nomination-form";
+import { startVisibleInterval } from "../../lib/shared/visible-interval";
 
 function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: string; children: React.ReactNode }) {
   return (
@@ -33,8 +34,6 @@ interface ShellData {
   setTab: (t: Tab) => void;
   noActiveRound: boolean;
   activeRound: SkillsHuntRound | null;
-  rounds: SkillsHuntRound[];
-  onSelectRound: (id: string) => void;
   submitted: boolean;
   form: ScoutFormModel;
   resetForm: () => void;
@@ -45,6 +44,7 @@ interface ShellData {
   missions: SkillsHuntMissionWithCommunityProgress[];
   loadingFinds: boolean;
   myFinds: SkillsHuntSubmission[];
+  refreshKey: number;
 }
 
 function roundsLoadErrorMessage(e: unknown): string {
@@ -65,7 +65,7 @@ function deriveShellState(args: {
 
 function ShellContent(d: ShellData) {
   if (d.tab === "scout") {
-    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} rounds={d.rounds} onSelectRound={d.onSelectRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
+    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
   }
   if (d.tab === "leaderboard") {
     return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} userId={d.userId} />;
@@ -73,7 +73,7 @@ function ShellContent(d: ShellData) {
   if (d.tab === "missions") {
     return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} />;
   }
-  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} onNavTab={d.setTab} />;
+  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} refreshKey={d.refreshKey} onNavTab={d.setTab} />;
 }
 
 export function SkillsHuntShell({
@@ -107,6 +107,7 @@ export function SkillsHuntShell({
   const t = getSkillsHuntTokens(theme);
 
   const { form, submitted, resetForm } = useNominationForm(activeRound);
+  const roundKey = activeRound?.id ?? null;
 
   const initialTabRead = useRef(false);
   useEffect(() => {
@@ -132,17 +133,11 @@ export function SkillsHuntShell({
         if (!roundsRes.ok) throw new Error("rounds");
         const roundsData = (await roundsRes.json()) as { rounds: SkillsHuntRound[] };
         setRounds(roundsData.rounds);
-        // The round is the scout's to choose, and this effect re-runs on every refresh. Seeding it
-        // from rounds[0] moved a half-filled nomination to a different round without saying so
-        // (owner report: a nomination was filed under a round it was not meant for), so the choice
-        // is kept and the row re-read to keep its window, status and reward current. With more
-        // than one round open nothing is chosen until the scout marks one in the form; a single
-        // open round is the round, since there is nothing to choose between. A chosen round that
-        // has left the active list clears the choice rather than sliding to its neighbour.
-        setActiveRound((current) => {
-          if (current) return roundsData.rounds.find((r) => r.id === current.id) ?? null;
-          return roundsData.rounds.length === 1 ? roundsData.rounds[0] : null;
-        });
+        // Only one round is open at a time (owner decision, 2026-10-01; the server refuses a
+        // second), so the open round is the round: every tab reads it and a nomination goes into it.
+        // If more than one is somehow open, none is picked and the screen says so, rather than
+        // guessing and filing a nomination under a round the scout never saw.
+        setActiveRound(roundsData.rounds.length === 1 ? roundsData.rounds[0] : null);
         if (achRes.ok) {
           const achData = (await achRes.json()) as { achievements: SkillsHuntAchievement[] };
           setAchievements(achData.achievements);
@@ -159,12 +154,12 @@ export function SkillsHuntShell({
   }, [refreshKey]);
 
   useEffect(() => {
-    if (!activeRound) return;
+    if (!roundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingLeaderboard(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${roundKey}/leaderboard`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
         setLeaderboard(data.items);
@@ -175,15 +170,15 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [activeRound, refreshKey]);
+  }, [roundKey, refreshKey]);
 
   useEffect(() => {
-    if (tab !== "my-finds" || !activeRound) return;
+    if (tab !== "my-finds" || !roundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingFinds(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/submissions`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${roundKey}/submissions`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntSubmission[] };
         setMyFinds(data.items);
@@ -193,15 +188,15 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
+  }, [tab, roundKey, refreshKey]);
 
   useEffect(() => {
-    if (tab !== "missions" || !activeRound) return;
+    if (tab !== "missions" || !roundKey) return;
     const controller = new AbortController();
     async function load() {
       setLoadingMissions(true);
       try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/missions`, { signal: controller.signal });
+        const res = await fetch(`/api/skills-hunt/rounds/${roundKey}/missions`, { signal: controller.signal });
         if (controller.signal.aborted || !res.ok) return;
         const data = (await res.json()) as { items: SkillsHuntMissionWithCommunityProgress[] };
         setMissions(data.items);
@@ -211,7 +206,7 @@ export function SkillsHuntShell({
     }
     void load();
     return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
+  }, [tab, roundKey, refreshKey]);
 
   // Notifications: poll every 30s for unread (GetStream is out of scope; continuity §2.11).
   useEffect(() => {
@@ -225,8 +220,9 @@ export function SkillsHuntShell({
       } catch { /* ignore polling errors */ }
     }
     void load();
-    const timer = setInterval(load, 30_000);
-    return () => { canceled = true; clearInterval(timer); };
+    // A background tab skips its ticks and catches up when shown.
+    const stopPoll = startVisibleInterval(() => void load(), 30_000);
+    return () => { canceled = true; stopPoll(); };
   }, []);
 
   async function markRead(notificationId: string) {
@@ -238,6 +234,7 @@ export function SkillsHuntShell({
 
   if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
+  if (rounds.length > 1) return <CenteredNote t={t} color={t.MUTED}>More than one round is open, and only one can be. An admin needs to close the others before nominations can continue.</CenteredNote>;
 
   const { noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
   const showModeratorTools = isAdmin || isModerator;
@@ -245,11 +242,10 @@ export function SkillsHuntShell({
   const content = (
     <ShellContent
       tab={tab} setTab={setTab} noActiveRound={noActiveRound} submitted={submitted} form={form} resetForm={resetForm}
-      activeRound={activeRound} rounds={rounds}
-      onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
+      activeRound={activeRound}
       loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
       loadingMissions={loadingMissions} missions={missions}
-      loadingFinds={loadingFinds} myFinds={myFinds}
+      loadingFinds={loadingFinds} myFinds={myFinds} refreshKey={refreshKey}
     />
   );
 

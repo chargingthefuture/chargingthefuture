@@ -14,6 +14,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 type BeaconEventLike = {
   id: string;
@@ -189,8 +190,8 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
 
   useEffect(() => {
     void loadCurrent();
-    const timer = setInterval(() => void loadCurrent(), 15000);
-    return () => clearInterval(timer);
+    // A background tab skips its ticks and catches up when shown.
+    return startVisibleInterval(() => void loadCurrent(), 15000);
   }, [loadCurrent]);
 
   const { liveEvent, hlsUrl, replay } = deriveBeaconView(current);

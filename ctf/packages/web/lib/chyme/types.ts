@@ -161,6 +161,7 @@ export type ChymeAuditEvent = {
     | 'chyme.admin.lift-removal'
     | 'chyme.admin.role'
     | 'chyme.admin.speak-mode'
+    | 'chyme.admin.readings.switch'
     | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;

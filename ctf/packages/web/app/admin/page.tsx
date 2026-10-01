@@ -28,6 +28,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // The Stream Video minute meter: how much of the month's live-audio allowance the Chyme rooms
   // have used, the band it puts the room under, and what the policy is pausing because of it.
   { href: '/admin/chyme', name: 'Chyme: Live Audio Usage' },
+  // Recorded blog readings played on the Chyme page while nobody is live, and the switch that turns
+  // them off. Temporary: removed once the room has people in it (owner decision, 2026-09-28).
+  { href: '/admin/chyme/readings', name: 'Chyme: Readings Loop' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
   // How many members traded with another member on a day, against the 384 target. Counts people
