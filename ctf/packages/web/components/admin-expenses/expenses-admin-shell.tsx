@@ -19,6 +19,8 @@ import { ExpensesOverview } from './expenses-overview';
 import { FundraisingCard } from './fundraising-card';
 import { fundraisingAsPlainText, suggestFundraisingGoal, type DriveProgress } from 'lib/admin-expenses/fundraising';
 import { ExpensesAudit } from './expenses-audit';
+import { GpuBillCard } from './gpu-bill-card';
+import { measuredGpuMonthlyCents, type GpuBillState } from 'lib/admin-expenses/gpu-bill-shared';
 
 type Tab = 'costs' | 'audit';
 const TABS: { key: Tab; label: string }[] = [
@@ -121,6 +123,9 @@ export function ExpensesAdminShell() {
   const [approvedMembers, setApprovedMembers] = useState(0);
   const [drive, setDrive] = useState<DriveProgress | null>(null);
   const [driveError, setDriveError] = useState<string | null>(null);
+  const [gpuBill, setGpuBill] = useState<GpuBillState | null>(null);
+  const [gpuBillError, setGpuBillError] = useState<string | null>(null);
+  const [readingBill, setReadingBill] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
@@ -133,11 +138,20 @@ export function ExpensesAdminShell() {
         setError(await responseFailureText(res, 'The costs could not be loaded.'));
         return;
       }
-      const data = (await res.json()) as { expenses?: Expense[]; approvedMembers?: number; drive?: DriveProgress | null; driveError?: string | null };
+      const data = (await res.json()) as {
+        expenses?: Expense[];
+        approvedMembers?: number;
+        drive?: DriveProgress | null;
+        driveError?: string | null;
+        gpuBill?: GpuBillState | null;
+        gpuBillError?: string | null;
+      };
       setExpenses(data.expenses ?? []);
       setApprovedMembers(data.approvedMembers ?? 0);
       setDrive(data.drive ?? null);
       setDriveError(data.driveError ?? null);
+      setGpuBill(data.gpuBill ?? null);
+      setGpuBillError(data.gpuBillError ?? null);
     } catch (caught) {
       setError(failureText(caught, { area: 'admin-expenses', op: 'load', fallback: 'The costs could not be loaded.' }));
     }
@@ -148,7 +162,11 @@ export function ExpensesAdminShell() {
   }, [load]);
 
   const today = localToday();
-  const summary = useMemo(() => (expenses ? summarizeExpenses(expenses, approvedMembers, today) : null), [expenses, approvedMembers, today]);
+  const gpuMeasuredCents = measuredGpuMonthlyCents(gpuBill);
+  const summary = useMemo(
+    () => (expenses ? summarizeExpenses(expenses, approvedMembers, today, gpuMeasuredCents) : null),
+    [expenses, approvedMembers, today, gpuMeasuredCents],
+  );
   // No suggestion while the drive could not be read: a figure for "no drive open" would be wrong then.
   const suggestion = useMemo(() => (summary && !driveError ? suggestFundraisingGoal(summary, drive) : null), [summary, drive, driveError]);
 
@@ -176,6 +194,15 @@ export function ExpensesAdminShell() {
     const message = removeMessage(expense);
     if (!window.confirm(message)) return;
     void run(expense.id, () => mutateExpense(`/api/admin/expenses/${expense.id}`, 'DELETE'));
+  }
+
+  async function readBillNow() {
+    setReadingBill(true);
+    setGpuBillError(null);
+    const result = await mutateExpense('/api/admin/expenses/gpu-bill', 'POST');
+    if (!result.ok) setGpuBillError(result.message);
+    else await load();
+    setReadingBill(false);
   }
 
   async function copy() {
@@ -221,7 +248,12 @@ export function ExpensesAdminShell() {
             <ExpensesOverview
               tokens={t}
               summary={summary}
-              afterTotals={<FundraisingCard tokens={t} suggestion={suggestion} error={driveError} />}
+              afterTotals={
+                <>
+                  <FundraisingCard tokens={t} suggestion={suggestion} error={driveError} />
+                  <GpuBillCard tokens={t} bill={gpuBill} error={gpuBillError} busy={readingBill} onReadNow={() => void readBillNow()} />
+                </>
+              }
               actions={{
                 busyId,
                 onEdit: (expense) => {

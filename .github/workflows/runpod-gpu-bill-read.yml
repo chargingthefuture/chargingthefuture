@@ -1,0 +1,65 @@
+name: Expenses — Read the RunPod drafting bill
+
+# Once a day, asks production to read the RunPod bill for this product's own AI drafting endpoints and
+# save it, one row per day, for /admin/expenses. Recurring: it has a next run every day.
+#
+# A day's figure is not final when it is first read: RunPod reports about an hour behind, and today
+# keeps growing. The app rewrites a day until it has been read a few hours after it ended, then never
+# changes it again. Running at 06:23 UTC means yesterday is settled by this run. Admins can also read
+# the bill at any time with "Read the bill now" on /admin/expenses.
+#
+# What it needs (Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_APP_URL secret — the production base URL. Already used by the image build.
+#   CRON_SECRET secret — must match the CRON_SECRET the app reads at runtime.
+# The RunPod key itself (RUNPOD_BILLING_API_KEY) lives only in the app's runtime settings (this
+# project's Infisical); this workflow never sees it. When the app has no key, the route answers that it
+# skipped, and this run passes with a note.
+#
+# Nothing here prints an amount: the run summary shows only how many days were read.
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runpod-gpu-bill-read
+  cancel-in-progress: false
+
+jobs:
+  read:
+    name: Read the RunPod bill
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the bill route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::warning::RunPod bill read skipped: NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets."
+            echo "Skipped: app URL not configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::warning::RunPod bill read skipped: CRON_SECRET is not set in GitHub Actions secrets. Admins can still use 'Read the bill now' on /admin/expenses."
+            echo "Skipped: CRON_SECRET not set." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/gpu-bill.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/admin-expenses/read-gpu-bill" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          summary=$(jq -r 'if .skipped then "Skipped: \(.message)" elif .ok then "Read \(.daysRead) days across \(.endpoints) endpoint(s)." else "Failed: \(.message // "no message")" end' /tmp/gpu-bill.json 2>/dev/null || echo "The response was not JSON.")
+          echo "${summary}"
+          echo "${summary}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${code}" != "200" ]; then
+            echo "::error::The RunPod bill read failed with HTTP ${code}. Check that CRON_SECRET matches the app runtime value and that RUNPOD_BILLING_API_KEY can read billing."
+            exit 1
+          fi

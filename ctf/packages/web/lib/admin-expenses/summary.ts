@@ -4,6 +4,8 @@
 //
 // These are real US dollar amounts a person pays. Amounts travel as whole cents to keep sums exact.
 
+import { isGpuBillProvider } from './gpu-bill-shared';
+
 export type ExpenseKind = 'recurring' | 'one_off';
 export type ExpenseBilling = 'fixed' | 'usage';
 
@@ -25,10 +27,15 @@ export type Expense = {
   updatedAt: string;
 };
 
+// Where a line's amount came from: typed by hand (an estimate for a usage-based line), or read from
+// the provider's bill. Only the RunPod line can be 'measured' today.
+export type AmountSource = 'entered' | 'measured';
+
 export type RecurringLine = {
   expense: Expense;
   lowCents: number;
   highCents: number;
+  source: AmountSource;
   // This line's share of the monthly total, 0..1, measured at the middle of any range. null while
   // the line has no amount, or while the total is zero.
   share: number | null;
@@ -58,19 +65,28 @@ function midpoint(low: number, high: number): number {
   return (low + high) / 2;
 }
 
-export function summarizeExpenses(expenses: Expense[], approvedMembers: number, today: string): ExpenseSummary {
+// A live RunPod line takes the measured figure when there is one, in place of the typed amount or
+// range, never on top of it.
+function lineAmount(expense: Expense, gpuMeasuredCents: number | null): { lowCents: number; highCents: number; source: AmountSource } | null {
+  if (gpuMeasuredCents !== null && isGpuBillProvider(expense.provider)) {
+    return { lowCents: gpuMeasuredCents, highCents: gpuMeasuredCents, source: 'measured' };
+  }
+  if (expense.amountCents === null) return null;
+  const lowCents = expense.amountCents;
+  return { lowCents, highCents: Math.max(expense.amountMaxCents ?? lowCents, lowCents), source: 'entered' };
+}
+
+// `gpuMeasuredCents` is the RunPod bill's last 30 full days, or null when the bill has not been read.
+export function summarizeExpenses(expenses: Expense[], approvedMembers: number, today: string, gpuMeasuredCents: number | null = null): ExpenseSummary {
   const recurring = expenses.filter((expense) => expense.kind === 'recurring');
   const live = recurring.filter((expense) => expense.stoppedOn === null);
   const stopped = recurring.filter((expense) => expense.stoppedOn !== null);
-  const unpriced = live.filter((expense) => expense.amountCents === null);
+  const unpriced = live.filter((expense) => lineAmount(expense, gpuMeasuredCents) === null);
 
-  const lines = live
-    .filter((expense) => expense.amountCents !== null)
-    .map((expense) => {
-      const lowCents = expense.amountCents ?? 0;
-      const highCents = Math.max(expense.amountMaxCents ?? lowCents, lowCents);
-      return { expense, lowCents, highCents };
-    });
+  const lines = live.flatMap((expense) => {
+    const amount = lineAmount(expense, gpuMeasuredCents);
+    return amount ? [{ expense, ...amount }] : [];
+  });
 
   const monthlyLowCents = lines.reduce((total, line) => total + line.lowCents, 0);
   const monthlyHighCents = lines.reduce((total, line) => total + line.highCents, 0);
@@ -138,6 +154,12 @@ export function billingLabel(billing: ExpenseBilling): string {
   return billing === 'usage' ? 'usage-based' : 'fixed';
 }
 
+// Whether the RunPod figure was measured or typed, so a reader can weigh it. Other lines say nothing.
+export function sourceLabel(line: RecurringLine): string | null {
+  if (line.source === 'measured') return 'measured from the RunPod bill, last 30 days';
+  return isGpuBillProvider(line.expense.provider) ? 'estimate, typed by hand' : null;
+}
+
 function checkedLabel(expense: Expense): string {
   return expense.lastCheckedOn ? `checked ${expense.lastCheckedOn}` : 'never checked';
 }
@@ -171,7 +193,8 @@ function recurringLines(summary: ExpenseSummary): string[] {
   if (summary.priced.length === 0) lines.push('None priced yet.');
   for (const line of summary.priced) {
     const { expense } = line;
-    const parts = [expense.provider, formatDollarRange(line.lowCents, line.highCents), formatShare(line.share), billingLabel(expense.billing), checkedLabel(expense)];
+    const source = sourceLabel(line);
+    const parts = [expense.provider, formatDollarRange(line.lowCents, line.highCents), formatShare(line.share), billingLabel(expense.billing), ...(source ? [source] : []), checkedLabel(expense)];
     lines.push(withDetail(parts, expense));
   }
   return lines;
