@@ -1088,12 +1088,12 @@ Result: web ☐
 
 **Steps:**
 1. On the admin Missions tab, press **+ New mission**. Read the Goal type list: each option is a sentence saying what it counts, not a bare identifier, and the identifier it stores is shown underneath.
-2. Choose **Accepted nominations carrying one named skill**. A Skill name box appears. Leave it empty and press Create mission.
-3. Fill in the Skill name with the exact taxonomy skill one of the accepted nominations carries. Set Goal target to 1. Create.
+2. Choose **Accepted nominations carrying one named skill**. A Sector dropdown and a Skill dropdown appear — no text boxes. Leave the skill unchosen and press Create mission.
+3. Choose the sector, then the taxonomy skill one of the accepted nominations carries, from the dropdowns. Set Goal target to 1. Create.
 4. Read the new row in the admin list.
 5. Open the member Missions tab.
 
-**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
+**Expected:** Both dropdowns list only real taxonomy entries, sorted by name; the Skill dropdown lists the chosen sector's skills and reads "Choose a sector first" until one is picked. Choosing **Accepted nominations carrying any skill in one sector** instead shows a single Sector dropdown, with no separate sector id field (2026-10-01: the sector, skill and their ids were typed by hand, and a misspelled name counted nothing). Step 2 refuses with "Choose the skill this mission counts.", not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
 
 **Why this exists:** until 2026-09-17 there was no goal type about a single trade, so a mission titled "Find a mechanic" was stored as "every accepted nomination, whatever the skill" and read "82/1 complete" for a scout who had nominated no mechanic (owner report).
 
@@ -1110,8 +1110,8 @@ Result: web ☐
 **Steps:**
 1. On the member Missions tab, note the number the mission shows — it is the scout's entire accepted total over a target of 1, and reads Complete.
 2. On the admin Missions tab, press **Edit** on that row.
-3. Change Goal type to **Accepted nominations carrying one named skill**, clear the Skill name, and press Save mission.
-4. Put the correct skill in and save.
+3. Change Goal type to **Accepted nominations carrying one named skill**, leave the skill unchosen, and press Save mission.
+4. Choose the correct sector and skill from the dropdowns and save.
 5. Re-check the member Missions tab **without** pressing anything else.
 6. Back on the admin Missions tab, press **Recompute progress**.
 7. Re-check the member Missions tab.
