@@ -1170,7 +1170,9 @@ midnight UTC.
 2. Open **Missions**, press "Save these missions as one picture", and read the dates on the picture.
 
 **Expected:** The dates on the picture are the same calendar days the Rounds tab shows. Before
-2026-10-01 the picture used UTC and could read a day off.
+2026-10-01 the picture used UTC and could read a day off. The small label at the top of the picture
+reads "SKILLS ECONOMY · SKILLSHUNT" (not "Charging the Future"), and the web address at the bottom
+still reads chargingthefuture.com.
 
 Result: web ☐
 
