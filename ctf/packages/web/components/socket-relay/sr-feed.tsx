@@ -180,6 +180,9 @@ function RequestCard({
               on the flex parent above lets the column shrink; this lets the text inside it break. */}
           <div style={{ fontSize: 14, fontWeight: 600, color: t.TITLE, marginBottom: 4, lineHeight: 1.4, overflowWrap: "anywhere" }}>{r.title}</div>
           {r.details && <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 6, lineHeight: 1.5, overflowWrap: "anywhere" }}>{r.details}</div>}
+          {r.image && (
+            <img src={r.image.url} alt={r.image.alt} width={r.image.width} height={r.image.height} loading="lazy" style={{ display: "block", width: "100%", height: "auto", maxHeight: 320, objectFit: "contain", borderRadius: 10, marginBottom: 8, background: "rgba(255,255,255,0.03)" }} />
+          )}
           <CardMeta request={r} t={t} />
         </div>
       </div>

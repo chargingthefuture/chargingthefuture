@@ -103,3 +103,28 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: socket-relay
+    command: socket-relay.admin.image.delete
+    commandVersion: 1.0.0
+    purpose: moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: ok_or_inappropriate_image
+      evidence:
+        roleCheck: pass_or_fail
+    dataClassesAccessed:
+      - socket_relay_request_image
+    targetContext:
+      workspaceId: workspace_identifier
+      requestId: request_identifier
+      uploadedByUserId: principal
+      banned: boolean
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

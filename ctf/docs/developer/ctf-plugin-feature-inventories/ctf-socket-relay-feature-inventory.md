@@ -38,6 +38,16 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
    ServiceCredits and part in dollars checks both instead of forcing a zero into one. The feed card
    shows a compact "Accepts ServiceCredits +N" badge next to the settlement badge; ServiceCredits
    always leads. Never a fiat-parity claim for ServiceCredits.
+6. Pictures (2026-10-02): a request can carry one picture, so a listing shows the item, place or job it
+   is about. Above the picture picker the post form shows a red warning: a picture must show what the
+   post is about, and uploading an inappropriate picture to SocketRelay is an automatic ban from the
+   app, with no exceptions. The picker stays disabled until the member ticks "I understand that an
+   inappropriate picture is an automatic ban, with no exceptions." A description of the picture is
+   required. The browser scales the picture to 1600 pixels on its long side and re-encodes it, which
+   drops the camera and location data a phone writes into a photo. The feed card shows the picture
+   under the details. When editing, the owner can replace the picture or remove it with the X on the
+   preview. The request is saved first; if only the picture fails, the form says the request is up and
+   the picture needs another try.
 
 ### 1.2 Profile Management
 
@@ -99,6 +109,10 @@ building a UI for it, unless the owner asks for a plugin-specific profile.
 1. Admin list/oversight views for requests and fulfillments.
 2. Role-gated moderation actions for request lifecycle interventions.
 3. Deterministic audit capture for sensitive admin mutations.
+4. Pictures (2026-10-02): each request's picture shows in the admin Requests list. "Remove picture"
+   takes the picture down and leaves the request up. "Remove picture and ban" also restricts the member
+   who uploaded it at scope `all` (the same restriction the account restrictions screen applies and
+   lifts), because an inappropriate picture is an automatic ban with no exceptions. Both confirm first.
 
 ## 3) API Surface and Route Map
 
@@ -117,6 +131,15 @@ User/authenticated routes:
   first).
 - `PUT /api/socket-relay/requests/:id` — same body as create; the stored accepted set is replaced
   from the payload (clear + re-write).
+- `GET /api/socket-relay/requests/:id/image` — the request's picture bytes, to any member past the read
+  gate. `nosniff`, private cache only; the address carries the upload time so a replaced picture is
+  fetched again. 404 when the request has none.
+- `PUT /api/socket-relay/requests/:id/image` — owner or admin uploads or replaces the picture. Multipart:
+  `image` (PNG, JPEG or WebP, checked from the file's first bytes, at most 3 MB), `alt` (required, up to
+  300 characters), `width`, `height`, and `acknowledged=1`. 400 without the acknowledgement, 403 for a
+  member who does not own the request. Returns `{ ok, image: { url, alt, width, height } }`.
+- `DELETE /api/socket-relay/requests/:id/image` — owner or admin removes the picture; the request stays.
+- Every request read path returns `image: { url, alt, width, height } | null`.
 - `POST /api/socket-relay/requests/:id/repost`
 - `POST /api/socket-relay/requests/:id/fulfill` — claim a request. Rejected with 409
   (`SOCKET_RELAY_HELPER_PREVIOUSLY_CANCELED`) when the caller's earlier claim on this request was
@@ -137,6 +160,9 @@ Admin routes:
 - `GET /api/socket-relay/admin/requests`
 - `GET /api/socket-relay/admin/fulfillments`
 - `DELETE /api/socket-relay/admin/requests/:id`
+- `DELETE /api/socket-relay/admin/requests/:id/image` — admin removes a request's picture. `?ban=1` also
+  restricts the uploader at scope `all`. Audited as `socket-relay.admin.image.delete` or
+  `socket-relay.admin.image.delete_and_ban` with the uploader's id in metadata. Returns `{ ok, banned }`.
 
 ## 4) Data Model and Storage Contracts
 
@@ -153,6 +179,13 @@ Tables owned by this plugin:
 6. `socket_relay_messages` — Participant-only chat messages on a fulfillment. The chat is transaction-scoped: after the fulfillment reaches a terminal state no new rows may be added; existing rows become read-only for the two participants for a limited window and are retained server-side for moderation/abuse evidence per the deletion contract (platform rule 100). Carries a unique index `socket_relay_messages_idempotency_uidx (fulfillment_id, sender_user_id, client_message_id)` that backs the send route's `ON CONFLICT` idempotency (without it Postgres rejects the upsert with 42P10).
 7. `socket_relay_admin_audit_trail` — Audit log for admin mutations.
 8. `socket_relay_request_accepted_currencies` — join (`request_id`, `currency_code` FK → `currencies.code`) for every currency the post accepts (split settlements). Written by request create (insert) and update (replace: delete + insert), read by every request read path and returned as `acceptedCurrencies` (ordered by `currencies.sort_order`, so ServiceCredits leads). Rows cascade-delete with the request.
+9. `socket_relay_request_images` — the one picture on a request (2026-10-02). `request_id UUID PRIMARY KEY`
+   (FK → `socket_relay_requests.id`, `ON DELETE CASCADE`), `uploaded_by_user_id TEXT`, `content_type`
+   (CHECK png/jpeg/webp), `bytes BYTEA`, `byte_size`, `width`, `height` (each CHECK > 0), `alt_text`,
+   `rules_acknowledged_at TIMESTAMPTZ NOT NULL` (when the uploader ticked the automatic-ban warning),
+   `created_at`. Index `idx_socket_relay_request_images_uploader`. The bytes are stored here, like
+   `feed_community_post_images`, because the project has no image store. Listed in the account-deletion
+   registry under `uploaded_by_user_id`.
 
 Multi-currency (issue #120): SocketRelay is mutual aid and posts are free, so `socket_relay_requests`
 gains OPTIONAL `price_amount` + `price_currency` (FK → `currencies.code`) for the rare case a reward is
@@ -178,6 +211,11 @@ Storage and projection rules:
 4. Members-only visibility: any signed-in member may view any request (feed list and detail agree); the `is_public` column no longer gates reads.
 5. Audit logging for sensitive admin mutations and policy-denied outcomes. Member mutations also emit audit rows: request create, fulfillment claim, fulfillment resolve, fulfillment message send (with participant-membership and moderation evidence), and the SocketRelay-initiated ServiceCredits transfer (`socket-relay.service-credits.send`, the financial mutation).
 6. Participant-only routes return 403 (not 404) when the fulfillment exists but the caller is not a participant, so existence is not leaked; 404 is reserved for a genuinely missing fulfillment.
+7. Pictures: an upload is refused without the automatic-ban acknowledgement, so every stored picture
+   records `rules_acknowledged_at`. The type is read from the file's own first bytes, never the name or
+   the browser's claim, and the image route sends `nosniff`. No automated image scanning exists; removal
+   is by an admin, and an inappropriate picture is an automatic ban (account restriction at scope `all`),
+   with no exceptions.
 
 ## 6) Web and Android Delivery Status
 
@@ -205,6 +243,16 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 3. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
+
+- 2026-10-02: **Requests can carry one picture** (owner decision: SocketRelay is the classifieds board,
+  and a listing reads faster with a photo). New table `socket_relay_request_images`; new routes
+  `GET/PUT/DELETE /api/socket-relay/requests/:id/image` and `DELETE /api/socket-relay/admin/requests/:id/image`;
+  new commands `socket-relay.request.image.put` / `.get` / `.delete` and `socket-relay.admin.image.delete`
+  (command, access-policy and audit contracts). The post form shows the automatic-ban warning above the
+  picture picker and keeps the picker disabled until the member ticks it; the route refuses an upload
+  without the tick. The admin list shows each picture with "Remove picture" and "Remove picture and ban".
+  The browser-side scaling the Commons picture share used moved to `lib/images/scale-picture.ts` so
+  both share it. Request reads gained `image`. Web only (Android: out of scope per rule 105).
 
 - 2026-08-29: **The Direct Line's ongoing-arrangement prompt now says "a request like this one".**
   It said "a favor like this one", the only place in SocketRelay's own screens using a different word

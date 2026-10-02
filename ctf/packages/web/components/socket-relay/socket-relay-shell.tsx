@@ -25,12 +25,13 @@ import {
 import { SocketRelayLoading } from "./sr-loading";
 import { SocketRelayFeed } from "./sr-feed";
 import { SocketRelayPost, type PostDraft } from "./sr-post";
+import { EMPTY_IMAGE_DRAFT, saveRequestImage, validateImageDraft } from "./sr-image-field";
 import { SocketRelayChat } from "./sr-chat";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 
-const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false, acceptedCurrencies: [] };
+const EMPTY_DRAFT: PostDraft = { title: "", details: "", tags: [], city: "", state: "", country: "", isPublic: false, priceCurrency: "FREE", priceAmount: "", requiresAmount: false, acceptedCurrencies: [], image: EMPTY_IMAGE_DRAFT };
 
 type MemberLocation = { city: string; state: string; country: string };
 const EMPTY_LOCATION: MemberLocation = { city: "", state: "", country: "" };
@@ -55,6 +56,7 @@ function draftFromRequest(request: SrRequest): PostDraft {
     priceAmount: request.priceAmount != null ? String(request.priceAmount) : "",
     requiresAmount: request.priceAmount != null,
     acceptedCurrencies: request.acceptedCurrencies ?? [],
+    image: { ...EMPTY_IMAGE_DRAFT, existing: request.image ?? null },
   };
 }
 
@@ -125,7 +127,7 @@ function validatePostDraft(draft: PostDraft): string | null {
   if (!draft.details.trim()) return "Add a few details about what you need or can give.";
   if (draft.tags.length === 0) return "Add at least one tag (for example Food or Transport).";
   if (draft.requiresAmount && !(Number(draft.priceAmount) > 0)) return "Enter an amount for the payment type you chose, or switch it to Free.";
-  return null;
+  return validateImageDraft(draft.image);
 }
 
 // Normalize a trimmed text field to its value or null (a blank optional field is stored as null).
@@ -157,8 +159,22 @@ function buildRequestBody(draft: PostDraft) {
   };
 }
 
-// Create (POST) or update (PUT) a request. Throws with a friendly message on a non-OK response.
-async function saveDraft(draft: PostDraft, editingId: string | null): Promise<void> {
+// Create (POST) or update (PUT) a request, then upload or remove its picture. Throws with a friendly
+// message when the request itself fails. A picture that fails after the request saved comes back as
+// `imageError` instead, so the form still resets (a retry must not post the request twice) and tells
+// the member the post is up and only the picture needs another try.
+async function saveDraft(draft: PostDraft, editingId: string | null): Promise<{ imageError: string | null }> {
+  const requestId = await saveRequestFields(draft, editingId);
+  try {
+    await saveRequestImage(requestId, draft.image);
+    return { imageError: null };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "";
+    return { imageError: `Your request was saved, but the picture was not. ${reason} Edit the request to try the picture again.` };
+  }
+}
+
+async function saveRequestFields(draft: PostDraft, editingId: string | null): Promise<string> {
   const url = editingId ? `/api/socket-relay/requests/${editingId}` : "/api/socket-relay/requests";
   const res = await fetch(url, {
     method: editingId ? "PUT" : "POST",
@@ -169,6 +185,10 @@ async function saveDraft(draft: PostDraft, editingId: string | null): Promise<vo
     const payload = (await res.json().catch(() => null)) as { message?: string } | null;
     throw new Error(payload?.message ?? "Failed to save request.");
   }
+  const payload = (await res.json().catch(() => null)) as { item?: { id?: string } } | null;
+  const id = payload?.item?.id ?? editingId;
+  if (!id) throw new Error("The request was saved, but the server did not say which one. Refresh the page.");
+  return id;
 }
 
 // POST with the CSRF header and no body; returns whether the server accepted it. Used by the re-post
@@ -360,10 +380,11 @@ function useSocketRelay() {
     setPostError(null);
     setPostSuccess(false);
     try {
-      await saveDraft(draft, editingId);
+      const { imageError } = await saveDraft(draft, editingId);
       setDraft(freshDraft(myLocation));
       setEditingId(null);
-      setPostSuccess(true);
+      if (imageError) setPostError(imageError);
+      else setPostSuccess(true);
       await fetchData(false);
     } catch (e) {
       setPostError(e instanceof Error ? e.message : "Failed to save request.");
