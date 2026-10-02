@@ -4,7 +4,7 @@ import { GOAL_BOARD_URL, motdArticleUrl, type QuoraMotdMessage } from './types';
 // goal board. Put the part of the day that is left into one card on somebody else's goal, and post
 // a goal of your own.
 //
-// Every fact here is how the board works as shipped: one open goal per member, cards small enough
+// Every fact here is how the board works as shipped: up to 10 open goals per member, cards small enough
 // to do from a phone in under half an hour, a card held a day without a result going back by
 // itself, the goal's owner marking whether it helped, and an approved account to take part. If the
 // board changes, these change with it.
@@ -38,7 +38,7 @@ export const QUORA_MOTD_GOAL_BOARD: QuoraMotdMessage[] = [
     title: 'A goal needs a finish line',
     body: [
       '"Get stable" is not a goal anybody can help with. "Get a forklift certificate" is, because everybody can tell when it is done.',
-      'On the goal board you post one goal at a time, with a finish line, and break it into cards: find three places that run the class on weekends, find out which warehouses pay for it once they hire you. When it is done, you mark it reached.',
+      'On the goal board you post a goal with a finish line and break it into cards: find three places that run the class on weekends, find out which warehouses pay for it once they hire you. When it is done, you mark it reached.',
       'Post yours: ' + GOAL_BOARD_URL,
       'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
     ].join('\n\n'),

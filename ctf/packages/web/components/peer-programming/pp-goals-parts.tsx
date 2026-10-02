@@ -210,11 +210,10 @@ export function YourGoalPanel({ goal, busy, onAddTask, onClose }: { goal: BoardG
   );
 }
 
-// Shown while a member has no open goal. Closed until pressed, so the board leads with the cards
-// rather than a form.
-export function NewGoalForm({ busy, onPost }: { busy: boolean; onPost: (title: string, tasks: string[]) => Promise<boolean> }) {
+// Opened from the "+ Add your goal" chip above the board, so the board leads with the cards rather
+// than a form. A member can post another goal while earlier ones are still open.
+export function NewGoalForm({ busy, onPost, onCancel }: { busy: boolean; onPost: (title: string, tasks: string[]) => Promise<boolean>; onCancel: () => void }) {
   const t = useTokens();
-  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [tasks, setTasks] = useState("");
   async function submit() {
@@ -222,17 +221,15 @@ export function NewGoalForm({ busy, onPost }: { busy: boolean; onPost: (title: s
     if (await onPost(title, list)) {
       setTitle("");
       setTasks("");
-      setOpen(false);
     }
   }
-  if (!open) return <SmallButton label="+ Add your goal" onClick={() => setOpen(true)} />;
   return (
-    <section aria-label="Your goal" style={{ padding: 12, borderRadius: 12, border: `1px dashed ${t.BORDER_STRONG}`, display: "grid", gap: 8 }}>
+    <section aria-label="New goal" style={{ padding: 12, borderRadius: 12, border: `1px dashed ${t.BORDER_STRONG}`, display: "grid", gap: 8 }}>
       <TextBox value={title} onChange={setTitle} rows={2} maxLength={200} placeholder="One goal with a finish line, e.g. a yard jockey job in Texas" />
       <TextBox value={tasks} onChange={setTasks} rows={4} maxLength={9000} placeholder={"Cards, one per line, each doable from a phone in under half an hour.\ne.g. Find 3 yards hiring near Dallas and add their numbers"} />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <SmallButton label="Post goal" primary disabled={busy || title.trim().length === 0} onClick={() => void submit()} />
-        <SmallButton label="Cancel" disabled={busy} onClick={() => setOpen(false)} />
+        <SmallButton label="Cancel" disabled={busy} onClick={onCancel} />
       </div>
     </section>
   );

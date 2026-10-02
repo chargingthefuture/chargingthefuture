@@ -75,10 +75,11 @@ web ☐
 
 **6. The goal board opens and takes a goal**
 Signed in as a cohort member with no open goal, open `/apps/peer-programming`. The Goals tab is
-selected, the top line shows how many cards were done in the last 24 hours, and a "+ Add your goal"
-button is visible above the Up for grabs, Doing and Done columns. Press it, write a goal and two
-cards, one per line, and press "Post goal". A "Your goal" panel appears reading "0 of 2 cards done",
-the button is gone, and both cards sit in Up for grabs marked "Your goal".
+selected, the top line shows how many cards were done in the last 24 hours, and a row of goals
+starting with "All goals" and ending with "+ Add your goal" sits above the Up for grabs, Doing and
+Done columns. Press "+ Add your goal", write a goal and two cards, one per line, and press "Post
+goal". The new goal is selected in the row, a "Your goal" panel appears reading "0 of 2 cards done",
+and both cards sit in Up for grabs marked "Your goal".
 web ☐
 
 ---
@@ -391,18 +392,22 @@ Result: web ☐
 
 ---
 
-### PP-17 — One open goal per member
+### PP-17 — Several goals, switched from the row above the board
 
-**Role:** member · **Surfaces:** web
+**Role:** member · **Surfaces:** web (phone width)
 
 **Steps:**
-1. With an open goal, look for the "+ Add your goal" button.
-2. Press "Reached it" on your goal.
+1. With one open goal, press "+ Add your goal" at the end of the goal row, post a second goal with
+   one card, and press "All goals".
+2. Swipe the goal row sideways, then press the first goal, then the second.
+3. With the second goal selected, press "Reached it".
 
-**Expected:** While the goal is open there is no button to post a second one, only the "Your goal"
-panel. After "Reached it" the panel and the goal's unfinished cards leave the board, its done cards
-stay in Done with no controls, and "+ Add your goal" is back. "Take it down" instead removes the goal
-and all its cards from the board.
+**Expected:** Both goals show in the row, yours first, each with "Yours · 0 of N done" and the same
+colored edge as its cards. "All goals" shows every card; pressing a goal narrows Up for grabs, Doing
+and Done to that goal's cards and shows its "Your goal" panel. After "Reached it" the row goes back
+to "All goals", that goal leaves the row, its unfinished cards leave the board, and its done cards
+stay in Done with no controls. "Take it down" instead removes the goal and all its cards. With 10
+open goals, "+ Add your goal" is not in the row.
 
 Result: web ☐
 
@@ -722,7 +727,7 @@ browser and the phone-width layout — but a missing Android result is never a b
 | PP-14 | Weekly assignment (not merely opening the page) places an active member into standing Cohort 1 |
 | PP-15 | Another member takes a task, posts a result, and the owner is notified |
 | PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
-| PP-17 | One open goal at a time; the form returns after the goal is closed |
+| PP-17 | Several goals switched from the row above the board; up to 10 open at once |
 | PP-21 | "It helped" shows to the goal's owner and the helper only; the helper is credited |
 | PP-A3 | Admin can run weekly assignment and see the result count |
 | PP-A5 | Admin cohort list shows cross-week cohorts with week labels |

@@ -35,6 +35,8 @@ export type Board = {
   // How many hours a taken card holds before it reopens for anyone. Shown to a member before and
   // after they take a card, so nobody does the work and comes back to find it already reopened.
   taskHoldHours: number;
+  // How many goals one member can have open at once; the "+ Add your goal" chip hides at the cap.
+  maxOpenGoals: number;
 };
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
@@ -76,6 +78,7 @@ export async function loadBoard(signal?: AbortSignal): Promise<{ ok: true; board
       finishedLastDay: data.finishedLastDay ?? 0,
       viewerUserId: data.viewerUserId,
       taskHoldHours: data.taskHoldHours,
+      maxOpenGoals: data.maxOpenGoals ?? 1,
     },
   };
 }

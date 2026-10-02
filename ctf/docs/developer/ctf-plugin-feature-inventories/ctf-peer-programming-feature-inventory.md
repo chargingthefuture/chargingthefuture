@@ -164,10 +164,18 @@ to the env flag, then the default. With no admin setting and no env override, th
    on a small line, and a colored left edge shared by every card of the same goal (owner decision,
    2026-09-25: a kanban layout, so the board reads as casual and a member picks one card rather than a
    goal).
-3. A member with no open goal sees a "+ Add your goal" button. It opens a form: one line for the goal
-   and a box for its first cards, one per line. "Post goal" puts it on the board. A member can have
-   one open goal at a time; posting a second is refused with a message saying to close the first. A
-   member with an open goal sees it in a "Your goal" panel above the columns instead.
+3. Above the columns, a row of goals scrolls sideways (owner decision, 2026-10-02): "All goals" first,
+   then the viewer's own open goals, then everyone else's, newest first. Each goal shows its title,
+   whose it is ("Yours" or "@name") and how many of its cards are done, with the same colored edge as
+   its cards. Pressing a goal narrows the three columns to that goal's cards; "All goals" shows every
+   card again, and is where the board opens. A member keeps separate goals for separate needs (a job,
+   a week's groceries, a place to live), each with its own small cards.
+   The row ends with "+ Add your goal", which opens a form: one line for the goal and a box for its
+   first cards, one per line. "Post goal" puts it on the board and selects it. A member can have up to
+   10 open goals at once; at 10 the chip is hidden, and a post past the cap is refused with a message
+   saying to close one first. Selecting one of your own goals shows it in a "Your goal" panel above
+   the columns, with "Add card", "Reached it" and "Take it down". A goal that closes falls back to
+   "All goals".
 4. Up for grabs and Doing hold cards from open goals only. Done also holds cards from goals reached in
    the last two weeks. A goal taken down unfinished leaves the board.
 5. Cards in Doing read "@name is on it" ("You are on it" for the holder). Cards in Done read
@@ -240,8 +248,8 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `POST /api/peer-programming/feedback` — Submit structured feedback for the iteration loop.
 - `POST /api/peer-programming/session/join` — Mint live video session credentials (GetStream) for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member gets a call token and the call is always scoped to that member's cohort. Returns 404 when the caller has no cohort and 503 when Stream is not configured.
 
-- `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId, taskHoldHours }`. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks (each task now also carries `takenAtIso`, null unless it is currently held); `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours; `taskHoldHours` echoes `PEER_PROGRAMMING_TASK_HOLD_HOURS` so the client states the hold rule and a held card's actual deadline instead of hardcoding the number. `cohortId` is null when the caller has no cohort.
-- `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_goal_already_open` when the caller already has an open goal (enforced by a partial-unique index); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
+- `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId, taskHoldHours, maxOpenGoals }`. `maxOpenGoals` echoes `PEER_PROGRAMMING_MAX_OPEN_GOALS` (10) so the client hides "+ Add your goal" at the cap. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks (each task now also carries `takenAtIso`, null unless it is currently held); `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours; `taskHoldHours` echoes `PEER_PROGRAMMING_TASK_HOLD_HOURS` so the client states the hold rule and a held card's actual deadline instead of hardcoding the number. `cohortId` is null when the caller has no cohort.
+- `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_open_goal_limit` when the caller already has 10 open goals (`PEER_PROGRAMMING_MAX_OPEN_GOALS`, counted in the same statement as the insert); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
 - `POST /api/peer-programming/goals/[goalId]` — The goal owner only. Body `{ action: "add_task", description }` or `{ action: "close", outcome: "reached" | "withdrawn" }`. Audited as `peer-programming.goal.task.add` / `peer-programming.goal.close`.
 - `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result?, description? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may mark a finished result `helped`, `keep` it without that mark, or `send_back` it, remove a task nobody has finished (`remove`), or fix a typo in an open task's words with `edit` and a `description` (up to 300 characters, same cap as `add_task`) — `edit` is gated on the task reading truly "open" (nobody holds it, or a hold has lapsed), narrower than `remove`'s "nobody has finished it yet", so the words can never change out from under a member already holding or who has finished the task. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
 
@@ -300,7 +308,7 @@ somebody is using the app but not being selected, the sign-in record is what to 
 7. `peer_programming_admin_audit_trail` — immutable admin-action audit trail (id, actor_id, command, policy_status, reason, target_type, target_id, metadata jsonb, created_at). One row per privileged peer-programming command, capturing the `allow`/`deny` outcome; written by the repository audit helper. **Retained** on account deletion for compliance (`retain` in `lib/account/deletion-registry.ts`), not removed with the member's own rows.
 8. `peer_programming_settings` — one-row settings singleton for admin-flippable plugin toggles (singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE with `CHECK (singleton_id)` so only one row can exist, single_open_cohort_enabled BOOLEAN nullable, updated_by_user_id TEXT, updated_at TIMESTAMPTZ). `single_open_cohort_enabled` is the admin's stored choice for single standing, always-open Cohort 1 mode: `TRUE`/`FALSE` is an explicit choice that supersedes the env flag `PEER_PROGRAMMING_SINGLE_OPEN_COHORT`, and `NULL` (the default / unset) means fall back to the env flag, then the built-in default (ON). Read by `getPeerProgrammingSettings`/`resolveSingleOpenCohortMode`/`isSingleOpenCohortModeEnabled` and written by `setPeerProgrammingSingleOpenCohort` in `lib/peer-programming/repository.ts`. Not member-owned data; not seeded (absent row = unset = default ON). The async resolver `isSingleOpenCohortModeEnabled()` is what `getMyCohort`, `listActiveCohorts`, and `runWeeklyAssignment` now await to decide the mode.
 
-9. `peer_programming_goals` — The goal board's goals (id, cohort_id, owner_user_id, title, status, closed_at, created_at, updated_at). `status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reached','withdrawn'))`. Partial-unique index `uq_peer_programming_goals_one_open ON (owner_user_id) WHERE status = 'open'` holds a member to one open goal; index `idx_peer_programming_goals_cohort_created ON (cohort_id, created_at)` backs the board read. Deleted with the member's account (`del` on `owner_user_id`), which removes its tasks by cascade.
+9. `peer_programming_goals` — The goal board's goals (id, cohort_id, owner_user_id, title, status, closed_at, created_at, updated_at). `status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','reached','withdrawn'))`. Partial index `idx_peer_programming_goals_owner_open ON (owner_user_id) WHERE status = 'open'` backs the count of a member's open goals against the cap of 10 (it replaced the partial-unique `uq_peer_programming_goals_one_open`, dropped by `post/0049`); index `idx_peer_programming_goals_cohort_created ON (cohort_id, created_at)` backs the board read. Deleted with the member's account (`del` on `owner_user_id`), which removes its tasks by cascade.
 10. `peer_programming_goal_tasks` — Tasks on a goal (id, goal_id → `peer_programming_goals(id) ON DELETE CASCADE`, description, taken_by_user_id, taken_at, result, finished_at, kept_at, helped, created_at, updated_at). `helped BOOLEAN NOT NULL DEFAULT FALSE` is set once, with `kept_at`, when the goal's owner presses "It helped"; the board route returns it only to the goal's owner and the helper. A task is open when `taken_by_user_id` is null or `taken_at` is more than 24 hours old with no `finished_at`; taken while held; finished once `finished_at` is set; kept once `kept_at` is set. Sending back clears the helper, the result and `finished_at`. Indexes `idx_peer_programming_goal_tasks_goal ON (goal_id, created_at)` and a partial `idx_peer_programming_goal_tasks_finished ON (finished_at) WHERE finished_at IS NOT NULL` for the 24-hour count, and a partial `idx_peer_programming_goal_tasks_helped ON (kept_at) WHERE helped` for the value event `value.peer_programming_tasks_helped` that the Weavers of the Commons badge, the daily exchange count and Weekly Performance read. On account deletion a helper's id is pseudonymized (`pseudo` on `taken_by_user_id`) and the result stays with the goal; the board then shows "A former member".
 
 ### Storage and Persistence Constraints
@@ -369,6 +377,18 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-10-02: **A member can hold several open goals, and the Goals tab switches between them.**
+  Owner decision: separate needs (a job, a week's groceries, a place to live) belong in separate goals,
+  each with small cards somebody can do with the little energy left in their day. The one-open-goal
+  rule is now a cap of 10 open goals per member (`PEER_PROGRAMMING_MAX_OPEN_GOALS`); the partial-unique
+  index `uq_peer_programming_goals_one_open` is replaced in `schema.sql` by the plain partial index
+  `idx_peer_programming_goals_owner_open`, and `post/0049` drops the old index from the live database.
+  The error code `peer_programming_goal_already_open` becomes `peer_programming_open_goal_limit`, and
+  `GET /api/peer-programming/goals` returns `maxOpenGoals`. On screen, a sideways-scrolling row of goals
+  sits above the columns ("All goals", your goals, everyone else's, "+ Add your goal"); pressing one
+  narrows the columns to its cards, and your own selected goal shows the "Your goal" panel
+  (`pp-goals-chips.tsx` added).
 
 - 2026-09-26: **Bug fix: a typo in a card's words could only be fixed by removing it and starting
   over.** Owner report: a card is a small task on the goal board (e.g. "Find five places in Houston

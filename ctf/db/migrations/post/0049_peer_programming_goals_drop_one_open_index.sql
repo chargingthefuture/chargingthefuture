@@ -1,0 +1,14 @@
+-- Let a member hold more than one open goal on the PeerProgramming goal board (owner decision,
+-- 2026-10-02).
+--
+-- Why: a member's needs are separate goals — a job, a week's groceries, a place to live — each with
+-- its own small cards, and the board now lets them switch between their goals. The partial-unique
+-- index uq_peer_programming_goals_one_open refused a second open goal. The cap is now 10 open goals
+-- per member, counted by createGoal when the goal is inserted.
+--
+-- What it does: drops that index. schema.sql no longer creates it and creates the plain index
+-- idx_peer_programming_goals_owner_open on the same column and condition in its place, so the count
+-- stays an index read. No row changes.
+--
+-- Safe to re-run: IF EXISTS makes every run after the first a no-op.
+DROP INDEX IF EXISTS uq_peer_programming_goals_one_open;
