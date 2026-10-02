@@ -10,8 +10,8 @@ import { extractBearerToken } from './verify-bearer';
  * machine is not one.
  *
  * Exactly one consumer exists and the exclusivity is the owner's decision, not an accident of
- * this file: One Percent, the owner's separate paid consultation work, reads the Skills Taxonomy
- * so its peer graph speaks the same vocabulary the app does. Both products are run and paid for
+ * this file: One Percent, the paid tier, reads the Skills Taxonomy so its peer graph speaks the
+ * same vocabulary the app does, and reads claimed Directory profiles by id for the owner's desk. Both products are run and paid for
  * by one person, so this is one operator wiring two of their own things together rather than a
  * service offered to anybody. See the "One Percent reads the skills taxonomy, and nothing else"
  * section of the repository's CLAUDE.md before adding a second entry — that is an owner decision.
@@ -19,13 +19,22 @@ import { extractBearerToken } from './verify-bearer';
  * It takes nothing away from anybody. Every approved member already has this data, free, at
  * /apps/skills-taxonomy. This is a machine-readable way to the same thing.
  */
+/**
+ * Which credential list a route checks. Each read has its own, so either can be revoked without
+ * the other: `TAXONOMY_SERVICE_TOKENS` for the two Skills Taxonomy reads, and
+ * `DIRECTORY_SERVICE_TOKENS` for the claimed-profile read (owner decision, 2026-10-02; see the
+ * "One Percent is the paid tier" section of CLAUDE.md). A token from one list never opens the
+ * other's route.
+ */
+export type ServiceTokenSetting = 'TAXONOMY_SERVICE_TOKENS' | 'DIRECTORY_SERVICE_TOKENS';
+
 export type ServiceConsumer = {
   /** The consumer's name, which is also its audit actor. */
   name: string;
 };
 
 /**
- * The configured consumers, read from `TAXONOMY_SERVICE_TOKENS`.
+ * The configured consumers, read from the named setting.
  *
  * One entry per consumer, `name:secret`, separated by commas. Empty or unset means no machine
  * may read anything, which is the correct state for an environment that has not been given a
@@ -36,8 +45,8 @@ export type ServiceConsumer = {
  * is a settings change the owner can make from a phone. Never copied from One Percent's own
  * secrets store, which is a separate Infisical project for exactly this reason.
  */
-function configuredConsumers(): Map<string, string> {
-  const raw = process.env.TAXONOMY_SERVICE_TOKENS?.trim();
+function configuredConsumers(setting: ServiceTokenSetting): Map<string, string> {
+  const raw = process.env[setting]?.trim();
   const consumers = new Map<string, string>();
   if (!raw) return consumers;
 
@@ -71,7 +80,10 @@ function sameSecret(given: string, expected: string): boolean {
  * caller that fails here falls through to the member path untouched. The mobile app sends a
  * Clerk token on this same header and must keep working.
  */
-export function resolveServiceConsumer(authorization: string | null | undefined): ServiceConsumer | null {
+export function resolveServiceConsumer(
+  authorization: string | null | undefined,
+  setting: ServiceTokenSetting = 'TAXONOMY_SERVICE_TOKENS',
+): ServiceConsumer | null {
   const token = extractBearerToken(authorization);
   if (!token) return null;
 
@@ -81,7 +93,7 @@ export function resolveServiceConsumer(authorization: string | null | undefined)
   const secret = token.slice(at + 1);
   if (!name || !secret) return null;
 
-  const expected = configuredConsumers().get(name);
+  const expected = configuredConsumers(setting).get(name);
   if (!expected) return null;
 
   return sameSecret(secret, expected) ? { name } : null;

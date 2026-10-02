@@ -99,3 +99,34 @@ describe('resolveServiceConsumer', () => {
     });
   });
 });
+
+// Two reads, two credential lists. A token issued for the taxonomy must not open the Directory
+// read, so revoking one never depends on the other.
+describe('resolveServiceConsumer with DIRECTORY_SERVICE_TOKENS', () => {
+  const keptDirectory = process.env.DIRECTORY_SERVICE_TOKENS;
+  beforeEach(() => {
+    configure('one-percent:a-taxonomy-secret-0123456789');
+    process.env.DIRECTORY_SERVICE_TOKENS = 'one-percent:a-directory-secret-0123456789';
+  });
+  afterEach(() => {
+    configure(KEPT);
+    if (keptDirectory === undefined) delete process.env.DIRECTORY_SERVICE_TOKENS;
+    else process.env.DIRECTORY_SERVICE_TOKENS = keptDirectory;
+  });
+
+  it('accepts the directory credential against its own list', () => {
+    expect(
+      resolveServiceConsumer('Bearer one-percent.a-directory-secret-0123456789', 'DIRECTORY_SERVICE_TOKENS'),
+    ).toEqual({ name: 'one-percent' });
+  });
+
+  it('refuses the taxonomy credential on the directory list', () => {
+    expect(
+      resolveServiceConsumer('Bearer one-percent.a-taxonomy-secret-0123456789', 'DIRECTORY_SERVICE_TOKENS'),
+    ).toBeNull();
+  });
+
+  it('refuses the directory credential on the taxonomy list', () => {
+    expect(resolveServiceConsumer('Bearer one-percent.a-directory-secret-0123456789')).toBeNull();
+  });
+});

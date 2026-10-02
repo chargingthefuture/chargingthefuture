@@ -11,6 +11,8 @@ export const DIRECTORY_ERROR_CODE = {
   // The profile's Quora URL was taken down at the person's request and is on the suppression list;
   // it cannot be listed again until an admin lifts the block (override).
   quoraUrlSuppressed: 'DIRECTORY_QUORA_URL_SUPPRESSED',
+  // A machine read without a credential from DIRECTORY_SERVICE_TOKENS.
+  serviceUnauthorized: 'DIRECTORY_SERVICE_UNAUTHORIZED',
 } as const;
 
 // Reason required when an admin takes down a profile at the person's request, or when lifting a

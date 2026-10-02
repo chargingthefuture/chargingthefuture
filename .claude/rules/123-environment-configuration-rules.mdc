@@ -162,6 +162,21 @@ It is scoped to taxonomy reads by construction rather than by promise: only
 gate, so no other route can see the header at all. Every admin route and every write stays
 member-only.
 
+### The Directory service credential
+
+`DIRECTORY_SERVICE_TOKENS` holds the credential One Percent's desk reads claimed Directory
+profiles with (owner decision, 2026-10-02; the name was approved by the owner). Same format and
+same binding as the taxonomy one above: `name:secret` entries, sent as
+`Authorization: Bearer <name>.<secret>`.
+
+It is a separate list on purpose. A taxonomy credential never opens the Directory read and the
+reverse holds, so either integration can be revoked without touching the other. Optional, never
+required: unset or empty means the route refuses everybody. Revoking it is removing the entry.
+
+Only `/api/directory/service/profiles/[id]` reads this list, through `requireDirectoryServiceRead`
+in `ctf/packages/web/lib/directory/service-read.ts`. That route answers for one claimed profile at
+a time with the fields One Percent's desk shows, and has no member path.
+
 ### Stream and Formance staging keys
 The single `production` Infisical environment additionally holds the demo/staging
 credential set for the two integrations that need it:

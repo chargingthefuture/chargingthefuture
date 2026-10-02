@@ -115,6 +115,33 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.profile.service.get
+    version: 1.0.0
+    description: >-
+      One claimed directory profile by id, for One Percent's operator desk (owner decision,
+      2026-10-02). GET /api/directory/service/profiles/[id]. Machine caller only, authenticated by a
+      DIRECTORY_SERVICE_TOKENS consumer. Returns name, headline, job title, sector, skill names,
+      profile address and city/state/country, and nothing else: never the bio, payment addresses,
+      the claiming account id, or who nominated or invited the person. An unclaimed or missing
+      profile is the same 404. No list and no search.
+    inputSchema:
+      id:
+        type: string
+        required: true
+    outputSchema:
+      profile:
+        type: object
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+    purpose: one_percent_introduction
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
     command: directory.profile.get
     version: 1.0.0
     description: >-
