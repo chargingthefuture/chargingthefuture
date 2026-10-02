@@ -613,6 +613,22 @@ id and an unclaimed one from the admin list.
 - The audit lines carry `service:<name>` as the actor and the command `directory.profile.service.get`.
 **Result:** web ☐ — notes:
 
+**By account.** The same credential, for a client's own profile:
+
+**Steps:**
+1. `GET /api/directory/service/accounts/<the Clerk id of an account with a claimed profile>/profile` with `Authorization: Bearer <name>.<secret>`.
+2. The same, for an account with no claimed profile.
+3. The same, with `not-an-account` as the id.
+4. Step 1 with no header.
+5. Step 1 for an account an admin restricted with scope `contact`.
+
+**Expected:**
+- Step 1: **200**, `{ profile }` with the same fields as the by-id read, including the profile id.
+- Steps 2, 3 and 5: the same **404**, with nothing saying which.
+- Step 4: **401** naming `DIRECTORY_SERVICE_TOKENS`.
+- The audit line carries the command `directory.profile.service.by-account.get` and the profile id when found, never the account id.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
