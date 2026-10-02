@@ -14,6 +14,7 @@
 | **Seed first** | `pnpm --dir ctf seed:skill-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skill-up-feature-inventory.md` |
 | **Generated** | 2026-07-20 (commit eca128e5) |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
 

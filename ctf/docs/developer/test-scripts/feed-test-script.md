@@ -10,6 +10,7 @@
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md` |
 | **Generated** | 2026-07-25 (commit 95cb98b2) |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
 

@@ -18,6 +18,7 @@
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
 | **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
 
