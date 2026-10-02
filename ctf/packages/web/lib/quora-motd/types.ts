@@ -39,6 +39,13 @@ export const GOAL_BOARD_URL = 'https://app.chargingthefuture.com/apps/peer-progr
 export const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
 
 /**
+ * Workforce needs an approved account, and most people reading a post on Quora do not have one.
+ * One Percent's site carries a shorter version of the same calculator with no sign-in, so the
+ * first step is open to them too.
+ */
+export const ONE_PERCENT_NO_SIGN_IN_LINE = `No account yet? A shorter version of the calculator runs with no sign-in at ${ONE_PERCENT_PAID_TIER_URL}`;
+
+/**
  * The three Enact steps on the Peace Battle 2 page, in the order the page lists them. Every
  * message asks for exactly one of them, and the day's step rotates, so a reader who comes back
  * three days running is asked for three different things rather than the same thing three times.

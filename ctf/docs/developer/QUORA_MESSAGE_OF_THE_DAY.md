@@ -65,6 +65,10 @@ The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-goal-board.ts`
 `messages-one-percent-call.ts`. Keep them the same length as each other, or one action's messages
 come around more often than another's.
 
+Every 1% message ends with a line pointing a reader without an account to the shorter calculator on
+One Percent's site, which needs no sign-in (`ONE_PERCENT_NO_SIGN_IN_LINE`): Workforce needs an
+approved account, and most people reading the space do not have one yet.
+
 Every One Percent message says that the first two steps are complete without it and stay free. A
 paid step that reads as the real one turns the free steps into a preview, and they are not one.
 
