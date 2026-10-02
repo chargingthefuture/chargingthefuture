@@ -123,3 +123,95 @@ policies:
       - actor_not_authenticated
       - invalid_request_payload
       - non_positive_amount
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.put
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      requestOwnership: actor_is_owner_or_admin
+      pictureRuleAcknowledged: true
+    consentRequirements:
+      scopes:
+        - socket_relay_request_management
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_owner
+      - picture_rule_not_acknowledged
+      - invalid_request_payload
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.get
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - socket_relay_request_management
+      fallbackLawfulBasis: contract_preparation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.delete
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      requestOwnership: actor_is_owner_or_admin
+    consentRequirements:
+      scopes:
+        - socket_relay_request_management
+      fallbackLawfulBasis: explicit_consent_required
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_owner
+
+  - pluginId: socket-relay
+    command: socket-relay.admin.image.delete
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+    consentRequirements:
+      scopes:
+        - socket_relay_moderation
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_admin

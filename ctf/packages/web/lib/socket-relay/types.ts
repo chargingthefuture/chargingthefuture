@@ -13,6 +13,15 @@ export type SocketRelayProfileInput = {
   presenceOptIn: boolean;
 };
 
+// The one picture a request can carry. The bytes are served from `url`; width and height reserve its
+// space before it loads.
+export type SocketRelayRequestImage = {
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
+};
+
 export type SocketRelayRequestStatus = 'open' | 'claimed' | 'closed' | 'canceled';
 
 export type SocketRelayRequest = {
@@ -41,6 +50,8 @@ export type SocketRelayRequest = {
   // currency, ServiceCredits first, from socket_relay_request_accepted_currencies. Independent of the
   // single listed price above, mirroring LightHouse's accepted-currencies model.
   acceptedCurrencies: string[];
+  // The request's picture, from socket_relay_request_images, or null when it has none.
+  image: SocketRelayRequestImage | null;
   createdAtIso: string;
   updatedAtIso: string;
   // When this post auto-expires (28 days after it was posted or last re-posted). `isExpired` is the

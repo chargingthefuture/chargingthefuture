@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) · 2026-10-02 (SR-4b and SR-A3a added for request pictures) |
 
 ---
 
@@ -175,6 +175,35 @@ web ☐
   for a ServiceCredits amount.
 - After step 5, the badge reads "Accepts ServiceCredits" (the stored set was replaced, not appended).
 - Re-opening the edit form shows the saved checkboxes checked.
+
+web ☐
+
+---
+
+### SR-4b — Add a picture to a request: the ban warning comes first (added 2026-10-02)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a member. Have a photo of an item on hand (PNG, JPEG or WebP).
+
+**Steps:**
+1. Open the post form and fill in title, details, and one tag.
+2. Before touching anything else, look at the **Picture** section and try to choose a file.
+3. Tick "I understand that an inappropriate picture is an automatic ban, with no exceptions."
+4. Choose the photo. Leave the description empty and press Post Request.
+5. Type a description of the photo and post.
+6. Edit the post, remove the picture with the X on the preview, and save.
+
+**Expected:**
+- The red warning reads that a picture must show what the post is about, that uploading an
+  inappropriate picture to SocketRelay is an automatic ban from the app, and that there are no
+  exceptions. It is shown before any picture can be chosen.
+- In step 2 the file picker is disabled until the box is ticked. Unticking it clears a chosen picture.
+- Step 4 is stopped with "Describe what the picture shows." and nothing is posted.
+- After step 5 the card in the feed shows the photo under the details, scaled to fit the card.
+- After step 6 the card shows no picture and the request is still up.
+- A direct `PUT /api/socket-relay/requests/:id/image` without `acknowledged=1` returns 400; one from a
+  member who does not own the request returns 403; a file that is not a PNG, JPEG or WebP returns 400.
 
 web ☐
 
@@ -665,6 +694,30 @@ web ☐
 - After confirming, the request disappears from the admin list.
 - Dismissing the dialog without confirming leaves the request untouched.
 - The removal is transactional: the request's fulfillments, participants, and lifecycle events are cleared too (no orphaned rows), while fulfillment chat messages are retained server-side as moderation evidence. The `socket-relay.admin.request.delete` audit row is written **in the same transaction** as the delete — a removed request always has a matching audit row (the delete and audit commit or roll back together).
+
+web ☐
+
+---
+
+### SR-A3a — Admin removes a picture, with or without a ban (added 2026-10-02)
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** Signed in as an admin. Two requests with pictures exist, posted by a test member.
+
+**Steps:**
+1. In the admin Requests list, find a request with a picture. Press "Remove picture" and confirm.
+2. On the second request, press "Remove picture and ban" and read the confirm dialog before confirming.
+3. Open the account restrictions screen.
+
+**Expected:**
+- Each request's picture shows in the admin list above its buttons; requests without one show only "Remove".
+- Step 1 removes the picture, keeps the request, and writes a `socket-relay.admin.image.delete` audit row.
+- Step 2's dialog says the ban applies to the entire app and is lifted only from the account restrictions
+  screen. After confirming, the picture is gone, the status line reads "Picture removed and uploader
+  banned.", and a `socket-relay.admin.image.delete_and_ban` audit row names the uploader.
+- In step 3 the test member is restricted at scope `all`, with the reason naming an inappropriate
+  SocketRelay picture. Signed in as that member, every product route is blocked.
 
 web ☐
 

@@ -432,6 +432,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         ['fulfiller_username'],
         'Requests you offered to help on — the record stays with its owner, your identity does not.',
       ),
+      // A request's picture also cascades with the request; listed so a picture an admin added to a
+      // member's request, or one whose request outlives this delete, is still named and removed.
+      del('socket_relay_request_images', 'uploaded_by_user_id', 'Pictures you added to relay requests.'),
       del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
       // Lifecycle events belong to the request they narrate (posted/claimed/canceled/closed), which
       // may be another member's surviving record — so the event stays and the actor's id is

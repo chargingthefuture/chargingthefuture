@@ -26,6 +26,7 @@ import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
+import { loadRequestImages } from './images';
 
 // Cross-plugin presence: a SocketRelay help post (the Commons request a member created) marks its
 // owner as active in SocketRelay. A post counts as active presence only while its status is 'open';
@@ -219,6 +220,8 @@ function mapRequestRow(row: RequestRow): SocketRelayRequest {
     // The accepted-currencies set lives in a join table and is loaded separately by
     // attachAcceptedCurrencies; mapRequestRow stays pure and defaults it to empty here.
     acceptedCurrencies: [],
+    // Loaded with the accepted currencies, by the same attach step.
+    image: null,
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
@@ -254,16 +257,19 @@ function mergeAcceptedCurrencies(requests: SocketRelayRequest[], rows: AcceptedC
   }));
 }
 
-// Load each request's accepted currencies from socket_relay_request_accepted_currencies and attach
-// them to the mapped requests (split settlements — a post can accept several currencies, e.g.
+// Load each request's accepted currencies from socket_relay_request_accepted_currencies and its
+// picture's details from socket_relay_request_images, and attach both to the mapped requests (split settlements — a post can accept several currencies, e.g.
 // ServiceCredits and USD, independent of its single listed price).
 async function attachAcceptedCurrencies(requests: SocketRelayRequest[]): Promise<SocketRelayRequest[]> {
   const requestIds = requests.map((request) => request.id);
   if (requestIds.length === 0) {
     return requests;
   }
-  const result = await queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
-  return mergeAcceptedCurrencies(requests, result.rows);
+  const [result, images] = await Promise.all([
+    queryDb<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]),
+    loadRequestImages(requestIds),
+  ]);
+  return mergeAcceptedCurrencies(requests, result.rows).map((request) => ({ ...request, image: images.get(request.id) ?? null }));
 }
 
 // Same as attachAcceptedCurrencies but on a transaction client, so freshly inserted rows are visible
@@ -277,7 +283,8 @@ async function attachAcceptedCurrenciesWithClient(
     return requests;
   }
   const result = await client.query<AcceptedCurrencyRow>(ACCEPTED_CURRENCIES_SQL, [requestIds]);
-  return mergeAcceptedCurrencies(requests, result.rows);
+  const images = await loadRequestImages(requestIds, client);
+  return mergeAcceptedCurrencies(requests, result.rows).map((request) => ({ ...request, image: images.get(request.id) ?? null }));
 }
 
 // Validate the requested accepted-currency codes against the active currencies catalog and persist

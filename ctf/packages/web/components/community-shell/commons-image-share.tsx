@@ -3,38 +3,13 @@
 import { useEffect, useState } from "react";
 import type { CommonsMessage } from "lib/commons/types";
 import styles from "./community-shell.module.css";
+import { scalePicture } from "lib/images/scale-picture";
 
 // Admins only: post a message with a picture to the Commons (owner decision, 2026-09-25). The owner
 // explains the product with screenshots, and Quora erases the accounts those were shared from.
 //
-// The picture is scaled to at most 1600 pixels on its long side and re-encoded in the browser before
-// it is sent. That keeps it small, and re-drawing it drops the location and camera data a phone writes
-// into a photo, so none of that reaches the database.
-
-const MAX_SIDE = 1600;
-
-type Scaled = { blob: Blob; width: number; height: number };
-
-function canvasToBlob(canvas: HTMLCanvasElement, type: string): Promise<Blob | null> {
-  return new Promise((resolve) => canvas.toBlob(resolve, type, 0.85));
-}
-
-async function scalePicture(file: File): Promise<Scaled> {
-  const bitmap = await createImageBitmap(file);
-  const ratio = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * ratio));
-  const height = Math.max(1, Math.round(bitmap.height * ratio));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
-  // A browser that cannot write WebP hands back a PNG instead; a JPEG is much smaller than that.
-  const webp = await canvasToBlob(canvas, "image/webp");
-  const blob = webp && webp.type === "image/webp" ? webp : await canvasToBlob(canvas, "image/jpeg");
-  if (!blob) throw new Error("This browser could not prepare the picture. Try another browser.");
-  return { blob, width, height };
-}
+// The picture is scaled and re-encoded in the browser before it is sent (lib/images/scale-picture),
+// which keeps it small and drops the location and camera data a phone writes into a photo.
 
 async function sendPicture(file: File, alt: string, text: string): Promise<CommonsMessage> {
   const scaled = await scalePicture(file);
