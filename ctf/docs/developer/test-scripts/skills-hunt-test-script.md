@@ -1028,6 +1028,10 @@ fewer than 10. Note each scout's ServiceCredits balance.
 6. As the admin, press **Send awards** again and confirm.
 7. On another closed round with no points bar set, or a pool of 0, read the panel.
 
+**Note (2026-10-02):** the round form has no per-accept credit fields at all, and the database no
+longer has the columns behind them (`post/0048`). A form or screen that still mentions "ServiceCredits
+per accepted nomination" or a per-scout cap is out of date.
+
 **Expected:** Step 1 — no Send control; an open round has no award to send yet. Step 3 — one line
 per scout at or above 10 points, reading @user · points · amount, with the scout under 10 left out.
 The amounts are shares of the pool in proportion to points, rounded down; they add up to 100 or

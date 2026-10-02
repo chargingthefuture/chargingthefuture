@@ -634,10 +634,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  -- No longer read or written (2026-10-01): an accept no longer sends credits. Kept one release so
-  -- the revision still running during the deploy can read them; drop in the next release.
-  reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
-  reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
   -- End-of-round award (owner decision, 2026-10-01): when the round closes, every scout whose
   -- score reached award_points_bar shares award_pool_credits ServiceCredits in proportion to their
   -- points, sent once when an admin presses Send. 0 / NULL = no award set.
@@ -5582,8 +5578,11 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- ServiceCredits reward config (per-round; defaults pay nothing so legacy rounds are unaffected).
 -- Brand-new columns, so the CHECK constraints match the CREATE TABLE and add cleanly on a
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
-ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
-ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+-- The per-accept reward columns are gone (2026-10-02, post/0048): an accept has sent no credits
+-- since 2026-10-01, and nothing reads them. Dropped here too so a database built from this file
+-- matches one brought forward by the migrations.
+ALTER TABLE IF EXISTS skills_hunt_rounds DROP COLUMN IF EXISTS reward_credits_per_accept;
+ALTER TABLE IF EXISTS skills_hunt_rounds DROP COLUMN IF EXISTS reward_per_user_round_cap;
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
 ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
