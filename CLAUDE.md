@@ -256,8 +256,9 @@ needed to authenticate `infisical run`.
 
 ### The instance also hosts One Percent, in its own project
 
-One Percent is a separate product — the owner's own paid consultation work, not part of this
-project — and its settings live in a separate project inside this same Infisical instance. It was
+One Percent is the paid tier of Skills Economy — the owner's own paid consultation work — run as a
+separate product with its own repositories, its own settings and its own books, and its settings
+live in a separate project inside this same Infisical instance. It was
 given a project rather than an instance of its own because a project is the access boundary:
 machine identities are scoped to one, so this project's credentials cannot read One Percent's
 secrets, and its credentials cannot read these.
@@ -277,7 +278,7 @@ and cache to patch, back up and keep online, for a boundary a project already dr
 
 ## One Percent reads the skills taxonomy, and nothing else (owner decision, 2026-09-27)
 
-One Percent — the owner's separate paid consultation work — gets read access to the Skills
+One Percent — the paid tier, the owner's own consultation work — gets read access to the Skills
 Taxonomy over an authenticated route, so its peer graph can speak the same vocabulary this app
 does: the same sectors, the same job titles, the same skill names.
 
@@ -287,7 +288,8 @@ between a person and a skill does not live there — `directory_profile_skills` 
 `directory_profiles.job_title_id` are Directory's tables — so a route reading this plugin alone
 touches nothing about a member. That is the boundary, and it is a property of which tables are
 read rather than a promise about how they are used. Any future route that would join across it
-is not covered by this and needs its own decision.
+is not covered by this and needs its own decision. One such decision has been made, for claimed
+Directory profiles, and it is the next section.
 
 **It is exclusive, and nobody else may request it.** The reason belongs next to the rule, or it
 gets argued every time somebody asks. Both products are run and paid for by one person, so this
@@ -326,6 +328,38 @@ those two routes alone, because they are the only ones that hand the request to 
 The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per consumer, and
 removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
 without one simply has no machine reader rather than no app.
+
+## One Percent is the paid tier, and reads claimed Directory profiles (owner decision, 2026-10-02)
+
+Skills Economy stays as it is: free and self-service, every plugin. One Percent is its paid tier,
+the owner's time and judgment on top of what members can already do themselves. It keeps its own
+name, repositories, Infisical project and books, so spinning it out later stays a matter of
+revoking credentials rather than untangling data. Self-service stays complete without it, and
+anything written about the paid tier says so.
+
+The reason for a tier rather than two silos is the owner's labor. People the owner already
+entered in the Directory were being entered a second time in One Percent to make introductions.
+So One Percent reads them, under these limits:
+
+- **Claimed profiles only.** An unclaimed profile has no contact details, so nobody can be asked
+  or introduced, and it stays out of One Percent. A profile that is unclaimed or deleted later
+  stops resolving.
+- **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
+  the person. A takedown here takes effect there with nothing to clean up, and cutting the
+  integration off is revoking the credential.
+- **One direction.** Directory into One Percent, nothing back. No transcript, sheet, payment or
+  client detail ever enters this app. The one link the other way is a client signing in to One
+  Percent with their own Skills Economy account, which they do themselves.
+- **The owner's desk only.** The route serves One Percent's operator screen, never a client's
+  screen. The Directory is behind Unlock so that only vetted members see it; One Percent's buyers
+  are not vetted, so the owner looking at the profile and deciding on the introduction is the
+  vetting.
+- **Never in the request path of paid work.** A Directory outage leaves an id on the desk with no
+  details beside it. It never stops a payment, a call or a sheet.
+
+The credential is this app's to issue and revoke, scoped to this read, and separate from the
+taxonomy one so either can be cut without the other. The route is not built yet. When it is, it
+gets its own access policy entry and a line here naming it.
 
 ## Key Rules (pointers to full detail)
 
