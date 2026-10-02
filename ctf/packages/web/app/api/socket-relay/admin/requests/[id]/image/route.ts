@@ -18,6 +18,26 @@ type RouteProps = { params: Promise<{ id: string }> };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SOCKET_RELAY_IMAGE_BAN_REASON = 'Inappropriate picture uploaded to SocketRelay (automatic ban, no exceptions).';
 
+// The picture is gone before the ban is written, so a failed ban leaves nothing on show. The audit row
+// names the uploader in both cases, so a failed ban can be applied by hand from it. An admin who
+// replaced a member's picture is its uploader of record, so the acting admin is never banned.
+async function auditAndBan(requestId: string, actorId: string, uploaderId: string, ban: boolean): Promise<boolean> {
+  await insertSocketRelayAudit({
+    actorId,
+    command: ban ? 'socket-relay.admin.image.delete_and_ban' : 'socket-relay.admin.image.delete',
+    policyStatus: 'allow',
+    reason: ban ? 'inappropriate_image' : 'ok',
+    targetType: 'request',
+    targetId: requestId,
+    metadata: { uploadedByUserId: uploaderId },
+  });
+  const banned = ban && uploaderId !== actorId;
+  if (banned) {
+    await restrictAccount({ targetUserId: uploaderId, actorId, scope: 'all', reason: SOCKET_RELAY_IMAGE_BAN_REASON });
+  }
+  return banned;
+}
+
 export async function DELETE(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;
@@ -36,22 +56,7 @@ export async function DELETE(request: Request, { params }: RouteProps) {
     if (!removed) {
       return NextResponse.json({ ok: false, code: SOCKET_RELAY_ERROR_CODE.requestNotFound, message: 'That request has no picture to remove.' }, { status: 404 });
     }
-    // The picture is gone before the ban is written, so a failed ban leaves nothing on show. The audit
-    // row names the uploader in both cases, so a failed ban can be applied by hand from it.
-    await insertSocketRelayAudit({
-      actorId: gate.auth.userId,
-      command: ban ? 'socket-relay.admin.image.delete_and_ban' : 'socket-relay.admin.image.delete',
-      policyStatus: 'allow',
-      reason: ban ? 'inappropriate_image' : 'ok',
-      targetType: 'request',
-      targetId: id,
-      metadata: { uploadedByUserId: removed.uploadedByUserId },
-    });
-    // An admin who replaced a member's picture is its uploader of record; never ban the acting admin.
-    const banned = ban && removed.uploadedByUserId !== gate.auth.userId;
-    if (banned) {
-      await restrictAccount({ targetUserId: removed.uploadedByUserId, actorId: gate.auth.userId, scope: 'all', reason: SOCKET_RELAY_IMAGE_BAN_REASON });
-    }
+    const banned = await auditAndBan(id, gate.auth.userId, removed.uploadedByUserId, ban);
     return NextResponse.json({ ok: true, banned }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'admin_image_delete' });
