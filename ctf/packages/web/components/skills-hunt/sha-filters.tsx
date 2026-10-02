@@ -1,38 +1,21 @@
 "use client";
 
-import type { SkillsHuntRound } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_OPTIONS, getSkillsHuntAdminTokens, type SkillsHuntAdminStatusFilter } from "./sha-shared";
 
 export function SkillsHuntAdminFilters({
-  rounds,
-  activeRoundId,
-  onRound,
   statusFilter,
   onStatus,
 }: {
-  rounds: SkillsHuntRound[];
-  activeRoundId: string | null;
-  onRound: (id: string) => void;
   statusFilter: SkillsHuntAdminStatusFilter;
   onStatus: (s: SkillsHuntAdminStatusFilter) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
+  // No round chips: only one round can be open at a time, and Moderation reads that round. The
+  // chips opened on whichever round came first in the list, often a closed one (owner report).
   return (
     <>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        {rounds.map((r) => {
-          const active = activeRoundId === r.id;
-          return (
-            <button key={r.id} type="button" onClick={() => onRound(r.id)}
-              style={{ padding: "6px 14px", borderRadius: 20, background: active ? `${t.ACCENT}25` : t.INPUT_BG, border: `1px solid ${active ? t.ACCENT + "60" : t.BORDER_STRONG}`, color: active ? t.ACCENT : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              {r.name} <span style={{ opacity: 0.6 }}>· {r.status}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Wraps: four status chips overflow a phone-width column, and the one that fell off the
           right edge was Flagged — the filter a moderator needs precisely when a submission has
           vanished from Pending. */}

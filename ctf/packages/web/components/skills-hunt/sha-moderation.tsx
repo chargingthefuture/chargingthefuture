@@ -83,10 +83,8 @@ function RoundPurpose({ round }: { round: SkillsHuntRound | null }) {
   );
 }
 
-export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
-  rounds: SkillsHuntRound[];
+export function SkillsHuntModeration({ activeRoundId }: {
   activeRoundId: string | null;
-  onRoundChange: (id: string) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -237,13 +235,13 @@ export function SkillsHuntModeration({ rounds, activeRoundId, onRoundChange }: {
   const allSelected = shownCount > 0 && selected.size === shownCount;
   const pageCount = Math.max(1, Math.ceil(total / MODERATION_PAGE_SIZE));
 
-  if (rounds.length === 0) {
+  if (!activeRoundId) {
     return <div style={{ color: t.MUTED, fontSize: 13 }}>No rounds yet. Create one in the Rounds tab before moderating.</div>;
   }
 
   return (
     <>
-      <SkillsHuntAdminFilters rounds={rounds} activeRoundId={activeRoundId} onRound={onRoundChange} statusFilter={statusFilter} onStatus={setStatusFilter} />
+      <SkillsHuntAdminFilters statusFilter={statusFilter} onStatus={setStatusFilter} />
       <RoundPurpose round={round} />
       <SkillsHuntAdminBulkBar count={selected.size} onAccept={() => void bulkReview("accept")} onReject={() => void bulkReview("reject")} onClear={() => setSelected(new Set())} />
 

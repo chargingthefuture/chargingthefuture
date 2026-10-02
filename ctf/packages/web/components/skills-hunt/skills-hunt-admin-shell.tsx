@@ -29,8 +29,9 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
   const [tab, setTab] = useState<Tab>("moderation");
-  // Shared between Moderation (round filter) and Missions (which round to manage).
-  const [activeRoundId, setActiveRoundId] = useState<string | null>(rounds[0]?.id ?? null);
+  // Moderation and Missions both work on the one open round. With none open (between rounds) they
+  // fall back to the first round in the list, so a closed round's queue can still be finished.
+  const activeRoundId = (rounds.find((r) => r.status === "active") ?? rounds[0])?.id ?? null;
 
   return (
     <div style={{ minHeight: "100vh", background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
@@ -51,7 +52,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
         })}
       </div>
 
-      {tab === "moderation" && <SkillsHuntModeration rounds={rounds} activeRoundId={activeRoundId} onRoundChange={setActiveRoundId} />}
+      {tab === "moderation" && <SkillsHuntModeration activeRoundId={activeRoundId} />}
       {tab === "rounds" && <SkillsHuntRoundManager rounds={rounds} />}
       {tab === "missions" && <SkillsHuntAdminMissions roundId={activeRoundId} />}
       {tab === "reward-card" && <SkillsHuntAdminRewardCard />}
