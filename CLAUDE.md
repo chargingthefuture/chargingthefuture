@@ -322,8 +322,9 @@ The access policy contract names a `service` role on `skills-taxonomy.hierarchy.
 `.flattened.get`, and that role is load-bearing now rather than decorative. The path behind it is
 `ctf/packages/web/lib/auth/service-consumer.ts` (who a credential belongs to) and
 `ctf/packages/web/lib/skills-taxonomy/read-gate.ts` (the branch in front of the two read routes).
-Nothing else in the app has a machine caller, and nothing else should: the credential is read by
-those two routes alone, because they are the only ones that hand the request to the gate.
+That credential is read by those two routes alone, because they are the only ones that hand the
+request to the gate. The one other machine caller is the claimed-profile read in the next section,
+on a credential of its own.
 
 The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per consumer, and
 removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
@@ -343,7 +344,9 @@ So One Percent reads them, under these limits:
 
 - **Claimed profiles only.** An unclaimed profile has no contact details, so nobody can be asked
   or introduced, and it stays out of One Percent. A profile that is unclaimed or deleted later
-  stops resolving.
+  stops resolving. So does one whose owner is restricted with scope `all` or `contact`: an
+  introduction is a connection, and those scopes already block one here. `trading` alone doesn't
+  hide a profile, and One Percent is never told that somebody is restricted.
 - **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
   the person. A takedown here takes effect there with nothing to clean up, and cutting the
   integration off is revoking the credential.
@@ -358,8 +361,11 @@ So One Percent reads them, under these limits:
   details beside it. It never stops a payment, a call or a sheet.
 
 The credential is this app's to issue and revoke, scoped to this read, and separate from the
-taxonomy one so either can be cut without the other. The route is not built yet. When it is, it
-gets its own access policy entry and a line here naming it.
+taxonomy one so either can be cut without the other. It is `DIRECTORY_SERVICE_TOKENS`, read only
+by `GET /api/directory/service/profiles/[id]` through `ctf/packages/web/lib/directory/service-read.ts`,
+with the access policy entry `directory.profile.service.get`. The route answers one claimed profile
+by id with name, headline, job title, sector, skill names, profile address and location. There's
+no list and no search: the owner pastes the link of somebody they already know about.
 
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
