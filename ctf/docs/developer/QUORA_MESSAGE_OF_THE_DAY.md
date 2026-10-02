@@ -55,9 +55,8 @@ of its own, so the first full day, 19 September, is Day 1, and 2 October is Day 
 generated, not stored with the message, so a message reads the right day whenever the rotation
 reaches it.
 
-The line states the protest as a stand rather than a grievance: Targeted Individuals holding it for
-their lives, by building what cannot be taken. Quora has mostly carried the second kind of post;
-these are meant to mobilize.
+The line names the protest as a stand: Targeted Individuals holding it for their lives, by building
+what cannot be taken.
 
 ## Adding or editing a message
 
