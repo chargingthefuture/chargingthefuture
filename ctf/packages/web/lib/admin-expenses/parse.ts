@@ -33,12 +33,12 @@ function text(value: unknown, field: string, required: boolean): string | { erro
   return trimmed;
 }
 
-// Amounts arrive as whole cents. null (or a missing field) means "not known yet", which is kept
+// Amounts arrive as exact cents. null (or a missing field) means "not known yet", which is kept
 // apart from 0, a checked, free line.
 function cents(value: unknown, field: string): number | null | { error: string } {
   if (value === undefined || value === null) return null;
   if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > MAX_CENTS) {
-    return { error: `${field} must be a whole number of cents between 0 and ${MAX_CENTS}.` };
+    return { error: `${field} must be an exact number of cents between 0 and ${MAX_CENTS}.` };
   }
   return value;
 }

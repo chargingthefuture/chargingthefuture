@@ -43,7 +43,7 @@ jobs:
           # merged PR's "what changed" context), which grounds the generator so it
           # stops inventing capabilities from a five-word subject (see issue #1471).
           # Trailer lines (session URL, co-author, the Claude attribution, and the
-          # Parity Status gate line) are stripped as noise, and the whole block is
+          # Parity Status gate line) are stripped as noise, and the entire block is
           # capped so it can never overflow the $GITHUB_OUTPUT size limit.
           COMMITS=$(git log "$RANGE" --max-count=30 --pretty=format:"=== %h %s%n%b%n" \
             | grep -vaiE '^(co-authored-by:|claude-session:|https://claude\.ai/code/|🤖 generated with|generated with \[claude|parity status:|parity ticket:)' \

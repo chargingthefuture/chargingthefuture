@@ -6,7 +6,7 @@ name: Weekly Performance — Goal Snapshot Capture
 # needs at least one stored reading, and goal history must never depend on someone opening the
 # dashboard that week. Runs daily; each run refreshes the current week's row (last capture of the
 # week wins), so the stored value converges to the week's closing reading. If a run fails, the next
-# day's run covers it — only a whole week of failures loses that week's reading, which is why this
+# day's run covers it — only a full week of failures loses that week's reading, which is why this
 # is daily rather than weekly.
 #
 # Needs (from Infisical, injected below): APP_URL, INTERNAL_SERVICE_SECRET.

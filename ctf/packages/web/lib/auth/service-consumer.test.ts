@@ -67,7 +67,7 @@ describe('resolveServiceConsumer', () => {
 
   // A secret may hold a colon. Splitting on the first one keeps the rest of it intact rather
   // than silently authenticating against a truncated value.
-  it('keeps a secret that contains a colon whole', () => {
+  it('keeps a secret that contains a colon intact', () => {
     configure('one-percent:part-one:part-two');
     expect(resolveServiceConsumer('Bearer one-percent.part-one:part-two')).toEqual({
       name: 'one-percent',
@@ -76,7 +76,7 @@ describe('resolveServiceConsumer', () => {
   });
 
   // Same for the token: the name is up to the first dot and the secret is everything after it.
-  it('keeps a secret that contains a dot whole', () => {
+  it('keeps a secret that contains a dot intact', () => {
     configure('one-percent:has.dots.in.it');
     expect(resolveServiceConsumer('Bearer one-percent.has.dots.in.it')).toEqual({
       name: 'one-percent',
@@ -92,7 +92,7 @@ describe('resolveServiceConsumer', () => {
     expect(resolveServiceConsumer('Bearer another.first-secret')).toBeNull();
   });
 
-  it('skips a malformed entry rather than failing the whole list', () => {
+  it('skips a malformed entry rather than failing the entire list', () => {
     configure('rubbish,one-percent:a-good-secret');
     expect(resolveServiceConsumer('Bearer one-percent.a-good-secret')).toEqual({
       name: 'one-percent',

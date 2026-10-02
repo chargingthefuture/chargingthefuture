@@ -175,7 +175,7 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
 
   // While joined, ping the presence heartbeat so this member keeps counting as in the call. 35s
   // keeps the member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS),
-  // matching the web room. Without this the mobile participant's presence row goes stale and they
+  // matching the web room. Without this the mobile participant's presence row stops updating and they
   // drop off the participant list after 45s even though they are still connected to Stream audio.
   // While in a call the Android foreground service (androidKeepCallAlive + StreamVideoRN.updateConfig,
   // see app.config.ts and App.tsx) keeps the JS runtime alive when the app is backgrounded, so this

@@ -154,7 +154,7 @@ export async function refreshOwnPresence(userId: string): Promise<MemberPresence
     try {
       const rows = await source.read(trimmed);
       desired.push(...rows);
-      // Only a source we read without error is safe to reconcile (deactivate stale rows within).
+      // Only a source we read without error is safe to reconcile (deactivate rows not seen recently within).
       reconciledSlugs.add(source.slug);
     } catch {
       // no-trace: a missing table or transient failure skips this source, adding and removing nothing.

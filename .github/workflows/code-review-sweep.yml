@@ -2,7 +2,7 @@ name: Code Review — Sweep and File Issues
 
 # Reviews ONE slice of the codebase per run and files GitHub issues for the findings, then
 # advances the rotation ledger so the next run moves on. This is the incremental,
-# review-the-whole-codebase-over-time alternative to a per-merge review bot. It never writes
+# review-the-entire-codebase-over-time alternative to a per-merge review bot. It never writes
 # code or opens a PR — findings it judges to have a small, safe fix get the
 # `code-review:actionable` label, which `code-review-implement.yml` can turn into a PR.
 #
@@ -54,7 +54,7 @@ jobs:
       #   2. The branch EXISTS but the fetch/parse failed (transient network blip, or a corrupt
       #      ledger) → falling back to the empty stub here would, at the commit step, FORCE-PUSH a
       #      blank ledger over real rotation state and wipe every slice's review history. That is
-      #      the bug that reset the whole sweep before. In that case we FAIL LOUDLY (non-zero) so
+      #      the bug that reset the entire sweep before. In that case we FAIL LOUDLY (non-zero) so
       #      the run can simply be retried, instead of destroying the rotation.
       - name: Restore rotation ledger from its branch
         run: |

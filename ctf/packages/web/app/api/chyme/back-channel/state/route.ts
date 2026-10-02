@@ -6,7 +6,7 @@ import { requireChymeAccess } from '../../_lib';
 
 // GET /api/chyme/back-channel/state
 // Poll-driven state for the current member: an incoming invite to answer, a pending outgoing invite
-// (the "Invite sent…" badge), and/or the live call to show the panel for. Reaps stale rows first so
+// (the "Invite sent…" badge), and/or the live call to show the panel for. Reaps expired rows first so
 // nothing returned is out of date. Read-only; no CSRF. Not audited (high-frequency poll).
 export async function GET() {
   const gate = await requireChymeAccess();

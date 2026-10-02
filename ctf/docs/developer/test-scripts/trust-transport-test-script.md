@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the out-of-date "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
 
 ---
 

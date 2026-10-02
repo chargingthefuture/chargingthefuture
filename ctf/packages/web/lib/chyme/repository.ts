@@ -383,7 +383,7 @@ export async function assertNotRemoved(client: PoolClient, roomId: string, userI
 
 export async function listRoomParticipants(client: PoolClient, roomId: string): Promise<ChymeParticipant[]> {
   // Only members seen within the presence window count as "in the call". A member who left
-  // (row deleted) or disconnected (heartbeat stopped, last_seen_at goes stale) drops off
+  // (row deleted) or disconnected (heartbeat stopped, last_seen_at stops updating) drops off
   // automatically — there is no realtime socket, so freshness is how presence expires.
   const result = await client.query<ParticipantRow>(
     `
@@ -785,7 +785,7 @@ export async function touchRoomPresence(
 
 // Persist a member's raise/lower hand. Unlike a transient Stream reaction, this rides on the
 // member's presence row so everyone in the room keeps seeing the raised hand until the member
-// lowers it (or leaves / their presence goes stale). last_seen_at is bumped so toggling also
+// lowers it (or leaves / their presence stops updating). last_seen_at is bumped so toggling also
 // counts as a heartbeat. If the member has no presence row (not in the call), the UPDATE matches
 // nothing and this is a no-op — we still return the current room state for the client.
 export async function setRoomMemberHandRaised(

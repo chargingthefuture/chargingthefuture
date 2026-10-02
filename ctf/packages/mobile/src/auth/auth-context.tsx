@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (stillValid) return current.idToken;
 
     if (!current.refreshToken || !discovery || !clientId) {
-      // No way to refresh — drop the stale session so the UI shows signed-out.
+      // No way to refresh — drop the expired session so the UI shows signed-out.
       await persistSession(null);
       return null;
     }

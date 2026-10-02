@@ -117,7 +117,7 @@ This checklist is used by the **Metrics & Data Integrity Agent** to verify every
 - [ ] **Completeness**: All expected records present (no missing data)
 - [ ] **Accuracy**: Data matches source (no corruption or transformation errors)
 - [ ] **Consistency**: Data consistent across all views (UI, API, reports)
-- [ ] **Timeliness**: Data updated on schedule (no stale data)
+- [ ] **Timeliness**: Data updated on schedule (no out-of-date data)
 
 ---
 

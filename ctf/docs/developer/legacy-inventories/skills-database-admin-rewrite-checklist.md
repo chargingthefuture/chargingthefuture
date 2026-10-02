@@ -89,7 +89,7 @@
     - Confirmations and dependency-impact warnings appear before delete.
 - [ ] Implement post-mutation refresh behavior.
   - Acceptance criteria:
-    - Hierarchy and any dependent views update without stale state.
+    - Hierarchy and any dependent views update without out-of-date state.
 
 ## Mobile/Shared Tasks
 

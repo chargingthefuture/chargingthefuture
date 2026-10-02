@@ -43,7 +43,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      # One auto PR at a time. If the previous one hasn't merged yet, skip this whole run — the
+      # One auto PR at a time. If the previous one hasn't merged yet, skip this run — the
       # babysitter is responsible for getting it unstuck. gh is preinstalled, so no checkout needed.
       - name: Only one auto PR at a time
         id: gate

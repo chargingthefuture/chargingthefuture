@@ -14,6 +14,7 @@
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md` |
 | **Generated** | 2026-07-13 (commit 0aef7039) |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
 

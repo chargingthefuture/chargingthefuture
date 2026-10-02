@@ -15,7 +15,7 @@ name: Render — Watch Deploy
 #   3. add a case branch mapping that name to that env var;
 #   4. add the RENDER_SERVICE_ID_CTF_WORKER repo secret.
 # Secrets are referenced statically on purpose — dynamic secrets[...] indexing
-# would expose the whole secrets context to the runner.
+# would expose the entire secrets context to the runner.
 
 on:
   push:

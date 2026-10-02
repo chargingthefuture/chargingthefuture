@@ -29,7 +29,7 @@ Define one canonical user handle source for all plugin surfaces that show a user
 ## Sign-up and Profile Governance
 
 - Product should require canonical handle capture during sign-up/onboarding to maximize parity across plugins.
-- If username changes are allowed in the active auth provider, downstream plugin reads must treat that provider as the current source of truth and avoid stale plugin-local username ownership models.
+- If username changes are allowed in the active auth provider, downstream plugin reads must treat that provider as the current source of truth and avoid out-of-date plugin-local username ownership models.
 
 ## Security and Compliance Notes
 

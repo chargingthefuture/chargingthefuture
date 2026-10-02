@@ -544,7 +544,7 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
     reportError(error, { area: 'unlock', op: 'sync_spam_denylist', extra: { submissionId: input.submissionId } });
   }
 
-  // Keep the auth provider in step with the decision, so one decision on one screen is the whole ban.
+  // Keep the auth provider in step with the decision, so one decision on one screen settles the ban.
   //
   // Dropping access_tier above stops this app letting them in and stops nothing else. The provider is
   // what any other surface signing people in through it asks, and until this call it kept answering

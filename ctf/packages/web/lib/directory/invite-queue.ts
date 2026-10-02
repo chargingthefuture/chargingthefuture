@@ -57,7 +57,7 @@ type QueueDbRow = {
 // invitation to anybody and that everybody already knows them. Both stopped being true: there is
 // something to invite people to now, and the community keeps admitting people who have never
 // heard of anybody. So the owner queues like everybody else, gets one invite post in the same
-// format, and joins this array when it ships. One post is the whole of the endorsement, and the
+// format, and joins this array when it ships. One post is all of the endorsement, and the
 // listing is displayed on the same footing as every other — same fields, same ordering, no
 // placement nobody else can have.
 export const DIRECTORY_INVITE_ALREADY_WRITTEN = [

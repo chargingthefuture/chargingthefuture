@@ -44,6 +44,7 @@
     "check:admin-audit-coverage": "node ./scripts/check-admin-audit-coverage.mjs",
     "check:notice-formatting": "node ./scripts/check-notice-formatting.mjs",
     "check:us-spelling": "node ./scripts/check-us-spelling.mjs",
+    "check:banned-words": "node ./scripts/check-banned-words.mjs",
     "check:unlock-tier-exceptions": "node ./scripts/check-unlock-tier-exceptions.mjs",
     "preview:member-copy": "node --experimental-strip-types ./scripts/preview-member-copy.mjs",
     "lint:a11y": "eslint --no-config-lookup --config ./a11y-audit.config.mjs --max-warnings=0 \"packages/web/app/**/*.tsx\" \"packages/web/components/**/*.tsx\"",

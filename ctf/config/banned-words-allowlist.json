@@ -1,0 +1,68 @@
+{
+  "paths": [
+    {
+      "path": "CLAUDE.md",
+      "reason": "Defines the ban. The banned-term dictionary has to name each word to forbid it."
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "Points back to CLAUDE.md and may repeat the dictionary for tools that read only this file."
+    },
+    {
+      "path": ".claude/rules/",
+      "reason": "Rule modules are governed by their own change-control process (rule 099) and may name the banned words to define them."
+    },
+    {
+      "path": ".claude/hooks/",
+      "reason": "The Stop hook holds the canonical banned-term list, so it has to spell each word out."
+    },
+    {
+      "path": "ctf/scripts/check-banned-words.mjs",
+      "reason": "The checker itself, which has to name the words it looks for."
+    },
+    {
+      "path": "ctf/config/banned-words-allowlist.json",
+      "reason": "This file, which names the fixed phrases that are exempt."
+    },
+    {
+      "path": "ctf/agents/skills/supabase-postgres-best-practices/",
+      "reason": "A copied third-party skill from Supabase. Its text is theirs, not ours to reword."
+    },
+    {
+      "path": "ctf/db/migrations/post/0005_directory_backfill_skills_from_legacy_array.sql",
+      "reason": "An applied migration. Editing it, even a comment, trips the schema drift gate, and it is a record of what ran."
+    },
+    {
+      "path": "ctf/schema.demo.sql",
+      "reason": "Generated from ctf/schema.sql and the post migrations, which are checked at their source. It copies the applied migration above."
+    }
+  ],
+  "filePatterns": [
+    {
+      "regex": "(^|/)[^/]*OFL[^/]*\\.txt$",
+      "reason": "Font license files. License text is a legal document from a third party."
+    },
+    {
+      "regex": "(^|/)(LICEN[CS]E|COPYING)[^/]*$",
+      "reason": "License files. License text is a legal document from a third party."
+    },
+    {
+      "regex": "(^|/)(pnpm-lock\\.yaml|package-lock\\.json|yarn\\.lock)$",
+      "reason": "Generated lockfiles. Package names and descriptions belong to third parties."
+    }
+  ],
+  "phrases": [
+    {
+      "text": "stale-while-revalidate",
+      "reason": "A standard HTTP Cache-Control directive. The browser and CDN read it by this exact name."
+    },
+    {
+      "text": "Dismiss stale pull request approvals",
+      "reason": "The name of a GitHub branch protection setting, quoted so a reader can find it in GitHub's settings."
+    },
+    {
+      "text": "Whole Foods",
+      "reason": "A company name. A name is not ours to reword."
+    }
+  ]
+}
