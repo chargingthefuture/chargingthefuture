@@ -1,6 +1,6 @@
 // The goal board in a PeerProgramming cohort (owner decision, 2026-09-25).
 //
-// A member posts one goal with a finish line and breaks it into small tasks another member can do
+// A member posts goals, each with a finish line, and breaks each into small tasks another member can do
 // from a phone. Other members of the cohort take a task, do it, and post what they found. The goal's
 // owner keeps the result or sends the task back for somebody else. There is no conversation here on
 // purpose: a goal, its tasks and their results are the only things anyone can write, so the board
@@ -8,6 +8,7 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
 import {
+  PEER_PROGRAMMING_MAX_OPEN_GOALS,
   PEER_PROGRAMMING_REACHED_GOAL_VISIBLE_DAYS,
   PEER_PROGRAMMING_TASK_HOLD_HOURS,
 } from './constants';
@@ -201,12 +202,10 @@ export async function getTaskWithGoal(taskId: string): Promise<TaskWithGoal | nu
   };
 }
 
-function isUniqueViolation(error: unknown): boolean {
-  return Boolean(error) && typeof error === 'object' && (error as { code?: string }).code === '23505';
-}
-
-// Post a goal with its first tasks. Throws 'goal_already_open' when the member already has an open
-// goal — the partial-unique index is what decides that, so two quick submits cannot both land.
+// Post a goal with its first tasks. Throws 'open_goal_limit' when the member already has
+// PEER_PROGRAMMING_MAX_OPEN_GOALS open goals. The count and the insert are one statement, so the
+// check reads the table as the insert sees it; two submits landing in the same instant could still
+// pass one goal over the cap, which costs nothing worse than one extra goal.
 export async function createGoal(input: {
   cohortId: string;
   ownerUserId: string;
@@ -214,17 +213,15 @@ export async function createGoal(input: {
   tasks: string[];
 }): Promise<string> {
   const goalId = randomUUID();
-  try {
-    await queryDb(
-      `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title)
-       VALUES ($1, $2, $3, $4)`,
-      [goalId, input.cohortId, input.ownerUserId, input.title],
-    );
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      throw new Error('goal_already_open');
-    }
-    throw error;
+  const inserted = await queryDb<{ id: string }>(
+    `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title)
+     SELECT $1, $2, $3, $4
+     WHERE (SELECT COUNT(*) FROM peer_programming_goals WHERE owner_user_id = $3 AND status = 'open') < $5
+     RETURNING id`,
+    [goalId, input.cohortId, input.ownerUserId, input.title, PEER_PROGRAMMING_MAX_OPEN_GOALS],
+  );
+  if (inserted.rows.length === 0) {
+    throw new Error('open_goal_limit');
   }
   for (const description of input.tasks) {
     await addTask({ goalId, description });

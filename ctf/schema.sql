@@ -4896,11 +4896,11 @@ ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS release
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- The goal board in a cohort (owner decision, 2026-09-25). A member posts one goal with a finish
--- line, breaks it into small tasks another member can do from a phone, and other members take a
+-- The goal board in a cohort (owner decision, 2026-09-25). A member posts goals, each with a finish
+-- line, breaks each into small tasks another member can do from a phone, and other members take a
 -- task, do it, and post the result. There is no conversation on the board: a goal, its tasks, and
--- their results are the only things anyone can write. At most one open goal per member, enforced by
--- the partial-unique index below.
+-- their results are the only things anyone can write. A member can hold up to 10 open goals at once
+-- (owner decision, 2026-10-02; PEER_PROGRAMMING_MAX_OPEN_GOALS), counted by createGoal on insert.
 CREATE TABLE IF NOT EXISTS peer_programming_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
@@ -4921,8 +4921,9 @@ ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS status TEX
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- One open goal per member.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_peer_programming_goals_one_open
+-- A member's open goals, counted against the cap when they post another. Replaced the one-open-goal
+-- unique index, which post/0049 drops from an existing database.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goals_owner_open
   ON peer_programming_goals (owner_user_id)
   WHERE status = 'open';
 -- The board lists one cohort's goals, newest first.
