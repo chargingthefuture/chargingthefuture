@@ -3,9 +3,9 @@ import {
   type QuoraMotdAction,
   type QuoraMotdMessage,
 } from './types';
-import { QUORA_MOTD_FIRESIDE } from './messages-fireside';
-import { QUORA_MOTD_TI_RADIO } from './messages-ti-radio';
 import { QUORA_MOTD_ONE_PERCENT } from './messages-one-percent';
+import { QUORA_MOTD_GOAL_BOARD } from './messages-goal-board';
+import { QUORA_MOTD_ONE_PERCENT_CALL } from './messages-one-percent-call';
 
 /**
  * Day one. Peace Battle 2 starts on the evening of Friday 18 September 2026, so the rotation is
@@ -23,9 +23,9 @@ export const QUORA_MOTD_EPOCH = '2026-09-18';
 const MOTD_TIME_ZONE = 'America/New_York';
 
 const POOLS: Record<QuoraMotdAction, QuoraMotdMessage[]> = {
-  fireside: QUORA_MOTD_FIRESIDE,
-  'ti-radio': QUORA_MOTD_TI_RADIO,
   'one-percent': QUORA_MOTD_ONE_PERCENT,
+  'goal-board': QUORA_MOTD_GOAL_BOARD,
+  'one-percent-call': QUORA_MOTD_ONE_PERCENT_CALL,
 };
 
 export type QuoraMotdPick = {
@@ -88,7 +88,7 @@ function orderFor(length: number, cycle: number): number[] {
 /**
  * The message for one calendar day.
  *
- * The action rotates every day — Fireside, TI Radio, your 1%, and round again — so three days
+ * The action rotates every day — your 1%, the goal board, One Percent, and round again — so three days
  * running never ask for the same thing. Within an action, the pool is worked through in a shuffled
  * order with no repeat until it is exhausted. With ten messages per action and three actions, that
  * is thirty days before anything comes back, and it comes back in a different order.

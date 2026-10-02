@@ -31,8 +31,11 @@ Three things follow, and they are why each message is written the way it is:
 - Day one is `2026-09-18`, the day Peace Battle 2 starts.
 - The day is taken in `America/New_York`, not the server's UTC. Without that, every message after
   8pm Eastern would be the next day's.
-- The ask rotates every day across the three Peace Battle 2 actions — say something under a post,
-  take a slot on TI Radio, post your 1% — so three days running never ask for the same thing.
+- The ask rotates every day across the three Enact steps on the Peace Battle 2 page — see your 1%
+  in Workforce, start on it on the PeerProgramming goal board, take it further with One Percent —
+  so three days running never ask for the same thing. The steps follow the page: Fireside and TI
+  Radio left both on 2026-10-02, when the outward message narrowed to the goal board, the Peace
+  Battle 2 page and One Percent (see "Feature freeze, and one message" in `CLAUDE.md`).
 - Within an action, the pool is worked through in a shuffled order with no repeat until it is
   exhausted. The shuffle is seeded by the pass number, so each pass through a pool is a different
   order and the same date always gives the same message.
@@ -40,16 +43,39 @@ Three things follow, and they are why each message is written the way it is:
 - A date before day one clamps to day one rather than failing, so opening the screen early shows
   something usable.
 
+## The day line
+
+Every post opens with which day of the protest it is and the Peace Battle 2 page under its short
+address (`/pb2`), built by `motdDayLine` in `lib/quora-motd/types.ts`. The page is the lead link,
+ahead of chargingthefuture.com, so it sits in the first line rather than at the foot.
+
+The day is the count the page's own clock shows: days since Friday 18 September 2026 at 7:00 PM
+Eastern, taken by calendar day in Eastern so it changes once a day. The opening night is not a day
+of its own, so the first full day, 19 September, is Day 1, and 2 October is Day 14. The line is
+generated, not stored with the message, so a message reads the right day whenever the rotation
+reaches it.
+
+The line states the protest as a stand rather than a grievance: Targeted Individuals holding it for
+their lives, by building what cannot be taken. Quora has mostly carried the second kind of post;
+these are meant to mobilize.
+
 ## Adding or editing a message
 
-The pools are `lib/quora-motd/messages-fireside.ts`, `messages-ti-radio.ts` and
-`messages-one-percent.ts`. Keep them the same length as each other, or one action's messages come
-around more often than another's.
+The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-goal-board.ts` and
+`messages-one-percent-call.ts`. Keep them the same length as each other, or one action's messages
+come around more often than another's.
+
+Every 1% message ends with a line pointing a reader without an account to the shorter calculator on
+One Percent's site, which needs no sign-in (`ONE_PERCENT_NO_SIGN_IN_LINE`): Workforce needs an
+approved account, and most people reading the space do not have one yet.
+
+Every One Percent message says that the first two steps are complete without it and stay free. A
+paid step that reads as the real one turns the free steps into a preview, and they are not one.
 
 - `id` is stable across edits to the text. Changing an id changes where it lands in the rotation.
 - `title` and `body` are stored as two values, but they are copied as one. Quora's composer has no
-  title field — a post is one box — so the screen's single copy control hands over the title, a
-  blank line, then the body, which is the order the preview shows them in. The two values stay
+  title field — a post is one box — so the screen's single copy control hands over the day line,
+  the title, then the body, each after a blank line, which is the order the preview shows them in. The two values stay
   apart because the list of what is coming shows titles on their own.
 - `body` is plain text, one paragraph per line, no markdown of any kind — Quora's editor shows
   every marker literally. It ends with a `Full post:` line. That label is load-bearing: an address
