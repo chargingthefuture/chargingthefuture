@@ -361,6 +361,33 @@ The credential is this app's to issue and revoke, scoped to this read, and separ
 taxonomy one so either can be cut without the other. The route is not built yet. When it is, it
 gets its own access policy entry and a line here naming it.
 
+## Feature freeze, and one message (owner decision, 2026-10-02)
+
+No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
+plugin stays live and maintained. A new capability is the owner's call and is asked about first,
+never built and offered afterwards. The One Percent read of claimed Directory profiles, in the
+section above, was decided before the freeze and is not caught by it.
+
+The reason is the message rather than the code. Twenty-five member-facing plugins is too much for
+a newcomer to take in, and a plugin built as a two-sided marketplace looks empty while only one
+side has arrived: somebody looking for a room who opens LightHouse finds no listings. So what is
+said outward narrows to three things that cover the rest between them:
+
+1. **PeerProgramming's goal board.** Put the 1% of the day that is left into small tasks toward
+   somebody else's goal, and post your own. It works before the marketplace exists, because a
+   post like "help me find a room" can be answered by anybody, and its chat and calls carry a
+   small part of what the other plugins do.
+2. **The Peace Battle 2 page** on the blog. It is the pitch and the lead link in comments, in
+   Commons posts and on Quora, ahead of chargingthefuture.com. Its Enact section points at
+   Workforce, the goal board and One Percent and at nothing else.
+3. **One Percent**, the paid tier, for somebody who wants more than self-service.
+
+Posts about any plugin still get written and still tie back to these three. The sign-up line at
+the end of a blog post is unchanged.
+
+The board is judged by what is on it the day somebody arrives. The owner keeps their own small
+tasks and replies on it while the traffic builds, so it is never empty.
+
 ## Key Rules (pointers to full detail)
 
 | Topic | Rule file |
