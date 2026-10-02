@@ -583,6 +583,38 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 
 ---
 
+### DIR-A9 · One Percent reads one claimed profile, and nothing else
+
+**Role:** none — a service credential, not a person · **Surfaces:** web (API only — no UI)
+
+This is One Percent's desk reading the Directory. It needs `DIRECTORY_SERVICE_TOKENS` set to at
+least one `name:secret` entry, and it can't be run from a phone: every step is a request with a
+header on it. Skip the case on any environment where that setting is empty. Use a claimed profile
+id and an unclaimed one from the admin list.
+
+**Steps:**
+1. `GET /api/directory/service/profiles/<claimed id>` with `Authorization: Bearer <name>.<secret>`, signed out.
+2. The same, with an unclaimed profile's id.
+3. The same, with an id that doesn't exist.
+4. Step 1 with the right name and one character of the secret changed.
+5. Step 1 with a credential from `TAXONOMY_SERVICE_TOKENS` instead.
+6. Step 1 with no header, signed in as an approved member.
+6a. Step 1 for a claimed profile whose owner an admin restricted with scope `contact`, then `trading`.
+7. Repeat step 1 many times in quick succession.
+
+**Expected:**
+- Step 1: **200**, `{ profile }` with name, headline, job title, sector, skill names, profile
+  address, city, state and country. No bio, no payment address, no account id.
+- Steps 2 and 3: the same **404**. An unclaimed profile reads exactly like a missing one.
+- Steps 4, 5 and 6: **401** naming `DIRECTORY_SERVICE_TOKENS`. The taxonomy credential doesn't
+  open this route, and there's no member path.
+- Step 6a: `contact` gives the same **404** as an unclaimed profile, with no word about a restriction. `trading` still gives **200**.
+- Step 7: eventually **429**.
+- The audit lines carry `service:<name>` as the actor and the command `directory.profile.service.get`.
+**Result:** web ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For DIR-1, DIR-2, DIR-4, and DIR-A1 to DIR-A3, the android app and the mobile-responsive web layout
