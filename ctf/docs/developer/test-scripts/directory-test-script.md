@@ -599,6 +599,7 @@ id and an unclaimed one from the admin list.
 4. Step 1 with the right name and one character of the secret changed.
 5. Step 1 with a credential from `TAXONOMY_SERVICE_TOKENS` instead.
 6. Step 1 with no header, signed in as an approved member.
+6a. Step 1 for a claimed profile whose owner an admin restricted with scope `contact`, then `trading`.
 7. Repeat step 1 many times in quick succession.
 
 **Expected:**
@@ -607,6 +608,7 @@ id and an unclaimed one from the admin list.
 - Steps 2 and 3: the same **404**. An unclaimed profile reads exactly like a missing one.
 - Steps 4, 5 and 6: **401** naming `DIRECTORY_SERVICE_TOKENS`. The taxonomy credential doesn't
   open this route, and there's no member path.
+- Step 6a: `contact` gives the same **404** as an unclaimed profile, with no word about a restriction. `trading` still gives **200**.
 - Step 7: eventually **429**.
 - The audit lines carry `service:<name>` as the actor and the command `directory.profile.service.get`.
 **Result:** web ☐ — notes:

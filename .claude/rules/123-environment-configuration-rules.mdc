@@ -175,7 +175,7 @@ required: unset or empty means the route refuses everybody. Revoking it is remov
 
 Only `/api/directory/service/profiles/[id]` reads this list, through `requireDirectoryServiceRead`
 in `ctf/packages/web/lib/directory/service-read.ts`. That route answers for one claimed profile at
-a time with the fields One Percent's desk shows, and has no member path.
+a time, never one whose owner is restricted with scope `all` or `contact`, with the fields One Percent's desk shows, and has no member path.
 
 ### Stream and Formance staging keys
 The single `production` Infisical environment additionally holds the demo/staging

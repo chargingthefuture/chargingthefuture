@@ -61,6 +61,7 @@ policies:
       tenancy: same_workspace
       directoryReadScope: approved_consumers_only
       claimedProfilesOnly: required
+      contactRestrictedOwnersExcluded: required
     consentRequirements:
       scopes: []
       fallbackLawfulBasis: legitimate_interest_safety_support
@@ -74,6 +75,7 @@ policies:
     denyConditions:
       - unauthorized_consumer_binding
       - unclaimed_profile
+      - owner_restricted_from_contact
 
   - pluginId: directory
     command: directory.profile.get

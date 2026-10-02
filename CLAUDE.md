@@ -344,7 +344,9 @@ So One Percent reads them, under these limits:
 
 - **Claimed profiles only.** An unclaimed profile has no contact details, so nobody can be asked
   or introduced, and it stays out of One Percent. A profile that is unclaimed or deleted later
-  stops resolving.
+  stops resolving. So does one whose owner is restricted with scope `all` or `contact`: an
+  introduction is a connection, and those scopes already block one here. `trading` alone doesn't
+  hide a profile, and One Percent is never told that somebody is restricted.
 - **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
   the person. A takedown here takes effect there with nothing to clean up, and cutting the
   integration off is revoking the credential.

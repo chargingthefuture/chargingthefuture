@@ -68,6 +68,8 @@ describe('getClaimedProfileForService', () => {
     await getClaimedProfileForService('00000000-0000-4000-8000-000000000001');
     const sql = String(queryDb.mock.calls[0][0]);
     expect(sql).toMatch(/claimed_by_user_id IS NOT NULL/);
+    expect(sql).toMatch(/account_restrictions/);
+    expect(sql).toMatch(/restriction_scope IN \('all', 'contact'\)/);
     expect(sql).not.toMatch(/\bbio\b|venmo|monero|bitcoin|service_credits_address|claimed_by_user_id AS/);
   });
 

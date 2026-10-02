@@ -10,6 +10,10 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 //
 // - Claimed only. The query itself requires `claimed_by_user_id`, so an unclaimed profile is the
 //   same answer as a missing one, and a profile unclaimed or deleted later stops resolving.
+// - Not a member Skills Economy blocks from connecting. A claiming account restricted with scope
+//   'all' or 'contact' reads as not found, because an introduction is a connection and those two
+//   scopes already stop the member from starting one here. 'trading' alone covers credits and
+//   rides and does not hide the profile. The answer never says a member is restricted.
 // - One profile by id. There is no list and no search: the owner pastes the link of somebody
 //   they already know about, and the route answers for that one person.
 // - Only what the desk shows. Name, headline, job title, sector, skills by name, profile address
@@ -110,6 +114,12 @@ export async function getClaimedProfileForService(profileId: string): Promise<Cl
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE p.id::text = $1
         AND p.claimed_by_user_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM account_restrictions r
+          WHERE r.user_id = p.claimed_by_user_id
+            AND r.is_restricted
+            AND r.restriction_scope IN ('all', 'contact')
+        )
       LIMIT 1
     `,
     [id],

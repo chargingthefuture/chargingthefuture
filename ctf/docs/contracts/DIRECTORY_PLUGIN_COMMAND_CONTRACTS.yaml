@@ -123,7 +123,9 @@ contracts:
       DIRECTORY_SERVICE_TOKENS consumer. Returns name, headline, job title, sector, skill names,
       profile address and city/state/country, and nothing else: never the bio, payment addresses,
       the claiming account id, or who nominated or invited the person. An unclaimed or missing
-      profile is the same 404. No list and no search.
+      profile is the same 404, and so is one whose claiming account carries an account_restrictions
+      row with scope 'all' or 'contact'; the answer never says a member is restricted. No list and
+      no search.
     inputSchema:
       id:
         type: string
@@ -137,6 +139,7 @@ contracts:
       - skills_taxonomy_skills
       - skills_taxonomy_sectors
       - skills_taxonomy_job_titles
+      - account_restrictions
     purpose: one_percent_introduction
     retentionClass: derived_short_lived
     idempotency: true
