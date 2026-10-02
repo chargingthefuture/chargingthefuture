@@ -16,14 +16,19 @@ import {
 // from a phone with no keyboard in reach: the day's message is one copy control, and nothing has
 // to be selected by hand.
 //
-// Title and post copy together, in that order, because Quora's composer has no separate title
-// field — a post is one box. Two controls meant two pastes into one box and a member deciding
+// The day line, title and post copy together, in that order, because Quora's composer has no
+// separate title field — a post is one box. The day line leads so every post opens as a day of
+// the protest, with the Peace Battle 2 page as its first link. Two controls meant two pastes into one box and a member deciding
 // which order they went in, so the screen now hands over the text already in the order it is read.
 
 export type QuoraMotdDay = {
   date: string;
   /** Monday 22 September, for a reader who is not counting days from an epoch. */
   label: string;
+  /** Which day of Peace Battle 2 this is, the same count the protest page's clock shows. */
+  day: number;
+  /** The opening line of the post: the day of the protest and the page to come back to. */
+  dayLine: string;
   message: QuoraMotdMessage;
 };
 
@@ -87,7 +92,7 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
   const t = getPluginShellTokens(getAppAccent('fireside', theme), theme);
   const [showUpcoming, setShowUpcoming] = useState(false);
   // Exactly what the preview above shows, so what is pasted is what was read.
-  const pasteText = `${today.message.title}\n\n${today.message.body}`;
+  const pasteText = `${today.dayLine}\n\n${today.message.title}\n\n${today.message.body}`;
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -103,7 +108,8 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
           banned inside the minute they were opened.
         </p>
         <p style={{ fontSize: 12.5, color: t.MUTED, margin: '0 0 16px', lineHeight: 1.55 }}>
-          The ask rotates between the three Peace Battle 2 actions, and nothing repeats until all{' '}
+          The ask rotates between the three Peace Battle 2 steps — your 1%, the goal board, One
+          Percent — and nothing repeats until all{' '}
           {poolSize} have run.{' '}
           <a href={QUORA_MOTD_SPACE_URL} style={{ color: t.ACCENT }}>
             {QUORA_MOTD_SPACE_URL}
@@ -119,14 +125,14 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
           }}
         >
           <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 700, marginBottom: 2 }}>
-            {today.label}
+            {today.label} · Day {today.day} of Peace Battle 2
           </div>
           <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 12 }}>
             Ask: {QUORA_MOTD_ACTION_LABEL[today.message.action]}
           </div>
 
           <div style={{ fontSize: 11.5, color: t.MUTED, marginBottom: 5 }}>
-            The post, title first — one paste
+            The post, day line first — one paste
           </div>
           <pre
             style={{
@@ -143,6 +149,8 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
               border: `1px solid ${t.BORDER_SOLID}`,
             }}
           >
+            {today.dayLine}
+            {'\n\n'}
             <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>
               {today.message.title}
             </span>
@@ -188,7 +196,7 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
                 }}
               >
                 <div style={{ fontSize: 11.5, color: t.MUTED, marginBottom: 3 }}>
-                  {day.label} · {QUORA_MOTD_ACTION_LABEL[day.message.action]}
+                  {day.label} · Day {day.day} · {QUORA_MOTD_ACTION_LABEL[day.message.action]}
                 </div>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: t.TITLE, lineHeight: 1.4 }}>
                   {day.message.title}
