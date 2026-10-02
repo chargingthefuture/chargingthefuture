@@ -16,6 +16,11 @@ import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 //   rides and does not hide the profile. The answer never says a member is restricted.
 // - One profile by id. There is no list and no search: the owner pastes the link of somebody
 //   they already know about, and the route answers for that one person.
+// - Or one profile by the account that claimed it (owner decision, 2026-10-02). A One Percent
+//   client signs in there with their Skills Economy account, so One Percent already holds that
+//   account's id; this answers which claimed profile, if any, belongs to it. Still one person,
+//   asked for by an id the caller already has. Never a list, never a search, and never an
+//   answer that says whether an account exists.
 // - Only what the desk shows. Name, headline, job title, sector, skills by name, profile address
 //   and location. Never the bio, payment addresses, the account id or anything about who
 //   nominated or invited them.
@@ -84,11 +89,7 @@ type Row = {
 // cannot match a row, so it is answered as not found without reaching the database.
 const PROFILE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-export async function getClaimedProfileForService(profileId: string): Promise<ClaimedProfileForService | null> {
-  const id = typeof profileId === 'string' ? profileId.trim() : '';
-  if (!PROFILE_ID.test(id)) {
-    return null;
-  }
+async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: string): Promise<ClaimedProfileForService | null> {
   const result = await queryDb<Row>(
     `
       SELECT
@@ -112,7 +113,7 @@ export async function getClaimedProfileForService(profileId: string): Promise<Cl
       FROM directory_profiles p
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-      WHERE p.id::text = $1
+      WHERE ${column === 'id' ? 'p.id::text' : 'p.claimed_by_user_id'} = $1
         AND p.claimed_by_user_id IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM account_restrictions r
@@ -122,7 +123,7 @@ export async function getClaimedProfileForService(profileId: string): Promise<Cl
         )
       LIMIT 1
     `,
-    [id],
+    [value],
   );
   const row = result.rows[0];
   if (!row) {
@@ -141,4 +142,24 @@ export async function getClaimedProfileForService(profileId: string): Promise<Cl
     state: row.state,
     country: row.country,
   };
+}
+
+export async function getClaimedProfileForService(profileId: string): Promise<ClaimedProfileForService | null> {
+  const id = typeof profileId === 'string' ? profileId.trim() : '';
+  if (!PROFILE_ID.test(id)) {
+    return null;
+  }
+  return readClaimedProfile('id', id);
+}
+
+// Clerk account ids: "user_" and letters and digits. Anything else can't have claimed a profile,
+// so it's answered as not found without reaching the database.
+const ACCOUNT_ID = /^user_[A-Za-z0-9]{8,64}$/;
+
+export async function getClaimedProfileForAccountService(accountId: string): Promise<ClaimedProfileForService | null> {
+  const id = typeof accountId === 'string' ? accountId.trim() : '';
+  if (!ACCOUNT_ID.test(id)) {
+    return null;
+  }
+  return readClaimedProfile('claimed_by_user_id', id);
 }

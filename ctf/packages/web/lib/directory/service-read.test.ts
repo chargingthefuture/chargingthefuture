@@ -102,3 +102,42 @@ describe('getClaimedProfileForService', () => {
     });
   });
 });
+
+describe('getClaimedProfileForAccountService', () => {
+  beforeEach(() => queryDb.mockReset());
+
+  it('asks for the claimed profile that account owns, with the same restriction rule', async () => {
+    queryDb.mockResolvedValue({ rows: [] });
+    const { getClaimedProfileForAccountService } = await import('./service-read');
+    await getClaimedProfileForAccountService('user_inventedAccount0001');
+    const [sql, params] = queryDb.mock.calls[0];
+    expect(String(sql)).toMatch(/p\.claimed_by_user_id = \$1/);
+    expect(String(sql)).toMatch(/claimed_by_user_id IS NOT NULL/);
+    expect(String(sql)).toMatch(/restriction_scope IN \('all', 'contact'\)/);
+    expect(String(sql)).not.toMatch(/\bbio\b|claimed_by_user_id AS/);
+    expect(params).toEqual(['user_inventedAccount0001']);
+  });
+
+  it('never queries for something that could not be an account id', async () => {
+    const { getClaimedProfileForAccountService } = await import('./service-read');
+    expect(await getClaimedProfileForAccountService("user_x' OR '1'='1")).toBeNull();
+    expect(await getClaimedProfileForAccountService('00000000-0000-4000-8000-000000000001')).toBeNull();
+    expect(await getClaimedProfileForAccountService('')).toBeNull();
+    expect(queryDb).not.toHaveBeenCalled();
+  });
+
+  it('answers the same fields as the by-id read', async () => {
+    queryDb.mockResolvedValue({
+      rows: [{
+        id: 'demo-profile-2', first_name: 'Invented', last_name: 'Client', headline: null,
+        job_title_name: 'Electrician', sector_name: 'Trades', skills: [],
+        profile_url: null, city: null, state: null, country: null,
+      }],
+    });
+    const { getClaimedProfileForAccountService } = await import('./service-read');
+    const profile = await getClaimedProfileForAccountService('user_inventedAccount0002');
+    expect(profile?.id).toBe('demo-profile-2');
+    expect(profile?.jobTitle).toBe('Electrician');
+    expect(Object.keys(profile || {})).not.toContain('claimedByUserId');
+  });
+});
