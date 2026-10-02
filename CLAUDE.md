@@ -367,12 +367,21 @@ with the access policy entry `directory.profile.service.get`. The route answers 
 by id with name, headline, job title, sector, skill names, profile address and location. There's
 no list and no search: the owner pastes the link of somebody they already know about.
 
+One second read, for one case (owner decision, 2026-10-02): a One Percent client's own profile.
+Clients sign in to One Percent with their Skills Economy account, so One Percent already holds the
+account id, and `GET /api/directory/service/accounts/[accountId]/profile`
+(`directory.profile.service.by-account.get`) answers which claimed profile that account owns, so the
+owner doesn't look it up and paste it. The same credential, rate limit, fields and restriction rule.
+It answers for one account the caller already has, never a list or a search, and a 404 never says
+whether the account exists. The audit names the profile it found and never the account id.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
 plugin stays live and maintained. A new capability is the owner's call and is asked about first,
 never built and offered afterwards. The One Percent read of claimed Directory profiles, in the
-section above, was decided before the freeze and is not caught by it.
+section above, was decided before the freeze and is not caught by it. The by-account read beside it was asked
+for by the owner after the freeze, on the same day, and changes nothing a member sees.
 
 The reason is the message rather than the code. Twenty-five member-facing plugins is too much for
 a newcomer to take in, and a plugin built as a two-sided marketplace looks empty while only one

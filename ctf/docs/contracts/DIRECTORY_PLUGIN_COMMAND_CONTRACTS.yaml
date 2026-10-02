@@ -145,6 +145,35 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.profile.service.by-account.get
+    version: 1.0.0
+    description: >-
+      The claimed directory profile that belongs to one Skills Economy account, for One Percent's
+      operator desk (owner decision, 2026-10-02). GET /api/directory/service/accounts/[accountId]/profile.
+      One Percent's clients sign in there with their Skills Economy account, so it already holds the
+      Clerk account id. Same consumer credential, rate limit and fields as
+      directory.profile.service.get. 404 when the account has no claimed profile, is restricted with
+      scope 'all' or 'contact', or doesn't exist; the answer never says which. The audit names the
+      profile when found and never the account id. No list and no search.
+    inputSchema:
+      accountId:
+        type: string
+        required: true
+    outputSchema:
+      profile:
+        type: object
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - account_restrictions
+    purpose: one_percent_introduction
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
     command: directory.profile.get
     version: 1.0.0
     description: >-
