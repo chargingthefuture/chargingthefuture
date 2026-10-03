@@ -29,33 +29,41 @@ type FoundationThreadResponse = {
   streamToken?: string;
 };
 
-// Member-facing text for each Foundation API failure `code`. The most common case is requesting a
-// quote from your own profile, which the server denies as a policy.
+// Member-facing text for the Foundation API failure `code`s whose own server message is written for
+// a log rather than a person. The most common case is requesting a quote from your own profile, which
+// the server denies as a policy. An unexpected failure (`FOUNDATION_PERSISTENCE_UNAVAILABLE`,
+// `FOUNDATION_STREAM_UNAVAILABLE`) is deliberately NOT in this map: the route already answers it with
+// a plain sentence that says which step failed, plus a reference that also appears in the error
+// report. Replacing that with one fixed "temporarily unavailable" line hid both, and a screenshot of
+// the banner could not be matched to anything (rule 137).
 const FOUNDATION_ERROR_MESSAGES: Record<string, string> = {
   FOUNDATION_POLICY_DENIED: "You can't request a quote from your own profile.",
   FOUNDATION_PROVIDER_NOT_FOUND: "This provider's profile could not be found.",
   FOUNDATION_RATE_LIMIT_EXCEEDED: "You're sending requests too quickly — wait a moment and try again.",
-  FOUNDATION_STREAM_UNAVAILABLE: "Connections are temporarily unavailable. Please try again shortly.",
-  FOUNDATION_PERSISTENCE_UNAVAILABLE: "Connections are temporarily unavailable. Please try again shortly.",
   FOUNDATION_CSRF_DENIED: "Your session needs a refresh — reload the page and try again.",
 };
 
-// Read a failed response's JSON `code`/`message`, tolerating a non-JSON body.
-async function readFoundationErrorBody(res: Response): Promise<{ code: string; message: string }> {
+type FoundationErrorBody = { code: string; message: string; reference: string };
+
+// Read a failed response's JSON `code`/`message`/`reference`, tolerating a non-JSON body.
+async function readFoundationErrorBody(res: Response): Promise<FoundationErrorBody> {
   try {
-    const body = (await res.json()) as { code?: string; message?: string };
-    return { code: body.code ?? "", message: body.message ?? "" };
+    const body = (await res.json()) as { code?: string; message?: string; reference?: string };
+    return { code: body.code ?? "", message: body.message ?? "", reference: body.reference ?? "" };
   } catch {
     /* non-JSON body — fall back below */
-    return { code: "", message: "" };
+    return { code: "", message: "", reference: "" };
   }
 }
 
-// Turn a failed Foundation API response into a clear member-facing message by reading the route's
-// JSON `code`, instead of always showing a generic "could not open a connection".
+// Turn a failed Foundation API response into a clear member-facing message: the fixed copy for a
+// known `code`, otherwise what the route itself said, and only then the screen's own fallback. When
+// the route sent a reference it is appended as `[ref …]`, so a screenshot of the banner can be
+// matched to the error report that holds the real reason.
 async function foundationErrorMessage(res: Response, fallback: string): Promise<string> {
-  const { code, message } = await readFoundationErrorBody(res);
-  return FOUNDATION_ERROR_MESSAGES[code] || message || fallback;
+  const { code, message, reference } = await readFoundationErrorBody(res);
+  const text = FOUNDATION_ERROR_MESSAGES[code] || message || fallback;
+  return reference ? `${text} [ref ${reference}]` : text;
 }
 
 function toErrorMessage(e: unknown, fallback: string): string {
