@@ -184,6 +184,18 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-10-03: **Request Quote failed at the connection step for every provider (bug fix, owner
+  report).** With the reference added earlier the same day, the banner read "Could not open a
+  connection with this provider right now." The provider lookup in `createConnectionThread`
+  (`getProviderForConnection` in `lib/foundation/repository.ts`) asked for the profile with
+  `WHERE id = $1::uuid`. `directory_profiles.id` is varchar in the carried-over v2 database even
+  though `schema.sql` declares it UUID, and Postgres has no `varchar = uuid` operator, so the query
+  threw before reading a row and the route answered with its generic 503. It passes on a
+  `schema.sql`-shaped database, which is why local checks and CI never saw it; the Directory
+  inventory records the same fault twice before (2026-06-19, 2026-09-12). Fixed by comparing
+  `id::text = $1`, matching every Directory query and `getProviderById` in this file. An id that is
+  not a uuid now answers 404 "Provider not found." instead of the 503. No route, schema or contract
+  change.
 - 2026-10-03: **Request Quote now says which step failed and gives a reference to quote; the quote
   table declares the column every quote writes (bug fix, owner report).** A member pressing Request
   Quote on a provider profile got "Connections are temporarily unavailable. Please try again
