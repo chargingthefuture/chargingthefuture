@@ -8,6 +8,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -58,7 +59,17 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 });
 
 if (!response.ok) {
-  console.error('Anthropic API error:', response.status, await response.text());
+  const error = await anthropicApiError(response);
+  if (
+    !reportIfRunBlocked({
+      script: 'generate-update',
+      error,
+      manualRoute: '/product-update',
+      nothingLost: 'No tag was moved, so the next run after this clears covers the same commits.',
+    })
+  ) {
+    console.error(error.message);
+  }
   process.exit(1);
 }
 
