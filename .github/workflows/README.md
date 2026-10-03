@@ -68,7 +68,7 @@ the same job by hand, writes the step summary, and sets the exit code. An unreco
 sweep, community stats, product update, user guide, manual test script) all use it.
 
 Each of those jobs also has a hand route for the months the account is unfunded — a slash command
-in `.claude/commands/` (`/triage-bug`, `/build-bug`, `/review-slice`, `/community-stats`,
+in `.claude/commands/` (`/triage-bug`, `/build-bug`, `/rs`, `/community-stats`,
 `/product-update`, `/user-guide`, `/test-script`; the table in `CLAUDE.md` maps each to its
 workflow). Two of them need a workflow because the chat session has no database or app secrets:
 `generate-community-stats-manual.yml` files the numbers, and `generate-product-update.yml` takes

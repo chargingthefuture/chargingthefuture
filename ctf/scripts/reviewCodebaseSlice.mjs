@@ -963,7 +963,7 @@ main().catch((error) => {
     reportIfRunBlocked({
       script: 'reviewCodebaseSlice',
       error,
-      manualRoute: '/review-slice',
+      manualRoute: '/rs',
       nothingLost: 'The ledger was not advanced, so the next run after this clears reviews the same slice.',
     })
   ) {
