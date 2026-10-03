@@ -119,6 +119,24 @@ Result: web ☐
 
 ---
 
+### PP-2a — Message box grows with a long message (added 2026-10-03)
+
+**Role:** member · **Surfaces:** web (phone width, and iOS Safari if available)
+
+**Precondition:** Signed in as a cohort member with the composer showing (as in PP-2).
+
+**Steps:**
+1. Tap the message box. On iOS Safari, check whether the page zooms in.
+2. Type a sentence long enough to pass the right edge of the box.
+3. Keep typing, adding line breaks with Shift+Enter, until the text is about ten lines long.
+4. Press Send.
+
+**Expected:** The page does not zoom on focus. The text wraps onto new lines instead of scrolling sideways. The box grows one line at a time up to six lines, then stops growing and scrolls inside itself. The send button stays at the bottom right of the box as it grows. After sending, the box clears and shrinks back to one line.
+
+Result: web ☐
+
+---
+
 ### PP-2b — A cohort message notifies the other members
 
 **Role:** member · **Surfaces:** web
