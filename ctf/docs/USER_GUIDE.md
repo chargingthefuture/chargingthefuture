@@ -532,7 +532,7 @@ A place on the reader is something you get by finishing Unlock or by contributin
 1. Sign in and open Reader from the apps list; the tile carries a newspaper mark. It needs an approved account — before that, the tile opens the Unlock nudge instead.
 2. Read the three cards: what a new account starts with, what the reader cannot do, and what a place on it costs.
 3. Press 'Open the reader'. It opens rss.chargingthefuture.com in a new tab, and you sign in there with this same account.
-4. Add anything else you read there. The blog and the demo-video channel are already in a new account.
+4. Add anything else you read there. The blog, the demo-video channel and the recorded broadcasts are already in a new account.
 
 ## Reporting a problem
 
