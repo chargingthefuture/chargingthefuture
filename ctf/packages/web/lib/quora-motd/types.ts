@@ -40,17 +40,19 @@ export const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
 
 /**
  * Workforce needs an approved account, and most people reading a post on Quora do not have one.
- * One Percent's site carries a shorter version of the same calculator with no sign-in, so the
- * first step is open to them too.
+ * One Percent's site carries a shorter version of the same calculator with no sign-in, so seeing
+ * your 1% is open to them too.
  */
 export const ONE_PERCENT_NO_SIGN_IN_LINE = `No account yet? A shorter version of the calculator runs with no sign-in at ${ONE_PERCENT_PAID_TIER_URL}`;
 
 /**
- * The three Enact steps on the Peace Battle 2 page, in the order the page lists them. Every
- * message asks for exactly one of them, and the day's step rotates, so a reader who comes back
+ * The three asks on the Peace Battle 2 page, in the order the page raises them: your 1%, which
+ * the page's Envision section introduces, then the two Enact steps, the goal board and One Percent.
+ * Every message asks for exactly one of them, and the day's ask rotates, so a reader who comes back
  * three days running is asked for three different things rather than the same thing three times.
  * Fireside and TI Radio were steps until 2026-10-02 and left the page that day, so they left here
- * too: the messages follow the page.
+ * too; "See your 1%" left Enact for Envision on 2026-10-03 and stays an ask here. The messages
+ * follow the page, and no message calls your 1% a step or counts the steps as three.
  */
 export const QUORA_MOTD_ACTIONS = ['one-percent', 'goal-board', 'one-percent-call'] as const;
 

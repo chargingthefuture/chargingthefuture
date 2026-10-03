@@ -1,12 +1,12 @@
 import { motdArticleUrl, ONE_PERCENT_PAID_TIER_URL, type QuoraMotdMessage } from './types';
 
-// Messages whose ask is the third Peace Battle 2 step: take your 1% further with One Percent, the
+// Messages whose ask is the second Enact step of Peace Battle 2: take your 1% further with One Percent, the
 // paid tier. A call of up to half an hour, in the browser, with the owner, about the figure a trade
 // produces and the first customer behind it. It costs $7 and needs no account.
 //
-// Every one of these says that the first two steps are complete without it and stay free. That
-// line is not optional: a paid step that reads as the real one turns the free steps into a
-// preview, and they are not.
+// Every one of these says that your 1% and the goal board are complete without it and stay free.
+// That line is not optional: a paid step that reads as the real one turns the free part into a
+// preview, and it is not.
 //
 // The Darn Tough figures are the ones Start with socks cites (a review published 15 December 2025),
 // and the $142,500 average is Singapore's published output per worker. Nothing here projects this
@@ -28,11 +28,11 @@ export const QUORA_MOTD_ONE_PERCENT_CALL: QuoraMotdMessage[] = [
   {
     id: 'call-free-steps-first',
     action: 'one-percent-call',
-    title: 'The first two steps are free, and they are complete without the third',
+    title: 'Your 1% and the goal board are free, and they are complete without One Percent',
     body: [
-      'Peace Battle 2 has three steps. See your 1% in Workforce. Start on it on the goal board. Both are free and self-service, and they stay that way.',
-      'The third is for somebody who wants to take it further: half an hour with me, in the browser, about your trade and its first customer, for $7, with no account.',
-      'Nobody needs the third to have taken part.',
+      'Peace Battle 2 starts with your 1%: see it in Workforce, then start on it on the goal board. Both are free and self-service, and they stay that way.',
+      'One Percent is for somebody who wants to take it further: half an hour with me, in the browser, about your trade and its first customer, for $7, with no account.',
+      'Nobody needs One Percent to have taken part.',
       'One Percent: ' + ONE_PERCENT_PAID_TIER_URL,
       'Full post: ' + motdArticleUrl('whats-your-one-percent'),
     ].join('\n\n'),
@@ -68,7 +68,7 @@ export const QUORA_MOTD_ONE_PERCENT_CALL: QuoraMotdMessage[] = [
     body: [
       'The average contributor in What\'s Your 1% brings in $142,500 a year. At $20 a pair, that is 7,125 pairs of socks.',
       'In a population of five million, that is about one person in 700 buying one pair, once, in a year.',
-      'Socks are one example. Your trade has its own version of that sum. One Percent is half an hour with me working it through, for $7, no account. The free steps are complete without it.',
+      'Socks are one example. Your trade has its own version of that sum. One Percent is half an hour with me working it through, for $7, no account. Your 1% and the goal board are complete without it, and they stay free.',
       'One Percent: ' + ONE_PERCENT_PAID_TIER_URL,
       'Full post: ' + motdArticleUrl('start-with-socks'),
     ].join('\n\n'),
@@ -92,7 +92,7 @@ export const QUORA_MOTD_ONE_PERCENT_CALL: QuoraMotdMessage[] = [
     body: [
       'Darn Tough\'s turn came when its work moved overseas. For us that question is already settled. Targeted Individuals have been pushed out of the global economy, so there is no cheaper country to move the work to.',
       'What gets made here is made by people here, for people here.',
-      'If you want half an hour on what you could make and who buys it first, One Percent is $7 with no account. The free steps are complete without it.',
+      'If you want half an hour on what you could make and who buys it first, One Percent is $7 with no account. Your 1% and the goal board are complete without it, and they stay free.',
       'One Percent: ' + ONE_PERCENT_PAID_TIER_URL,
       'Full post: ' + motdArticleUrl('start-with-socks'),
     ].join('\n\n'),
@@ -116,7 +116,7 @@ export const QUORA_MOTD_ONE_PERCENT_CALL: QuoraMotdMessage[] = [
     body: [
       'One Percent does not ask you to sign up for anything. It is a call of up to half an hour, it runs in your browser, and it costs $7.',
       'It is about one thing: the figure your trade produces and the first customer behind it.',
-      'The two free steps of Peace Battle 2, seeing your 1% and starting on the goal board, are complete without it.',
+      'Seeing your 1% and starting on the goal board are complete without it, and they stay free.',
       'One Percent: ' + ONE_PERCENT_PAID_TIER_URL,
       'Full post: ' + motdArticleUrl('start-with-socks'),
     ].join('\n\n'),
