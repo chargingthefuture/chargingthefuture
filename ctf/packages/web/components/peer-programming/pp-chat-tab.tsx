@@ -32,6 +32,11 @@ function MessageRow({ msg }: { msg: Message }) {
   );
 }
 
+// Composer box sizing: one line to start, grows to six, then scrolls inside itself.
+const COMPOSER_LINE_HEIGHT_PX = 20;
+const COMPOSER_MAX_LINES = 6;
+const COMPOSER_PADDING_Y_PX = 6;
+
 // The message composer (input + send). Shown only to cohort members while the cohort is live.
 function ChatComposer({
   messageInput,
@@ -47,18 +52,35 @@ function ChatComposer({
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
   const canSend = messageInput.trim().length > 0 && !submitting;
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Grow the box with the text, up to COMPOSER_MAX_LINES lines, then scroll inside it. Re-measured on
+  // every change so it also shrinks back to one line after a send clears it.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = COMPOSER_LINE_HEIGHT_PX * COMPOSER_MAX_LINES + COMPOSER_PADDING_Y_PX * 2;
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [messageInput]);
   return (
     <div style={{ padding: "8px 24px 20px", flexShrink: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 14 }}>
-        <input
+      {/* alignItems flex-end keeps the send button on the bottom edge as the box grows. */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 10, padding: "10px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 14 }}>
+        <textarea
+          ref={inputRef}
+          rows={1}
+          aria-label="Message your cohort"
           value={messageInput}
           onChange={(e) => onMessageInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
           placeholder="Message your cohort…"
           disabled={submitting}
-          style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }}
+          // 16px so iOS Safari does not zoom the page on focus; pre-wrap so long text wraps instead of
+          // scrolling sideways out of view.
+          style={{ flex: 1, minWidth: 0, minHeight: 32, padding: `${COMPOSER_PADDING_Y_PX}px 0`, boxSizing: "border-box", background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 16, lineHeight: `${COMPOSER_LINE_HEIGHT_PX}px`, fontFamily: "inherit", whiteSpace: "pre-wrap", overflowWrap: "anywhere", color: t.TEXT }}
         />
-        <button type="button" aria-label="Send" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, borderRadius: 8, background: canSend ? t.ACCENT : t.BORDER, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
+        <button type="button" aria-label="Send" onClick={onSend} disabled={!canSend} style={{ width: 32, height: 32, flexShrink: 0, borderRadius: 8, background: canSend ? t.ACCENT : t.BORDER, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: canSend ? "pointer" : "not-allowed" }}>
           <Send size={14} style={{ color: canSend ? "#fff" : t.FAINT }} />
         </button>
       </div>
