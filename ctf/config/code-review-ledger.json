@@ -126,8 +126,8 @@
     {
       "name": "concierge",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-03T20:06:36.000Z",
+      "lastRunIssues": 1,
       "cursor": 0,
       "partial": false
     },
