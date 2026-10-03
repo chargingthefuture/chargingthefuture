@@ -451,7 +451,7 @@ next run. The test is whether it has one.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-09-26. Four routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-09-26. Five routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
@@ -459,6 +459,7 @@ Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-0
 | `/pr` | [`.claude/commands/pr.md`](.claude/commands/pr.md) | Open pull requests are blocked, behind, conflicted, or failing checks. |
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
+| `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
 
 Seven more do by hand what a scheduled workflow does with the Anthropic API, for the months the
 account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
@@ -543,6 +544,18 @@ The owner sends a screenshot with a sentence highlighted and a short remark. It 
 The argument is not in question: a `/fix` is about how a sentence reads, never about whether the claim is right. Keep every fact, figure, name and link exactly as it was, fix the same wording wherever else it appears (the post, its excerpt and teaser, the paste sheet entry), regenerate rather than hand-edit the generated files, and do not move the date or publish a dated correction — nothing a reader acted on was wrong.
 
 What this replaces: the paragraph explaining what was wrong with the old sentence. The owner could see it was wrong, which is why they sent it. They read and type on a phone on limited usage, so that paragraph costs them the thing they are short of.
+
+### /fl — is anything still in flight?
+
+The owner asks this before archiving a chat, and it is only about **open tasks**: work that exists
+nowhere but in the session. An open pull request is not one — it is committed, pushed and carried
+by its branch, so archiving loses nothing and the state of the PR is reported rather than waited
+on.
+
+Check the four things that can strand work, in every attached repo: uncommitted changes, unpushed
+commits, a pushed branch with no PR, and a scheduled check-in still armed. Then look back over the
+session for anything asked and never started, which no command can detect. Finish what is found
+rather than reporting it, then answer in a few lines.
 
 ### /cr — verify every finding before acting on it
 
