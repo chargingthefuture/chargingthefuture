@@ -184,6 +184,17 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-10-03: **Direct Line message box stayed one line, so long messages scrolled out of view (bug
+  fix, owner report).** The shared chat panel (`components/shared/stream-chat-panel.tsx`) rendered
+  Stream's `MessageInput` without `grow`, and Stream pins the textarea to one row when `grow` is
+  off. The channel composer and the reply-thread composer now pass `grow` with `maxRows: 6`: the box
+  starts at one line, wraps, grows to six lines, then scrolls inside itself. `stream-chat-panel.css`
+  holds the text at 16px (iOS Safari zooms the page on focus below that), keeps wrapping on, and
+  pins the send and attachment buttons to the bottom edge as the box grows. The conversation search
+  field stays one line (a search is a short query) but its text went from 13px to 16px for the same
+  iOS zoom reason. The same panel serves the LightHouse, SocketRelay, TrustTransport and Beacon
+  chats, so they get the fix too. UI only; no route, schema or contract change.
+
 - 2026-10-03: **Request Quote failed at the connection step for every provider (bug fix, owner
   report).** With the reference added earlier the same day, the banner read "Could not open a
   connection with this provider right now." The provider lookup in `createConnectionThread`

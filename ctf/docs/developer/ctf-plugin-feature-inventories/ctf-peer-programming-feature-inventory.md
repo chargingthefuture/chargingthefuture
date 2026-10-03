@@ -378,6 +378,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-10-03: **Cohort Direct Line message box grows with the text (bug fix, owner report).** The
+  composer in `pp-chat-tab.tsx` was a one-line `<input>`, so longer messages scrolled sideways out
+  of view before sending. It is now a `<textarea>` that starts at one line, wraps, grows to six
+  lines, then scrolls inside itself, and shrinks back after a send. Text is 16px so iOS Safari does
+  not zoom on focus, and the send button stays on the bottom edge as the box grows. Enter still
+  sends and Shift+Enter adds a line break, as before. UI only; no route, schema or contract change.
+
 - 2026-10-02: **A member can hold several open goals, and the Goals tab switches between them.**
   Owner decision: separate needs (a job, a week's groceries, a place to live) belong in separate goals,
   each with small cards somebody can do with the little energy left in their day. The one-open-goal

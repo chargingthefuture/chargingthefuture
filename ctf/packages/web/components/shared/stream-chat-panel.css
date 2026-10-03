@@ -32,6 +32,21 @@
   background-color: var(--ctf-chat-own-bg, var(--str-chat__message-bubble-background-color));
 }
 
+/* Message composer (channel and thread). MessageInput is rendered with grow + maxRows=6 in
+ * stream-chat-panel.tsx, so the textarea wraps and grows to six lines and then scrolls inside itself.
+ * These rules keep the text wrapping on spaces and line breaks, hold the font at 16px so iOS Safari
+ * does not zoom the page when the box is focused, and pin the send button and attachment button to
+ * the bottom edge as the box grows (Stream centers them by default). */
+.ctf-stream-chat .str-chat__message-textarea {
+  font-size: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ctf-stream-chat .str-chat__message-input .str-chat__message-input-inner {
+  align-items: flex-end;
+}
+
 /* In-channel search bar (ChannelSearchBar in stream-chat-panel.tsx). It is a compact strip at the
  * top of the Window: when collapsed it is just a small "Search" button; when open it shows an input
  * plus a scrollable results list. The results list is height-capped so it never grows tall enough to
@@ -66,7 +81,7 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background-color: rgba(255, 255, 255, 0.06);
   color: #F3F4F6;
-  font-size: 13px;
+  font-size: 16px; /* 16px or more, or iOS Safari zooms the page on focus */
   line-height: 1.3;
 }
 

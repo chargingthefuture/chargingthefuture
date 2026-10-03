@@ -270,6 +270,26 @@ Result: web ☐
 
 ---
 
+### FDN-10b — Direct Line: message box grows with a long message (added 2026-10-03)
+
+**Role:** Member (survivor)
+**Surface:** Web (phone width, and iOS Safari if available)
+
+**Precondition:** A Direct Line chat is open (FDN-8 or FDN-10).
+
+**Steps:**
+1. Tap the message box. On iOS Safari, check whether the page zooms in.
+2. Type a sentence long enough to pass the right edge of the box.
+3. Keep typing, adding line breaks with Shift+Enter, until the text is about ten lines long.
+4. Open a reply thread on any message and repeat step 2 in the thread's message box.
+5. Send the message.
+
+**Expected:** The page does not zoom on focus. The text wraps instead of scrolling sideways. The box grows up to six lines, then scrolls inside itself. The send and attachment buttons stay at the bottom of the box as it grows. The thread's box behaves the same way. After sending, the box clears and returns to one line. The Search field at the top of the chat also does not zoom the page when tapped.
+
+Result: web ☐
+
+---
+
 ### FDN-11 — Direct Line: non-participant is denied a token
 
 **Role:** Member (a third member who is not part of the thread)
