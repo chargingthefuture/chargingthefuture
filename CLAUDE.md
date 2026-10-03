@@ -471,7 +471,7 @@ shape, so a later funded run picks up where the hand-done one left off.
 |---|---|---|
 | `/triage-bug` | [`.claude/commands/triage-bug.md`](.claude/commands/triage-bug.md) | `bug-reports-triage.yml` — root cause and fix plan on the oldest `needs-triage` issue. |
 | `/build-bug` | [`.claude/commands/build-bug.md`](.claude/commands/build-bug.md) | `bug-reports-build.yml` — the PR for an `approved-to-build` issue. |
-| `/review-slice` | [`.claude/commands/review-slice.md`](.claude/commands/review-slice.md) | `code-review-sweep.yml` — review one slice and file `code-review` issues (`/cr` then works them). |
+| `/rs` | [`.claude/commands/rs.md`](.claude/commands/rs.md) | `code-review-sweep.yml` — review one slice and file `code-review` issues (`/cr` then works them). |
 | `/community-stats` | [`.claude/commands/community-stats.md`](.claude/commands/community-stats.md) | `generate-community-stats.yml` — the post, from numbers filed by `generate-community-stats-manual.yml`. |
 | `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
 | `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
