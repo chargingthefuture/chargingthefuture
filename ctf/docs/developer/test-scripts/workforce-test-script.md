@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview · 2026-10-03 manual update: WF-12 — each route has a "Go to <name> ›" button |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview · 2026-10-03 manual update: WF-12 — each route has a "Go to <name> ›" button · 2026-10-03 manual update: WF-12 step 8a — the tab shares as one picture, and the picture carries the member's typed numbers rather than the field placeholders |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -262,6 +262,19 @@ with a second account that has no claimed listing.
    showing $125 per person per year and $6,250,000. Clear either field; the box disappears. Enter
    0 or a negative number in either; no box appears and nothing errors.
 8. Reload the page. The two numbers you typed are gone — they are not saved anywhere.
+8a. **One picture of the tab.** Type 250 and 0.5 into "Your own numbers" again, then press **Show
+   this page as one picture**. Read the note under the button first — it must say the picture
+   carries your name, your trade, your listed skills and the numbers you typed. The picture appears
+   on this screen rather than replacing it, and nothing navigates away. Check it against the tab
+   behind it: same card, same trade block, same ladder, same routes, same closing paragraph about
+   the figures being speculative, and the deep link
+   `https://app.chargingthefuture.com/apps/workforce?view=one-percent` underneath. **Read the two
+   "Your own numbers" fields in the picture: they must show 250 and 0.5 in normal text, not the
+   grayed-out example figures** — a picture showing numbers the member did not type is the failure
+   this step exists to catch. Now clear both fields and take a second picture: the fields read as
+   empty or as their faint examples, never as the numbers from the first picture. Press Share and
+   confirm the phone's share sheet opens with the image; press and hold the picture and confirm the
+   phone offers to save it. Neither the app header nor the button itself appears in either picture.
 9. Sign in as an account with no claimed Directory listing and open the same tab.
 10. Sign out entirely and try to reach the tab.
 **Expected:** The card is yours and only yours — no other member's name, initials or skills appear
