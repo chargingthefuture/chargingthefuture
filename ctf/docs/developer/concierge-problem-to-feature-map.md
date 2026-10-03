@@ -1,8 +1,8 @@
 # Concierge problem → best-feature map (approved)
 
 Purpose: replace the placeholder "every app solves every problem" mapping with a curated 1–3
-best-fit features per problem, so the home concierge and the landing page point a person at the one
-right place instead of a wall of apps.
+best-fit features per problem, so the landing page points a person at the one right place instead
+of a wall of apps.
 
 ## Framing: this is a reframe, not a report (owner-directed, 2026-06-17)
 
@@ -28,9 +28,10 @@ excluded here: self-soothing is not getting the external need met.)
 
 ## Consumers
 
-1. The home concierge intent table (`ctf/packages/web/lib/concierge/intents.ts`) — keyword coverage so
-   a typed problem routes to the same best feature.
-2. The landing page `LOOK_MA_ITEMS` solution arrays (`landing-page` repo, `src/App.tsx`). The "Apps"
+The home chat's keyword concierge (`lib/concierge/intents.ts`) used to read this map too. It had no
+caller and was removed on 2026-10-03 (#2627).
+
+1. The landing page `LOOK_MA_ITEMS` solution arrays (`landing-page` repo, `src/App.tsx`). The "Apps"
    column uses the exact landing-page feature tokens so they are drop-in for the `solutions: [...]`
    arrays. Order matches `LOOK_MA_ITEMS` so each row lines up 1:1; leave the `q` text unchanged.
 
