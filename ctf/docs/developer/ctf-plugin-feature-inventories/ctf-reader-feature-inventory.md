@@ -106,7 +106,8 @@ somebody reads is not evidence anybody should be publishing.
   became the third on 2026-09-29 (owner report). The card, the user guide step and the test
   script now name all three. The cards also sat almost touching: the page column is a direct
   child of the app viewport, whose fallback rule forces it to `display: block` and so drops its
-  14px gap. The column now carries `ctf-self-responsive`, so the gap applies again.
+  14px gap. The column now carries `ctf-self-responsive`, so the gap applies again. The gap between items is now 16px, and the
+  line under the button sits 8px below it, grouped with the button rather than spaced like a card.
 - 2026-09-23 — Created. The reader went live at rss.chargingthefuture.com earlier the same day;
   this adds the tile and the page that explains it, so the apps list carries it rather than members
   finding the address in a blog post. The page exists at all because the apps list has no way to
