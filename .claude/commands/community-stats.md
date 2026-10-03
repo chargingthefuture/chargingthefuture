@@ -18,8 +18,8 @@ the issue number directly.
 
 Read the "Source numbers" section of the issue. Read `ctf/docs/BRAND_VOICE_LEXICON.md` and
 `.claude/rules/124-brand-voice-and-language-rules.mdc` first. Then write, in the same shape the
-model is asked for in `ctf/scripts/generate-community-stats.mjs` (read its system and user prompt
-and follow them as your instructions):
+model is asked for in `ctf/scripts/generate-community-stats.mjs` (read the instructions it gives
+the model and follow them as your own):
 
 - `title`: a short, plain title for the week's snapshot.
 - `quoraDraft`: a short community snapshot in a plain, personal tone. Single operator: never "we",

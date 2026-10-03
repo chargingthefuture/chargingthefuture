@@ -21,7 +21,7 @@ than the section's `updated` date (`git log -1 --format=%cs -- <file>`).
 
 ## 2. Write each section
 
-Read the script's system prompt (`GROUNDING`, `VOICE`) and user prompt; they are your instructions.
+Read the instructions the script gives the model (`GROUNDING`, `VOICE` and the request text); they are yours.
 Ground each section in exactly three blocks and nothing else: the inventory's "Intent and Outcome"
 statement (framing only, never copied), its "User Features" section, and the test script's "Core
 smoke" steps. Produce `summary` (one plain sentence), `body` (1 to 3 short paragraphs) and `howTo`

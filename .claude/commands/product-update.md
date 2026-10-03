@@ -23,8 +23,8 @@ stop, unless `$ARGUMENTS` says `force`.
 
 ## 2. Write the update
 
-Read `ctf/docs/BRAND_VOICE_LEXICON.md` and the system and user prompt in
-`ctf/scripts/generate-update.mjs`; they are your instructions. Write a JSON object with exactly the
+Read `ctf/docs/BRAND_VOICE_LEXICON.md` and the instructions `ctf/scripts/generate-update.mjs`
+gives the model; they are your instructions. Write a JSON object with exactly the
 keys that prompt lists: `feedTitle`, `feedBody`, `wikiPageName`
 (`Product-Update-<YYYY-MM-DD>-Short-Title`, hyphens only), `wikiContent` (with `## What Shipped`
 and `## Why It Matters`), `wikiSiteExcerpt` (one sentence, under 150 characters) and `quoraDraft`.
