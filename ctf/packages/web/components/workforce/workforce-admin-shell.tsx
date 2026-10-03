@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { SharePicture } from '@/components/shared/share-picture';
+import { captureScreen } from 'lib/share/capture-screen';
+import { WorkforceHeroStats } from './workforce-hero-stats';
+import { WorkforceCommunityPlanning } from './workforce-community-planning';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
@@ -22,6 +26,8 @@ const fieldStyle = (t: WorkforceTokens) =>
     outline: 'none',
     boxSizing: 'border-box',
   }) as const;
+
+const WORKFORCE_DEEP_LINK = 'https://app.chargingthefuture.com/apps/workforce';
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
   const { theme } = useTheme();
@@ -201,6 +207,69 @@ function AuditTrailPanel() {
   );
 }
 
+// The two Workforce views worth posting somewhere, each with its own picture.
+//
+// They live here rather than on the member screens because of the placement rule (owner directive,
+// 2026-10-03): a picture control only goes on a member page if members get it too. An admin-only
+// one belongs on the admin page, not hidden inside the member UI behind an admin check — which is
+// what the first cut of the Community Planning control did, and is the thing this corrects.
+//
+// The Overview block is the four headline tiles and the Skills Economy Summary, which is the exact
+// portion the owner posts (owner report, 2026-10-03). It is the same `WorkforceHeroStats` the
+// member Overview renders, from the same dashboard, so the picture is that screen rather than a
+// second drawing of it.
+function ShareableViews({ dashboard, t }: { dashboard: WorkforceDashboard; t: ReturnType<typeof getWorkforceTokens> }) {
+  const overviewRef = useRef<HTMLDivElement | null>(null);
+
+  const captureOverview = useCallback(async () => {
+    const node = overviewRef.current;
+    if (!node) throw new Error('The page is not ready to be pictured yet.');
+    return await captureScreen(node, {
+      background: t.BG,
+      footer: {
+        line: WORKFORCE_DEEP_LINK,
+        note: 'Skills Economy (SE) — figures as they stood when this picture was taken.',
+        accent: t.ACCENT,
+        muted: t.MUTED,
+      },
+    });
+  }, [t.BG, t.ACCENT, t.MUTED]);
+
+  return (
+    <>
+      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Pictures to post</div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 14 }}>
+        The member-facing views, as they stand, with a control for taking each one as a single
+        picture. Members see these screens; the pictures are made from here.
+      </div>
+
+      <div ref={overviewRef} style={{ background: t.BG }}>
+        <WorkforceHeroStats dashboard={dashboard} />
+      </div>
+      <div style={{ marginBottom: 24 }}>
+        <SharePicture
+          capture={captureOverview}
+          filename={`skills-economy-workforce-overview-${new Date().toISOString().slice(0, 10)}.png`}
+          label="Show the Overview as one picture"
+          busyLabel="Taking the picture…"
+          accent={t.ACCENT}
+          surface={t.SURFACE}
+          border={t.BORDER_SOLID}
+          muted={t.MUTED}
+          area="workforce"
+          op="share_overview_picture"
+        >
+          Takes a picture of the four headline figures and the Skills Economy Summary above, with
+          the link to Workforce underneath. It is the member Overview itself, so a reader who opens
+          the app finds what they were shown.
+        </SharePicture>
+      </div>
+
+      <WorkforceCommunityPlanning showPicture />
+    </>
+  );
+}
+
 export function WorkforceAdminShell({
   dashboard,
   config: initialConfig,
@@ -290,6 +359,11 @@ export function WorkforceAdminShell({
           <button type="button" disabled={busy} onClick={() => void save()} style={{ padding: '11px 18px', borderRadius: 10, background: busy ? `${t.ACCENT}66` : t.ACCENT, border: 'none', color: '#3a1d05', fontSize: 14, fontWeight: 800, cursor: busy ? 'not-allowed' : 'pointer' }}>
             {busy ? 'Saving…' : 'Save config'}
           </button>
+        </div>
+
+        {/* The member-facing views and their picture controls. */}
+        <div style={{ padding: '16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 16 }}>
+          <ShareableViews dashboard={dashboard} t={t} />
         </div>
 
         <AuditTrailPanel />
