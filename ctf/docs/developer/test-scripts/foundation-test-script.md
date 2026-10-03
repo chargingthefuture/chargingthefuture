@@ -12,6 +12,7 @@
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
 | **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason · 2026-09-23 manual update: FDN-40 checks that marking the work done settles a quote and that the value reaches the community index, after nothing in the app was found to send the closing transition |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
+| **Manual update** | 2026-10-03: FDN-8 no longer expects the fixed "temporarily unavailable" line; FDN-41 checks that a failed Request Quote names the step that failed and ends with a reference, after the owner reported the button failing with a banner that said neither |
 
 ---
 
@@ -226,7 +227,7 @@ Result: web ☐
 4. Observe where the app takes you after submission.
 5. Send a message in the Direct Line that opens.
 
-**Expected:** After clicking Request Quote, a connection thread is created (POST `/api/foundation/connections/threads`) and then a quote is created (POST `/api/foundation/quotes`). The member is taken directly into the Direct Line chat for that thread, not silently bounced to the Quotes tab. The chat is Stream-backed. Sending a message succeeds. No "Connections are temporarily unavailable" error appears.
+**Expected:** After clicking Request Quote, a connection thread is created (POST `/api/foundation/connections/threads`) and then a quote is created (POST `/api/foundation/quotes`). The member is taken directly into the Direct Line chat for that thread, not silently bounced to the Quotes tab. The chat is Stream-backed. Sending a message succeeds. No error banner appears under the button. (If one does, it must read as FDN-41 describes: the route's own sentence naming the step, ending in `[ref …]`; the old fixed line "Connections are temporarily unavailable. Please try again shortly." must not appear.)
 
 Result: web ☐
 
@@ -922,5 +923,36 @@ this against production.
 - The audit failure is visible in the server log as a reported error, not silent.
 - Before this change the first attempt created the thread and then answered 503, and every retry
   answered 503 the same way, so the member could never get through. That must not happen.
+
+Result: web ☐
+
+### FDN-41 — A failed Request Quote names the step that failed and gives a reference to quote (added 2026-10-03)
+
+**Role:** Member (survivor)
+**Surface:** Web
+
+**Precondition:** Signed in as a member who is not the provider, on a provider's profile. You need a
+way to make one of the two Request Quote steps fail for a reason the route does not recognize — the
+simplest is to point the app at a scratch database and temporarily rename the
+`foundation_quote_requests` table (fails the second step) or the `foundation_connection_threads`
+table (fails the first). Do not do this against production.
+
+**Steps:**
+1. Click "Request Quote."
+2. Read the red text under the button, in full.
+3. Look in the server log (or Sentry) for a Foundation error report from the same moment.
+4. Restore the table, then repeat with the other table renamed.
+
+**Expected:**
+- With the quote table renamed, the text reads "Could not send your quote request right now." With
+  the thread table renamed, it reads "Could not open a connection with this provider right now." The
+  two are different, so the reader knows which step failed.
+- Either way it ends with a reference in square brackets, like `[ref 1a2b3c4d]`, with no table name,
+  SQL or stack text in it.
+- That same reference appears in the server's error report, alongside the real reason.
+- The old fixed line — "Connections are temporarily unavailable. Please try again shortly." — never
+  appears, and neither does "Quote create unavailable." on its own.
+- A self-request, a missing provider, a rate limit or a CSRF denial still shows its own plain
+  sentence (FDN-5, FDN-9), unchanged.
 
 Result: web ☐

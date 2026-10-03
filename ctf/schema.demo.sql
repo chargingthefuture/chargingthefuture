@@ -4443,6 +4443,33 @@ ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT
 ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
 CREATE INDEX IF NOT EXISTS idx_socket_relay_request_accepted_currencies_request ON socket_relay_request_accepted_currencies(request_id);
 
+-- One picture per SocketRelay request, so a listing can show the thing being offered or asked for.
+-- The bytes live here, like feed_community_post_images, because this project has no image store.
+-- Deleted with the request. rules_acknowledged_at records that the uploader ticked the warning that
+-- an inappropriate picture is an automatic ban, with no exceptions; the upload route refuses without it.
+CREATE TABLE IF NOT EXISTS socket_relay_request_images (
+  request_id UUID PRIMARY KEY REFERENCES socket_relay_requests(id) ON DELETE CASCADE,
+  uploaded_by_user_id TEXT NOT NULL,
+  content_type TEXT NOT NULL CHECK (content_type IN ('image/png', 'image/jpeg', 'image/webp')),
+  bytes BYTEA NOT NULL,
+  byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+  width INTEGER NOT NULL CHECK (width > 0),
+  height INTEGER NOT NULL CHECK (height > 0),
+  alt_text TEXT NOT NULL,
+  rules_acknowledged_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS uploaded_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'image/webp';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS bytes BYTEA NOT NULL DEFAULT ''::bytea;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS byte_size INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS width INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS height INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS alt_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS rules_acknowledged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_socket_relay_request_images_uploader ON socket_relay_request_images(uploaded_by_user_id);
+
 CREATE TABLE IF NOT EXISTS socket_relay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
@@ -5484,6 +5511,11 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- request_details is written by every quote create (createQuoteRequest, always a JSON object, '{}'
+-- when the member supplied none) but was never declared here, so a database built from this file
+-- alone refused the second step of Request Quote with "column request_details does not exist". A
+-- no-op where the column already exists.
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS request_details JSONB NOT NULL DEFAULT '{}'::jsonb;
 -- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
 -- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
 -- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
