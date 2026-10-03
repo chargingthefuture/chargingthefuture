@@ -601,13 +601,18 @@ type FoundationProviderLookupRow = {
   display_name: string;
 };
 
+// Compare the id as text, like every Directory query. `directory_profiles.id` is varchar in the
+// carried-over v2 database even though schema.sql declares it UUID, and Postgres has no
+// `varchar = uuid` operator, so `id = $1::uuid` threw before reading a row and every Request Quote
+// failed with the generic connection error. It passes on a schema.sql-shaped database, which is why
+// local checks and CI never saw it.
 async function getProviderForConnection(client: PoolClient, providerProfileId: string): Promise<FoundationProviderLookupRow> {
   const provider = await client.query<FoundationProviderLookupRow>(
     `
       SELECT id::text, claimed_by_user_id,
              TRIM(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) AS display_name
       FROM directory_profiles
-      WHERE id = $1::uuid
+      WHERE id::text = $1
         AND claimed_by_user_id IS NOT NULL
     `,
     [providerProfileId],
