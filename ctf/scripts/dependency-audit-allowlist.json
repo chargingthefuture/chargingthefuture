@@ -1,17 +1,35 @@
 {
   "_comment": "BURN-DOWN list for check-dependency-audit.mjs: advisories open in the locked production tree that this repo cannot currently close. An entry is allowed only when there is no published fix to move to, or when a parent pins the vulnerable version and cannot be overridden. Every entry MUST carry a note saying which parent brings the package in, what release it waits on, and the date that was last checked — without it the next reader has to re-derive the entire tree. Reaching a package through a transitive path is not on its own a reason to list it: where a fixed version is published, pin it with pnpm.overrides in ctf/package.json as \"package@exact-installed-version\": \"fixed\", so the entry stops matching once the parent moves on. The list may only ever shrink: the gate fails on a new advisory not listed here AND on a listed advisory that no longer applies. Never add an entry to silence the gate; update the dependency instead.",
   "advisories": {
-    "1138808": {
-      "module": "image-size",
-      "severity": "high",
-      "title": "image-size: ICNS parser allows denial of service through an infinite loop",
-      "note": "No patched version is published — the advisory reports the fixed range as none, and 2.0.2 (the latest release) is still inside the vulnerable range <=2.0.2. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path several levels down that this repo does not choose a version for; an override has nothing fixed to point at. Remove as soon as image-size ships a fix. Checked 2026-09-14."
-    },
-    "1138809": {
+    "1239765": {
       "module": "image-size",
       "severity": "high",
       "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
-      "note": "No patched version is published — the advisory reports the fixed range as none, and 2.0.2 (the latest release) is still inside the vulnerable range <=2.0.2. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path several levels down that this repo does not choose a version for; an override has nothing fixed to point at. Remove as soon as image-size ships a fix. Checked 2026-09-14."
+      "note": "The fix is published only in 2.0.3 and later, and 2.x is not a drop-in replacement: its main export accepts only image bytes, while Metro Assets.js passes a file path for every image asset, so an override would break the mobile bundle. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path this repo does not choose a version for. Newer Metro (0.87) no longer depends on image-size; remove once Expo moves to it. Checked 2026-10-03."
+    },
+    "1239766": {
+      "module": "image-size",
+      "severity": "high",
+      "title": "image-size: ICNS parser allows denial of service through an infinite loop",
+      "note": "Same as 1239765: the fix is only in 2.x, whose main export no longer accepts the file path Metro passes. Installed at 1.2.1 through Metro inside Expo (metro 0.83.5 / 0.83.7 / 0.84.4 under packages/mobile), a build-time path this repo does not choose a version for. Remove once Expo moves to a Metro release without image-size. Checked 2026-10-03."
+    },
+    "1240912": {
+      "module": "node-forge",
+      "severity": "high",
+      "title": "node-forge RSA PKCS#1 v1.5 signature verification accepts extra nested DigestAlgorithm elements",
+      "note": "No patched version is published: the advisory covers <=1.4.0 and 1.4.0 is the latest release. Installed at 1.4.0 through @expo/code-signing-certificates under @expo/cli in packages/mobile, a build-time tool. Remove as soon as node-forge ships a fix (then pin it with an override if Expo has not moved). Checked 2026-10-03."
+    },
+    "1240991": {
+      "module": "http-cache-semantics",
+      "severity": "high",
+      "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
+      "note": "No patched version is published: the advisory covers <=4.2.0 and 4.2.0 is the latest release. Installed at 4.2.0 through make-fetch-happen 15.0.5 under unleash-client 6.11.0 in packages/web, which fetches feature-flag settings for the server only, not member responses. Remove as soon as http-cache-semantics ships a fix. Checked 2026-10-03."
+    },
+    "1240992": {
+      "module": "braces",
+      "severity": "high",
+      "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+      "note": "No patched version is published: the advisory covers <=3.0.3 and 3.0.3 is the latest release. Installed at 3.0.3 through micromatch 4.0.8 under Metro and Jest inside react-native in packages/mobile, build-time paths that only see patterns from this repo. Remove as soon as braces ships a fix. Checked 2026-10-03."
     }
   }
 }
