@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;width:1170px;height:2532px;background:#0b0b0d;color:#e6e6ea;font-family:"DejaVu Sans",Helvetica,Arial,sans-serif;overflow:hidden}
+  body{background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:36px 36px}
+  .wrap{position:absolute;left:60px;right:60px;top:660px}
+  h1{margin:0 0 14px;font-size:46px;letter-spacing:.5px;color:#f5a524;font-weight:800}
+  .sub{font-size:27px;color:#a4a4ac;margin:6px 0 26px}
+  .card{background:#141418;border:2px solid #2c2c33;border-radius:26px;padding:16px 32px 18px;margin-bottom:12px;position:relative}
+  .cmd{font-family:"DejaVu Sans Mono",Menlo,monospace;color:#f5a524;font-weight:700;font-size:52px;line-height:1}
+  .tag{position:absolute;right:32px;top:24px;font-size:24px;color:#a4a4ac}
+  .t{font-size:30px;font-weight:700;margin-top:8px}
+  .d{font-size:28px;color:#c4c4cc;line-height:1.25;margin-top:8px}
+  h2{margin:20px 0 12px;font-size:36px;color:#f5a524;font-weight:800}
+  .sub2{font-size:25px;color:#a4a4ac;margin:0 0 20px;line-height:1.3}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid .card{padding:12px 22px 14px;margin:0}
+  .grid .cmd{font-size:36px}
+  .grid .t{font-size:26px;margin-top:10px}
+  .grid .d{font-size:25px}
+  .foot{margin-top:18px;font-size:26px;color:#a4a4ac}
+  .foot code{font-family:"DejaVu Sans Mono",monospace;color:#f5a524;font-weight:700}
+</style></head><body>
+<div class="wrap">
+  <h1>SLASH COMMANDS</h1>
+  
+
+  <div class="card"><span class="tag">all repos</span><div class="cmd">/br</div><div class="d">Branch off main, do it surgically, run CI's checks, open the PR ready. Never the claude/ branch.</div></div>
+  <div class="card"><span class="tag">all repos</span><div class="cmd">/pr</div><div class="d">One pass over every PR that is behind, conflicted or red. Fix it; do not report it.</div></div>
+  <div class="card"><span class="tag">all repos</span><div class="cmd">/fix</div><div class="d">Rewrite it, fix it everywhere it sits, regenerate, push. Two-line reply, no explanation.</div></div>
+  <div class="card"><span class="tag">wiki-site</span><div class="cmd">/s</div><div class="d">pnpm wiki:sync, paste sheets, feed numbers set to match /feed, checks, push.</div></div>
+  <div class="card"><span class="tag">product repo</span><div class="cmd">/cr</div><div class="d">Verify each against the code first; fix, or close with one paragraph.</div></div>
+
+  <h2>NO API CREDIT? DO IT BY HAND</h2>
+  
+  <div class="grid">
+    <div class="card"><div class="cmd">/triage-bug</div><div class="d">Root cause, fix plan, labels.</div></div>
+    <div class="card"><div class="cmd">/build-bug</div><div class="d">Build it, open the PR, relabel.</div></div>
+    <div class="card"><div class="cmd">/review-slice</div><div class="d">File findings; /cr works them.</div></div>
+    <div class="card"><div class="cmd">/community-stats</div><div class="d">Run the numbers workflow, write the draft.</div></div>
+    <div class="card"><div class="cmd">/product-update</div><div class="d">Write the JSON, publish via workflow.</div></div>
+    <div class="card"><div class="cmd">/user-guide</div><div class="d">Write sections, render, PR.</div></div>
+    <div class="card"><div class="cmd">/test-script</div><div class="d">One plugin, from its inventory.</div></div>
+    
+  </div>
+
+  <div class="foot"><code>/clear</code> starts a fresh session.</div>
+</div>
+</body></html>

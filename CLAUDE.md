@@ -500,6 +500,10 @@ What "the same job" means, concretely:
   A `claude-code-action` workflow has no script of its own and still needs the command.
 - The command is listed in the table above and in `.github/workflows/README.md` beside its
   workflow.
+- The owner's phone cheat sheet is updated too. Any slash command added, renamed or removed in
+  `.claude/commands/` gets its card changed in `ctf/docs/developer/slash-commands-wallpaper/`
+  and the image re-rendered and sent in the reply, in the same PR. The README there carries the
+  render command and the layout rules.
 
 The workflows themselves keep their schedule and their API call; automation is the normal state
 and the command is the fallback, not a replacement. A one-off that never needs a schedule is a
