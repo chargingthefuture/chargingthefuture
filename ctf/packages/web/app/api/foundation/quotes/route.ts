@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFoundationReadAccess } from 'lib/foundation/_lib';
 import { FOUNDATION_ERROR_CODE } from 'lib/foundation/constants';
 import { createQuoteRequest, insertFoundationAudit } from 'lib/foundation/repository';
-import { reportError } from 'lib/observability/report';
-import { failureReason } from 'lib/errors/failure';
+import { failureReason, failureResponse } from 'lib/errors/failure';
 
 type CreateQuotePayload = { threadId?: string; serviceType?: string; requestDetails?: unknown; idempotencyKey?: string };
 
@@ -102,10 +101,19 @@ export async function POST(request: Request) {
       return mapped;
     }
 
-    reportError(error, { area: 'foundation', op: 'quotes' });
-    return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.persistenceUnavailable, message: 'Quote create unavailable.' },
-      { status: 503 },
-    );
+    // Anything else is a genuine failure of a step in this route (the thread read, the rate-limit
+    // check, one of the three inserts). The member keeps plain copy that names this step — the
+    // connection thread was already opened, so "could not open a connection" would be the wrong
+    // sentence — and the response carries a reference that also appears in the error report, so a
+    // screenshot of the banner can be matched to the log line that says what actually broke
+    // (rule 137). The previous answer, "Quote create unavailable." with no reference, was a dead end.
+    return failureResponse({
+      summary: 'Could not send your quote request right now.',
+      error,
+      code: FOUNDATION_ERROR_CODE.persistenceUnavailable,
+      area: 'foundation',
+      op: 'quotes',
+      audience: 'member',
+    });
   }
 }
