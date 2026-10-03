@@ -108,7 +108,7 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
           banned inside the minute they were opened.
         </p>
         <p style={{ fontSize: 12.5, color: t.MUTED, margin: '0 0 16px', lineHeight: 1.55 }}>
-          The ask rotates between the three Peace Battle 2 steps — your 1%, the goal board, One
+          The ask rotates between the three Peace Battle 2 asks — your 1%, the goal board, One
           Percent — and nothing repeats until all{' '}
           {poolSize} have run.{' '}
           <a href={QUORA_MOTD_SPACE_URL} style={{ color: t.ACCENT }}>

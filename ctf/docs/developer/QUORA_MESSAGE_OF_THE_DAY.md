@@ -31,9 +31,11 @@ Three things follow, and they are why each message is written the way it is:
 - Day one is `2026-09-18`, the day Peace Battle 2 starts.
 - The day is taken in `America/New_York`, not the server's UTC. Without that, every message after
   8pm Eastern would be the next day's.
-- The ask rotates every day across the three Enact steps on the Peace Battle 2 page — see your 1%
-  in Workforce, start on it on the PeerProgramming goal board, take it further with One Percent —
-  so three days running never ask for the same thing. The steps follow the page: Fireside and TI
+- The ask rotates every day across the three asks on the Peace Battle 2 page — see your 1% in
+  Workforce (its Envision section), start on it on the PeerProgramming goal board, take it further
+  with One Percent (its two Enact steps) — so three days running never ask for the same thing. The
+  asks follow the page: "See your 1%" left Enact for Envision on 2026-10-03, so no message calls it
+  a step or counts the steps as three. Fireside and TI
   Radio left both on 2026-10-02, when the outward message narrowed to the goal board, the Peace
   Battle 2 page and One Percent (see "Feature freeze, and one message" in `CLAUDE.md`).
 - Within an action, the pool is worked through in a shuffled order with no repeat until it is
@@ -68,8 +70,8 @@ Every 1% message ends with a line pointing a reader without an account to the sh
 One Percent's site, which needs no sign-in (`ONE_PERCENT_NO_SIGN_IN_LINE`): Workforce needs an
 approved account, and most people reading the space do not have one yet.
 
-Every One Percent message says that the first two steps are complete without it and stay free. A
-paid step that reads as the real one turns the free steps into a preview, and they are not one.
+Every One Percent message says that your 1% and the goal board are complete without it and stay
+free. A paid step that reads as the real one turns the free part into a preview, and it is not one.
 
 - `id` is stable across edits to the text. Changing an id changes where it lands in the rotation.
 - `title` and `body` are stored as two values, but they are copied as one. Quora's composer has no

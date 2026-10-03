@@ -1,6 +1,6 @@
 import { GOAL_BOARD_URL, motdArticleUrl, type QuoraMotdMessage } from './types';
 
-// Messages whose ask is the second Peace Battle 2 step: start on your 1% on the PeerProgramming
+// Messages whose ask is the first Enact step of Peace Battle 2: start on your 1% on the PeerProgramming
 // goal board. Put the part of the day that is left into one card on somebody else's goal, and post
 // a goal of your own.
 //

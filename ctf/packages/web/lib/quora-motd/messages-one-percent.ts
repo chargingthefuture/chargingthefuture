@@ -5,7 +5,7 @@ import {
   type QuoraMotdMessage,
 } from './types';
 
-// Messages whose ask is the first Peace Battle 2 step: see your 1%, the arithmetic in Workforce
+// Messages whose ask is the first thing Peace Battle 2 raises: see your 1%, the arithmetic in Workforce
 // from 50,000 people back to one person's trade.
 //
 // These are the arithmetic messages. Every figure in them is either published by somebody else
@@ -24,7 +24,7 @@ export const QUORA_MOTD_ONE_PERCENT: QuoraMotdMessage[] = [
       'So take what one person pays you, once, in a year, and run it across 50,000 of them. Five dollars is $250,000. Twenty is a million. Fifty is two and a half million. Two hundred and fifty is twelve and a half million.',
       'Find the row nearest what you already charge one person and read across. You do not have to believe a forecast to do that — it is your own rate and a multiplication.',
       'One percent puts an ordinary trade where the wider economy reserves its top performers. That is the part people do not expect, and it is why the arithmetic is worth doing yourself rather than reading mine.',
-      'Open your own figures and adjust them to what you would actually charge. That is step one of Peace Battle 2, and it is free: ' + ONE_PERCENT_WORKFORCE_URL,
+      'Open your own figures and adjust them to what you would actually charge. That is where Peace Battle 2 starts, and it is free: ' + ONE_PERCENT_WORKFORCE_URL,
       ONE_PERCENT_NO_SIGN_IN_LINE,
       'Full post: ' + motdArticleUrl('whats-your-one-percent'),
     ].join('\n\n'),
