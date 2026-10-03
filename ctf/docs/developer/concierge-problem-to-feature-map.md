@@ -40,7 +40,7 @@ PeerProgramming, GDP, ServiceCredits, Workforce, SkillsHunt, SkillUp, Trust, Wha
 | # | Problem (short) | Best apps | Why |
 |---|---|---|---|
 | 1 | People crowd you aiming/staring at phones | SocketRelay, Chyme | Get what you need in-network; stand with people who get it. |
-| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, SkillUp | Better paid work, and training for an occupation that is short of people — on your terms. |
+| 2 | Coworkers turn cold / lie about your work / push you out | Workforce, SkillUp | See which skills the community is short of and fill a gap, alone or teamed up with a member who has the skill; train for an occupation that is short of people — on your terms. |
 | 3 | Cars sit parked outside your home | LightHouse, Chyme | Move somewhere vouched-for; lean on the community. |
 | 4 | People block/cut/hold up lines in public | SocketRelay, TrustTransport | Ask for what you need, or pay a vetted member to bring it — skip the gauntlet. |
 | 5 | Neighbors swapped for "new neighbors" who don't live there | LightHouse, Chyme | Vouched housing; community solidarity. |
@@ -56,9 +56,9 @@ PeerProgramming, GDP, ServiceCredits, Workforce, SkillsHunt, SkillUp, Trust, Wha
 | 15 | People know things you never told them | Trust, WhatWorks | Vet who's real; tools to lock down your privacy. |
 | 16 | Strangers constantly try to befriend you in public | Trust, Chyme | Check who's real; find people who actually are. |
 | 17 | Staged scenes / smirking onlookers | Chyme, PeerProgramming | Peers who've seen it too; a steady group. |
-| 18 | Denied jobs / housing for no good reason | Workforce, LightHouse | In-network paid work; vouched housing — around the gatekeepers. |
+| 18 | Denied jobs / housing for no good reason | Workforce, LightHouse | See where the skills gaps are and build a living by filling one; vouched housing — around the gatekeepers. |
 | 19 | Live near a freemason lodge / know a freemason | Chyme | Talk it through with the community. |
-| 20 | Job applications loop / won't submit | Workforce, ServiceCredits | Paid work inside the network; earn outside their broken forms. |
+| 20 | Job applications loop / won't submit | Workforce, ServiceCredits | See where the skills gaps are and build a living by filling one; earn credits outside their broken forms. |
 | 21 | Doctors deny care / ghost you / lose results | Directory, WhatWorks | A vetted provider; what's worked for others getting care. |
 | 22 | Humming / buzzing / machine noise you can't place | WhatWorks, LightHouse | Tools that help; move if it's your home. |
 | 23 | Mail lost or tampered with | SocketRelay, ServiceCredits | Get/share in-network; transact without relying on the mail. |
