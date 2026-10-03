@@ -476,11 +476,34 @@ shape, so a later funded run picks up where the hand-done one left off.
 | `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
 | `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
 
-Every script those workflows run reports an unfunded, revoked or unavailable API as
-`CTF_RUN_BLOCKED_EXTERNAL:<reason>` through `ctf/scripts/lib/anthropicRunBlocked.mjs`, so the
-workflow health check lists the run as paused rather than broken and names the command to run
-instead. A new script that calls the API uses that module; a new one-off that does not need to run
-on a schedule is a command here, not a workflow.
+### Every API-funded workflow ships with its slash command (owner directive, 2026-10-03)
+
+A workflow that depends on API credit is not finished until the slash command that does the same
+job by hand exists beside it, in the same PR. No exceptions and no follow-up: the command is part
+of the workflow, the way the inventory update is part of a route. A workflow that only works while
+the account is funded is a feature the product loses for months at a time, and the owner found
+that out one job at a time.
+
+What "the same job" means, concretely:
+
+- The command reads the same inputs the workflow reads and files the same output in the same shape
+  (same labels, same issue or PR body, same ledger or tag), so a later funded run carries on from
+  the hand-done work and never duplicates it.
+- Where the chat session lacks something the workflow has (the database, an app secret), the
+  workflow gains a no-model path for that part: a dispatch-only twin that files the raw inputs
+  (`generate-community-stats-manual.yml`), or a dispatch input that accepts hand-written content
+  (`update_json` on `generate-product-update.yml`). The command then uses that path. The chat
+  session never gets the secret.
+- The script reports an unfunded, revoked or unavailable API as
+  `CTF_RUN_BLOCKED_EXTERNAL:<reason>` through `ctf/scripts/lib/anthropicRunBlocked.mjs`, naming
+  the command in the annotation, so the health check lists the run as paused rather than broken.
+  A `claude-code-action` workflow has no script of its own and still needs the command.
+- The command is listed in the table above and in `.github/workflows/README.md` beside its
+  workflow.
+
+The workflows themselves keep their schedule and their API call; automation is the normal state
+and the command is the fallback, not a replacement. A one-off that never needs a schedule is a
+command only, not a workflow.
 
 ### /br — every executed change
 
