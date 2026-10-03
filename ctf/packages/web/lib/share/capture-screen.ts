@@ -69,7 +69,7 @@ function appendFooter(cloned: HTMLElement, footer: CaptureFooter): void {
 // leaving the `value` attribute alone, so the clone comes back empty. An empty value then falls
 // back to the field's placeholder, which is drawn in placeholder gray — so a captured form shows
 // its example figures rather than the person's own, and the picture states numbers they never
-// entered. On a screen whose whole point is somebody's own arithmetic, under their own name, that
+// entered. On a screen that exists to show somebody's own arithmetic, under their own name, that
 // is worse than leaving the field blank.
 //
 // The clone is structurally identical to the live node, so the two lists line up by index.
