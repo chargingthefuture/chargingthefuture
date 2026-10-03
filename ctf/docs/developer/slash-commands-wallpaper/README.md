@@ -15,7 +15,7 @@ Render (1170 × 2532, the iPhone Lock Screen size):
   --screenshot=slash-commands-wallpaper.png file://$PWD/wallpaper.html
 ```
 
-Layout rules the owner set: the top 660 px stay dark for the clock; no one-line titles under a
+Layout rules the owner set: the top 660 px stay dark for the clock; every section is two columns; no one-line titles under a
 command, only the description; no explainer lines under a heading; the footer is the `/clear`
 line alone. Everything must fit above 2532 px, so a new card means tightening the others, not
 dropping below the bottom edge. The PNG is not committed; it is a deliverable sent in chat.
