@@ -42,7 +42,10 @@ export function ReaderShell() {
   return (
     <>
       <MobileScreenHeader title="Reader" accent={t.ACCENT} icon={<Rss size={18} color={t.ACCENT} />} />
+      {/* ctf-self-responsive: without it the app viewport's un-row fallback forces this column to
+          display:block, which drops the gap and leaves the cards touching. */}
       <div
+        className="ctf-self-responsive"
         style={{
           width: '100%',
           background: t.BG,
@@ -51,7 +54,7 @@ export function ReaderShell() {
           padding: '16px 16px 28px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 14,
+          gap: 16,
         }}
       >
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: t.SUBTLE }}>
@@ -60,30 +63,32 @@ export function ReaderShell() {
           have to run anything yourself.
         </p>
 
-        <a
-          href={READER_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: 14,
-            borderRadius: 12,
-            background: t.ACCENT,
-            color: '#0B0B0B',
-            fontSize: 15,
-            fontWeight: 700,
-            textDecoration: 'none',
-          }}
-        >
-          Open the reader
-          <ExternalLink size={16} color="#0B0B0B" />
-        </a>
-        <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>
-          Opens rss.chargingthefuture.com. Sign in there with this same account — there is no second password to set.
-        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <a
+            href={READER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: 14,
+              borderRadius: 12,
+              background: t.ACCENT,
+              color: '#0B0B0B',
+              fontSize: 15,
+              fontWeight: 700,
+              textDecoration: 'none',
+            }}
+          >
+            Open the reader
+            <ExternalLink size={16} color="#0B0B0B" />
+          </a>
+          <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>
+            Opens rss.chargingthefuture.com. Sign in there with this same account — there is no second password to set.
+          </p>
+        </div>
 
         <Note title="What you get" tokens={t}>
           <p style={{ margin: 0 }}>
