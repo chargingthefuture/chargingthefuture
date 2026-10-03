@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight, Loader2, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { SharePicture } from '@/components/shared/share-picture';
+import { captureScreen } from 'lib/share/capture-screen';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import { WorkforceMemberList } from './workforce-member-list';
 import type { WorkforceMatchedMember } from '../../lib/workforce/types';
@@ -14,6 +16,14 @@ import type { WorkforceMatchedMember } from '../../lib/workforce/types';
 // named union of Workforce sectors; its roster is the de-duplicated members that already match those
 // sectors, and its gap is the sectors' summed demand gap. Reads the live model, so it recomputes on
 // every load as the Directory changes — no scheduled job, and member names never leave the app.
+//
+// Admins get a picture of the tab (owner request, 2026-10-03: this one is for showing the plan,
+// and members are not the audience for it). The rosters are the reason it is not one to one: a
+// team expands to real member names linked to their Directory profiles, and a picture travels
+// away from the app's own access rules. Those rows carry `data-capture-hide`, so an expanded team
+// is still in the picture as a team — its name, what it is responsible for, its sectors and its
+// count — with the names taken out. That is the privacy exception rule 130 allows, and the only
+// difference between this screen and its picture.
 
 type CommunityPlanningTeam = {
   key: string;
@@ -34,6 +44,10 @@ type CommunityPlanningReport = {
   sourceIssue: string;
   teams: CommunityPlanningTeam[];
 };
+
+// The tab's own address, so a reader lands on the teams rather than the Workforce Overview.
+const COMMUNITY_PLANNING_DEEP_LINK =
+  'https://app.chargingthefuture.com/apps/workforce?view=community-planning';
 
 function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens }) {
   const [open, setOpen] = useState(false);
@@ -107,7 +121,9 @@ function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens
       </button>
 
       {open ? (
-        <div style={{ padding: '4px 6px 18px 34px' }}>
+        // Kept out of the picture: these are real members, named and linked to their Directory
+        // profiles. The count above stays, because a count is not a person.
+        <div data-capture-hide="" style={{ padding: '4px 6px 18px 34px' }}>
           {team.memberCount === 0 ? (
             <div style={{ fontSize: 13, color: t.MUTED }}>
               No members match this team&apos;s sectors yet. As members join and set their skills in the
@@ -122,12 +138,29 @@ function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens
   );
 }
 
-export function WorkforceCommunityPlanning() {
+export function WorkforceCommunityPlanning({ isAdmin = false }: { isAdmin?: boolean }) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const [report, setReport] = useState<CommunityPlanningReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const reportRef = useRef<HTMLDivElement | null>(null);
+
+  // Runs on its own press with the node already on screen, so nothing is awaited between the press
+  // and the picture beyond the draw itself.
+  const capture = useCallback(async () => {
+    const node = reportRef.current;
+    if (!node) throw new Error('The page is not ready to be pictured yet.');
+    return await captureScreen(node, {
+      background: t.BG,
+      footer: {
+        line: COMMUNITY_PLANNING_DEEP_LINK,
+        note: 'Skills Economy (SE) — rosters recomputed live from the Directory. Member names are left out of the picture.',
+        accent: t.ACCENT,
+        muted: t.MUTED,
+      },
+    });
+  }, [t.BG, t.ACCENT, t.MUTED]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -167,7 +200,7 @@ export function WorkforceCommunityPlanning() {
 
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ padding: '24px' }}>
+      <div ref={reportRef} style={{ padding: '24px' }}>
         <div
           style={{
             padding: '16px 20px',
@@ -217,6 +250,27 @@ export function WorkforceCommunityPlanning() {
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <div style={{ padding: '0 24px 32px' }}>
+          <SharePicture
+            capture={capture}
+            filename={`skills-economy-community-planning-${new Date().toISOString().slice(0, 10)}.png`}
+            label="Show this page as one picture"
+            busyLabel="Taking the picture…"
+            accent={t.ACCENT}
+            surface={t.SURFACE}
+            border={t.BORDER}
+            muted={t.MUTED}
+            area="workforce"
+            op="share_community_planning_picture"
+          >
+            Takes a picture of the teams as they stand, with the link to this tab underneath. Member
+            names are left out even where a team is expanded — the counts stay, the people do not —
+            so the picture can be posted without carrying anybody into it.
+          </SharePicture>
+        </div>
+      )}
     </div>
   );
 }

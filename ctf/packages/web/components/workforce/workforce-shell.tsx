@@ -425,7 +425,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
   const content = view === 'occupations' ? (
     <WorkforceOccupations />
   ) : view === 'community-planning' ? (
-    <WorkforceCommunityPlanning />
+    <WorkforceCommunityPlanning isAdmin={isAdmin} />
   ) : view === 'one-percent' ? (
     <WorkforceOnePercent t={t} />
   ) : (
