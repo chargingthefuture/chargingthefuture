@@ -104,7 +104,9 @@ somebody reads is not evidence anybody should be publishing.
 
 - 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
   became the third on 2026-09-29 (owner report). The card, the user guide step and the test
-  script now name all three.
+  script now name all three. The cards also sat almost touching: the page column is a direct
+  child of the app viewport, whose fallback rule forces it to `display: block` and so drops its
+  14px gap. The column now carries `ctf-self-responsive`, so the gap applies again.
 - 2026-09-23 — Created. The reader went live at rss.chargingthefuture.com earlier the same day;
   this adds the tile and the page that explains it, so the apps list carries it rather than members
   finding the address in a blog post. The page exists at all because the apps list has no way to
