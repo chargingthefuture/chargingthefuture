@@ -55,6 +55,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectDependencyContext } from './lib/sliceImports.mjs';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -547,9 +548,7 @@ async function anthropicMessage(system, user, maxTokens) {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
-  }
+  if (!response.ok) throw await anthropicApiError(response);
   const result = await response.json();
   if (result.stop_reason === 'max_tokens') {
     console.warn('reviewCodebaseSlice: model response hit max_tokens; output may be truncated.');
@@ -960,6 +959,16 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (
+    reportIfRunBlocked({
+      script: 'reviewCodebaseSlice',
+      error,
+      manualRoute: '/review-slice',
+      nothingLost: 'The ledger was not advanced, so the next run after this clears reviews the same slice.',
+    })
+  ) {
+    process.exit(1);
+  }
   console.error('reviewCodebaseSlice failed:', error?.message || error);
   process.exit(1);
 });

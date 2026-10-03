@@ -460,6 +460,28 @@ Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-0
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 
+Seven more do by hand what a scheduled workflow does with the Anthropic API, for the months the
+account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
+purpose while unfunded; the product does not wait on the bill, because the owner has a chat agent
+even then. Each command names the workflow it stands in for and files the same output in the same
+shape, so a later funded run picks up where the hand-done one left off.
+
+| Command | File | Stands in for |
+|---|---|---|
+| `/triage-bug` | [`.claude/commands/triage-bug.md`](.claude/commands/triage-bug.md) | `bug-reports-triage.yml` — root cause and fix plan on the oldest `needs-triage` issue. |
+| `/build-bug` | [`.claude/commands/build-bug.md`](.claude/commands/build-bug.md) | `bug-reports-build.yml` — the PR for an `approved-to-build` issue. |
+| `/review-slice` | [`.claude/commands/review-slice.md`](.claude/commands/review-slice.md) | `code-review-sweep.yml` — review one slice and file `code-review` issues (`/cr` then works them). |
+| `/community-stats` | [`.claude/commands/community-stats.md`](.claude/commands/community-stats.md) | `generate-community-stats.yml` — the post, from numbers filed by `generate-community-stats-manual.yml`. |
+| `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
+| `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
+| `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
+
+Every script those workflows run reports an unfunded, revoked or unavailable API as
+`CTF_RUN_BLOCKED_EXTERNAL:<reason>` through `ctf/scripts/lib/anthropicRunBlocked.mjs`, so the
+workflow health check lists the run as paused rather than broken and names the command to run
+instead. A new script that calls the API uses that module; a new one-off that does not need to run
+on a schedule is a command here, not a workflow.
+
 ### /br — every executed change
 
 Any request that changes files runs this routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes.

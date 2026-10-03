@@ -26,6 +26,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Pool } from 'pg';
 import { PROJECTION_SOURCES, RECOGNITION_SOURCES, computeValueIndex } from './lib/gdpValueIndex.mjs';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -40,7 +41,12 @@ function requireEnv(name) {
 }
 
 const databaseUrl = requireEnv('DATABASE_URL');
-requireEnv('ANTHROPIC_API_KEY');
+
+// STATS_ONLY=1 is the no-credit route (generate-community-stats-manual.yml): collect the same
+// aggregate counts, print them as `{ statsMarkdown }`, and make no model call. The workflow files
+// the numbers as a `draft-needed` issue and the `/community-stats` command writes the post from it.
+const STATS_ONLY = process.env.STATS_ONLY === '1';
+if (!STATS_ONLY) requireEnv('ANTHROPIC_API_KEY');
 
 // The number of documented skills a functioning economy needs — the point at which the community can
 // meet its own needs. Any economy can be any size; covering all 650 skills is what makes it
@@ -270,6 +276,11 @@ if (statsForPrompt.trim().length === 0) {
   process.exit(1);
 }
 
+if (STATS_ONLY) {
+  process.stdout.write(JSON.stringify({ statsMarkdown }) + '\n');
+  process.exit(0);
+}
+
 const brandVoice = readFileSync(
   join(repoRoot, 'ctf/docs/BRAND_VOICE_LEXICON.md'),
   'utf-8',
@@ -300,7 +311,17 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 });
 
 if (!response.ok) {
-  console.error('Anthropic API error:', response.status, await response.text());
+  const error = await anthropicApiError(response);
+  if (
+    !reportIfRunBlocked({
+      script: 'generate-community-stats',
+      error,
+      manualRoute: '/community-stats',
+      nothingLost: 'The counts are read fresh on every run, so the next run after this clears drafts the post.',
+    })
+  ) {
+    console.error(error.message);
+  }
   process.exit(1);
 }
 

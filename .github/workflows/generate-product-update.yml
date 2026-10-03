@@ -9,6 +9,11 @@ on:
         description: "Force update even with no feat/fix/perf commits (testing)"
         type: boolean
         default: false
+      update_json:
+        description: "No-credit route: the update JSON an agent session wrote by hand (/product-update). When set, the model step is skipped and this is published as-is."
+        type: string
+        required: false
+        default: ""
 
 jobs:
   # ── Job 1: decide whether this window warrants a product update ─────────────
@@ -67,7 +72,8 @@ jobs:
     needs: check-changes
     if: >-
       needs.check-changes.outputs.has_changes == 'true' ||
-      inputs.force == true
+      inputs.force == true ||
+      inputs.update_json != ''
     runs-on: ubuntu-latest
     # Stamp all dates (wiki page slug, Quora draft issue, update tag) in US
     # Eastern rather than the runner's UTC, so they match the project's local
@@ -110,13 +116,21 @@ jobs:
           recursive: true
 
       # ── Generate ─────────────────────────────────────────────────────────────
+      # When the account has no API credit, an agent session writes the same JSON by hand with
+      # the `/product-update` command and passes it in; the publish steps below do not change.
       - name: Generate update content via Claude
         id: content
         env:
           # ANTHROPIC_API_KEY is injected by the Infisical step (single source).
           COMMITS: ${{ needs.check-changes.outputs.commits }}
+          HANDWRITTEN_JSON: ${{ inputs.update_json }}
         run: |
-          OUTPUT=$(node ctf/scripts/generate-update.mjs)
+          if [ -n "$HANDWRITTEN_JSON" ]; then
+            echo "Using the update JSON passed in by hand; no model call."
+            OUTPUT=$(echo "$HANDWRITTEN_JSON" | jq -c '.')
+          else
+            OUTPUT=$(node ctf/scripts/generate-update.mjs)
+          fi
           echo "json<<EOF" >> "$GITHUB_OUTPUT"
           echo "$OUTPUT" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
