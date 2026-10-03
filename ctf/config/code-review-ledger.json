@@ -118,8 +118,8 @@
     {
       "name": "community-shell",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-03T21:25:13.011Z",
+      "lastRunIssues": 6,
       "cursor": 0,
       "partial": false
     },
