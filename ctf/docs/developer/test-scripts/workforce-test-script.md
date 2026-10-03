@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview · 2026-10-03 manual update: WF-12 — each route has a "Go to <name> ›" button |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -53,7 +53,7 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    card with your initials, your name, and the skills from your Directory listing; a line reading
    50,000 people; a "What your trade normally carries" block naming your occupation and how many
    people one of you serves; two inputs for your own rate and frequency; a reference table whose
-   first row is $5 → $250,000; and five routes, each a link to a part of the app. Nobody else's
+   first row is $5 → $250,000; and five routes, each with a "Go to <name> ›" button. Nobody else's
    card is anywhere on the screen. → web ☐ mobile ☐
 
 ---
@@ -250,8 +250,9 @@ with a second account that has no claimed listing.
 4. Read the rate table. Confirm the rows are $5 / $20 / $50 / $100 / $250 per person per year, that
    the middle column reads $250,000 / $1,000,000 / $2,500,000 / $5,000,000 / $12,500,000, and that
    the first row's third column reads 3.5×.
-5. Click each of the five route links in turn (Foundation, Foundation, PeerProgramming, SkillUp,
-   Knowledge Library). Each one opens that part of the app — none 404s.
+5. Press each of the five route buttons in turn (Go to Foundation, Go to Foundation, Go to
+   PeerProgramming, Go to SkillUp, Go to Knowledge Library). Each one opens that part of the app —
+   none 404s.
 6. Read the "What your trade normally carries" block. Note the occupation it names and the
    people-served figure. Sign in as a second account whose Directory listing carries an occupation
    in a **different sector**, open the same tab, and compare — the figures must differ. Two

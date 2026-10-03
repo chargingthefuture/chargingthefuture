@@ -299,14 +299,25 @@ function Routes({ routes, t }: { routes: OnePercentRoute[]; t: WorkforceTokens }
           }}
         >
           <div style={{ minWidth: 0, flex: 1 }}>
-            <a
-              href={route.href}
-              style={{ fontSize: 13, fontWeight: 700, color: t.ACCENT, textDecoration: 'none' }}
-            >
-              {route.surface}
-            </a>
+            <div style={{ fontSize: 13, fontWeight: 700, color: t.TEXT }}>{route.surface}</div>
             <div style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.6, marginTop: 3 }}>{route.what}</div>
             <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.6, marginTop: 3 }}>{route.reach}</div>
+            <a
+              href={route.href}
+              style={{
+                display: 'inline-block',
+                marginTop: 10,
+                padding: '8px 16px',
+                borderRadius: 9,
+                background: t.ACCENT,
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              Go to {route.surface} ›
+            </a>
           </div>
         </div>
       ))}
