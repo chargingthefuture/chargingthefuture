@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorkforceTokens } from './workforce-shared';
+import { SharePicture } from '@/components/shared/share-picture';
+import { captureScreen } from 'lib/share/capture-screen';
 import { computeOwnEstimate } from '@/lib/workforce/one-percent';
 import type {
   OnePercentCard,
@@ -20,6 +22,15 @@ import type {
 //
 // The card is deliberately a playing card: your initials, your name, your trade, your skills. It
 // is yours, nobody else's is shown, and nothing on it is scored or ranked.
+//
+// It also has a picture control, which no other private screen has (owner request, 2026-10-03:
+// they post their own 1% often, and stitching screenshots of a screen this tall by hand is the
+// thing SharePicture exists to end). Nothing here belongs to anybody else — the card is the
+// member's own listing, the figures are their own typed numbers, and the rest is the same shared
+// arithmetic everybody sees — so sharing it is a member disclosing themselves rather than a screen
+// leaking a third party. The control still says plainly what ends up in the picture, because the
+// screen above it promises nobody else sees this, and a control that quietly undoes that promise
+// would be the wrong kind of surprise.
 
 type Payload = {
   card: OnePercentCard;
@@ -28,6 +39,11 @@ type Payload = {
   ladder: OnePercentRateRow[];
   routes: OnePercentRoute[];
 };
+
+// The screen's own address, not just the plugin's: the rail is a horizontal scroller and this tab
+// sits at the far end of it, so a picture that linked to /apps/workforce would land a reader on
+// the Overview and leave them to find the thing they were sent for.
+const ONE_PERCENT_DEEP_LINK = 'https://app.chargingthefuture.com/apps/workforce?view=one-percent';
 
 function usd(value: number): string {
   return `$${value.toLocaleString('en-US')}`;
@@ -328,6 +344,23 @@ function Routes({ routes, t }: { routes: OnePercentRoute[]; t: WorkforceTokens }
 export function WorkforceOnePercent({ t }: { t: WorkforceTokens }) {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const reportRef = useRef<HTMLDivElement | null>(null);
+
+  // Runs on its own press with the node already on screen, so nothing is awaited between the press
+  // and the picture beyond the draw itself.
+  const capture = useCallback(async () => {
+    const node = reportRef.current;
+    if (!node) throw new Error('The page is not ready to be pictured yet.');
+    return await captureScreen(node, {
+      background: t.BG,
+      footer: {
+        line: ONE_PERCENT_DEEP_LINK,
+        note: 'Skills Economy (SE) — arithmetic on a share of a population estimate, not a forecast of earnings.',
+        accent: t.ACCENT,
+        muted: t.MUTED,
+      },
+    });
+  }, [t.BG, t.ACCENT, t.MUTED]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -361,30 +394,55 @@ export function WorkforceOnePercent({ t }: { t: WorkforceTokens }) {
   const { card, reach, tradeLoad, ladder, routes } = data;
 
   return (
-    <div style={{ padding: '20px 16px 48px' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, color: t.TEXT, margin: '0 0 6px' }}>
-        What&rsquo;s your 1%?
-      </h2>
-      <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 20px' }}>
-        One percent of the {reach.population.toLocaleString('en-US')} estimate is{' '}
-        <strong style={{ color: t.TEXT }}>{reach.peopleReached.toLocaleString('en-US')} people</strong>.
-        What that means depends on your trade, so the figures below are worked from the skills on
-        your own listing. This is yours alone — nobody else sees it, and you see nobody else&rsquo;s.
-      </p>
+    <div>
+      {/* The picture is a capture of exactly this node. The closing paragraph about the figures
+          being speculative is inside it on purpose: a picture of income arithmetic that travels
+          without its own disclaimer is the one version of this worth refusing to make. */}
+      <div ref={reportRef} style={{ padding: '20px 16px 24px' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: t.TEXT, margin: '0 0 6px' }}>
+          What&rsquo;s your 1%?
+        </h2>
+        <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, margin: '0 0 20px' }}>
+          One percent of the {reach.population.toLocaleString('en-US')} estimate is{' '}
+          <strong style={{ color: t.TEXT }}>{reach.peopleReached.toLocaleString('en-US')} people</strong>.
+          What that means depends on your trade, so the figures below are worked from the skills on
+          your own listing. This is yours alone — nobody else sees it, and you see nobody else&rsquo;s.
+        </p>
 
-      <Card card={card} t={t} />
-      {tradeLoad && <TradeLoad load={tradeLoad} reach={reach} t={t} />}
-      <OwnEstimate reach={reach} t={t} />
-      <Ladder reach={reach} ladder={ladder} t={t} />
-      <Routes routes={routes} t={t} />
+        <Card card={card} t={t} />
+        {tradeLoad && <TradeLoad load={tradeLoad} reach={reach} t={t} />}
+        <OwnEstimate reach={reach} t={t} />
+        <Ladder reach={reach} ladder={ladder} t={t} />
+        <Routes routes={routes} t={t} />
 
-      <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '28px 0 0' }}>
-        These figures are speculative and are not a forecast of what you or anybody will earn. They
-        are arithmetic on a stated share of a population estimate, shown so the shape of it is
-        visible. What actually happens takes talent, work, and luck in some combination, and no
-        screen can hand you those. What it can tell you is that the skill you have is still a skill,
-        and that the number it could reach here is not small.
-      </p>
+        <p style={{ fontSize: 11, color: t.MUTED, lineHeight: 1.6, margin: '28px 0 0' }}>
+          These figures are speculative and are not a forecast of what you or anybody will earn. They
+          are arithmetic on a stated share of a population estimate, shown so the shape of it is
+          visible. What actually happens takes talent, work, and luck in some combination, and no
+          screen can hand you those. What it can tell you is that the skill you have is still a skill,
+          and that the number it could reach here is not small.
+        </p>
+      </div>
+
+      <div style={{ padding: '0 16px 48px' }}>
+        <SharePicture
+          capture={capture}
+          filename={`skills-economy-my-one-percent-${new Date().toISOString().slice(0, 10)}.png`}
+          label="Show this page as one picture"
+          busyLabel="Taking the picture…"
+          accent={t.ACCENT}
+          surface={t.SURFACE}
+          border={t.BORDER}
+          muted={t.MUTED}
+          area="workforce"
+          op="share_one_percent_picture"
+        >
+          Takes a picture of this page as it stands, with the link to it underneath. The picture
+          carries your name, your trade and the skills on your listing, along with any numbers you
+          typed above — this screen is private until you share one, and then it is as public as
+          wherever you put it.
+        </SharePicture>
+      </div>
     </div>
   );
 }
