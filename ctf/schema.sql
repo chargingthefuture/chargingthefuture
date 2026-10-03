@@ -5513,6 +5513,11 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- request_details is written by every quote create (createQuoteRequest, always a JSON object, '{}'
+-- when the member supplied none) but was never declared here, so a database built from this file
+-- alone refused the second step of Request Quote with "column request_details does not exist". A
+-- no-op where the column already exists.
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS request_details JSONB NOT NULL DEFAULT '{}'::jsonb;
 -- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
 -- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
 -- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
