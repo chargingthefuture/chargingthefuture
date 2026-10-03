@@ -39,6 +39,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -240,9 +241,7 @@ async function anthropicMessage(system, user, maxTokens) {
       messages: [{ role: 'user', content: user }],
     }),
   });
-  if (!response.ok) {
-    throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
-  }
+  if (!response.ok) throw await anthropicApiError(response);
   const result = await response.json();
   if (result.stop_reason === 'max_tokens') {
     console.warn('generateManualTestScript: response hit max_tokens; the script may be truncated.');
@@ -368,6 +367,16 @@ async function main() {
 }
 
 main().catch((error) => {
+  if (
+    reportIfRunBlocked({
+      script: 'generateManualTestScript',
+      error,
+      manualRoute: '/test-script',
+      nothingLost: 'No file was changed; run the workflow again for the same plugin once this clears.',
+    })
+  ) {
+    process.exit(1);
+  }
   console.error('generateManualTestScript failed:', error?.message || error);
   process.exit(1);
 });

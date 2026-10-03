@@ -63,6 +63,10 @@
     {
       "text": "Whole Foods",
       "reason": "A company name. A name is not ours to reword."
+    },
+    {
+      "text": "max-stale handling can disclose cross-user cached responses",
+      "reason": "The GitHub advisory title for http-cache-semantics, kept verbatim in the dependency audit burn-down list so the entry matches the advisory."
     }
   ]
 }

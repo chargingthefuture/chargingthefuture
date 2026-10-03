@@ -59,6 +59,21 @@ Rules for claiming it:
   claiming it at all: it hides a real break, and it teaches the next reader to distrust the label.
 - **Say the reason in plain words too**, in the same annotation, for whoever reads the run page.
 
+Shared emitter: `ctf/scripts/lib/anthropicRunBlocked.mjs`. A script that makes one model call throws
+`anthropicApiError(response)` on a non-OK answer and, in its catch, calls `reportIfRunBlocked({ script,
+error, manualRoute, nothingLost })`: it maps the vendor's error type (or a 402 / a 400 naming the
+credit balance) to a reason, prints the annotation with the marker and the slash command that does
+the same job by hand, writes the step summary, and sets the exit code. An unrecognized error returns
+`false` and the script prints its usual failure. The six one-call scripts (bug triage, code-review
+sweep, community stats, product update, user guide, manual test script) all use it.
+
+Each of those jobs also has a hand route for the months the account is unfunded — a slash command
+in `.claude/commands/` (`/triage-bug`, `/build-bug`, `/review-slice`, `/community-stats`,
+`/product-update`, `/user-guide`, `/test-script`; the table in `CLAUDE.md` maps each to its
+workflow). Two of them need a workflow because the chat session has no database or app secrets:
+`generate-community-stats-manual.yml` files the numbers, and `generate-product-update.yml` takes
+hand-written content through its `update_json` input.
+
 Worked example: `ctf/scripts/proposeSkillPromotions.mjs` — it maps the vendor's own machine-readable
 error type to a named state and only marks the states that are genuinely outside the repo.
 
@@ -109,8 +124,9 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `expo-android-scheduled-build.yml` | Expo — Scheduled Android Test Build | Mon/Wed/Fri 08:41 UTC; manual | Hands-free `preview` Android test build. Checks the free-tier quota first (skips when this month's automated budget is used) so the 15-builds/month allotment is never overspent; if the build fails, a Claude agent opens a fix branch and PR. |
 | `expo-preview.yml` | Expo — Preview APK | Mobile PRs labeled `build-apk`; manual | Builds a preview Android APK for a mobile PR (opt-in via label to save free-tier builds) and posts an install link. |
 | `expo-update.yml` | Expo — OTA Update | Push to `main` touching mobile code | Publishes a JavaScript/asset-only over-the-air update via EAS Update — no native rebuild; installed apps pick it up on next launch. |
+| `generate-community-stats-manual.yml` | Generate — Community Stats Numbers (no AI, manual) | Manual | The no-credit companion to the scheduled workflow below. Collects the same privacy-safe counts with `STATS_ONLY=1` (no Anthropic API call) and files them as a `community-stats` issue labeled `draft-needed`; an agent session then runs `/community-stats` to write the post into that issue. |
 | `generate-community-stats.yml` | Generate — Community Stats Draft | Mondays 14:00 UTC; manual | Reads privacy-safe community-wide counts (open SocketRelay posts, Directory profiles and skills, ServiceCredits aggregates, and the real + projected Community Value Index figures), drafts a Quora post with Claude, and files it as an issue for review. |
-| `generate-product-update.yml` | Generate — Product Update | Weekly (Thursdays 00:33 UTC); manual | Turns recent feat/fix/perf commits into a product update: publishes to the wiki, the blog registry, and the in-app feed, files a Quora draft issue, and tags the update. |
+| `generate-product-update.yml` | Generate — Product Update | Weekly (Thursdays 00:33 UTC); manual | Turns recent feat/fix/perf commits into a product update: publishes to the wiki, the blog registry, and the in-app feed, files a Quora draft issue, and tags the update. Its `update_json` dispatch input takes hand-written content from `/product-update` when the account has no API credit; the publish steps run unchanged. |
 | `generate-user-guide.yml` | User Guide — Regenerate | Mondays 06:00 UTC; manual | Regenerates the public user guide (`/guide` + `docs/USER_GUIDE.md`) from each plugin's inventory Intent and Outcome statement and User Features section, plus its test-script Core smoke steps, via `ctf/scripts/generate-user-guide.mjs`. |
 | `github-actions-billing-token-reminder.yml` | GitHub Actions — Billing Token Rotation Reminder | Mondays 12:00 UTC; manual | Files a reminder issue every ~45 days to rotate the Actions billing token, with a runbook checklist. |
 | `github-actions-budget-monitor.yml` | GitHub Actions — Budget Monitor | Every 6 hours; manual | Checks Actions usage (minutes, artifact storage, cache) against budgets, posts a report issue, and closes the rotation reminder when usage is healthy. |

@@ -20,6 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -147,9 +148,7 @@ async function askClaude(issue, codeContext) {
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
-  }
+  if (!response.ok) throw await anthropicApiError(response);
   const result = await response.json();
   return result.content[0].text.trim();
 }
@@ -208,6 +207,16 @@ main().catch((error) => {
       'triageBugReportIssues: GitHub API rate limit hit; skipping this run. The next scheduled run will retry.',
     );
     process.exit(0);
+  }
+  if (
+    reportIfRunBlocked({
+      script: 'triageBugReportIssues',
+      error,
+      manualRoute: '/triage-bug',
+      nothingLost: 'The issue keeps its needs-triage label, so the next run after this clears picks it up.',
+    })
+  ) {
+    process.exit(1);
   }
   console.error('triageBugReportIssues failed:', message);
   process.exit(1);

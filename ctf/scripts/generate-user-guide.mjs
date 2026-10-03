@@ -31,6 +31,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -299,10 +300,23 @@ async function rewrite(slug, title, whatItIs, features, coreSmoke, focus) {
     }),
   });
   if (!res.ok) {
+    // An account state (no credit, a rejected key, the vendor down) hits every section the same
+    // way, so stop here and say so, rather than "keep" each section in turn and ship a guide whose
+    // dates moved while no prose was regenerated.
+    const error = await anthropicApiError(res);
+    if (
+      reportIfRunBlocked({
+        script: 'generate-user-guide',
+        error,
+        manualRoute: '/user-guide',
+        nothingLost: 'The committed guide is untouched; the next run after this clears regenerates it.',
+      })
+    ) {
+      process.exit(1);
+    }
     // Log the API's own error message, not just the status, so a bad model id / request is
     // diagnosable from the run log rather than a bare "400".
-    const detail = await res.text().catch(() => '');
-    console.error(`  model call failed for ${slug}: ${res.status} ${detail.slice(0, 300)}`);
+    console.error(`  model call failed for ${slug}: ${res.status} ${error.body.slice(0, 300)}`);
     return null;
   }
   const data = await res.json();
@@ -326,8 +340,17 @@ async function rewrite(slug, title, whatItIs, features, coreSmoke, focus) {
 // that turns the raw docs into plain, grounded prose, so without it this script would publish
 // ungrounded doc-scrapings to a public page (that is exactly how the fallback dump once shipped).
 // Fail loudly instead and leave the committed guide untouched.
-if (!process.env.ANTHROPIC_API_KEY) {
+//
+// USER_GUIDE_RENDER_ONLY=1 is the one exception, and it makes no model call at all: the `/user-guide`
+// command has an agent session write each section into guide-content.json by hand, then runs this
+// mode to rebuild the markdown copy from that JSON so the two files never drift.
+const RENDER_ONLY = process.env.USER_GUIDE_RENDER_ONLY === '1';
+if (!RENDER_ONLY && !process.env.ANTHROPIC_API_KEY) {
   console.error('ANTHROPIC_API_KEY is not set — refusing to regenerate the user guide. The guide is left unchanged.');
+  process.exit(1);
+}
+if (RENDER_ONLY && !existsSync(OUT_JSON)) {
+  console.error(`USER_GUIDE_RENDER_ONLY needs an existing ${OUT_JSON} to render from; none found.`);
   process.exit(1);
 }
 
@@ -341,7 +364,11 @@ const prevIntro = existsSync(OUT_JSON) ? JSON.parse(readFileSync(OUT_JSON, 'utf-
 noticeMissingFromGuide();
 
 const sections = [];
-for (const [slug, title, sources] of ORDER) {
+if (RENDER_ONLY) {
+  console.error('USER_GUIDE_RENDER_ONLY=1: rebuilding the markdown copy from guide-content.json, no model call.');
+  sections.push(...prev.values());
+}
+for (const [slug, title, sources] of RENDER_ONLY ? [] : ORDER) {
   const invPath = inventoryPath(slug, sources?.inventory);
   const tsPath = testScriptPath(slug, sources?.testScript);
   const inv = invPath ? readFileSync(invPath, 'utf-8') : '';
