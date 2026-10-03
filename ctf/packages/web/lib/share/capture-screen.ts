@@ -13,6 +13,9 @@
 // be a problem, while the canvas path draws text with the browser's own text rendering and gets
 // the font for free.
 //
+// A field the person has typed into is carried across by hand — see mirrorTypedValues below for
+// why the library does not do it for <input>.
+//
 // What a caller controls, through the DOM rather than through arguments: `data-capture-hide` on
 // any element keeps it out of the picture. The share control marks itself, so it never appears in
 // its own output. A screen passes the node holding what it wants shown rather than its outermost
@@ -59,6 +62,31 @@ function appendFooter(cloned: HTMLElement, footer: CaptureFooter): void {
   cloned.appendChild(wrap);
 }
 
+// Carry what the person typed into the picture.
+//
+// html2canvas copies a live value onto its clone for <textarea> and <select>, but not for <input>:
+// it reads the clone's own `value`, and a React-controlled field sets the DOM *property* while
+// leaving the `value` attribute alone, so the clone comes back empty. An empty value then falls
+// back to the field's placeholder, which is drawn in placeholder gray — so a captured form shows
+// its example figures rather than the person's own, and the picture states numbers they never
+// entered. On a screen that exists to show somebody's own arithmetic, under their own name, that
+// is worse than leaving the field blank.
+//
+// The clone is structurally identical to the live node, so the two lists line up by index.
+function mirrorTypedValues(live: HTMLElement, cloned: HTMLElement): void {
+  const sources = live.querySelectorAll('input');
+  const clones = cloned.querySelectorAll('input');
+  clones.forEach((clone, index) => {
+    const source = sources[index];
+    if (!source) return;
+    clone.value = source.value;
+    clone.setAttribute('value', source.value);
+    clone.checked = source.checked;
+    if (source.checked) clone.setAttribute('checked', 'checked');
+    else clone.removeAttribute('checked');
+  });
+}
+
 export async function captureScreen(node: HTMLElement, options: CaptureOptions): Promise<Blob> {
   const canvas = await html2canvas(node, {
     backgroundColor: options.background,
@@ -69,6 +97,7 @@ export async function captureScreen(node: HTMLElement, options: CaptureOptions):
     logging: false,
     ignoreElements: (element) => element.hasAttribute('data-capture-hide'),
     onclone: (_doc, cloned) => {
+      mirrorTypedValues(node, cloned);
       if (options.footer) appendFooter(cloned, options.footer);
     },
   });
