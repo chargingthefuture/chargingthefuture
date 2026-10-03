@@ -91,7 +91,7 @@ Foundation-owned domain entities (canonical in `ctf/schema.sql`):
 3. `foundation_thread_participants` — Thread participant roster.
 4. `foundation_message_metadata` — Message history with delivery/read state.
 5. `foundation_call_sessions` — Voice/video call session records. The instant 1:1 call ring/answer lifecycle (issue #808 task 3, audio-only v1) adds ring columns to this same table: `caller_user_id` / `callee_user_id` (`TEXT`, who rang / who was rung), `ring_status` (`TEXT NOT NULL DEFAULT 'none'`: `none` | `ringing` | `answered` | `declined` | `timed_out` | `ended`), `ring_expires_at` (`TIMESTAMPTZ`, ~60s unanswered-ring timeout), `answered_at` / `ended_at` (`TIMESTAMPTZ`), `ended_by_user_id` (`TEXT`), and `first_block_charged` (`BOOLEAN NOT NULL DEFAULT FALSE`). Per-block billing (issue #808 task 4) adds: `rate_credits_locked` (`INTEGER`, the provider's rate snapshotted at answer), `interval_minutes_locked` (`INTEGER`, the block length snapshotted at answer), `authorized_blocks` (`INTEGER`, the buyer-set per-session cap set at ring), `blocks_charged` (`INTEGER NOT NULL DEFAULT 0`, how many blocks have been paid), `paid_through_at` (`TIMESTAMPTZ`, = `answered_at + blocks_charged * interval`, drives the display countdown and the lazy paid-window expiry), `last_transfer_id` (`TEXT`, the most recent ServiceCredits transfer id — trace only, NOT a value), and `ended_reason` (`TEXT`: `caller_insufficient_funds` | `paid_window_elapsed` | `block_cap_reached`, null for a plain end/decline/timeout). **No credit balance is stored on this table** — every block charge is a row in the canonical `service_credits_*` tables (see Security/Compliance and the deletion contract). A partial unique index `foundation_call_sessions_active_ring_per_callee` (over `callee_user_id WHERE ring_status = 'ringing'`) allows only one live ring per callee at a time; index `foundation_call_sessions_ring_status_idx` supports the inbox poll and timeout sweep. All added with `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS` so legacy DBs upgrade cleanly.
-6. `foundation_quote_requests` — Quote request lifecycle records. Priced one-off quote (2026-07-21): `quoted_amount` (`NUMERIC`, nullable), `quoted_currency` (`TEXT`, nullable, FK → `currencies.code`), and `settled_at` (`TIMESTAMPTZ`, nullable). When a **provider** moves a quote to `provider_responded` they attach `quoted_amount` + `quoted_currency` (a code from the shared currency catalog); on `closed`, a quote that carries a value stamps `settled_at = NOW()`, and that settled value feeds GDP recognition per currency (see the `foundationQuoteSource` recognition source in `lib/gdp/recognition.ts`). All three are null until the provider responds / the quote settles. There is **no** `is_recurring` column — recurring engagements are out of scope here (handled by the Recurring Activity plugin). All added with `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
+6. `foundation_quote_requests` — Quote request lifecycle records. `request_details` (`JSONB NOT NULL DEFAULT '{}'`) holds whatever the member attached to the request, always a JSON object; declared in `schema.sql` since 2026-10-03 (the create path had written it from the start, but nothing had declared it, so a database built from the schema file alone refused every quote). Priced one-off quote (2026-07-21): `quoted_amount` (`NUMERIC`, nullable), `quoted_currency` (`TEXT`, nullable, FK → `currencies.code`), and `settled_at` (`TIMESTAMPTZ`, nullable). When a **provider** moves a quote to `provider_responded` they attach `quoted_amount` + `quoted_currency` (a code from the shared currency catalog); on `closed`, a quote that carries a value stamps `settled_at = NOW()`, and that settled value feeds GDP recognition per currency (see the `foundationQuoteSource` recognition source in `lib/gdp/recognition.ts`). All three are null until the provider responds / the quote settles. There is **no** `is_recurring` column — recurring engagements are out of scope here (handled by the Recurring Activity plugin). All added with `ALTER TABLE IF EXISTS ... ADD COLUMN IF NOT EXISTS`.
 7. `foundation_quote_status_events` — Quote state transition log.
 8. `foundation_notification_events` — Notification delivery history. The instant-call ring (issue #808 task 5) writes a row of kind `instant_call.ring` (title "Incoming call", body "<caller> is calling you on Foundation.", `metadata.callId` + `metadata.type`) for the callee, so the in-app inbox/poll fallback shows the ring even when Web Push is unconfigured. Existing kinds: `message.new`, `quote.requested`, `quote.state.updated`.
 9. `foundation_rate_limit_counters` — Per-command rate limiting state.
@@ -184,6 +184,28 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-10-03: **Request Quote now says which step failed and gives a reference to quote; the quote
+  table declares the column every quote writes (bug fix, owner report).** A member pressing Request
+  Quote on a provider profile got "Connections are temporarily unavailable. Please try again
+  shortly." and nothing else. Two things were wrong. First, the screen (`foundation-shell.tsx`)
+  mapped both `FOUNDATION_PERSISTENCE_UNAVAILABLE` and `FOUNDATION_STREAM_UNAVAILABLE` to that one
+  fixed line, which replaced the route's own sentence and dropped the `reference` the thread route
+  had carried since 2026-09-12. So the banner could not say whether the connection thread or the
+  quote failed, and a screenshot could not be matched to the error report. The two codes are no
+  longer in the fixed-copy map: the screen shows what the route said (the fixed copy stays for policy
+  denied, provider not found, rate limit and CSRF) and appends `[ref xxxxxxxx]` whenever the response
+  carries one, the same way the instant-call dialog does. Second, `POST /api/foundation/quotes` still
+  answered an unexpected failure with "Quote create unavailable." and no reference; it now goes
+  through `failureResponse` (member audience) with "Could not send your quote request right now."
+  plus a reference, so both steps of Request Quote are traceable. Separately, `createQuoteRequest`
+  writes `foundation_quote_requests.request_details` on every insert, but `schema.sql` never declared
+  that column (a comment claimed an `ALTER` added it; none did), so a database built from the schema
+  file alone refused the second step with "column request_details does not exist". Added
+  `ADD COLUMN IF NOT EXISTS request_details JSONB NOT NULL DEFAULT '{}'::jsonb` (a no-op where the
+  column exists) and regenerated `schema.demo.sql`. Whether production's failure was this column or
+  something else is what the reference is for: the next screenshot names the log line. No route,
+  contract or credit change. **Parity:** web + mobile-responsive; Android out of scope (web-only per
+  rule 105).
 - 2026-09-23: **A quote could be priced but never closed, so no Foundation job reached GDP.** The
   server has always accepted the `closed` transition, and `updateQuoteRequestState` stamps
   `settled_at` on it whenever the quote carries a value; `foundationQuoteSource` reads exactly those
