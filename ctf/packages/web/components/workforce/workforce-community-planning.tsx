@@ -17,8 +17,11 @@ import type { WorkforceMatchedMember } from '../../lib/workforce/types';
 // sectors, and its gap is the sectors' summed demand gap. Reads the live model, so it recomputes on
 // every load as the Directory changes — no scheduled job, and member names never leave the app.
 //
-// Admins get a picture of the tab (owner request, 2026-10-03: this one is for showing the plan,
-// and members are not the audience for it). The rosters are the reason it is not one to one: a
+// The picture control is off by default and the admin page turns it on (owner directive,
+// 2026-10-03: a capture control only goes on a member page if members get it too, so an admin-only
+// one lives on the admin page rather than hidden inside the member UI behind an admin check).
+// `showPicture` rather than `isAdmin` says which of those is being asked for at the call site.
+// The rosters are the reason the picture is not one to one: a
 // team expands to real member names linked to their Directory profiles, and a picture travels
 // away from the app's own access rules. Those rows carry `data-capture-hide`, so an expanded team
 // is still in the picture as a team — its name, what it is responsible for, its sectors and its
@@ -138,7 +141,7 @@ function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens
   );
 }
 
-export function WorkforceCommunityPlanning({ isAdmin = false }: { isAdmin?: boolean }) {
+export function WorkforceCommunityPlanning({ showPicture = false }: { showPicture?: boolean }) {
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
   const [report, setReport] = useState<CommunityPlanningReport | null>(null);
@@ -251,7 +254,7 @@ export function WorkforceCommunityPlanning({ isAdmin = false }: { isAdmin?: bool
         </div>
       </div>
 
-      {isAdmin && (
+      {showPicture && (
         <div style={{ padding: '0 24px 32px' }}>
           <SharePicture
             capture={capture}
