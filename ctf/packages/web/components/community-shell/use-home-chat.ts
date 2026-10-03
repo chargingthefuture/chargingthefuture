@@ -12,7 +12,6 @@ import {
 } from 'react';
 import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
 import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
-import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
 import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
@@ -112,8 +111,8 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // action button: a peer community post must never carry a plugin link the author did not add, and
 // members cannot attach one. (The old keyword inference here wrongly decorated any post containing
 // words like "economy"/"housing" with an "Open GDP"/"Open LightHouse" button, making it look as if
-// the poster had linked a plugin.) Action buttons come only from an explicit source — the local
-// concierge reply and an answer chip set their own `actions` — never from message text.
+// the poster had linked a plugin.) Action buttons come only from an explicit source — an answer
+// chip sets its own `actions` — never from message text.
 function buildChatMessage(
   id: string,
   from: 'commons' | 'user',
@@ -190,7 +189,7 @@ function getMessageDedupKey(message: ChatMessage): string {
   // with its published time. Keying on the stable community post id keeps those two copies from
   // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
   // composite key below folds the formatted time label in, so "9:32 PM" vs "9:33 PM" defeated
-  // it). Non-post lines (AI answers, concierge, announcement rows) keep the composite key.
+  // it). Non-post lines (AI answers, answer chips, announcement rows) keep the composite key.
   if (message.communityPostId) {
     return `post|${message.communityPostId}`;
   }
@@ -456,7 +455,7 @@ function useCommonsStreamFilters(userId: string, settersRef: RefObject<ChatSette
 }
 
 // The composer's "replying to …" target for a peer message, or null when the message is not a peer
-// post (only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to).
+// post (only peer posts carry a communityPostId, so AI answers / answer-chip lines cannot be replied to).
 function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
   if (!message.communityPostId) return null;
   const author = message.senderLabel ?? 'Community member';
@@ -769,49 +768,9 @@ async function runRateComicAnswer(turnId: string, rating: ComicAnswerRating, set
   }
 }
 
-// Build the member's question message plus the instant local concierge reply for a concierge ask.
-// Purely local — points at the best-matching feature (with an "Open X" button), or a gentle
-// fall-back when nothing matches. Returns an empty array for empty input.
-function buildConciergeMessages(promptText: string): ChatMessage[] {
-  const text = promptText.trim();
-  if (!text) {
-    return [];
-  }
-  const now = new Date();
-  const time = formatTimeLabel(now);
-  // Stamp a real sentAtIso: the home stream sorts by epoch(sentAtIso) and falls back to the array
-  // index when it is missing — without this, concierge messages got a tiny fallback epoch and sorted
-  // to the TOP of the chat instead of the bottom. A real timestamp keeps them newest-last.
-  const sentAtIso = now.toISOString();
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const matches = resolveConcierge(text);
-  const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time, sentAtIso };
-
-  const top = matches[0];
-  const second = matches[1];
-  const reply: ChatMessage = top
-    ? {
-      id: `concierge-a-${stamp}`,
-      from: 'commons',
-      text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
-      time,
-      sentAtIso,
-      actions: [{ label: `Open ${top.name} →`, href: `/apps/${top.slug}` }],
-    }
-    : {
-      id: `concierge-a-${stamp}`,
-      from: 'commons',
-      text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
-      time,
-      sentAtIso,
-    };
-
-  return [userMsg, reply];
-}
-
 // An answer chip: the member's question as their own message, then the chip's fixed reply with its
-// buttons, both local. Nothing is sent anywhere. Same timestamp handling as the concierge above, for
-// the same reason: the stream sorts by sentAtIso.
+// buttons, both local. Nothing is sent anywhere. Both carry a real sentAtIso: the stream sorts by it,
+// and a message without one falls back to its array index and sorts to the top of the chat.
 function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>, setters: ChatSetters): void {
   const now = new Date();
   const time = formatTimeLabel(now);
@@ -823,15 +782,6 @@ function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }
       { id: `answer-a-${stamp}`, from: 'commons', text: chip.reply, time, sentAtIso, actions: [...chip.actions] },
     ]),
   );
-}
-
-// Run a concierge ask: append the member's question plus the instant local reply. No-op for empty input.
-function applyConciergeAsk(promptText: string, setters: ChatSetters): void {
-  const next = buildConciergeMessages(promptText);
-  if (next.length === 0) {
-    return;
-  }
-  setters.setMessages((previous) => mergeMessages(previous, next));
 }
 
 // One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the AI
@@ -1298,16 +1248,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const unlockFocus = useCommonsUnlockFocus();
   const suggestionChips = useMemo(() => commonsSuggestionChips({ unlockFocus }), [unlockFocus]);
 
-  // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
-  // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local
-  // concierge path (`sendConciergeAsk`); the visible chip row now uses `suggestionChips`.
-  const starterPrompts = useMemo(() => conciergeStarterPrompts(5), []);
-
-  // Run a concierge ask: show the question as the member's own message, then an instant local reply
-  // that points at the best-matching feature. Purely local — it does not post to the community and
-  // does not touch the @comic or peer-post paths.
-  const sendConciergeAsk = useCallback((promptText: string) => applyConciergeAsk(promptText, settersRef.current), []);
-
   return {
     messages,
     comicItems,
@@ -1316,12 +1256,10 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     notifyTyping,
     typingUsers,
     sendMessage,
-    sendConciergeAsk,
     // Called unconditionally, as every hook here is; it only builds a stable callback.
     addSavedMessage: useAddSavedMessage(setMessages, currentUser.userId),
     askComic,
     answerChip,
-    starterPrompts,
     suggestionChips,
     rateComicAnswer,
     composerMentionsComic,

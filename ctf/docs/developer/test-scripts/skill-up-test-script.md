@@ -69,7 +69,6 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 **Expected:**
 - Without filters, at least the seed cohort card appears.
 - Nothing on this screen, or on the Apps list entry that led here, promises a "stipend" or a "microgrant" — the catalog summary reads "earn credits as you reach each milestone". SkillUp moves credits on milestone release, trainer grant, and completion bonus only.
-- Ask the Concierge something SkillUp actually answers ("I need training for work that is actually hiring"): it offers SkillUp. Ask it a savings question ("I want to save $1,000 in 90 days"): it does **not** offer SkillUp, which runs training cohorts and tracks no savings goal.
 - Filtering by matching track narrows the list to include the seed cohort; filtering by a track that matches nothing shows an empty state (no error).
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
