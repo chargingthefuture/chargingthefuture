@@ -42,7 +42,10 @@ export function ReaderShell() {
   return (
     <>
       <MobileScreenHeader title="Reader" accent={t.ACCENT} icon={<Rss size={18} color={t.ACCENT} />} />
+      {/* ctf-self-responsive: without it the app viewport's un-row fallback forces this column to
+          display:block, which drops the gap and leaves the cards touching. */}
       <div
+        className="ctf-self-responsive"
         style={{
           width: '100%',
           background: t.BG,
