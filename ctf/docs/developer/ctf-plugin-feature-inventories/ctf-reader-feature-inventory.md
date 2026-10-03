@@ -27,8 +27,9 @@ already have.
 - A tile in the apps list called Reader, opening a page that explains the reader in plain words.
 - An "Open the reader" button that goes to rss.chargingthefuture.com in a new tab, with a line
   underneath naming the address it opens and saying the sign-in is this same account.
-- A statement of what a new reader account starts with: this blog and the owner's demo-video
-  channel, and nothing else added for you (the channel joined the default list 2026-09-23).
+- A statement of what a new reader account starts with: this blog, the owner's demo-video
+  channel and the recorded broadcasts, and nothing else added for you (the channel joined the
+  default list 2026-09-23, the recorded broadcasts 2026-09-29).
 - A statement of what the reader cannot do: it collects only from the day a feed is added, and it
   never notifies anybody.
 - A statement of what a place on the reader costs, and that losing one is not a ban: the account in
@@ -101,6 +102,9 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Change Log
 
+- 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
+  became the third on 2026-09-29 (owner report). The card, the user guide step and the test
+  script now name all three.
 - 2026-09-23 — Created. The reader went live at rss.chargingthefuture.com earlier the same day;
   this adds the tile and the page that explains it, so the apps list carries it rather than members
   finding the address in a blog post. The page exists at all because the apps list has no way to
