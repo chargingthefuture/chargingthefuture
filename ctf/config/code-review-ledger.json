@@ -191,9 +191,10 @@
     {
       "name": "economic-models-package",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-04T23:53:41.070Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-04T23:53:41.070Z"
     },
     {
       "name": "education-package",
