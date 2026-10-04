@@ -31,8 +31,8 @@ and does no external calls.
 - One short form: what went wrong (required), what you were trying to do (optional). Page and
   plugin are attached automatically; the browser is read server-side. (No app-version constant
   exists in the app yet, so `appVersion` is not sent.)
-- Under the intro line, above the first text box: "Not a bug? To talk to Farah about your work,
-  it's $7 here." — "here" opens One Percent (https://farahbrunache.com), the paid tier, in a new
+- Under the intro line, above the first text box: "Not a bug? To talk to Farah about your
+  work." — "talk to Farah about your work" opens One Percent (https://farahbrunache.com), the paid tier, in a new
   tab (web) or the device browser (android). It is a pointer only: the form, its fields and the
   submit button work exactly as before, and the link carries no tracking.
 - Immediate, private storage of the report with a calm confirmation. No technical detail is
@@ -171,6 +171,10 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-04: **The One Percent line drops the price.** Owner directive: the line now reads "Not
+  a bug? To talk to Farah about your work.", and the link moves from "here" to "talk to Farah
+  about your work", on web and android. Same address, styling and behavior. Test script BUG-1
+  updated.
 - 2026-10-04: **A line above the form points people who aren't reporting a bug to One Percent.**
   Owner report: members use the form to reach the owner about their own work, because it's the
   only channel that feels like a direct message. A second line under the intro, on web

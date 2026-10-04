@@ -40,14 +40,14 @@ export function BugReportForm({
             where members can answer.
           </p>
           <p className={styles.subtitle}>
-            Not a bug? To talk to Farah about your work, it&apos;s $7{' '}
+            Not a bug? To{' '}
             <a
               className={styles.subtitleLink}
               href={ONE_PERCENT_PAID_TIER_URL}
               target="_blank"
               rel="noopener noreferrer"
             >
-              here
+              talk to Farah about your work
             </a>
             .
           </p>

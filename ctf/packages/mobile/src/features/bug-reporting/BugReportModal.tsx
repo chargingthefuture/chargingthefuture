@@ -218,7 +218,7 @@ function FormBody({
         where members can answer.
       </Text>
       <Text style={s.signpost}>
-        Not a bug? To talk to Farah about your work, it&apos;s $7{' '}
+        Not a bug? To{' '}
         <Text
           style={s.signpostLink}
           accessibilityRole="link"
@@ -226,7 +226,7 @@ function FormBody({
             void Linking.openURL(ONE_PERCENT_PAID_TIER_URL);
           }}
         >
-          here
+          talk to Farah about your work
         </Text>
         .
       </Text>
