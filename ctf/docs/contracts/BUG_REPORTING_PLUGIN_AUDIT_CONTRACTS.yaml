@@ -1,110 +1,89 @@
 # Bug Reporting audit events.
 #
-# One command writes a durable row: the admin resolve, through `recordBugReportAdminAudit` in
-# `lib/bug-reports/audit.ts`, into `bug_report_admin_audit_trail`. The row's `command` column holds
-# the string `bug-reports.admin.resolve` (the code's own name, kept here verbatim so a reader can match
-# the row to this contract), its `id` is a generated UUID, and `target_type` is always `bug_report`.
-# The same helper prints one log line per event for debugging; the row is the record.
+# Written from the code as it stands on 2026-10-04 (docs only; no behavior changed):
+# ctf/packages/web/lib/bug-reports/audit.ts (recordBugReportAdminAudit) and its only caller,
+# ctf/packages/web/app/api/bug-reports/admin/[id]/resolve/route.ts.
 #
-# The other three commands write nothing: no row and no log line. The only trace of a report being
-# filed, listed, or the trail being read is the server's request log. Their entries below describe
-# the shape such an event would take and say so, rather than claiming a row that is not written.
+# One event is written, for the admin resolve decision. Not audited:
+#   - bug-reports.report.submit — no audit row or audit log line. The stored bug_reports row
+#     (user_id, created_at) is the only record that someone filed a report.
+#   - bug-reports.admin.list — admin reads are not recorded.
+#   - bug-reports.admin.audit-events.list — reads of the trail are not recorded.
+#   - The create-issues job (ctf/scripts/createBugReportIssues.mjs) records no audit event; the
+#     report row's own status, issue_number and issue_url show that it was sent.
 #
-# What is deliberately never recorded, by any entry: the report body (raw or redacted) and the
-# reporter's id. The trail names which report was decided and by whom, never what it said or who said it.
+# Each event is written twice: a log line tagged `[bug-reports.audit]` with the shape below, and a
+# row in bug_report_admin_audit_trail. The row is the durable record. The write never throws: if
+# the insert fails, the failure goes to the observability channel (area bug-reports, op
+# admin_audit_write) and the request carries on, so a completed resolve is never turned into an
+# error by a failed audit write.
+#
+# What is deliberately never recorded: the report text and the reporter. The trail names which
+# report was decided and by which admin. There is no column for either.
 auditEvents:
-  - eventId: bug-reporting.report.create
+  - eventId: uuid
     timestamp: rfc3339
     actorId: principal
-    pluginId: bug-reporting
-    command: report.create
+    pluginId: bug-reports
+    command: bug-reports.admin.resolve
     commandVersion: 1.0.0
-    purpose: file_problem_report
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    result: stored_or_rate_limited
-    dataClassesAccessed:
-      - report_text_raw
-      - report_text_redacted
-      - risk_classification
-      - page_and_plugin_context
-    targetContext:
-      reportId: report_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    # Request log only — no durable row. The code writes nothing to bug_report_admin_audit_trail on
-    # create and prints no audit log line; a storage failure goes to observability via reportError.
-    notes: >-
-      Not durably audited. The bug_reports row itself carries user_id and created_at, which is the
-      record of the filing; a separate audit row would duplicate that and would have to name the
-      reporter, which the trail is built never to do.
-  - eventId: bug-reporting.admin.report.list
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: bug-reporting
-    command: admin.report.list
-    commandVersion: 1.0.0
-    purpose: triage_review
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    result: listed
-    dataClassesAccessed:
-      - report_text_redacted
-      - risk_classification
-      - reporter_display_identity
-      - issue_link
-    targetContext:
-      surface: admin_bug_reports_page
-    requestId: request_identifier
-    traceId: trace_identifier
-    # Request log only — no durable row. The code records nothing for an admin list read.
-    notes: Not durably audited. A read of the review list leaves no row and no log line.
-  - eventId: bug-reports.admin.resolve
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: bug-reporting
-    command: admin.report.resolve
-    commandVersion: 1.0.0
-    purpose: triage_decision
+    purpose: product_problem_triage
     policyDecision:
       status: allow_or_deny
       reason: admin_route_guard_or_not_resolvable
-    result: success_or_failure
     dataClassesAccessed:
-      - report_status
-      - resolve_action
+      - bug_report_status
     targetContext:
       targetType: bug_report
-      targetId: report_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    # Durable. The eventId above is the exact string the code writes to the `command` column of
-    # bug_report_admin_audit_trail. Three outcomes are written: allow/success with metadata
-    # {action, toStatus}; deny/failure with reason not_resolvable and error_category conflict (the 409);
-    # allow/failure with error_category persistence_error (the 503). The row's `id` is a UUID generated
-    # by the database, and the log line carries its own randomUUID eventId.
-    notes: >-
-      Recorded on every attempt, refusals included. An admin reaching for a report that is already
-      gone is worth seeing, and what did not happen must be as legible as what did. The audit write
-      never fails the resolve: a write error is reported to observability instead.
-  - eventId: bug-reporting.admin.audit.list
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: bug-reporting
-    command: admin.audit.list
-    commandVersion: 1.0.0
-    purpose: audit_review
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    result: listed
-    dataClassesAccessed:
-      - audit_decision_rows
-    targetContext:
-      surface: admin_bug_reports_audit_panel
-    requestId: request_identifier
-    traceId: trace_identifier
-    # Request log only — no durable row. Reading the trail does not itself write to the trail.
-    notes: Not durably audited. The read returns decision rows and leaves none behind.
+      targetId: bug_report_identifier
+    metadata:
+      action: release_or_reject
+      toStatus: new_or_rejected (only on success)
+    result:
+      status: success_or_failure
+      errorCategory: none_or_conflict_or_persistence_error
+    requestId: not_recorded
+    traceId: not_recorded
+    outcomes:
+      - when: Status changed (HTTP 200)
+        policyStatus: allow
+        reason: admin_route_guard
+        result: success
+        errorCategory: null in the row, none in the log line
+        metadata: '{ action, toStatus }'
+      - when: No row changed, report missing or already past the status the action needs (HTTP 409)
+        policyStatus: deny
+        reason: not_resolvable
+        result: failure
+        errorCategory: conflict
+        metadata: '{ action }'
+      - when: The status update threw (HTTP 503)
+        policyStatus: allow
+        reason: admin_route_guard
+        result: failure
+        errorCategory: persistence_error
+        metadata: '{ action }'
+    notWritten: >-
+      A request refused before the status update writes nothing: not signed in (401), not an admin
+      or a failed CSRF check (403), or a bad id, body or action (400).
+    storage:
+      table: bug_report_admin_audit_trail
+      columns:
+        id: uuid primary key, database default (not the same value as the log line eventId)
+        actor_id: the admin's user id (auth userId)
+        command: bug-reports.admin.resolve
+        policy_status: allow or deny
+        reason: admin_route_guard or not_resolvable
+        target_type: always bug_report
+        target_id: the report id from the path
+        result: success or failure
+        error_category: null, conflict or persistence_error
+        metadata: jsonb, the action and on success the new status
+        created_at: database default NOW()
+      index: idx_bug_report_admin_audit_trail_lookup (created_at DESC, actor_id, command)
+      readBy: GET /api/bug-reports/admin/audit-events (Audit log panel on /admin/bug-reports)
+    logLineOnly:
+      - eventId (random uuid made for the log line)
+      - timestamp
+      - pluginId
+      - commandVersion

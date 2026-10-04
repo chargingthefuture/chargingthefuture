@@ -100,13 +100,14 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 
 ## Security, Privacy, and Compliance Controls
 
-- **Contracts (added 2026-10-04).** `ctf/docs/contracts/BUG_REPORTING_PLUGIN_COMMAND_CONTRACTS.yaml`
-  (`bug-reporting.report.create`, `.admin.report.list`, `.admin.report.resolve`, `.admin.audit.list`),
-  `BUG_REPORTING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, `BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml`
-  (the one durable event is `bug-reports.admin.resolve`, the string the code writes) and
-  `BUG_REPORTING_PROFILE_AND_DELETION_CONTRACT.md` (`bug_reports` pseudonymized on `user_id`; the
-  admin audit trail retained). The prefix follows the registry slug; `api/bug-reports` is mapped to
-  it in `ctf/config/code-review-slice-manifest.json`.
+Contracts (written from the code on 2026-10-04; where a contract and this inventory differ, the
+contract follows the code):
+
+- Commands: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_COMMAND_CONTRACTS.yaml`
+- Access policy: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
+- Audit events: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml`
+- Profile, deletion and export: `ctf/docs/contracts/BUG_REPORTING_PROFILE_AND_DELETION_CONTRACT.md`
+
 - **Raw text never leaves the database.** Only redacted text is published, and only into a
   private repo.
 - **Fail closed.** Anything the gate flags becomes `held_for_review` and is never
@@ -178,15 +179,15 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
-- 2026-10-04: **The four contract files exist.** Another session noticed this plugin had none of the
-  mandatory contracts; an audit across every API surface followed. The `BUG_REPORTING_*` command,
-  access-policy, audit and profile-and-deletion contracts are written from the routes, the
-  repository and the deletion registry, and CI job `contract-coverage-gate` now fails on any API
-  surface missing one of the four files. No code change. Noted while writing them, not changed: the
-  admin list reads the legacy `users` table for `reporter_username` behind a `to_regclass` probe,
-  the 409 on a non-resolvable report uses error code `bug_reports.forbidden`, and `user_agent` is
-  stored but not returned by the admin list.
-
+- 2026-10-04: **Contract coverage is enforced.** CI job `contract-coverage-gate`
+  (`ctf/scripts/check-contract-coverage.mjs`) now fails on any API surface missing one of the four
+  contract files without a recorded reason, so this plugin cannot drift back to having none.
+- 2026-10-04: **Contracts written for this plugin.** The command, access policy, audit and
+  profile-and-deletion contracts did not exist; all four are now in `ctf/docs/contracts/`
+  (`BUG_REPORTING_*`), written from the current code, and linked from the Security section above.
+  The code-review sweep now maps the `bug-reports` slice to these files
+  (`ctf/config/code-review-slice-manifest.json`), and the profile-and-deletion index lists them.
+  Docs only: no code, schema or behavior changed.
 - 2026-10-04: **The One Percent line drops the price.** Owner directive: the line now reads "Not
   a bug? To talk to Farah about your work.", and the link moves from "here" to "talk to Farah
   about your work", on web and android. Same address, styling and behavior. Test script BUG-1

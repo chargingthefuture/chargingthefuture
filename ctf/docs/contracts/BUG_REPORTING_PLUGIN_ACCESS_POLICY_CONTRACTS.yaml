@@ -1,88 +1,144 @@
 # Bug Reporting access policy.
 #
-# Two postures. Filing a report needs a signed-in member and nothing more: `requireReporterAccess` in
-# `app/api/bug-reports/_lib.ts` evaluates with `minUnlockTier: 'any_authenticated'`, because the
-# member most likely to hit a bug is the one stuck in onboarding, and gating the report behind Unlock
-# would silence exactly them. This is listed as machinery (not one of the four feature exceptions) in
-# `ctf/config/unlock-tier-exception-allowlist.json`, and CI fails if the call site and the list drift.
+# Written from the code as it stands on 2026-10-04 (docs only; no behavior changed). The gates live
+# in ctf/packages/web/app/api/bug-reports/_lib.ts and call evaluatePluginAccess
+# (ctf/packages/web/lib/auth/server-authz.ts).
 #
-# Everything else is admin only: `requireBugReportAdminAccess` evaluates with `requiredRoles: ['admin']`
-# on every admin route regardless of what the navigation shows (rule 131). Both POST routes also need
-# the `x-ctf-csrf: 1` header and pass the same-origin check in `lib/auth/csrf`; GET routes do not.
+# Two postures:
+#   - Filing a report needs only a signed-in account. It is Unlock-exempt machinery, not a feature
+#     exception: the member most likely to hit a bug is the one stuck in onboarding, and gating this
+#     would silence exactly them. Listed in ctf/config/unlock-tier-exception-allowlist.json (kind
+#     `machinery`, file app/api/bug-reports/_lib.ts) and enforced by
+#     ctf/scripts/check-unlock-tier-exceptions.mjs.
+#   - Everything under /api/bug-reports/admin needs the admin role. The tier is left at the
+#     approved_full default, but evaluatePluginAccess lets an admin past the tier and restriction
+#     checks, so the role is the real gate.
+#
+# denyConditions use the codes the routes actually return. The two AUTH_* codes come from the shared
+# deny body (lib/auth/deny-taxonomy.ts); the bug_reports.* codes come from
+# lib/bug-reports/constants.ts.
 policies:
-  - pluginId: bug-reporting
-    command: bug-reporting.report.create
+  - pluginId: bug-reports
+    command: bug-reports.report.submit
     version: 1.0.0
-    requiredRoles: [user]
+    requiredRoles: []
+    requiresAuthentication: true
     minUnlockTier: any_authenticated
-    requiresAuthentication: true
     attributePolicies:
-      ownership: the row is written with the caller's own user id; no other member is named
-      rateLimit: at most 5 reports per member in a rolling 10 minutes, counted on bug_reports
-      csrf: x-ctf-csrf header plus same-origin check, before the body is read
+      tenancy: same_workspace
+      unlockGated: false
+      accountRestrictionChecked: false
+      ownRowsOnly: enforced
+      csrf: x-ctf-csrf header must be "1"; Origin, when sent, must be the same host
+      rateLimit: 5 reports per person in a rolling 10 minutes
     consentRequirements:
-      - The report form says the text is stored privately and that only a redacted copy can reach the
-        private triage repository. Nothing the member writes is ever shown to other members.
+      scopes:
+        - product_problem_reporting
+      fallbackLawfulBasis: legitimate_interest_service_operation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
     denyConditions:
-      - not_signed_in
-      - csrf_header_missing_or_cross_origin
-      - message_missing_or_not_a_string
-      - rate_limit_reached
+      - AUTH_UNAUTHORIZED (401) — not signed in
+      - bug_reports.csrf_denied (403) — x-ctf-csrf header missing or not "1"
+      - bug_reports.csrf_denied (403) — Origin header cannot be parsed
+      - bug_reports.csrf_denied (403) — Origin header is from another host
+      - bug_reports.invalid_payload (400) — body is not valid JSON, or message is missing or blank
+      - bug_reports.rate_limited (429) — 5 or more reports from this person in the last 10 minutes
     notes: >-
-      The unlock-tier exception, with its reason: an unapproved member is still a signed-in member,
-      and the report is the only way they can tell anybody that the step in front of them is broken.
-      The row is their own text under their own id and touches nobody else.
-  - pluginId: bug-reporting
-    command: bug-reporting.admin.report.list
+      No role is checked: any signed-in account passes, whatever its Unlock tier. Because the tier is
+      any_authenticated, evaluatePluginAccess also skips the full-account restriction check, so a
+      member under an `all`-scope restriction can still file a report. A not-yet-verified member is
+      the person this is kept open for. Submission is not written to an audit trail; the stored row
+      itself (user_id, created_at) is the record that the person filed it.
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.list
     version: 1.0.0
-    requiredRoles: [admin]
-    minUnlockTier: approved_full
+    requiredRoles:
+      - admin
     requiresAuthentication: true
+    minUnlockTier: approved_full
     attributePolicies:
-      fields: redacted text only; raw_message and raw_context are never selected
-      reporterIdentity: username and a stable handle, shown on this admin surface only and never copied onto the triage issue
-    consentRequirements: []
+      tenancy: same_workspace
+      rawTextExposed: false
+      reporterIdentityExposed: admin_surface_only
+    consentRequirements:
+      scopes:
+        - product_problem_triage
+      fallbackLawfulBasis: legitimate_interest_service_operation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
     denyConditions:
-      - not_signed_in
-      - not_admin
+      - AUTH_UNAUTHORIZED (401) — not signed in
+      - AUTH_FORBIDDEN_ROLE (403) — signed in without the admin role
     notes: >-
-      Read-only. The list exists so a human looks at every held report before it goes anywhere, and
-      so a report that is really a request for help can be answered.
-  - pluginId: bug-reporting
-    command: bug-reporting.admin.report.resolve
+      Read only, so no CSRF check. Returns redacted text, never raw_message or raw_context, and
+      includes the reporter's username and handle so the admin can follow up. Reads are not audited.
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.resolve
     version: 1.0.0
-    requiredRoles: [admin]
-    minUnlockTier: approved_full
+    requiredRoles:
+      - admin
     requiresAuthentication: true
+    minUnlockTier: approved_full
     attributePolicies:
-      stateGuard: release only from held_for_review; reject only from held_for_review or new; anything else is a 409 and is recorded
-      csrf: x-ctf-csrf header plus same-origin check, before the body is read
-      audit: every attempt writes a row to bug_report_admin_audit_trail, refusals and failures included
-    consentRequirements: []
+      tenancy: same_workspace
+      csrf: x-ctf-csrf header must be "1"; Origin, when sent, must be the same host
+      allowedTransitions: release held_for_review to new; reject held_for_review or new to rejected
+    consentRequirements:
+      scopes:
+        - product_problem_triage
+      fallbackLawfulBasis: legitimate_interest_service_operation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
     denyConditions:
-      - not_signed_in
-      - not_admin
-      - csrf_header_missing_or_cross_origin
-      - id_not_a_uuid
-      - action_not_release_or_reject
-      - report_not_resolvable
+      - AUTH_UNAUTHORIZED (401) — not signed in
+      - AUTH_FORBIDDEN_ROLE (403) — signed in without the admin role
+      - bug_reports.csrf_denied (403) — x-ctf-csrf header missing, or Origin unparseable or from another host
+      - bug_reports.invalid_payload (400) — report id is not a UUID, body is not valid JSON, or action is not release or reject
+      - bug_reports.forbidden (409) — report missing or not in a status the action can move (audited as deny, reason not_resolvable)
     notes: >-
-      The decision that matters most in this plugin. Release sends the member's redacted words to the
-      triage repository; reject means they go nowhere, and the member is never told which. That is why
-      the refusal path is audited as carefully as the success path.
-  - pluginId: bug-reporting
-    command: bug-reporting.admin.audit.list
+      Every attempt that reaches the status update writes a bug_report_admin_audit_trail row: success,
+      the 409 refusal, and a database failure. The 401, 403 and 400 refusals happen before that step
+      and are not audited.
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.audit-events.list
     version: 1.0.0
-    requiredRoles: [admin]
-    minUnlockTier: approved_full
+    requiredRoles:
+      - admin
     requiresAuthentication: true
+    minUnlockTier: approved_full
     attributePolicies:
-      fields: decision rows only; the trail holds no report content and no reporter id, so none can be returned
-      limit: clamped to 1..200 server-side whatever the caller sends
-    consentRequirements: []
+      tenancy: same_workspace
+      reportContentExposed: false
+    consentRequirements:
+      scopes:
+        - admin_accountability
+      fallbackLawfulBasis: legitimate_interest_service_operation
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
     denyConditions:
-      - not_signed_in
-      - not_admin
+      - AUTH_UNAUTHORIZED (401) — not signed in
+      - AUTH_FORBIDDEN_ROLE (403) — signed in without the admin role
     notes: >-
-      A trail nobody can read is not a check on anything, so the read ships with the table. Admin
-      only, like the table it reads.
+      Read only, so no CSRF check. Returns admin ids and report ids, never report text or the
+      reporter. Reads of the trail are not themselves audited.

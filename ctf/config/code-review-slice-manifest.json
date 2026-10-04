@@ -18,6 +18,10 @@
     "Add an entry when you rename a slice folder, or when a slice's contracts live under another name."
   ],
   "slices": {
+    "bug-reports": {
+      "contractPrefix": "BUG_REPORTING",
+      "note": "The api, lib and components folders are named bug-reports, but the contracts are the BUG_REPORTING_* files, after the bug-reporting plugin registry slug."
+    },
     "commons": {
       "contractPrefix": "FEED",
       "aliases": [
@@ -28,10 +32,6 @@
     "community-shell": {
       "contractPrefix": "FEED",
       "note": "The shell that renders the Commons/feed surfaces; no contracts of its own."
-    },
-    "bug-reports": {
-      "contractPrefix": "BUG_REPORTING",
-      "note": "The registry slug and the inventory are `bug-reporting`; the api and lib folders are `bug-reports`. The contracts follow the slug."
     },
     "safety": {
       "contractPrefix": "MEMBER_BLOCKS",
