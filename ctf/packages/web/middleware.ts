@@ -1,6 +1,7 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getClerkRuntimeOptions } from './lib/auth/clerk-env';
+import { IDENTITY_STAMP_HEADER, getIdentityStamp } from './lib/auth/identity-stamp';
 
 // Identity headers that the app reads in `lib/auth/request-identity.ts`. The
 // middleware is the only thing allowed to set them, so we always clear whatever
@@ -15,6 +16,7 @@ const MANAGED_IDENTITY_HEADERS = [
   'x-ctf-first-name',
   'x-ctf-last-name',
   'x-ctf-user-role',
+  IDENTITY_STAMP_HEADER,
 ];
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -90,6 +92,12 @@ export default clerkMiddleware(async (auth, request) => {
   requestHeaders.set('x-ctf-auth-provider', 'clerk');
   if (userId) {
     requestHeaders.set('x-ctf-user-id', userId);
+
+    // Proves to the app that these headers came from here, not from the client.
+    const stamp = await getIdentityStamp();
+    if (stamp) {
+      requestHeaders.set(IDENTITY_STAMP_HEADER, stamp);
+    }
 
     const username = extractUsername(sessionClaims);
     if (username) {

@@ -19,13 +19,34 @@ vi.mock('lib/auth/verify-bearer', () => ({
   verifyBearerIdentity: (...args: unknown[]) => verifyBearerIdentity(...args),
 }));
 
+vi.mock('lib/auth/provider-env', () => ({
+  getConfiguredAuthProvider: () => ({ secretKey: 'sk_test_identity_stamp' }),
+}));
+
+// Cookies are written by the client. A cookie of the same name as an identity header must never
+// stand in for it, so the mock carries values that would make the caller an admin if read.
+const clientCookies: Record<string, string> = {
+  ctf_user_id: 'user_cookie',
+  ctf_user_role: 'admin',
+  ctf_username: 'cookie_handle',
+};
+
 let requestHeaders = new Headers();
 vi.mock('next/headers', () => ({
   headers: async () => requestHeaders,
-  cookies: async () => ({ get: () => undefined }),
+  cookies: async () => ({
+    get: (name: string) => (name in clientCookies ? { name, value: clientCookies[name] } : undefined),
+  }),
 }));
 
-const { resolveRequestIdentity } = await import('lib/auth/request-identity');
+const { resolveRequestIdentity, getRequestUserId } = await import('lib/auth/request-identity');
+const { getIdentityStamp, IDENTITY_STAMP_HEADER } = await import('lib/auth/identity-stamp');
+
+async function setMiddlewareHeaders(userId: string): Promise<void> {
+  requestHeaders.set('x-ctf-authenticated', 'true');
+  requestHeaders.set('x-ctf-user-id', userId);
+  requestHeaders.set(IDENTITY_STAMP_HEADER, (await getIdentityStamp()) ?? '');
+}
 
 beforeEach(() => {
   recorded.length = 0;
@@ -36,8 +57,7 @@ beforeEach(() => {
 
 describe('recording that a member turned up', () => {
   it('records a verified web session', async () => {
-    requestHeaders.set('x-ctf-authenticated', 'true');
-    requestHeaders.set('x-ctf-user-id', 'user_web');
+    await setMiddlewareHeaders('user_web');
 
     const identity = await resolveRequestIdentity();
 
@@ -77,6 +97,52 @@ describe('recording that a member turned up', () => {
 
     expect(identity.isAuthenticated).toBe(false);
     expect(recorded).toEqual([]);
+  });
+});
+
+describe('where identity is read from', () => {
+  it('takes the role and username from the middleware headers only, never from cookies', async () => {
+    // A member with no role or username claim gets no such header from the middleware.
+    await setMiddlewareHeaders('user_member');
+
+    const identity = await resolveRequestIdentity();
+
+    expect(identity.userId).toBe('user_member');
+    expect(identity.role).toBeNull();
+    expect(identity.isAdmin).toBe(false);
+    expect(identity.username).toBeNull();
+  });
+
+  it('ignores identity headers that carry no stamp, as on a path the middleware skipped', async () => {
+    requestHeaders.set('x-ctf-authenticated', 'true');
+    requestHeaders.set('x-ctf-user-id', 'user_spoofed');
+    requestHeaders.set('x-ctf-user-role', 'admin');
+
+    const identity = await resolveRequestIdentity();
+
+    expect(identity.isAuthenticated).toBe(false);
+    expect(identity.isAdmin).toBe(false);
+  });
+
+  it('ignores identity headers that carry a wrong stamp', async () => {
+    requestHeaders.set('x-ctf-authenticated', 'true');
+    requestHeaders.set('x-ctf-user-id', 'user_spoofed');
+    requestHeaders.set(IDENTITY_STAMP_HEADER, 'not-the-stamp');
+
+    const identity = await resolveRequestIdentity();
+
+    expect(identity.isAuthenticated).toBe(false);
+  });
+
+  it('gives the lightweight user id only for a stamped, signed-in request', async () => {
+    expect(await getRequestUserId()).toBeNull();
+
+    requestHeaders.set('x-ctf-user-id', 'user_spoofed');
+    expect(await getRequestUserId()).toBeNull();
+
+    requestHeaders = new Headers();
+    await setMiddlewareHeaders('user_web');
+    expect(await getRequestUserId()).toBe('user_web');
   });
 });
 
