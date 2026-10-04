@@ -4,15 +4,21 @@
     "The sweep names a slice after the folders that share a name across the source layers. Two things",
     "cannot be derived from that name, so they are declared here instead of guessed:",
     "",
-    "  contractPrefix — which ctf/docs/contracts/<PREFIX>_* files govern this slice. The default is the",
+    "  contractPrefix \u2014 which ctf/docs/contracts/<PREFIX>_* files govern this slice. The default is the",
     "    slice name upper-snake-cased, which is wrong wherever a surface is served by another plugin's",
     "    contracts. Getting this wrong means the reviewer is handed NO contracts and then invents what",
     "    the contract must say (that is what produced issue #2207, which asserted a plugin id the feed",
     "    contracts pin the other way).",
     "",
-    "  aliases — folder names this slice used to have. Findings are deduped against issues titled",
+    "  aliases \u2014 folder names this slice used to have. Findings are deduped against issues titled",
     "    'Code review (<slice>): ...', so a rename hides every earlier decision and dismissed findings",
     "    come back. #2207 is #1876 refiled 17 days later, purely because api/hub became api/commons.",
+    "",
+    "  extraPaths \u2014 folders (or files) outside the name-grouped layers that belong to this slice: a page",
+    "    folder whose name does not match its plugin (app/survey is the quora-deletion-survey entry screen,",
+    "    app/knowledge the comic one). Claimed before any name match, so a declared path inside another",
+    "    slice's page folder (app/plugin/unlock) goes where it was declared. Undeclared, such a page is",
+    "    reviewed in the web-pages catch-all, away from the routes it calls.",
     "",
     "Only slices that need one of these appear here; everything else uses the derived default.",
     "Add an entry when you rename a slice folder, or when a slice's contracts live under another name."
@@ -21,6 +27,12 @@
     "bug-reports": {
       "contractPrefix": "BUG_REPORTING",
       "note": "The api, lib and components folders are named bug-reports, but the contracts are the BUG_REPORTING_* files, after the bug-reporting plugin registry slug."
+    },
+    "comic": {
+      "extraPaths": [
+        "ctf/packages/web/app/knowledge"
+      ],
+      "note": "app/knowledge renders components/comic (the knowledge library)."
     },
     "commons": {
       "contractPrefix": "FEED",
@@ -33,13 +45,31 @@
       "contractPrefix": "FEED",
       "note": "The shell that renders the Commons/feed surfaces; no contracts of its own."
     },
+    "questions": {
+      "contractPrefix": "FEED",
+      "note": "Mints Stream credentials for the Questions screen over feed_questions, a Feed table; governed by the FEED_* contracts."
+    },
+    "quora-deletion-survey": {
+      "extraPaths": [
+        "ctf/packages/web/app/survey"
+      ],
+      "note": "app/survey/quora-account-deletions is this plugin's entry screen; it renders components/quora-deletion-survey."
+    },
     "safety": {
       "contractPrefix": "MEMBER_BLOCKS",
       "note": "The admin review queue for the safety reports a member attaches to a block; declared as admin.safety-report.* in the MEMBER_BLOCKS_* contracts."
     },
-    "questions": {
-      "contractPrefix": "FEED",
-      "note": "Mints Stream credentials for the Questions screen over feed_questions, a Feed table; governed by the FEED_* contracts."
+    "unlock": {
+      "extraPaths": [
+        "ctf/packages/web/app/plugin/unlock"
+      ],
+      "note": "The public Unlock page lives under app/plugin, which otherwise belongs to the legacy plugin redirect slice."
+    },
+    "what-works": {
+      "extraPaths": [
+        "ctf/packages/web/app/plugin/what-works"
+      ],
+      "note": "The public What Works page lives under app/plugin."
     }
   }
 }

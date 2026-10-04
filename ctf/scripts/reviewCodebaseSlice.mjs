@@ -1,19 +1,24 @@
 #!/usr/bin/env node
-// Review ONE plugin (or standalone module) of the codebase and file GitHub issues for the
-// findings.
+// Review ONE slice of the codebase and file GitHub issues for the findings.
 //
 // This is the "code review" half of an incremental review pipeline that runs on a schedule
 // (or by hand) instead of on every merge:
 //
-//   1. Discover slices by grouping folders by NAME across the source layers
-//      (app/api, components, lib, mobile/src/features). A name that appears in several
-//      layers is a plugin and is reviewed as ONE holistic slice (its API + server logic +
-//      web UI + mobile feature together), so cross-layer bugs are visible. A name that
-//      appears in only one layer is a standalone module (e.g. `auth`, `ui`, `chatbot`) and
-//      is its own slice, so features outside any plugin still get reviewed.
-//   2. Pick the slice to review: an in-progress (partial) slice first, then any
-//      never-reviewed slice, then the least-recently-reviewed one. This guarantees every
-//      slice gets at least one pass before any gets a second.
+//   1. Discover slices. Folders are grouped by NAME across the source layers (app/api,
+//      components, lib, mobile/src/features; a page folder under app/ joins a slice of the same
+//      name). A name that appears in several layers is a plugin and is reviewed as ONE holistic
+//      slice (its API + server logic + web UI + mobile feature together), so cross-layer bugs are
+//      visible. A name that appears in only one layer is a standalone module (e.g. `auth`, `ui`,
+//      `chatbot`) and is its own slice, so features outside any plugin still get reviewed.
+//      A page folder elsewhere that belongs to a plugin is declared under `extraPaths` in the
+//      slice manifest. Everything that no grouped slice claims lands in a catch-all slice
+//      (`web-pages`, `web-shell`, `mobile-shell`, one per other workspace package, `scripts`,
+//      `ops`, `sql`, and `ctf-root` for whatever is left), so every source file under ctf/
+//      belongs to exactly one slice. Before the catch-alls, 343 files — the admin pages, the plugin shell page, the
+//      middleware, every script and migration — were in no slice and were never reviewed.
+//   2. Pick the slice to review: an in-progress (partial) slice first, then one with findings
+//      left over from a capped run, then any never-reviewed slice, then the least-recently-
+//      reviewed one. This guarantees every slice gets at least one pass before any gets a second.
 //   3. Send that slice's source to Claude (up to a per-run byte budget), along with two read-only
 //      references — the plugin's declared contracts, and the code the slice imports from OUTSIDE
 //      itself — and ask for concrete, high-signal findings, including mismatches between the layers
@@ -27,15 +32,45 @@
 //      down (issues #2205, #2206, #2208). See ctf/scripts/lib/sliceImports.mjs.
 //   4. File one GitHub issue per finding, labeled `code-review`. Findings the model judges
 //      to have a small, safe, self-contained fix also get `code-review:actionable`, which
-//      the implement workflow can turn into a pull request.
+//      the implement workflow can turn into a pull request. Findings past the per-run issue cap
+//      are kept on the slice's ledger row (`deferred`) and filed by the next run(s) — a run that
+//      files leftovers reviews nothing new — before any further part of the slice is read. They
+//      used to be dropped until the slice came round again.
 //   5. Stamp the slice in the rotation ledger. A slice too big for one run carries over:
 //      its remaining files are reviewed on the next run(s), and it is only marked fully
-//      reviewed once every file has been covered (nothing is silently dropped).
+//      reviewed once every file has been covered (nothing is silently dropped). The resume point
+//      is the path of the next file (plus a byte offset inside a file larger than the budget,
+//      which is read in windows across runs), not an index, so a file added or removed between
+//      runs does not shift it.
 //
-// It never writes code or opens a PR. It no-ops safely when its environment is not
-// configured, so it is harmless to schedule before the secrets are in place.
+// It never writes code or opens a PR.
 //
-// Required environment:
+// The ledger has two copies and they are merged on read. The scheduled sweep keeps its copy on
+// the `code-review-ledger` branch; the hand route (`/rs`) stamps the copy on main. Each run reads
+// its own copy plus every path in CODE_REVIEW_LEDGER_MERGE_PATHS and, slice by slice, keeps the
+// row written most recently (`updatedAt`, which every write to a row refreshes) — so a slice
+// reviewed by hand is not reviewed again by the next funded run, and a slice the funded run
+// covered is not picked by hand. Before the merge the two copies drifted for
+// months and nine hand-reviewed slices read as never reviewed on the branch.
+//
+// Modes (the first argument):
+//   (none)                       Review one slice and file issues. Needs ANTHROPIC_API_KEY and
+//                                GH_TOKEN; a missing one FAILS the run (it used to exit 0 with
+//                                "nothing to do", which made a lost secret look like a green run).
+//                                A missing API key is reported as the paused state `no_key`
+//                                (CTF_RUN_BLOCKED_EXTERNAL) so the health check lists it as
+//                                paused, not broken; a missing GH_TOKEN is a plain failure.
+//   --pick [slice] [--json]      Print the slice the sweep would review next (or the named one):
+//                                its folders, files, resume point, leftover findings, and which
+//                                slices are new or never reviewed. No model call, no secrets. This
+//                                is how `/rs` chooses, so the hand route runs the same discovery
+//                                and sees slices the ledger file does not list yet.
+//   --stamp <slice> [--issues N] Mark the slice fully reviewed now (clears partial state and
+//                                leftover findings) and save the reconciled ledger. For `/rs`.
+//   --reconcile                  Merge, reconcile against the current folders, and save. No stamp.
+//   --fingerprint <slice> <title>  Print the dedupe fingerprint the sweep embeds in an issue body.
+//
+// Required environment (review mode):
 //   ANTHROPIC_API_KEY    For the model call.
 //   GH_TOKEN             A token with `issues: write` on the repo (the Actions token is fine).
 //
@@ -43,28 +78,47 @@
 //   GITHUB_REPOSITORY      owner/repo (default: chargingthefuture/chargingthefuture).
 //   CODE_REVIEW_MODEL      Model id (default: claude-sonnet-4-6). Use a cheaper model to cut cost.
 //   CODE_REVIEW_SLICE      Review this exact plugin/module name instead of the rotation pick.
-//   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first.
+//   CODE_REVIEW_MAX_ISSUES Most issues to file in one run (default: 8). Highest severity first;
+//                          the rest carry over to the next run on the ledger row.
 //   CODE_REVIEW_MAX_BYTES  Per-run source byte budget (default: 200000 ≈ most entire plugins).
 //   CODE_REVIEW_CONTRACTS_MAX_BYTES  Cap on contract reference bytes (default: 60000).
-//   CODE_REVIEW_DEPS_MAX_BYTES  Cap on imported-code reference bytes (default: 70000; 0 disables).
+//   CODE_REVIEW_DEPS_MAX_BYTES  Cap on imported-code reference bytes (default: 90000; 0 disables).
+//   CODE_REVIEW_LEDGER_PATH  The ledger to read and write (default: ctf/config/code-review-ledger.json).
+//   CODE_REVIEW_LEDGER_MERGE_PATHS  Comma-separated extra ledger copies merged on read (the row
+//                          written most recently wins, per slice). A listed path that does not exist is skipped
+//                          with a log line; one that exists but cannot be parsed fails the run.
+//   CODE_REVIEW_EXISTING_ISSUES_LIMIT  Most `code-review` issues fetched for dedupe (default:
+//                          10000). Hitting the limit fails the run rather than refiling dismissed
+//                          findings the fetch could not see.
 //   CODE_REVIEW_DRY_RUN    "1" to print findings without filing issues or touching the ledger.
+//
+// In GitHub Actions the review mode writes `slice`, `completed_slice` (empty when the run was
+// partial or only filed leftovers) and `filed` to $GITHUB_OUTPUT, so later steps that should
+// follow a COMPLETED review — the manual test-script refresh — can be gated on it.
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { appendFileSync, readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { join, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectDependencyContext } from './lib/sliceImports.mjs';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
-const ledgerPath = join(repoRoot, 'ctf/config/code-review-ledger.json');
+const DEFAULT_LEDGER_REL = 'ctf/config/code-review-ledger.json';
+const ledgerPath = process.env.CODE_REVIEW_LEDGER_PATH
+  ? resolve(process.env.CODE_REVIEW_LEDGER_PATH)
+  : join(repoRoot, DEFAULT_LEDGER_REL);
+const ledgerMergePaths = (process.env.CODE_REVIEW_LEDGER_MERGE_PATHS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((p) => resolve(p));
 const manifestPath = join(repoRoot, 'ctf/config/code-review-slice-manifest.json');
 
 const REPO = (process.env.GITHUB_REPOSITORY || 'chargingthefuture/chargingthefuture').trim();
 const MODEL = (process.env.CODE_REVIEW_MODEL || 'claude-sonnet-4-6').trim();
-const FORCED_SLICE = (process.env.CODE_REVIEW_SLICE || '').trim();
 const MAX_ISSUES = Number(process.env.CODE_REVIEW_MAX_ISSUES || '8');
 const MAX_BYTES = Number(process.env.CODE_REVIEW_MAX_BYTES || '200000');
 const CONTRACTS_MAX_BYTES = Number(process.env.CODE_REVIEW_CONTRACTS_MAX_BYTES || '60000');
@@ -81,6 +135,10 @@ const DEPS_MAX_BYTES = Number(process.env.CODE_REVIEW_DEPS_MAX_BYTES || '90000')
 // review: the JSON truncated mid-string and JSON.parse threw, failing the entire run. Give it ample
 // room (Sonnet allows far more), overridable for cost tuning.
 const MAX_OUTPUT_TOKENS = Number(process.env.CODE_REVIEW_MAX_OUTPUT_TOKENS || '16000');
+// Every `code-review` issue ever filed is read for dedupe. The old fixed limit of 500 was passed
+// in October 2026 (527 issues), and the oldest 27 — all workforce findings — fell outside it, so
+// their dismissals were invisible and the next workforce pass would have refiled them.
+const EXISTING_ISSUES_LIMIT = Number(process.env.CODE_REVIEW_EXISTING_ISSUES_LIMIT || '10000');
 const DRY_RUN = process.env.CODE_REVIEW_DRY_RUN === '1';
 // How long a won't-fix (closed as "not planned") finding stays suppressed before a recurrence is
 // re-surfaced for a fresh decision. Dedup keys off the finding TITLE, not the code, so a dismissal is
@@ -104,24 +162,64 @@ const CONTRACT_SUFFIXES = [
 
 // Folders with the same name under these layers are grouped into one slice. A name in two
 // or more layers is treated as a plugin; a name in one layer is a standalone module.
-const SLICE_ROOTS = [
-  'ctf/packages/web/app/api',
-  'ctf/packages/web/components',
-  'ctf/packages/web/lib',
-  'ctf/packages/mobile/src/features',
+//
+// `joinOnly` roots never start a slice of their own: a page folder under app/ or app/apps/
+// (app/admin, app/account, app/apps/directory) joins the slice that already carries its name, so
+// the screen is read beside the routes and server code it renders. A page folder matching no slice
+// (app/guide, app/sign-in, app/apps/[pluginSlug]) is left to the `web-pages` catch-all below
+// rather than becoming a one-file slice that costs a run of its own. A page folder whose name
+// does not match its plugin (app/survey is the quora-deletion-survey entry screen) is declared
+// under `extraPaths` in the slice manifest and claimed before any name match.
+const GROUPED_ROOTS = [
+  { root: 'ctf/packages/web/app/api' },
+  { root: 'ctf/packages/web/components' },
+  { root: 'ctf/packages/web/lib' },
+  { root: 'ctf/packages/mobile/src/features' },
+  { root: 'ctf/packages/web/app', skip: ['api', 'apps'], joinOnly: true },
+  { root: 'ctf/packages/web/app/apps', joinOnly: true },
+];
+
+// Catch-all slices, applied in this order after the grouped slices: every source file under the
+// base(s) that no earlier slice claimed. Workspace packages other than web and mobile are added
+// between `mobile-shell` and `scripts`, one slice each (`shared-package`, `eol-package`, ...).
+// `ctf-root` is last and takes whatever is left anywhere under ctf/, so a new folder can never
+// sit outside the rotation.
+const CATCH_ALL_SLICES = [
+  { name: 'web-pages', bases: ['ctf/packages/web/app'], note: 'page folders matching no slice, plus the app root files' },
+  { name: 'web-shell', bases: ['ctf/packages/web'], note: 'middleware, instrumentation, config, hooks, scripts, src — every web file in no other slice' },
+  { name: 'mobile-shell', bases: ['ctf/packages/mobile'], note: 'the native app outside src/features: entry point, auth, theme, components, config' },
+  { name: 'scripts', bases: ['ctf/scripts'], note: 'operational scripts, CI gates and the AI workflow scripts' },
+  { name: 'ops', bases: ['ctf/ops'], note: 'the Route Weather service and other ops code' },
+  { name: 'sql', bases: ['ctf/db', 'ctf/schema.sql'], note: 'the schema and migrations' },
+  { name: 'ctf-root', bases: ['ctf'], note: 'anything under ctf/ that no other slice claims' },
+];
+const PACKAGES_DIR = 'ctf/packages';
+const PACKAGES_WITH_OWN_SLICES = new Set(['web', 'mobile']);
+
+// Files that match a source extension but are not source. Each is logged once per run so an
+// exclusion is visible rather than silent.
+const EXCLUDED_FILES = [
+  { pattern: /^ctf\/schema\.demo\.sql$/, reason: 'generated demo seed dump' },
+  { pattern: /^ctf\/schema-prod[^/]*\.sql$/, reason: 'production schema snapshot, not maintained source' },
 ];
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.sql'];
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', '__snapshots__', '.turbo']);
 const SEVERITY_RANK = { high: 0, medium: 1, low: 2 };
+const FINDING_FIELDS = ['title', 'severity', 'category', 'files', 'summary', 'recommendation', 'actionable'];
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.log('reviewCodebaseSlice: ANTHROPIC_API_KEY not set; nothing to do.');
-  process.exit(0);
-}
-if (!process.env.GH_TOKEN && !DRY_RUN) {
-  console.log('reviewCodebaseSlice: GH_TOKEN not set; nothing to do.');
-  process.exit(0);
+const argv = process.argv.slice(2);
+const MODE = argv[0] && argv[0].startsWith('--') ? argv[0] : null;
+const MODE_ARGS = MODE ? argv.slice(1) : argv;
+// A forced slice comes from the environment (the workflow's dispatch input) or from `--pick <name>`.
+const FORCED_SLICE = (
+  (MODE === '--pick' ? MODE_ARGS.find((a) => !a.startsWith('--')) : '') || process.env.CODE_REVIEW_SLICE || ''
+).trim();
+
+// Progress notes. In `--pick --json` they go to stderr so stdout is only the JSON document.
+const NOTES_TO_STDERR = MODE === '--pick' && MODE_ARGS.includes('--json');
+function note(message) {
+  (NOTES_TO_STDERR ? console.error : console.log)(message);
 }
 
 function gh(args, options = {}) {
@@ -136,7 +234,8 @@ function loadSliceManifest() {
   try {
     const parsed = JSON.parse(readFileSync(manifestPath, 'utf8'));
     return parsed && typeof parsed.slices === 'object' && parsed.slices !== null ? parsed.slices : {};
-  } catch {
+  } catch (error) {
+    console.warn(`reviewCodebaseSlice: slice manifest unreadable (${error?.message || error}); using derived defaults.`);
     return {};
   }
 }
@@ -174,114 +273,16 @@ function isDir(path) {
   try {
     return statSync(path).isDirectory();
   } catch {
-    return false;
+    return false; // no-trace: a missing path is simply not a directory.
   }
 }
 
-// Group folders by name across the layers. Returns a Map of name -> { name, type, paths }.
-function discoverSlices() {
-  const byName = new Map();
-  for (const root of SLICE_ROOTS) {
-    const rootAbs = join(repoRoot, root);
-    if (!isDir(rootAbs)) {
-      continue;
-    }
-    for (const name of readdirSync(rootAbs)) {
-      if (SKIP_DIRS.has(name) || name.startsWith('.')) {
-        continue;
-      }
-      if (!isDir(join(rootAbs, name))) {
-        continue;
-      }
-      if (!byName.has(name)) {
-        byName.set(name, { name, type: 'module', paths: [] });
-      }
-      byName.get(name).paths.push(`${root}/${name}`);
-    }
-  }
-  for (const slice of byName.values()) {
-    slice.paths.sort();
-    slice.type = slice.paths.length >= 2 ? 'plugin' : 'module';
-  }
-  return byName;
-}
-
-function loadLedger() {
+function isFile(path) {
   try {
-    const parsed = JSON.parse(readFileSync(ledgerPath, 'utf8'));
-    if (!Array.isArray(parsed.slices)) {
-      parsed.slices = [];
-    }
-    return parsed;
+    return statSync(path).isFile();
   } catch {
-    return { slices: [] };
+    return false; // no-trace: a missing path is simply not a file.
   }
-}
-
-function saveLedger(ledger) {
-  writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-}
-
-// Keep rotation state for every discovered slice; drop slices whose folders are all gone.
-// `cursor` is the index into the slice's file list where the next run resumes; `partial`
-// means a run covered only part of the slice and it must be continued.
-function reconcileSlices(ledger, discovered) {
-  const known = new Map(ledger.slices.map((s) => [s.name, s]));
-  const result = [];
-  for (const name of [...discovered.keys()].sort()) {
-    const existing = known.get(name);
-    if (existing) {
-      existing.type = discovered.get(name).type;
-      if (typeof existing.cursor !== 'number') existing.cursor = 0;
-      if (typeof existing.partial !== 'boolean') existing.partial = false;
-      result.push(existing);
-    } else {
-      result.push({ name, type: discovered.get(name).type, lastReviewedAt: null, lastRunIssues: 0, cursor: 0, partial: false });
-    }
-  }
-  ledger.slices = result;
-  return ledger;
-}
-
-// In-progress (partial) slice first, then never-reviewed, then least-recently-reviewed.
-// `discovered` is the map of slice name -> { name, type, paths } from discoverSlices(); it is
-// used to resolve a forced slice tolerantly and to fail loudly on an unknown one.
-function pickSlice(ledger, discovered) {
-  if (FORCED_SLICE) {
-    // Resolve the forced name tolerantly: trim + lowercase both sides so `Workforce`,
-    // `workforce`, and ` workforce ` all match the `workforce` slice (slice/folder names are
-    // already lowercase, so lowercasing the comparison is safe). Match against the DISCOVERED
-    // slice names, then return that name's reconciled ledger row.
-    const wanted = FORCED_SLICE.toLowerCase();
-    const resolvedName = [...discovered.keys()].find((name) => name.trim().toLowerCase() === wanted);
-    if (!resolvedName) {
-      // A forced slice that matches no discovered folder used to fall through to a no-op review
-      // of nothing. Fail loudly instead, before any model call or ledger write.
-      const valid = [...discovered.keys()].sort().join(', ');
-      console.error(`reviewCodebaseSlice: Unknown slice '${FORCED_SLICE}'. Valid slices: ${valid}`);
-      process.exit(1);
-    }
-    return (
-      ledger.slices.find((s) => s.name === resolvedName) || {
-        name: resolvedName,
-        type: discovered.get(resolvedName).type,
-        lastReviewedAt: null,
-        lastRunIssues: 0,
-        cursor: 0,
-        partial: false,
-      }
-    );
-  }
-  const partial = ledger.slices.find((s) => s.partial);
-  if (partial) {
-    return partial;
-  }
-  const sorted = [...ledger.slices].sort((a, b) => {
-    if (!a.lastReviewedAt) return -1;
-    if (!b.lastReviewedAt) return 1;
-    return new Date(a.lastReviewedAt) - new Date(b.lastReviewedAt);
-  });
-  return sorted[0] || null;
 }
 
 function walkSourceFiles(dirAbs, out) {
@@ -303,47 +304,412 @@ function walkSourceFiles(dirAbs, out) {
   return out;
 }
 
-// Deterministic, repo-relative file list across all of a slice's folders.
-function buildFileList(paths) {
-  const files = [];
-  for (const rel of paths) {
-    const abs = join(repoRoot, rel);
-    if (isDir(abs)) {
-      walkSourceFiles(abs, files);
-    }
+// Source files under a repo-relative folder or a single file, as [{abs, rel}].
+function sourceFilesUnder(rel) {
+  const abs = join(repoRoot, rel);
+  const found = [];
+  if (isDir(abs)) {
+    walkSourceFiles(abs, found);
+  } else if (isFile(abs) && SOURCE_EXTENSIONS.some((ext) => abs.endsWith(ext))) {
+    found.push(abs);
   }
-  return files
-    .map((abs) => ({ abs, rel: relative(repoRoot, abs) }))
-    .sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+  return found.map((a) => ({ abs: a, rel: relative(repoRoot, a) }));
 }
 
-// Concatenate files from `cursor` up to the byte budget, with a header per file. A single
-// file larger than the budget is included truncated so the run always makes progress.
-function gatherChunk(fileList, cursor, budget) {
+function byRel(a, b) {
+  return a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0;
+}
+
+function excludedReason(rel) {
+  const hit = EXCLUDED_FILES.find((e) => e.pattern.test(rel));
+  return hit ? hit.reason : null;
+}
+
+// Every slice in the codebase: Map of name -> { name, type, paths, files, note }.
+// `paths` are the folders (or, for a catch-all, the bases) shown to the reviewer and in the issue
+// body; `files` is the deterministic, sorted, repo-relative file list the run walks.
+// Also returns the excluded files it saw, so a run can log them.
+function discoverSlices() {
+  const byName = new Map();
+  const claimed = new Set();
+  const excluded = [];
+
+  const claimFiles = (files) => {
+    const kept = [];
+    for (const f of files) {
+      if (claimed.has(f.rel)) continue;
+      const reason = excludedReason(f.rel);
+      if (reason) {
+        excluded.push({ rel: f.rel, reason });
+        claimed.add(f.rel);
+        continue;
+      }
+      claimed.add(f.rel);
+      kept.push(f);
+    }
+    return kept;
+  };
+
+  const subfolders = (root) => {
+    const rootAbs = join(repoRoot, root);
+    if (!isDir(rootAbs)) return [];
+    return readdirSync(rootAbs)
+      .filter((name) => !SKIP_DIRS.has(name) && !name.startsWith('.') && isDir(join(rootAbs, name)))
+      .sort();
+  };
+
+  // Pass 1: roots that start slices.
+  for (const { root, skip = [], joinOnly } of GROUPED_ROOTS) {
+    if (joinOnly) continue;
+    for (const name of subfolders(root)) {
+      if (skip.includes(name)) continue;
+      if (!byName.has(name)) {
+        byName.set(name, { name, type: 'module', layers: 0, paths: [], extraPaths: [], files: [], note: '' });
+      }
+      byName.get(name).paths.push(`${root}/${name}`);
+      byName.get(name).layers += 1;
+    }
+  }
+  // Pass 2: paths declared in the manifest (claimed first, so a declared page folder inside a
+  // joinOnly folder of another name goes where it was declared), then roots whose folders only
+  // join a slice that already exists.
+  for (const slice of byName.values()) {
+    const declared = SLICE_MANIFEST[slice.name]?.extraPaths;
+    if (!Array.isArray(declared)) continue;
+    for (const rel of declared) {
+      if (typeof rel !== 'string' || !rel.trim()) continue;
+      const clean = rel.trim().replace(/\/+$/, '');
+      if (!isDir(join(repoRoot, clean)) && !isFile(join(repoRoot, clean))) {
+        console.warn(`reviewCodebaseSlice: manifest extraPaths for ${slice.name} names ${clean}, which does not exist; ignored.`);
+        continue;
+      }
+      slice.extraPaths.push(clean);
+    }
+    slice.files.push(...claimFiles(slice.extraPaths.flatMap((p) => sourceFilesUnder(p))));
+  }
+  for (const { root, skip = [], joinOnly } of GROUPED_ROOTS) {
+    if (!joinOnly) continue;
+    for (const name of subfolders(root)) {
+      if (skip.includes(name) || !byName.has(name)) continue;
+      byName.get(name).paths.push(`${root}/${name}`);
+    }
+  }
+  for (const slice of byName.values()) {
+    slice.paths = [...slice.paths, ...slice.extraPaths].sort();
+    delete slice.extraPaths;
+    // A plugin is a name present in two or more source layers; a joined page folder or a
+    // declared extra path does not make a one-layer module a plugin.
+    slice.type = slice.layers >= 2 ? 'plugin' : 'module';
+    delete slice.layers;
+    slice.files = [...slice.files, ...claimFiles(slice.paths.flatMap((p) => sourceFilesUnder(p)))].sort(byRel);
+  }
+
+  // Pass 3: catch-alls, in order, over whatever is still unclaimed.
+  const catchAlls = [...CATCH_ALL_SLICES];
+  const packagesAbs = join(repoRoot, PACKAGES_DIR);
+  const otherPackages = isDir(packagesAbs)
+    ? readdirSync(packagesAbs)
+      .filter((name) => !name.startsWith('.') && !PACKAGES_WITH_OWN_SLICES.has(name) && isDir(join(packagesAbs, name)))
+      .sort()
+      .map((name) => ({ name: `${name}-package`, bases: [`${PACKAGES_DIR}/${name}`], note: `the @ctf/${name} workspace package` }))
+    : [];
+  const scriptsIdx = catchAlls.findIndex((c) => c.name === 'scripts');
+  catchAlls.splice(scriptsIdx, 0, ...otherPackages);
+
+  for (const { name: wantedName, bases, note } of catchAlls) {
+    // A folder of the same name under a grouped root takes the plain name; the catch-all is
+    // suffixed rather than aborting every mode until somebody renames a folder.
+    let name = wantedName;
+    if (byName.has(name)) {
+      name = `${wantedName}-catch-all`;
+      console.warn(`reviewCodebaseSlice: a folder-derived slice is already named '${wantedName}'; the catch-all is '${name}'.`);
+    }
+    const files = claimFiles(bases.flatMap((b) => sourceFilesUnder(b))).sort(byRel);
+    if (files.length === 0) continue;
+    byName.set(name, {
+      name,
+      type: 'module',
+      paths: bases.map((b) => (isDir(join(repoRoot, b)) ? `${b} (every file in no other slice)` : b)),
+      files,
+      note,
+    });
+  }
+
+  return { slices: byName, excluded };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ledger: load (merging copies), reconcile against discovery, pick, stamp, save.
+
+function readLedgerFile(path, { required }) {
+  if (!existsSync(path)) {
+    if (required) return { slices: [] };
+    note(`reviewCodebaseSlice: ledger copy ${path} does not exist; nothing to merge from it.`);
+    return null;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    // A copy that exists but cannot be read is not something to skip: skipping it would drop every
+    // stamp it holds and review those slices again. Fail so the run can be retried.
+    throw new Error(`Ledger ${path} exists but could not be parsed: ${error?.message || error}`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`Ledger ${path} is not a JSON object.`);
+  }
+  if (!Array.isArray(parsed.slices)) {
+    parsed.slices = [];
+  }
+  return parsed;
+}
+
+function stampTime(row) {
+  const t = Date.parse(row?.lastReviewedAt || '');
+  return Number.isNaN(t) ? 0 : t;
+}
+
+// When a row was last written: `updatedAt` (refreshed by every write — a stamp, a partial save,
+// filing leftovers) or, for rows from before it existed, the completion stamp.
+function writeTime(row) {
+  const t = Date.parse(row?.updatedAt || '');
+  return Math.max(Number.isNaN(t) ? 0 : t, stampTime(row));
+}
+
+// Of two rows for the same slice, the one written most recently; on the same time an in-progress
+// row (a partial pass) carries more than a finished one, and a true tie keeps the primary copy's
+// row. The time is the write time, not the completion stamp: filing leftovers shrinks `deferred`
+// without moving the stamp, and comparing stamps let the copy still holding the unfiled list win
+// every merge, so the sweep filed the same leftovers run after run.
+function furtherAlongRow(primary, other) {
+  const tp = writeTime(primary);
+  const to = writeTime(other);
+  if (tp !== to) return tp > to ? primary : other;
+  if (Boolean(primary.partial) !== Boolean(other.partial)) return primary.partial ? primary : other;
+  return primary;
+}
+
+function touch(row) {
+  row.updatedAt = new Date().toISOString();
+}
+
+function mergeLedgers(primary, other, otherPath) {
+  const rows = new Map(primary.slices.map((s) => [s.name, s]));
+  const taken = [];
+  for (const row of other.slices) {
+    if (!row || typeof row.name !== 'string') continue;
+    const mine = rows.get(row.name);
+    if (!mine) {
+      rows.set(row.name, row);
+      taken.push(row.name);
+      continue;
+    }
+    const winner = furtherAlongRow(mine, row);
+    if (winner !== mine) {
+      rows.set(row.name, row);
+      taken.push(row.name);
+    }
+  }
+  primary.slices = [...rows.values()];
+  note(
+    `reviewCodebaseSlice: merged ledger copy ${otherPath}` +
+      (taken.length ? ` — it was further along for: ${taken.join(', ')}.` : ' — nothing in it was newer.'),
+  );
+  return primary;
+}
+
+function loadLedger() {
+  const ledger = readLedgerFile(ledgerPath, { required: true });
+  for (const path of ledgerMergePaths) {
+    if (path === ledgerPath) continue;
+    const other = readLedgerFile(path, { required: false });
+    if (other) mergeLedgers(ledger, other, path);
+  }
+  return ledger;
+}
+
+// Write rows in a fixed shape. Earlier runs persisted a `paths` array onto each row by accident
+// (51 of 64 rows carried one, going out of date on every rename) and an index `cursor` that the
+// path-based resume replaced; only the rotation fields are written now, and the in-progress
+// fields only while they mean something.
+function normalizeRow(row, discoveredType) {
+  const out = {
+    name: row.name,
+    type: discoveredType || row.type || 'module',
+    lastReviewedAt: typeof row.lastReviewedAt === 'string' ? row.lastReviewedAt : null,
+    lastRunIssues: Number.isFinite(row.lastRunIssues) ? row.lastRunIssues : 0,
+    partial: row.partial === true,
+  };
+  if (typeof row.updatedAt === 'string' && row.updatedAt) {
+    out.updatedAt = row.updatedAt;
+  }
+  if (out.partial && typeof row.nextFile === 'string' && row.nextFile) {
+    out.nextFile = row.nextFile;
+    if (Number.isFinite(row.nextOffset) && row.nextOffset > 0) {
+      out.nextOffset = row.nextOffset;
+    }
+  }
+  const deferred = Array.isArray(row.deferred) ? row.deferred.filter((f) => f && typeof f.title === 'string') : [];
+  if (deferred.length > 0) {
+    out.deferred = deferred.map(compactFinding);
+  }
+  return out;
+}
+
+function compactFinding(finding) {
+  const out = {};
+  for (const key of FINDING_FIELDS) {
+    if (finding[key] !== undefined) out[key] = finding[key];
+  }
+  return out;
+}
+
+// Keep rotation state for every discovered slice; drop slices whose folders are all gone.
+// Returns the slice names added and pruned so a run can say what changed.
+function reconcileSlices(ledger, discovered) {
+  const known = new Map(ledger.slices.map((s) => [s.name, s]));
+  const result = [];
+  const added = [];
+  for (const name of [...discovered.keys()].sort()) {
+    const type = discovered.get(name).type;
+    const existing = known.get(name);
+    if (existing) {
+      result.push(normalizeRow(existing, type));
+    } else {
+      result.push(normalizeRow({ name }, type));
+      added.push(name);
+    }
+  }
+  const pruned = [...known.keys()].filter((name) => !discovered.has(name)).sort();
+  ledger.slices = result;
+  return { ledger, added, pruned };
+}
+
+function saveLedger(ledger) {
+  writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
+}
+
+// In-progress (partial) slice first, then one with leftover findings to file, then never-reviewed
+// (by name, so the order is stable), then least-recently-reviewed. Returns { row, reason }.
+function pickSlice(ledger, discovered) {
+  if (FORCED_SLICE) {
+    // Resolve the forced name tolerantly: trim + lowercase both sides so `Workforce`,
+    // `workforce`, and ` workforce ` all match the `workforce` slice (slice/folder names are
+    // already lowercase, so lowercasing the comparison is safe).
+    const wanted = FORCED_SLICE.toLowerCase();
+    const resolvedName = [...discovered.keys()].find((name) => name.trim().toLowerCase() === wanted);
+    if (!resolvedName) {
+      // A forced slice that matches no discovered folder used to fall through to a no-op review
+      // of nothing. Fail loudly instead, before any model call or ledger write.
+      const valid = [...discovered.keys()].sort().join(', ');
+      throw new Error(`Unknown slice '${FORCED_SLICE}'. Valid slices: ${valid}`);
+    }
+    const row = ledger.slices.find((s) => s.name === resolvedName);
+    return { row, reason: `named explicitly (${FORCED_SLICE})` };
+  }
+  const partial = ledger.slices.find((s) => s.partial);
+  if (partial) {
+    return { row: partial, reason: `in progress — resumes at ${partial.nextFile || 'the first file'}` };
+  }
+  const deferred = ledger.slices.find((s) => Array.isArray(s.deferred) && s.deferred.length > 0);
+  if (deferred) {
+    return { row: deferred, reason: `${deferred.deferred.length} finding(s) left over from its last run are still to file` };
+  }
+  const sorted = [...ledger.slices].sort((a, b) => {
+    const ta = stampTime(a);
+    const tb = stampTime(b);
+    if (ta !== tb) return ta - tb;
+    return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+  });
+  const row = sorted[0] || null;
+  if (!row) return { row: null, reason: 'no slices' };
+  return {
+    row,
+    reason: row.lastReviewedAt ? `least recently reviewed (${row.lastReviewedAt})` : 'never reviewed',
+  };
+}
+
+// Where a partial pass resumes: the index of the next file and the byte offset inside it (for a
+// file larger than the budget, read in windows). The file list is sorted, so if the recorded file
+// was removed the pass continues from the first file after it, at offset 0.
+function resumePoint(row, files) {
+  if (!row.partial) return { index: 0, offset: 0 };
+  if (typeof row.nextFile === 'string' && row.nextFile) {
+    const idx = files.findIndex((f) => f.rel >= row.nextFile);
+    if (idx === -1) {
+      note(`reviewCodebaseSlice: every file from ${row.nextFile} onward is gone; starting ${row.name} from the top.`);
+      return { index: 0, offset: 0 };
+    }
+    if (files[idx].rel !== row.nextFile) {
+      note(`reviewCodebaseSlice: ${row.nextFile} is gone; ${row.name} resumes at ${files[idx].rel}.`);
+      return { index: idx, offset: 0 };
+    }
+    const offset = Number.isFinite(row.nextOffset) && row.nextOffset > 0 ? row.nextOffset : 0;
+    return { index: idx, offset };
+  }
+  return { index: 0, offset: 0 };
+}
+
+function markComplete(row, filed) {
+  row.lastReviewedAt = new Date().toISOString();
+  row.lastRunIssues = filed;
+  row.partial = false;
+  delete row.nextFile;
+  delete row.nextOffset;
+  touch(row);
+}
+
+// Leftovers from this run join whatever the row already carries, in order; never replace.
+function carryDeferred(row, deferred) {
+  const carried = Array.isArray(row.deferred) ? row.deferred : [];
+  const all = [...carried, ...deferred];
+  if (all.length > 0) row.deferred = all; else delete row.deferred;
+}
+
+function writeGithubOutput(pairs) {
+  const path = process.env.GITHUB_OUTPUT;
+  if (!path) return;
+  appendFileSync(path, Object.entries(pairs).map(([k, v]) => `${k}=${v}\n`).join(''));
+}
+
+// ---------------------------------------------------------------------------------------------
+// Gathering what the reviewer reads.
+
+// Concatenate files from `cursor` up to the byte budget, with a header per file. A single file
+// larger than the budget is read in windows: this run sends `budget` characters from `offset`,
+// and the next run continues inside the same file from where this one stopped (`nextOffset`),
+// so the slice is only complete once the last window of its last file has been sent. The old
+// behavior cut such a file at the budget, moved on, and stamped the slice complete with most of
+// ctf/schema.sql never shown to the reviewer.
+function gatherChunk(fileList, cursor, offset, budget) {
   let text = '';
   let i = cursor;
-  let truncatedFile = null;
+  let nextOffset = 0;
+  let windowedFile = null;
   for (; i < fileList.length; i++) {
     const { abs, rel } = fileList[i];
-    const header = `\n===== FILE: ${rel} =====\n`;
+    const startAt = i === cursor ? offset : 0;
+    const full = readFileSync(abs, 'utf8');
+    const rangeNote = startAt > 0 ? ` (continues from character ${startAt + 1} of ${full.length})` : '';
+    const header = `\n===== FILE: ${rel}${rangeNote} =====\n`;
     if (text.length > 0 && text.length + header.length >= budget) {
       break;
     }
-    let body = readFileSync(abs, 'utf8');
+    const body = full.slice(startAt);
     const room = budget - text.length - header.length;
     if (body.length > room) {
       if (text.length === 0) {
-        body = `${body.slice(0, Math.max(room, 0))}\n... (file truncated to fit the run budget) ...`;
-        truncatedFile = rel;
-        text += header + body;
-        i += 1;
+        const window = Math.max(room, 1);
+        text += `${header}${body.slice(0, window)}\n... (this file continues next run from character ${startAt + window + 1} of ${full.length}) ...`;
+        windowedFile = rel;
+        nextOffset = startAt + window;
       }
       break;
     }
     text += header + body;
   }
   const complete = i >= fileList.length;
-  return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, complete, truncatedFile };
+  return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, nextOffset: complete ? 0 : nextOffset, complete, windowedFile };
 }
 
 // A plugin's declared contracts (by exact filename), as read-only reference text.
@@ -360,7 +726,7 @@ function gatherContracts(sliceName) {
     try {
       body = readFileSync(join(repoRoot, rel), 'utf8');
     } catch {
-      continue; // this contract does not exist for this slice
+      continue; // no-trace: this contract does not exist for this slice.
     }
     const header = `\n----- CONTRACT: ${rel} -----\n`;
     const room = CONTRACTS_MAX_BYTES - text.length - header.length;
@@ -429,7 +795,8 @@ function loadPlainLanguageRules() {
       ...vocab.map((v) => `      - "${v.term}": ${v.use}`),
       '  - Name the specific problem, not a vague label.',
     ];
-  } catch {
+  } catch (error) {
+    console.warn(`reviewCodebaseSlice: could not derive the banned-term list (${error?.message || error}); using the general rule.`);
     return fallback;
   }
 }
@@ -491,6 +858,7 @@ async function askClaude(slice, source, chunkNote, contractsText, existingFindin
   const user = [
     `Review the ${slice.type} \`${slice.name}\`. It spans these folders:`,
     `  ${layers}`,
+    ...(slice.note ? [`  (${slice.note})`] : []),
     chunkNote,
     ...(contractsText
       ? [
@@ -630,6 +998,9 @@ function salvageFindings(text) {
   return objects;
 }
 
+// ---------------------------------------------------------------------------------------------
+// Filing: dedupe against every issue ever filed for the slice, then create / reopen.
+
 function fingerprint(sliceName, title) {
   return createHash('sha1').update(`${sliceName}\n${title}`).digest('hex').slice(0, 16);
 }
@@ -647,36 +1018,48 @@ function ensureLabel(name, color, description) {
 // re-filed). We match on substance via the model (judgeDuplicates), not on the issue title — an LLM
 // rewrites the title every run, so a text fingerprint would miss a reworded re-flag. The embedded
 // fingerprint is kept only as a cheap exact-match fast path.
+//
+// A failed fetch THROWS. It used to return [] and carry on, which filed every finding of the run
+// as new — the one outcome dedupe exists to prevent. The ledger is not advanced on a throw, so the
+// next run simply reviews the same slice again.
 function existingSliceIssues(sliceName) {
   // Match this slice's current name AND any former folder name it declares, so a rename does not
   // hide the decisions already made (issue #2207 was #1876 refiled after api/hub became
   // api/commons — the code had not changed and the finding had already been rejected).
   const titlePrefixes = sliceTitleNames(sliceName).map((name) => `Code review (${name}):`);
+  let raw;
   try {
-    const raw = gh([
+    raw = gh([
       'issue', 'list', '--repo', REPO, '--label', 'code-review', '--state', 'all',
-      '--json', 'number,title,state,stateReason,closedAt,body', '--limit', '500',
+      '--json', 'number,title,state,stateReason,closedAt,body', '--limit', String(EXISTING_ISSUES_LIMIT),
     ]);
-    const issues = [];
-    for (const issue of JSON.parse(raw)) {
-      const title = issue.title || '';
-      const titlePrefix = titlePrefixes.find((prefix) => title.startsWith(prefix));
-      if (!titlePrefix) continue;
-      const fpMatch = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
-      issues.push({
-        number: issue.number,
-        title: title.slice(titlePrefix.length).trim(),
-        summary: extractWhat(issue.body || ''),
-        state: String(issue.state || '').toLowerCase(),
-        stateReason: String(issue.stateReason || '').toLowerCase(),
-        closedAt: issue.closedAt || null,
-        fingerprint: fpMatch ? fpMatch[1] : null,
-      });
-    }
-    return issues;
-  } catch {
-    return [];
+  } catch (error) {
+    throw new Error(`Could not list existing code-review issues for dedupe: ${error?.message || error}`);
   }
+  const all = JSON.parse(raw);
+  if (all.length >= EXISTING_ISSUES_LIMIT) {
+    throw new Error(
+      `The repo has at least ${EXISTING_ISSUES_LIMIT} code-review issues, which is the fetch limit; ` +
+        'findings outside it could not be deduped. Raise CODE_REVIEW_EXISTING_ISSUES_LIMIT.',
+    );
+  }
+  const issues = [];
+  for (const issue of all) {
+    const title = issue.title || '';
+    const titlePrefix = titlePrefixes.find((prefix) => title.startsWith(prefix));
+    if (!titlePrefix) continue;
+    const fpMatch = (issue.body || '').match(/code-review-fingerprint:\s*([a-f0-9]+)/);
+    issues.push({
+      number: issue.number,
+      title: title.slice(titlePrefix.length).trim(),
+      summary: extractWhat(issue.body || ''),
+      state: String(issue.state || '').toLowerCase(),
+      stateReason: String(issue.stateReason || '').toLowerCase(),
+      closedAt: issue.closedAt || null,
+      fingerprint: fpMatch ? fpMatch[1] : null,
+    });
+  }
+  return issues;
 }
 
 // Pull the "## What" paragraph out of an issue body for a compact dedupe signal.
@@ -808,78 +1191,16 @@ function fileIssue(slice, finding, fp) {
   return gh(args).trim();
 }
 
-async function main() {
-  const discovered = discoverSlices();
-  const ledger = reconcileSlices(loadLedger(), discovered);
-  if (ledger.slices.length === 0) {
-    console.log('reviewCodebaseSlice: no slices discovered under the configured roots.');
-    return;
-  }
-
-  const slice = pickSlice(ledger, discovered);
-  if (!slice) {
-    console.log('reviewCodebaseSlice: nothing to review.');
-    return;
-  }
-  // pickSlice may synthesize a forced slice that is not in `discovered`; fill its folders.
-  slice.paths = (discovered.get(slice.name) || { paths: [] }).paths;
-
-  const fileList = buildFileList(slice.paths);
-  if (fileList.length === 0) {
-    console.log(`reviewCodebaseSlice: ${slice.name} has no source files; marking reviewed.`);
-    slice.lastReviewedAt = new Date().toISOString();
-    slice.lastRunIssues = 0;
-    slice.cursor = 0;
-    slice.partial = false;
-    if (!DRY_RUN) saveLedger(ledger);
-    return;
-  }
-
-  const start = typeof slice.cursor === 'number' && slice.cursor < fileList.length ? slice.cursor : 0;
-  const chunk = gatherChunk(fileList, start, MAX_BYTES);
-  const covered = `files ${chunk.startIdx + 1}–${chunk.endIdx} of ${fileList.length}`;
-  const chunkNote = chunk.complete && start === 0
-    ? `This run covers the entire slice (${fileList.length} file(s)).`
-    : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
-
-  const contracts = gatherContracts(slice.name);
-  const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
-  // The code this slice calls from outside itself. Without it the reviewer reads call sites whose
-  // implementations it cannot open and guesses at them, which is where its wrong findings come from.
-  const deps = DEPS_MAX_BYTES > 0
-    ? collectDependencyContext(fileList, { repoRoot, maxBytes: DEPS_MAX_BYTES })
-    : { text: '', files: [], skipped: 0 };
-  const depNote = deps.files.length
-    ? ` + ${deps.files.length} imported file(s)${deps.skipped ? ` (${deps.skipped} dropped for budget)` : ''}`
-    : '';
-  // The findings already raised for this slice (open + closed). Passed to the reviewer so it doesn't
-  // re-report a concern already tracked or already fixed (the main source of re-run churn), and reused
-  // below for substance-based dedup. One fetch serves both.
-  const sliceIssues = existingSliceIssues(slice.name);
-  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote}${depNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
-  const findings = parseFindings(
-    await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues, deps.text),
-  );
-
-  if (findings.length === 0) {
-    console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
-  }
-  // Highest severity first, so the per-run cap keeps the issues that matter most.
-  findings.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 3) - (SEVERITY_RANK[b.severity] ?? 3));
-
-  if (DRY_RUN) {
-    console.log(JSON.stringify({ slice: slice.name, covered, complete: chunk.complete, findings }, null, 2));
-    return;
-  }
-
+// File up to MAX_ISSUES findings (highest severity first). Returns the count filed and the findings
+// the cap left unattempted, which the caller keeps on the ledger row for the next run.
+async function fileFindings(slice, findings, sliceIssues) {
   ensureLabel('code-review', '5319e7', 'Filed by the scheduled code-review sweep');
   ensureLabel('code-review:actionable', '0e8a16', 'Code-review finding with a small, safe fix; eligible for an auto PR');
   ensureLabel('code-review:regression', 'b60205', 'A previously-fixed code-review finding the sweep saw recur');
   ensureLabel('code-review:revisit', 'fbca04', 'A dismissed (won\'t-fix) code-review finding the sweep re-surfaced for a fresh decision');
 
-  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text — reusing
-  // the sliceIssues fetched above. The embedded fingerprint is a free exact-match fast path for the
-  // rare run where the title is identical.
+  // Match new findings to existing slice issues by SUBSTANCE (the model), not by title text. The
+  // embedded fingerprint is a free exact-match fast path for the rare run where the title is identical.
   const issuesByNumber = new Map(sliceIssues.map((i) => [i.number, i]));
   const fingerprintToIssue = new Map();
   for (const i of sliceIssues) {
@@ -888,10 +1209,10 @@ async function main() {
   const judged = await judgeDuplicates(slice, findings, sliceIssues);
 
   let filed = 0;
-  for (let idx = 0; idx < findings.length; idx += 1) {
+  let idx = 0;
+  for (; idx < findings.length; idx += 1) {
     const finding = findings[idx];
     if (filed >= MAX_ISSUES) {
-      console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); remaining findings deferred.`);
       break;
     }
     if (!finding.title) {
@@ -944,18 +1265,286 @@ async function main() {
     console.log(`reviewCodebaseSlice: filed ${url}`);
   }
 
-  slice.lastRunIssues = filed;
+  const deferred = findings.slice(idx).filter((f) => f && f.title).map(compactFinding);
+  if (deferred.length > 0) {
+    console.log(`reviewCodebaseSlice: hit MAX_ISSUES (${MAX_ISSUES}); ${deferred.length} finding(s) carry over to the next run of ${slice.name}.`);
+  }
+  return { filed, deferred };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Modes.
+
+function requireReviewEnv() {
+  // Exiting 0 here used to make a lost secret look like a successful sweep, and the test-script
+  // refresh after it still ran. A missing secret is a failed run. A missing API key is an outside
+  // state (the key lives in Infisical), reported the way an unfunded account is so the health
+  // check lists the run as paused rather than broken; a missing GH_TOKEN is the workflow's own
+  // configuration and a plain failure.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    reportRunBlocked({
+      script: 'reviewCodebaseSlice',
+      reason: 'no_key',
+      manualRoute: '/rs',
+      nothingLost: 'The ledger was not advanced, so the next run after this clears reviews the same slice.',
+    });
+    process.exit(1);
+  }
+  if (!process.env.GH_TOKEN && !DRY_RUN) {
+    throw new Error('GH_TOKEN not set; the review cannot file issues. Check the workflow env.');
+  }
+}
+
+function logDiscovery(discovery, reconciled) {
+  if (reconciled.added.length) {
+    note(`reviewCodebaseSlice: new slice(s) added to the ledger as never reviewed: ${reconciled.added.join(', ')}.`);
+  }
+  if (reconciled.pruned.length) {
+    note(`reviewCodebaseSlice: slice(s) whose folders are gone, dropped from the ledger: ${reconciled.pruned.join(', ')}.`);
+  }
+  for (const { rel, reason } of discovery.excluded) {
+    note(`reviewCodebaseSlice: not reviewed: ${rel} (${reason}).`);
+  }
+}
+
+function loadAndReconcile() {
+  const discovery = discoverSlices();
+  const reconciled = reconcileSlices(loadLedger(), discovery.slices);
+  logDiscovery(discovery, reconciled);
+  return { discovery, ledger: reconciled.ledger, reconciled };
+}
+
+function sliceBytes(files) {
+  let total = 0;
+  for (const f of files) {
+    try {
+      total += statSync(f.abs).size;
+    } catch {
+      // no-trace: a file that vanished between discovery and sizing contributes nothing.
+    }
+  }
+  return total;
+}
+
+function runPick() {
+  const asJson = MODE_ARGS.includes('--json');
+  const { discovery, ledger, reconciled } = loadAndReconcile();
+  const { row, reason } = pickSlice(ledger, discovery.slices);
+  if (!row) {
+    console.log('reviewCodebaseSlice: nothing to review.');
+    return;
+  }
+  const slice = discovery.slices.get(row.name);
+  const bytes = sliceBytes(slice.files);
+  const start = resumePoint(row, slice.files);
+  const neverReviewed = ledger.slices.filter((s) => !s.lastReviewedAt).map((s) => s.name);
+  const report = {
+    slice: row.name,
+    type: slice.type,
+    reason,
+    folders: slice.paths,
+    note: slice.note || undefined,
+    fileCount: slice.files.length,
+    bytes,
+    runsAtBudget: Math.max(1, Math.ceil(bytes / MAX_BYTES)),
+    resumeAt: row.partial ? { index: start.index, offset: start.offset, file: slice.files[start.index]?.rel || null } : null,
+    deferredFindings: Array.isArray(row.deferred) ? row.deferred : [],
+    contracts: gatherContracts(row.name).files,
+    lastReviewedAt: row.lastReviewedAt,
+    ledger: { path: ledgerPath, mergedWith: ledgerMergePaths },
+    newSlices: reconciled.added,
+    prunedSlices: reconciled.pruned,
+    neverReviewed,
+    excluded: discovery.excluded,
+    files: slice.files.map((f) => f.rel),
+  };
+  if (asJson) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  const lines = [
+    `Slice: ${report.slice} (${report.type}) — ${report.reason}`,
+    'Folders:',
+    ...report.folders.map((p) => `  - ${p}`),
+    ...(report.note ? [`  ${report.note}`] : []),
+    `Files: ${report.fileCount} (${Math.round(bytes / 1024)} KB; ${report.runsAtBudget} scheduled run(s) at the ${MAX_BYTES}-byte budget — by hand, review all of it)`,
+    ...(report.resumeAt ? [`Resume at: file ${report.resumeAt.index + 1} (${report.resumeAt.file})${report.resumeAt.offset ? `, character ${report.resumeAt.offset + 1}` : ''}`] : []),
+    `Last reviewed: ${report.lastReviewedAt || 'never'}`,
+    `Contracts: ${report.contracts.length ? report.contracts.join(', ') : 'none'}`,
+    `Ledger: ${report.ledger.path}${report.ledger.mergedWith.length ? ` merged with ${report.ledger.mergedWith.join(', ')}` : ' (no other copy merged — set CODE_REVIEW_LEDGER_MERGE_PATHS to the branch copy)'}`,
+    ...(report.deferredFindings.length
+      ? [`Leftover findings from the last run (${report.deferredFindings.length}) — file these first:`, JSON.stringify(report.deferredFindings, null, 2)]
+      : []),
+    `Never reviewed (${neverReviewed.length}): ${neverReviewed.join(', ') || 'none'}`,
+    ...(report.newSlices.length ? [`New since the ledger was written: ${report.newSlices.join(', ')}`] : []),
+    ...(report.prunedSlices.length ? [`Gone since the ledger was written: ${report.prunedSlices.join(', ')}`] : []),
+    'Files in this slice:',
+    ...report.files.map((f) => `  ${f}`),
+  ];
+  console.log(lines.join('\n'));
+}
+
+function runStamp() {
+  const name = MODE_ARGS.find((a) => !a.startsWith('--'));
+  if (!name) {
+    throw new Error('--stamp needs the slice name: --stamp <slice> [--issues N]');
+  }
+  const issuesIdx = MODE_ARGS.indexOf('--issues');
+  const issues = issuesIdx !== -1 ? Number(MODE_ARGS[issuesIdx + 1]) : 0;
+  if (!Number.isFinite(issues) || issues < 0) {
+    throw new Error('--issues must be a non-negative number.');
+  }
+  const { discovery, ledger } = loadAndReconcile();
+  const wanted = name.trim().toLowerCase();
+  const row = ledger.slices.find((s) => s.name.toLowerCase() === wanted);
+  if (!row) {
+    throw new Error(`Unknown slice '${name}'. Valid slices: ${[...discovery.slices.keys()].sort().join(', ')}`);
+  }
+  markComplete(row, issues);
+  delete row.deferred;
+  saveLedger(ledger);
+  console.log(`reviewCodebaseSlice: stamped ${row.name} reviewed at ${row.lastReviewedAt} with ${issues} issue(s); ledger saved to ${ledgerPath}.`);
+}
+
+function runReconcile() {
+  const { ledger, reconciled } = loadAndReconcile();
+  saveLedger(ledger);
+  console.log(
+    `reviewCodebaseSlice: ledger reconciled and saved to ${ledgerPath} (${ledger.slices.length} slices; ` +
+      `${reconciled.added.length} added, ${reconciled.pruned.length} pruned).`,
+  );
+}
+
+function runFingerprint() {
+  const [slice, ...titleParts] = MODE_ARGS;
+  const title = titleParts.join(' ');
+  if (!slice || !title) {
+    throw new Error('--fingerprint needs the slice name and the finding title: --fingerprint <slice> <title>');
+  }
+  console.log(fingerprint(slice, title));
+}
+
+async function runReview() {
+  requireReviewEnv();
+  const { discovery, ledger } = loadAndReconcile();
+  if (ledger.slices.length === 0) {
+    console.log('reviewCodebaseSlice: no slices discovered under the configured roots.');
+    return;
+  }
+
+  const { row, reason } = pickSlice(ledger, discovery.slices);
+  if (!row) {
+    console.log('reviewCodebaseSlice: nothing to review.');
+    return;
+  }
+  const slice = discovery.slices.get(row.name);
+  console.log(`reviewCodebaseSlice: picked ${slice.type} ${slice.name} — ${reason}.`);
+
+  // Leftover findings from a capped run are filed before any further part of this slice is read,
+  // up to the same cap. Nothing is sent to the model for review in such a run; the slice's stamp
+  // and partial state are unchanged, so a partial pass resumes on the run after.
+  if (Array.isArray(row.deferred) && row.deferred.length > 0) {
+    if (DRY_RUN) {
+      console.log(JSON.stringify({ slice: slice.name, leftoverFindings: row.deferred }, null, 2));
+      return;
+    }
+    const sliceIssues = existingSliceIssues(slice.name);
+    const { filed, deferred } = await fileFindings(slice, row.deferred, sliceIssues);
+    row.lastRunIssues = filed;
+    if (deferred.length > 0) row.deferred = deferred; else delete row.deferred;
+    touch(row);
+    saveLedger(ledger);
+    writeGithubOutput({ slice: slice.name, completed_slice: '', filed });
+    console.log(`reviewCodebaseSlice: filed ${filed} leftover issue(s) for ${slice.name}; ${deferred.length} still to file.`);
+    return;
+  }
+
+  const fileList = slice.files;
+  if (fileList.length === 0) {
+    console.log(`reviewCodebaseSlice: ${slice.name} has no source files; marking reviewed.`);
+    markComplete(row, 0);
+    if (!DRY_RUN) saveLedger(ledger);
+    writeGithubOutput({ slice: slice.name, completed_slice: '', filed: 0 });
+    return;
+  }
+
+  const start = resumePoint(row, fileList);
+  const chunk = gatherChunk(fileList, start.index, start.offset, MAX_BYTES);
+  const windowed = chunk.windowedFile
+    ? ` (${chunk.windowedFile} is larger than the budget and is read in windows; this run ends at character ${chunk.nextOffset || 'the end'})`
+    : '';
+  const covered = `files ${chunk.startIdx + 1}–${Math.max(chunk.endIdx, chunk.startIdx + 1)} of ${fileList.length}${windowed}`;
+  const chunkNote = chunk.complete && start.index === 0 && start.offset === 0
+    ? `This run covers the entire slice (${fileList.length} file(s)).`
+    : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
+
+  const contracts = gatherContracts(slice.name);
+  const contractNote = contracts.files.length ? ` + ${contracts.files.length} contract file(s)` : '';
+  // The code this slice calls from outside itself. Without it the reviewer reads call sites whose
+  // implementations it cannot open and guesses at them, which is where its wrong findings come from.
+  const deps = DEPS_MAX_BYTES > 0
+    ? collectDependencyContext(fileList, { repoRoot, maxBytes: DEPS_MAX_BYTES })
+    : { text: '', files: [], skipped: 0 };
+  const depNote = deps.files.length
+    ? ` + ${deps.files.length} imported file(s)${deps.skipped ? ` (${deps.skipped} dropped for budget)` : ''}`
+    : '';
+  // The findings already raised for this slice (open + closed). Passed to the reviewer so it doesn't
+  // re-report a concern already tracked or already fixed (the main source of re-run churn), and reused
+  // below for substance-based dedup. One fetch serves both. Fetched before the model call so a
+  // GitHub failure costs nothing.
+  const sliceIssues = DRY_RUN && !process.env.GH_TOKEN ? [] : existingSliceIssues(slice.name);
+  console.log(`reviewCodebaseSlice: reviewing ${slice.type} ${slice.name} — ${covered}${contractNote}${depNote} with ${MODEL} (${sliceIssues.length} already-tracked).`);
+  const findings = parseFindings(
+    await askClaude(slice, chunk.text, chunkNote, contracts.text, sliceIssues, deps.text),
+  );
+
+  if (findings.length === 0) {
+    console.log(`reviewCodebaseSlice: no findings for ${slice.name} (${covered}).`);
+  }
+  // Highest severity first, so the per-run cap keeps the issues that matter most.
+  findings.sort((a, b) => (SEVERITY_RANK[a.severity] ?? 3) - (SEVERITY_RANK[b.severity] ?? 3));
+
+  if (DRY_RUN) {
+    console.log(JSON.stringify({ slice: slice.name, covered, complete: chunk.complete, findings }, null, 2));
+    return;
+  }
+
+  const { filed, deferred } = await fileFindings(slice, findings, sliceIssues);
+
   if (chunk.complete) {
-    slice.lastReviewedAt = new Date().toISOString();
-    slice.cursor = 0;
-    slice.partial = false;
+    markComplete(row, filed);
+    carryDeferred(row, deferred);
     console.log(`reviewCodebaseSlice: completed ${slice.name}; filed ${filed} issue(s).`);
   } else {
-    slice.cursor = chunk.nextCursor;
-    slice.partial = true;
-    console.log(`reviewCodebaseSlice: ${slice.name} carries over from file ${chunk.nextCursor + 1}; filed ${filed} issue(s).`);
+    row.lastRunIssues = filed;
+    row.nextFile = fileList[chunk.nextCursor].rel;
+    if (chunk.nextOffset > 0) row.nextOffset = chunk.nextOffset; else delete row.nextOffset;
+    row.partial = true;
+    // Leftovers from a partial pass are filed by the very next run (a partial row is picked first
+    // and its leftovers go before any further reading), then the pass resumes.
+    carryDeferred(row, deferred);
+    touch(row);
+    console.log(`reviewCodebaseSlice: ${slice.name} carries over from file ${chunk.nextCursor + 1} (${row.nextFile}${row.nextOffset ? `, character ${row.nextOffset + 1}` : ''}); filed ${filed} issue(s).`);
   }
   saveLedger(ledger);
+  writeGithubOutput({ slice: slice.name, completed_slice: chunk.complete ? slice.name : '', filed });
+}
+
+async function main() {
+  switch (MODE) {
+    case '--pick':
+      return runPick();
+    case '--stamp':
+      return runStamp();
+    case '--reconcile':
+      return runReconcile();
+    case '--fingerprint':
+      return runFingerprint();
+    case null:
+      return runReview();
+    default:
+      throw new Error(`Unknown mode '${MODE}'. Modes: --pick, --stamp, --reconcile, --fingerprint, or none to review.`);
+  }
 }
 
 main().catch((error) => {
