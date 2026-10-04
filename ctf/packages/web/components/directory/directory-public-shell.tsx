@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { getDirectoryTokens } from './shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // SkillsHunt amber from the DirectoryPublic / MobileDirectoryPublic design mockups (the
 // cross-plugin reward-card accent; no shell-token slot, kept static).
@@ -25,6 +26,7 @@ function MobileDirectoryPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Community members</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
+        <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 

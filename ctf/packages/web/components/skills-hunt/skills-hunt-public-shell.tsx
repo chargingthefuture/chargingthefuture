@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getSkillsHuntTokens } from './sh-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups, served via the
 // shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FACC15,
@@ -35,6 +36,7 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
         <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
           This is not a referral button. You nominate someone you believe may be a survivor — first name, bio, Quora profile, skills, and professions. Their profile seeds the Directory so we can trade and stop depending on traffickers.
         </p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>

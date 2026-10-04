@@ -525,6 +525,26 @@ Result: web ☐
 
 ---
 
+### PP-22 — Signed-out page (added 2026-10-04)
+
+**Role:** signed-out visitor · **Surfaces:** web (phone width)
+
+**Precondition:** Signed out.
+
+**Steps:**
+1. Open `/apps/peer-programming`.
+2. Read the description under the title.
+3. Count the buttons that lead to sign-in.
+
+**Expected:** The description opens with "A global mastermind with a goal board: each member posts
+their goals, and everyone helps each other reach them." and then the weekly cohort sentence. "Open
+to members worldwide" shows under it. There is one sign-in button, "Join Skills Economy — Free";
+the lock area below shows "Sign in to get matched" with no button of its own.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### PP-A1 — Set or update the weekly topic

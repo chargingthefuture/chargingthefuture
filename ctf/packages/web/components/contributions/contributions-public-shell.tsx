@@ -10,6 +10,7 @@ import {
   getContributionsTokens,
   type ContributionsTokens,
 } from './contributions-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // The signed-out marketing view. It must show NO fabricated figures: a signed-out visitor has no
 // session, so any drive name, dollar amount, count, or progress bar here would be made-up and read
@@ -161,6 +162,7 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
         </div>
 
         <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.8, margin: '0 0 22px' }}>{INTRO}</p>
+        <PublicShellWorldwide color={t.MUTED} style={{ margin: '-10px 0 22px' }} />
 
         <div style={{ background: t.SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 22 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 12 }}>Three ways to help</div>

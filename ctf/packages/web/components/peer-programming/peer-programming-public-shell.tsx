@@ -1,9 +1,10 @@
 'use client';
 
-import { Users, Globe, Lock } from 'lucide-react';
+import { Users, Lock } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 import { getPeerProgrammingTokens } from './pp-shared';
 
 // Palette from the PeerProgrammingPublic / MobilePeerProgrammingPublic design mockups,
@@ -40,11 +41,8 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <span style={{ fontSize: 20, fontWeight: 800 }}>PeerProgramming</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Weekly cohorts of up to 12 people, open worldwide. Active members are placed automatically each week — no competitive selection.</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Globe size={13} color={t.MUTED} />
-          <span style={{ fontSize: 12, color: t.MUTED }}>Open to members worldwide</span>
-        </div>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>A global mastermind with a goal board: each member posts their goals, and everyone helps each other reach them. Weekly cohorts of up to 12 people, open worldwide. Active members are placed automatically each week — no competitive selection.</p>
+        <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 
@@ -57,7 +55,6 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to get matched</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -67,8 +64,8 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
 /**
  * Signed-out visitor view for PeerProgramming. Renders the public marketing
  * experience pixel-faithful to the PeerProgrammingPublic (desktop) and
- * MobilePeerProgrammingPublic (phone) design mockups, with sign-in affordances
- * pointing at the real hosted sign-in URL. It shows no private or per-user data:
+ * MobilePeerProgrammingPublic (phone) design mockups, with
+ * one sign-in button pointing at the real hosted sign-in URL. It shows no private or per-user data:
  * there is no public cohort feed, so the locked region behind the sign-in overlay
  * renders neutral blurred placeholder cards rather than fabricated cohort rows.
  */

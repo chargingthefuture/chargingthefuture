@@ -378,6 +378,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-10-04: **Signed-out description names the goal board (owner report).** The public header
+  in `peer-programming-public-shell.tsx` described only the weekly cohorts. It now opens with "A
+  global mastermind with a goal board: each member posts their goals, and everyone helps each other
+  reach them." The cohort sentence after it is unchanged. The page also showed the sign-in link
+  twice: the main "Join Skills Economy — Free" button and a second "Sign in" button inside the lock
+  overlay, both going to the same place. The overlay button is removed; the lock icon and "Sign in
+  to get matched" stay. No route, schema, or contract change.
 - 2026-10-03: **Cohort Direct Line message box grows with the text (bug fix, owner report).** The
   composer in `pp-chat-tab.tsx` was a one-line `<input>`, so longer messages scrolled sideways out
   of view before sending. It is now a `<textarea>` that starts at one line, wraps, grows to six

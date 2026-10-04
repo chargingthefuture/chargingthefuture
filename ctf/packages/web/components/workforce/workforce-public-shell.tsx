@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getWorkforceTokens } from './workforce-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Layout from the WorkforcePublic / MobileWorkforcePublic design mockups; chrome colors come from
 // the shared Workforce theme tokens (default theme returns the exact shipped hex).
@@ -69,6 +70,7 @@ function MobileWorkforcePublic({ signInUrl, verifyUrl, snapshot }: { signInUrl: 
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>5M survivor goal</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Real-time skills distribution, employment gaps, and personalized pathways across our growing network.</p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         {/* Live snapshot — real network-wide aggregate counts (no per-member data). */}
         <div style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', padding: '14px 16px', background: 'rgba(255,255,255,0.02)' }}>
