@@ -15,7 +15,7 @@
 | **Surfaces** | submit: web (desktop) · web (mobile-responsive, ~390px) · android — triage: web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-bug-reporting-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-04 manual note: the four `BUG_REPORTING_*` contracts now exist (command, access policy, audit, profile and deletion), written from the routes this script already exercises — no test change; the audit event id in BUG-A5 is unchanged |
 
 ## How to run this
 
