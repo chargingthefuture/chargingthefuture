@@ -58,7 +58,7 @@ Member-reporting + private-triage plugin — these are the can't-ship-broken che
 **Expected:** The intro line states all three of: the form is for something in the app that
 isn't working; reports are one-way and you won't get a reply here; questions go to the Commons
 on the home screen, where members can answer. A second line under it, above the first text box,
-reads "Not a bug? To talk to Farah about your work, it's $7 here."; tapping "here" opens
+reads "Not a bug? To talk to Farah about your work."; tapping "talk to Farah about your work" opens
 https://farahbrunache.com (a new tab on web, the device browser on android) and leaves the form
 as it was. At ~390px the line wraps with no sideways scroll. The form posts to `POST /api/bug-reports` with the `x-ctf-csrf: 1` header and
 same-origin cookies. Page URL and (on `/apps/<slug>`) the plugin slug are attached automatically;
