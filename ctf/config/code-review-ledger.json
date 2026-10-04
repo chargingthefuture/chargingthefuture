@@ -4,9 +4,10 @@
     {
       "name": "account",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-04T23:39:23.202Z",
+      "lastRunIssues": 9,
+      "partial": false,
+      "updatedAt": "2026-10-04T23:39:23.211Z"
     },
     {
       "name": "account-closed",
@@ -137,8 +138,8 @@
     {
       "name": "contributions",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-08-06T09:18:06.567Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -179,8 +180,8 @@
     {
       "name": "directory",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-06-27T04:13:20.881Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -249,8 +250,8 @@
     {
       "name": "foundation",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-29T09:19:17.562Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -340,8 +341,8 @@
     {
       "name": "mutual-time",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-21T09:07:33.219Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -389,7 +390,7 @@
     {
       "name": "plugin",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-07-16T08:37:32.172Z",
       "lastRunIssues": 0,
       "partial": false
     },
@@ -445,8 +446,8 @@
     {
       "name": "recurring-activity",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-07-14T11:54:27.811Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -578,8 +579,8 @@
     {
       "name": "unlock",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-06-26T12:38:54.509Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
@@ -613,8 +614,8 @@
     {
       "name": "what-works",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-06-27T02:41:07.460Z",
+      "lastRunIssues": 8,
       "partial": false
     },
     {
