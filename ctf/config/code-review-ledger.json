@@ -41,9 +41,10 @@
     {
       "name": "agent-mcp-server-package",
       "type": "module",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-10-04T23:50:24.407Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-04T23:50:24.407Z"
     },
     {
       "name": "announcements",
