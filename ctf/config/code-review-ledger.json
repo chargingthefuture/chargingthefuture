@@ -12,9 +12,10 @@
     {
       "name": "account-closed",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-04T23:48:23.907Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-04T23:48:23.908Z"
     },
     {
       "name": "account-data",
