@@ -1,11 +1,19 @@
 {
-  "_comment": "Rotation state for the scheduled code-review sweep. A slice is one plugin (a folder name shared across the app/api, components, lib, and mobile layers, reviewed together) or one standalone module (a folder name in just one layer). Each run reviews an in-progress slice first, then any never-reviewed slice, then the least-recently-reviewed one, so every slice gets at least one pass. `cursor`/`partial` carry a too-big slice across runs so nothing is dropped. New slices start unreviewed (lastReviewedAt: null); slices whose folders are gone are pruned. Maintained by ctf/scripts/reviewCodebaseSlice.mjs and committed back by .github/workflows/code-review-sweep.yml. Safe to edit by hand.",
+  "_comment": "Rotation state for the code-review sweep. A slice is one plugin (a folder name shared across the app/api, components, lib and mobile layers, plus the page folder of that name under app/ or app/apps/, reviewed together), one standalone module (a folder name in just one layer), or one catch-all (web-pages, web-shell, mobile-shell, <name>-package, scripts, sql, ctf-root) holding every source file no named slice claims. Each run reviews an in-progress slice first, then one with findings left over from a capped run (`deferred`), then any never-reviewed slice, then the least-recently-reviewed one. `partial` and `nextFile` carry a too-big slice across runs so nothing is dropped. New slices start unreviewed (lastReviewedAt: null); slices whose folders are gone are pruned. This copy on main is stamped by the hand route (/rs, via `--stamp`); the scheduled sweep keeps its own copy on the code-review-ledger branch and merges this one on every run, newer stamp per slice winning. Maintained by ctf/scripts/reviewCodebaseSlice.mjs; use its --pick, --stamp and --reconcile modes rather than editing by hand.",
   "slices": [
     {
       "name": "account",
       "type": "plugin",
       "lastReviewedAt": "2026-10-03T23:56:58.639Z",
       "lastRunIssues": 6,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "account-closed",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "cursor": 0,
       "partial": false
     },
@@ -26,16 +34,28 @@
       "partial": false
     },
     {
+      "name": "admin-expenses",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "agent-mcp-server-package",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
       "name": "announcements",
       "type": "module",
       "lastReviewedAt": "2026-07-18T09:46:21.009Z",
       "lastRunIssues": 6,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/announcements",
-        "ctf/packages/web/app/api/announcements"
-      ]
+      "partial": false
     },
     {
       "name": "auth",
@@ -99,19 +119,21 @@
       "lastReviewedAt": "2026-06-27T02:26:34.545Z",
       "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/click-log",
-        "ctf/packages/web/app/api/click-log",
-        "ctf/packages/web/components/click-log",
-        "ctf/packages/web/lib/click-log"
-      ]
+      "partial": false
     },
     {
       "name": "comic",
       "type": "plugin",
       "lastReviewedAt": "2026-10-04T04:02:00.436Z",
       "lastRunIssues": 6,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "commons",
+      "type": "plugin",
+      "lastReviewedAt": "2026-08-11T07:43:20.794Z",
+      "lastRunIssues": 4,
       "cursor": 0,
       "partial": false
     },
@@ -137,12 +159,7 @@
       "lastReviewedAt": "2026-08-06T09:18:06.567Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/contributions",
-        "ctf/packages/web/components/contributions",
-        "ctf/packages/web/lib/contributions"
-      ]
+      "partial": false
     },
     {
       "name": "contributor-access",
@@ -150,12 +167,15 @@
       "lastReviewedAt": "2026-08-05T14:30:46.085Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/contributor-access",
-        "ctf/packages/web/components/contributor-access",
-        "ctf/packages/web/lib/contributor-access"
-      ]
+      "partial": false
+    },
+    {
+      "name": "ctf-root",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "currencies",
@@ -163,10 +183,7 @@
       "lastReviewedAt": "2026-08-05T09:14:09.920Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/currencies"
-      ]
+      "partial": false
     },
     {
       "name": "currency",
@@ -174,10 +191,7 @@
       "lastReviewedAt": "2026-08-04T23:38:50.123Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/currency"
-      ]
+      "partial": false
     },
     {
       "name": "db",
@@ -185,10 +199,7 @@
       "lastReviewedAt": "2026-08-04T23:12:28.808Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/db"
-      ]
+      "partial": false
     },
     {
       "name": "directory",
@@ -196,24 +207,39 @@
       "lastReviewedAt": "2026-06-27T04:13:20.881Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/directory",
-        "ctf/packages/web/app/api/directory",
-        "ctf/packages/web/components/directory",
-        "ctf/packages/web/lib/directory"
-      ]
+      "partial": false
+    },
+    {
+      "name": "economic-models-package",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "education-package",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "engagement",
-      "type": "module",
+      "type": "plugin",
       "lastReviewedAt": "2026-08-03T10:10:15.973Z",
       "lastRunIssues": 3,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/engagement"
-      ]
+      "partial": false
+    },
+    {
+      "name": "eol-package",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "errors",
@@ -221,10 +247,7 @@
       "lastReviewedAt": "2026-08-04T09:16:34.636Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/errors"
-      ]
+      "partial": false
     },
     {
       "name": "feature-flags",
@@ -232,10 +255,7 @@
       "lastReviewedAt": "2026-08-02T08:41:34.630Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/feature-flags"
-      ]
+      "partial": false
     },
     {
       "name": "feed",
@@ -243,11 +263,7 @@
       "lastReviewedAt": "2026-08-01T08:38:06.926Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/feed",
-        "ctf/packages/web/lib/feed"
-      ]
+      "partial": false
     },
     {
       "name": "feed-announcements",
@@ -255,10 +271,15 @@
       "lastReviewedAt": "2026-07-30T09:08:07.260Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/components/feed-announcements"
-      ]
+      "partial": false
+    },
+    {
+      "name": "fireside",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "foundation",
@@ -266,12 +287,7 @@
       "lastReviewedAt": "2026-07-29T09:19:17.562Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/foundation",
-        "ctf/packages/web/components/foundation",
-        "ctf/packages/web/lib/foundation"
-      ]
+      "partial": false
     },
     {
       "name": "gdp",
@@ -279,12 +295,7 @@
       "lastReviewedAt": "2026-07-28T09:12:53.372Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/gdp",
-        "ctf/packages/web/components/gdp",
-        "ctf/packages/web/lib/gdp"
-      ]
+      "partial": false
     },
     {
       "name": "geo",
@@ -292,10 +303,7 @@
       "lastReviewedAt": "2026-07-26T10:41:31.407Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/geo"
-      ]
+      "partial": false
     },
     {
       "name": "health",
@@ -303,22 +311,15 @@
       "lastReviewedAt": "2026-07-26T08:41:33.760Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/health"
-      ]
+      "partial": false
     },
     {
-      "name": "commons",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-25T08:27:58.413Z",
-      "lastRunIssues": 6,
+      "name": "http",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/commons",
-        "ctf/packages/web/lib/commons"
-      ]
+      "partial": false
     },
     {
       "name": "identity",
@@ -326,10 +327,15 @@
       "lastReviewedAt": "2026-07-24T09:00:54.256Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/identity"
-      ]
+      "partial": false
+    },
+    {
+      "name": "images",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "integrations",
@@ -337,10 +343,7 @@
       "lastReviewedAt": "2026-07-23T09:04:00.711Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/integrations"
-      ]
+      "partial": false
     },
     {
       "name": "internal",
@@ -348,23 +351,15 @@
       "lastReviewedAt": "2026-07-22T09:05:40.694Z",
       "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/internal"
-      ]
+      "partial": false
     },
     {
-      "name": "skill-up",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-20T09:40:20.540Z",
-      "lastRunIssues": 8,
+      "name": "invites",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/skill-up",
-        "ctf/packages/web/components/skill-up",
-        "ctf/packages/web/lib/skill-up"
-      ]
+      "partial": false
     },
     {
       "name": "lighthouse",
@@ -372,13 +367,15 @@
       "lastReviewedAt": "2026-06-27T02:28:12.465Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/lighthouse",
-        "ctf/packages/web/app/api/lighthouse",
-        "ctf/packages/web/components/lighthouse",
-        "ctf/packages/web/lib/lighthouse"
-      ]
+      "partial": false
+    },
+    {
+      "name": "mobile-shell",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "mood",
@@ -386,13 +383,7 @@
       "lastReviewedAt": "2026-06-26T15:08:10.962Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/mood",
-        "ctf/packages/web/app/api/mood",
-        "ctf/packages/web/components/mood",
-        "ctf/packages/web/lib/mood"
-      ]
+      "partial": false
     },
     {
       "name": "mutual-time",
@@ -400,12 +391,7 @@
       "lastReviewedAt": "2026-07-21T09:07:33.219Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/mutual-time",
-        "ctf/packages/web/components/mutual-time",
-        "ctf/packages/web/lib/mutual-time"
-      ]
+      "partial": false
     },
     {
       "name": "nav",
@@ -413,10 +399,7 @@
       "lastReviewedAt": "2026-07-20T04:22:57.270Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/nav"
-      ]
+      "partial": false
     },
     {
       "name": "notifications",
@@ -424,10 +407,7 @@
       "lastReviewedAt": "2026-07-20T01:46:02.477Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/notifications"
-      ]
+      "partial": false
     },
     {
       "name": "observability",
@@ -435,10 +415,7 @@
       "lastReviewedAt": "2026-07-19T08:39:00.553Z",
       "lastRunIssues": 3,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/observability"
-      ]
+      "partial": false
     },
     {
       "name": "peer-programming",
@@ -446,24 +423,23 @@
       "lastReviewedAt": "2026-07-18T08:14:09.048Z",
       "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/peer-programming",
-        "ctf/packages/web/app/api/peer-programming",
-        "ctf/packages/web/components/peer-programming",
-        "ctf/packages/web/lib/peer-programming"
-      ]
+      "partial": false
+    },
+    {
+      "name": "platform",
+      "type": "module",
+      "lastReviewedAt": "2026-08-10T08:10:26.615Z",
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "plugin",
-      "type": "module",
+      "type": "plugin",
       "lastReviewedAt": "2026-07-16T08:37:32.172Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/plugin"
-      ]
+      "partial": false
     },
     {
       "name": "plugins",
@@ -471,12 +447,7 @@
       "lastReviewedAt": "2026-07-15T08:39:32.823Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/plugins",
-        "ctf/packages/web/components/plugins",
-        "ctf/packages/web/lib/plugins"
-      ]
+      "partial": false
     },
     {
       "name": "presence",
@@ -484,11 +455,7 @@
       "lastReviewedAt": "2026-07-14T15:52:17.449Z",
       "lastRunIssues": 4,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/presence",
-        "ctf/packages/web/lib/presence"
-      ]
+      "partial": false
     },
     {
       "name": "questions",
@@ -496,11 +463,39 @@
       "lastReviewedAt": "2026-07-14T14:58:05.350Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/questions",
-        "ctf/packages/web/app/api/questions"
-      ]
+      "partial": false
+    },
+    {
+      "name": "quora-deletion-survey",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "quora-live-census",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "quora-motd",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "reader",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "recurring-activity",
@@ -508,26 +503,7 @@
       "lastReviewedAt": "2026-07-14T11:54:27.811Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/recurring-activity",
-        "ctf/packages/web/app/api/recurring-activity",
-        "ctf/packages/web/components/recurring-activity",
-        "ctf/packages/web/lib/recurring-activity"
-      ]
-    },
-    {
-      "name": "reviews",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-29T02:50:49.583Z",
-      "lastRunIssues": 4,
-      "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/reviews",
-        "ctf/packages/web/components/reviews",
-        "ctf/packages/web/lib/reviews"
-      ]
+      "partial": false
     },
     {
       "name": "safety",
@@ -535,12 +511,15 @@
       "lastReviewedAt": "2026-07-14T08:32:24.007Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/safety",
-        "ctf/packages/web/components/safety",
-        "ctf/packages/web/lib/safety"
-      ]
+      "partial": false
+    },
+    {
+      "name": "scripts",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "security",
@@ -548,10 +527,7 @@
       "lastReviewedAt": "2026-07-17T08:31:47.697Z",
       "lastRunIssues": 3,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/lib/security"
-      ]
+      "partial": false
     },
     {
       "name": "service-credits",
@@ -559,13 +535,15 @@
       "lastReviewedAt": "2026-07-13T09:51:55.954Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/service-credits",
-        "ctf/packages/web/app/api/service-credits",
-        "ctf/packages/web/components/service-credits",
-        "ctf/packages/web/lib/service-credits"
-      ]
+      "partial": false
+    },
+    {
+      "name": "share",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "shared",
@@ -573,11 +551,23 @@
       "lastReviewedAt": "2026-07-09T10:05:36.491Z",
       "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/components/shared",
-        "ctf/packages/web/lib/shared"
-      ]
+      "partial": false
+    },
+    {
+      "name": "shared-package",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "skill-up",
+      "type": "plugin",
+      "lastReviewedAt": "2026-07-20T09:40:20.540Z",
+      "lastRunIssues": 8,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "skills-hunt",
@@ -585,13 +575,7 @@
       "lastReviewedAt": "2026-07-08T09:03:30.711Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/skills-hunt",
-        "ctf/packages/web/app/api/skills-hunt",
-        "ctf/packages/web/components/skills-hunt",
-        "ctf/packages/web/lib/skills-hunt"
-      ]
+      "partial": false
     },
     {
       "name": "skills-taxonomy",
@@ -599,13 +583,7 @@
       "lastReviewedAt": "2026-06-27T02:29:37.457Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/skills-taxonomy",
-        "ctf/packages/web/app/api/skills-taxonomy",
-        "ctf/packages/web/components/skills-taxonomy",
-        "ctf/packages/web/lib/skills-taxonomy"
-      ]
+      "partial": false
     },
     {
       "name": "socket-relay",
@@ -613,12 +591,23 @@
       "lastReviewedAt": "2026-07-26T00:22:51.077Z",
       "lastRunIssues": 1,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/socket-relay",
-        "ctf/packages/web/components/socket-relay",
-        "ctf/packages/web/lib/socket-relay"
-      ]
+      "partial": false
+    },
+    {
+      "name": "sql",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "stream-quota",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "theme",
@@ -626,11 +615,15 @@
       "lastReviewedAt": "2026-07-02T09:39:55.982Z",
       "lastRunIssues": 2,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/components/theme",
-        "ctf/packages/web/lib/theme"
-      ]
+      "partial": false
+    },
+    {
+      "name": "ti-radio",
+      "type": "plugin",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "trust",
@@ -638,13 +631,7 @@
       "lastReviewedAt": "2026-07-01T10:28:02.892Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/trust",
-        "ctf/packages/web/app/api/trust",
-        "ctf/packages/web/components/trust",
-        "ctf/packages/web/lib/trust"
-      ]
+      "partial": false
     },
     {
       "name": "trust-transport",
@@ -652,13 +639,7 @@
       "lastReviewedAt": "2026-06-30T10:05:29.205Z",
       "lastRunIssues": 6,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/trust-transport",
-        "ctf/packages/web/app/api/trust-transport",
-        "ctf/packages/web/components/trust-transport",
-        "ctf/packages/web/lib/trust-transport"
-      ]
+      "partial": false
     },
     {
       "name": "ui",
@@ -666,10 +647,7 @@
       "lastReviewedAt": "2026-06-28T09:38:47.942Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/components/ui"
-      ]
+      "partial": false
     },
     {
       "name": "unlock",
@@ -677,13 +655,23 @@
       "lastReviewedAt": "2026-06-26T12:38:54.509Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/unlock",
-        "ctf/packages/web/app/api/unlock",
-        "ctf/packages/web/components/unlock",
-        "ctf/packages/web/lib/unlock"
-      ]
+      "partial": false
+    },
+    {
+      "name": "web-pages",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "web-shell",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
+      "cursor": 0,
+      "partial": false
     },
     {
       "name": "webhooks",
@@ -691,10 +679,7 @@
       "lastReviewedAt": "2026-07-18T09:44:46.490Z",
       "lastRunIssues": 0,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/web/app/api/webhooks"
-      ]
+      "partial": false
     },
     {
       "name": "weekly-performance",
@@ -702,13 +687,7 @@
       "lastReviewedAt": "2026-06-27T09:09:24.899Z",
       "lastRunIssues": 5,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/weekly-performance",
-        "ctf/packages/web/app/api/weekly-performance",
-        "ctf/packages/web/components/weekly-performance",
-        "ctf/packages/web/lib/weekly-performance"
-      ]
+      "partial": false
     },
     {
       "name": "what-works",
@@ -716,13 +695,7 @@
       "lastReviewedAt": "2026-06-27T02:41:07.460Z",
       "lastRunIssues": 8,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/what-works",
-        "ctf/packages/web/app/api/what-works",
-        "ctf/packages/web/components/what-works",
-        "ctf/packages/web/lib/what-works"
-      ]
+      "partial": false
     },
     {
       "name": "workforce",
@@ -730,13 +703,7 @@
       "lastReviewedAt": "2026-06-26T10:10:07.990Z",
       "lastRunIssues": 7,
       "cursor": 0,
-      "partial": false,
-      "paths": [
-        "ctf/packages/mobile/src/features/workforce",
-        "ctf/packages/web/app/api/workforce",
-        "ctf/packages/web/components/workforce",
-        "ctf/packages/web/lib/workforce"
-      ]
+      "partial": false
     }
   ]
 }

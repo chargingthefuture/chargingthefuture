@@ -9,7 +9,9 @@ name: Code Review — Sweep and File Issues
 # Runs on a daily schedule (one slice per run) and can also be kicked by hand. The schedule
 # is deliberately modest — one bounded model call per day — so it works through the codebase
 # over time without much cost. Change or remove the cron below to adjust the cadence. See
-# ctf/scripts/reviewCodebaseSlice.mjs.
+# ctf/scripts/reviewCodebaseSlice.mjs. Every source file under ctf/ belongs to exactly one slice
+# (catch-all slices take the pages, shell files, scripts, migrations and other packages that the
+# name-grouped slices do not), so nothing sits outside the rotation.
 on:
   workflow_dispatch:
     inputs:
@@ -48,6 +50,11 @@ jobs:
       # satisfy, so the daily bot must not push there. Restore the latest ledger from its
       # branch into the working tree before reviewing.
       #
+      # The copy on main is NOT discarded: it is set aside and merged by the script (newer stamp
+      # per slice wins, see CODE_REVIEW_LEDGER_MERGE_PATHS below). The hand route `/rs` stamps
+      # the copy on main, so before the merge every slice reviewed by hand read as never
+      # reviewed on this branch and was reviewed again by the next funded run.
+      #
       # CRITICAL — never silently reset the ledger. There are two very different situations and
       # only the first may fall back to the in-repo stub:
       #   1. The branch does NOT exist yet (first run ever) → seeding from the stub is correct.
@@ -60,6 +67,8 @@ jobs:
         run: |
           set -euo pipefail
           LEDGER=ctf/config/code-review-ledger.json
+          cp "$LEDGER" "$RUNNER_TEMP/code-review-ledger.main.json"
+          echo "Set aside the copy of the ledger on main for the merge."
 
           if ! git ls-remote --exit-code --heads origin code-review-ledger >/dev/null 2>&1; then
             echo "No code-review-ledger branch yet (first run); seeding from the in-repo stub on main."
@@ -106,7 +115,12 @@ jobs:
           secret-path: /
           recursive: true
 
+      # Fails (rather than exiting 0 with "nothing to do") when ANTHROPIC_API_KEY or GH_TOKEN is
+      # missing, so a lost secret is a red run and not a green one that reviewed nothing. Writes
+      # `completed_slice` to the step outputs — empty when the run was partial or only filed
+      # findings left over from an earlier capped run — which gates the test-script refresh below.
       - name: Review one slice and file issues
+        id: review
         env:
           # ANTHROPIC_API_KEY is injected by the Infisical step above.
           # GITHUB_TOKEN is the automatic Actions token (issues: write granted above).
@@ -114,6 +128,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           CODE_REVIEW_SLICE: ${{ inputs.slice }}
           CODE_REVIEW_DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          CODE_REVIEW_LEDGER_MERGE_PATHS: ${{ runner.temp }}/code-review-ledger.main.json
         run: node ctf/scripts/reviewCodebaseSlice.mjs
 
       # Persist the rotation pointer so the next run reviews a different slice. Pushes to the
@@ -143,9 +158,12 @@ jobs:
       # review above just completed (it reads the most-recently-reviewed slice from the ledger that
       # the review step already updated in the working tree). This is the auto/rotation half of the
       # manual-testing system; the on-demand half is .github/workflows/manual-test-script.yml.
-      # Skipped on a dry run. No-ops cleanly if the rotation landed on a non-plugin slice.
+      # Skipped on a dry run and whenever the review did not COMPLETE a slice: a partial run of a
+      # big slice, or a run that only filed leftover findings, leaves the newest stamp on the
+      # previous plugin, and this step used to regenerate that plugin's script again on each such
+      # run. No-ops cleanly if the rotation landed on a non-plugin slice.
       - name: Refresh the rotated plugin's manual test script
-        if: ${{ inputs.dry_run != true }}
+        if: ${{ inputs.dry_run != true && steps.review.outputs.completed_slice != '' }}
         env:
           # ANTHROPIC_API_KEY is injected by the Infisical step above.
           TEST_SCRIPT_FROM_REVIEW: '1'
@@ -155,7 +173,7 @@ jobs:
       # scheduled job can't push to it directly). Uses GH_PAT so the PR triggers CI and auto-merge can
       # complete. No change -> no PR. Reuses a stable per-plugin branch so a re-run updates the same PR.
       - name: Open an auto-merge PR for the refreshed script
-        if: ${{ inputs.dry_run != true }}
+        if: ${{ inputs.dry_run != true && steps.review.outputs.completed_slice != '' }}
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
