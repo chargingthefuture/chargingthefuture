@@ -27,9 +27,10 @@
     {
       "name": "admin",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-04T23:53:55.239Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-04T23:53:55.239Z"
     },
     {
       "name": "admin-expenses",
