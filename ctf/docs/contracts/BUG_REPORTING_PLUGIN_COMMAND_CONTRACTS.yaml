@@ -1,0 +1,279 @@
+# Bug Reporting — the in-app "Report a problem" form and its admin review page.
+#
+# Written from the code as it stands on 2026-10-04 (docs only; no behavior changed):
+#   ctf/packages/web/app/api/bug-reports/route.ts                     (submit)
+#   ctf/packages/web/app/api/bug-reports/_lib.ts                      (access gates and CSRF check)
+#   ctf/packages/web/app/api/bug-reports/admin/route.ts               (admin list)
+#   ctf/packages/web/app/api/bug-reports/admin/[id]/resolve/route.ts  (admin release or reject)
+#   ctf/packages/web/app/api/bug-reports/admin/audit-events/route.ts  (admin audit log read)
+#   ctf/packages/web/lib/bug-reports/{constants,repository,sanitize,audit}.ts
+#
+# pluginId is `bug-reports`, the id lib/bug-reports/audit.ts writes and the account deletion registry
+# uses. The plugin registry tile is slugged `bug-reporting`; the two names refer to the same feature.
+#
+# Every error body has the shape { ok: false, code, message } unless noted. An access-gate refusal
+# instead returns the shared deny body from evaluatePluginAccess (lib/auth/deny-taxonomy.ts), with a
+# `code` of AUTH_UNAUTHORIZED (401) or AUTH_FORBIDDEN_ROLE (403).
+#
+# Where report text goes after it is stored. These are not routes, so they are not commands here, but
+# they are the only readers of the report outside the four commands below:
+#   - .github/workflows/bug-reports-create-issues.yml -> ctf/scripts/createBugReportIssues.mjs, every
+#     30 minutes (:11 and :41). Reads up to 25 rows with status `new`, oldest first, selecting only
+#     id, redacted_message, redacted_context, page_url, plugin_slug, app_version and created_at. Opens
+#     one issue per row in the private triage repo (BUG_REPORTS_TRIAGE_REPO, default
+#     chargingthefuture/bug-reports) labeled `user-report` and `needs-triage`, then sets the row to
+#     `issue_created` with triage_repo, issue_number and issue_url. The raw text, user_id and
+#     user_agent are never selected, so they never reach the issue.
+#   - .github/workflows/bug-reports-triage.yml -> ctf/scripts/triageBugReportIssues.mjs reads the
+#     issue (already redacted) from the triage repo and sends its title and body to the Anthropic API
+#     for a fix plan, then comments on the issue. It never reads the app database.
+#   - .github/workflows/bug-reports-build.yml works from the triage issue after the owner labels it
+#     `approved-to-build`. It never reads the app database.
+contracts:
+  - pluginId: bug-reports
+    command: bug-reports.report.submit
+    version: 1.0.0
+    route: POST /api/bug-reports
+    description: >-
+      A signed-in person files a problem report. The text is trimmed and cut to length, a per-person
+      rate limit is checked, the redaction and risk check runs on the same request, and one row is
+      stored. A report that trips any risk signal is stored as `held_for_review` and is never sent on
+      until an admin releases it; a clean report is stored as `new`.
+    clients:
+      - Web report modal (ctf/packages/web/components/bug-reports/bug-report-submit.ts) sends message,
+        context, pageUrl and pluginSlug.
+      - Android (ctf/packages/mobile/src/features/bug-reporting/api.ts) sends message, context (only
+        when not blank) and pluginSlug. It never sends pageUrl or appVersion. It treats 201 as
+        success, 429 as rate limited and anything else as an error, and keeps the typed text.
+    requestHeaders:
+      x-ctf-csrf:
+        required: true
+        value: '1'
+      origin:
+        required: false
+        rule: When present, its host must equal x-forwarded-host (first entry) or Host. A missing Origin is allowed, which is how the Android app calls.
+      user-agent:
+        required: false
+        rule: Read on the server, trimmed and cut to 512 characters, stored as user_agent.
+    inputSchema:
+      message:
+        type: string
+        required: true
+        maxLength: 5000
+        rule: Trimmed. Missing, not a string, or blank after trimming is a 400. Longer text is cut to 5000 characters, not refused.
+      context:
+        type: string
+        required: false
+        maxLength: 5000
+        rule: Trimmed and cut to 5000. Not a string or blank is stored as null.
+      pageUrl:
+        type: string
+        required: false
+        maxLength: 512
+        rule: Trimmed and cut to 512. Not a string or blank is stored as null. Not checked to be a URL.
+      pluginSlug:
+        type: string
+        required: false
+        maxLength: 512
+        rule: Trimmed and cut to 512. Not checked against the plugin registry.
+      appVersion:
+        type: string
+        required: false
+        maxLength: 512
+        rule: Trimmed and cut to 512. Neither client sends it today.
+    limits:
+      rateLimit:
+        count: 5
+        windowMinutes: 10
+        rule: >-
+          Counts this person's rows with created_at inside the last 10 minutes before inserting. At 5
+          or more the request is refused with 429. The count and the insert are separate statements,
+          so two requests arriving together can both pass the count.
+    processing:
+      redaction: >-
+        lib/bug-reports/sanitize.ts runs on message and context before the insert. Card-like digit
+        runs (13 to 16 digits) become "[redacted number]", token-like strings become
+        "[redacted secret]", email addresses become "[redacted email]", phone-like digit runs become
+        "[redacted phone]". A short list of abusive words sets the abusive_language flag without
+        changing the text.
+      riskFlags: [pii_email, pii_phone, pii_card, secret_token, abusive_language]
+      statusOnCreate: Any flag gives risk_level `flagged` and status `held_for_review`; no flag gives risk_level `clean` and status `new`.
+    outputSchema:
+      ok:
+        type: boolean
+        value: true
+      reportId:
+        type: string
+        format: uuid
+      status:
+        type: string
+        enum: [new, held_for_review]
+    statusCodes:
+      201: Report stored.
+      400: bug_reports.invalid_payload — body is not valid JSON (message "Invalid JSON.", plus a `reason`), or message is missing or blank.
+      401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
+      403: bug_reports.csrf_denied — x-ctf-csrf header missing or not "1", Origin unparseable, or Origin from another host.
+      429: bug_reports.rate_limited — 5 or more reports from this person in the last 10 minutes.
+      503: bug_reports.persistence_unavailable — the rate-limit count or the insert failed; the error goes to the observability channel (area bug-reports, op submit).
+    knownGaps:
+      - A body that parses as JSON but is not an object (for example `null`) is not caught; reading its message field throws outside the try block and the request ends as an unhandled 500.
+    dataAccess:
+      - bug_reports (select count by user_id and created_at; insert)
+    purpose: product_problem_reporting
+    retentionClass: transactional_long_lived
+    idempotency: false
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.list
+    version: 1.0.0
+    route: GET /api/bug-reports/admin
+    description: >-
+      Admin list for /admin/bug-reports. Held reports first, then the rest, newest first within each
+      group, at most 200 rows. Returns redacted text only; raw_message, raw_context and user_agent are
+      never selected. Includes who filed each report so the admin can follow up; that identity stays
+      on this admin page and is never put on a triage issue.
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+        value: true
+      items:
+        type: array
+        maxItems: 200
+        items:
+          id: string (uuid)
+          status: string (new | held_for_review | issue_created | rejected | resolved)
+          reporterUsername: string | null (from the legacy public.users table; null when that table is absent or has no row)
+          reporterHandle: string (stable display handle from feedAuthorHandle(username, user_id); always set)
+          redactedMessage: string | null
+          redactedContext: string | null
+          riskFlags: string[] (empty array when null)
+          riskLevel: string (clean | flagged | unknown)
+          pageUrl: string | null
+          pluginSlug: string | null
+          appVersion: string | null
+          triageRepo: string | null
+          issueNumber: integer | null
+          issueUrl: string | null
+          createdAt: timestamp
+          updatedAt: timestamp
+    statusCodes:
+      200: List returned.
+      401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
+      403: AUTH_FORBIDDEN_ROLE — signed in without the admin role (shared deny body).
+      503: bug_reports.persistence_unavailable — message "Unable to load bug reports" followed by the failure reason; reported to observability (op admin-list).
+    dataAccess:
+      - bug_reports (select; redacted fields, status, risk, page, plugin, app version, issue link, user_id)
+      - users (select username only, legacy public.users table, only when it exists)
+    purpose: product_problem_triage
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.resolve
+    version: 1.0.0
+    route: POST /api/bug-reports/admin/:id/resolve
+    description: >-
+      Admin decision on one report. `release` moves a `held_for_review` report back to `new`, so the
+      create-issues job sends its redacted copy to the triage repo on its next run. `reject` moves a
+      `held_for_review` or `new` report to `rejected`, so it is never sent. The reporter is not told
+      which happened. Every decision that reaches the database step is written to the audit trail.
+    requestHeaders:
+      x-ctf-csrf:
+        required: true
+        value: '1'
+      origin:
+        required: false
+        rule: Same check as submit.
+    inputSchema:
+      id:
+        in: path
+        type: string
+        required: true
+        format: uuid
+        rule: Must match the UUID pattern (any case) or the request is a 400.
+      action:
+        in: body
+        type: string
+        required: true
+        enum: [release, reject]
+    checkOrder:
+      - Admin access gate
+      - CSRF header and origin
+      - id is a UUID
+      - body parses as JSON
+      - action is release or reject
+      - status update, then audit write
+    transitions:
+      release: held_for_review -> new (no change from any other status)
+      reject: held_for_review or new -> rejected (no change from any other status)
+    outputSchema:
+      ok:
+        type: boolean
+        value: true
+      id:
+        type: string
+      status:
+        type: string
+        enum: [new, rejected]
+    statusCodes:
+      200: Status changed.
+      400: bug_reports.invalid_payload — "Invalid report id.", "Invalid JSON body.", or action not release or reject.
+      401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
+      403: AUTH_FORBIDDEN_ROLE (not an admin, shared deny body) or bug_reports.csrf_denied (header or origin check failed).
+      409: bug_reports.forbidden — no row changed; the report does not exist or is already in a status the action cannot move. Message "Report is not in a state that can be resolved."
+      503: bug_reports.persistence_unavailable — message "Unable to resolve this report" followed by the failure reason; reported to observability (op admin-resolve).
+    audit: >-
+      Writes one bug_report_admin_audit_trail row on 200, 409 and 503. Nothing is written for 400,
+      401 or 403. See BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml.
+    knownGaps:
+      - A body that parses as JSON but is not an object (for example `null`) throws when its action field is read and ends as an unhandled 500.
+    dataAccess:
+      - bug_reports (update status and updated_at by id)
+      - bug_report_admin_audit_trail (insert)
+    purpose: product_problem_triage
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: bug-reports
+    command: bug-reports.admin.audit-events.list
+    version: 1.0.0
+    route: GET /api/bug-reports/admin/audit-events
+    description: >-
+      Admin read of the resolve audit trail, newest first, for the Audit log panel on
+      /admin/bug-reports. Names which report was decided and by which admin, never what the report
+      said.
+    inputSchema:
+      limit:
+        in: query
+        type: integer
+        required: false
+        default: 100
+        rule: Parsed as an integer. Not a number falls back to 100. Then held between 1 and 200.
+    outputSchema:
+      events:
+        type: array
+        maxItems: 200
+        items:
+          id: string (uuid)
+          actor_id: string
+          command: string
+          policy_status: string (allow | deny)
+          reason: string
+          target_type: string (bug_report)
+          target_id: string
+          result: string (success | failure)
+          error_category: string | null
+          metadata: object
+          created_at: timestamp
+      note: The success body has no `ok` field, and rows keep their database column names.
+    statusCodes:
+      200: Events returned.
+      401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
+      403: AUTH_FORBIDDEN_ROLE — not an admin (shared deny body).
+      503: bug_reports.persistence_unavailable — message "Unable to fetch audit events" followed by the failure reason; reported to observability (op admin_audit_events).
+    dataAccess:
+      - bug_report_admin_audit_trail (select)
+    purpose: admin_accountability
+    retentionClass: derived_short_lived
+    idempotency: true

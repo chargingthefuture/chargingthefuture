@@ -18,6 +18,10 @@
     "Add an entry when you rename a slice folder, or when a slice's contracts live under another name."
   ],
   "slices": {
+    "bug-reports": {
+      "contractPrefix": "BUG_REPORTING",
+      "note": "The api, lib and components folders are named bug-reports, but the contracts are the BUG_REPORTING_* files, after the bug-reporting plugin registry slug."
+    },
     "commons": {
       "contractPrefix": "FEED",
       "aliases": ["hub"],
