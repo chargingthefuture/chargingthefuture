@@ -1,5 +1,6 @@
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { recordLoginEvent } from 'lib/engagement/login-activity';
+import { hasValidIdentityStamp } from './identity-stamp';
 import { verifyBearerIdentity } from './verify-bearer';
 
 type MaybeValue = string | null | undefined;
@@ -41,18 +42,6 @@ function normalizeBoolean(value: MaybeValue): boolean | null {
   return null;
 }
 
-function readIdentityValue(
-  headerName: string,
-  cookieName: string,
-  headerStore: Headers,
-  cookieStore: Awaited<ReturnType<typeof cookies>>,
-): string | null {
-  return pickFirstNonEmpty(
-    headerStore.get(headerName),
-    cookieStore.get(cookieName)?.value,
-  );
-}
-
 // Record that this member turned up today. Signing in is a Clerk event and has nothing to do with
 // which plugin gets opened next, so the recording belongs here — the one place every authenticated
 // request resolves its Clerk identity, whether it arrived as a verified web session or a verified
@@ -69,28 +58,36 @@ function recordSignIn(userId: string | null): void {
   }
 }
 
+async function isMiddlewareAuthenticated(headerStore: Headers): Promise<boolean> {
+  return (
+    normalizeBoolean(headerStore.get('x-ctf-authenticated')) === true &&
+    pickFirstNonEmpty(headerStore.get('x-ctf-user-id')) !== null &&
+    (await hasValidIdentityStamp(headerStore))
+  );
+}
+
 export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const headerStore = await headers();
-  const cookieStore = await cookies();
 
   // The web Clerk middleware is the ONLY thing allowed to set the managed
   // `x-ctf-*` identity headers: it strips whatever the client sent and rewrites
   // them from the verified Clerk session, marking the request with
   // `x-ctf-authenticated`. So a same-origin web request (SSR/route handler) is
   // already trusted here. We only read the `x-ctf-user-*` identity headers when
-  // the middleware confirmed authentication (`x-ctf-authenticated === 'true'`).
-  const middlewareAuthenticated =
-    normalizeBoolean(headerStore.get('x-ctf-authenticated')) === true &&
-    pickFirstNonEmpty(headerStore.get('x-ctf-user-id')) !== null;
+  // the middleware confirmed authentication (`x-ctf-authenticated === 'true'`)
+  // and stamped the request (see identity-stamp.ts: the middleware's matcher
+  // skips paths that look like static files, and on those a client-sent header
+  // would arrive untouched). Headers only: a header the middleware left unset
+  // (no role or username claim) means the value is absent, never a cookie, since
+  // cookies are written by the client.
+  const middlewareAuthenticated = await isMiddlewareAuthenticated(headerStore);
 
   if (middlewareAuthenticated) {
-    const userId = readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
-    const username = readIdentityValue('x-ctf-username', 'ctf_username', headerStore, cookieStore);
-    const firstName = readIdentityValue('x-ctf-first-name', 'ctf_first_name', headerStore, cookieStore);
-    const lastName = readIdentityValue('x-ctf-last-name', 'ctf_last_name', headerStore, cookieStore);
-    const role = normalizeRole(
-      readIdentityValue('x-ctf-user-role', 'ctf_user_role', headerStore, cookieStore),
-    );
+    const userId = pickFirstNonEmpty(headerStore.get('x-ctf-user-id'));
+    const username = pickFirstNonEmpty(headerStore.get('x-ctf-username'));
+    const firstName = pickFirstNonEmpty(headerStore.get('x-ctf-first-name'));
+    const lastName = pickFirstNonEmpty(headerStore.get('x-ctf-last-name'));
+    const role = normalizeRole(headerStore.get('x-ctf-user-role'));
 
     recordSignIn(userId);
 
@@ -141,19 +138,23 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   };
 }
 
-// Lightweight: read only the request's user id from headers/cookies, for per-user
-// feature-flag targeting (e.g. demo-mode). Unlike resolveRequestIdentity it does NOT
-// verify the token (no JWT/crypto, no DB), so it is safe on hot paths like DB-pool
-// selection. Returns null outside a request scope (seed scripts, migrations) where
-// headers()/cookies() are unavailable.
+// Lightweight: read only the request's user id from the middleware's headers, for
+// per-user feature-flag targeting (e.g. demo-mode). Unlike resolveRequestIdentity it
+// does NOT verify a bearer token (no JWT, no DB); the stamp check is one cached digest
+// comparison, so it is safe on hot paths like DB-pool selection. Returns null for a
+// signed-out or unstamped request, and outside a request scope (seed scripts,
+// migrations) where headers() is unavailable.
 export async function getRequestUserId(): Promise<string | null> {
+  let headerStore: Headers;
   try {
-    const headerStore = await headers();
-    const cookieStore = await cookies();
-    return readIdentityValue('x-ctf-user-id', 'ctf_user_id', headerStore, cookieStore);
+    headerStore = await headers();
   } catch {
     return null;
   }
+  if (!(await isMiddlewareAuthenticated(headerStore))) {
+    return null;
+  }
+  return pickFirstNonEmpty(headerStore.get('x-ctf-user-id'));
 }
 
 export function buildIdentityDisplayName(username: string | null, userId: string | null): string {
