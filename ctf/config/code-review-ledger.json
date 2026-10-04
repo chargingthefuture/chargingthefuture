@@ -20,8 +20,8 @@
     {
       "name": "admin",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-04T02:35:05.838Z",
+      "lastRunIssues": 3,
       "cursor": 0,
       "partial": false
     },
