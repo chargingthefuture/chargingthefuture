@@ -255,6 +255,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   The delete route emits a `failure`-result event when an authorized delete finds no row (rowCount 0),
   so an authorized request is audited regardless of the storage outcome.
 - See [CLICK_LOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml](../../contracts/CLICK_LOG_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml)
+- Deletion: [CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md](../../contracts/CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md)
+  (added 2026-10-04) states what the deletion registry entry `click-log` does: scheme suggestions,
+  incidents and the preferences row are deleted, for the service alone or with the account; the
+  unnamed-scheme alert table has no member column and is untouched.
 
 - The trend-reporting queries are the privacy boundary, and it is enforced in SQL rather than in
   the screen that displays the result (`lib/click-log/report-repository.ts`). Every one filters on
@@ -317,6 +321,11 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
+
+- 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
+  had three of the four contract files. `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` now states the
+  registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface
+  missing one of the four files.
 
 - 2026-09-20 (owner directive): **the "Save the file" button is gone, and Share is the way.** On a
   phone it did not do what its label said, and Share already covers saving to the photo library and

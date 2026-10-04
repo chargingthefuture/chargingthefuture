@@ -212,11 +212,20 @@ Clearing it would erase who made an observation while leaving the observation st
 the wrong half to keep, and it matters more if a second coder is ever added. `quora_live_census_entries`
 has no user column at all and needs no entry: it describes third-party public accounts.
 
-Audit: every census route logs through `insertCensusAudit`. Refusals are logged in the shared gate
-rather than at each route, so a probe against any endpoint leaves a trace whichever one it hit. The
-export logs before the file is handed over, with the admin's id, the run, and the row count — that
+Audit: every census route logs a refusal through `insertCensusAudit` in the shared gate rather than
+at each route, so a probe against any endpoint leaves a trace whichever one it hit. Two routes also
+log the successful action: the run read (`census.run.read`) and the export (`census.run.export`);
+the other five write no row on success (corrected 2026-10-04; the earlier wording overstated this).
+The export logs before the file is handed over, with the admin's id, the run, and the row count — that
 is the moment a list of named third parties leaves the app, and it is the action that most needs a
 record of who took it. The writer is best-effort and never fails the action it describes.
+
+Contracts (added 2026-10-04): `ctf/docs/contracts/QUORA_LIVE_CENSUS_PLUGIN_COMMAND_CONTRACTS.yaml`
+(seven commands, `quora-live-census.run.*` and `.entry.*`), `QUORA_LIVE_CENSUS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
+(admin on every one), `QUORA_LIVE_CENSUS_PLUGIN_AUDIT_CONTRACTS.yaml` (the event ids the code
+writes, `census.run.read`, `census.run.export` and the deny-only rows) and
+`QUORA_LIVE_CENSUS_PROFILE_AND_DELETION_CONTRACT.md` (runs and audit log retained; entries carry no
+user column).
 
 Publication: nothing here is published by any code path. What reaches a reader is a count an admin
 writes by hand into a post. Naming an individual account publicly is a decision made outside this
@@ -278,6 +287,14 @@ this is not a plugin. The steps that matter:
   reading them side by side currently means exporting both.
 
 ## Change Log
+
+- 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
+  found this tool had none. The `QUORA_LIVE_CENSUS_*` contracts are written from the routes, the
+  repository and the deletion registry, and the audit paragraph above now says which routes log a
+  successful action (two) rather than all of them. Noted, not changed: `parse.ts` accepts
+  `last_active_year` up to 2110 while the database check stops at 2100, so a year from 2101 to 2110
+  passes validation and fails at the insert. CI job `contract-coverage-gate` now fails on any API
+  surface missing one of the four files. No code change.
 
 - 2026-08-19: Added `ctf/docs/QUORA_RESEARCH_BLOG_AGENT_BRIEF.md`, the brief fed to the blog-writing
   agent. The two limits it must carry from here: a removal rate is readable only from a run whose

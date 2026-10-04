@@ -266,6 +266,14 @@ External value movement dependencies:
 7. Enrollment-party check on `dispute.open`: only the enrollment's learner, its assigned trainer,
    or an admin may open a dispute on it (enforced in `openDispute`), per the access policy's
    `enrollment_not_visible` deny condition.
+8. Contracts: `ctf/docs/contracts/SKILL_UP_PLUGIN_COMMAND_CONTRACTS.yaml`,
+   `SKILL_UP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, `SKILL_UP_PLUGIN_AUDIT_CONTRACTS.yaml` and
+   `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` (the last added 2026-10-04). The deletion contract
+   states the registry entry `skill-up`: enrollments, rate-limit counters, the trainer profile and
+   earned achievements are deleted; the audit log, disbursements, disputes and their comments,
+   milestone validations, the trainer skill audit, cohorts, proposals and the auto-cohort settings
+   are retained as the record of why credits moved. `skill_up_command_idempotency` (actor id,
+   command name, key; no content) is not in the registry.
 
 ## Seed Coverage Status
 
@@ -344,6 +352,11 @@ that exist today.
 5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
 
 ## Change Log
+
+- 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
+  had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
+  registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface
+  missing one of the four files.
 
 - 2026-09-14: **The schema would not load on a blank database, and the re-enroll fix had never taken effect on one.** The `Demo Seed Smoke` check had been red on `main` since 2026-09-13 (issue #2380). One cause, two faults. `skill_up_enrollments` declared the seat rule twice: an inline `UNIQUE (cohort_id, user_id)` in the `CREATE TABLE`, and the guarded `DO` block below it that builds the partial index. An inline `UNIQUE` is a table *constraint*, and its backing index takes the same name the partial index wants. So on a freshly built database the constraint went in first, the `DO` block looked the name up in `pg_indexes`, found it, and skipped — leaving the unconditional rule in place, which means the 2026-09-13 re-enroll fix below was never true of a fresh database at all. Then `post/0014` ran `DROP INDEX IF EXISTS` against it, and Postgres refuses to drop a constraint's backing index — `cannot drop index ... because constraint ... requires it` — which stopped the schema load dead at that line. Three changes: the inline `UNIQUE` is gone, so the `DO` block is the only place the seat rule is declared; the guard now checks the *shape* of what it finds (`pg_index.indpred IS NOT NULL`) rather than only the name, and retires an unconditional constraint or index before building the partial one; and `post/0014` drops the constraint before the index for the same reason. Verified against a scratch Postgres: `schema.sql` and `schema.demo.sql` both load twice without error on a blank database, the demo seed runs twice clean, a database carrying the old constraint upgrades to the partial index with no constraint left behind, and on all of them a re-enroll after leaving succeeds while a second live enrollment is still refused.
 

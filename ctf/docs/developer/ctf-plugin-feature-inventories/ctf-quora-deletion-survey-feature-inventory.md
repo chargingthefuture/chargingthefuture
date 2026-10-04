@@ -187,6 +187,14 @@ removed, from the account survey".
 
 ## Security, Privacy, and Compliance Controls
 
+Contracts (added 2026-10-04): `ctf/docs/contracts/QUORA_DELETION_SURVEY_PLUGIN_COMMAND_CONTRACTS.yaml`,
+`QUORA_DELETION_SURVEY_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml` (member routes for any signed-in account,
+the recorded Unlock exception of 2026-08-19; admin routes for admins),
+`QUORA_DELETION_SURVEY_PLUGIN_AUDIT_CONTRACTS.yaml` (the `quora_deletion_survey.*` event ids the
+code writes to `quora_deletion_survey_audit_log`) and
+`QUORA_DELETION_SURVEY_PROFILE_AND_DELETION_CONTRACT.md` (responses pseudonymized, the audit log
+retained, accounts cascading from responses).
+
 What is deliberately not stored: no IP address, no user agent, no email, and no contact detail of
 any kind. The follow-up contact field was removed from the questionnaire on the owner's instruction
 (2026-08-18). What is stored is the member id of the account that sent the response, the Quora
@@ -366,6 +374,10 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
+  found this survey had none. The `QUORA_DELETION_SURVEY_*` contracts are written from the routes,
+  the repository and the deletion registry. CI job `contract-coverage-gate` now fails on any API
+  surface missing one of the four files. No code change.
 
 - 2026-08-20: The per-response account limit went from 25 to 500, and an over-limit response is now
   refused rather than trimmed. The old number was arbitrary and could have cut off a real

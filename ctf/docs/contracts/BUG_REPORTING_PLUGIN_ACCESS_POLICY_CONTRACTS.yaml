@@ -1,0 +1,88 @@
+# Bug Reporting access policy.
+#
+# Two postures. Filing a report needs a signed-in member and nothing more: `requireReporterAccess` in
+# `app/api/bug-reports/_lib.ts` evaluates with `minUnlockTier: 'any_authenticated'`, because the
+# member most likely to hit a bug is the one stuck in onboarding, and gating the report behind Unlock
+# would silence exactly them. This is listed as machinery (not one of the four feature exceptions) in
+# `ctf/config/unlock-tier-exception-allowlist.json`, and CI fails if the call site and the list drift.
+#
+# Everything else is admin only: `requireBugReportAdminAccess` evaluates with `requiredRoles: ['admin']`
+# on every admin route regardless of what the navigation shows (rule 131). Both POST routes also need
+# the `x-ctf-csrf: 1` header and pass the same-origin check in `lib/auth/csrf`; GET routes do not.
+policies:
+  - pluginId: bug-reporting
+    command: bug-reporting.report.create
+    version: 1.0.0
+    requiredRoles: [user]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    attributePolicies:
+      ownership: the row is written with the caller's own user id; no other member is named
+      rateLimit: at most 5 reports per member in a rolling 10 minutes, counted on bug_reports
+      csrf: x-ctf-csrf header plus same-origin check, before the body is read
+    consentRequirements:
+      - The report form says the text is stored privately and that only a redacted copy can reach the
+        private triage repository. Nothing the member writes is ever shown to other members.
+    denyConditions:
+      - not_signed_in
+      - csrf_header_missing_or_cross_origin
+      - message_missing_or_not_a_string
+      - rate_limit_reached
+    notes: >-
+      The unlock-tier exception, with its reason: an unapproved member is still a signed-in member,
+      and the report is the only way they can tell anybody that the step in front of them is broken.
+      The row is their own text under their own id and touches nobody else.
+  - pluginId: bug-reporting
+    command: bug-reporting.admin.report.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      fields: redacted text only; raw_message and raw_context are never selected
+      reporterIdentity: username and a stable handle, shown on this admin surface only and never copied onto the triage issue
+    consentRequirements: []
+    denyConditions:
+      - not_signed_in
+      - not_admin
+    notes: >-
+      Read-only. The list exists so a human looks at every held report before it goes anywhere, and
+      so a report that is really a request for help can be answered.
+  - pluginId: bug-reporting
+    command: bug-reporting.admin.report.resolve
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      stateGuard: release only from held_for_review; reject only from held_for_review or new; anything else is a 409 and is recorded
+      csrf: x-ctf-csrf header plus same-origin check, before the body is read
+      audit: every attempt writes a row to bug_report_admin_audit_trail, refusals and failures included
+    consentRequirements: []
+    denyConditions:
+      - not_signed_in
+      - not_admin
+      - csrf_header_missing_or_cross_origin
+      - id_not_a_uuid
+      - action_not_release_or_reject
+      - report_not_resolvable
+    notes: >-
+      The decision that matters most in this plugin. Release sends the member's redacted words to the
+      triage repository; reject means they go nowhere, and the member is never told which. That is why
+      the refusal path is audited as carefully as the success path.
+  - pluginId: bug-reporting
+    command: bug-reporting.admin.audit.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      fields: decision rows only; the trail holds no report content and no reporter id, so none can be returned
+      limit: clamped to 1..200 server-side whatever the caller sends
+    consentRequirements: []
+    denyConditions:
+      - not_signed_in
+      - not_admin
+    notes: >-
+      A trail nobody can read is not a check on anything, so the read ships with the table. Admin
+      only, like the table it reads.
