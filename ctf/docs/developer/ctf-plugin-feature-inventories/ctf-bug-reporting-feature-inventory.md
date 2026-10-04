@@ -31,6 +31,10 @@ and does no external calls.
 - One short form: what went wrong (required), what you were trying to do (optional). Page and
   plugin are attached automatically; the browser is read server-side. (No app-version constant
   exists in the app yet, so `appVersion` is not sent.)
+- Under the intro line, above the first text box: "Not a bug? To talk to Farah about your work,
+  it's $7 here." — "here" opens One Percent (https://farahbrunache.com), the paid tier, in a new
+  tab (web) or the device browser (android). It is a pointer only: the form, its fields and the
+  submit button work exactly as before, and the link carries no tracking.
 - Immediate, private storage of the report with a calm confirmation. No technical detail is
   ever asked of the user.
 
@@ -167,6 +171,15 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-04: **A line above the form points people who aren't reporting a bug to One Percent.**
+  Owner report: members use the form to reach the owner about their own work, because it's the
+  only channel that feels like a direct message. A second line under the intro, on web
+  (`bug-report-form.tsx`) and android (`BugReportModal.tsx`), reads "Not a bug? To talk to Farah
+  about your work, it's $7 here.", with "here" linking to https://farahbrunache.com (web reuses
+  `ONE_PERCENT_PAID_TIER_URL`). Same type and color as the intro line. Nothing is blocked or
+  redirected; fields, submit, routes, schema and contracts are unchanged. No click counting or
+  third-party service: the owner reads the effect from bug reports and One Percent's own records.
+  Test script BUG-1 extended to assert the line and the link.
 - 2026-08-28: **Resolving a held report is recorded, and the record is readable.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. This plugin was the one surface with **no audit machinery at all** — no table, no helper, not even a `console.info` line — so `POST /api/bug-reports/admin/:id/resolve` decided a member's report and left nothing behind. That decision is not a small one: `release` sends the redacted report on to the private triage repo, `reject` drops it so it never goes anywhere, and the member who filed it is never told which happened. New table `bug_report_admin_audit_trail` and a new `lib/bug-reports/audit.ts` written durable-first — there was no console-only predecessor to stay compatible with, so the row is the record and the log line rides along for debugging. Every outcome is recorded: the resolve with its action and resulting status, the 409 when the report was already resolved or absent, and a persistence failure. It never throws, so a failed audit write cannot turn a completed resolve into a 503 and have an admin repeat a reject they had already made. **The trail records the decision, not the report**: no message, no context, no reporter id — the body is redacted before it leaves this app and the trail must not be the one place it sits in the clear. Stated at the type in `audit.ts`, in the schema comment, in the security controls above, and in BUG-A5, because a later reader will find "which member reported this" tempting to add. New `GET /api/bug-reports/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/bug-reports`, reading the most recent 200 in plain words ("Sent it on to triage", "Dropped it", "Refused · Because it had already been resolved, or was not there"). Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip a release, a reject, and a resolve refused as a conflict — with no column able to hold report text. This was the last surface on the admin-audit-coverage burn-down list that needed machinery built.
 - 2026-08-18: **Reports now announce themselves, and reach triage within half an hour (owner
   report).** Five reports had been sitting on `/admin/bug-reports` for days, the oldest from a month

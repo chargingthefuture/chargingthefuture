@@ -8,6 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -24,6 +25,9 @@ import { submitBugReport, type BugReportSubmitResult } from './api';
 
 // The message and context fields share the server's 5000-character cap.
 const FIELD_MAX_LENGTH = 5000;
+
+// One Percent, the paid tier, for members who use this form to reach the owner about their own work.
+const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
 
 type ViewState = 'form' | 'success' | 'error' | 'rate_limited';
 
@@ -213,6 +217,19 @@ function FormBody({
         won&apos;t get a reply here. Have a question? Ask in the Commons on the home screen,
         where members can answer.
       </Text>
+      <Text style={s.signpost}>
+        Not a bug? To talk to Farah about your work, it&apos;s $7{' '}
+        <Text
+          style={s.signpostLink}
+          accessibilityRole="link"
+          onPress={() => {
+            void Linking.openURL(ONE_PERCENT_PAID_TIER_URL);
+          }}
+        >
+          here
+        </Text>
+        .
+      </Text>
 
       <View style={s.field}>
         <View style={s.labelRow}>
@@ -369,7 +386,9 @@ function makeStylesSheet(t: ThemeTokens) {
     sheetContent: { paddingHorizontal: 20, paddingBottom: 28 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     title: { fontSize: 17, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary, letterSpacing: t.isComic ? 0.5 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
-    subtitle: { fontSize: 13, color: t.textSecondary, marginTop: 4, marginBottom: 18, fontFamily: interFamily('400') },
+    subtitle: { fontSize: 13, color: t.textSecondary, marginTop: 4, fontFamily: interFamily('400') },
+    signpost: { fontSize: 13, color: t.textSecondary, marginTop: 4, marginBottom: 18, fontFamily: interFamily('400') },
+    signpostLink: { textDecorationLine: 'underline' },
     close: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
     closeText: { color: t.textSecondary, fontSize: 14, fontFamily: interFamily('400') },
   });
