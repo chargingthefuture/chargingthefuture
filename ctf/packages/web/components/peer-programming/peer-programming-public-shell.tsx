@@ -1,9 +1,10 @@
 'use client';
 
-import { Users, Globe, Lock } from 'lucide-react';
+import { Users, Lock } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 import { getPeerProgrammingTokens } from './pp-shared';
 
 // Palette from the PeerProgrammingPublic / MobilePeerProgrammingPublic design mockups,
@@ -41,10 +42,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>A global mastermind with a goal board: each member posts their goals, and everyone helps each other reach them. Weekly cohorts of up to 12 people, open worldwide. Active members are placed automatically each week — no competitive selection.</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Globe size={13} color={t.MUTED} />
-          <span style={{ fontSize: 12, color: t.MUTED }}>Open to members worldwide</span>
-        </div>
+        <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 

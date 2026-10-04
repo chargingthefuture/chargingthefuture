@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getTrustTokens } from './trust-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Chrome palette comes from getTrustTokens (default theme returns the exact shipped
 // TrustPublic / MobileTrustPublic mockup values, so the default UI is pixel-identical).
@@ -48,6 +49,7 @@ function MobileTrustPublic({ signInUrl, verifyUrl }: { signInUrl: string; verify
           <span style={{ color: t.ACCENT }}>Without exposing who you are.</span>
         </h2>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Trust aggregates voluntary signals to establish credibility. Providers and peers can trust you — you reveal nothing beyond what you choose.</p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {MOBILE_SIGNALS.map((s) => (

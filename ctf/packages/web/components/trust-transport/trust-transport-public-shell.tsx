@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getTrustTransportTokens, type TrustTransportTokens } from './tt-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the TrustTransportPublic / MobileTrustTransportPublic mockups, now served from
 // the shared theme tokens (default theme returns the exact shipped hex values).
@@ -32,6 +33,7 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
           <span style={{ fontSize: 20, fontWeight: 800 }}>TrustTransport</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Pay with ServiceCredits.</p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         {/* Service type cards */}
         <div style={{ display: 'flex', gap: 10 }}>

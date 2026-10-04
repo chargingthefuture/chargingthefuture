@@ -5,6 +5,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { useTheme } from '@/hooks/useTheme';
 import { getGdpTokens } from './gdp-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
@@ -21,6 +22,7 @@ function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUr
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Survivor economy dashboard</span>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>The gross domestic product of the survivor economy — the total value the community creates, broken down by where it comes from, plus how many members are in each country.</p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         {/* Live snapshot — locked until sign-in (no fabricated totals) */}
         <div style={{ borderRadius: 16, border: `1px solid ${t.ACCENT}30`, background: t.ACCENT + '06', padding: '20px 18px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>

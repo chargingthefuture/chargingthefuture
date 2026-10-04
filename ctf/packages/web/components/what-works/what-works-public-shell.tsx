@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getWhatWorksTokens } from './ww-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
@@ -52,6 +53,7 @@ function MobileWhatWorksPublic({ signInUrl, verifyUrl }: { signInUrl: string; ve
         <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.65 }}>
           Pick a problem you&apos;re facing. Underneath is a list of specific products a survivor here used and said helped — each with a direct link. No ads. Nothing sold.
         </p>
+        <PublicShellWorldwide color={t.MUTED} style={{ marginTop: 10 }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '20px 0 12px' }}>
           <span style={{ fontSize: 12.5, fontWeight: 700 }}>A look at the list</span>

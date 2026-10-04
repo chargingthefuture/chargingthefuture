@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getSkillUpTokens } from './su-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the SkillUpPublic / MobileSkillUpPublic design mockups,
 // served through the shared theme tokens (default theme returns the exact shipped hex).
@@ -47,6 +48,7 @@ function MobileSkillUpPublic({ signInUrl, verifyUrl }: { signInUrl: string; veri
           <span style={{ fontSize: 20, fontWeight: 800 }}>SkillUp</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Cohort-based courses across tech, finance, trades, and life skills. Earn ServiceCredits through badges and completion bonuses. Trainers earn a credit split for validating your milestones.</p>
+        <PublicShellWorldwide color={t.MUTED} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {HIGHLIGHTS.map((f) => (
             <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

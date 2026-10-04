@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getMoodTokens } from './mood-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Chrome palette comes from getMoodTokens (default branch = the shipped
 // MoodPublic / MobileMoodPublic mockup values).
@@ -44,6 +45,7 @@ function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
           Check in with yourself.<br /><span style={{ color: t.ACCENT }}>No names, no spotlight.</span>
         </h1>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, maxWidth: 300 }}>Your check-ins are pseudonymous — kept under a random ID separate from your account. Daily check-ins unlock resources and gentle nudges.</p>
+        <PublicShellWorldwide color={t.MUTED} style={{ justifyContent: 'center' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {PRIVACY.map((p) => (

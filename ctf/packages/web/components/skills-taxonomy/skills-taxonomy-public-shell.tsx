@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getSkillsTaxonomyTokens } from './st-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the SkillsTaxonomyPublic / MobileSkillsTaxonomyPublic mockups, resolved through the
 // theme-aware Skills Taxonomy tokens (default theme keeps the shipped hex values).
@@ -99,6 +100,7 @@ function MobileSkillsTaxonomyPublic({ signInUrl, verifyUrl, counts }: { signInUr
         <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
           Every skill, job title, and sector represented by survivors. Sign in to search, filter, and trade with survivors who have the skills you need.
         </div>
+        <PublicShellWorldwide color={t.MUTED} style={{ marginBottom: 16 }} />
         {counts ? (
           <div style={{ marginBottom: 16 }}>
             <StatTriplet counts={counts} fontSize={22} />
