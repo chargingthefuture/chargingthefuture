@@ -24,12 +24,22 @@
     },
     "commons": {
       "contractPrefix": "FEED",
-      "aliases": ["hub"],
+      "aliases": [
+        "hub"
+      ],
       "note": "Member-facing surface over the feed plugin: its routes call lib/feed and it is governed by the FEED_* contracts. `commons` is not a registered plugin slug."
     },
     "community-shell": {
       "contractPrefix": "FEED",
       "note": "The shell that renders the Commons/feed surfaces; no contracts of its own."
+    },
+    "safety": {
+      "contractPrefix": "MEMBER_BLOCKS",
+      "note": "The admin review queue for the safety reports a member attaches to a block; declared as admin.safety-report.* in the MEMBER_BLOCKS_* contracts."
+    },
+    "questions": {
+      "contractPrefix": "FEED",
+      "note": "Mints Stream credentials for the Questions screen over feed_questions, a Feed table; governed by the FEED_* contracts."
     }
   }
 }

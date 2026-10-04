@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/skill-up`, `/admin/skill-up`) · android (SkillUp screen, Admin SkillUp screen) |
 | **Seed first** | `pnpm --dir ctf seed:skill-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skill-up-feature-inventory.md` |
-| **Generated** | 2026-07-20 (commit eca128e5) |
+| **Generated** | 2026-07-20 (commit eca128e5) · 2026-10-04 manual note: `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` written (the registry entry stated: enrollments, counters, trainer profile and achievements deleted; the credit-movement record retained) — no test change; the deletion cases live in the account test script |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---

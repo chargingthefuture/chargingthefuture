@@ -1,0 +1,70 @@
+# Audit contract for member blocking and the safety-report review queue.
+#
+# Two kinds of command live under this contract and they are audited differently on purpose.
+#
+# Member block create/remove/list, and the safety report a member attaches to a block, write no
+# durable audit row. A block is the member's own private boundary: it is never visible to the
+# person blocked and it carries no reason, so a row recording who blocked whom would be a record
+# the plugin otherwise goes out of its way not to keep. The authorization decision is still made
+# and logged like any other request; there is no table behind it. Entries are kept below so the
+# command set here matches MEMBER_BLOCKS_PLUGIN_COMMAND_CONTRACTS.yaml one to one.
+#
+# The admin review of a safety report is the governance action, and it writes one append-only row
+# to safety_admin_audit_trail (ctf/packages/web/lib/safety/repository.ts, insertSafetyAdminAudit)
+# naming the actor, the action taken and the report id. The row's command column carries the
+# string the code writes, `safety.report.review`, which is the eventId below; it is the audit
+# record of the command the command contract calls `admin.safety-report.review`.
+auditEvents:
+  - pluginId: member-blocks
+    command: member.block.create
+    commandVersion: 1.0.0
+    eventId: member.block.create
+    policyDecision: allow
+    dataClassesAccessed: [member_block]
+    targetContext: user
+    # Request-log only; no durable row (see the note at the top).
+  - pluginId: member-blocks
+    command: member.block.remove
+    commandVersion: 1.0.0
+    eventId: member.block.remove
+    policyDecision: allow
+    dataClassesAccessed: [member_block]
+    targetContext: user
+    # Request-log only; no durable row.
+  - pluginId: member-blocks
+    command: member.block.list
+    commandVersion: 1.0.0
+    eventId: member.block.list
+    policyDecision: allow
+    dataClassesAccessed: [member_block]
+    targetContext: user
+    # Request-log only; no durable row.
+  - pluginId: member-blocks
+    command: member.safety-report.create
+    commandVersion: 1.0.0
+    eventId: member.safety-report.create
+    policyDecision: allow
+    dataClassesAccessed: [member_block, safety_report]
+    targetContext: user
+    # Request-log only; the report row itself (member_safety_reports) is the record that the
+    # escalation happened, and it is written in the same transaction as the block.
+  - pluginId: member-blocks
+    command: admin.safety-report.list
+    commandVersion: 1.0.0
+    eventId: admin.safety-report.list
+    policyDecision: allow
+    dataClassesAccessed: [safety_report]
+    targetContext: admin
+    # Request-log only; a read of the queue writes no durable row.
+  - pluginId: member-blocks
+    command: admin.safety-report.review
+    commandVersion: 1.0.0
+    eventId: safety.report.review
+    policyDecision: allow
+    dataClassesAccessed: [safety_report]
+    targetContext: admin
+    # Durable: one row in safety_admin_audit_trail per successful move of a report out of
+    # `open` (target_type 'safety_report', target_id the report id, metadata carrying the action,
+    # `reviewed` or `dismissed`). Written best-effort after the status change; a repeat action on
+    # a report that is no longer open is a 409 and writes nothing. Rows are never updated or
+    # deleted, and they survive the deletion of either member's account.

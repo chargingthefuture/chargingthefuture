@@ -179,6 +179,9 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-04: **Contract coverage is enforced.** CI job `contract-coverage-gate`
+  (`ctf/scripts/check-contract-coverage.mjs`) now fails on any API surface missing one of the four
+  contract files without a recorded reason, so this plugin cannot drift back to having none.
 - 2026-10-04: **Contracts written for this plugin.** The command, access policy, audit and
   profile-and-deletion contracts did not exist; all four are now in `ctf/docs/contracts/`
   (`BUG_REPORTING_*`), written from the current code, and linked from the Security section above.

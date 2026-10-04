@@ -1,0 +1,109 @@
+# Quora account deletion survey audit events. Every event below is a durable row in
+# quora_deletion_survey_audit_log, written by insertSurveyAudit in
+# lib/quora-deletion-survey/repository.ts. The eventId is the exact string the code writes to the
+# row's `command` column (QUORA_SURVEY_AUDIT_COMMAND in lib/quora-deletion-survey/constants.ts);
+# note the underscore form, which differs from the dotted command names in the command contract.
+#
+# The writer is best-effort: the routes await it, and a failed insert is logged rather than turned
+# into an error on the member's screen, because by then the response is already stored and losing
+# the audit row is the lesser failure.
+#
+# What a row never holds: an IP address, a user agent, or a copy of a response's contents. A submit
+# row carries the response id, the account row count and the four flags; an admin row carries the
+# admin's id and how many responses they saw, and never a response id, which would put a response
+# beside an admin's id for every row read. The schema comment on this table still says the actor
+# is null on every submit; the code has set it to the member's id on every signed-in submit path
+# since the member id went onto the response row (owner decision, 2026-08-19), and the one null
+# actor is the refusal before sign-in.
+auditEvents:
+  - eventId: quora_deletion_survey.response.submit
+    pluginId: quora-deletion-survey
+    command: quora-deletion-survey.response.submit
+    commandVersion: 1.0.0
+    actorId: the member's user id, or null on the not_signed_in refusal
+    purpose: research_self_report
+    policyDecision:
+      status: allow_or_deny
+      reason: >-
+        stored on allow; not_signed_in, csrf_denied, rate_limited, unreadable_payload,
+        invalid_payload or persistence_unavailable on deny
+    dataClassesAccessed:
+      - survey_response
+      - reported_account_handles
+      - publication_consent_flags
+    targetContext:
+      responseId: set on allow only
+      rowCount: how many account rows were stored, on allow only
+      metadata: >-
+        on allow: consentPublishHandles, consentQuote, consentAttributeQuote, anyAccountRemoved,
+        closuresRecordedOnAccount (how many handles were actually appended to the member's history)
+    durableRow: true
+    notes: >-
+      Every path through the route writes a row, refusals included. The count in
+      closuresRecordedOnAccount is what was written, not what was attempted.
+  - eventId: quora_deletion_survey.verification.link
+    pluginId: quora-deletion-survey
+    command: quora-deletion-survey.verification.link
+    commandVersion: 1.0.0
+    actorId: the member's user id
+    purpose: verification_handoff
+    policyDecision:
+      status: allow_or_deny
+      reason: submitted or already_on_file on allow; csrf_denied or rate_limited on deny
+    dataClassesAccessed:
+      - unlock_submission_status
+    targetContext:
+      responseId: never set
+      rowCount: never set
+    durableRow: true
+    notes: >-
+      Partial by design. Four outcomes write no survey audit row: the refusal before sign-in, an
+      empty or unreadable body, an invalid_url outcome and a failed outcome, which return their
+      error without recording one. A successful link is additionally recorded in unlock_audit_log
+      as an ordinary unlock.verification.submit with metadata.source = quora_deletion_survey, so
+      the Unlock trail shows the member never saw the Unlock form. The profile link itself is on
+      neither row.
+  - eventId: quora_deletion_survey.admin.read
+    pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.list
+    commandVersion: 1.0.0
+    actorId: the admin's user id, or null when the gate refused
+    purpose: research_review
+    policyDecision:
+      status: allow_or_deny
+      reason: listed on allow; persistence_unavailable or the auth layer's own deny reason on deny
+    dataClassesAccessed:
+      - survey_response
+      - reported_account_handles
+      - publication_consent_flags
+      - respondent_member_id
+    targetContext:
+      responseId: never set
+      rowCount: how many responses were returned, on allow
+      metadata: limit (500) and truncated on allow; status and code on a gate refusal; failure text on a read failure
+    durableRow: true
+    notes: >-
+      The mirror image of a submit row. What is worth knowing later is who looked and how much they
+      saw, so the row names the reader and the count and never the responses themselves.
+  - eventId: quora_deletion_survey.admin.export
+    pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.export
+    commandVersion: 1.0.0
+    actorId: the admin's user id, or null when the gate refused
+    purpose: research_export
+    policyDecision:
+      status: allow_or_deny
+      reason: exported on allow; persistence_unavailable or the auth layer's own deny reason on deny
+    dataClassesAccessed:
+      - survey_response
+      - reported_account_handles
+      - publication_consent_flags
+      - respondent_member_id
+    targetContext:
+      responseId: never set
+      rowCount: how many responses were in the file, on allow
+      metadata: limit (100000) and format csv on allow; status and code on a gate refusal; failure text on a build failure
+    durableRow: true
+    notes: >-
+      Written before the file is handed over, because afterwards the table is a copy on somebody's
+      disk outside anything this code can see.

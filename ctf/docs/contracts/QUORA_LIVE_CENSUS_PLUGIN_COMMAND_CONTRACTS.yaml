@@ -1,0 +1,342 @@
+# Quora live census — an admin-only research tool.
+#
+# Every row this plugin holds is about a public Quora account that an admin looked at from outside
+# and coded by hand: the handle, whether the account was still there on a fixed date, what it is
+# about, and what it does. The people behind those accounts are not members of this app, were not
+# asked, and have no screen here. The only member-side value anywhere is `created_by_user_id` on a
+# run, which records which admin started it.
+#
+# All seven commands run behind `requireCensusAdminAccess` (role `admin`) in
+# `ctf/packages/web/app/api/quora-live-census/_lib.ts`. Nothing here is member-facing or public.
+# The four commands that change data also require the `x-ctf-csrf: 1` header and pass the shared
+# same-origin check (`checkMutationOrigin`).
+#
+# Shared error shape, every command: `{ ok: false, code, message, reason? }` where `code` is one of
+# `quora_live_census.invalid_payload` (400), `quora_live_census.csrf_denied` (403),
+# `quora_live_census.not_found` (404), `quora_live_census.run_closed` (409),
+# `quora_live_census.duplicate_handle` (409), `quora_live_census.persistence_unavailable` (503).
+commands:
+  - pluginId: quora-live-census
+    command: quora-live-census.run.list
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        runs:
+          type: array
+          description: Newest observation date first, then newest created; at most 200 rows
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              observed_on:
+                type: string
+              frame_kind:
+                type: string
+                enum: [existing_list, fresh_search]
+              topic_scope:
+                type: string
+              sampling_method:
+                type: string
+              notes:
+                type: [string, 'null']
+              status:
+                type: string
+                enum: [open, closed]
+              created_by_user_id:
+                type: [string, 'null']
+              created_at:
+                type: string
+              updated_at:
+                type: string
+              entry_count:
+                type: integer
+              live_count:
+                type: integer
+                description: Entries in the run whose account_state is live
+    dataAccess:
+      - quora_live_census_runs (select)
+      - quora_live_census_entries (select, counts grouped by run only)
+      - quora_live_census_audit_log (insert, on a refused request only)
+    purpose: List every run with how many accounts were coded and how many were still live
+    retentionClass: research_record
+    idempotency: true
+  - pluginId: quora-live-census
+    command: quora-live-census.run.create
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [observedOn, frameKind, topicScope, samplingMethod]
+      properties:
+        observedOn:
+          type: string
+          description: Calendar date as YYYY-MM-DD; any other form is refused
+        frameKind:
+          type: string
+          enum: [existing_list, fresh_search]
+          description: Required with no default, because it decides whether the run can support a removal rate
+        topicScope:
+          type: string
+          description: Trimmed; must be non-empty; cut at 5000 characters
+        samplingMethod:
+          type: string
+          description: Trimmed; must be non-empty; cut at 5000 characters
+        notes:
+          type: [string, 'null']
+          description: Trimmed; empty becomes null; cut at 5000 characters
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        run:
+          type: object
+          description: The inserted row, status open, created_by_user_id set to the calling admin
+    dataAccess:
+      - quora_live_census_runs (insert)
+      - quora_live_census_audit_log (insert, on a refused request only)
+    purpose: Start an observation run with the date, scope and sampling method that make it reproducible
+    retentionClass: research_record
+    idempotency: false
+    notes: >-
+      Responds 201. The observation date, frame kind, scope and method are all required rather than
+      defaulted: a run missing any of them produces a number nobody can check later.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.read
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [runId]
+      properties:
+        runId:
+          type: string
+          description: Path segment
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        run:
+          type: object
+          description: The run row
+        entries:
+          type: array
+          description: Every entry in the run, oldest first
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              run_id:
+                type: string
+              handle:
+                type: string
+              profile_url:
+                type: [string, 'null']
+              account_state:
+                type: string
+                enum: [live, gone, renamed_or_moved]
+              topics:
+                type: array
+                items:
+                  type: string
+              stance:
+                type: string
+                enum: [practical_help, organizing, personal_account, unclear, unrelated]
+              approx_answer_count:
+                type: [integer, 'null']
+              last_active_year:
+                type: [integer, 'null']
+              evidence_url:
+                type: [string, 'null']
+              notes:
+                type: [string, 'null']
+              created_at:
+                type: string
+        tally:
+          type: array
+          description: Stance counts over live accounts only, largest first
+          items:
+            type: object
+            properties:
+              stance:
+                type: string
+              count:
+                type: integer
+        stateCounts:
+          type: object
+          properties:
+            live:
+              type: integer
+            gone:
+              type: integer
+            renamedOrMoved:
+              type: integer
+    dataAccess:
+      - quora_live_census_runs (select)
+      - quora_live_census_entries (select)
+      - quora_live_census_audit_log (insert)
+    purpose: Read one run with its coded accounts, stance tally and account-state counts
+    retentionClass: research_record
+    idempotency: true
+    notes: >-
+      Writes an audit row on every successful read (command `census.run.read`, reason `admin_read`,
+      the run id and the number of entries returned). 404 when no run has that id.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.update
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [runId, status]
+      properties:
+        runId:
+          type: string
+          description: Path segment
+        status:
+          type: string
+          enum: [open, closed]
+          description: Anything else is refused with 400
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        run:
+          type: object
+          description: The updated row; updated_at is set to now
+    dataAccess:
+      - quora_live_census_runs (update)
+      - quora_live_census_audit_log (insert, on a refused request only)
+    purpose: Close a finished run so it can be quoted, or reopen one to correct it
+    retentionClass: research_record
+    idempotency: true
+    notes: >-
+      Only the status column changes. A closed run refuses new entries, so closing is a deliberate
+      action rather than something inferred from the row count. 404 when no run has that id.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.export
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [runId]
+      properties:
+        runId:
+          type: string
+          description: Path segment
+    outputSchema:
+      type: string
+      description: >-
+        text/csv as an attachment named quora-live-census-<observed_on>.csv, Cache-Control no-store.
+        Columns: run_id, observed_on, frame_kind, run_status, topic_scope, sampling_method, handle,
+        profile_url, account_state, stance, topics, approx_answer_count, last_active_year,
+        evidence_url, notes. The run columns repeat on every row so the file carries its own date
+        and method. account_state, stance and topics are written as their labels, not their codes.
+    dataAccess:
+      - quora_live_census_runs (select)
+      - quora_live_census_entries (select)
+      - quora_live_census_audit_log (insert)
+    purpose: Download one run as CSV for analysis and citation outside the app
+    retentionClass: research_record
+    idempotency: true
+    notes: >-
+      The one command where a list of named third parties leaves the app, so the audit row is
+      written before the file is handed over: command `census.run.export`, reason `csv_download`,
+      the run id, the row count, and metadata holding observedOn, frameKind and runStatus. 404 when
+      no run has that id.
+  - pluginId: quora-live-census
+    command: quora-live-census.entry.create
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [runId, handle]
+      properties:
+        runId:
+          type: string
+          description: Path segment
+        handle:
+          type: string
+          description: Trimmed; must be non-empty; cut at 200 characters
+        profileUrl:
+          type: [string, 'null']
+          description: Trimmed; cut at 2000 characters
+        accountState:
+          type: string
+          enum: [live, gone, renamed_or_moved]
+          description: Defaults to live when missing or not in the list
+        topics:
+          type: array
+          description: >-
+            Values outside the shared subject list are dropped, duplicates removed. The list is
+            targeting_and_gang_stalking, surveillance_and_harassment_tactics, coping_and_support,
+            legal_and_reporting, organizing_and_meetups, unrelated_subjects.
+          items:
+            type: string
+        stance:
+          type: string
+          enum: [practical_help, organizing, personal_account, unclear, unrelated]
+          description: Defaults to unclear when missing or not in the list, never to a substantive value
+        approxAnswerCount:
+          type: [integer, 'null']
+          description: Rounded; null unless between 0 and 1000000
+        lastActiveYear:
+          type: [integer, 'null']
+          description: Rounded; null unless between 2010 and 2110
+        evidenceUrl:
+          type: [string, 'null']
+          description: Trimmed; cut at 2000 characters
+        notes:
+          type: [string, 'null']
+          description: Trimmed; cut at 5000 characters
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        entry:
+          type: object
+          description: The inserted row
+    dataAccess:
+      - quora_live_census_runs (select, to find the run and check its status)
+      - quora_live_census_entries (insert)
+      - quora_live_census_audit_log (insert, on a refused request only)
+    purpose: Record one observed public account inside a run
+    retentionClass: research_record
+    idempotency: false
+    notes: >-
+      Responds 201. 404 when no run has that id; 409 `run_closed` when the run is closed; 409
+      `duplicate_handle` when the same handle (case-insensitive) is already coded in that run,
+      settled by the unique index on (run_id, lower(handle)) rather than by a read-then-write.
+  - pluginId: quora-live-census
+    command: quora-live-census.entry.delete
+    version: 1.0.0
+    inputSchema:
+      type: object
+      required: [runId, entryId]
+      properties:
+        runId:
+          type: string
+          description: Path segment
+        entryId:
+          type: string
+          description: Path segment
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - quora_live_census_entries (delete, matched on id and run_id together)
+      - quora_live_census_audit_log (insert, on a refused request only)
+    purpose: Remove a miscoded entry so it stops counting toward the tally
+    retentionClass: research_record
+    idempotency: true
+    notes: >-
+      A hard delete rather than a flag: a wrong row left in place keeps counting, and the census is
+      small enough to re-add a corrected one. 404 when no entry with that id is in that run. The run
+      status is not checked here.

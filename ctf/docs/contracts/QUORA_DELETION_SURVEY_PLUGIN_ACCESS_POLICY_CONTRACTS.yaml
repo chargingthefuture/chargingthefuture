@@ -1,0 +1,117 @@
+# Quora account deletion survey access policy.
+#
+# Two postures. The two member commands run at `minUnlockTier: 'any_authenticated'` with no
+# username required: any signed-in account, verified or not. That is one of the four recorded
+# exceptions to the Unlock gate (owner decision, 2026-08-19), listed in
+# ctf/config/unlock-tier-exception-allowlist.json against app/api/quora-deletion-survey/_lib.ts and
+# enforced by the unlock-tier-gate CI job. The reason is specific and does not generalize: the
+# research is about people outside this app, so approval cannot be the bar without sampling only
+# the members already reached. Sign-in keeps bulk junk out of a table that is meant to be citable;
+# it is not a claim that the member is verified, and it is not what decides whether anything is
+# published. The tier must stay where it is. Someone who made an account minutes ago to answer is
+# exactly who the survey is for, and raising the bar would exclude them without a trace.
+#
+# The two admin commands require the admin role, checked by requireSurveyAdminAccess in _lib.ts on
+# every call regardless of what the nav shows. There is no member-facing read of this data and no
+# public projection: the consent flags are the only thing that decides what leaves the table, and
+# a person reading it makes that decision, not a route.
+policies:
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.response.submit
+    version: 1.0.0
+    requiredRoles: [user]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    attributePolicies:
+      requireUsername: false
+      csrfHeader: x-ctf-csrf required, plus the shared same-origin check
+      rateLimit: 5 submissions per IP per hour, counted in memory and never stored
+      actorSource: session only; a member id in the body is ignored
+    consentRequirements:
+      - >-
+        Three publication consents are collected on the form, each a separate yes/no defaulting
+        to no: publishing the handles, quoting the free text, and attributing a quote. A handle or
+        a quote leaves the table only with the matching true on that row.
+      - >-
+        The form states before anyone answers that the response is stored against their account,
+        that each reported handle is appended to their own account history as a record that
+        cannot be edited later, and that the answer is kept as research with the account id
+        removed if they delete their account.
+    denyConditions:
+      - not_signed_in
+      - csrf_denied
+      - rate_limited
+      - unreadable_payload
+      - invalid_payload
+      - persistence_unavailable
+    notes: >-
+      The lowest tier, deliberately, and recorded as an exception rather than a pattern. Each
+      refusal above is also an audit row. The member's id is stored on the response so a duplicate
+      answer is visible and a response can be lined up against that member's Unlock submission;
+      storing who answered is not permission to print it.
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.verification.link
+    version: 1.0.0
+    requiredRoles: [user]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    attributePolicies:
+      requireUsername: false
+      csrfHeader: x-ctf-csrf required, plus the shared same-origin check
+      rateLimit: shares the submit brake of 5 per IP per hour
+      ownAccountOnly: the submission is created for the session's own user id and no other
+      noOverwrite: refused as already_on_file when any Unlock submission exists for the member
+    consentRequirements:
+      - >-
+        The member presses a button on the confirmation screen to start this; it never runs as
+        part of submitting the survey. The screen says it creates a pending verification request
+        and approves nobody.
+    denyConditions:
+      - not_signed_in
+      - csrf_denied
+      - rate_limited
+      - invalid_payload
+      - invalid_url
+      - failed
+    notes: >-
+      The same tier as the submit command, for the same reason: it is the first step toward
+      verification, and the person taking it is by definition not yet approved. It writes through
+      lib/shared/unlock-interface.ts and never imports lib/unlock directly.
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      readOnly: true
+      noPublicProjection: true
+      pageSize: newest 500 responses, fixed
+    consentRequirements: []
+    denyConditions:
+      - not_admin
+      - persistence_unavailable
+    notes: >-
+      The one reader of the raw table. Returns every column including the member id and the free
+      text; the consent flags are shown above the handles they govern so the decision is on screen
+      before the thing it decides. A refused call is recorded with the deny code and no actor,
+      because there was no admin session to name.
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.export
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      readOnly: true
+      noPublicProjection: true
+      cacheControl: no-store
+      limit: up to 100000 responses, the entire table
+    consentRequirements: []
+    denyConditions:
+      - not_admin
+      - persistence_unavailable
+    notes: >-
+      Produces a copy of the table outside the app. The audit row is written before the file is
+      returned and names the admin and the response count, so a published figure can later be
+      traced to the export it came from.

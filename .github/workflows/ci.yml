@@ -371,6 +371,21 @@ jobs:
       - name: Enforce feature-inventory coverage of tables and routes
         run: node ctf/scripts/check-inventory-drift.mjs
 
+  contract-coverage-gate:
+    name: Contract Coverage Gate
+    runs-on: ubuntu-latest
+    needs: rules-integrity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Rule 200 makes the command, access-policy and audit contracts mandatory for every plugin
+      # command surface, and rule 114 adds the profile-and-deletion contract. Nothing checked that
+      # the files existed, so a plugin could ship and be reviewed for months with none of the four.
+      # This fails on any API directory with no contract files and no recorded reason.
+      - name: Fail on API surfaces with no contract files
+        run: node ctf/scripts/check-contract-coverage.mjs
+
   notice-formatting-gate:
     name: Notice Formatting Gate
     runs-on: ubuntu-latest

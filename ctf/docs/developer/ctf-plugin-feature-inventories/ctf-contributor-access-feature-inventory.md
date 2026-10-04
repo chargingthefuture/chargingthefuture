@@ -298,9 +298,10 @@ counts still feed the score internally).
   or restructured.
 - Contracts: `ctf/docs/contracts/CONTRIBUTOR_ACCESS_PLUGIN_COMMAND_CONTRACTS.yaml`,
   `CONTRIBUTOR_ACCESS_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`,
-  `CONTRIBUTOR_ACCESS_PLUGIN_AUDIT_CONTRACTS.yaml`. Deletion handling lives in the account
-  deletion registry (see the data model section); a standalone profile-and-deletion contract
-  document is still to be authored.
+  `CONTRIBUTOR_ACCESS_PLUGIN_AUDIT_CONTRACTS.yaml`,
+  `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` (added 2026-10-04). Deletion itself runs
+  through the account deletion registry (see the data model section); the contract states what
+  that entry does and why.
 
 ## Web and Android Delivery Status
 
@@ -355,10 +356,15 @@ fill on the first recompute / config save / member post.
   are not yet read as an admission gate (needs an owner decision on which signals count).
 - No per-member admin drill-down (deliberate for now — it would tempt exposing the internal
   evidence; revisit only with strong cause).
-- A standalone `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` document is still to be
-  authored; the deletion behavior itself is already wired via the account deletion registry.
 
 ## Change Log
+
+- 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
+  had the command, access-policy and audit contracts but not the deletion one that rule 114
+  requires. `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` now states the registry entry
+  (reactions, posts and the eligibility row deleted; the audit trail retained; no service-scoped
+  deletion, because the badge is earned and deleting the account is what resets it). No code change.
+  CI job `contract-coverage-gate` now fails on any API surface missing one of the four files.
 
 - 2026-09-25 — PeerProgramming goal cards that helped added as a value event (owner decision).
   `value.peer_programming_tasks_helped`, weight 3, delivering: a card on the PeerProgramming goal

@@ -39,6 +39,7 @@
     "schema:report-live-drift": "bash ./scripts/audit_schema_drift.sh",
     "schema:audit-queries": "node ./scripts/audit-schema-queries.mjs",
     "check:inventory-drift": "node ./scripts/check-inventory-drift.mjs",
+    "check:contract-coverage": "node ./scripts/check-contract-coverage.mjs",
     "check:orphan-routes": "node ./scripts/check-orphan-routes.mjs",
     "check:plugin-registry-seed": "node ./scripts/check-plugin-registry-seed.mjs",
     "check:admin-audit-coverage": "node ./scripts/check-admin-audit-coverage.mjs",
