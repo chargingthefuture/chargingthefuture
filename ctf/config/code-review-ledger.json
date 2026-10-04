@@ -64,8 +64,8 @@
     {
       "name": "bug-reporting",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-04T13:22:34.729Z",
+      "lastRunIssues": 2,
       "cursor": 0,
       "partial": false
     },
