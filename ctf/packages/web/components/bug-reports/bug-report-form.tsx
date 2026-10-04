@@ -5,6 +5,7 @@ import {
   BUG_REPORT_MESSAGE_MAX_LENGTH,
   BUG_REPORT_CONTEXT_MAX_LENGTH,
 } from '@/lib/bug-reports/constants';
+import { ONE_PERCENT_PAID_TIER_URL } from '@/lib/quora-motd/types';
 import styles from './bug-report-modal.module.css';
 
 type BugReportFormProps = {
@@ -37,6 +38,18 @@ export function BugReportForm({
             Use this when something in the app isn&apos;t working. Reports are one-way — you
             won&apos;t get a reply here. Have a question? Ask in the Commons on the home screen,
             where members can answer.
+          </p>
+          <p className={styles.subtitle}>
+            Not a bug? To talk to Farah about your work, it&apos;s $7{' '}
+            <a
+              className={styles.subtitleLink}
+              href={ONE_PERCENT_PAID_TIER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              here
+            </a>
+            .
           </p>
         </div>
         <button
