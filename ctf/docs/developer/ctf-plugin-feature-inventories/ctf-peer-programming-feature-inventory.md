@@ -378,6 +378,11 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-10-04: **Signed-out description names the goal board (owner report).** The public header
+  in `peer-programming-public-shell.tsx` described only the weekly cohorts. It now opens with "A
+  global mastermind with a goal board: each member posts their goals, and everyone helps each other
+  reach them." The cohort sentence after it is unchanged. Copy only — no route, schema, or contract
+  change.
 - 2026-10-03: **Cohort Direct Line message box grows with the text (bug fix, owner report).** The
   composer in `pp-chat-tab.tsx` was a one-line `<input>`, so longer messages scrolled sideways out
   of view before sending. It is now a `<textarea>` that starts at one line, wraps, grows to six
