@@ -1,20 +1,18 @@
 {
-  "_comment": "Rotation state for the code-review sweep. A slice is one plugin (a folder name shared across the app/api, components, lib and mobile layers, plus the page folder of that name under app/ or app/apps/, reviewed together), one standalone module (a folder name in just one layer), or one catch-all (web-pages, web-shell, mobile-shell, <name>-package, scripts, sql, ctf-root) holding every source file no named slice claims. Each run reviews an in-progress slice first, then one with findings left over from a capped run (`deferred`), then any never-reviewed slice, then the least-recently-reviewed one. `partial` and `nextFile` carry a too-big slice across runs so nothing is dropped. New slices start unreviewed (lastReviewedAt: null); slices whose folders are gone are pruned. This copy on main is stamped by the hand route (/rs, via `--stamp`); the scheduled sweep keeps its own copy on the code-review-ledger branch and merges this one on every run, newer stamp per slice winning. Maintained by ctf/scripts/reviewCodebaseSlice.mjs; use its --pick, --stamp and --reconcile modes rather than editing by hand.",
+  "_comment": "Rotation state for the code-review sweep. A slice is one plugin (a folder name shared across the app/api, components, lib and mobile layers, plus the page folder of that name under app/ or app/apps/, reviewed together), one standalone module (a folder name in just one layer), or one catch-all (web-pages, web-shell, mobile-shell, <name>-package, scripts, ops, sql, ctf-root) holding every source file no named slice claims. Each run reviews an in-progress slice first, then one with findings left over from a capped run (`deferred`), then any never-reviewed slice, then the least-recently-reviewed one. `partial`, `nextFile` and `nextOffset` carry a too-big slice across runs so nothing is dropped; `updatedAt` moves on every write to a row. New slices start unreviewed (lastReviewedAt: null); slices whose folders are gone are pruned. This copy on main is stamped by the hand route (/rs, via `--stamp`); the scheduled sweep keeps its own copy on the code-review-ledger branch and merges this one on every run, the row written most recently winning per slice. Maintained by ctf/scripts/reviewCodebaseSlice.mjs; use its --pick, --stamp and --reconcile modes rather than editing by hand.",
   "slices": [
     {
       "name": "account",
       "type": "plugin",
-      "lastReviewedAt": "2026-10-03T23:56:58.639Z",
-      "lastRunIssues": 6,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
       "name": "account-closed",
-      "type": "plugin",
+      "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -22,15 +20,13 @@
       "type": "plugin",
       "lastReviewedAt": "2026-10-04T01:14:53.153Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "admin",
       "type": "plugin",
-      "lastReviewedAt": "2026-10-04T02:35:05.838Z",
-      "lastRunIssues": 3,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -38,7 +34,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -46,7 +41,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -54,7 +48,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-18T09:46:21.009Z",
       "lastRunIssues": 6,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -62,7 +55,6 @@
       "type": "module",
       "lastReviewedAt": "2026-10-04T02:57:53.205Z",
       "lastRunIssues": 1,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -70,7 +62,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-10-04T03:43:18.553Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -78,7 +69,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-10-04T03:53:15.480Z",
       "lastRunIssues": 3,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -86,7 +76,6 @@
       "type": "module",
       "lastReviewedAt": "2026-10-04T13:22:34.729Z",
       "lastRunIssues": 2,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -94,7 +83,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-10-04T14:42:10.260Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -102,7 +90,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -110,7 +97,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -118,15 +104,13 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-27T02:26:34.545Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "comic",
       "type": "plugin",
-      "lastReviewedAt": "2026-10-04T04:02:00.436Z",
-      "lastRunIssues": 6,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -134,7 +118,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-08-11T07:43:20.794Z",
       "lastRunIssues": 4,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -142,7 +125,6 @@
       "type": "module",
       "lastReviewedAt": "2026-10-03T21:25:13.011Z",
       "lastRunIssues": 6,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -150,15 +132,13 @@
       "type": "module",
       "lastReviewedAt": "2026-10-03T20:06:36.000Z",
       "lastRunIssues": 1,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "contributions",
       "type": "plugin",
-      "lastReviewedAt": "2026-08-06T09:18:06.567Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -166,7 +146,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-08-05T14:30:46.085Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -174,7 +153,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -182,7 +160,6 @@
       "type": "module",
       "lastReviewedAt": "2026-08-05T09:14:09.920Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -190,7 +167,6 @@
       "type": "module",
       "lastReviewedAt": "2026-08-04T23:38:50.123Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -198,15 +174,13 @@
       "type": "module",
       "lastReviewedAt": "2026-08-04T23:12:28.808Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "directory",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T04:13:20.881Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -214,7 +188,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -222,7 +195,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -230,7 +202,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-08-03T10:10:15.973Z",
       "lastRunIssues": 3,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -238,7 +209,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -246,7 +216,6 @@
       "type": "module",
       "lastReviewedAt": "2026-08-04T09:16:34.636Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -254,7 +223,6 @@
       "type": "module",
       "lastReviewedAt": "2026-08-02T08:41:34.630Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -262,7 +230,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-08-01T08:38:06.926Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -270,7 +237,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-30T09:08:07.260Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -278,15 +244,13 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "foundation",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-29T09:19:17.562Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -294,7 +258,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-28T09:12:53.372Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -302,7 +265,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-26T10:41:31.407Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -310,7 +272,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-26T08:41:33.760Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -318,7 +279,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -326,7 +286,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-24T09:00:54.256Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -334,7 +293,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -342,7 +300,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-23T09:04:00.711Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -350,7 +307,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-22T09:05:40.694Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -358,7 +314,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -366,7 +321,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-27T02:28:12.465Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -374,7 +328,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -382,15 +335,13 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-26T15:08:10.962Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "mutual-time",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-21T09:07:33.219Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -398,7 +349,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-20T04:22:57.270Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -406,7 +356,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-20T01:46:02.477Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -414,7 +363,13 @@
       "type": "module",
       "lastReviewedAt": "2026-07-19T08:39:00.553Z",
       "lastRunIssues": 3,
-      "cursor": 0,
+      "partial": false
+    },
+    {
+      "name": "ops",
+      "type": "module",
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -422,7 +377,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-18T08:14:09.048Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -430,15 +384,13 @@
       "type": "module",
       "lastReviewedAt": "2026-08-10T08:10:26.615Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "plugin",
-      "type": "plugin",
-      "lastReviewedAt": "2026-07-16T08:37:32.172Z",
+      "type": "module",
+      "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -446,7 +398,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-15T08:39:32.823Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -454,7 +405,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-14T15:52:17.449Z",
       "lastRunIssues": 4,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -462,7 +412,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-14T14:58:05.350Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -470,7 +419,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -478,7 +426,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -486,7 +433,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -494,15 +440,13 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "recurring-activity",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-14T11:54:27.811Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -510,7 +454,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-14T08:32:24.007Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -518,7 +461,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -526,7 +468,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-17T08:31:47.697Z",
       "lastRunIssues": 3,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -534,7 +475,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-13T09:51:55.954Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -542,7 +482,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -550,7 +489,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-09T10:05:36.491Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -558,7 +496,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -566,7 +503,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-20T09:40:20.540Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -574,7 +510,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-08T09:03:30.711Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -582,7 +517,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-27T02:29:37.457Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -590,7 +524,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-26T00:22:51.077Z",
       "lastRunIssues": 1,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -598,7 +531,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -606,7 +538,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -614,7 +545,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-02T09:39:55.982Z",
       "lastRunIssues": 2,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -622,7 +552,6 @@
       "type": "plugin",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -630,7 +559,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-07-01T10:28:02.892Z",
       "lastRunIssues": 8,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -638,7 +566,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-30T10:05:29.205Z",
       "lastRunIssues": 6,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -646,15 +573,13 @@
       "type": "module",
       "lastReviewedAt": "2026-06-28T09:38:47.942Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "unlock",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-26T12:38:54.509Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -662,7 +587,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -670,7 +594,6 @@
       "type": "module",
       "lastReviewedAt": null,
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -678,7 +601,6 @@
       "type": "module",
       "lastReviewedAt": "2026-07-18T09:44:46.490Z",
       "lastRunIssues": 0,
-      "cursor": 0,
       "partial": false
     },
     {
@@ -686,15 +608,13 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-27T09:09:24.899Z",
       "lastRunIssues": 5,
-      "cursor": 0,
       "partial": false
     },
     {
       "name": "what-works",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T02:41:07.460Z",
-      "lastRunIssues": 8,
-      "cursor": 0,
+      "lastReviewedAt": null,
+      "lastRunIssues": 0,
       "partial": false
     },
     {
@@ -702,7 +622,6 @@
       "type": "plugin",
       "lastReviewedAt": "2026-06-26T10:10:07.990Z",
       "lastRunIssues": 7,
-      "cursor": 0,
       "partial": false
     }
   ]

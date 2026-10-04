@@ -33,8 +33,9 @@ The sweep's order is: a slice with `partial: true` first, then one with leftover
 with `lastReviewedAt: null`, then the oldest `lastReviewedAt`. A slice is every folder with that name
 across `ctf/packages/web/app/api`, `components`, `lib` and `ctf/packages/mobile/src/features`, plus
 the page folder of that name under `app/` or `app/apps/`, reviewed together. The catch-all slices
-(`web-pages`, `web-shell`, `mobile-shell`, `<name>-package`, `scripts`, `sql`, `ctf-root`) hold
-everything no named slice claims.
+(`web-pages`, `web-shell`, `mobile-shell`, `<name>-package`, `scripts`, `ops`, `sql`, `ctf-root`)
+hold everything no named slice claims; a page folder named differently from its plugin is declared
+under `extraPaths` in `ctf/config/code-review-slice-manifest.json`.
 
 ## 2. Review it
 
@@ -78,8 +79,8 @@ CODE_REVIEW_LEDGER_MERGE_PATHS=/tmp/code-review-ledger.branch.json \
 ```
 
 This sets the slice's `lastReviewedAt` to now, clears its partial state and leftover findings, and
-saves the reconciled ledger — new slices added as never reviewed, gone ones dropped, and the newer
-stamp per slice kept from either copy. Do not edit the JSON by hand. The next scheduled run merges
+saves the reconciled ledger — new slices added as never reviewed, gone ones dropped, and for every
+other slice the copy written most recently kept. Do not edit the JSON by hand. The next scheduled run merges
 this copy with the branch copy the same way, so the slice is not reviewed twice.
 
 ## 6. Report

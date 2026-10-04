@@ -188,7 +188,12 @@ jobs:
           branch="test-script/auto-${slug}"
           git config user.name "CTF CI Bot"
           git config user.email "ci@chargingthefuture.org"
-          git checkout -B "$branch"
+          # Cut from origin/main, not from HEAD: HEAD now carries the ledger commit pushed to the
+          # ledger branch above, and a PR cut from it carried that commit and the ledger file too
+          # (the open test-script PR was two commits ahead of main for that reason), which then
+          # conflicted with every ledger stamp landing on main. The regenerated script is an
+          # uncommitted change and survives the checkout.
+          git checkout -B "$branch" origin/main
           git add ctf/docs/developer/test-scripts/
           git commit -m "docs: refresh ${slug} manual test script"
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${branch}"

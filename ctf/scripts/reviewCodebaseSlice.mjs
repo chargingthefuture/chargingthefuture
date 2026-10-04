@@ -10,10 +10,11 @@
 //      slice (its API + server logic + web UI + mobile feature together), so cross-layer bugs are
 //      visible. A name that appears in only one layer is a standalone module (e.g. `auth`, `ui`,
 //      `chatbot`) and is its own slice, so features outside any plugin still get reviewed.
-//      Everything that no grouped slice claims lands in a catch-all slice (`web-pages`,
-//      `web-shell`, `mobile-shell`, one per other workspace package, `scripts`, `sql`, and
-//      `ctf-root` for whatever is left), so every source file under ctf/ belongs to exactly one
-//      slice. Before the catch-alls, 343 files — the admin pages, the plugin shell page, the
+//      A page folder elsewhere that belongs to a plugin is declared under `extraPaths` in the
+//      slice manifest. Everything that no grouped slice claims lands in a catch-all slice
+//      (`web-pages`, `web-shell`, `mobile-shell`, one per other workspace package, `scripts`,
+//      `ops`, `sql`, and `ctf-root` for whatever is left), so every source file under ctf/
+//      belongs to exactly one slice. Before the catch-alls, 343 files — the admin pages, the plugin shell page, the
 //      middleware, every script and migration — were in no slice and were never reviewed.
 //   2. Pick the slice to review: an in-progress (partial) slice first, then one with findings
 //      left over from a capped run, then any never-reviewed slice, then the least-recently-
@@ -32,27 +33,33 @@
 //   4. File one GitHub issue per finding, labeled `code-review`. Findings the model judges
 //      to have a small, safe, self-contained fix also get `code-review:actionable`, which
 //      the implement workflow can turn into a pull request. Findings past the per-run issue cap
-//      are kept on the slice's ledger row and filed by the next run(s) before anything else is
-//      reviewed — they used to be dropped until the slice came round again.
+//      are kept on the slice's ledger row (`deferred`) and filed by the next run(s) — a run that
+//      files leftovers reviews nothing new — before any further part of the slice is read. They
+//      used to be dropped until the slice came round again.
 //   5. Stamp the slice in the rotation ledger. A slice too big for one run carries over:
 //      its remaining files are reviewed on the next run(s), and it is only marked fully
 //      reviewed once every file has been covered (nothing is silently dropped). The resume point
-//      is the path of the next file, not an index, so a file added or removed between runs does
-//      not shift it.
+//      is the path of the next file (plus a byte offset inside a file larger than the budget,
+//      which is read in windows across runs), not an index, so a file added or removed between
+//      runs does not shift it.
 //
 // It never writes code or opens a PR.
 //
 // The ledger has two copies and they are merged on read. The scheduled sweep keeps its copy on
 // the `code-review-ledger` branch; the hand route (`/rs`) stamps the copy on main. Each run reads
 // its own copy plus every path in CODE_REVIEW_LEDGER_MERGE_PATHS and, slice by slice, keeps the
-// newer stamp — so a slice reviewed by hand is not reviewed again by the next funded run, and a
-// slice the funded run covered is not picked by hand. Before the merge the two copies drifted for
+// row written most recently (`updatedAt`, which every write to a row refreshes) — so a slice
+// reviewed by hand is not reviewed again by the next funded run, and a slice the funded run
+// covered is not picked by hand. Before the merge the two copies drifted for
 // months and nine hand-reviewed slices read as never reviewed on the branch.
 //
 // Modes (the first argument):
 //   (none)                       Review one slice and file issues. Needs ANTHROPIC_API_KEY and
 //                                GH_TOKEN; a missing one FAILS the run (it used to exit 0 with
 //                                "nothing to do", which made a lost secret look like a green run).
+//                                A missing API key is reported as the paused state `no_key`
+//                                (CTF_RUN_BLOCKED_EXTERNAL) so the health check lists it as
+//                                paused, not broken; a missing GH_TOKEN is a plain failure.
 //   --pick [slice] [--json]      Print the slice the sweep would review next (or the named one):
 //                                its folders, files, resume point, leftover findings, and which
 //                                slices are new or never reviewed. No model call, no secrets. This
@@ -77,8 +84,8 @@
 //   CODE_REVIEW_CONTRACTS_MAX_BYTES  Cap on contract reference bytes (default: 60000).
 //   CODE_REVIEW_DEPS_MAX_BYTES  Cap on imported-code reference bytes (default: 90000; 0 disables).
 //   CODE_REVIEW_LEDGER_PATH  The ledger to read and write (default: ctf/config/code-review-ledger.json).
-//   CODE_REVIEW_LEDGER_MERGE_PATHS  Comma-separated extra ledger copies merged on read (newer
-//                          stamp per slice wins). A listed path that does not exist is skipped
+//   CODE_REVIEW_LEDGER_MERGE_PATHS  Comma-separated extra ledger copies merged on read (the row
+//                          written most recently wins, per slice). A listed path that does not exist is skipped
 //                          with a log line; one that exists but cannot be parsed fails the run.
 //   CODE_REVIEW_EXISTING_ISSUES_LIMIT  Most `code-review` issues fetched for dedupe (default:
 //                          10000). Hitting the limit fails the run rather than refiling dismissed
@@ -95,7 +102,7 @@ import { appendFileSync, readFileSync, writeFileSync, readdirSync, statSync, exi
 import { join, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectDependencyContext } from './lib/sliceImports.mjs';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -160,7 +167,9 @@ const CONTRACT_SUFFIXES = [
 // (app/admin, app/account, app/apps/directory) joins the slice that already carries its name, so
 // the screen is read beside the routes and server code it renders. A page folder matching no slice
 // (app/guide, app/sign-in, app/apps/[pluginSlug]) is left to the `web-pages` catch-all below
-// rather than becoming a one-file slice that costs a run of its own.
+// rather than becoming a one-file slice that costs a run of its own. A page folder whose name
+// does not match its plugin (app/survey is the quora-deletion-survey entry screen) is declared
+// under `extraPaths` in the slice manifest and claimed before any name match.
 const GROUPED_ROOTS = [
   { root: 'ctf/packages/web/app/api' },
   { root: 'ctf/packages/web/components' },
@@ -180,7 +189,8 @@ const CATCH_ALL_SLICES = [
   { name: 'web-shell', bases: ['ctf/packages/web'], note: 'middleware, instrumentation, config, hooks, scripts, src — every web file in no other slice' },
   { name: 'mobile-shell', bases: ['ctf/packages/mobile'], note: 'the native app outside src/features: entry point, auth, theme, components, config' },
   { name: 'scripts', bases: ['ctf/scripts'], note: 'operational scripts, CI gates and the AI workflow scripts' },
-  { name: 'sql', bases: ['ctf/db', 'ctf/ops', 'ctf/schema.sql'], note: 'the schema, migrations and ops SQL' },
+  { name: 'ops', bases: ['ctf/ops'], note: 'the Route Weather service and other ops code' },
+  { name: 'sql', bases: ['ctf/db', 'ctf/schema.sql'], note: 'the schema and migrations' },
   { name: 'ctf-root', bases: ['ctf'], note: 'anything under ctf/ that no other slice claims' },
 ];
 const PACKAGES_DIR = 'ctf/packages';
@@ -354,12 +364,29 @@ function discoverSlices() {
     for (const name of subfolders(root)) {
       if (skip.includes(name)) continue;
       if (!byName.has(name)) {
-        byName.set(name, { name, type: 'module', paths: [], files: [], note: '' });
+        byName.set(name, { name, type: 'module', layers: 0, paths: [], extraPaths: [], files: [], note: '' });
       }
       byName.get(name).paths.push(`${root}/${name}`);
+      byName.get(name).layers += 1;
     }
   }
-  // Pass 2: roots whose folders only join a slice that already exists.
+  // Pass 2: paths declared in the manifest (claimed first, so a declared page folder inside a
+  // joinOnly folder of another name goes where it was declared), then roots whose folders only
+  // join a slice that already exists.
+  for (const slice of byName.values()) {
+    const declared = SLICE_MANIFEST[slice.name]?.extraPaths;
+    if (!Array.isArray(declared)) continue;
+    for (const rel of declared) {
+      if (typeof rel !== 'string' || !rel.trim()) continue;
+      const clean = rel.trim().replace(/\/+$/, '');
+      if (!isDir(join(repoRoot, clean)) && !isFile(join(repoRoot, clean))) {
+        console.warn(`reviewCodebaseSlice: manifest extraPaths for ${slice.name} names ${clean}, which does not exist; ignored.`);
+        continue;
+      }
+      slice.extraPaths.push(clean);
+    }
+    slice.files.push(...claimFiles(slice.extraPaths.flatMap((p) => sourceFilesUnder(p))));
+  }
   for (const { root, skip = [], joinOnly } of GROUPED_ROOTS) {
     if (!joinOnly) continue;
     for (const name of subfolders(root)) {
@@ -368,9 +395,13 @@ function discoverSlices() {
     }
   }
   for (const slice of byName.values()) {
-    slice.paths.sort();
-    slice.type = slice.paths.length >= 2 ? 'plugin' : 'module';
-    slice.files = claimFiles(slice.paths.flatMap((p) => sourceFilesUnder(p))).sort(byRel);
+    slice.paths = [...slice.paths, ...slice.extraPaths].sort();
+    delete slice.extraPaths;
+    // A plugin is a name present in two or more source layers; a joined page folder or a
+    // declared extra path does not make a one-layer module a plugin.
+    slice.type = slice.layers >= 2 ? 'plugin' : 'module';
+    delete slice.layers;
+    slice.files = [...slice.files, ...claimFiles(slice.paths.flatMap((p) => sourceFilesUnder(p)))].sort(byRel);
   }
 
   // Pass 3: catch-alls, in order, over whatever is still unclaimed.
@@ -385,16 +416,20 @@ function discoverSlices() {
   const scriptsIdx = catchAlls.findIndex((c) => c.name === 'scripts');
   catchAlls.splice(scriptsIdx, 0, ...otherPackages);
 
-  for (const { name, bases, note } of catchAlls) {
+  for (const { name: wantedName, bases, note } of catchAlls) {
+    // A folder of the same name under a grouped root takes the plain name; the catch-all is
+    // suffixed rather than aborting every mode until somebody renames a folder.
+    let name = wantedName;
     if (byName.has(name)) {
-      throw new Error(`Catch-all slice name '${name}' collides with a folder-derived slice; rename one of them.`);
+      name = `${wantedName}-catch-all`;
+      console.warn(`reviewCodebaseSlice: a folder-derived slice is already named '${wantedName}'; the catch-all is '${name}'.`);
     }
     const files = claimFiles(bases.flatMap((b) => sourceFilesUnder(b))).sort(byRel);
     if (files.length === 0) continue;
     byName.set(name, {
       name,
       type: 'module',
-      paths: bases.map((b) => `${b} (every file in no other slice)`),
+      paths: bases.map((b) => (isDir(join(repoRoot, b)) ? `${b} (every file in no other slice)` : b)),
       files,
       note,
     });
@@ -434,18 +469,28 @@ function stampTime(row) {
   return Number.isNaN(t) ? 0 : t;
 }
 
-// Of two rows for the same slice, the one whose state is further along: the newer completion
-// stamp wins; on the same stamp, in-progress state (a partial pass, leftover findings) carries
-// more than none; a true tie keeps the primary copy's row.
+// When a row was last written: `updatedAt` (refreshed by every write — a stamp, a partial save,
+// filing leftovers) or, for rows from before it existed, the completion stamp.
+function writeTime(row) {
+  const t = Date.parse(row?.updatedAt || '');
+  return Math.max(Number.isNaN(t) ? 0 : t, stampTime(row));
+}
+
+// Of two rows for the same slice, the one written most recently; on the same time an in-progress
+// row (a partial pass) carries more than a finished one, and a true tie keeps the primary copy's
+// row. The time is the write time, not the completion stamp: filing leftovers shrinks `deferred`
+// without moving the stamp, and comparing stamps let the copy still holding the unfiled list win
+// every merge, so the sweep filed the same leftovers run after run.
 function furtherAlongRow(primary, other) {
-  const tp = stampTime(primary);
-  const to = stampTime(other);
+  const tp = writeTime(primary);
+  const to = writeTime(other);
   if (tp !== to) return tp > to ? primary : other;
   if (Boolean(primary.partial) !== Boolean(other.partial)) return primary.partial ? primary : other;
-  const dp = Array.isArray(primary.deferred) ? primary.deferred.length : 0;
-  const dOther = Array.isArray(other.deferred) ? other.deferred.length : 0;
-  if (dp !== dOther) return dp > dOther ? primary : other;
   return primary;
+}
+
+function touch(row) {
+  row.updatedAt = new Date().toISOString();
 }
 
 function mergeLedgers(primary, other, otherPath) {
@@ -484,22 +529,25 @@ function loadLedger() {
 }
 
 // Write rows in a fixed shape. Earlier runs persisted a `paths` array onto each row by accident
-// (51 of 64 rows carried one, going out of date on every rename); only the rotation fields are
-// written now, and the in-progress fields only while they mean something.
+// (51 of 64 rows carried one, going out of date on every rename) and an index `cursor` that the
+// path-based resume replaced; only the rotation fields are written now, and the in-progress
+// fields only while they mean something.
 function normalizeRow(row, discoveredType) {
   const out = {
     name: row.name,
     type: discoveredType || row.type || 'module',
     lastReviewedAt: typeof row.lastReviewedAt === 'string' ? row.lastReviewedAt : null,
     lastRunIssues: Number.isFinite(row.lastRunIssues) ? row.lastRunIssues : 0,
-    cursor: Number.isFinite(row.cursor) ? row.cursor : 0,
     partial: row.partial === true,
   };
+  if (typeof row.updatedAt === 'string' && row.updatedAt) {
+    out.updatedAt = row.updatedAt;
+  }
   if (out.partial && typeof row.nextFile === 'string' && row.nextFile) {
     out.nextFile = row.nextFile;
-  }
-  if (!out.partial) {
-    out.cursor = 0;
+    if (Number.isFinite(row.nextOffset) && row.nextOffset > 0) {
+      out.nextOffset = row.nextOffset;
+    }
   }
   const deferred = Array.isArray(row.deferred) ? row.deferred.filter((f) => f && typeof f.title === 'string') : [];
   if (deferred.length > 0) {
@@ -561,7 +609,7 @@ function pickSlice(ledger, discovered) {
   }
   const partial = ledger.slices.find((s) => s.partial);
   if (partial) {
-    return { row: partial, reason: `in progress — resumes at ${partial.nextFile || `file index ${partial.cursor}`}` };
+    return { row: partial, reason: `in progress — resumes at ${partial.nextFile || 'the first file'}` };
   }
   const deferred = ledger.slices.find((s) => Array.isArray(s.deferred) && s.deferred.length > 0);
   if (deferred) {
@@ -581,34 +629,41 @@ function pickSlice(ledger, discovered) {
   };
 }
 
-// Where a partial pass resumes. The ledger records the path of the next file to cover; the file
-// list is sorted, so if that file was removed the pass continues from the first file after it.
-// An index is kept only for ledgers written before paths were recorded.
-function resumeIndex(row, files) {
-  if (!row.partial) return 0;
+// Where a partial pass resumes: the index of the next file and the byte offset inside it (for a
+// file larger than the budget, read in windows). The file list is sorted, so if the recorded file
+// was removed the pass continues from the first file after it, at offset 0.
+function resumePoint(row, files) {
+  if (!row.partial) return { index: 0, offset: 0 };
   if (typeof row.nextFile === 'string' && row.nextFile) {
     const idx = files.findIndex((f) => f.rel >= row.nextFile);
     if (idx === -1) {
       note(`reviewCodebaseSlice: every file from ${row.nextFile} onward is gone; starting ${row.name} from the top.`);
-      return 0;
+      return { index: 0, offset: 0 };
     }
     if (files[idx].rel !== row.nextFile) {
       note(`reviewCodebaseSlice: ${row.nextFile} is gone; ${row.name} resumes at ${files[idx].rel}.`);
+      return { index: idx, offset: 0 };
     }
-    return idx;
+    const offset = Number.isFinite(row.nextOffset) && row.nextOffset > 0 ? row.nextOffset : 0;
+    return { index: idx, offset };
   }
-  if (Number.isFinite(row.cursor) && row.cursor > 0 && row.cursor < files.length) {
-    return row.cursor;
-  }
-  return 0;
+  return { index: 0, offset: 0 };
 }
 
 function markComplete(row, filed) {
   row.lastReviewedAt = new Date().toISOString();
   row.lastRunIssues = filed;
-  row.cursor = 0;
   row.partial = false;
   delete row.nextFile;
+  delete row.nextOffset;
+  touch(row);
+}
+
+// Leftovers from this run join whatever the row already carries, in order; never replace.
+function carryDeferred(row, deferred) {
+  const carried = Array.isArray(row.deferred) ? row.deferred : [];
+  const all = [...carried, ...deferred];
+  if (all.length > 0) row.deferred = all; else delete row.deferred;
 }
 
 function writeGithubOutput(pairs) {
@@ -620,33 +675,41 @@ function writeGithubOutput(pairs) {
 // ---------------------------------------------------------------------------------------------
 // Gathering what the reviewer reads.
 
-// Concatenate files from `cursor` up to the byte budget, with a header per file. A single
-// file larger than the budget is included truncated so the run always makes progress.
-function gatherChunk(fileList, cursor, budget) {
+// Concatenate files from `cursor` up to the byte budget, with a header per file. A single file
+// larger than the budget is read in windows: this run sends `budget` characters from `offset`,
+// and the next run continues inside the same file from where this one stopped (`nextOffset`),
+// so the slice is only complete once the last window of its last file has been sent. The old
+// behavior cut such a file at the budget, moved on, and stamped the slice complete with most of
+// ctf/schema.sql never shown to the reviewer.
+function gatherChunk(fileList, cursor, offset, budget) {
   let text = '';
   let i = cursor;
-  let truncatedFile = null;
+  let nextOffset = 0;
+  let windowedFile = null;
   for (; i < fileList.length; i++) {
     const { abs, rel } = fileList[i];
-    const header = `\n===== FILE: ${rel} =====\n`;
+    const startAt = i === cursor ? offset : 0;
+    const full = readFileSync(abs, 'utf8');
+    const rangeNote = startAt > 0 ? ` (continues from character ${startAt + 1} of ${full.length})` : '';
+    const header = `\n===== FILE: ${rel}${rangeNote} =====\n`;
     if (text.length > 0 && text.length + header.length >= budget) {
       break;
     }
-    let body = readFileSync(abs, 'utf8');
+    const body = full.slice(startAt);
     const room = budget - text.length - header.length;
     if (body.length > room) {
       if (text.length === 0) {
-        body = `${body.slice(0, Math.max(room, 0))}\n... (file truncated to fit the run budget) ...`;
-        truncatedFile = rel;
-        text += header + body;
-        i += 1;
+        const window = Math.max(room, 1);
+        text += `${header}${body.slice(0, window)}\n... (this file continues next run from character ${startAt + window + 1} of ${full.length}) ...`;
+        windowedFile = rel;
+        nextOffset = startAt + window;
       }
       break;
     }
     text += header + body;
   }
   const complete = i >= fileList.length;
-  return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, complete, truncatedFile };
+  return { text, startIdx: cursor, endIdx: i, nextCursor: complete ? 0 : i, nextOffset: complete ? 0 : nextOffset, complete, windowedFile };
 }
 
 // A plugin's declared contracts (by exact filename), as read-only reference text.
@@ -1213,13 +1276,22 @@ async function fileFindings(slice, findings, sliceIssues) {
 // Modes.
 
 function requireReviewEnv() {
-  const missing = [];
-  if (!process.env.ANTHROPIC_API_KEY) missing.push('ANTHROPIC_API_KEY');
-  if (!process.env.GH_TOKEN && !DRY_RUN) missing.push('GH_TOKEN');
-  if (missing.length > 0) {
-    // Exiting 0 here used to make a lost secret look like a successful sweep, and the test-script
-    // refresh after it still ran. A missing secret is a failed run.
-    throw new Error(`${missing.join(' and ')} not set; the review cannot run. Check the Infisical secret injection and the workflow env.`);
+  // Exiting 0 here used to make a lost secret look like a successful sweep, and the test-script
+  // refresh after it still ran. A missing secret is a failed run. A missing API key is an outside
+  // state (the key lives in Infisical), reported the way an unfunded account is so the health
+  // check lists the run as paused rather than broken; a missing GH_TOKEN is the workflow's own
+  // configuration and a plain failure.
+  if (!process.env.ANTHROPIC_API_KEY) {
+    reportRunBlocked({
+      script: 'reviewCodebaseSlice',
+      reason: 'no_key',
+      manualRoute: '/rs',
+      nothingLost: 'The ledger was not advanced, so the next run after this clears reviews the same slice.',
+    });
+    process.exit(1);
+  }
+  if (!process.env.GH_TOKEN && !DRY_RUN) {
+    throw new Error('GH_TOKEN not set; the review cannot file issues. Check the workflow env.');
   }
 }
 
@@ -1264,7 +1336,7 @@ function runPick() {
   }
   const slice = discovery.slices.get(row.name);
   const bytes = sliceBytes(slice.files);
-  const start = resumeIndex(row, slice.files);
+  const start = resumePoint(row, slice.files);
   const neverReviewed = ledger.slices.filter((s) => !s.lastReviewedAt).map((s) => s.name);
   const report = {
     slice: row.name,
@@ -1275,7 +1347,7 @@ function runPick() {
     fileCount: slice.files.length,
     bytes,
     runsAtBudget: Math.max(1, Math.ceil(bytes / MAX_BYTES)),
-    resumeAt: row.partial ? { index: start, file: slice.files[start]?.rel || null } : null,
+    resumeAt: row.partial ? { index: start.index, offset: start.offset, file: slice.files[start.index]?.rel || null } : null,
     deferredFindings: Array.isArray(row.deferred) ? row.deferred : [],
     contracts: gatherContracts(row.name).files,
     lastReviewedAt: row.lastReviewedAt,
@@ -1296,7 +1368,7 @@ function runPick() {
     ...report.folders.map((p) => `  - ${p}`),
     ...(report.note ? [`  ${report.note}`] : []),
     `Files: ${report.fileCount} (${Math.round(bytes / 1024)} KB; ${report.runsAtBudget} scheduled run(s) at the ${MAX_BYTES}-byte budget — by hand, review all of it)`,
-    ...(report.resumeAt ? [`Resume at: file ${report.resumeAt.index + 1} (${report.resumeAt.file})`] : []),
+    ...(report.resumeAt ? [`Resume at: file ${report.resumeAt.index + 1} (${report.resumeAt.file})${report.resumeAt.offset ? `, character ${report.resumeAt.offset + 1}` : ''}`] : []),
     `Last reviewed: ${report.lastReviewedAt || 'never'}`,
     `Contracts: ${report.contracts.length ? report.contracts.join(', ') : 'none'}`,
     `Ledger: ${report.ledger.path}${report.ledger.mergedWith.length ? ` merged with ${report.ledger.mergedWith.join(', ')}` : ' (no other copy merged — set CODE_REVIEW_LEDGER_MERGE_PATHS to the branch copy)'}`,
@@ -1368,9 +1440,10 @@ async function runReview() {
   const slice = discovery.slices.get(row.name);
   console.log(`reviewCodebaseSlice: picked ${slice.type} ${slice.name} — ${reason}.`);
 
-  // Leftover findings from a capped run are filed before any new review of this slice, up to the
-  // same cap. Nothing is sent to the model for review in such a run; the slice's stamp is unchanged.
-  if (Array.isArray(row.deferred) && row.deferred.length > 0 && !row.partial) {
+  // Leftover findings from a capped run are filed before any further part of this slice is read,
+  // up to the same cap. Nothing is sent to the model for review in such a run; the slice's stamp
+  // and partial state are unchanged, so a partial pass resumes on the run after.
+  if (Array.isArray(row.deferred) && row.deferred.length > 0) {
     if (DRY_RUN) {
       console.log(JSON.stringify({ slice: slice.name, leftoverFindings: row.deferred }, null, 2));
       return;
@@ -1379,6 +1452,7 @@ async function runReview() {
     const { filed, deferred } = await fileFindings(slice, row.deferred, sliceIssues);
     row.lastRunIssues = filed;
     if (deferred.length > 0) row.deferred = deferred; else delete row.deferred;
+    touch(row);
     saveLedger(ledger);
     writeGithubOutput({ slice: slice.name, completed_slice: '', filed });
     console.log(`reviewCodebaseSlice: filed ${filed} leftover issue(s) for ${slice.name}; ${deferred.length} still to file.`);
@@ -1394,10 +1468,13 @@ async function runReview() {
     return;
   }
 
-  const start = resumeIndex(row, fileList);
-  const chunk = gatherChunk(fileList, start, MAX_BYTES);
-  const covered = `files ${chunk.startIdx + 1}–${chunk.endIdx} of ${fileList.length}`;
-  const chunkNote = chunk.complete && start === 0
+  const start = resumePoint(row, fileList);
+  const chunk = gatherChunk(fileList, start.index, start.offset, MAX_BYTES);
+  const windowed = chunk.windowedFile
+    ? ` (${chunk.windowedFile} is larger than the budget and is read in windows; this run ends at character ${chunk.nextOffset || 'the end'})`
+    : '';
+  const covered = `files ${chunk.startIdx + 1}–${Math.max(chunk.endIdx, chunk.startIdx + 1)} of ${fileList.length}${windowed}`;
+  const chunkNote = chunk.complete && start.index === 0 && start.offset === 0
     ? `This run covers the entire slice (${fileList.length} file(s)).`
     : `This run covers ${covered}${chunk.complete ? ' (final part)' : ' — the rest continues next run'}.`;
 
@@ -1436,18 +1513,18 @@ async function runReview() {
 
   if (chunk.complete) {
     markComplete(row, filed);
-    if (deferred.length > 0) row.deferred = deferred; else delete row.deferred;
+    carryDeferred(row, deferred);
     console.log(`reviewCodebaseSlice: completed ${slice.name}; filed ${filed} issue(s).`);
   } else {
     row.lastRunIssues = filed;
-    row.cursor = chunk.nextCursor;
     row.nextFile = fileList[chunk.nextCursor].rel;
+    if (chunk.nextOffset > 0) row.nextOffset = chunk.nextOffset; else delete row.nextOffset;
     row.partial = true;
-    // A partial pass may also leave findings over; they are filed when the slice is next picked,
-    // which — partial first — is the very next run.
-    const carried = Array.isArray(row.deferred) ? row.deferred : [];
-    if (carried.length + deferred.length > 0) row.deferred = [...carried, ...deferred]; else delete row.deferred;
-    console.log(`reviewCodebaseSlice: ${slice.name} carries over from file ${chunk.nextCursor + 1} (${row.nextFile}); filed ${filed} issue(s).`);
+    // Leftovers from a partial pass are filed by the very next run (a partial row is picked first
+    // and its leftovers go before any further reading), then the pass resumes.
+    carryDeferred(row, deferred);
+    touch(row);
+    console.log(`reviewCodebaseSlice: ${slice.name} carries over from file ${chunk.nextCursor + 1} (${row.nextFile}${row.nextOffset ? `, character ${row.nextOffset + 1}` : ''}); filed ${filed} issue(s).`);
   }
   saveLedger(ledger);
   writeGithubOutput({ slice: slice.name, completed_slice: chunk.complete ? slice.name : '', filed });
