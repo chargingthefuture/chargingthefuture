@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change |
 
 ## How to run this
 
