@@ -100,6 +100,14 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 
 ## Security, Privacy, and Compliance Controls
 
+Contracts (written from the code on 2026-10-04; where a contract and this inventory differ, the
+contract follows the code):
+
+- Commands: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_COMMAND_CONTRACTS.yaml`
+- Access policy: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
+- Audit events: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml`
+- Profile, deletion and export: `ctf/docs/contracts/BUG_REPORTING_PROFILE_AND_DELETION_CONTRACT.md`
+
 - **Raw text never leaves the database.** Only redacted text is published, and only into a
   private repo.
 - **Fail closed.** Anything the gate flags becomes `held_for_review` and is never
@@ -171,6 +179,12 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-04: **Contracts written for this plugin.** The command, access policy, audit and
+  profile-and-deletion contracts did not exist; all four are now in `ctf/docs/contracts/`
+  (`BUG_REPORTING_*`), written from the current code, and linked from the Security section above.
+  The code-review sweep now maps the `bug-reports` slice to these files
+  (`ctf/config/code-review-slice-manifest.json`), and the profile-and-deletion index lists them.
+  Docs only: no code, schema or behavior changed.
 - 2026-10-04: **The One Percent line drops the price.** Owner directive: the line now reads "Not
   a bug? To talk to Farah about your work.", and the link moves from "here" to "talk to Farah
   about your work", on web and android. Same address, styling and behavior. Test script BUG-1
