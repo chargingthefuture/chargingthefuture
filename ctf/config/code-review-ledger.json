@@ -12,8 +12,8 @@
     {
       "name": "account-data",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-04T01:14:53.153Z",
+      "lastRunIssues": 5,
       "cursor": 0,
       "partial": false
     },
