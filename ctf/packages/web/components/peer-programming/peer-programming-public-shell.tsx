@@ -57,7 +57,6 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.ACCENT + '10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center' }}>Sign in to get matched</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </div>
@@ -67,8 +66,8 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
 /**
  * Signed-out visitor view for PeerProgramming. Renders the public marketing
  * experience pixel-faithful to the PeerProgrammingPublic (desktop) and
- * MobilePeerProgrammingPublic (phone) design mockups, with sign-in affordances
- * pointing at the real hosted sign-in URL. It shows no private or per-user data:
+ * MobilePeerProgrammingPublic (phone) design mockups, with
+ * one sign-in button pointing at the real hosted sign-in URL. It shows no private or per-user data:
  * there is no public cohort feed, so the locked region behind the sign-in overlay
  * renders neutral blurred placeholder cards rather than fabricated cohort rows.
  */
