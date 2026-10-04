@@ -57,6 +57,14 @@ verified Clerk `userId`, and additionally sets:
 - `x-ctf-username` — the Clerk username, when present.
 - `x-ctf-user-role` — the user's role (e.g. `admin`), when present.
 
+Identity is read from these headers only, never from a cookie of the same name: cookies are
+written by the client, so a header the middleware left unset (no username or role claim) means the
+value is absent. The middleware also writes `x-ctf-identity-stamp`, a digest of the auth secret key
+(`lib/auth/identity-stamp.ts`), and the headers are trusted only when it matches. Its matcher skips
+paths that look like static files (`*.png`, `*.csv`, …), and a page route such as
+`/apps/directory/profile/[handle]` can be reached on one, so without the stamp a client-sent
+`x-ctf-*` header would arrive there untouched.
+
 These come from the **Clerk session token claims** (`sessionClaims`), which is fast (no extra
 Clerk API call per request — the values ride along in the session JWT).
 
@@ -104,7 +112,8 @@ Unlock tier as the fallback).
 | `lib/auth/provider-env.ts`     | Provider-neutral runtime facade. It resolves the active auth provider configuration while preserving both generic and legacy env contracts. |
 | `lib/auth/clerk-env.ts`        | Legacy compatibility wrapper for older Clerk-specific imports. Do not use as the primary abstraction for new auth work.                     |
 | `scripts/check-auth-env.mjs`   | Provider-neutral auth env preflight. Validates auth env only when a provider is configured and accepts legacy Clerk fallbacks.              |
-| `lib/auth/request-identity.ts` | Server-side identity resolver. Reads `x-ctf-user-*` headers and `ctf_*` cookies set by middleware.                                          |
+| `lib/auth/request-identity.ts` | Server-side identity resolver. Reads the `x-ctf-user-*` headers set by middleware, only when the identity stamp matches. Never reads cookies. |
+| `lib/auth/identity-stamp.ts`   | The stamp the middleware writes so the app can tell its identity headers from client-sent ones.                                            |
 | `lib/auth/server-authz.ts`     | Server-side authorization evaluator. Used in route handlers and Server Components.                                                          |
 
 ---
