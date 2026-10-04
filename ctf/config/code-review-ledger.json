@@ -4,8 +4,8 @@
     {
       "name": "account",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
+      "lastReviewedAt": "2026-10-03T23:56:58.639Z",
+      "lastRunIssues": 6,
       "cursor": 0,
       "partial": false
     },
