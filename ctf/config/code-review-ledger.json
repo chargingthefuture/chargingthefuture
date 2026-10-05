@@ -570,9 +570,10 @@
     {
       "name": "socket-relay",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-26T00:22:51.077Z",
-      "lastRunIssues": 1,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:36:15.341Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:36:15.341Z"
     },
     {
       "name": "sql",
