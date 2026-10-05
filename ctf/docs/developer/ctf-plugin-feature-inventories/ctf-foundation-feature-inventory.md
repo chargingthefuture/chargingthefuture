@@ -197,6 +197,14 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
   - A shared provider link that answers an error or fails says so above Browse.
   - A microphone that could not be turned on in an instant call is reported and said on the call
     card while it stays off.
+- 2026-10-05: **The active-call poll keeps going after a failed read (#2959).** `useActiveCallPoll`
+  in `components/foundation/foundation-instant-call.tsx` returned before scheduling its next tick on
+  any non-OK answer or an answer without a call. One 503 ended polling for the rest of the call. A
+  caller then stayed on the ringing screen after an answer, a callee never got the audio
+  credentials, and nothing on the client followed the paid window ending. Any failed read except a
+  404 (the call no longer exists for this member, which stopped polling before too) is now retried
+  on the next tick. A run of failures is reported once (op `instant_call_poll`). No schema, route or
+  contract change. Test script step FDN-21b added.
 - 2026-10-03: **Direct Line message box stayed one line, so long messages scrolled out of view (bug
   fix, owner report).** The shared chat panel (`components/shared/stream-chat-panel.tsx`) rendered
   Stream's `MessageInput` without `grow`, and Stream pins the textarea to one row when `grow` is
