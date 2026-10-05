@@ -380,6 +380,12 @@ this is not a plugin. The steps that matter:
   "Your response could not be saved". The list, the parser and the command contract now stop at
   2100, from one constant (`QUORA_SURVEY_LATEST_YEAR`) next to the earliest year. A year past it
   becomes null, as the parser's comment always said.
+- 2026-10-05: **The link preview no longer says answers are stored with no link to the account.**
+  The page's metadata description, which search results and link previews show when the survey
+  link is shared, still carried the promise withdrawn on 2026-08-19. Every response is saved with
+  the sending member's id, and the form itself says so. The description now says the same thing:
+  the answer is saved with the account you sign in with, and the form asks for no way to reach
+  you. Correction of a false statement only; the in-page copy is unchanged.
 
 - 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
   found this survey had none. The `QUORA_DELETION_SURVEY_*` contracts are written from the routes,
