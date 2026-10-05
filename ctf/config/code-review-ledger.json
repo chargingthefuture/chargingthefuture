@@ -601,9 +601,10 @@
     {
       "name": "ui",
       "type": "module",
-      "lastReviewedAt": "2026-06-28T09:38:47.942Z",
+      "lastReviewedAt": "2026-10-05T12:19:53.158Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:19:53.158Z"
     },
     {
       "name": "unlock",
