@@ -183,9 +183,10 @@
     {
       "name": "db",
       "type": "module",
-      "lastReviewedAt": "2026-08-04T23:12:28.808Z",
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:39:49.005Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:39:49.005Z"
     },
     {
       "name": "directory",
