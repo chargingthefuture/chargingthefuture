@@ -7,7 +7,7 @@ import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens, type FoundationTab, type ProviderView, type QuoteView } from "./foundation-ui";
 import { BrowsePanel, QuotesPanel } from "./foundation-panels";
-import { useQuoteTransitions } from "./foundation-quote-actions";
+import { useQuoteTransitions, type QuoteTransitionResult } from "./foundation-quote-actions";
 import { OfferSkillsPanel } from "./foundation-offer-skills";
 import { ProviderProfile } from "./foundation-profile";
 import { DirectLineFromQuote, DirectLineFromThread, type DirectLineCredentials } from "./foundation-direct-line";
@@ -15,6 +15,8 @@ import { FoundationInstantCallController } from "./foundation-instant-call";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { failureText } from "@/lib/errors/client-failure";
+import { reportError } from "@/lib/observability/report";
 
 const CSRF_HEADERS = { "Content-Type": "application/json", "x-ctf-csrf": "1" };
 
@@ -78,11 +80,13 @@ function buildFoundationSearchParams(searchTerm: string, skillId: string | null)
   return params.toString();
 }
 
+// A failed search throws with the route's reason, so it shows as an error rather than as an empty
+// browse list that reads as nobody offering anything.
 async function fetchFoundationProviders(
   queryString: string,
-): Promise<{ items: ProviderView[]; viewerUserId: string | null } | null> {
+): Promise<{ items: ProviderView[]; viewerUserId: string | null }> {
   const res = await fetch(`/api/foundation/providers/search?${queryString}`);
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(await foundationErrorMessage(res, "Could not search providers."));
   const data = (await res.json()) as { items?: ProviderView[]; viewerUserId?: string };
   return { items: data.items ?? [], viewerUserId: data.viewerUserId ?? null };
 }
@@ -131,9 +135,11 @@ type FoundationMainScreenProps = {
   searchTerm: string;
   quotes: QuoteView[];
   onOpenDirectLine: (quote: QuoteView) => void;
-  onRespond: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
-  onClose: (quote: QuoteView) => Promise<boolean>;
+  onRespond: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<QuoteTransitionResult>;
+  onClose: (quote: QuoteView) => Promise<QuoteTransitionResult>;
   onRefresh: () => void;
+  // Set when a shared provider link could not be opened; shown above the browse list.
+  deepLinkError?: string | null;
 };
 
 const FOUNDATION_TABS: { key: FoundationTab; label: string }[] = [
@@ -178,6 +184,7 @@ function FoundationMainScreen(props: FoundationMainScreenProps) {
           </div>
         )}
       </div>
+      {props.deepLinkError ? <div role="alert" style={{ margin: "12px 14px 0", fontSize: 13, color: "#EF4444", lineHeight: 1.5 }}>{props.deepLinkError}</div> : null}
       <FoundationTabContent {...props} />
     </div>
   );
@@ -231,6 +238,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   const [submitting, setSubmitting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
+  const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   // The Direct Line opened straight after Request Quote, holding the Stream credentials the thread
   // POST returned, plus the provider name to show in the heading.
   const [activeDirectLine, setActiveDirectLine] = useState<{ credentials: DirectLineCredentials; subtitle: string | null; providerUserId?: string | null } | null>(null);
@@ -246,12 +254,13 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
   // Trade filter has no client-side field to match on; it scopes the server search query.
   const searchTerm = [trade === "All Trades" ? "" : trade, query].filter(Boolean).join(" ").trim();
 
+  // Throws with the route's reason on a failed read, so the Quotes tab is never shown empty because
+  // the history could not be read.
   const loadQuotes = useCallback(async () => {
     const res = await fetch("/api/foundation/quotes/history");
-    if (res.ok) {
-      const data = (await res.json()) as { items?: QuoteView[] };
-      setQuotes(data.items ?? []);
-    }
+    if (!res.ok) throw new Error(await foundationErrorMessage(res, "Could not load your quotes."));
+    const data = (await res.json()) as { items?: QuoteView[] };
+    setQuotes(data.items ?? []);
   }, []);
 
   useEffect(() => {
@@ -267,10 +276,8 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
           loadQuotes(),
         ]);
         if (!active) return;
-        if (search) {
-          setProviders(search.items);
-          setViewerUserId(search.viewerUserId);
-        }
+        setProviders(search.items);
+        setViewerUserId(search.viewerUserId);
       } catch (e: unknown) {
         if (active) setError(toErrorMessage(e, "Failed to load Foundation."));
       } finally {
@@ -293,13 +300,20 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
     (async () => {
       try {
         const res = await fetch(`/api/foundation/providers/${encodeURIComponent(initialProviderId)}`, { signal: controller.signal });
-        if (!res.ok || controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        if (!res.ok) {
+          const reason = await foundationErrorMessage(res, "The profile this link points to could not be read.");
+          if (!controller.signal.aborted) setDeepLinkError(`This provider link could not be opened. ${reason}`);
+          return;
+        }
         const data = (await res.json()) as { provider?: ProviderView; viewerUserId?: string };
         if (controller.signal.aborted) return;
         if (data.viewerUserId) setViewerUserId(data.viewerUserId);
         if (data.provider) setSelected(data.provider);
-      } catch {
-        // Aborted or unavailable: the browse view stays open instead of the deep-linked profile.
+      } catch (caught) {
+        // Aborted means the page moved on; anything else is said, and browse stays open beneath it.
+        if (controller.signal.aborted) return;
+        setDeepLinkError(failureText(caught, { area: "foundation", op: "open_provider_link", fallback: "This provider link could not be opened.", audience: "member" }));
       }
     })();
     return () => controller.abort();
@@ -330,8 +344,9 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       if (!quoteRes.ok) throw new Error(await foundationErrorMessage(quoteRes, "Could not submit the quote request."));
 
       setQuoteSuccess(true);
-      // Refresh quotes in the background; do not block landing in the Direct Line on it.
-      void loadQuotes();
+      // Refresh quotes in the background; do not block landing in the Direct Line on it. The request
+      // itself succeeded, so a failed re-read is reported rather than shown as a failed request.
+      loadQuotes().catch((caught: unknown) => reportError(caught, { area: "foundation", op: "quotes_reload_after_request" }));
       setSelected(null);
 
       // Land in the Direct Line when Stream credentials were issued; otherwise fall back to the
@@ -428,6 +443,7 @@ export function FoundationShell({ isAdmin, initialProviderId }: { isAdmin?: bool
       onRespond={respondToQuote}
       onClose={closeQuote}
       onRefresh={() => setRefreshKey((k) => k + 1)}
+      deepLinkError={deepLinkError}
     />,
   );
 }
