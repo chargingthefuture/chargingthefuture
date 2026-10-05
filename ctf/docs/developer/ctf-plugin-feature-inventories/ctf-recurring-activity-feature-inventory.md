@@ -221,6 +221,15 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-10-05: **Confirm, decline, end and visibility work again.** The four
+  `POST /api/recurring-activity/[activityId]/*` routes read the path value synchronously, but this
+  Next.js version hands route handlers their params as a Promise, so `activityId` was always
+  `undefined`. Every call found no row and answered 404 `Activity not found.` with a deny audit row
+  whose `activity_id` was null, so no activity could leave `pending`, none could be ended, and no
+  visibility change was saved. The routes now await `context.params`. A value that is not a UUID is
+  answered with the same 404 before the database is touched (`isRecurringActivityId` in
+  `lib/recurring-activity/_lib.ts`), where before it would have made Postgres throw and the route
+  answer 503. Who may call each route is unchanged.
 - 2026-08-03 (third pass): **Closed the last two inventory gaps.** (1) **Cadence normalization**
   (Gaps #2): a declared ServiceCredits value is now scaled to a monthly figure by the line's cadence
   before it is counted — weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3 — in the live
