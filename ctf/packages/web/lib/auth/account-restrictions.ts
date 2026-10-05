@@ -1,4 +1,5 @@
-import { queryDb } from 'lib/db/postgres';
+import type { PoolClient } from 'pg';
+import { queryDb, withDbTransaction } from 'lib/db/postgres';
 
 // Platform-wide account-restriction signal. One canonical record (account_restrictions) supersedes the
 // per-plugin flags (TrustTransport account_restricted, ServiceCredits wallet is_frozen). A restriction
@@ -90,13 +91,14 @@ export async function getAnyAccountRestriction(userId: string): Promise<AccountR
 }
 
 async function insertAccountRestrictionAudit(
+  client: Pick<PoolClient, 'query'>,
   actorId: string,
   action: 'restrict' | 'unrestrict',
   targetUserId: string,
   scope: RestrictionScope | null,
   reason: string | null,
 ): Promise<void> {
-  await queryDb(
+  await client.query(
     `INSERT INTO account_restrictions_audit (actor_id, action, target_user_id, scope, reason)
      VALUES ($1, $2, $3, $4, $5)`,
     [actorId, action, targetUserId, scope, reason],
@@ -104,6 +106,9 @@ async function insertAccountRestrictionAudit(
 }
 
 // Restrict a member at the given scope (default 'all'). Idempotent upsert; writes an audit row.
+// The restriction and its audit row are written in one transaction: when they were two separate
+// writes, a failed audit insert left the restriction saved, the caller reported it as failed, and
+// the audit trail had no record of a change that had happened.
 export async function restrictAccount(input: {
   targetUserId: string;
   actorId: string;
@@ -113,33 +118,43 @@ export async function restrictAccount(input: {
   const scope: RestrictionScope = input.scope ?? 'all';
   const reason = input.reason ?? null;
 
-  await queryDb(
-    `INSERT INTO account_restrictions
-       (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason, updated_at)
-     VALUES ($1, TRUE, $2, NOW(), $3, $4, NOW())
-     ON CONFLICT (user_id)
-     DO UPDATE SET is_restricted = TRUE, restriction_scope = EXCLUDED.restriction_scope,
-       restricted_at = NOW(), restricted_by_user_id = EXCLUDED.restricted_by_user_id,
-       restriction_reason = EXCLUDED.restriction_reason, updated_at = NOW()`,
-    [input.targetUserId, scope, input.actorId, reason],
-  );
+  return withDbTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO account_restrictions
+         (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason, updated_at)
+       VALUES ($1, TRUE, $2, NOW(), $3, $4, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET is_restricted = TRUE, restriction_scope = EXCLUDED.restriction_scope,
+         restricted_at = NOW(), restricted_by_user_id = EXCLUDED.restricted_by_user_id,
+         restriction_reason = EXCLUDED.restriction_reason, updated_at = NOW()`,
+      [input.targetUserId, scope, input.actorId, reason],
+    );
 
-  await insertAccountRestrictionAudit(input.actorId, 'restrict', input.targetUserId, scope, reason);
-  return { targetUserId: input.targetUserId, restricted: true, scope };
+    await insertAccountRestrictionAudit(client, input.actorId, 'restrict', input.targetUserId, scope, reason);
+    return { targetUserId: input.targetUserId, restricted: true as const, scope };
+  });
 }
 
-// Lift a member's restriction. Writes an audit row.
+// Lift a member's restriction. Only a restriction that is in force is lifted, and only that writes
+// an audit row: `changed` is false when there was nothing to lift (never restricted, already lifted,
+// or an id with no row), so no caller is told a change happened and the audit trail records none.
+// The lift and its audit row are written in one transaction, for the same reason as above.
 export async function unrestrictAccount(input: {
   targetUserId: string;
   actorId: string;
-}): Promise<{ targetUserId: string; restricted: false }> {
-  await queryDb(
-    `UPDATE account_restrictions SET is_restricted = FALSE, updated_at = NOW() WHERE user_id = $1`,
-    [input.targetUserId],
-  );
-
-  await insertAccountRestrictionAudit(input.actorId, 'unrestrict', input.targetUserId, null, null);
-  return { targetUserId: input.targetUserId, restricted: false };
+}): Promise<{ targetUserId: string; restricted: false; changed: boolean }> {
+  return withDbTransaction(async (client) => {
+    const result = await client.query(
+      `UPDATE account_restrictions SET is_restricted = FALSE, updated_at = NOW()
+        WHERE user_id = $1 AND is_restricted = TRUE`,
+      [input.targetUserId],
+    );
+    const changed = (result.rowCount ?? 0) > 0;
+    if (changed) {
+      await insertAccountRestrictionAudit(client, input.actorId, 'unrestrict', input.targetUserId, null, null);
+    }
+    return { targetUserId: input.targetUserId, restricted: false as const, changed };
+  });
 }
 
 export type AccountRestrictionAuditEntry = {
