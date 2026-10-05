@@ -189,9 +189,10 @@
     {
       "name": "directory",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T04:13:20.881Z",
+      "lastReviewedAt": "2026-10-05T12:23:38.257Z",
       "lastRunIssues": 8,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:23:38.257Z"
     },
     {
       "name": "economic-models-package",
