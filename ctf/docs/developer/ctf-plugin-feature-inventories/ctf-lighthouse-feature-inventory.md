@@ -357,6 +357,13 @@ Contract expectations:
    reusing the profile row mapping, which is what keeps that true as the table grows. `GET
    /api/lighthouse/wanted` is member-gated, has no write method, and hides postings in both
    directions of a block.
+9. **The exact address is shown only once a stay is agreed** (2026-10-05). `GET
+   /api/lighthouse/properties` and `GET /api/lighthouse/properties/:id` return `addressLine` and
+   `zipCode` only to the host, an admin or operations reader, and a seeker whose match on that
+   listing is `accepted`; every other reader gets `null` for both and still sees city, state and
+   country. The rule is applied in the SQL (`exactAddressColumnsSql` in
+   `lib/lighthouse/repository.ts`), so the columns never leave the database for a reader who may
+   not have them. `GET /api/lighthouse/my-properties` and the admin listing read are unchanged.
 
 ## 6) Web and Android Delivery Status
 
@@ -390,6 +397,14 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-10-05: **A listing's street address and postal code no longer go to every member (#2810).**
+  The browse and detail reads returned both fields to any approved member from the moment a listing
+  was created, though no member screen showed them, so a host who typed their home address had
+  handed it to every member, including people they would never accept. The two reads now return
+  them only to the host, an admin, and a seeker whose match on that listing is accepted, and `null`
+  to everyone else (§5 item 9). City, state and country are unchanged for browsing. The host's edit
+  form still prefills from the detail read, because the host is the owner. No schema or screen
+  change; the access policy contract gains `exactAddressDisclosure` on `lighthouse.property.create`.
 - 2026-09-15: **A member can publish what they are looking for, not only what they have to offer
   (owner report).** LightHouse showed one side of the market. A member weighing up offering a room
   saw other people's listings and nothing about whether anyone needed one, and the side with the most
