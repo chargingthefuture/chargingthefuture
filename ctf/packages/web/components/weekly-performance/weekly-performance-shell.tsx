@@ -49,6 +49,39 @@ function routeReason(res: Response): Promise<string> {
   return responseFailureText(res, "the route gave no reason.", "member");
 }
 
+async function readWeekMetrics(
+  weekStartDate: string,
+): Promise<{ ok: true; metrics: WpMetric[] } | { ok: false; error: string }> {
+  const metricsRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`, { cache: "no-store" });
+  if (metricsRes.ok) {
+    return { ok: true, metrics: ((await metricsRes.json()) as MetricsResponse).metrics ?? [] };
+  }
+  // A failed read used to leave the cards empty and the placeholder saying the numbers were
+  // loading, which is indistinguishable from a slow read and never resolves. Say what failed
+  // instead (rule 137), with the route's own message when it gives one.
+  const body = (await metricsRes.json().catch(() => null)) as { message?: string } | null;
+  return {
+    ok: false,
+    error: `Could not load this week's numbers (${metricsRes.status})${body?.message ? `: ${body.message}` : "."}`,
+  };
+}
+
+// The prior-week comparison. `comparison` is left undefined when nothing should replace what is on
+// screen: there is no prior week to compare against, or its read failed.
+async function readComparison(
+  weekStartDate: string,
+  compareWeekStartDate: string | null,
+): Promise<{ comparison?: WpComparison | null; notice: string | null }> {
+  if (!compareWeekStartDate) return { notice: null };
+  const cmpRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}&compareWeekStartDate=${encodeURIComponent(compareWeekStartDate)}`, { cache: "no-store" });
+  if (cmpRes.ok) {
+    return { comparison: ((await cmpRes.json()) as ComparisonResponse).comparison ?? null, notice: null };
+  }
+  // Without this the cards read "No prior-week comparison", which says there is no prior data
+  // when the read actually failed.
+  return { notice: `Could not load the prior week for comparison (${cmpRes.status}): ${await routeReason(cmpRes)}` };
+}
+
 async function fetchShellData(): Promise<ShellData> {
   const [weeksRes, currentRes] = await Promise.all([
     fetch("/api/weekly-performance/weeks", { cache: "no-store" }),
@@ -112,35 +145,17 @@ export function WeeklyPerformanceShell() {
       setComparison(null);
       setWeekLoading(true);
     }
-    const metricsRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`, { cache: "no-store" });
-    if (metricsRes.ok) {
-      setMetrics(((await metricsRes.json()) as MetricsResponse).metrics ?? []);
+    const week = await readWeekMetrics(weekStartDate);
+    if (week.ok) {
+      setMetrics(week.metrics);
       setError(null);
     } else {
-      // A failed read used to leave the cards empty and the placeholder saying the numbers were
-      // loading, which is indistinguishable from a slow read and never resolves. Say what failed
-      // instead (rule 137), with the route's own message when it gives one.
-      const body = (await metricsRes.json().catch(() => null)) as { message?: string } | null;
-      setError(
-        `Could not load this week's numbers (${metricsRes.status})${body?.message ? `: ${body.message}` : "."}`,
-      );
+      setError(week.error);
     }
     if (!silent) setWeekLoading(false);
-    if (compareWeekStartDate) {
-      const cmpRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}&compareWeekStartDate=${encodeURIComponent(compareWeekStartDate)}`, { cache: "no-store" });
-      if (cmpRes.ok) {
-        setComparison(((await cmpRes.json()) as ComparisonResponse).comparison ?? null);
-        setComparisonNotice(null);
-      } else {
-        // Without this the cards read "No prior-week comparison", which says there is no prior data
-        // when the read actually failed.
-        setComparisonNotice(
-          `Could not load the prior week for comparison (${cmpRes.status}): ${await routeReason(cmpRes)}`,
-        );
-      }
-    } else {
-      setComparisonNotice(null);
-    }
+    const prior = await readComparison(weekStartDate, compareWeekStartDate);
+    if (prior.comparison !== undefined) setComparison(prior.comparison);
+    setComparisonNotice(prior.notice);
   }, []);
 
   useEffect(() => {
