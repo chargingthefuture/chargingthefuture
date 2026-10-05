@@ -6,7 +6,9 @@ import { useState } from "react";
 import { reportError } from "lib/observability/report";
 import { getSkillUpTokens, idempotencyKey, type Enrollment, enrollmentPct } from "./su-shared";
 
-const STEPS = ["Choose a cohort", "Pay credits into escrow", "Complete milestones", "Trainer validates & credits release"];
+// The deposit is held and comes back to the learner; it is never a payment (CLAUDE.md "Credits Are
+// Not Money"), the same reason the cohort card says "Returnable deposit".
+const STEPS = ["Choose a cohort", "Hold a returnable deposit in escrow", "Complete milestones", "Trainer validates & credits release"];
 
 // What to say on a cohort that has no milestones to show a bar for. The default line assumes the
 // cohort simply has not started; a finished or left cohort needs its own line so it is not described

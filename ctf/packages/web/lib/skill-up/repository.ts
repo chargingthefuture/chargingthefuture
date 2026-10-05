@@ -1792,7 +1792,11 @@ export async function getSkillUpWalletView(userId: string) {
     .filter((entry) => entry.amount > 0)
     .sort((a, b) => (a.earnedAtIso < b.earnedAtIso ? 1 : -1));
 
-  const totalEarned = roundCurrency(history.reduce((sum, entry) => sum + entry.amount, 0));
+  // A milestone_release row is the learner's own deposit coming back, not a grant, so it is left out
+  // of "Earned through SkillUp" (the wallet's Earned tab leaves it out the same way). Display only.
+  const totalEarned = roundCurrency(
+    history.filter((entry) => entry.kind !== 'milestone_release').reduce((sum, entry) => sum + entry.amount, 0),
+  );
 
   return {
     availableBalance: wallet.availableBalance,
