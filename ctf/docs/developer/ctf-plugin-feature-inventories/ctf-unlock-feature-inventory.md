@@ -464,6 +464,17 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-05: **Admin Quora history reads are audited against the member, and the denylist panel
+  shows the route's reason (code-review #2788, #2805).** (1) `GET /api/unlock/admin/quora-history`
+  wrote its `unlock.admin.quora.history.read` audit row with the member's id only inside `metadata`,
+  so `target_user_id` was null and a query by target id missed every admin read of a member's URL
+  history. It now passes `targetUserId`, as the audit contract's `targetContext` already names it, and
+  keeps `count` in metadata. Rows written before this change still carry the id in metadata only.
+  (2) The spam denylist panel's Remove read only `reason` and `code` from a failed answer, but the
+  remove route and the CSRF guard answer with `message`, so an admin saw "Remove failed (503)." in
+  place of the route's sentence. It now reads `message` first, like the other admin actions in this
+  plugin. No schema, route shape or contract change.
+
 - 2026-09-26: **Help for members stuck on the Quora profile URL.** The Unlock screen's help box and the Commons banner's help note were two versions of the same ask; they are now one component with the hint box in both places, plus a picture (`public/help/quora-profile-url.svg`, an illustration rather than a capture of Quora) and steps for the four ways members get stuck. A member not yet approved who asks @comic about Unlock gets a scripted answer built from the same steps, sent without review (owner decision; switchable from the log page), and `/admin/comic/unlock-help` lists each such conversation against whether the member was approved afterward. No change to who is approved or how: the assistant has no way to approve anybody. See the comic and commons inventories for those halves.
 
 - 2026-09-24: **A database update removed one spam denylist entry and did not put it back.** `post/0028` (the Quora URL re-keying) deleted the denylist rows and re-inserted them from a TEMP table; on the 2026-09-24 "Neon — Update DB" run the connection pooler ran the re-insert on a different session, the TEMP table was not there, and the deleted row stayed deleted. `post/0028` now runs in one transaction, so a failure undoes the delete. `post/0040` rebuilds missing entries from submissions marked `spam`, except a URL an admin removed from the denylist after that decision. An entry whose submission was deleted with its account cannot be rebuilt from the database.
