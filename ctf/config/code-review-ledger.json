@@ -541,9 +541,10 @@
     {
       "name": "skills-hunt",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-08T09:03:30.711Z",
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:28:12.216Z",
+      "lastRunIssues": 11,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:28:12.217Z"
     },
     {
       "name": "skills-taxonomy",
