@@ -495,6 +495,8 @@ and read from `CHYME_MAX_PARTICIPANTS`, `CHYME_MAX_GUEST_LISTENERS`, `CHYME_RED_
    tile and, in the app, try an invite anyway.
 6. Lower it until the meter reads 95% or more (Red) with `CHYME_RED_BAND_MAX_PARTICIPANTS=2`.
    Reload the room.
+7. With `CHYME_MAX_PARTICIPANTS=1`, join as member A on web and switch to another tab for over a
+   minute. While A is away, join as member B. Return to A's tab.
 **Expected:** Step 1 reads the plain count — "1 participant · Signed in as @you" — with no cap
 named; the cap appears only from 80% of it ("40 of 50 participants · nearly full") and at it
 ("50 of 50 participants · full"), on web and on the Android room card alike (M is the cap in
@@ -511,8 +513,10 @@ says listening without an account and Back Channel calls are paused until next m
 page shows "The room is live — sign in to join it." with the paused reason and no Tap to listen
 button; the Back Channel tile action is gone, and a forced invite is answered 503 with the paused
 reason. Step 6: the notice turns red and names the cap ("the room holds 2 people at a time"); the
-header reads "N of 2"; a third member is refused as in step 2. On every step the same server line
-appears on web and android — neither platform has its own wording.
+header reads "N of 2"; a third member is refused as in step 2. Step 7 (since 2026-10-05): A's
+first heartbeat back answers 409 with the same "This room is full right now…" sentence, shown in
+place of A's stage with Leave; the room still reads "1 of 1", never "2 of 1". On every step the
+same server line appears on web and android — neither platform has its own wording.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -574,7 +578,8 @@ when, and the main room is where.
 4. As A, tap **Raise Hand**. As the admin, tap **Let speak** under A; then, later, **Listening**.
 5. As the admin, tap **Remove** under B and confirm. As B, press Join again. Open `/admin/chyme`
    as the admin, find B under **Removed members**, tap **Let back in**; as B, press Join again.
-6. Switch the room back to **Open mic**. As A, look at the control row.
+6. Switch the room back to **Open mic**. As A, look at the control row. Then switch to
+   **Hand-raise mode** again and have a third member C join the room afterwards.
 7. As the admin, with Stream unreachable (or after the call has ended), tap **Mute** under A.
 **Expected:** Step 1: the admin sees Mute and Remove under every other member's tile and the speak-mode
 switch reading "Open mic" in the control row; A sees neither under anybody's tile and no switch.
@@ -587,7 +592,10 @@ returns and A can unmute; after **Listening** A's microphone is off again and th
 Step 5: B drops from the call and from the count at once; B's Join answers "An admin removed you
 from this room. You can come back once an admin lets you back in." in place of the stage (web
 error banner; android alert); the admin screen lists B with the room and time; after **Let back
-in** B's Join works. Step 6: everyone's microphone control is back and A can unmute. Step 7: the
+in** B's Join works. Step 6: everyone's microphone control is back and A can unmute, and with
+`CHYME_GUEST_STREAM_ROLE` set Stream accepts A's audio (the switch to open put everyone present back
+on the default Stream role). C joins listening; with that role set, C cannot publish audio even from
+a client that ignores the mode, because the join gave C the listener role on the call. Step 7: the
 action is recorded and the control shows one amber line beginning "Recorded, but Stream did not
 apply it in the call:" with Stream's reason — never a silent failure and never a 500. Every step
 writes a row in `chyme_admin_audit_trail`.

@@ -27,26 +27,28 @@ async function requirePresent(client: PoolClient, roomId: string, userId: string
 }
 
 // Set the room's speak mode. Switching to hand-raise turns everyone present except the admin
-// making the switch into a listener, and returns their ids so the route can mute them in the call;
-// switching to open leaves the rows alone (the role column is not read in open mode).
+// making the switch into a listener, and returns their ids so the route can mute them and give
+// them the listener role in the call. Switching to open leaves the rows alone (the role column is
+// not read in open mode) and returns everyone present as `restoredUserIds`, so the route can put
+// them back on the default role in the call.
 export async function setRoomSpeakMode(
   roomKey: string,
   mode: ChymeSpeakMode,
   actor: IdentityInput,
-): Promise<{ demotedUserIds: string[] }> {
+): Promise<{ demotedUserIds: string[]; restoredUserIds: string[] }> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
     await client.query(`UPDATE chyme_rooms SET speak_mode = $2, updated_at = NOW() WHERE id = $1`, [room.id, mode]);
-    if (mode !== 'hand_raise') {
-      return { demotedUserIds: [] };
-    }
     const present = await listRoomParticipants(client, room.id);
+    if (mode !== 'hand_raise') {
+      return { demotedUserIds: [], restoredUserIds: present.map((participant) => participant.userId) };
+    }
     const demotedUserIds = present.map((participant) => participant.userId).filter((userId) => userId !== actor.userId);
     await client.query(
       `UPDATE chyme_room_members SET role = CASE WHEN user_id = $2 THEN 'speaker' ELSE 'listener' END WHERE room_id = $1`,
       [room.id, actor.userId],
     );
-    return { demotedUserIds };
+    return { demotedUserIds, restoredUserIds: [] };
   });
 }
 
