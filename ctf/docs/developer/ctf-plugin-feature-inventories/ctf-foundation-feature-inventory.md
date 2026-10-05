@@ -186,6 +186,14 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 ## Change Log
 
 - 2026-10-05: **The instant-call ring no longer names the caller and Foundation on a discreet lock screen (#2953).** The ring push was built with the caller's name and the plugin name and never read the callee's notification settings, so a member who left discreet pings on (the default) still got a lock-screen alert saying who was calling and through which service. Both pushes now send the generic text while discreet pings are on (Security item 11). No schema, route or contract change. Test script step FDN-37b added.
+- 2026-10-05: **The active-call poll keeps going after a failed read (#2959).** `useActiveCallPoll`
+  in `components/foundation/foundation-instant-call.tsx` returned before scheduling its next tick on
+  any non-OK answer or an answer without a call. One 503 ended polling for the rest of the call. A
+  caller then stayed on the ringing screen after an answer, a callee never got the audio
+  credentials, and nothing on the client followed the paid window ending. Any failed read except a
+  404 (the call no longer exists for this member, which stopped polling before too) is now retried
+  on the next tick. A run of failures is reported once (op `instant_call_poll`). No schema, route or
+  contract change. Test script step FDN-21b added.
 - 2026-10-03: **Direct Line message box stayed one line, so long messages scrolled out of view (bug
   fix, owner report).** The shared chat panel (`components/shared/stream-chat-panel.tsx`) rendered
   Stream's `MessageInput` without `grow`, and Stream pins the textarea to one row when `grow` is

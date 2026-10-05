@@ -505,6 +505,29 @@ Result: web ☐
 
 ---
 
+### FDN-21b — Instant call: one failed state read does not stop the call being followed (added 2026-10-05)
+
+**Role:** Member (survivor, caller) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** Same as FDN-20. Browser dev tools open on the caller.
+
+**Steps:**
+1. Caller rings the provider.
+2. On the caller, block `GET /api/foundation/connections/instant-calls/<callId>` for a few seconds
+   (dev tools → request blocking), then unblock it.
+3. As callee: click "Answer" while the block is still on, then unblock.
+
+**Expected:** While the read is blocked the caller's overlay stays on the ringing screen. Once it is
+unblocked, the next poll (every 2 seconds) picks the call up and the caller moves to the in-call
+state, as in FDN-21. Polling never stops after one failed read. It stops only when the call ends,
+is declined or times out, or when the call no longer exists for the member (404). A run of failed
+reads is reported once (Sentry op `instant_call_poll`, area `foundation`).
+
+Result: web ☐
+
+---
+
 ### FDN-22 — Instant call: extend charges another block
 
 **Role:** Member (survivor, caller)
