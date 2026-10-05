@@ -448,9 +448,10 @@
     {
       "name": "quora-motd",
       "type": "plugin",
-      "lastReviewedAt": null,
+      "lastReviewedAt": "2026-10-05T01:20:31.270Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T01:20:31.270Z"
     },
     {
       "name": "reader",
