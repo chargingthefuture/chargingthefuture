@@ -1,4 +1,5 @@
 import { isOllamaConfigured } from 'lib/chatbot/ollama';
+import { reportError } from 'lib/observability/report';
 import { getUnlockAccessTier } from 'lib/shared/unlock-interface';
 import { isUnlockHelpSentWithoutReview } from './runtime-config';
 import {
@@ -30,7 +31,8 @@ function pickScriptedAnswer(helpCase: UnlockHelpCase, sendWithoutReview: boolean
 // Null for anything that is not an Unlock question from a member still waiting on Unlock: an
 // ordinary question, a safety-flagged one (those stay human-first with no draft of any kind), or one
 // from an approved member, who has nothing left to unlock. The tier read is best-effort; if it fails
-// the question is treated as ordinary rather than blocking the message.
+// the question is treated as ordinary rather than blocking the message, and the failure is reported
+// so a skipped scripted answer can be told apart from one skipped by design.
 export async function planUnlockHelp(
   actorId: string,
   questionBody: string,
@@ -39,7 +41,10 @@ export async function planUnlockHelp(
   if (safetyFlagged) return null;
   const helpCase = classifyUnlockHelpQuestion(questionBody);
   if (!helpCase) return null;
-  const tier = await getUnlockAccessTier(actorId).catch(() => 'approved_full' as const);
+  const tier = await getUnlockAccessTier(actorId).catch((error: unknown) => {
+    reportError(error, { area: 'comic', op: 'unlock_help_tier_read' });
+    return 'approved_full' as const;
+  });
   if (tier === 'approved_full') return null;
   const sendWithoutReview = await isUnlockHelpSentWithoutReview();
   return {

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { ComicTokens } from "./comic-shared";
+import { failureText } from "lib/errors/client-failure";
 
 // One row of comic_admin_audit_trail, as the admin route returns it.
 type AuditEvent = {
@@ -116,8 +117,8 @@ export function ComicAuditPanel({ tokens: t }: { tokens: ComicTokens }) {
       }
       const data = (await res.json()) as { events?: AuditEvent[] };
       setEvents(data.events ?? []);
-    } catch {
-      setErr("Could not load the audit trail.");
+    } catch (caught) {
+      setErr(failureText(caught, { area: "comic", op: "admin_audit_events", fallback: "Could not load the audit trail." }));
     } finally {
       setLoading(false);
     }
