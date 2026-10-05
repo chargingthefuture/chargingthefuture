@@ -336,9 +336,10 @@
     {
       "name": "lighthouse",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T02:28:12.465Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:22:27.973Z",
+      "lastRunIssues": 17,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:22:27.973Z"
     },
     {
       "name": "mobile-shell",
