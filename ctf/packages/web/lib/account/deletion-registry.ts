@@ -698,6 +698,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Everything you wrote under a blog post, and every reaction you left.',
     serviceScopeSupported: true,
     tables: [
+      // Replies other members wrote under these comments stay. A comment somebody else answered is
+      // emptied and kept before this runs (`runInTransactionSteps` in the orchestrator), so it no
+      // longer carries this member's id and the delete skips it; and parent_comment_id is ON DELETE
+      // SET NULL (post/0051), so no deleted comment can take a reply with it.
       del('fireside_comments', 'author_user_id', 'Your comments, including any still waiting on approval.'),
       del('fireside_reactions', 'reactor_user_id', 'Your reactions.'),
       // A thread is a reference to a blog post, not anything about a person; an empty one holds
