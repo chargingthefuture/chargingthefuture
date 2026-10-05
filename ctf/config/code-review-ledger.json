@@ -176,9 +176,10 @@
     {
       "name": "currency",
       "type": "module",
-      "lastReviewedAt": "2026-08-04T23:38:50.123Z",
+      "lastReviewedAt": "2026-10-05T12:39:51.188Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:39:51.188Z"
     },
     {
       "name": "db",
