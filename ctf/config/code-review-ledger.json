@@ -435,9 +435,10 @@
     {
       "name": "quora-deletion-survey",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T01:21:45.999Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T01:21:46.000Z"
     },
     {
       "name": "quora-live-census",
