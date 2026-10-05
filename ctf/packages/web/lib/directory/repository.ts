@@ -17,6 +17,7 @@ import {
 } from './constants';
 import { recordTrainerSkillChanges, type TrainerSkillChange } from 'lib/shared/skill-up-interface';
 import { normalizeQuoraProfileUrl } from './quora-url';
+import { lockAccountProfileClaim, OWNED_PROFILE_ORDER_SQL } from './profile-claim';
 import type {
   DirectoryAnnouncement,
   DirectoryAnnouncementInput,
@@ -690,6 +691,7 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE p.claimed_by_user_id = $1
+      ORDER BY ${OWNED_PROFILE_ORDER_SQL}
       LIMIT 1
     `,
     [userId],
@@ -940,8 +942,11 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
+    // Two saves landing together would both find nothing and both insert, leaving the account with
+    // two listings; the lock makes the second wait and then find the first one's row.
+    await lockAccountProfileClaim(client, userId);
     const existing = await client.query<{ id: string; profile_url: string | null }>(
-      'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+      `SELECT id, profile_url FROM directory_profiles p WHERE claimed_by_user_id = $1 ORDER BY ${OWNED_PROFILE_ORDER_SQL} LIMIT 1`,
       [userId],
     );
 
@@ -1458,7 +1463,7 @@ export async function listDirectoryAnnouncements(publicOnly = true): Promise<Dir
  * an ordinary delete and is suppressed only when the admin uses the takedown control and says why.
  *
  * Runs on a caller-owned client so it commits or rolls back with the rest of the member's deletion.
- * Returns the deleted profile's id, or null when the member had claimed nothing.
+ * Returns the deleted profiles' ids, empty when the member had claimed nothing.
  */
 /**
  * Recorded against the suppression a member's own removal creates, so an admin reading the
@@ -1470,19 +1475,31 @@ export async function removeClaimedDirectoryProfile(
   client: PoolClient,
   userId: string,
   reason: string,
-): Promise<string | null> {
+): Promise<string[]> {
+  // Every listing the account owns, not just one. An account should own at most one, and the claim
+  // writers now refuse a second, but accounts given a second listing before that check keep both
+  // until an admin resolves them; removing only one left the other live and claimed after the member
+  // asked for their data to go.
   const existing = await client.query<{ id: string; profile_url: string | null }>(
-    'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+    `SELECT id, profile_url FROM directory_profiles p WHERE claimed_by_user_id = $1 ORDER BY ${OWNED_PROFILE_ORDER_SQL}`,
     [userId],
   );
 
-  if (existing.rows.length === 0) {
-    return null;
+  const removedIds: string[] = [];
+  for (const row of existing.rows) {
+    await removeOneClaimedProfile(client, userId, reason, row.id, row.profile_url);
+    removedIds.push(row.id);
   }
+  return removedIds;
+}
 
-  const profileId = existing.rows[0].id;
-  const profileUrl = existing.rows[0].profile_url;
-
+async function removeOneClaimedProfile(
+  client: PoolClient,
+  userId: string,
+  reason: string,
+  profileId: string,
+  profileUrl: string | null,
+): Promise<void> {
   // Record the skills as removed before they go: otherwise a trainer could clear the credential they
   // claimed a cohort on and leave no trace. Written while the profile row still exists, matching the
   // order the other delete paths use.
@@ -1509,7 +1526,6 @@ export async function removeClaimedDirectoryProfile(
     );
   }
 
-  return profileId;
 }
 
 export async function deleteOwnDirectoryProfile(userId: string): Promise<{ requestedAtIso: string }> {
@@ -1962,8 +1978,12 @@ export async function assignAdminProfile(
   actorId: string,
   profileId: string,
   userId: string,
-): Promise<DirectoryProfile | 'already_claimed' | null> {
+): Promise<DirectoryProfile | 'already_claimed' | 'account_has_profile' | null> {
   return withDbTransaction(async (client) => {
+    // Held to the end of the transaction, so a member's own first save cannot slip in between the
+    // check below and the claim.
+    await lockAccountProfileClaim(client, userId);
+
     // Compare ids as text: directory_profiles.id carried over from v2 as varchar,
     // so casting the bind param to ::uuid against a varchar column fails to plan
     // (and throws "invalid input syntax for type uuid" for non-uuid v2 ids). Cast
@@ -1997,6 +2017,28 @@ export async function assignAdminProfile(
       );
 
       return 'already_claimed';
+    }
+
+    // One listing per account. Every reader of "the member's profile" takes one row, so a second
+    // claimed listing would be edited, shown to One Percent, or removed on deletion depending on which
+    // row a read happened to return. The admin deletes or merges one listing first.
+    const owned = await client.query<{ id: string }>(
+      'SELECT id::text AS id FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+      [userId],
+    );
+    if (owned.rows.length > 0) {
+      await client.query(
+        `
+          INSERT INTO directory_profile_change_events
+            (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+          VALUES
+            ($1, 'directory.admin.profile.assign', 'deny', 'account_already_owns_profile', 'profile', $2,
+             jsonb_build_object('assignedUserId', $3::text, 'ownedProfileId', $4::text))
+        `,
+        [actorId, profileId, userId, owned.rows[0].id],
+      );
+
+      return 'account_has_profile';
     }
 
     await client.query(

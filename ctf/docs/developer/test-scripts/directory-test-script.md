@@ -486,10 +486,13 @@ one transaction, so the header counts read 0 as well. The gate
    profile.
 2. From `/admin/directory`, assign an unclaimed profile to a user id.
 3. Try to attach a profile that another member already claimed.
+4. Try to attach a different unclaimed profile to the account you used in step 2, which now owns one.
 **Expected:** Both the inline control and the dedicated page assign an unclaimed profile. After
 attach, the profile reads as claimed and the inline section stops rendering. Reassigning a profile
 that is already claimed by another member is blocked (a `409` / claimed-profile guard, recorded as a
-deny event) — an admin cannot silently overwrite another member's claim.
+deny event) — an admin cannot silently overwrite another member's claim. Step 4 is refused with a
+`409` saying the account already owns a Directory profile and can own only one; the second profile
+stays unclaimed, and the audit log shows the refusal (#2833).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2b · A profile keeps its nominator after it is claimed (added 2026-09-30)
