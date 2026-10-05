@@ -364,9 +364,10 @@
     {
       "name": "mutual-time",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-21T09:07:33.219Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:34:28.219Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:34:28.220Z"
     },
     {
       "name": "nav",
