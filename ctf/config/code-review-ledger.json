@@ -474,9 +474,10 @@
     {
       "name": "recurring-activity",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-14T11:54:27.811Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:29:24.630Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:29:24.630Z"
     },
     {
       "name": "safety",
