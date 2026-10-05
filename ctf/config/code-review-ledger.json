@@ -279,9 +279,10 @@
     {
       "name": "geo",
       "type": "module",
-      "lastReviewedAt": "2026-07-26T10:41:31.407Z",
+      "lastReviewedAt": "2026-10-05T12:33:03.838Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:33:03.838Z"
     },
     {
       "name": "health",
