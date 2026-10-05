@@ -12,7 +12,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-member-view.tsx`, `trust-evidence-row.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/user/*` + `/api/trust/signal/snapshot` · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-10 (hand-updated: the per-member visibility choice was removed — every member reads the summary, TR-A3; the write route is gone, TR-A5; the card's read-only member view, TR-A5b; verification review removed entirely, TR-A9b) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged |
+| **Generated** | 2026-08-10 (hand-updated: the per-member visibility choice was removed — every member reads the summary, TR-A3; the write route is gone, TR-A5; the card's read-only member view, TR-A5b; verification review removed entirely, TR-A9b) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-05 manual update: TR-A3 now checks the body names the member asked for and that a blank id answers 400 (#2844) |
 
 ---
 
@@ -142,6 +142,8 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`. The owner reading their own row gets `full` too.
 - The response carries no `trustVisibility` field, and `trust_user_extension` has no `trust_visibility` column: `SELECT trust_visibility FROM trust_user_extension` must error with "column does not exist". Nothing in the product decides disclosure per member any more.
 - No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
+- The body names Member B: `userId` equals `memberB_userId` and `trustEvidence` is not empty when Member B has activity. An empty card for a member who clearly has activity is the regression from #2844 (the route read its id before the route params resolved), and must be filed.
+- `GET /api/trust/user/%20` (a blank id) answers HTTP 400 with code `TRUST_INVALID_PAYLOAD`, not 200 with an empty card.
 - On the Directory profile the Trust card renders with the shorter list and the note "This member shares a summary of their participation, not the detail." above it. There is no "Your trust" / "What members see" split on someone else's card, and no row stating what that member chose to share — there is no such choice.
 - Each read writes a `trust.summary.read` row to `trust_admin_audit_trail` with `policy_status = allow` and reason `member_summary_read` (non-owner non-admin), `admin_summary_read`, or `self_summary_read`.
 
