@@ -7,6 +7,7 @@ import { getFoundationTokens, type ProviderView } from "./foundation-ui";
 import { FoundationCallAudio, type FoundationCallCredentials } from "./foundation-call-audio";
 import type { FoundationCallRingStatus, FoundationInstantCall } from "@/lib/foundation/types";
 import { failureText } from "@/lib/errors/client-failure";
+import { reportError } from "@/lib/observability/report";
 
 // Client orchestration for the Foundation instant 1:1 call ring/answer lifecycle (issue #808 task 3).
 // Audio-only for v1. One <FoundationInstantCallController> is mounted once at the shell root; it both:
@@ -196,18 +197,24 @@ function useActiveCallPoll(
     }
     let canceled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // One report per run of failed reads, not one every tick, so an outage leaves a single line.
+    let failureReported = false;
 
-    const tick = async () => {
+    // Read the call once. "terminal" closes the overlay after the final message; "stop" ends polling
+    // only (unmounted, or the call no longer exists for this member, which was already the 404
+    // behavior). Any other failed read is retried on the next tick: a single 503 must not leave a
+    // caller on the ringing screen, keep a callee from ever getting the credentials, or leave the
+    // room open past the paid window with nothing following it.
+    const pollOnce = async (): Promise<"continue" | "terminal" | "stop"> => {
       try {
         const res = await fetch(`/api/foundation/connections/instant-calls/${activeCallId}`);
-        if (!res.ok || canceled) {
-          return;
-        }
+        if (canceled || res.status === 404) return "stop";
+        if (!res.ok) throw new Error(`Call state read failed (HTTP ${res.status}).`);
         const data = (await res.json()) as CallStateResponse;
         const call = data.call;
-        if (!call || canceled) {
-          return;
-        }
+        if (!call) throw new Error("Call state read answered without a call.");
+        if (canceled) return "stop";
+        failureReported = false;
         setRingStatus(call.ringStatus);
         setBilling(billingFromCall(call));
         // Read the video call id from the flat response field, falling back to the nested call row. Wait for
@@ -217,18 +224,25 @@ function useActiveCallPoll(
         if (credentials) {
           setCredentials(credentials);
         }
-        // Terminal: declined / timed_out / ended. Hold the final message briefly, then close.
-        if (isTerminalRing(call.ringStatus)) {
-          if (timer) clearTimeout(timer);
-          timer = setTimeout(() => { if (!canceled) reset(); }, 1800);
-          return;
+        return isTerminalRing(call.ringStatus) ? "terminal" : "continue";
+      } catch (caught) {
+        if (!failureReported) {
+          failureReported = true;
+          reportError(caught, { area: "foundation", op: "instant_call_poll", extra: { callId: activeCallId } });
         }
-      } catch {
-        /* transient — the next tick reconciles */
+        return "continue";
       }
-      if (!canceled) {
-        timer = setTimeout(() => void tick(), RING_POLL_MS);
+    };
+
+    const tick = async () => {
+      const outcome = await pollOnce();
+      if (canceled || outcome === "stop") return;
+      if (outcome === "terminal") {
+        // Terminal: declined / timed_out / ended. Hold the final message briefly, then close.
+        timer = setTimeout(() => { if (!canceled) reset(); }, 1800);
+        return;
       }
+      timer = setTimeout(() => void tick(), RING_POLL_MS);
     };
     void tick();
 

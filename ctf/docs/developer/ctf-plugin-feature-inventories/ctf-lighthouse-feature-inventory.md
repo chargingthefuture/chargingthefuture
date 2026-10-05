@@ -213,6 +213,9 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 ### 2.1 Admin Dashboard and Data Views
 
 1. Admin route parity target (`/apps/lighthouse/admin`).
+   The web Properties tab shows each rent in its own currency through the shared `formatRentParts`
+   (the currency catalog is read server-side with the listings): a ServiceCredits rent by its label,
+   never as a "$" figure.
 2. Stats parity target:
    - seekers,
    - hosts,
@@ -390,6 +393,12 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-10-05: **The admin Properties tab shows rent in the listing's own currency (#2829).** The
+  admin rows used a local formatter that printed every rent as `$N/mo`, so a 20 ServiceCredits rent
+  read "$20/mo" and a euro rent carried a dollar sign. `app/admin/lighthouse/page.tsx` now reads the
+  active currency catalog (`listActiveCurrencies`) beside the listings, and the admin shell formats
+  rent with the member screens' `formatRentParts`. A code missing from the catalog is shown by its
+  code. No route, schema or contract change.
 - 2026-09-15: **A member can publish what they are looking for, not only what they have to offer
   (owner report).** LightHouse showed one side of the market. A member weighing up offering a room
   saw other people's listings and nothing about whether anyone needed one, and the side with the most
