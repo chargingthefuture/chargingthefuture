@@ -384,9 +384,10 @@
     {
       "name": "observability",
       "type": "module",
-      "lastReviewedAt": "2026-07-19T08:39:00.553Z",
-      "lastRunIssues": 3,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:32:13.868Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:32:13.869Z"
     },
     {
       "name": "ops",
