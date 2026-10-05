@@ -36,12 +36,19 @@ function summaryView(trust: TrustUserExtension): TrustPeerView {
   };
 }
 
-export async function GET(request: Request, context: unknown) {
-  const { userId: targetUserId } = (context as { params: { userId: string } }).params;
+export async function GET(request: Request, context: { params: Promise<{ userId: string }> }) {
+  const { userId: targetUserId } = await context.params;
 
   const gate = await requireTrustMemberAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  if (!targetUserId || targetUserId.trim().length === 0) {
+    return NextResponse.json(
+      { ok: false, code: TRUST_ERROR_CODE.invalidPayload, message: 'Missing userId in the request path.' },
+      { status: 400 },
+    );
   }
 
   const viewerUserId = gate.auth.userId;
