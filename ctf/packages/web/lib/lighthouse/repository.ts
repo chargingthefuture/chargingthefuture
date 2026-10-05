@@ -1252,6 +1252,32 @@ export async function listMatches(actorUserId: string): Promise<LighthouseMatch[
   return result.rows.map(mapMatch);
 }
 
+// A member moves a match only from their own side of it: the host accepts, declines or completes,
+// the seeker cancels, and either move must be one the current status allows.
+function assertMemberMayMoveMatch(
+  actorUserId: string,
+  match: LighthouseMatchRow,
+  status: LighthouseMatch['status'],
+): void {
+  let side: 'host' | 'seeker';
+  if (actorUserId === match.host_user_id) {
+    if (status !== 'accepted' && status !== 'rejected' && status !== 'completed') {
+      throw new Error('policy_denied');
+    }
+    side = 'host';
+  } else if (actorUserId === match.seeker_user_id) {
+    if (status !== 'canceled') {
+      throw new Error('policy_denied');
+    }
+    side = 'seeker';
+  } else {
+    throw new Error('policy_denied');
+  }
+  if (!isAllowedMatchTransition(side, match.status, status)) {
+    throw new Error('invalid_transition');
+  }
+}
+
 export async function updateMatch(input: {
   actorUserId: string;
   matchId: string;
@@ -1290,23 +1316,7 @@ export async function updateMatch(input: {
 
     const match = existing.rows[0];
     if (!input.isAdmin) {
-      let side: 'host' | 'seeker';
-      if (input.actorUserId === match.host_user_id) {
-        if (input.status !== 'accepted' && input.status !== 'rejected' && input.status !== 'completed') {
-          throw new Error('policy_denied');
-        }
-        side = 'host';
-      } else if (input.actorUserId === match.seeker_user_id) {
-        if (input.status !== 'canceled') {
-          throw new Error('policy_denied');
-        }
-        side = 'seeker';
-      } else {
-        throw new Error('policy_denied');
-      }
-      if (!isAllowedMatchTransition(side, match.status, input.status)) {
-        throw new Error('invalid_transition');
-      }
+      assertMemberMayMoveMatch(input.actorUserId, match, input.status);
     }
 
     const nextHostResponse = typeof input.hostResponse === 'undefined'
