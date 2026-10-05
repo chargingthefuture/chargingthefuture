@@ -520,9 +520,10 @@
     {
       "name": "shared",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-09T10:05:36.491Z",
-      "lastRunIssues": 7,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:29:00.283Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:29:00.283Z"
     },
     {
       "name": "shared-package",
