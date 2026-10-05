@@ -573,9 +573,10 @@
     {
       "name": "theme",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-02T09:39:55.982Z",
-      "lastRunIssues": 2,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:20:43.494Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:20:43.494Z"
     },
     {
       "name": "ti-radio",
