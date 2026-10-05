@@ -325,9 +325,10 @@
     {
       "name": "internal",
       "type": "module",
-      "lastReviewedAt": "2026-07-22T09:05:40.694Z",
-      "lastRunIssues": 7,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:37:44.443Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:37:44.443Z"
     },
     {
       "name": "invites",
