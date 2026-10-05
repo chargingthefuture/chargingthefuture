@@ -271,9 +271,10 @@
     {
       "name": "foundation",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-29T09:19:17.562Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:40:41.058Z",
+      "lastRunIssues": 9,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:40:41.059Z"
     },
     {
       "name": "gdp",
