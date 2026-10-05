@@ -25,6 +25,7 @@ import {
 } from './policy';
 import { listPluginRegistry } from 'lib/plugins/repository';
 import { planUnlockHelp, type UnlockHelpPlan } from './unlock-help-plan';
+import { redactContributedText } from './redact';
 import { UNLOCK_HELP_INTENT_PREFIX, UNLOCK_HELP_MODEL_FACTS, UNLOCK_HELP_MODEL_FALLBACK, UNLOCK_HELP_SENT_REASON } from './unlock-help-script';
 import type {
   ComicAnswerRatingValue,
@@ -1108,7 +1109,10 @@ export async function exportComicTrainingExamples(): Promise<ComicTrainingExport
   const pendingIds: string[] = [];
   for (const row of result.rows) {
     const label = row.intent_label || 'general';
-    const text = row.text.replace(/\n/g, ' ').trim();
+    // Redacted before it reaches the file, as the deletion contract requires of training text:
+    // contact details, profile links and handles an asker typed into a question are removed. This
+    // narrows exposure; it is not de-identification (see lib/comic/redact.ts).
+    const text = redactContributedText(row.text).replace(/\n/g, ' ').trim();
     if (text.length === 0) {
       continue;
     }
@@ -1208,8 +1212,9 @@ export async function exportComicRatedAnswers(): Promise<ComicRatedAnswerExample
 
   const examples: ComicRatedAnswerExample[] = [];
   for (const row of result.rows) {
-    const question = row.question_body.replace(/\n/g, ' ').trim();
-    const answer = row.answer_body.replace(/\n/g, ' ').trim();
+    // Both sides redacted before export, the same as the owner-correction text above.
+    const question = redactContributedText(row.question_body).replace(/\n/g, ' ').trim();
+    const answer = redactContributedText(row.answer_body).replace(/\n/g, ' ').trim();
     if (question.length === 0 || answer.length === 0) {
       continue;
     }

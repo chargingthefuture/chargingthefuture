@@ -370,7 +370,9 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   Running it also records the download: every owner-correction row that reached the file and was
   still awaiting export is set to `exported` with an `exported_at` stamp (JSON `markedExported`;
   the `X-Marked-Exported` header on the YAML download). `?preview=1` returns the same file without
-  marking anything.
+  marking anything. Question and answer text is redacted with `redactContributedText` before it is
+  written, and every run writes a `comic.training.export` row to `comic_admin_audit_trail`
+  (format, `markedExported`, `preview`; a failed run records the reason).
 - `GET /api/comic/admin/ai-status` (`comic.ai.status`) — admin. Read-only live status of the Ollama
   drafting backend (configured / reachable / latency). An admin diagnostic probe only — it no longer
   backs a UI badge. The always-"reachable" engine badges were removed because they only pinged the
@@ -819,6 +821,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-05: **The training export is redacted and leaves an audit row.** `GET /api/comic/training/export` moves rows from awaiting export to exported but wrote no audit row, although the audit contract defines `comic.training.export` and requires a durable row for every admin action. It now calls `recordComicAdminAudit` on success (format, `markedExported`, `preview`) and on failure (the reason), and the Audit log panel names it "Exported the training data". The deletion contract also says training text is redacted before export, but questions went into the file as typed. `exportComicTrainingExamples` and `exportComicRatedAnswers` now pass question and answer text through `redactContributedText` (`lib/comic/redact.ts`) first. No schema change.
 
 - 2026-09-30: **`GET /api/comic/conversation` answers an unchanged stream with a bodiless 304.** It is polled with the home chat every 10-30s; it now answers through `jsonWithEtag` (fingerprint plus `Cache-Control: private, no-cache`), and the home chat reads it with `cache: 'no-cache'`. The review queue poll (`comic-review-dashboard.tsx`) now skips ticks while the tab is hidden and refreshes once when shown. Same payload, no schema or contract change. Detail in the Feed inventory change log.
 

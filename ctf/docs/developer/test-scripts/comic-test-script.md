@@ -333,6 +333,12 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 - Step 4: the file is identical (the export is the entire dataset, not a queue that drains) but `markedExported` is 0 — nothing is re-stamped.
 - Step 5: the YAML download carries `X-Marked-Exported`, counting only rows still awaiting export at that moment.
 - Step 6: the new correction shows as 1 awaiting export, and the next export moves it.
+- Every run above, preview included, appears in the **Audit log** panel on `/admin/comic/knowledge`
+  as "Exported the training data", with "preview only" on the preview run and the "N marked
+  exported" count (added 2026-10-05).
+- A question that was asked with an email address, phone number, Quora profile link or other link in
+  it shows `[email removed]`, `[number removed]`, `[profile link removed]` or `[link removed]` in the
+  file in place of the original (added 2026-10-05).
 
 **Result:** web ☐
 
