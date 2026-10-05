@@ -214,9 +214,10 @@
     {
       "name": "engagement",
       "type": "plugin",
-      "lastReviewedAt": "2026-08-03T10:10:15.973Z",
-      "lastRunIssues": 3,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:39:44.632Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:39:44.632Z"
     },
     {
       "name": "eol-package",
