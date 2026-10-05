@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { readTrustSelfExtensionOrStored } from 'lib/trust/repository';
 import type { TrustUserExtension } from 'lib/trust/types';
+import { reportError } from 'lib/observability/report';
 import { AccountHubShell } from '@/components/account/account-hub-shell';
 
 // Unified account hub. Rule 114 means there is no single profile table — each plugin extends the one
@@ -40,7 +41,12 @@ export default async function AccountPage() {
   // Recompute before rendering (throttled, with a fallback to the last stored evidence) so the card
   // shows the member's participation as it is now. A plain read froze this page's card at whatever
   // the last self-API call had written, which could be weeks earlier.
-  const trust = await readTrustSelfExtensionOrStored(decision.userId).catch(() => buildFallbackTrust(decision.userId));
+  // readTrustSelfExtensionOrStored already reports a failed recompute; what reaches this catch is the
+  // stored-evidence read failing too, so report it before showing the empty card.
+  const trust = await readTrustSelfExtensionOrStored(decision.userId).catch((error: unknown) => {
+    reportError(error, { area: 'account', op: 'hub_trust_read' });
+    return buildFallbackTrust(decision.userId);
+  });
   const username = decision.username && decision.username !== 'guest' ? decision.username : null;
 
   return <AccountHubShell username={username} trust={trust} />;

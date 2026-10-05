@@ -6,6 +6,7 @@ import { insertSafetyReportTx } from 'lib/safety/repository';
 import { SAFETY_REPORT_DETAIL_MAX_LENGTH } from 'lib/safety/constants';
 import { withDbTransaction } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { logSafetyReportCreateAudit } from 'lib/blocks/audit';
 
 // Member blocking — the cross-cutting "block / unblock / see who you've blocked" API (issue #809,
 // task 2). Blocking is a baseline safety control available to ANY signed-in member, so these routes
@@ -116,6 +117,13 @@ export async function POST(request: Request) {
         await blockUserTx(client, gate.auth.userId, blockedUserId);
         await insertSafetyReportTx(client, gate.auth.userId, blockedUserId, safetyDetail);
       });
+      logSafetyReportCreateAudit({
+        actorId: gate.auth.userId,
+        status: 'allow',
+        reason: 'safety_report_recorded',
+        result: 'success',
+        errorCategory: null,
+      });
       return NextResponse.json({ ok: true, safetyReported: true }, { status: 200 });
     }
 
@@ -123,9 +131,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, safetyReported: false }, { status: 200 });
   } catch (error) {
     if (error instanceof SelfBlockError) {
+      if (safetyConcern) {
+        logSafetyReportCreateAudit({
+          actorId: gate.auth.userId,
+          status: 'deny',
+          reason: 'self_block',
+          result: 'failure',
+          errorCategory: 'validation_error',
+        });
+      }
       return badRequest('You cannot block yourself.');
     }
     reportError(error, { area: 'account', op: safetyConcern ? 'blocks_create_with_safety_report' : 'blocks_create' });
+    if (safetyConcern) {
+      logSafetyReportCreateAudit({
+        actorId: gate.auth.userId,
+        status: 'allow',
+        reason: 'safety_report_not_recorded',
+        result: 'failure',
+        errorCategory: 'persistence_error',
+      });
+    }
     const message = safetyConcern
       ? 'We could not record your safety report, so this person was not blocked. Please try again.'
       : 'Unable to block this member.';
