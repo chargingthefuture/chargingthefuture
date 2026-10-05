@@ -236,9 +236,10 @@
     {
       "name": "feature-flags",
       "type": "module",
-      "lastReviewedAt": "2026-08-02T08:41:34.630Z",
-      "lastRunIssues": 5,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:39:42.218Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:39:42.218Z"
     },
     {
       "name": "feed",
