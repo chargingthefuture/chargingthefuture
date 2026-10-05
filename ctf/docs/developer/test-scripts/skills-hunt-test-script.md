@@ -1350,6 +1350,20 @@ Result: web ☐
 
 ---
 
+### SH-A19 — The seed and end-to-end smoke check run on an up-to-date database (added 2026-10-05)
+
+**Role:** operator · **Surfaces:** operational (scripts, no UI)
+
+**Precondition:** A scratch database built from the current `ctf/schema.sql` and post migrations.
+
+**Steps:**
+1. Run the Skills Hunt seed, then the Skills Hunt end-to-end smoke check against that database.
+
+**Expected:**
+- Step 1: every step passes, including the Directory profile step (source `community-generated`, the `@community-seed01` handle, the inviting username) and the one-row handle count. Before 2026-10-05 the smoke check stopped at the Directory profile step, because it selected two columns `directory_profiles` no longer has.
+
+**Result:** web ☐ mobile ☐ — notes:
+
 ## Parity check (web ↔ android)
 
 The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.

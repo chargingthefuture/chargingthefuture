@@ -680,6 +680,24 @@ the Advocacy placeholder and one carrying only that placeholder.
   object from the public sources it was built from, which is why it is admin-only here.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A7b · The paste-ready invite queue SQL runs in the Neon dashboard (added 2026-10-05)
+**Role:** owner · **Surfaces:** operational (Neon dashboard, no app UI)
+**Precondition:** The same profiles as DIR-A7, plus one profile with no Quora address.
+**Steps:**
+1. Paste the contents of `ctf/scripts/sql/directory-invite-queue.sql` into the Neon SQL editor for
+   production and run it.
+2. Compare the rows with the Invite queue screen from DIR-A7.
+3. In the weekly community stats draft (or the `draft-needed` issue the no-credit route files), read
+   the Directory lines.
+**Expected:**
+- Step 1: the statement runs and returns rows. Before 2026-10-05 it stopped with a missing-column
+  error, because it still tested a column that was dropped from `directory_profiles`.
+- Step 2: the profile with no Quora address is absent, and nobody already written about appears,
+  matching the screen.
+- Step 3: the Directory section carries the profile count, the distinct-skills count, the coverage
+  line toward 650 and the most-listed skills, rather than a skipped note.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### DIR-A8 · Pending skill proposals list, and dropping a chip after a non-promotion
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** One profile carrying a member-added "skill not listed" chip (DIR-3), and one
