@@ -635,6 +635,19 @@ calls they started and calls they received. The call log is ephemeral and has no
 there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
 registry entries.
 
+### CH-25 · Sign in, and sign out leaves the room (android)
+**Role:** signed out, then member · **Surfaces:** android
+**Steps:**
+1. On a fresh install (or after signing out), open the app on the **Chyme** pill.
+2. Tap **Sign in** on the **You are not signed in** card above the room list and sign in.
+3. Join the room, then open **Account & Data**, scroll down, tap **Sign out** and confirm.
+4. Go back to the **Chyme** pill.
+**Expected:** Step 1: the sign-in card shows above the room list, and listening as a guest still
+works. Step 2: the card goes away and you can speak, react and tip as yourself. Step 4: you are no
+longer in the room as a member, the Android "Chyme live audio" notification is gone, and the sign-in
+card is back. The same steps are in the Android app test script (AN-1, AN-7).
+**Result:** android ☐ — notes:
+
 ---
 
 ## Admin walkthrough

@@ -31,7 +31,9 @@ end.
 1. Sign out, then sign in with the **not-yet-approved** account.
 2. Expect the full-screen Unlock screen instead of the Chyme shell (mirrors the web redirect to
    `/plugin/unlock`).
-3. Approve that account (or switch back to the approved account) and confirm the shell appears.
+3. Scroll to the bottom of the Unlock screen and tap **Sign out**, then confirm. Expect the shell
+   with the **You are not signed in** card (see unlock test script UNLOCK-M5).
+4. Approve that account (or sign in with the approved account) and confirm the shell appears.
 
 ## AN-3 — Chyme: join a room and hear audio
 

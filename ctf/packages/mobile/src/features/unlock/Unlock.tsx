@@ -18,6 +18,7 @@ import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { fetchUnlockStatus, requestUnlockHelp, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
+import { SignOutButton } from '../../components/shared/SessionControls';
 
 type DisplayStatus = 'pending' | 'approved' | 'rejected';
 
@@ -185,6 +186,8 @@ function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: strin
           </View>
         </React.Fragment>
       ))}
+      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
+      <SignOutButton />
     </ScrollView>
   );
 }
@@ -290,6 +293,8 @@ function SubmissionView({
           </React.Fragment>
         ))}
       </View>
+      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
+      <SignOutButton />
     </ScrollView>
   );
 }
@@ -457,6 +462,8 @@ function StatusView({
           </React.Fragment>
         ))}
       </View>
+      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
+      <SignOutButton />
     </ScrollView>
   );
 }

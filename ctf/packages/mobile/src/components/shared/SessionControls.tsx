@@ -6,7 +6,8 @@
 //   - `SignInPrompt` sits above the shell content while nobody is signed in, so a member on a fresh
 //     install has a way to an account from whichever pill they are on. A signed-out member can still
 //     listen to a Chyme room as a guest, so the prompt does not block anything.
-//   - `SignOutButton` sits on the Account & Data screen. Signing out clears the stored session from
+//   - `SignOutButton` sits on the Account & Data screen, and on the Unlock screen, which covers the
+//     app for a member still held at the Unlock wall. Signing out clears the stored session from
 //     the device keychain and drops the bearer token; App.tsx keys the content view on the signed-in
 //     member's id, so every Chyme screen holding a Stream client unmounts and disconnects it.
 //

@@ -632,6 +632,23 @@ account rather than this app alone, and that it is not a deletion and can be lif
 closes it.
 **Result:** web ☐ · android ☐ — notes:
 
+### UNLOCK-M5 · Sign out from the Unlock screen (Android)
+**Role:** member (signed in, not yet verified, held at the Unlock wall) · **Surfaces:** android
+**Precondition:** a signed-in account the Android app sends to the full-screen Unlock screen (no
+submission and no help request, or a pending or rejected submission).
+**Steps:**
+1. Open the app and land on the Unlock screen. Scroll to the bottom.
+2. Find **Signed in as** your username (or email) and a **Sign out** button below everything else on
+   the screen. Check that the rest of the screen reads and looks as before.
+3. Tap **Sign out**, then **Stay signed in**.
+4. Tap **Sign out** again, then **Sign out**.
+5. Close and reopen the app.
+**Expected:** Step 2: the button is the last thing on the screen, after "What gets unlocked". Step 3:
+the confirm closes and nothing changes. Step 4: the Unlock screen goes away and the app shell shows
+with the **You are not signed in** card and its **Sign in** button. Step 5: you are still signed out.
+Signing back in with the same account brings the Unlock screen back with your place unchanged.
+**Result:** android ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
