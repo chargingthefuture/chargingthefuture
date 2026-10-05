@@ -1,0 +1,16 @@
+-- post/0050: Let a member log a second ClickLog incident with the same note and location.
+--
+-- Why: click_log_incidents carried metadata_hash, a generated md5 of the metadata JSON, and
+-- UNIQUE (user_id, metadata_hash). The date, tags and share flag sit outside the metadata, so two
+-- incidents with the same note and location collided. An incident logged with no note and no
+-- location is stored as '{}', so a member could log one such incident and every later one failed
+-- with a unique violation the create route did not catch. Each incident is a separate event and
+-- gets its own row.
+--
+-- What it does: drops metadata_hash. The unique constraint is defined on that column, so it goes
+-- with it, whichever name it carries (older databases created it before the clicklog_ ->
+-- click_log_ rename). Nothing else read the column. No row changes. schema.sql runs the same
+-- statement and no longer creates the column or the constraint.
+--
+-- Safe to re-run: IF EXISTS makes every run after the first a no-op.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
