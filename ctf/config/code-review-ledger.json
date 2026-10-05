@@ -368,9 +368,10 @@
     {
       "name": "nav",
       "type": "module",
-      "lastReviewedAt": "2026-07-20T04:22:57.270Z",
+      "lastReviewedAt": "2026-10-05T12:30:43.186Z",
       "lastRunIssues": 0,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:30:43.186Z"
     },
     {
       "name": "notifications",
