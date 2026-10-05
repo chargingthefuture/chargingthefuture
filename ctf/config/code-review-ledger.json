@@ -400,9 +400,10 @@
     {
       "name": "peer-programming",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-18T08:14:09.048Z",
-      "lastRunIssues": 7,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:32:34.488Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:32:34.488Z"
     },
     {
       "name": "platform",
