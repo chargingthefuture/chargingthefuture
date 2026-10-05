@@ -257,9 +257,10 @@
     {
       "name": "feed-announcements",
       "type": "module",
-      "lastReviewedAt": "2026-07-30T09:08:07.260Z",
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:41:05.013Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:41:05.013Z"
     },
     {
       "name": "fireside",
