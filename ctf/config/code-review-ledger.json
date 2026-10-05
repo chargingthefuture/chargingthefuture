@@ -318,9 +318,10 @@
     {
       "name": "integrations",
       "type": "module",
-      "lastReviewedAt": "2026-07-23T09:04:00.711Z",
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:37:46.751Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:37:46.752Z"
     },
     {
       "name": "internal",
