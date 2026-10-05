@@ -426,9 +426,10 @@
     {
       "name": "presence",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-14T15:52:17.449Z",
-      "lastRunIssues": 4,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:28:30.461Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:28:30.461Z"
     },
     {
       "name": "questions",
