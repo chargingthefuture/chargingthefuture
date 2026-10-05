@@ -69,11 +69,6 @@
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/announcements",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
       "route": "/api/directory/service/profiles/[id]",
       "kind": "external",
       "reason": "Called by One Percent's server for the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads one claimed profile by id (owner decision, 2026-10-02)."
