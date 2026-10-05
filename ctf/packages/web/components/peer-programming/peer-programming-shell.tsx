@@ -13,6 +13,7 @@ import { PeerProgrammingGoalsTab } from "./pp-goals-tab";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { responseFailureText } from "lib/errors/client-failure";
 
 // Shape returned by GET /api/peer-programming/room. The shell's view models (Room,
 // Message) differ from the API, so map explicitly here rather than casting.
@@ -94,7 +95,7 @@ function mapRoomData(data: RoomApiResponse): RoomData {
 
 async function fetchRoomData(signal: AbortSignal, cohortId?: string | null): Promise<RoomData> {
   const res = await fetch(roomUrl(cohortId), { signal });
-  if (!res.ok) throw new Error("Failed to load room");
+  if (!res.ok) throw new Error(await responseFailureText(res, "Failed to load room.", "member"));
   const data = (await res.json()) as RoomApiResponse;
   return mapRoomData(data);
 }
@@ -188,6 +189,7 @@ function PeerProgrammingTabContent(props: {
   onMessageInput: (value: string) => void;
   onSend: () => void;
   submitting: boolean;
+  postError: string | null;
   access: RoomAccess;
   onJoinSession: () => void;
   feedbackInput: string;
@@ -204,7 +206,7 @@ function PeerProgrammingTabContent(props: {
   isAdmin?: boolean;
 }) {
   const {
-    tab, room, messages, messageInput, onMessageInput, onSend, submitting, access,
+    tab, room, messages, messageInput, onMessageInput, onSend, submitting, postError, access,
     onJoinSession, feedbackInput, onFeedbackInput, onSubmitFeedback, feedbackSuccess,
     feedbackError, cohorts, members, myCohortId, activeCohortId, onOpenCohort, switching, isAdmin,
   } = props;
@@ -242,6 +244,7 @@ function PeerProgrammingTabContent(props: {
           onMessageInput={onMessageInput}
           onSend={onSend}
           submitting={submitting}
+          postError={postError}
           readOnly={access !== "member"}
           ended={Boolean(room?.ended)}
         />
@@ -266,6 +269,9 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   // The goal board is where the room opens (owner decision, 2026-09-25).
   const [tab, setTab] = useState<Tab>("goals");
   const [messageInput, setMessageInput] = useState("");
+  // A failed post is shown beside the composer, not as the full-page error, so the room and the
+  // typed message stay on screen.
+  const [postError, setPostError] = useState<string | null>(null);
   const [feedbackInput, setFeedbackInput] = useState("");
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -358,23 +364,23 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   async function handlePostMessage() {
     if (!messageInput.trim()) return;
     const cohortId = room?.cohortId;
-    if (!cohortId) { setError("You are not in a cohort yet."); return; }
-    if (access !== "member") { setError("You are listening in — only cohort members can post here."); return; }
+    if (!cohortId) { setPostError("You are not in a cohort yet."); return; }
+    if (access !== "member") { setPostError("You are listening in — only cohort members can post here."); return; }
     setSubmitting(true);
-    setError(null);
+    setPostError(null);
     try {
       const res = await fetch("/api/peer-programming/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ cohortId, body: messageInput }),
       });
-      if (!res.ok) throw new Error("Failed to post message");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to post message.", "member"));
       setMessageInput("");
       // The room endpoint is the source of truth for the open cohort's messages.
       const refreshed = await fetchRoomMessages(activeCohortId);
       if (refreshed) setMessages(refreshed);
     } catch (e: unknown) {
-      setError(errorMessage(e, "Failed to post message."));
+      setPostError(errorMessage(e, "Failed to post message."));
     } finally {
       setSubmitting(false);
     }
@@ -398,7 +404,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           note: feedbackInput,
         }),
       });
-      if (!res.ok) throw new Error("Failed to submit feedback");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to submit feedback.", "member"));
       setFeedbackSuccess(true);
       setFeedbackInput("");
     } catch (err: unknown) {
@@ -422,6 +428,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         onMessageInput={setMessageInput}
         onSend={() => void handlePostMessage()}
         submitting={submitting}
+        postError={postError}
         access={access}
         onJoinSession={() => setTab("session")}
         feedbackInput={feedbackInput}

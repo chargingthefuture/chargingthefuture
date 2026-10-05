@@ -39,6 +39,34 @@ const PARTICIPANT_TILE_CSS = `
 }
 `;
 
+// Browser error names that mean the device is simply not there. Anything else (most often a blocked
+// permission) is something the member can fix, so it is named on screen and reported.
+const MISSING_DEVICE_ERRORS = new Set(['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError']);
+const BLOCKED_DEVICE_ERRORS = new Set(['NotAllowedError', 'PermissionDeniedError', 'SecurityError']);
+
+type DeviceKind = 'camera' | 'microphone';
+
+// Turn the camera or microphone on after joining. Returns null when it started, or a sentence for the
+// call stage saying which device did not start and the browser's reason. A missing device is not an
+// incident and is not reported; every other failure is.
+async function startDevice(kind: DeviceKind, enable: () => Promise<void>, callId: string): Promise<string | null> {
+  try {
+    await enable();
+    return null;
+  } catch (error) {
+    const name = error instanceof Error ? error.name : '';
+    if (MISSING_DEVICE_ERRORS.has(name)) {
+      return `No ${kind} was found, so you joined without it.`;
+    }
+    reportError(error, { area: 'peer-programming', op: `session_${kind}_enable`, extra: { callId, errorName: name } });
+    const reason = error instanceof Error && error.message ? error.message : String(error);
+    if (BLOCKED_DEVICE_ERRORS.has(name)) {
+      return `Your ${kind} is blocked for this site (${reason}). Allow it in your browser's site settings, then turn it on with the button below.`;
+    }
+    return `Your ${kind} could not start (${reason}).`;
+  }
+}
+
 export type PeerProgrammingSessionCredentials = {
   cohortId: string;
   displayName: string;
@@ -63,6 +91,7 @@ export function PeerProgrammingSessionCall({
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [deviceNotices, setDeviceNotices] = useState<string[]>([]);
 
   useEffect(() => {
     let canceled = false;
@@ -77,9 +106,10 @@ export function PeerProgrammingSessionCall({
     void (async () => {
       try {
         await activeCall.join({ create: true });
-        try { await activeCall.camera.enable(); } catch { /* no camera available */ }
-        try { await activeCall.microphone.enable(); } catch { /* no mic available */ }
+        const cameraNotice = await startDevice('camera', () => activeCall.camera.enable(), credentials.streamCallId);
+        const micNotice = await startDevice('microphone', () => activeCall.microphone.enable(), credentials.streamCallId);
         if (canceled) return;
+        setDeviceNotices([cameraNotice, micNotice].filter((notice): notice is string => notice !== null));
         setClient(videoClient);
         setCall(activeCall);
         setStatus('joined');
@@ -121,7 +151,7 @@ export function PeerProgrammingSessionCall({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <PeerProgrammingSessionStage onLeave={onLeave} />
+        <PeerProgrammingSessionStage onLeave={onLeave} deviceNotices={deviceNotices} />
       </StreamCall>
     </StreamVideo>
   );
@@ -139,7 +169,7 @@ const leaveButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
+function PeerProgrammingSessionStage({ onLeave, deviceNotices }: { onLeave: () => void; deviceNotices: string[] }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
   const { useParticipants, useCameraState, useMicrophoneState } = useCallStateHooks();
@@ -169,6 +199,11 @@ function PeerProgrammingSessionStage({ onLeave }: { onLeave: () => void }) {
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.MUTED, textTransform: 'uppercase', marginBottom: 14 }}>
         Live · {uniqueParticipants.length} {uniqueParticipants.length === 1 ? 'participant' : 'participants'}
       </div>
+      {deviceNotices.map((notice) => (
+        <div key={notice} role="status" style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171', fontSize: 13, lineHeight: 1.5 }}>
+          {notice}
+        </div>
+      ))}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
         {uniqueParticipants.map((participant) => (
           <div key={participant.sessionId} className="pp-participant-tile" style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.ACCENT}25`, background: '#000', aspectRatio: '4 / 3' }}>
