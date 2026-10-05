@@ -644,9 +644,10 @@
     {
       "name": "weekly-performance",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T09:09:24.899Z",
-      "lastRunIssues": 5,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:23:44.472Z",
+      "lastRunIssues": 8,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:23:44.473Z"
     },
     {
       "name": "what-works",
