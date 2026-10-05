@@ -172,7 +172,7 @@ User routes:
 - `POST /api/trust-transport/trips/:tripId/status` — Advance trip status one forward step (assigned → en_route → picked_up → delivered), or set a terminal state. A non-admin cannot set `completed` here — completion requires mutual confirmation (below). Admins keep a direct override to `completed`.
 - `POST /api/trust-transport/trips/:tripId/complete` — Record the caller's completion confirmation for a `delivered` trip. Only the requester or provider may call it. The trip transitions to `completed` (and settlement fires) only once **both** parties have confirmed — neither can complete a trip alone, because completion moves value (a ServiceCredits transfer, or a recorded off-platform fiat/crypto settlement).
 - `POST /api/trust-transport/trips/:tripId/proof` — Capture pickup/delivery proof.
-- `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
+- `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video. Requires the `x-ctf-csrf: 1` header and a same-origin request, like every other mutation in this plugin.
 - `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
 - `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
 - `GET /api/trust-transport/earnings` — The caller's **recorded** earnings from completed trips, per currency (read-only). Not a withdrawable balance: for anything other than ServiceCredits the payment is arranged peer-to-peer off-platform, so there is nothing to withdraw. The same figures feed the GDP recognition layer. (The `POST /payouts/requests` and `GET /payouts` routes were removed 2026-07-08.)
@@ -313,6 +313,11 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-10-05: **The trip chat route checks CSRF.** `POST /trips/:tripId/chat` upserts both members'
+  Stream users, creates the trip channel, adds members and mints a token, but it was the only POST in
+  this plugin without `ensureMutationCsrf`. It now runs that check first and answers 403 without the
+  header. Both web callers already send `x-ctf-csrf: 1`, so the shipped screens are unaffected; the
+  Android app has no TrustTransport surface (rule 105). No schema change.
 - 2026-09-18: **Stream failures say what failed and why (cross-plugin pass).** The trip chat route's
   error message is now "Could not set up the chat channel: <Stream's reason>" built by the shared
   helper `lib/shared/stream-error-text.ts` (Stream's message kept, `api_key` redacted, capped) instead
