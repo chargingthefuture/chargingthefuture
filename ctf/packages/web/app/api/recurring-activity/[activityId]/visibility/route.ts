@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   ensureMutationCsrf,
+  isRecurringActivityId,
   recurringActivityErrorResponse,
   recurringActivityMutationError,
   requireRecurringActivityAccess,
@@ -18,8 +19,8 @@ import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
 // POST /api/recurring-activity/[activityId]/visibility — the owner sets the activity's visibility.
-export async function POST(request: Request, context: unknown) {
-  const { activityId } = (context as { params: { activityId: string } }).params;
+export async function POST(request: Request, context: { params: Promise<{ activityId: string }> }) {
+  const { activityId } = await context.params;
 
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -28,6 +29,9 @@ export async function POST(request: Request, context: unknown) {
   const gate = await requireRecurringActivityAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+  if (!isRecurringActivityId(activityId)) {
+    return recurringActivityMutationError('not_found', 'Activity not found.');
   }
 
   let body: Record<string, unknown>;
