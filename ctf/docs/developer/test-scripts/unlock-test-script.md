@@ -417,11 +417,16 @@ queue has at least one row.
 1. As a member, open the Unlock screen (submission form or status view) and drag the content down.
 2. Have the reviewer change the submission's status on web, then pull down again on the device.
 3. As an admin, open Unlock Admin, drag the queue down, and watch the list while it refreshes.
+4. (Added 2026-10-05.) As a member with a pending submission, turn on airplane mode and pull down on
+   the Android Unlock screen, then turn it off and pull down again.
 **Expected:** On both screens a refresh spinner appears at the top and the data re-pulls
 (`GET /api/unlock/status` for the member screen; `GET /api/unlock/admin/submissions` for the queue).
 The full-screen loading state does **not** flash — the current content stays visible until the fresh
 data lands, then the member screen reflects the new review status. The spinner stops when the pull
-completes, including on a failed request.
+completes, including on a failed request. Step 4: the failed pull keeps the "Pending Review" status
+view on screen (it does not switch to "Submit your Quora profile URL") and shows a red line under the
+header starting "Your verification status could not be read:" with the reason; the next successful
+pull removes the line.
 **Result:** android ☐ — notes:
 
 ---

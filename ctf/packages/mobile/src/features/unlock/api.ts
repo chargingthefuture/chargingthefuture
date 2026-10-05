@@ -23,11 +23,27 @@ export type UnlockStatus = {
   commonsAccess?: boolean;
 };
 
+// A failed status read. Carries the HTTP status so the screen can tell "not signed in" (401/403) from
+// an outage, and the route's own message so the member is told what failed.
+export class UnlockStatusError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'UnlockStatusError';
+    this.status = status;
+  }
+}
+
 export async function fetchUnlockStatus(): Promise<UnlockStatus> {
   const res = await authedFetch('/api/unlock/status', {
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error('Unlock status unavailable.');
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { message?: string; reason?: string } | null;
+    const said = payload?.message ?? payload?.reason ?? 'Unlock status unavailable.';
+    throw new UnlockStatusError(`${said} (HTTP ${res.status})`, res.status);
+  }
   const data = (await res.json()) as { ok: boolean; status: UnlockStatus };
   return data.status;
 }

@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
-import { fetchUnlockStatus, requestUnlockHelp, submitUnlockUrl } from './api';
+import { reportError } from '../../observability/report';
+import { UnlockStatusError, fetchUnlockStatus, requestUnlockHelp, submitUnlockUrl } from './api';
 import type { UnlockStatus, UnlockReviewStatus } from './api';
 
 type DisplayStatus = 'pending' | 'approved' | 'rejected';
@@ -189,6 +190,13 @@ function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: strin
   );
 }
 
+// Shown when the latest status read failed. The screen keeps what it last knew rather than guessing,
+// so this line is what tells the member the status on screen may not be current, and why.
+function StatusReadError({ s, message }: { s: Styles; message: string | null }) {
+  if (!message) return null;
+  return <Text style={s.errorText}>Your verification status could not be read: {message}</Text>;
+}
+
 // Submission form (no previous submission)
 function SubmissionView({
   onSubmitted,
@@ -197,6 +205,7 @@ function SubmissionView({
   accent,
   refreshing,
   onRefresh,
+  statusError,
 }: {
   onSubmitted: () => void;
   s: Styles;
@@ -204,6 +213,7 @@ function SubmissionView({
   accent: string;
   refreshing: boolean;
   onRefresh: () => void;
+  statusError: string | null;
 }) {
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -234,6 +244,7 @@ function SubmissionView({
         <Text style={s.headerTitle}>Unlock Full Access</Text>
         <Text style={s.headerSub}>Verify your Quora profile to get started</Text>
       </View>
+      <StatusReadError s={s} message={statusError} />
       <Text style={s.formHeading}>Submit your Quora profile URL</Text>
       <Text style={[s.bodyText, { marginBottom: 18 }]}>
         To unlock full access, submit your Quora profile URL for manual verification. This helps confirm you're a real person and reduces infiltration risk.
@@ -351,6 +362,7 @@ function StatusView({
   accent,
   refreshing,
   onRefresh,
+  statusError,
 }: {
   status: UnlockStatus;
   onResubmitted: () => void;
@@ -359,6 +371,7 @@ function StatusView({
   accent: string;
   refreshing: boolean;
   onRefresh: () => void;
+  statusError: string | null;
 }) {
   const display = toDisplayStatus(status.reviewStatus);
   const cfg = STATUS_CFG[display];
@@ -393,6 +406,7 @@ function StatusView({
           <Text style={[s.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
         </View>
       </View>
+      <StatusReadError s={s} message={statusError} />
 
       {/* Status card */}
       <View style={[s.statusCard, { backgroundColor: cfg.bg, borderColor: cfg.color + '40' }]}>
@@ -473,16 +487,24 @@ export const Unlock: React.FC<{
 
   const [phase, setPhase] = useState<'loading' | 'public' | 'submit' | 'status'>('loading');
   const [unlockStatus, setUnlockStatus] = useState<UnlockStatus | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
       const st = await fetchUnlockStatus();
       setUnlockStatus(st);
+      setStatusError(null);
       setPhase(st.hasSubmission ? 'status' : 'submit');
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '';
-      const isAuthErr = msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('Forbidden');
-      setPhase(isAuthErr ? 'public' : 'submit');
+      if (e instanceof UnlockStatusError && (e.status === 401 || e.status === 403)) {
+        setPhase('public');
+        return;
+      }
+      reportError(e, { area: 'unlock', op: 'mobile_status_load' });
+      setStatusError(e instanceof Error ? e.message : 'Unlock status unavailable.');
+      // Keep the last known view, so a failed refresh never moves a pending member back to the
+      // submission form. Only a first load with nothing known falls back to the form.
+      setPhase((prev) => (prev === 'loading' ? 'submit' : prev));
     } finally {
       onStatusChanged?.();
     }
@@ -513,6 +535,7 @@ export const Unlock: React.FC<{
         accent={accent}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        statusError={statusError}
       />
     );
   if (phase === 'status' && unlockStatus) {
@@ -525,6 +548,7 @@ export const Unlock: React.FC<{
         accent={accent}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        statusError={statusError}
       />
     );
   }
