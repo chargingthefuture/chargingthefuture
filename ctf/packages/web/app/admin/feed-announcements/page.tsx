@@ -13,7 +13,7 @@ export default async function FeedAnnouncementsAdminPage() {
 
   const [config, announcements] = await Promise.all([
     getFeedConfig(),
-    listAnnouncements(true),
+    listAnnouncements(),
   ]);
 
   return <FeedAnnouncementsAdminShell config={config} announcements={announcements} />;
