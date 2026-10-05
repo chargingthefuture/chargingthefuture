@@ -617,6 +617,34 @@ export async function createEscrowHold(input: {
     }
 
     const escrowId = input.escrowId ?? randomUUID();
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance - $2, escrow_balance = escrow_balance + $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.sourceUserId, input.amount],
+    );
+
+    await client.query(
+      `INSERT INTO service_credits_escrow_holds (id, wallet_user_id, transfer_id, amount, status)
+       VALUES ($1, $2, NULL, $3, 'held')`,
+      [escrowId, input.sourceUserId, input.amount],
+    );
+
+    const ledgerEntryId = randomUUID();
+    await client.query(
+      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
+       VALUES ($1, $2, 'escrow_hold', $4, 'escrow', $3, 'service_credits_non_gdp', $5::jsonb)`,
+      [
+        ledgerEntryId,
+        input.sourceUserId,
+        escrowId,
+        input.amount,
+        JSON.stringify({ releasePolicy: input.releasePolicy, originPlugin: input.originPlugin, externalLedgerTransactionId: null }),
+      ],
+    );
+
+    // The external ledger is posted only after every local write above has succeeded, so a local
+    // failure rolls back with nothing recorded in Formance (the same order the deletion reclaim uses).
     let externalLedgerTransactionId: string | null = null;
     try {
       const externalLedger = await postEscrowHoldToFormance({
@@ -652,35 +680,19 @@ export async function createEscrowHold(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // Formance unavailable — keep the authoritative local ledger write (made above) and
       // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
       // the member's credits are correct locally and the external mirror catches up later.
     }
 
-    await client.query(
-      `UPDATE service_credits_wallets
-       SET available_balance = available_balance - $2, escrow_balance = escrow_balance + $2, updated_at = NOW()
-       WHERE user_id = $1`,
-      [input.sourceUserId, input.amount],
-    );
-
-    await client.query(
-      `INSERT INTO service_credits_escrow_holds (id, wallet_user_id, transfer_id, amount, status)
-       VALUES ($1, $2, NULL, $3, 'held')`,
-      [escrowId, input.sourceUserId, input.amount],
-    );
-
-    await client.query(
-      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
-       VALUES ($1, $2, 'escrow_hold', $4, 'escrow', $3, 'service_credits_non_gdp', $5::jsonb)`,
-      [
-        randomUUID(),
-        input.sourceUserId,
-        escrowId,
-        input.amount,
-        JSON.stringify({ releasePolicy: input.releasePolicy, originPlugin: input.originPlugin, externalLedgerTransactionId }),
-      ],
-    );
+    if (externalLedgerTransactionId) {
+      await client.query(
+        `UPDATE service_credits_ledger_entries
+         SET metadata = jsonb_set(metadata, '{externalLedgerTransactionId}', to_jsonb($2::text))
+         WHERE id = $1`,
+        [ledgerEntryId, externalLedgerTransactionId],
+      );
+    }
 
     const response = {
       escrowId,
@@ -1341,6 +1353,47 @@ export async function applyDisputeAdjustment(input: {
       throw new Error('insufficient_balance');
     }
 
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance - $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.sourceUserId, input.amount],
+    );
+
+    await client.query(
+      `UPDATE service_credits_wallets
+       SET available_balance = available_balance + $2, updated_at = NOW()
+       WHERE user_id = $1`,
+      [input.destinationUserId, input.amount],
+    );
+
+    const transferId = randomUUID();
+    await client.query(
+      `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
+       VALUES ($1, $2, $3, $4, 'completed', $5, NOW())
+       ON CONFLICT (sender_user_id, idempotency_key)
+       DO NOTHING`,
+      [transferId, input.sourceUserId, input.destinationUserId, input.amount, input.idempotencyKey],
+    );
+
+    const adjustmentId = randomUUID();
+    await client.query(
+      `INSERT INTO service_credits_dispute_adjustments
+        (id, dispute_case_id, source_user_id, destination_user_id, amount, adjustment_reason, transfer_id, actor_id, idempotency_key, provider_transaction_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [adjustmentId, input.disputeCaseId, input.sourceUserId, input.destinationUserId, input.amount, input.adjustmentReason, transferId, input.actorId, input.idempotencyKey, null],
+    );
+
+    await client.query(
+      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope)
+       VALUES
+        ($1, $2, 'debit', $4, 'dispute_adjustment', $3, 'service_credits_non_gdp'),
+        ($5, $6, 'credit', $4, 'dispute_adjustment', $3, 'service_credits_non_gdp')`,
+      [randomUUID(), input.sourceUserId, adjustmentId, input.amount, randomUUID(), input.destinationUserId],
+    );
+
+    // The external ledger is posted only after every local write above has succeeded, so a local
+    // failure rolls back with nothing recorded in Formance (the same order the deletion reclaim uses).
     let externalLedgerTransactionId: string | null = null;
     try {
       const externalLedger = await postDisputeAdjustmentToFormance({
@@ -1377,49 +1430,17 @@ export async function applyDisputeAdjustment(input: {
         },
         lastError: error instanceof Error ? error.message : 'external_ledger_unavailable',
       });
-      // Formance unavailable — keep the authoritative local ledger write (committed below) and
+      // Formance unavailable — keep the authoritative local ledger write (made above) and
       // leave a durable 'queued' outbox row for the reconciliation worker. Do not roll back, so
       // the member's credits are correct locally and the external mirror catches up later.
     }
 
-    await client.query(
-      `UPDATE service_credits_wallets
-       SET available_balance = available_balance - $2, updated_at = NOW()
-       WHERE user_id = $1`,
-      [input.sourceUserId, input.amount],
-    );
-
-    await client.query(
-      `UPDATE service_credits_wallets
-       SET available_balance = available_balance + $2, updated_at = NOW()
-       WHERE user_id = $1`,
-      [input.destinationUserId, input.amount],
-    );
-
-    const transferId = randomUUID();
-    await client.query(
-      `INSERT INTO service_credits_transfers (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
-       VALUES ($1, $2, $3, $4, 'completed', $5, NOW())
-       ON CONFLICT (sender_user_id, idempotency_key)
-       DO NOTHING`,
-      [transferId, input.sourceUserId, input.destinationUserId, input.amount, input.idempotencyKey],
-    );
-
-    const adjustmentId = randomUUID();
-    await client.query(
-      `INSERT INTO service_credits_dispute_adjustments
-        (id, dispute_case_id, source_user_id, destination_user_id, amount, adjustment_reason, transfer_id, actor_id, idempotency_key, provider_transaction_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [adjustmentId, input.disputeCaseId, input.sourceUserId, input.destinationUserId, input.amount, input.adjustmentReason, transferId, input.actorId, input.idempotencyKey, externalLedgerTransactionId],
-    );
-
-    await client.query(
-      `INSERT INTO service_credits_ledger_entries (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope)
-       VALUES
-        ($1, $2, 'debit', $4, 'dispute_adjustment', $3, 'service_credits_non_gdp'),
-        ($5, $6, 'credit', $4, 'dispute_adjustment', $3, 'service_credits_non_gdp')`,
-      [randomUUID(), input.sourceUserId, adjustmentId, input.amount, randomUUID(), input.destinationUserId],
-    );
+    if (externalLedgerTransactionId) {
+      await client.query(
+        `UPDATE service_credits_dispute_adjustments SET provider_transaction_id = $2 WHERE id = $1`,
+        [adjustmentId, externalLedgerTransactionId],
+      );
+    }
 
     const response = {
       adjustmentId,
@@ -1549,11 +1570,13 @@ async function applyReclaimLocalWrites(
     );
   }
 
+  // user_id is the legacy NOT NULL column on both the tombstone and the reclaim row; the account id
+  // is the member's user id (the enqueue in lib/chyme/repository.ts writes the same value to both).
   const tombstoneId = randomUUID();
   await client.query(
     `INSERT INTO service_credits_wallet_tombstones
-      (id, account_id, deletion_request_id, final_available_balance, final_escrow_balance)
-     VALUES ($1, $2, $3, $4, $5)
+      (id, user_id, account_id, deletion_request_id, final_available_balance, final_escrow_balance)
+     VALUES ($1, $2, $2, $3, $4, $5)
      ON CONFLICT (account_id, deletion_request_id)
      DO UPDATE SET final_available_balance = EXCLUDED.final_available_balance, final_escrow_balance = EXCLUDED.final_escrow_balance`,
     [tombstoneId, args.accountId, args.deletionRequestId, args.availableBalance, args.escrowBalance],
@@ -1670,8 +1693,8 @@ async function recordReclaimResult(
 ): Promise<void> {
   await client.query(
     `INSERT INTO service_credits_account_deletion_reclaims
-      (id, account_id, deletion_request_id, treasury_user_id, amount_transferred, transfer_id, tombstone_id, request_id, trace_id, actor_id, idempotency_key, provider_transaction_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      (id, user_id, account_id, deletion_request_id, treasury_user_id, amount_transferred, transfer_id, tombstone_id, request_id, trace_id, actor_id, idempotency_key, provider_transaction_id)
+     VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      ON CONFLICT (account_id, deletion_request_id)
      DO UPDATE SET amount_transferred = EXCLUDED.amount_transferred, transfer_id = EXCLUDED.transfer_id, tombstone_id = EXCLUDED.tombstone_id, provider_transaction_id = EXCLUDED.provider_transaction_id`,
     [
