@@ -315,12 +315,25 @@ type ExportableRow = {
  * Where a read of the export feed stopped, as `<created_at>|<id>`. Keyset rather than an offset
  * because rows are dropped after the database returns them — an offset counted against the scanned
  * set and the kept set at the same time, and would skip comments.
+ *
+ * Both halves are checked for shape, not only for presence: they are cast to `timestamptz` and
+ * `uuid` in the query, so a cursor such as `abc|def` used to reach the database, fail the cast, and
+ * come back as a 503 saying the feed could not be read, which a build retries forever. Refused here,
+ * it is the 400 the route already describes. The timestamp is the shape `to_char(..., 'YYYY-MM-DD
+ * HH24:MI:SS.USOF')` writes; a `T` separator and a `Z` are accepted as the same instant.
  */
+const EXPORT_CURSOR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?([+-]\d{2}(:?\d{2})?|Z)?$/;
+const EXPORT_CURSOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function parseExportCursor(cursor: string | null): { createdAt: string; id: string } | null {
   if (!cursor) return null;
   const separator = cursor.lastIndexOf('|');
   if (separator <= 0 || separator === cursor.length - 1) return null;
-  return { createdAt: cursor.slice(0, separator), id: cursor.slice(separator + 1) };
+  const createdAt = cursor.slice(0, separator);
+  const id = cursor.slice(separator + 1);
+  if (!EXPORT_CURSOR_TIMESTAMP.test(createdAt) || Number.isNaN(Date.parse(createdAt))) return null;
+  if (!EXPORT_CURSOR_ID.test(id)) return null;
+  return { createdAt, id };
 }
 
 /**
