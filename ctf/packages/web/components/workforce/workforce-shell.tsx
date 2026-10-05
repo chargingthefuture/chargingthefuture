@@ -12,6 +12,7 @@ import type {
   WorkforceOccupationGapItem,
   WorkforceProfile,
 } from '../../lib/workforce/types';
+import { responseFailureText } from 'lib/errors/client-failure';
 import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
@@ -309,7 +310,8 @@ async function loadWorkforceData(
   // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
   // surface the error state rather than silently falling through to the empty state.
   if (!dashRes.ok) {
-    throw new Error(`Dashboard request failed (${dashRes.status}).`);
+    // Show what the route said; the status is the fallback only when its body carries no message.
+    throw new Error(await responseFailureText(dashRes, 'Dashboard request failed'));
   }
 
   const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };

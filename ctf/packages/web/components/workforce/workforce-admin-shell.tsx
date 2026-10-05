@@ -6,6 +6,7 @@ import { Briefcase } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { SharePicture } from '@/components/shared/share-picture';
 import { captureScreen } from 'lib/share/capture-screen';
+import { reportError } from 'lib/observability/report';
 import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceCommunityPlanning } from './workforce-community-planning';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -95,8 +96,10 @@ async function adminMutate(
       | null;
     if (res.ok) return { ok: true, config: data?.config };
     return { ok: false, message: resolveErrorMessage(data, res.status) };
-  } catch {
-    return { ok: false, message: 'Network error. Try again.' };
+  } catch (err) {
+    // Not always a network error: fetch also throws on an aborted request. Record it and name it.
+    reportError(err, { area: 'workforce', op: 'admin_config_save' });
+    return { ok: false, message: `Could not save the config: ${err instanceof Error ? err.message : String(err)}` };
   }
 }
 
