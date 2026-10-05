@@ -11,8 +11,39 @@ import {
   progressPct,
   type FundraiserResponse,
 } from './contributions-shared';
+import { reportError } from 'lib/observability/report';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
+
+// The banner and the gift reminder are non-critical chrome: a failed fundraiser read only means they do
+// not show. It still leaves a trace. A 401 or 403 is not reported — it means this viewer has no access
+// to Contributions right now (signed out, or the plugin is switched off), which is expected.
+async function loadBannerFundraiser(
+  signal: AbortSignal,
+  op: string,
+): Promise<FundraiserResponse['fundraiser'] | null> {
+  try {
+    const res = await fetch('/api/contributions/fundraiser', { cache: 'no-store', signal });
+    if (!res.ok) {
+      if (res.status !== 401 && res.status !== 403) {
+        reportError(new Error(`Fundraiser read for the banner answered HTTP ${res.status}`), {
+          area: 'contributions',
+          op,
+          extra: { status: res.status },
+        });
+      }
+      return null;
+    }
+    const data = (await res.json()) as FundraiserResponse;
+    return data.fundraiser;
+  } catch (error) {
+    // An AbortError is ordinary teardown (the component unmounted mid-request), so it is not reported.
+    if ((error as Error | null)?.name !== 'AbortError') {
+      reportError(error, { area: 'contributions', op });
+    }
+    return null;
+  }
+}
 
 type BannerGoal = { label: string; current: number; target: number; unit: string; Icon: typeof DollarSign; color: string };
 
@@ -48,17 +79,9 @@ export function ContributionsBanner() {
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      try {
-        const res = await fetch('/api/contributions/fundraiser', { cache: 'no-store', signal: controller.signal });
-        if (!res.ok) {
-          return;
-        }
-        const data = (await res.json()) as FundraiserResponse;
-        if (!controller.signal.aborted) {
-          setFundraiser(data.fundraiser);
-        }
-      } catch {
-        // A banner is non-critical chrome — a failed load just means it does not show.
+      const loaded = await loadBannerFundraiser(controller.signal, 'banner_fundraiser_load');
+      if (loaded && !controller.signal.aborted) {
+        setFundraiser(loaded);
       }
     }
     void load();
@@ -70,10 +93,20 @@ export function ContributionsBanner() {
   const onDismiss = useCallback(async () => {
     setCollapsed(true);
     window.dispatchEvent(new Event(BANNER_DISMISSED_EVENT));
+    // Best-effort: even if the snooze write fails, the banner stays collapsed for this session. A refused
+    // or failed write is reported, since the full banner then returns on the next page load.
     try {
-      await fetch('/api/contributions/banner/dismiss', { method: 'POST', headers: CSRF_HEADERS });
-    } catch {
-      // Best-effort: even if the snooze write fails, the banner stays collapsed for this session.
+      const res = await fetch('/api/contributions/banner/dismiss', { method: 'POST', headers: CSRF_HEADERS });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { code?: unknown; message?: unknown } | null;
+        reportError(new Error(`Banner dismiss answered HTTP ${res.status}: ${String(body?.message ?? 'no message')}`), {
+          area: 'contributions',
+          op: 'banner_dismiss',
+          extra: { status: res.status, code: body?.code ?? null },
+        });
+      }
+    } catch (error) {
+      reportError(error, { area: 'contributions', op: 'banner_dismiss' });
     }
   }, []);
 
@@ -144,14 +177,8 @@ export function ContributionsGiftTrigger({ className }: { className: string }) {
   useEffect(() => {
     const controller = new AbortController();
     async function load() {
-      try {
-        const res = await fetch('/api/contributions/fundraiser', { cache: 'no-store', signal: controller.signal });
-        if (!res.ok) return;
-        const data = (await res.json()) as FundraiserResponse;
-        if (!controller.signal.aborted) setFundraiser(data.fundraiser);
-      } catch {
-        // Non-critical chrome: a failed load just means no reminder.
-      }
+      const loaded = await loadBannerFundraiser(controller.signal, 'gift_trigger_fundraiser_load');
+      if (loaded && !controller.signal.aborted) setFundraiser(loaded);
     }
     void load();
     return () => controller.abort();

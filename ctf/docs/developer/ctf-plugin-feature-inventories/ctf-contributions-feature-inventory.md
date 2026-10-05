@@ -86,7 +86,9 @@ flow is one-way, like gas-station reward points.
     would otherwise persist exactly. The integer-dollar rule on gift-card amounts is a separate,
     claim-shape rule and does not by itself guarantee this.
   - Rejection grants nothing.
-- Create and edit fundraiser cycles (window plus the three goals).
+- Create and edit fundraiser cycles (window plus the three goals). The Drive tab edits the active
+  drive, or the next upcoming one; once a drive has ended it shows "Start a drive" and saving creates
+  a new drive, so an ended drive is never reopened with its old confirmed rows attached.
 - Edit runtime configuration: credit valuation knobs, per-cycle cap, banner on/off, banner snooze
   months, and the Signal instructions copy.
 - Credit-per-action mapping in the admin settings UI: the stored model is authoritative — a
@@ -306,6 +308,17 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-05: **A new drive can be started after the last one ends (#2978), and the member screens
+  leave a trace when they fail (#2981).** The admin Drive tab picked the most recent drive when none
+  was active, including one that had already ended, so Save sent a PUT that reopened it with last
+  drive's confirmed rows and granted credits still counting toward progress and the per-member cap.
+  It now picks only an active or upcoming drive, and with neither it shows "Start a drive" and Save
+  creates a new one. On the member side, a failed drive load or submission now shows what the route
+  said instead of a fixed sentence, and a request that never answered is reported. The banner and
+  gift reminder fundraiser reads report network failures and non-OK answers (401 and 403 excepted,
+  which only mean this viewer has no access right now), and the "Not now" snooze write now checks the
+  response and reports a refusal; the banner still collapses for the session either way. No route,
+  schema, or contract change.
 - 2026-08-09: **Gift-card claims are integer dollars, $1 to $500, and credit grants are rounded**
   (owner decision, from the #2141 review discussion). Two independent changes, made together because
   they were raised together:

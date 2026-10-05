@@ -594,6 +594,28 @@ The new cycle is saved and displayed with correct start/end dates and all three 
 
 ---
 
+### CONT-A10c — After a drive ends, the Drive tab starts a new one
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** Signed in as admin. Exactly one drive exists and it is active, with at least one confirmed contribution. No upcoming drive exists.
+
+**Steps:**
+1. Open the **Drive** tab and set the end date to yesterday. Save. This ends the drive.
+2. Reload `/admin/contributions` and open the **Drive** tab again.
+3. Enter a start date of today, an end date one month from today and three non-zero goals. Save.
+4. Open `/apps/contributions` as a member and read the drive progress bars.
+
+**Expected:**
+- At step 2 the card title reads "Start a drive" and the form is empty. It does not show the ended drive.
+- Step 3 creates a second drive; the ended drive keeps its own dates.
+- At step 4 the progress bars start from zero for the new drive, not from the ended drive's totals.
+- A card titled "Active drive" at step 2 holding the ended drive's dates is the bug from #2978.
+
+**Result:** web ☐
+
+---
+
 ### CONT-A11 — Cycle with end before start is rejected
 
 **Role:** Admin
