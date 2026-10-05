@@ -357,6 +357,12 @@ Contract expectations:
    reusing the profile row mapping, which is what keeps that true as the table grows. `GET
    /api/lighthouse/wanted` is member-gated, has no write method, and hides postings in both
    directions of a block.
+9. **Deleting LightHouse data deletes the profile row** (2026-10-05). Account deletion and the
+   account area's LightHouse delete remove the `lighthouse_profiles` row, phone number and Signal
+   link included, the same as the plugin's own delete; only `lighthouse_user_extension` keeps a
+   `service_deleted_at` stamp, as the rejoin marker. The data export leaves out the blocks other
+   members placed on the member (`lighthouse_blocks` by `blocked_user_id`): those rows, and the
+   reason written on them, are the blocker's.
 
 ## 6) Web and Android Delivery Status
 
@@ -387,8 +393,23 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    Stream chat channel. Cutting an existing thread when one side blocks the other needs a decision on
    what happens to the match itself (canceled? left in place, muted?), so it is recorded here rather
    than guessed at.
+5. **`lighthouse_profiles.service_deleted_at` is no longer set by anything** (2026-10-05). Deletion
+   now removes the row, `post/0050` removed the rows that held a stamp, and saving a profile writes
+   NULL. The column is still read by the Wanted query and named in the predicate of
+   `idx_lighthouse_profiles_wanted_public`, and the revision running during a deploy reads it, so it
+   is dropped (with the index rebuilt without it and the two code references removed) in the
+   release after this one has shipped, the same sequence `post/0048` used.
 
 ## 9) Change Log
+
+- 2026-10-05: **Account deletion deletes the LightHouse profile row; the data export leaves out
+  blocks placed on the member.** The account deletion registry soft-deleted `lighthouse_profiles`,
+  so deleting an account, or only its LightHouse data from the account area, kept the phone number,
+  Signal link, bio, housing needs and budget, while the plugin's own delete removed the row (#2700).
+  The registry now deletes it, and `post/0050_lighthouse_profiles_delete_soft_deleted.sql` removes
+  the rows already left behind. The data export read the registry's `lighthouse_blocks` entry keyed
+  on `blocked_user_id` as the member's own rows and so returned who had blocked them and the reason
+  written (#2699); that entry is now marked `notExported(...)`, and deletion still removes it.
 
 - 2026-09-15: **A member can publish what they are looking for, not only what they have to offer
   (owner report).** LightHouse showed one side of the market. A member weighing up offering a room

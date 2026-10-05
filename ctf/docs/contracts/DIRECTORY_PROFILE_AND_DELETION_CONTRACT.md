@@ -107,7 +107,9 @@ When user requests full account deletion:
   - no recoverable user-scoped Directory profile data except policy-required audit artifacts
 - Profiles the member nominated for other people (`directory_profiles.nominated_by_user_id`) are
   not theirs, so they stay: the id is overwritten with the departed-member placeholder and
-  `invited_by_username` is cleared, so the Directory stops naming them as nominator.
+  `invited_by_username` is cleared, so the Directory stops naming them as nominator. For the same
+  reason these profiles are not in the nominator's data export: the row is the nominee's profile,
+  and once claimed it holds their bio, payment addresses and location.
 
 ## 7) Rejoin/Re-enable Behavior
 
@@ -164,6 +166,7 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-10-05: Profiles a member nominated are left out of that member's data export (#2643).
 - 2026-09-30: Added `directory_profiles.nominated_by_user_id` (who brought the person in). On full-account deletion of the nominator it is pseudonymized and `invited_by_username` cleared; the profile itself stays with its person.
 - 2026-06-25: Added `directory_profile_proposed_skills` (member-authored "skill not listed" free-text labels on their own profile, pending admin promotion). Profile_id-keyed; cleared with the profile in service-scoped deletion.
 - 2026-07-16: Added `directory_suppressed_quora_urls` (the "remove at the person's request" takedown suppression list). Retention: when a community-generated profile is taken down at the person's request, the profile row is deleted but the **normalized Quora URL + reason** are retained here — this is the minimal data needed to honor "do not list me again" and block the URL from being re-added. An admin override lifts the block (stamps the override fields) but the row is retained as an accountability record. This table is not written by ordinary self/admin deletion, and is not cleared by service-scoped deletion (it is a suppression record, not member profile data).
