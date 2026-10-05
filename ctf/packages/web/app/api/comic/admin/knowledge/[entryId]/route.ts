@@ -12,7 +12,8 @@ type RouteProps = { params: Promise<{ entryId: string }> };
 
 // Admin: switch one grounding entry on or off for retrieval — the write half of knowledge curation
 // (command comic.admin.knowledge.set-active). Deactivating never deletes: the row stays for history
-// and can be switched back on; retrieval simply skips inactive rows.
+// and can be switched back on; retrieval simply skips inactive rows. The one exception is an entry
+// from a contribution its member withdrew: switching that back on is refused with a 409.
 export async function PUT(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;
@@ -40,8 +41,30 @@ export async function PUT(request: Request, { params }: RouteProps) {
   }
 
   try {
-    const entry = await setKnowledgeEntryActive(entryId, body.active);
-    if (!entry) {
+    const outcome = await setKnowledgeEntryActive(entryId, body.active);
+    if (outcome.status === 'withdrawn') {
+      await recordComicAdminAudit({
+        actorId: gate.auth.userId,
+        pluginId: 'comic',
+        command: 'comic.admin.knowledge.set-active',
+        status: 'deny',
+        reason: 'contribution_withdrawn',
+        targetType: 'knowledge_entry',
+        targetId: entryId,
+        result: 'failure',
+        errorCategory: 'conflict',
+        metadata: { active: body.active },
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: COMIC_ERROR_CODE.conflict,
+          message: 'This entry came from a contribution its member withdrew, so it cannot be switched back on.',
+        },
+        { status: 409 },
+      );
+    }
+    if (outcome.status === 'not_found') {
       // Recorded too: an admin reaching for an entry that is not there is worth seeing in the trail,
       // and the point of the trail is that what did not happen is as legible as what did.
       await recordComicAdminAudit({
@@ -73,7 +96,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
       errorCategory: null,
       metadata: { active: body.active },
     });
-    return NextResponse.json({ ok: true, entry }, { status: 200 });
+    return NextResponse.json({ ok: true, entry: outcome.entry }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'admin_knowledge_set_active' });
     await recordComicAdminAudit({

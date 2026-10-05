@@ -348,7 +348,10 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
 - `POST /api/comic/contributions/[id]/withdraw` (`comic.contribution.withdraw`) — signed-in member,
   own contribution only (scoped inside the query, so another member's id is indistinguishable from a
   missing one). Marks it withdrawn and deactivates its `comic_knowledge_entries` rows in one
-  transaction, so there is no window where it reads as withdrawn while still being quoted.
+  transaction, so there is no window where it reads as withdrawn while still being quoted. "Its rows"
+  are the ones whose `contribution_id` is this contribution — the same rows account deletion
+  removes. A row the contribution only pointed at because the text was already there (another
+  member's, or the owner's import) stays on.
 - `GET /api/comic/admin/contributions?status=<status>` — admin. The contribution review queue, each
   row with its entries so the reviewer reads the writing rather than a count.
 - `POST /api/comic/admin/contributions/[id]/review` (`comic.contribution.review`) — admin. Accept
@@ -386,7 +389,9 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   page (`comic-knowledge-admin.tsx`), linked from the `/admin` landing as "AI Knowledge Base".
 - `PUT /api/comic/admin/knowledge/[entryId]` (`comic.admin.knowledge.set-active`) — admin,
   CSRF-guarded. Switch one grounding entry on/off for retrieval. Off never deletes: the row stays
-  and retrieval simply skips inactive rows; the entry can be switched back on.
+  and retrieval simply skips inactive rows; the entry can be switched back on — except an entry from
+  a contribution its member withdrew, which answers 409 (`COMIC_CONFLICT`) and is audited
+  `deny`/`contribution_withdrawn`. Switching such an entry off is still allowed.
 - `GET /api/comic/admin/audit-events` (`comic.admin.audit.list`) — admin. Read of
   `comic_admin_audit_trail`, newest first; optional `?limit=` (default 100, capped at 200). Returns
   `{ events }`. Backs the **Audit log** panel at the bottom of `/admin/comic/knowledge`.
@@ -819,6 +824,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-05: **Withdrawing a contribution switches off only what that contribution put in the library, and curation cannot switch it back on.** An entry whose text was already in the library points at the existing row instead of making a new one, and `withdrawContribution` switched off every row its entries pointed at — so a member could switch off another member's entry, or the owner's imported writing, by sending a copy of it and withdrawing. The update now matches on `comic_knowledge_entries.contribution_id`, the same column account deletion cascades on. Separately, `setKnowledgeEntryActive` let an admin switch a withdrawn contribution's entry back on from `/admin/comic/knowledge`; switching on is now refused inside the same UPDATE when the row's contribution is withdrawn, and `PUT /api/comic/admin/knowledge/[entryId]` answers 409 with a plain reason and an audit row. No schema change.
 
 - 2026-09-30: **`GET /api/comic/conversation` answers an unchanged stream with a bodiless 304.** It is polled with the home chat every 10-30s; it now answers through `jsonWithEtag` (fingerprint plus `Cache-Control: private, no-cache`), and the home chat reads it with `cache: 'no-cache'`. The review queue poll (`comic-review-dashboard.tsx`) now skips ticks while the tab is hidden and refreshes once when shown. Same payload, no schema or contract change. Detail in the Feed inventory change log.
 
