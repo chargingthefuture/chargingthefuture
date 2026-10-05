@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { Pager } from "./fireside-pager";
 import { useUrlPage } from "./fireside-url-page";
+import { readFiresidePage } from "./paged-read";
 
 // The admin's half of the two keys on copying a comment out to the blog's published build.
 //
@@ -152,19 +153,10 @@ export function FiresideExportQueue({ t }: { t: PluginShellTokens }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/fireside/admin/export-queue?page=${wanted}`);
-      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
-      const data = (await res.json().catch(() => null)) as {
-        message?: string;
-        requests?: ExportRequest[];
-        page?: number;
-        lastPage?: number;
-        total?: number;
-      } | null;
-      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load the export queue (${res.status}).`);
-      setRequests(data.requests ?? []);
-      setLastPage(data.lastPage ?? 1);
-      setTotal(data.total ?? 0);
+      const data = await readFiresidePage<ExportRequest>(`/api/fireside/admin/export-queue?page=${wanted}`, "requests", "Could not load the export queue");
+      setRequests(data.items);
+      setLastPage(data.lastPage);
+      setTotal(data.total);
       // The server clamps an out-of-range page and answers with the one it used, so a linked page
       // number past the end lands on the last page rather than on nothing — which is what a
       // bookmarked queue page does as soon as the queue drains. It replaces the address-bar entry

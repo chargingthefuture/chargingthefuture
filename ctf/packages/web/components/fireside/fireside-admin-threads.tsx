@@ -5,6 +5,7 @@ import type { PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import { firesidePostUrl } from "@/lib/fireside/constants";
 import { Pager } from "./fireside-pager";
 import { useUrlPage } from "./fireside-url-page";
+import { readFiresidePage } from "./paged-read";
 
 // Every conversation, and the one control that acts on an entire one: close it to new comments, or
 // open it again.
@@ -85,19 +86,10 @@ export function FiresideAdminThreads({ t }: { t: PluginShellTokens }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/fireside/admin/threads?page=${wanted}`);
-      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
-      const data = (await res.json().catch(() => null)) as {
-        message?: string;
-        threads?: AdminThread[];
-        page?: number;
-        lastPage?: number;
-        total?: number;
-      } | null;
-      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load the conversations (${res.status}).`);
-      setThreads(data.threads ?? []);
-      setLastPage(data.lastPage ?? 1);
-      setTotal(data.total ?? 0);
+      const data = await readFiresidePage<AdminThread>(`/api/fireside/admin/threads?page=${wanted}`, "threads", "Could not load the conversations");
+      setThreads(data.items);
+      setLastPage(data.lastPage);
+      setTotal(data.total);
       // The server clamps an out-of-range page and answers with the one it used, so a linked page
       // number past the end lands on the last page rather than on nothing. It replaces the
       // address-bar entry rather than adding one, so Back still leaves the list.
