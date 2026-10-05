@@ -156,9 +156,10 @@
     {
       "name": "contributor-access",
       "type": "plugin",
-      "lastReviewedAt": "2026-08-05T14:30:46.085Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:43:13.633Z",
+      "lastRunIssues": 3,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:43:13.633Z"
     },
     {
       "name": "ctf-root",
