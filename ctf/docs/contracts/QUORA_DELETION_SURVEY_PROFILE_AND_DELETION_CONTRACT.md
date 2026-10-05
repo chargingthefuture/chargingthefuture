@@ -32,11 +32,11 @@ service a member uses, it is a form they answered once.
 | `quora_deletion_survey_accounts` | Untouched by the engine; de-identified with the response. | No user column. The rows reach a person only through `response_id`, and once the response no longer names anyone, neither do they. The `ON DELETE CASCADE` on that foreign key fires only if a response row is ever deleted, which the engine does not do. |
 | `quora_deletion_survey_audit_log` | Retained | Records what was done to this data and by whom: admin reads and exports, and verification started from the survey. It has to survive the departure of anyone named in it, like every other accountability trail in the registry. |
 
-Two consequences of the placeholder are worth knowing. The engine writes the string
-`deleted_member`, not NULL, so a departed member's response is not told apart from another
-departed member's: the `repeatRespondents` total groups by `user_id` and would count two deleted
-members who each answered once as one repeat respondent. And the CSV `member_id` column carries
-the placeholder for those rows rather than an empty cell.
+The engine writes the string `deleted_member`, not NULL, so every departed member's response
+carries the same value and cannot be told apart from another's. The survey code treats that value
+as a deleted account: the `repeatRespondents` total leaves those rows out (grouped together, two
+departed members who each answered once would have counted as one repeat respondent), the admin
+card reads "member account deleted", and the CSV `member_id` cell is empty for them.
 
 ## What is written outside these tables
 
