@@ -350,9 +350,10 @@
     {
       "name": "mood",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-26T15:08:10.962Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:15:40.344Z",
+      "lastRunIssues": 6,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:15:40.345Z"
     },
     {
       "name": "mutual-time",
