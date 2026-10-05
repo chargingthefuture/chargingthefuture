@@ -21,6 +21,14 @@ export function runWithForcedPool<T>(target: ForcedPoolTarget, fn: () => Promise
   return forcedPoolStore.run(target, fn);
 }
 
+// The schema a surrounding runWithForcedPool pinned this work to, or null when nothing did. Read-only,
+// so another integration can follow the same choice the database queries follow: the Stream
+// credentials do, so a deletion pinned to the demo schema clears the demo Stream app and never the
+// production one.
+export function getForcedPoolTarget(): ForcedPoolTarget | null {
+  return forcedPoolStore.getStore() ?? null;
+}
+
 function getDatabaseUrl(): string {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl || databaseUrl.trim().length === 0) {
