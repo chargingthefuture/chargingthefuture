@@ -218,7 +218,7 @@ Core tables:
 3. `skill_up_milestones`
 4. `skill_up_enrollments` — one row per member per cohort, unique on `(cohort_id, user_id)` **only while the row is not `dropped`** (a partial unique index, `WHERE status <> 'dropped'`), so leaving frees the seat but keeps the record. Columns: `id` (PK), `cohort_id`, `user_id`, `status`, `credits_deposited`, `assigned_trainer_id`, `enrolled_at`, `progress_percent`, `created_at`, `updated_at`. `status` is `enrolled` on insert (`active` on rows written before the value changed) and moves to `completed` or `dropped`; every read that means "a live enrollment" matches `('enrolled', 'active')`, and both `enrolled` and `pending` are in the check constraint. `enrolled_at` was corrected into `ctf/schema.sql` on 2026-08-15 — it had always existed on the long-running database but a freshly built one lacked it while three reads order or measure by it.
 5. `skill_up_enrollment_milestone_escrows`
-6. `skill_up_milestone_validations`
+6. `skill_up_milestone_validations` — one row per enrollment and milestone, enforced by the unique index `uq_skill_up_milestone_validations_enrollment_milestone` on `(enrollment_id, milestone_id)` (added 2026-10-05; `validateMilestone` upserts on those columns and Postgres refuses the upsert without it). A repeat validate updates the row unless it is already `released`, in which case it is refused and the row is left as the record of the release.
 7. `skill_up_disbursements`
 9. `skill_up_disputes`
 10. `skill_up_dispute_comments`
@@ -353,6 +353,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-05: **Milestone validation could never succeed** (code-review finding #2923). `validateMilestone` wrote `skill_up_milestone_validations` with `ON CONFLICT (enrollment_id, milestone_id)`, and no unique index covered those columns, so Postgres refused every call and `POST /milestones/:id/validate` answered 503. With no validation row, release refused too, so no milestone returned a deposit or granted trainer credits. `schema.sql` now creates `uq_skill_up_milestone_validations_enrollment_milestone`, and `db/migrations/pre/0003_skill_up_milestone_validations_dedupe.sql` runs before it to leave one row per pair on a database that already held duplicates (keeping a released row first, then a validated one, then the newest), so the index build cannot stop the schema load. The upsert's update branch now skips a row that is already `released` — before, a repeat validate would have reset it to `validated` and erased its release time — and the call is refused instead. It also returns the id of the row it wrote rather than a fresh id that matched nothing on a repeat, and sets `validated_at` on the first insert. Verified against a scratch Postgres: the migration keeps the intended row and re-runs as a no-op, `schema.demo.sql` loads on a blank database and on one carrying the old table name, and a repeat upsert returns the same id while a released row stays released.
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
   registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface

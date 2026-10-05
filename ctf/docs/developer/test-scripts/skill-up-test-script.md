@@ -757,6 +757,7 @@ Result: web ☐
 **Expected:**
 - The validation succeeds and the queue re-pulls via refresh.
 - A second identical API request with the same idempotency key returns the same validation ID without creating a duplicate record.
+- Validating the same milestone again with a new idempotency key updates the same row (same validation ID). Once the milestone has been released (LU-A8), a further validate is refused with 409 and the release stays recorded.
 - Note: the member SkillUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
