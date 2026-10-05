@@ -392,6 +392,18 @@ not by itself proof of anything (Quora sometimes deletes accounts), so there is 
 penalty; the admin decides and Revoke is the manual action.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A5c · A rejected or revoked member loses access even where Unleash is set up (added 2026-10-05)
+**Role:** admin / reviewer, then the member · **Surfaces:** web
+**Precondition:** an environment with Unleash configured and the `feature-unlock-quora-onboarding`
+flag turned on; a test member who was approved.
+**Steps:**
+1. As the admin, use **Revoke reward** on that member (UNLOCK-A5), or reject their submission.
+2. As the member, reload the app and open a gated plugin such as Directory.
+**Expected:** The member is on support-only access and the gated plugin refuses them, matching what
+the admin screen shows. The stored submission decides whenever one exists; the Unleash flag only
+counts for a member with no submission. Approving a member no longer adds them to the flag.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A6 · Search the submissions list
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).
