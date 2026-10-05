@@ -73,7 +73,7 @@ function ThreadRow({
 }
 
 export function FiresideAdminThreads({ t }: { t: PluginShellTokens }) {
-  const [page, setPage] = useUrlPage("threads");
+  const { page, setPage, adoptPage, ready } = useUrlPage("threads");
   const [threads, setThreads] = useState<AdminThread[]>([]);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -86,28 +86,31 @@ export function FiresideAdminThreads({ t }: { t: PluginShellTokens }) {
     setError(null);
     try {
       const res = await fetch(`/api/fireside/admin/threads?page=${wanted}`);
-      const data = (await res.json()) as {
+      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
+      const data = (await res.json().catch(() => null)) as {
         message?: string;
         threads?: AdminThread[];
         page?: number;
         lastPage?: number;
         total?: number;
-      };
-      if (!res.ok) throw new Error(data.message ?? "Could not load the conversations.");
+      } | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load the conversations (${res.status}).`);
       setThreads(data.threads ?? []);
       setLastPage(data.lastPage ?? 1);
       setTotal(data.total ?? 0);
       // The server clamps an out-of-range page and answers with the one it used, so a linked page
-      // number past the end lands on the last page rather than on nothing.
-      if (data.page && data.page !== wanted) setPage(data.page);
+      // number past the end lands on the last page rather than on nothing. It replaces the
+      // address-bar entry rather than adding one, so Back still leaves the list.
+      if (data.page && data.page !== wanted) adoptPage(data.page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load the conversations.");
     } finally {
       setLoading(false);
     }
-  }, [setPage]);
+  }, [adoptPage]);
 
-  useEffect(() => { void load(page); }, [load, page]);
+  // Waits for the address bar to be read, so a linked page is the only page asked for.
+  useEffect(() => { if (ready) void load(page); }, [load, page, ready]);
 
   async function setClosed(id: string, isClosed: boolean) {
     setBusyId(id);
@@ -119,8 +122,8 @@ export function FiresideAdminThreads({ t }: { t: PluginShellTokens }) {
         body: JSON.stringify({ isClosed, reason: "From the conversations list." }),
       });
       if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not change that conversation.");
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? `Could not change that conversation (${res.status}).`);
       }
       await load(page);
     } catch (e) {

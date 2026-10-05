@@ -140,7 +140,7 @@ function RequestCard({
 export function FiresideExportQueue({ t }: { t: PluginShellTokens }) {
   // The page is in the address bar, so a queue page can be linked and the back button works
   // (rule 100). It used to be local state here, which is the gap the inventory recorded.
-  const [page, setPage] = useUrlPage("queue");
+  const { page, setPage, adoptPage, ready } = useUrlPage("queue");
   const [requests, setRequests] = useState<ExportRequest[]>([]);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -153,29 +153,32 @@ export function FiresideExportQueue({ t }: { t: PluginShellTokens }) {
     setError(null);
     try {
       const res = await fetch(`/api/fireside/admin/export-queue?page=${wanted}`);
-      const data = (await res.json()) as {
+      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
+      const data = (await res.json().catch(() => null)) as {
         message?: string;
         requests?: ExportRequest[];
         page?: number;
         lastPage?: number;
         total?: number;
-      };
-      if (!res.ok) throw new Error(data.message ?? "Could not load the export queue.");
+      } | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load the export queue (${res.status}).`);
       setRequests(data.requests ?? []);
       setLastPage(data.lastPage ?? 1);
       setTotal(data.total ?? 0);
       // The server clamps an out-of-range page and answers with the one it used, so a linked page
       // number past the end lands on the last page rather than on nothing — which is what a
-      // bookmarked queue page does as soon as the queue drains.
-      if (data.page && data.page !== wanted) setPage(data.page);
+      // bookmarked queue page does as soon as the queue drains. It replaces the address-bar entry
+      // rather than adding one, so Back still leaves the queue.
+      if (data.page && data.page !== wanted) adoptPage(data.page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load the export queue.");
     } finally {
       setLoading(false);
     }
-  }, [setPage]);
+  }, [adoptPage]);
 
-  useEffect(() => { void load(page); }, [load, page]);
+  // Waits for the address bar to be read, so a linked page is the only page asked for.
+  useEffect(() => { if (ready) void load(page); }, [load, page, ready]);
 
   async function decide(commentId: string, action: "approve" | "refuse") {
     setBusyId(commentId);
@@ -190,8 +193,8 @@ export function FiresideExportQueue({ t }: { t: PluginShellTokens }) {
         }),
       });
       if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not record that decision.");
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? `Could not record that decision (${res.status}).`);
       }
       await load(page);
     } catch (e) {
