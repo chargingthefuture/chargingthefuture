@@ -51,9 +51,10 @@
     {
       "name": "announcements",
       "type": "module",
-      "lastReviewedAt": "2026-07-18T09:46:21.009Z",
-      "lastRunIssues": 6,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:31:32.868Z",
+      "lastRunIssues": 3,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:31:32.868Z"
     },
     {
       "name": "auth",
