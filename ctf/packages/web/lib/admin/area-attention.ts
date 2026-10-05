@@ -3,6 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 // the queue rather than describing it. See the `{ count }` note on AttentionQuery below.
 import { countPendingExportRequests } from 'lib/fireside/export-review';
 import { reportError } from 'lib/observability/report';
+import { CONTRIBUTIONS_CALL_ACTOR_ID } from 'lib/admin-expenses/contributions-call';
 
 // Powers the "new to review" dot on the admin landing tiles. For each admin area that has a real
 // review queue on its admin page, we count the items that are actionable (pending / open / unresolved)
@@ -12,8 +13,8 @@ import { reportError } from 'lib/observability/report';
 // shows what is new. (Mutual Time's admin page is `/apps/mutual-time`, not `/admin/*`, so its slug is
 // still `mutual-time` — the last segment of the tile's href.) Areas that are read-only dashboards,
 // config editors, or browse views (directory, beacon, lighthouse, foundation, socket-relay,
-// weekly-performance, workforce, feed-announcements, daily-exchange) have no entry and never get
-// a dot.
+// weekly-performance, workforce, daily-exchange) have no entry and never get a dot.
+// feed-announcements has one entry only: the twice-yearly Contributions call draft (see below).
 //
 // Each query takes $1 = the admin's last-seen timestamp for that area (nullable; null = never opened,
 // so every actionable row counts). It returns a single integer column `n`. An area with more than one
@@ -36,7 +37,20 @@ type AttentionQuery =
   | { sql: string; scopedToAdmin: true }
   | { count: (since: Date | null) => Promise<number> };
 
+// The twice-yearly Contributions call is written as a draft for the owner to check and publish
+// (app/api/internal/admin-expenses/contributions-call-draft). Its dot ignores when the area was last
+// opened: it stays lit until the draft is published or archived, so opening the tile and leaving
+// does not let it be forgotten (owner decision, 2026-10-05).
+async function countUnpublishedContributionsCalls(): Promise<number> {
+  const result = await queryDb<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM announcements WHERE status = 'draft' AND created_by_user_id = $1`,
+    [CONTRIBUTIONS_CALL_ACTOR_ID],
+  );
+  return result.rows[0]?.n ?? 0;
+}
+
 const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
+  'feed-announcements': [{ count: countUnpublishedContributionsCalls }],
   unlock: [
     `SELECT COUNT(*)::int AS n FROM unlock_verification_submissions
        WHERE review_status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
