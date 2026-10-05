@@ -132,7 +132,7 @@ a duplicate, shown inline. If you and the host have blocked each other, the requ
 action never appears on your own listing.
 **Result:** web ☐ mobile ☐ — notes:
 
-### LH-4b · A listing's street address stays private until a stay is agreed (added 2026-10-05)
+### LH-4c · A listing's street address stays private until a stay is agreed (added 2026-10-05)
 **Role:** host, seeker, another member, admin · **Surfaces:** api/data
 **Precondition:** a host listing with a street address and postal code; a seeker with a pending
 request on it.
