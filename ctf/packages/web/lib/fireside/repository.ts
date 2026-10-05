@@ -173,6 +173,13 @@ async function readReactions(commentIds: string[], viewerUserId: string | null):
     [commentIds],
   );
 
+  // A reaction counts once the person who left it is approved, the same rule as a comment
+  // (fireside.reaction.toggle in the access policy): an unverified account pressing Agree is how a
+  // brigade would work. This used to count every row, so a press from an account that had never
+  // finished Unlock changed the number for every reader at once. Approval makes everything they
+  // have left count, because nothing here is stored differently — only read differently.
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.reactor_user_id));
+
   for (const row of result.rows) {
     const mine = viewerUserId != null && row.reactor_user_id === viewerUserId;
     // A downvote reaches the viewer list and never the counts. Somebody sees their own; nobody
@@ -181,6 +188,10 @@ async function readReactions(commentIds: string[], viewerUserId: string | null):
       viewer.set(row.comment_id, [...(viewer.get(row.comment_id) ?? []), row.kind]);
     }
     if (!isCountedKind(row.kind)) continue;
+    // The viewer's own reaction counts in what they are shown while they wait, the way their own
+    // held comment is shown to them, so a pressed button never sits beside a number it did not move.
+    // Nobody else's view includes it.
+    if (!mine && !approved.has(row.reactor_user_id)) continue;
     const existing = counts.get(row.comment_id) ?? emptyReactionCounts();
     existing[row.kind] += 1;
     counts.set(row.comment_id, existing);

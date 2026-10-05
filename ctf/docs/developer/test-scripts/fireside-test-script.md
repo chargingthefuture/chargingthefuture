@@ -72,11 +72,15 @@ Result: web ☐
 **Precondition:** The member from FS-2 has three held comments on two different posts, and one reaction.
 
 **Steps:**
-1. Approve that member in Unlock.
-2. Signed out, open both posts.
-3. Check the reaction count on the comment they reacted to.
+1. Before approving, read the reaction count on the comment they reacted to, signed out and then
+   signed in as that member.
+2. Approve that member in Unlock.
+3. Signed out, open both posts.
+4. Check the reaction count on the comment they reacted to.
 
 **Expected:**
+- Before approval their reaction is not in the count a signed-out reader sees. Signed in as that
+  member, the count includes it and the button shows as pressed.
 - All three comments are now public, across both posts, from the single approval. Nothing had to be approved comment by comment.
 - Their reaction now counts.
 - The queue never had three rows for this person — approval is one decision about a person, not one per item.
