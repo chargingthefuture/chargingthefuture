@@ -1658,7 +1658,8 @@ export async function dismissFeedItem(
   return { dismissedAtIso: new Date(dismissed.rows[0].dismissed_at).toISOString() };
 }
 
-export async function listAnnouncements(includeArchived: boolean): Promise<Announcement[]> {
+// The admin listing: every announcement, drafts and archived ones included. Admin-only callers.
+export async function listAnnouncements(): Promise<Announcement[]> {
   const result = await queryDb<AnnouncementRow>(
     `
       SELECT
@@ -1677,10 +1678,8 @@ export async function listAnnouncements(includeArchived: boolean): Promise<Annou
         created_at,
         updated_at
       FROM announcements
-      WHERE ($1::boolean = TRUE OR status <> 'archived')
       ORDER BY created_at DESC
     `,
-    [includeArchived],
   );
 
   return result.rows.map(mapAnnouncement);
