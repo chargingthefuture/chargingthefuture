@@ -272,9 +272,10 @@
     {
       "name": "gdp",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-28T09:12:53.372Z",
+      "lastReviewedAt": "2026-10-05T12:37:54.857Z",
       "lastRunIssues": 5,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:37:54.857Z"
     },
     {
       "name": "geo",
