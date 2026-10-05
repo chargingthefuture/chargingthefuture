@@ -650,9 +650,10 @@
     {
       "name": "webhooks",
       "type": "module",
-      "lastReviewedAt": "2026-07-18T09:44:46.490Z",
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:32:11.058Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:32:11.059Z"
     },
     {
       "name": "weekly-performance",
