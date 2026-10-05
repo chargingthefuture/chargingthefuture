@@ -249,6 +249,9 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       });
       await refreshHistory().catch(() => undefined);
     } catch (sendError) {
+      // Put the text back so a failed send (over the length cap, a network failure) does not lose it,
+      // unless the member has already started typing something new. Same rule as the Commons composer.
+      setInput((current) => (current.trim().length === 0 ? text : current));
       if (activeReply) {
         setReplyTarget(activeReply);
       }

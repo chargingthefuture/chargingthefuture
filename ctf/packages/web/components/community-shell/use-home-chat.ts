@@ -845,7 +845,9 @@ async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
 
 // A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `stopPoll`
 // stops the running poll so cleanup can end it.
-type BootstrapController = { active: boolean; stopPoll: (() => void) | undefined };
+// historyFailed is true while the first history read has failed and no later read has succeeded, so
+// a successful join does not wipe that error and the next good poll clears it.
+type BootstrapController = { active: boolean; stopPoll: (() => void) | undefined; historyFailed: boolean };
 
 // Everything the bootstrap needs from the hook: refresh callbacks, the refs the live handler and
 // cleanup reach through, and the state setters.
@@ -876,9 +878,16 @@ function resetChatForMount(setters: ChatSetters, markedSeenRef: RefObject<boolea
 function startChatPoll(ctx: ChatBootstrapContext, intervalMs: number): void {
   ctx.controller.stopPoll?.();
   ctx.controller.stopPoll = startVisibleInterval(() => {
-    void ctx.refreshHistory().catch(() => {
-      // Keep polling while the shell is mounted.
-    });
+    void ctx.refreshHistory()
+      .then(() => {
+        if (ctx.controller.active && ctx.controller.historyFailed) {
+          ctx.controller.historyFailed = false;
+          ctx.setters.setError(null);
+        }
+      })
+      .catch(() => {
+        // Keep polling while the shell is mounted.
+      });
     void ctx.refreshComic().catch(() => {
       // The comic stream poll is best-effort; failures must not break hub polling.
     });
@@ -895,6 +904,7 @@ async function loadInitialChatHistory(ctx: ChatBootstrapContext): Promise<void> 
     void ctx.loadAroundDeepLink().catch(() => undefined);
   } catch (loadError) {
     if (ctx.controller.active) {
+      ctx.controller.historyFailed = true;
       ctx.setters.setError(toErrorMessage(loadError, 'Unable to load live chat history.'));
     }
   }
@@ -943,7 +953,8 @@ async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
     });
     if (!ctx.controller.active) return;
     ctx.setters.setConnectionState('live');
-    ctx.setters.setError(null);
+    // Clear only the join's own earlier error; a failed history read stays on screen until a poll reads it.
+    if (!ctx.controller.historyFailed) ctx.setters.setError(null);
 
     const live = await connectLiveWhenConfigured(join, ctx);
 
@@ -1016,7 +1027,7 @@ function useChatBootstrapEffect(params: {
   } = params;
 
   useEffect(() => {
-    const controller: BootstrapController = { active: true, stopPoll: undefined };
+    const controller: BootstrapController = { active: true, stopPoll: undefined, historyFailed: false };
     resetChatForMount(settersRef.current, markedSeenRef);
     void runChatBootstrap({
       controller,
