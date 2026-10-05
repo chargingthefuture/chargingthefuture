@@ -20,11 +20,15 @@ import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { startVisibleInterval } from "../../lib/shared/visible-interval";
+import { responseFailureText } from "lib/errors/client-failure";
 
 type ShellData = {
   weeks: WpWeek[];
   currentWeekStart: string | null;
   initialWeekStart: string | null;
+  // Set when the current-week read failed: the picker still works, but the screen cannot tell which
+  // week is live, so it does not poll and says why.
+  currentWeekNotice: string | null;
 };
 
 function priorWeekStart(weeks: WpWeek[], selected: string | null): string | null {
@@ -39,19 +43,29 @@ function readCurrentWeekStart(currentData: CurrentWeekResponse | null): string |
   return currentData?.currentWeek?.weekStartDate ?? null;
 }
 
+// What the route said about a failed answer (message, then reason), or a plain note when it said
+// nothing. Callers put the status in their own sentence.
+function routeReason(res: Response): Promise<string> {
+  return responseFailureText(res, "the route gave no reason.", "member");
+}
+
 async function fetchShellData(): Promise<ShellData> {
   const [weeksRes, currentRes] = await Promise.all([
     fetch("/api/weekly-performance/weeks", { cache: "no-store" }),
     fetch("/api/weekly-performance/current-week", { cache: "no-store" }),
   ]);
-  if (!weeksRes.ok) throw new Error("Failed to load weeks.");
+  if (!weeksRes.ok) throw new Error(`Failed to load weeks (${weeksRes.status}): ${await routeReason(weeksRes)}`);
   const weeksData = (await weeksRes.json()) as WeeksResponse;
   const currentData = currentRes.ok ? ((await currentRes.json()) as CurrentWeekResponse) : null;
+  const currentWeekNotice = currentRes.ok
+    ? null
+    : `Could not read the current week (${currentRes.status}), so the numbers will not refresh on their own: ${await routeReason(currentRes)}`;
   const currentWeekStart = readCurrentWeekStart(currentData);
   return {
     weeks: weeksData.weeks,
     currentWeekStart,
     initialWeekStart: currentWeekStart ?? weeksData.weeks[0]?.weekStartDate ?? null,
+    currentWeekNotice,
   };
 }
 
@@ -63,6 +77,11 @@ export function WeeklyPerformanceShell() {
   const [metrics, setMetrics] = useState<WpMetric[]>([]);
   const [comparison, setComparison] = useState<WpComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True while a week's numbers are being fetched after a week switch, so the empty cards read as
+  // loading rather than as a week with no activity.
+  const [weekLoading, setWeekLoading] = useState(false);
+  const [currentWeekNotice, setCurrentWeekNotice] = useState<string | null>(null);
+  const [comparisonNotice, setComparisonNotice] = useState<string | null>(null);
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
 
@@ -74,6 +93,7 @@ export function WeeklyPerformanceShell() {
         setWeeks(data.weeks);
         setCurrentWeekStart(data.currentWeekStart);
         setSelectedWeekStart(data.initialWeekStart);
+        setCurrentWeekNotice(data.currentWeekNotice);
       })
       .catch((e) => {
         if (active) setError(e instanceof Error ? e.message : "Failed to load Weekly Performance.");
@@ -90,6 +110,7 @@ export function WeeklyPerformanceShell() {
     if (!silent) {
       setMetrics([]);
       setComparison(null);
+      setWeekLoading(true);
     }
     const metricsRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}`, { cache: "no-store" });
     if (metricsRes.ok) {
@@ -104,11 +125,21 @@ export function WeeklyPerformanceShell() {
         `Could not load this week's numbers (${metricsRes.status})${body?.message ? `: ${body.message}` : "."}`,
       );
     }
+    if (!silent) setWeekLoading(false);
     if (compareWeekStartDate) {
       const cmpRes = await fetch(`/api/weekly-performance/metrics?weekStartDate=${encodeURIComponent(weekStartDate)}&compareWeekStartDate=${encodeURIComponent(compareWeekStartDate)}`, { cache: "no-store" });
       if (cmpRes.ok) {
         setComparison(((await cmpRes.json()) as ComparisonResponse).comparison ?? null);
+        setComparisonNotice(null);
+      } else {
+        // Without this the cards read "No prior-week comparison", which says there is no prior data
+        // when the read actually failed.
+        setComparisonNotice(
+          `Could not load the prior week for comparison (${cmpRes.status}): ${await routeReason(cmpRes)}`,
+        );
       }
+    } else {
+      setComparisonNotice(null);
     }
   }, []);
 
@@ -149,13 +180,23 @@ export function WeeklyPerformanceShell() {
   const content = error ? (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#F87171", fontSize: 14, padding: 24 }}>{error}</div>
   ) : (
-    <WeeklyPerformanceDashboardMain
-      week={selectedWeek}
-      metrics={metrics}
-      comparison={comparison}
-      onRefresh={refreshSelectedWeek}
-      isCurrent={selectedIsCurrent}
-    />
+    <>
+      {[currentWeekNotice, comparisonNotice].map((notice) =>
+        notice ? (
+          <div key={notice} role="status" style={{ margin: "12px 24px 0", padding: "10px 14px", borderRadius: 10, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.3)", color: "#F87171", fontSize: 13 }}>
+            {notice}
+          </div>
+        ) : null,
+      )}
+      <WeeklyPerformanceDashboardMain
+        week={selectedWeek}
+        metrics={metrics}
+        comparison={comparison}
+        onRefresh={refreshSelectedWeek}
+        isCurrent={selectedIsCurrent}
+        loading={weekLoading}
+      />
+    </>
   );
 
     return (
