@@ -385,9 +385,10 @@
     {
       "name": "ops",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T01:21:44.002Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T01:21:44.002Z"
     },
     {
       "name": "peer-programming",
