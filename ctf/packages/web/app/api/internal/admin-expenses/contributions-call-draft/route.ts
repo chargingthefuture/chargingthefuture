@@ -3,7 +3,7 @@ import { countApprovedMembers, listExpenses } from 'lib/admin-expenses/repositor
 import { loadGpuBillState } from 'lib/admin-expenses/gpu-bill';
 import { measuredGpuMonthlyCents } from 'lib/admin-expenses/gpu-bill-shared';
 import { summarizeExpenses } from 'lib/admin-expenses/summary';
-import { buildContributionsCallDraft, CONTRIBUTIONS_CALL_LINKED_PLUGINS } from 'lib/admin-expenses/contributions-call';
+import { buildContributionsCallDraft, CONTRIBUTIONS_CALL_ACTOR_ID, CONTRIBUTIONS_CALL_LINKED_PLUGINS } from 'lib/admin-expenses/contributions-call';
 import { countTotalMembers } from 'lib/engagement/login-activity';
 import { createAnnouncementDraft } from 'lib/feed/repository';
 import { logFeedAudit } from 'lib/feed/audit';
@@ -15,7 +15,7 @@ import { failureReason } from 'lib/errors/failure';
 // with the current sign-up count, approved-member count and hosting cost filled in
 // (.github/workflows/contributions-call-draft.yml). The owner checks the figures and publishes it
 // from /admin/feed-announcements; nothing here publishes. Guarded by CRON_SECRET (Bearer).
-const CI_ACTOR_ID = 'ci-contributions-call';
+const CI_ACTOR_ID = CONTRIBUTIONS_CALL_ACTOR_ID;
 
 function isAuthorized(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;

@@ -9,6 +9,9 @@
 import type { ExpenseSummary } from './summary';
 import { formatDollars } from './summary';
 
+// The synthetic author of the draft. The admin landing's dot on Commons: Feed & Announcements looks
+// for drafts by this author (lib/admin/area-attention.ts).
+export const CONTRIBUTIONS_CALL_ACTOR_ID = 'ci-contributions-call';
 export const CONTRIBUTIONS_CALL_TITLE = 'Contribute if you can 😄';
 export const CONTRIBUTIONS_CALL_LINKED_PLUGINS = ['contributions'];
 
@@ -26,7 +29,7 @@ function middle(low: number, high: number): number {
   return Math.round((low + high) / 2);
 }
 
-// Whole dollars for the monthly total ("$250"), cents kept for the per-person figure ("$5.79").
+// Rounded to the dollar for the monthly total ("$250"), cents kept for the per-person figure ("$5.79").
 function roundDollars(cents: number): string {
   return `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 }

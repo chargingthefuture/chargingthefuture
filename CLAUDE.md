@@ -385,7 +385,8 @@ for by the owner after the freeze, on the same day, and changes nothing a member
 
 One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"
 Commons post, written as a draft on 5 April and 5 October with the current sign-ups, approved
-members and hosting cost filled in, for the owner to check and publish. Hosting is paid out of
+members and hosting cost filled in, for the owner to check and publish. The Feed & Announcements tile on
+the admin landing carries a dot until it is published. Hosting is paid out of
 pocket, and without help the app goes offline, which is not a freeze. Signing up costs nothing;
 each approved member is somebody the hosting bill is paid for, so the post counts both and the cost
 per person is the monthly total divided by approved members, the owner's own time excluded.
