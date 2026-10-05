@@ -20,7 +20,7 @@ Lifecycle/governance references applied:
 ## User Features (Implementation Scope)
 
 1. Authenticated room bootstrap via `GET /api/chyme/room` with deterministic room provisioning (`chyme-main-room`) and participant upsert.
-2. Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters. A member can **delete** their own room chat message (`DELETE /api/chyme/messages/[messageId]`, author-only) and **Edit** it — edit is delete + repost (loads the text into the composer, deletes the original, member sends a fresh message), matching the Commons home chat. Edit/Delete show on the member's own messages only. (The displayed room chat is DB-backed; the Stream fan-out copy has no per-message id stored, so a single-message delete removes the DB row shown in the panel — full Stream purge still happens on Chyme service/account deletion.)
+2. Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters. The row is stored first and the Stream copy is sent after the write commits; a Stream failure at any step is reported and never fails the send (2026-10-05). A member can **delete** their own room chat message (`DELETE /api/chyme/messages/[messageId]`, author-only) and **Edit** it — edit is delete + repost (loads the text into the composer, deletes the original, member sends a fresh message), matching the Commons home chat. Edit/Delete show on the member's own messages only. (The displayed room chat is DB-backed; the Stream fan-out copy has no per-message id stored, so a single-message delete removes the DB row shown in the panel — full Stream purge still happens on Chyme service/account deletion.)
 3. Stream-backed room join/token flow via `POST /api/chyme/join`, using shared Stream wrappers in `packages/shared`.
 4. Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
 5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including ServiceCredits reclaim dependency queueing in existing reclaim/outbox tables.
@@ -177,7 +177,7 @@ Chyme plugin routes:
   (`{ isAdmin, role }` — worked out on the server; an admin is always a speaker). Polled every 15s
   by both apps while a room is shown.
 - `GET /api/chyme/messages` — read bounded room history. Optional `?limit` is clamped to the `chyme.messages.list` contract bounds (minimum 1, maximum 100) at the route layer; a missing or non-numeric value falls back to the default (100).
-- `POST /api/chyme/messages` — send a chat message. CSRF-guarded (`x-ctf-csrf: '1'` + same-origin).
+- `POST /api/chyme/messages` — send a chat message. CSRF-guarded (`x-ctf-csrf: '1'` + same-origin). Stored in `chyme_messages` first; the Stream fan-out runs after the transaction and a Stream failure is reported, not returned.
 - `DELETE /api/chyme/messages/[messageId]` — delete the caller's OWN room chat message. Author-only: the repository (`deleteRoomMessage`) checks ownership and deletes only when `user_id` matches; a message that is not the caller's returns **403** (`CHYME_NOT_MESSAGE_OWNER`), an unknown/already-gone id returns **404** (`CHYME_MESSAGE_NOT_FOUND`), a malformed (non-UUID) id returns **400**. Room-scoped via `?room=` like the sibling message routes. Audit `chyme.message.delete`. CSRF-guarded. There is no in-place edit — the client's **Edit** loads the message text into the composer and calls this delete, so a corrected message is a fresh row with a new id/timestamp (matching the Commons home chat).
 - `POST /api/chyme/join` — load/bootstrap the room and mint Stream join credentials; marks the member joined (an admin as a speaker; in hand-raise mode a member as a listener). CSRF-guarded. **403** `CHYME_REMOVED_FROM_ROOM` while an admin's removal stands. **409** (`CHYME_ROOM_FULL`, with `capacity`) when the room already holds as many members as the quota policy's cap allows — checked before the Stream mint (a turned-away member costs no Stream call) and again under a lock on the room row inside `markRoomCallJoined`, so two members racing for the last spot cannot both take it. A member already inside the presence window is never turned away by their own row. Audited as a deny with reason `room_full`.
 - `POST /api/chyme/heartbeat` — presence keepalive (403 `CHYME_REMOVED_FROM_ROOM` while a removal stands, so a still-open page cannot keep a removed member present); refreshes the member's `last_seen_at` while in the call and credits the seconds since the previous heartbeat (capped at the 45s window) to the Stream Video minute meter (`stream_video_usage_daily`, surface `chyme:<roomKey>`). CSRF-guarded.
@@ -444,6 +444,13 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   `ChymeStage` (the pre-join preview) now renders nothing when the room is empty; with people in
   the room it shows their tiles as before. The signed-out page was not affected. Test script
   readings step 4 updated.
+- 2026-10-05: **A Stream outage no longer stops room chat (code review #2731).** `sendRoomMessage`
+  called the Stream fan-out before the INSERT and inside the transaction, and only the final
+  `sendMessage` was inside the catch that swallows a fan-out failure, so a Stream user or channel
+  setup error made `POST /api/chyme/messages` answer 503 for a chat both apps read from Postgres.
+  The row is now written first, the fan-out runs after the transaction commits (no Stream round
+  trip holds a database connection), and the entire Stream step is reported and swallowed. No
+  route shape, schema, or contract change. Test script CH-2 updated.
 - 2026-09-30: **The signed-out page puts the TI Radio guide above the room (owner directive).** It
   sat under the room list, at the bottom of the page; the signed-in page has it above the room. The
   "Coming up on TI Radio" rail now opens the signed-out room section, above the **Live Rooms** row,

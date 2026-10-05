@@ -669,17 +669,13 @@ export async function sendRoomMessage(
     throw new Error('invalid_message_text');
   }
 
-  return withDbTransaction(async (client) => {
+  // Chat is stored in chyme_messages and both apps read it from there; the Stream copy is a fan-out.
+  // So the row is written first, and the fan-out runs after the transaction has committed: a Stream
+  // outage cannot stop a send, a database failure cannot leave a message on Stream that the app
+  // never shows, and a Stream round trip does not hold a database connection.
+  const { message, streamChannelId } = await withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
-    await sendChymeStreamMessage({
-      userId: identity.userId,
-      name: chymeHandle(identity.username, identity.userId),
-      text: validation.normalizedText,
-      // Fan out to this room's Stream channel (the channel id equals the room key), so the private
-      // room's chat never lands in the main room's Stream channel.
-      channelId: room.room_key,
-    });
 
     const inserted = await client.query<MessageRow>(
       `
@@ -703,8 +699,19 @@ export async function sendRoomMessage(
       ],
     );
 
-    return mapMessage(inserted.rows[0]);
+    return { message: mapMessage(inserted.rows[0]), streamChannelId: room.room_key };
   });
+
+  await sendChymeStreamMessage({
+    userId: identity.userId,
+    name: chymeHandle(identity.username, identity.userId),
+    text: validation.normalizedText,
+    // Fan out to this room's Stream channel (the channel id equals the room key), so the private
+    // room's chat never lands in the main room's Stream channel.
+    channelId: streamChannelId,
+  });
+
+  return message;
 }
 
 // Delete one of the member's OWN room chat messages. Author-only: the row is deleted only when its

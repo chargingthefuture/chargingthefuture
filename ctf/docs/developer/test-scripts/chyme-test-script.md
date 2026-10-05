@@ -90,6 +90,8 @@ directly).
 (the `chyme.message.send` contract requires 1 to 1000 characters after trimming). A message over
 1000 characters is rejected by the same bound, not silently cut. The long-URL message **wraps**
 inside the chat window — the window scrolls only up and down, never left/right (no horizontal scroll).
+Since 2026-10-05 a send still posts and persists when Stream Chat is unreachable or refuses the user
+or channel setup: chat is read from the database, so only the Stream copy is skipped (and reported).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-3 · Read chat history with a page size
