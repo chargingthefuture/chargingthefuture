@@ -517,9 +517,10 @@
     {
       "name": "shared-package",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T01:21:48.207Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-05T01:21:48.207Z"
     },
     {
       "name": "skill-up",
