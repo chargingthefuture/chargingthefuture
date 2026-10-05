@@ -603,9 +603,10 @@
     {
       "name": "trust-transport",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-30T10:05:29.205Z",
-      "lastRunIssues": 6,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:27:16.758Z",
+      "lastRunIssues": 12,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:27:16.758Z"
     },
     {
       "name": "ui",
