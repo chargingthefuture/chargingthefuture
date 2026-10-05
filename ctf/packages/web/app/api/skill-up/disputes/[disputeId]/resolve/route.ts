@@ -58,6 +58,12 @@ export async function POST(request: Request, { params }: RouteProps) {
     return NextResponse.json({ ok: false, code: 'skill_up_invalid_payload', message: 'Invalid resolve payload.', issues: parsed.error.issues }, { status: 400 });
   }
 
+  // A credit adjustment moves credits between wallets, so only an admin may attach one. A trainer
+  // can still resolve a dispute in their cohort, just without moving anybody's credits.
+  if (parsed.data.adjustment && !gate.auth.isAdmin) {
+    return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'Only an admin can attach a credit adjustment when resolving a dispute.' }, { status: 403 });
+  }
+
   try {
     const resolution = await resolveDispute({
       actorId: gate.auth.userId,
