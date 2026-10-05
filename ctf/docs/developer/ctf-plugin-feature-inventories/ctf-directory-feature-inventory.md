@@ -237,6 +237,14 @@ Seeded content:
 
 - 2026-10-02: **One Percent reads claimed profiles by id (owner decision).** New `GET /api/directory/service/profiles/:id` for One Percent's operator desk, behind a new `DIRECTORY_SERVICE_TOKENS` credential list kept apart from `TAXONOMY_SERVICE_TOKENS`. Claimed profiles only, minus owners restricted with scope `all` or `contact`, one at a time, with name, headline, job title, sector, skill names, profile address and location. `resolveServiceConsumer` now takes the setting to check. Contracts: `directory.profile.service.get` in the command, access policy and audit files. No member-facing change.
 - 2026-10-02: **One Percent reads a client's own claimed profile by their account (owner decision).** New `GET /api/directory/service/accounts/:accountId/profile`, sharing the by-id read's query, gate and fields (`getClaimedProfileForAccountService` in `lib/directory/service-read.ts`). Contracts: `directory.profile.service.by-account.get` in the command, access policy and audit files. No member-facing change.
+- 2026-10-05: **A failed Directory load says so instead of reading as empty.** The browse list
+  ignored a failed `GET /api/directory/list` and dropped every thrown error as if it were an abort,
+  so a member saw "No profiles yet" when the list had not loaded and nothing was reported. It now
+  shows the route's message (or reports a thrown failure) in place of the empty state, keeping any
+  list already on screen. A shared profile link that cannot be opened says so above the browse view.
+  The edit form shows the profile route's message on a failed load and reports a thrown one. On the
+  admin page, the takedown list panel shows the route's reason instead of a fixed sentence, and both
+  it and the Audit log panel report a thrown failure and name it. No route, schema or contract change.
 
 - 2026-09-30: **Every profile records who nominated it (owner request).** New `directory_profiles.nominated_by_user_id`, set by Skills Hunt accept (the nominator) and by admin create (the admin), and left alone by a claim. `post/0044` backfills it from the Skills Hunt nomination link and from the admin create change event; profiles with neither record are assigned by the owner with a pasted statement (`scripts/sql/directory-assign-nominator.sql`). Full-account deletion pseudonymizes it on profiles the member nominated for other people. No route or UI change in Directory; the Skills Hunt totals card reads it.
 
