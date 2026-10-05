@@ -52,8 +52,9 @@ supported).
 
 Tables with no member column are not in the registry and are left alone: curriculum items,
 milestones, the escrow rows keyed by enrollment, and the achievement catalog. The idempotency
-table (`skill_up_command_idempotency`) is also not in the registry; it holds an actor id, a command
-name and a key, and no content.
+table (`skill_up_command_idempotency`) is not one of them: it is deleted, matched on `actor_id`,
+because each row is the stored result of a command the member ran, kept only so a retried request
+returns the first answer.
 
 ## What a deleted member leaves behind
 

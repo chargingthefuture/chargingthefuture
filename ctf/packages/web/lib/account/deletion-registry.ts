@@ -167,6 +167,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       del('notifications', 'user_id', 'Your notifications.'),
       del('notification_preferences', 'user_id', 'Your device-push preferences.'),
+      // push_subscriptions is user-global: notification pushes (lib/notifications/push.ts,
+      // expo-push.ts) and Foundation's instant-call ring both send to the same device rows. It sits
+      // here, with no per-service scope, so deleting only Foundation data keeps the devices a member
+      // turned notification pushes on for; the rows clear with the account.
+      del('push_subscriptions', 'user_id', 'The devices you turned push alerts on for (notifications and Foundation call alerts).'),
     ],
   },
   {
@@ -243,6 +248,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('directory_suppressed_quora_urls', 'Admin URL suppression list; abuse prevention and its admin audit.'),
       // directory_profile_skills, directory_profile_tags, and directory_profile_proposed_skills are
       // keyed by profile_id (cascade with the profile, cleared in deleteOwnDirectoryProfile).
+      retain('directory_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -295,6 +301,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // deleted by the `delWhere` above. Split on purpose: one table, two kinds of content.
       retain('feed_items', 'Admin-published announcement copies; authorship columns are the publish audit.'),
       retain('feed_render_config', 'Global feed settings and the admin audit of who changed them.'),
+      retain('feed_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -303,11 +310,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your provider connection threads, messages, calls, quote requests, and notifications.',
     serviceScopeSupported: true,
     tables: [
-      // push_subscriptions is a user-global table, but Foundation's instant-call ring (issue #808 task 5)
-      // is its only consumer today, so its deletion is wired here. If another plugin ever stores rows in
-      // it, move this to a shared/account-level deletion entry so a single-service deletion does not remove
-      // a device subscription another service still needs.
-      del('push_subscriptions', 'user_id', 'The devices you turned call alerts on for.'),
       del('foundation_notification_events', 'user_id', 'Your Foundation notifications.'),
       del('foundation_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       del('foundation_quote_status_events', 'actor_user_id', 'Quote state changes you made.'),
@@ -334,6 +336,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       // No gdp_user_extension exists in schema; all GDP tables are aggregate/admin.
       retain('gdp_publications', 'Published GDP reports; the host/publisher columns are the publication audit.'),
+      retain('gdp_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -537,6 +540,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       del('member_safety_reports', 'reporter_user_id', 'Safety reports you filed about another member.'),
       del('member_blocks', 'blocker_user_id', 'The blocks you created.'),
+      // The admin review trail of safety reports: actor_id is the reviewing admin, and the rows
+      // must outlive either member's account (MEMBER_BLOCKS_PLUGIN_AUDIT_CONTRACTS.yaml).
+      retain('safety_admin_audit_trail', 'The admin review trail of safety reports; retained for compliance.'),
     ],
   },
   {
@@ -648,6 +654,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('skill_up_trainer_skill_audit', 'Record of skill changes behind trainer cohort claims; retained as the integrity trail for claims already made.'),
       retain('skill_up_auto_cohort_config', 'Global auto-cohort settings and the admin audit of who changed them.'),
       retain('skill_up_auto_cohort_term_overrides', 'Per-term overrides and the admin audit of who set them.'),
+      // The stored result of each SkillUp command you ran, kept so a retried request with the same
+      // key returns the first answer. Once your SkillUp data is gone there is nothing left to retry.
+      del('skill_up_command_idempotency', 'actor_id', 'Stored results of SkillUp commands you ran.'),
     ],
   },
   {
@@ -681,6 +690,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('comic_review_queue', 'Answer review queue; reviewer_user_id is the admin review audit.'),
       retain('comic_runtime_config', 'Global settings and the admin audit of who changed them.'),
       // comic_turns / training_examples are shared/model data.
+      retain('comic_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -690,6 +700,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: false,
     tables: [
       retain('weekly_performance_weeks', 'Aggregate week records; selected_by is the admin audit of week selection.'),
+      retain('weekly_performance_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -732,6 +743,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // admin/review audit trail — same retain reasoning as every other reviewer column.
       retain('what_works_problems', 'Curated problem list; community content, not personal data.'),
       retain('what_works_products', 'Curated tool list; suggested_by/reviewed_by retained as review audit.'),
+      retain('what_works_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -790,6 +802,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // wallet tombstoned there is nothing left for a limit to bound, so the member's row goes
       // rather than keeping a raw id alive in a settings table.
       del('service_credits_credit_limits', 'user_id', 'Your credit-limit settings.'),
+      retain('service_credits_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
+      // The replay guard for sends, escrow, grants, burns and fees, keyed by the acting member. It stays with
+      // the ledger it guards: a removed row would let a retried command with the same key run twice.
+      retain('service_credits_command_idempotency', 'Replay guard for credit commands; retained with the ledger it protects.'),
     ],
   },
   {
@@ -832,6 +848,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       del('mutual_time_votes', 'voter_user_id', 'Your votes on meeting-time surveys.'),
       del('mutual_time_events', 'created_by_user_id', 'Meeting-time surveys you created.'),
+      retain('mutual_time_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -864,6 +881,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         [],
         'Bug reports you filed — the report stays for triage, your identity does not.',
       ),
+      retain('bug_report_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {
@@ -882,6 +900,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // the same reasoning as member_blocks.blocked_user_id and the safety-report subject.
       retain('account_restrictions', 'Moderation/restriction state; abuse enforcement record.'),
       retain('account_restrictions_audit', 'The audit trail of restriction decisions; retained for compliance.'),
+      // The owner's running-costs screen (admin only); actor_id is the admin who changed a line.
+      retain('admin_expenses_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {

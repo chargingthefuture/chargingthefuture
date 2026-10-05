@@ -4,7 +4,7 @@
 
 The notifications center is cross-cutting: it holds a member-facing feed of notify-worthy events
 produced by other plugins, plus each member's device-push opt-ins. It owns no profile of its own and
-reuses the canonical Clerk user id (`user_id`) as the key on both of its tables.
+reuses the canonical Clerk user id (`user_id`) as the key on its tables.
 
 ## Owned tables
 
@@ -12,8 +12,15 @@ reuses the canonical Clerk user id (`user_id`) as the key on both of its tables.
 |---|---|---|
 | `notifications` | `user_id` | Hard delete all rows for the member. |
 | `notification_preferences` | `user_id` (PK) | Hard delete the member's row. |
+| `push_subscriptions` | `user_id` (unique with `endpoint`) | Hard delete every device row for the member, web and expo alike. |
 
-Both are registered in `ctf/packages/web/lib/account/deletion-registry.ts` under slug
+`push_subscriptions` is shared: notification pushes (`lib/notifications/push.ts`, `expo-push.ts`)
+and Foundation's instant-call ring both send to the same device rows. Its deletion sits here rather
+than under `foundation` so that deleting only Foundation data does not remove the devices a member
+turned notification pushes on for. A row stores the push endpoint or Expo token and, for web, the
+subscription's own public keys; no message content.
+
+All three are registered in `ctf/packages/web/lib/account/deletion-registry.ts` under slug
 `notifications`. There is no per-service deletion scope (`serviceScopeSupported: false`) — a member
 cannot "leave notifications" as a standalone service; the data clears with the account.
 
@@ -29,3 +36,8 @@ cannot "leave notifications" as a standalone service; the data clears with the a
 - When the underlying object a notification points at is gone or the member has lost access to it,
   the summary still reads harmlessly (it is a past-tense statement), and the `link_path` target
   applies its own access check on open.
+
+## Change Log
+
+- 2026-10-05: `push_subscriptions` added to this contract and to the `notifications` registry entry,
+  moved from `foundation`, so its rows clear only with the account.
