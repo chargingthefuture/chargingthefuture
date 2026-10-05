@@ -608,9 +608,10 @@
     {
       "name": "unlock",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-26T12:38:54.509Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:19:29.459Z",
+      "lastRunIssues": 9,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:19:29.459Z"
     },
     {
       "name": "web-pages",
