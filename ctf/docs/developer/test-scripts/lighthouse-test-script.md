@@ -297,7 +297,9 @@ Result: web ☐
 1. Open the LightHouse admin dashboard.
 2. Read the five counts and the data tables.
 **Expected:** Counts for seekers, hosts, properties, active matches, and completed matches render
-from real data. Seekers/hosts/properties/matches tables list real rows. A non-admin is shown an
+from real data. Seekers/hosts/properties/matches tables list real rows. Each listing row shows rent
+in its own currency: a ServiceCredits rent reads as "20 ServiceCredits/mo", never "$20/mo", and a
+non-dollar rent carries its own symbol. A non-admin is shown an
 "admins only" notice instead.
 **Result:** web ☐ mobile ☐ — notes:
 
