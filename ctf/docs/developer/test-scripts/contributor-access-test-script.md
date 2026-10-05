@@ -256,6 +256,8 @@ Result: web ☐ mobile-responsive ☐
 
 **Expected:** The 4000-character message sends successfully and appears in the channel. The 4001-character message is rejected (either the composer prevents it or the server returns an error) — it does not appear in the channel.
 
+Since 2026-10-05: when the 4001-character send is refused, or a send fails because the network is off, the text you typed is put back in the composer (as long as you have not started typing something new), so nothing you wrote is lost.
+
 Result: web ☐
 
 ---
