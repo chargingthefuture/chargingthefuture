@@ -496,9 +496,10 @@
     {
       "name": "security",
       "type": "module",
-      "lastReviewedAt": "2026-07-17T08:31:47.697Z",
-      "lastRunIssues": 3,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:26:32.669Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:26:32.669Z"
     },
     {
       "name": "service-credits",
