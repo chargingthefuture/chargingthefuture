@@ -848,6 +848,18 @@ of why cohort balances moved survives the account.
 
 ---
 
+### Deleting SkillUp data returns deposits still held
+
+**Precondition:** A member enrolled in a cohort with a deposit, with at least one milestone not yet released. Note the wallet balance and the amount still held.
+
+**Steps:**
+1. From the account area, delete only the SkillUp data.
+2. Check the member's wallet.
+
+**Expected:** The deletion completes, the enrollment is gone, and the amount that was still held is back in the member's spendable balance with nothing left held. Deleting the entire account does the same before the account's credits are reclaimed.
+
+---
+
 ### Account deletion clears the trainer profile and achievements
 
 **Expected:** Deleting the account removes the member's trainer profile (name, headline, bio) and

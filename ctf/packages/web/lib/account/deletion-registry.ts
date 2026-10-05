@@ -629,6 +629,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skill_up_enrollments', 'user_id', 'Your cohort enrollments.'),
       del('skill_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       retain('skill_up_audit_events', 'Audit log; retained for compliance.'),
+      // Any deposit still held is returned to the member's wallet before this entry runs
+      // (deletion-orchestrator.ts → refundHeldDepositsBeforeDataDeletion), and the row is marked
+      // refunded. The rows stay as the record of what each deposit did.
+      retain('skill_up_enrollment_milestone_escrows', 'Per-milestone deposit holds; any still held are returned to your wallet first, then kept as the ledger record.'),
       // Burn-down batch 3 (ledger/disputes): credit disbursements and the disputes over them are the
       // record of why cohort escrow balances moved — retained for ledger integrity, like the
       // ServiceCredits ledger they feed.

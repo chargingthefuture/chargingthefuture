@@ -270,7 +270,8 @@ External value movement dependencies:
    `SKILL_UP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, `SKILL_UP_PLUGIN_AUDIT_CONTRACTS.yaml` and
    `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` (the last added 2026-10-04). The deletion contract
    states the registry entry `skill-up`: enrollments, rate-limit counters, the trainer profile and
-   earned achievements are deleted; the audit log, disbursements, disputes and their comments,
+   earned achievements are deleted; any deposit still held is first refunded to the member's own
+   wallet and its escrow row kept as `refunded`; the audit log, disbursements, disputes and their comments,
    milestone validations, the trainer skill audit, cohorts, proposals and the auto-cohort settings
    are retained as the record of why credits moved. `skill_up_command_idempotency` (actor id,
    command name, key; no content) is not in the registry.
@@ -353,6 +354,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-05: **Deleting SkillUp data left deposits held with no way back** (code-review finding #2933). The deletion registry deleted `skill_up_enrollments` and nothing returned the deposits those enrollments still held, while every path that could — leaving a cohort, a cohort closing — starts from the enrollment row. A member who deleted only SkillUp kept their wallet with up to the deposit per cohort stuck in it, and a full-account reclaim would wait on holds that could never clear. The deletion orchestrator now runs `refundHeldDepositsBeforeDataDeletion` before the deletion transaction, for both scopes: every deposit ServiceCredits still holds is refunded to the member's own wallet (reason `skill_up_data_deleted`, one fixed idempotency key per escrow) and its row marked `refunded`. It runs outside the transaction because the refund posts to the external ledger, and before it because the plan removes the rows it starts from. A failed refund stops the deletion so it can be run again. `skill_up_enrollment_milestone_escrows` is now listed as retained in the registry and the deletion contract. Test-script case added.
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
   registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface
