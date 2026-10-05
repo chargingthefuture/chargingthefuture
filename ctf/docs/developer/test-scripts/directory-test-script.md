@@ -505,6 +505,16 @@ step 3 the number does not change: claiming hides the "Community-generated profi
 nomination stays.
 **Result:** web ☐ — notes:
 
+### DIR-A2c · A nominator's data export leaves out the profiles they nominated (added 2026-10-05)
+**Role:** admin who has created or nominated at least one profile · **Surfaces:** web
+**Steps:**
+1. As that admin, download the data export from the account area.
+2. Search the export for the name of a profile they created or nominated.
+**Expected:** The export holds the admin's own Directory profile, if any, and none of the profiles
+they nominated: no nominee bio, payment address or location. Deleting the admin's account still
+clears their id from those profiles' nominator field.
+**Result:** web ☐ — notes:
+
 ### DIR-A3 · Unclaimed-only delete
 **Role:** admin · **Surfaces:** web
 **Steps:**
