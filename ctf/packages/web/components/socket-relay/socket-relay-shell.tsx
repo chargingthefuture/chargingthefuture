@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { failureText, responseFailureText } from "lib/errors/client-failure";
 import { Badge } from "@/components/ui/badge";
 import { Share2 } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
@@ -60,9 +61,11 @@ function draftFromRequest(request: SrRequest): PostDraft {
   };
 }
 
-async function getJson<T>(url: string): Promise<T | null> {
+// Read a list route. A non-OK answer throws with the route's own reason, so a failed read shows as a
+// failure (the shell's error view, or the note under "Load more") instead of an empty board.
+async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) return null;
+  if (!res.ok) throw new Error(await responseFailureText(res, "Failed to load SocketRelay.", "member"));
   return (await res.json()) as T;
 }
 
@@ -126,7 +129,7 @@ function validatePostDraft(draft: PostDraft): string | null {
   if (!draft.title.trim()) return "Add a short title for your request.";
   if (!draft.details.trim()) return "Add a few details about what you need or can give.";
   if (draft.tags.length === 0) return "Add at least one tag (for example Food or Transport).";
-  if (draft.requiresAmount && !(Number(draft.priceAmount) > 0)) return "Enter an amount for the payment type you chose, or switch it to Free.";
+  if (draft.requiresAmount && !(Number(draft.priceAmount) > 0)) return "Enter an amount for the settlement type you chose, or switch it to Free.";
   return validateImageDraft(draft.image);
 }
 
@@ -142,8 +145,11 @@ function parsePriceAmount(value: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function buildRequestBody(draft: PostDraft) {
+// `idempotencyKey` is sent on a create only: one key per new draft, so a retry of the same draft after
+// a lost response finds the request already saved instead of posting it a second time.
+function buildRequestBody(draft: PostDraft, idempotencyKey: string | null) {
   return {
+    ...(idempotencyKey ? { idempotencyKey } : {}),
     title: draft.title.trim(),
     details: draft.details.trim(),
     tags: draft.tags,
@@ -163,8 +169,8 @@ function buildRequestBody(draft: PostDraft) {
 // message when the request itself fails. A picture that fails after the request saved comes back as
 // `imageError` instead, so the form still resets (a retry must not post the request twice) and tells
 // the member the post is up and only the picture needs another try.
-async function saveDraft(draft: PostDraft, editingId: string | null): Promise<{ imageError: string | null }> {
-  const requestId = await saveRequestFields(draft, editingId);
+async function saveDraft(draft: PostDraft, editingId: string | null, idempotencyKey: string | null): Promise<{ imageError: string | null }> {
+  const requestId = await saveRequestFields(draft, editingId, idempotencyKey);
   try {
     await saveRequestImage(requestId, draft.image);
     return { imageError: null };
@@ -174,12 +180,12 @@ async function saveDraft(draft: PostDraft, editingId: string | null): Promise<{ 
   }
 }
 
-async function saveRequestFields(draft: PostDraft, editingId: string | null): Promise<string> {
+async function saveRequestFields(draft: PostDraft, editingId: string | null, idempotencyKey: string | null): Promise<string> {
   const url = editingId ? `/api/socket-relay/requests/${editingId}` : "/api/socket-relay/requests";
   const res = await fetch(url, {
     method: editingId ? "PUT" : "POST",
     headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-    body: JSON.stringify(buildRequestBody(draft)),
+    body: JSON.stringify(buildRequestBody(draft, idempotencyKey)),
   });
   if (!res.ok) {
     const payload = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -191,15 +197,21 @@ async function saveRequestFields(draft: PostDraft, editingId: string | null): Pr
   return id;
 }
 
-// POST with the CSRF header and no body; returns whether the server accepted it. Used by the re-post
-// and claim buttons, which only need to know success to trigger a refresh. A network failure returns
-// false so the caller simply skips the refresh (the next refresh reflects the latest state).
-async function postCsrf(url: string): Promise<boolean> {
+// POST with the CSRF header and no body, for the re-post and "I can help" buttons. Returns null when
+// the server accepted it, or the reason it did not: the route's own message (an expired or already
+// claimed request, a blocked pair) or a plain network-failure sentence.
+async function postCsrf(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return null;
+    return await responseFailureText(res, "That didn't go through. Please try again.", "member");
+  } catch (error) {
+    return failureText(error, {
+      area: "socket-relay",
+      op: "feed_action",
+      fallback: "Couldn't reach SocketRelay. Check your connection and try again.",
+      audience: "member",
+    });
   }
 }
 
@@ -210,7 +222,7 @@ async function fetchChatCredentials(fulfillmentId: string): Promise<SrChatCreden
     method: "POST",
     headers: { "x-ctf-csrf": "1" },
   });
-  if (!res.ok) throw new Error("Failed to fetch chat credentials");
+  if (!res.ok) throw new Error(await responseFailureText(res, "Failed to fetch chat credentials", "member"));
   const data = (await res.json()) as SrChatCredentials;
   if (!data.ok) throw new Error(data.message ?? "No chat credentials");
   return data;
@@ -270,6 +282,12 @@ function useSocketRelay() {
   const [requestsTotal, setRequestsTotal] = useState(0);
   const [requestsPage, setRequestsPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Why the last "Load more" page failed (under the list) / a feed tap was refused (top of the feed).
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [feedNotice, setFeedNotice] = useState<string | null>(null);
+  // The new draft's idempotency key: kept across its retries, dropped once it saves or the form
+  // switches to another draft. Always null while editing (startEdit clears it), so a PUT sends none.
+  const createKeyRef = useRef<string | null>(null);
   const [myRequests, setMyRequests] = useState<SrRequest[]>([]);
   const [, setMyRequestCount] = useState(0);
   const [fulfillments, setFulfillments] = useState<SrFulfillment[]>([]);
@@ -314,19 +332,20 @@ function useSocketRelay() {
   // shifted across the page boundary (e.g. a new post arrived) is never shown twice.
   const loadMore = useCallback(async () => {
     setLoadingMore(true);
+    setLoadMoreError(null);
     try {
       const next = requestsPage + 1;
       const data = await getJson<SrListResponse>(
         `/api/socket-relay/requests?status=open&page=${next}&pageSize=${FEED_PAGE_SIZE}`,
       );
-      if (data) {
-        setRequests((prev) => {
-          const seen = new Set(prev.map((r) => r.id));
-          return [...prev, ...data.items.filter((item) => !seen.has(item.id))];
-        });
-        setRequestsTotal(data.total);
-        setRequestsPage(next);
-      }
+      setRequests((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...data.items.filter((item) => !seen.has(item.id))];
+      });
+      setRequestsTotal(data.total);
+      setRequestsPage(next);
+    } catch (e) {
+      setLoadMoreError(`Couldn't load more requests. ${e instanceof Error ? e.message : ""}`.trim());
     } finally {
       setLoadingMore(false);
     }
@@ -355,6 +374,7 @@ function useSocketRelay() {
   }, []);
 
   const startEdit = useCallback((request: SrRequest) => {
+    createKeyRef.current = null;
     setDraft(draftFromRequest(request));
     setEditingId(request.id);
     setPostError(null);
@@ -363,6 +383,7 @@ function useSocketRelay() {
   }, []);
 
   const cancelEdit = useCallback(() => {
+    createKeyRef.current = null;
     setDraft(freshDraft(myLocation));
     setEditingId(null);
     setPostError(null);
@@ -380,7 +401,9 @@ function useSocketRelay() {
     setPostError(null);
     setPostSuccess(false);
     try {
-      const { imageError } = await saveDraft(draft, editingId);
+      if (!editingId && !createKeyRef.current) createKeyRef.current = crypto.randomUUID();
+      const { imageError } = await saveDraft(draft, editingId, createKeyRef.current);
+      createKeyRef.current = null;
       setDraft(freshDraft(myLocation));
       setEditingId(null);
       if (imageError) setPostError(imageError);
@@ -395,23 +418,22 @@ function useSocketRelay() {
 
   // Re-post an expired (or closed) request: re-opens it and resets the 28-day clock. Owner-only on the
   // server; here it is offered only on the member's own expired posts.
-  const handleRepost = useCallback(async (requestId: string) => {
+  // A refused tap shows the route's reason; the feed refreshes either way, since a refusal usually
+  // means the request changed (claimed by someone else, expired) since it was loaded.
+  const runFeedAction = useCallback(async (url: string) => {
     setSubmitting(true);
+    setFeedNotice(null);
     try {
-      if (await postCsrf(`/api/socket-relay/requests/${requestId}/repost`)) await fetchData(false);
+      const failure = await postCsrf(url);
+      if (failure) setFeedNotice(failure);
+      await fetchData(false);
     } finally {
       setSubmitting(false);
     }
   }, [fetchData]);
 
-  const handleClaim = useCallback(async (requestId: string) => {
-    setSubmitting(true);
-    try {
-      if (await postCsrf(`/api/socket-relay/requests/${requestId}/fulfill`)) await fetchData(false);
-    } finally {
-      setSubmitting(false);
-    }
-  }, [fetchData]);
+  const handleRepost = useCallback((id: string) => runFeedAction(`/api/socket-relay/requests/${id}/repost`), [runFeedAction]);
+  const handleClaim = useCallback((id: string) => runFeedAction(`/api/socket-relay/requests/${id}/fulfill`), [runFeedAction]);
 
   // Select a Direct Line row. A pending request (no helper yet) has no chat to open — it just shows the
   // "waiting for a helper" pane — so only a fulfillment row fetches chat credentials.
@@ -482,7 +504,7 @@ function useSocketRelay() {
   }, []);
 
   return {
-    loading, error, requests, requestsTotal, loadingMore, myRequests, fulfillments,
+    loading, error, requests, requestsTotal, loadingMore, loadMoreError, feedNotice, myRequests, fulfillments,
     submitting, tab, category, search, draft, editingId, postError, postSuccess,
     selectedLine, chatCredentials, chatLoading, chatError, resolving,
     setTab, setCategory, setSearch,
@@ -556,6 +578,8 @@ type SocketRelayTabContentProps = {
   category: string;
   hasMore: boolean;
   loadingMore: boolean;
+  loadMoreError: string | null;
+  feedNotice: string | null;
   onLoadMore: () => void;
   onClaim: (id: string) => void;
   onPost: () => void;
@@ -583,7 +607,7 @@ type SocketRelayTabContentProps = {
 // pull from `allRequests` (the full loaded set) so tag autocomplete is not limited to the visible rows.
 function SocketRelayTabContent(props: SocketRelayTabContentProps) {
   const { tab, requests, allRequests, userId, reclaimBlockedIds, submitting, search, category } = props;
-  const { hasMore, loadingMore, onLoadMore, onClaim, onPost, onEdit, onRepost } = props;
+  const { hasMore, loadingMore, loadMoreError, feedNotice, onLoadMore, onClaim, onPost, onEdit, onRepost } = props;
   const { draft, editing, onChange, postError, postSuccess, onSubmit, onCancelEdit } = props;
   const { directLines, selectedLine, resolving, onSelect, onBack, onResolve, chatLoading, chatError, chatCredentials } = props;
   const filterActive = Boolean(search.trim()) || category !== "All";
@@ -598,6 +622,8 @@ function SocketRelayTabContent(props: SocketRelayTabContentProps) {
           filterActive={filterActive}
           hasMore={hasMore}
           loadingMore={loadingMore}
+          loadMoreError={loadMoreError}
+          notice={feedNotice}
           onLoadMore={onLoadMore}
           onClaim={onClaim}
           onPost={onPost}
@@ -709,6 +735,8 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         category={sr.category}
         hasMore={hasMore}
         loadingMore={sr.loadingMore}
+        loadMoreError={sr.loadMoreError}
+        feedNotice={sr.feedNotice}
         onLoadMore={() => void sr.loadMore()}
         onClaim={(id) => void sr.handleClaim(id)}
         onPost={() => sr.setTab("post")}

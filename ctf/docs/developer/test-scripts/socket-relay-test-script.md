@@ -142,6 +142,7 @@ web ☐
 2. Fill in title, details, and one tag.
 3. Select "ServiceCredits" as the value type and enter a positive amount.
 4. Submit.
+5. (added 2026-10-05) Start another post, pick ServiceCredits, leave the amount blank and submit: the form reads "Enter an amount for the settlement type you chose, or switch it to Free." and never calls the choice a payment.
 
 **Expected:**
 - The created request card shows a settlement badge that names ServiceCredits (e.g. "SC" or "ServiceCredits") — never a fiat equivalent.
@@ -274,6 +275,7 @@ web ☐
 - On the **requester's** side, the request card in the feed now reads **"Being helped"** (amber) — not "✓ closed". The status badge and the action label agree.
 - The requester receives a "Someone offered to help…" notification whose **Open** button deep-links straight to that Direct Line (`/apps/socket-relay?fulfillment=<id>`) — it opens the Direct Line tab with that conversation selected, not the feed homepage.
 - Idempotent retry: re-sending the same claim (`POST /requests/:id/fulfill`) after it already succeeded returns the **same** fulfillment (201) rather than a `request_not_claimable` error, and does **not** create a second fulfillment. A different member claiming the now-claimed request still gets the error.
+- Refused claim (added 2026-10-05): with the feed open in two sessions, claim a request in one, then tap "I can help" on the same card in the other. A red note at the top of the feed gives the reason the server refused it, and the feed refreshes so the card drops out of the open list. Nothing fails without a message.
 
 web ☐
 
