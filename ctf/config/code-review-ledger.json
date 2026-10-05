@@ -651,9 +651,10 @@
     {
       "name": "workforce",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-26T10:10:07.990Z",
+      "lastReviewedAt": "2026-10-05T12:17:47.754Z",
       "lastRunIssues": 7,
-      "partial": false
+      "partial": false,
+      "updatedAt": "2026-10-05T12:17:47.754Z"
     }
   ]
 }
