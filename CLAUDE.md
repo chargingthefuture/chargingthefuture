@@ -383,6 +383,16 @@ never built and offered afterwards. The One Percent read of claimed Directory pr
 section above, was decided before the freeze and is not caught by it. The by-account read beside it was asked
 for by the owner after the freeze, on the same day, and changes nothing a member sees.
 
+One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"
+Commons post, written as a draft on 5 April and 5 October with the current sign-ups, approved
+members and hosting cost filled in, for the owner to check and publish. The Feed & Announcements tile on
+the admin landing carries a dot until it is published. Hosting is paid out of
+pocket, and without help the app goes offline, which is not a freeze. Signing up costs nothing;
+each approved member is somebody the hosting bill is paid for, so the post counts both and the cost
+per person is the monthly total divided by approved members, the owner's own time excluded.
+The route is `POST /api/internal/admin-expenses/contributions-call-draft`; the workflow is
+`contributions-call-draft.yml`.
+
 The reason is the message rather than the code. Twenty-five member-facing plugins is too much for
 a newcomer to take in, and a plugin built as a two-sided marketplace looks empty while only one
 side has arrived: somebody looking for a room who opens LightHouse finds no listings. So what is
