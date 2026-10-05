@@ -306,6 +306,8 @@ Android admin present (2026-06-06): `AdminSkillsHunt.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-10-05: **The end-to-end smoke check no longer reads dropped Directory columns.** `smokeSkillsHuntE2e.mjs` selected `is_public` and `deleted_at` from `directory_profiles` and filtered the handle count on `deleted_at IS NULL`. Neither column exists on an up-to-date database, so `pnpm smoke:skills-hunt` failed at the Directory profile step after a successful seed. Both are gone from the two queries; the `source`, `unclaimed_handle` and `invited_by_username` checks and the one-row handle count stay.
+
 - 2026-10-02: **Dropped the per-accept reward columns (owner request).** `skills_hunt_rounds.reward_credits_per_accept` and `reward_per_user_round_cap` had not been read or written since rounds became points only on 2026-10-01, and were kept one release only so the revision running during that deploy could read them. `post/0048` drops them; `schema.sql` drops them too, and `schema.demo.sql` is regenerated. The submission columns that record credits already sent are untouched. No code, route or contract change.
 
 - 2026-10-02: **Round chips removed from the admin Moderation tab (owner report).** The chips opened on the first round in the list, often a closed one, so each visit began by switching away from it. With one open round at a time they no longer choose anything useful. `skills-hunt-admin-shell.tsx` now picks the `active` round (falling back to the first round when none is open) for Moderation and Missions, and `SkillsHuntAdminFilters` carries only the status chips. No route, contract or schema change. Web only; Android: out of scope (web-only per rule 105).
