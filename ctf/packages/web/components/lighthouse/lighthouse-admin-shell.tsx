@@ -7,7 +7,8 @@ import type { LighthouseMatch, LighthouseProperty, LighthousePropertyInput } fro
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
-import { getLighthouseTokens, type LighthouseTokens } from './shared';
+import type { Currency } from 'lib/currency/types';
+import { formatRentParts, getLighthouseTokens, type CurrencyMap, type LighthouseTokens } from './shared';
 import { failureText } from 'lib/errors/client-failure';
 
 // Admin design tokens (shared admin look) come from the theme-aware LightHouse tokens: accent
@@ -55,9 +56,16 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
   );
 }
 
-function formatRent(amount: number | null): string | null {
-  if (amount === null || amount === undefined) return null;
-  return `$${amount.toLocaleString()}/mo`;
+// A listing's rent in its own currency, through the same formatter the member screens use. A code
+// the catalog does not hold (an inactive currency) is shown by its code rather than given a "$".
+function formatRent(p: LighthouseProperty, currencies: CurrencyMap): string | null {
+  if (p.monthlyRent === null || p.monthlyRent === undefined) return null;
+  const code = p.rentCurrency ?? 'USD';
+  if (!currencies[code]) return `${p.monthlyRent.toLocaleString('en-US')} ${code}/mo`;
+  const parts = formatRentParts({ monthlyRent: p.monthlyRent, rentCurrency: code }, currencies);
+  if (!parts) return null;
+  const amount = parts.unit ? `${parts.primary} ${parts.unit}` : parts.primary;
+  return parts.perMonth ? `${amount}/mo` : amount;
 }
 
 // The admin property endpoint takes a full LighthousePropertyInput (it validates the entire
@@ -91,10 +99,12 @@ export function LighthouseAdminShell({
   stats,
   properties,
   matches,
+  currencies,
 }: {
   stats: LighthouseAdminStats;
   properties: LighthouseProperty[];
   matches: LighthouseMatch[];
+  currencies: Currency[];
 }) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -103,6 +113,8 @@ export function LighthouseAdminShell({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const currencyMap: CurrencyMap = {};
+  for (const currency of currencies) currencyMap[currency.code] = currency;
 
   async function togglePropertyActive(p: LighthouseProperty) {
     if (busyId) return;
@@ -204,7 +216,7 @@ export function LighthouseAdminShell({
           ) : (
             properties.map((p) => {
               const location = [p.city, p.country].filter(Boolean).join(', ');
-              const rent = formatRent(p.monthlyRent);
+              const rent = formatRent(p, currencyMap);
               return (
                 <div key={p.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
