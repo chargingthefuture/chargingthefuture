@@ -78,7 +78,7 @@ Implemented routes:
 - Admin:
   - `GET /api/directory/admin/profiles` — one page of admin profiles. Query: `page`, `pageSize` (capped by `DIRECTORY_MAX_PAGE_SIZE`), `includeInactive`, `q` (free-text search), `claimed` (`all` | `claimed` | `unclaimed`; anything else falls back to `all`). Search and the claim filter are applied in SQL across the **entire** collection, not just the page on screen — `q` matches first name, last name, the two joined, headline, job title, and the system-assigned unclaimed handle, punctuation-insensitively (same collapsing as the member browse search). Returns `{ items, pagination: { page, pageSize, total }, unclaimedTotal }`; `total` counts the filtered set (so it drives the pager) and `unclaimedTotal` counts unclaimed profiles across the entire collection for the header line.
   - `POST /api/directory/admin/profiles`
-  - `PUT /api/directory/admin/profiles/:id`
+  - `PUT /api/directory/admin/profiles/:id` — admin edit. Every outcome (success, not-found, failure) writes a `directory.admin.profile.update` row to `directory_admin_audit_trail`.
   - `PUT /api/directory/admin/profiles/:id/assign`
   - `DELETE /api/directory/admin/profiles/:id`
   - `POST /api/directory/admin/profiles/:id/takedown` — remove a community-generated (unclaimed) profile **at the person's request** and suppress its Quora URL. Body `{ reason }` (required). Deletes the profile and its skill rows, inserts the normalized Quora URL into `directory_suppressed_quora_urls`, and writes a `directory.admin.profile.takedown` audit event. Denies (409) a claimed, non-community-generated, or URL-less profile; use the ordinary delete for those. **Distinct from delete** (which is for duplicates/accidents and does not block re-adding).
@@ -237,6 +237,18 @@ Seeded content:
 
 - 2026-10-02: **One Percent reads claimed profiles by id (owner decision).** New `GET /api/directory/service/profiles/:id` for One Percent's operator desk, behind a new `DIRECTORY_SERVICE_TOKENS` credential list kept apart from `TAXONOMY_SERVICE_TOKENS`. Claimed profiles only, minus owners restricted with scope `all` or `contact`, one at a time, with name, headline, job title, sector, skill names, profile address and location. `resolveServiceConsumer` now takes the setting to check. Contracts: `directory.profile.service.get` in the command, access policy and audit files. No member-facing change.
 - 2026-10-02: **One Percent reads a client's own claimed profile by their account (owner decision).** New `GET /api/directory/service/accounts/:accountId/profile`, sharing the by-id read's query, gate and fields (`getClaimedProfileForAccountService` in `lib/directory/service-read.ts`). Contracts: `directory.profile.service.by-account.get` in the command, access policy and audit files. No member-facing change.
+- 2026-10-05: **A taken-down Quora address is refused with a 409 on save, and admin edits are
+  audited.** `assertQuoraUrlNotSuppressed` throws `directory_quora_url_suppressed`, which this
+  inventory and the test script already described as a 409, but neither save route mapped it: the
+  member save (`PUT /api/directory/profile`) answered 503 "Unable to save profile." and the admin
+  create (`POST /api/directory/admin/profiles`) 503 "Unable to create profile.", both reported to
+  error tracking as faults. Both now answer 409 `DIRECTORY_QUORA_URL_SUPPRESSED` with a message saying
+  the profile was removed at the person's request and an admin has to lift the block, audit it as a
+  deny (`quora_url_suppressed`, category `policy`), and no longer report it. `PUT
+  /api/directory/admin/profiles/:id` now writes a `directory.admin.profile.update` row to
+  `directory_admin_audit_trail` on success, not-found and failure (it had none, so the Audit log tab
+  never showed admin edits), and the takedown-override route records a failure row when it throws.
+  The `directory.admin.profile.update` event was added to the audit contract. No schema change.
 
 - 2026-09-30: **Every profile records who nominated it (owner request).** New `directory_profiles.nominated_by_user_id`, set by Skills Hunt accept (the nominator) and by admin create (the admin), and left alone by a claim. `post/0044` backfills it from the Skills Hunt nomination link and from the admin create change event; profiles with neither record are assigned by the owner with a pasted statement (`scripts/sql/directory-assign-nominator.sql`). Full-account deletion pseudonymizes it on profiles the member nominated for other people. No route or UI change in Directory; the Skills Hunt totals card reads it.
 

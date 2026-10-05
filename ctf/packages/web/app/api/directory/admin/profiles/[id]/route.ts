@@ -74,6 +74,23 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   };
 }
 
+// An admin edit can rewrite a claimed member's name, headline, location, Quora address and skills, so
+// every outcome is a row in the admin audit trail the Audit log tab reads (the change-event row
+// updateAdminProfile writes is a different table that tab does not read).
+async function recordUpdateAudit(
+  actorId: string,
+  profileId: string,
+  outcome: { status: 'allow' | 'deny'; reason: string; result: 'success' | 'failure'; errorCategory: string | null },
+): Promise<void> {
+  await recordDirectoryAdminAudit({
+    actorId,
+    command: 'directory.admin.profile.update',
+    targetType: 'profile',
+    targetId: profileId,
+    ...outcome,
+  });
+}
+
 export async function PUT(request: Request, { params }: RouteParams) {
   const gate = await requireDirectoryAdminAccess();
   if (!gate.allowed) {
@@ -108,15 +125,24 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const profile = await updateAdminProfile(gate.auth.userId, id, input);
     if (!profile) {
+      await recordUpdateAudit(gate.auth.userId, id, { status: 'deny', reason: 'not_found', result: 'failure', errorCategory: 'not_found' });
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Profile not found.' },
         { status: 404 },
       );
     }
 
+    await recordUpdateAudit(gate.auth.userId, id, { status: 'allow', reason: 'admin_route_guard', result: 'success', errorCategory: null });
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
+    const isValidation = error instanceof Error && error.message.includes('_not_found');
+    await recordUpdateAudit(gate.auth.userId, id, {
+      status: 'allow',
+      reason: 'admin_route_guard',
+      result: 'failure',
+      errorCategory: isValidation ? 'validation' : 'persistence_error',
+    });
     return mapSelectorError(error);
   }
 }

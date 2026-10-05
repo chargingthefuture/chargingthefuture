@@ -80,6 +80,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   } catch (error) {
     reportError(error, { area: 'directory', op: 'admin_suppressed_url_override' });
+    await recordDirectoryAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'directory.admin.takedown.override',
+      status: 'allow',
+      reason: 'override',
+      targetType: 'suppressed_url',
+      targetId: id,
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
     return NextResponse.json(
       { ok: false, code: DIRECTORY_ERROR_CODE.persistenceUnavailable, message: `Unable to lift the suppression: ${failureReason(error)}` },
       { status: 503 },
