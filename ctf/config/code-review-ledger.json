@@ -249,9 +249,10 @@
     {
       "name": "feed",
       "type": "plugin",
-      "lastReviewedAt": "2026-08-01T08:38:06.926Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:41:02.511Z",
+      "lastRunIssues": 6,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:41:02.511Z"
     },
     {
       "name": "feed-announcements",
