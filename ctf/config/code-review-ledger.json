@@ -478,9 +478,10 @@
     {
       "name": "safety",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-14T08:32:24.007Z",
-      "lastRunIssues": 5,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:25:50.321Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:25:50.322Z"
     },
     {
       "name": "scripts",
