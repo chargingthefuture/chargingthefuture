@@ -132,6 +132,26 @@ a duplicate, shown inline. If you and the host have blocked each other, the requ
 action never appears on your own listing.
 **Result:** web ☐ mobile ☐ — notes:
 
+### LH-4b · Host accepts or declines a stay request
+**Role:** member (host) · **Surfaces:** web
+**Precondition:** two pending requests on a listing you own (LH-4, sent by other members), and a third
+request the seeker has since withdrawn.
+**Steps:**
+1. As the host, open the Matches tab. Each pending request on your listing shows **Accept** and
+   **Decline**; a request you sent on somebody else's listing does not.
+2. Press **Accept** on the first request. While it saves, both buttons are disabled and the pressed
+   one reads "Accepting…".
+3. Press **Decline** on the second request.
+4. Open the Direct Line tab and pick the accepted match.
+5. Send the route a host accept for the withdrawn request (for example from the browser's network
+   tools, `PUT /api/lighthouse/matches/:matchId` with `{"status":"accepted"}` and `x-ctf-csrf: 1`).
+**Expected:** The first card reads "Match: Accepted" with a green tick and the buttons are gone; the
+second reads "Match: Rejected". The accepted match opens a chat in Direct Line. The withdrawn request
+is refused with status 409 and "This request can no longer be changed that way. It may have been
+withdrawn or already answered." If a save fails, the route's message shows in red under the buttons
+and the request stays pending.
+**Result:** web ☐ — notes:
+
 ### LH-5 · List your own place (self-service hosting)
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**

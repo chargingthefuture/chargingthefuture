@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { failureText } from "lib/errors/client-failure";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { getLighthouseTokens, type Match, type Property } from "./shared";
 
@@ -14,9 +16,68 @@ const ACCEPTED_MATCH_STATUSES = new Set(["accepted", "approved", "completed"]);
 function StatusIcon({ status }: { status: string }) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
-  if (status === "approved") return <CheckCircle size={28} style={{ color: "#22C55E" }} />;
+  if (ACCEPTED_MATCH_STATUSES.has(status)) return <CheckCircle size={28} style={{ color: "#22C55E" }} />;
   if (status === "pending") return <Clock size={28} style={{ color: t.ACCENT }} />;
   return <XCircle size={28} style={{ color: "#EF4444" }} />;
+}
+
+const HOST_RESPONSE_FALLBACK = "Could not save your answer. Please try again.";
+
+// A host answers a pending stay request here. Accepting is what opens the private chat for the pair;
+// declining closes the request. Both go through PUT /api/lighthouse/matches/:matchId, which also
+// refuses a request the seeker has since withdrawn, and its message is shown as it comes back.
+function HostResponseControls({ match, onUpdated }: { match: Match; onUpdated?: () => void }) {
+  const { theme } = useTheme();
+  const t = getLighthouseTokens(theme);
+  const [saving, setSaving] = useState<"accepted" | "rejected" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function respond(status: "accepted" | "rejected") {
+    setSaving(status);
+    setError(null);
+    try {
+      const res = await fetch(`/api/lighthouse/matches/${match.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
+        body: JSON.stringify({ status }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (!res.ok || data.ok === false) {
+        setError(data.message ?? HOST_RESPONSE_FALLBACK);
+        return;
+      }
+      onUpdated?.();
+    } catch (caught) {
+      setError(failureText(caught, { area: "lighthouse", op: "match_respond", fallback: HOST_RESPONSE_FALLBACK, audience: "member" }));
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const busy = saving !== null;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => void respond("accepted")}
+          disabled={busy}
+          style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}
+        >
+          {saving === "accepted" ? "Accepting…" : "Accept"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void respond("rejected")}
+          disabled={busy}
+          style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}
+        >
+          {saving === "rejected" ? "Declining…" : "Decline"}
+        </button>
+      </div>
+      {error ? <div role="alert" style={{ color: "#EF4444", fontSize: 12, marginTop: 8 }}>{error}</div> : null}
+    </div>
+  );
 }
 
 export function LighthouseMatches({
@@ -24,6 +85,7 @@ export function LighthouseMatches({
   properties,
   onSelectProperty,
   viewerUserId,
+  onMatchUpdated,
 }: {
   matches: Match[];
   properties: Property[];
@@ -31,6 +93,8 @@ export function LighthouseMatches({
   // Needed only to work out which side of the match the reader is on, so the ongoing-arrangement
   // control names the other member. Optional so the component still renders without it.
   viewerUserId?: string;
+  // Called after the host accepts or declines a request, so the list is read again.
+  onMatchUpdated?: () => void;
 }) {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -64,6 +128,9 @@ export function LighthouseMatches({
                     </button>
                     <button style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: t.INPUT_BG, border: `1px solid ${t.ACCENT}35`, color: t.ACCENT, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Message</button>
                   </div>
+                  {m.status === "pending" && viewerUserId && viewerUserId === m.hostUserId ? (
+                    <HostResponseControls match={m} onUpdated={onMatchUpdated} />
+                  ) : null}
                   {ACCEPTED_MATCH_STATUSES.has(m.status) && viewerUserId ? (
                     <MarkRecurringControl
                       counterpartyUserId={viewerUserId === m.hostUserId ? m.seekerUserId : m.hostUserId}

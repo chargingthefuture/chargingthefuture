@@ -20,6 +20,7 @@ import type {
   LighthouseWantedPosting,
 } from './types';
 import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
+import { isAllowedMatchTransition } from './match-transitions';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a LightHouse property listing marks its host as active in LightHouse.
@@ -1276,6 +1277,9 @@ export async function updateMatch(input: {
         FROM lighthouse_matches
         WHERE id = $1::uuid
         LIMIT 1
+        -- Locked so a seeker's cancel and a host's accept arriving together are decided one after
+        -- the other against the status the first one left, not both against the old one.
+        FOR UPDATE
       `,
       [input.matchId],
     );
@@ -1286,17 +1290,22 @@ export async function updateMatch(input: {
 
     const match = existing.rows[0];
     if (!input.isAdmin) {
+      let side: 'host' | 'seeker';
       if (input.actorUserId === match.host_user_id) {
-        const hostAllowed = input.status === 'accepted' || input.status === 'rejected' || input.status === 'completed';
-        if (!hostAllowed) {
+        if (input.status !== 'accepted' && input.status !== 'rejected' && input.status !== 'completed') {
           throw new Error('policy_denied');
         }
+        side = 'host';
       } else if (input.actorUserId === match.seeker_user_id) {
         if (input.status !== 'canceled') {
           throw new Error('policy_denied');
         }
+        side = 'seeker';
       } else {
         throw new Error('policy_denied');
+      }
+      if (!isAllowedMatchTransition(side, match.status, input.status)) {
+        throw new Error('invalid_transition');
       }
     }
 
