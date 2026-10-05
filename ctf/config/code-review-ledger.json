@@ -377,9 +377,10 @@
     {
       "name": "notifications",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-20T01:46:02.477Z",
-      "lastRunIssues": 5,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:32:59.076Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:32:59.076Z"
     },
     {
       "name": "observability",
