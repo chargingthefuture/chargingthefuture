@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Quora account removals — survey',
   description:
-    'A short survey for people whose Quora accounts were removed: which accounts, when, and what they were writing about. Answers are stored with no link to your account.',
+    'A short survey for people whose Quora accounts were removed: which accounts, when, and what they were writing about. Your answer is saved with the account you sign in with, and the form asks for no way to reach you.',
 };
 
 // A short top-level path, not one under /apps, because this link is read outside the app — on

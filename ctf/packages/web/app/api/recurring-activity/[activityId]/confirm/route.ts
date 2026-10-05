@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   ensureMutationCsrf,
+  isRecurringActivityId,
   recurringActivityErrorResponse,
   recurringActivityMutationError,
   requireRecurringActivityAccess,
@@ -13,8 +14,8 @@ import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 
 // POST /api/recurring-activity/[activityId]/confirm — the counterparty confirms a pending activity.
-export async function POST(request: Request, context: unknown) {
-  const { activityId } = (context as { params: { activityId: string } }).params;
+export async function POST(request: Request, context: { params: Promise<{ activityId: string }> }) {
+  const { activityId } = await context.params;
 
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -23,6 +24,9 @@ export async function POST(request: Request, context: unknown) {
   const gate = await requireRecurringActivityAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+  if (!isRecurringActivityId(activityId)) {
+    return recurringActivityMutationError('not_found', 'Activity not found.');
   }
 
   const requestId = resolveRequestId(request);
