@@ -440,9 +440,10 @@
     {
       "name": "quora-live-census",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T01:20:29.161Z",
+      "lastRunIssues": 2,
+      "partial": false,
+      "updatedAt": "2026-10-05T01:20:29.161Z"
     },
     {
       "name": "quora-motd",
