@@ -618,9 +618,10 @@
     {
       "name": "web-shell",
       "type": "module",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:11:20.381Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:11:20.402Z"
     },
     {
       "name": "webhooks",
