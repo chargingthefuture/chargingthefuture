@@ -35,6 +35,27 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // The egress call puts the call on air with HLS and recording on, so it runs only for the live
+    // event. A draft goes live through go-live; an ended event must stay off air.
+    if (event.status !== 'live') {
+      await insertBeaconAudit({
+        actorId: gate.auth.userId,
+        command: 'beacon.event.start-broadcast',
+        policyStatus: 'deny',
+        reason: `not_live:${event.status}`,
+        targetType: 'event',
+        targetId: event.id,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: BEACON_ERROR_CODE.conflict,
+          message: event.status === 'draft' ? 'Go live first, then start the broadcast.' : 'This event has ended, so the broadcast cannot start.',
+        },
+        { status: 409 },
+      );
+    }
+
     const started = await startBeaconBroadcastEgress(event.id);
     if (!started) {
       return NextResponse.json(

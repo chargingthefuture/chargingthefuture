@@ -94,7 +94,7 @@ contracts:
   - pluginId: beacon
     command: event.chat-token.mint
     version: 1.0.0
-    description: Mint a Stream Chat token for the live event chat channel. Requires a signed-in member, so only members can post; this is the sign-in-to-chat gate. Anonymous callers are denied.
+    description: Mint a Stream Chat token for the live event chat channel. Requires a signed-in member, so only members can post; this is the sign-in-to-chat gate. Anonymous callers are denied. Only a live event's chat gets a token; a draft or ended event answers 409 beacon_conflict.
     inputSchema:
       eventId:
         type: string
@@ -169,7 +169,7 @@ contracts:
   - pluginId: beacon
     command: event.go-live
     version: 1.0.0
-    description: Flip the event to live (Stream goLive on the livestream call) and auto-post a live-now notice to the Commons. Admin-only. Idempotent on the Commons post (stored on the event row).
+    description: Flip a draft event to live (Stream goLive on the livestream call) and auto-post a live-now notice to the Commons. Admin-only. Only a draft can go live; a live or ended event, or a second event while one is live, answers 409 beacon_conflict and writes a deny audit row. The row moves to live before Stream is called (the UPDATE carries status = 'draft'), so of two simultaneous calls only one reaches Stream; if Stream then fails, the row goes back to draft. Idempotent on the Commons post (stored on the event row).
     inputSchema:
       eventId:
         type: string
@@ -188,7 +188,7 @@ contracts:
   - pluginId: beacon
     command: event.start-broadcast
     version: 1.0.0
-    description: Start the public HLS broadcast and recording once a host is publishing media to the livestream call. Admin-only. Idempotent.
+    description: Start the public HLS broadcast and recording once a host is publishing media to the livestream call. Admin-only. Only for a live event; a draft or ended event answers 409 beacon_conflict and writes a deny audit row. Idempotent.
     inputSchema:
       eventId:
         type: string
@@ -205,7 +205,7 @@ contracts:
   - pluginId: beacon
     command: event.end
     version: 1.0.0
-    description: End the broadcast, stop the Stream call so video billing stops, and flip the event to ended. Admin-only.
+    description: End the broadcast, stop the Stream call so video billing stops, and flip the event to ended. Admin-only. Only a live event can be ended (the UPDATE carries status = 'live'); a draft or ended event answers 409 beacon_conflict and writes a deny audit row.
     inputSchema:
       eventId:
         type: string
@@ -260,7 +260,7 @@ contracts:
   - pluginId: beacon
     command: event.moderate
     version: 1.0.0
-    description: Moderate the live event chat — mute a member, ban a member from the event channel, or toggle slow-mode. Admin-only; targets the Stream Chat channel for the event.
+    description: Moderate the live event chat — mute a member, ban a member from the event channel, or toggle slow-mode. Admin-only; targets the Stream Chat channel for the event. A mute is a timed channel ban (BEACON_MUTE_MINUTES), so the member stops posting to every viewer, not only to the admin.
     inputSchema:
       eventId:
         type: string
