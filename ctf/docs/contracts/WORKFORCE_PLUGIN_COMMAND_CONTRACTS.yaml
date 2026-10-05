@@ -26,50 +26,6 @@ contracts:
     idempotency: true
 
   - pluginId: workforce
-    command: workforce.profile.fetch
-    version: 2.0.0
-    description: >-
-      Fetch the caller's read-only workforce profile (occupation/skill derived live from their claimed
-      Directory profile) plus the workforce-owned extension preferences and deletion marker.
-    inputSchema:
-      userScope:
-        type: self
-        required: true
-    outputSchema:
-      profile:
-        type: object
-    dataAccess:
-      - directory_profiles
-      - skills_taxonomy_job_titles
-      - workforce_user_extension
-    purpose: workforce_profile_management
-    retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: workforce
-    command: workforce.profile.delete
-    version: 2.0.0
-    description: >-
-      Service-scoped workforce profile soft delete: set service_deleted_at and reset the workforce
-      extension preferences. Directory and Skills Taxonomy are never written.
-    inputSchema:
-      scope:
-        type: string
-        enum: [service]
-    outputSchema:
-      status:
-        type: string
-      requestedAtIso:
-        type: string
-    dataAccess:
-      - workforce_user_extension
-      - workforce_deletion_events
-      - workforce_admin_audit_trail
-    purpose: workforce_profile_management
-    retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: workforce
     command: workforce.occupations.list
     version: 2.0.0
     description: >-

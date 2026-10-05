@@ -110,7 +110,12 @@ If user returns after service-scoped deletion:
 - Deletion event schema fields:
   - `id`, `user_id`, `scope`, `plugin_id`, `requested_at`, `processed_at`, `result`, `request_id`, `trace_id`
 - Event table/path:
-  - `workforce_deletion_events`
+  - `account_deletion_events` (`service_name = 'workforce'`), written by the central deletion
+    orchestrator (`lib/account/deletion-orchestrator.ts`) for both the service delete and the
+    full-account delete
+  - `workforce_deletion_events` holds the rows the retired `DELETE /api/workforce/profile` wrote
+    before 2026-10-05; nothing writes it now, and the deletion registry retains it as the
+    accountability trail
 - Who can trigger deletion:
   - authenticated user (self)
   - full-account orchestrator/system actor
@@ -120,7 +125,9 @@ If user returns after service-scoped deletion:
 ## 9) API and UX Surface
 
 - Service delete endpoint:
-  - `DELETE /api/workforce/profile`
+  - `DELETE /api/account/services/workforce` (the Account & Data screen's per-service delete,
+    run through the central deletion registry). The in-plugin `DELETE /api/workforce/profile` was
+    retired 2026-10-05: no screen called it.
 - Full account delete endpoint (or orchestrator):
   - `DELETE /api/account/full-account`
 - Status model (`requested`, `processing`, `completed`, `failed`):

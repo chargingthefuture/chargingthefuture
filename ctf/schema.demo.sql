@@ -2290,7 +2290,9 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Service-scoped deletion event log for DELETE /api/workforce/profile (deletion contract section 8).
+-- Service-scoped deletion event log written by the retired DELETE /api/workforce/profile (deletion
+-- contract section 8). Nothing writes it since 2026-10-05; the central deletion orchestrator records
+-- service deletes in account_deletion_events. Retained as the accountability trail.
 CREATE TABLE IF NOT EXISTS workforce_deletion_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
