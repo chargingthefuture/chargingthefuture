@@ -148,9 +148,10 @@
     {
       "name": "contributions",
       "type": "plugin",
-      "lastReviewedAt": "2026-08-06T09:18:06.567Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:43:11.291Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:43:11.291Z"
     },
     {
       "name": "contributor-access",
