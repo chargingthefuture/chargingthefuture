@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { HandHeart, Loader2, Check, MessageCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
@@ -60,7 +61,7 @@ function ProofForm({ tripId, onDone }: { tripId: string; onDone: () => void }) {
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ artifactType: type, artifactRedacted: value.trim() }),
       });
-      if (!res.ok) throw new Error("Could not add proof.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not add proof.", "member"));
       onDone();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not add proof.");
@@ -107,7 +108,7 @@ function TripChat({ tripId }: { tripId: string }) {
     setError(null);
     try {
       const res = await fetch(`/api/trust-transport/trips/${tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Could not load chat.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not load chat.", "member"));
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "Could not load chat.");
       setCreds(data);
@@ -160,7 +161,7 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
     setError(null);
     try {
       const res = await fetch(`/api/trust-transport/trips/${tripId}/complete`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Could not confirm completion.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not confirm completion.", "member"));
       onConfirmed();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not confirm completion.");
@@ -280,7 +281,7 @@ function ProviderTripsSection() {
     setError(null);
     try {
       const res = await fetch("/api/trust-transport/trips");
-      if (!res.ok) throw new Error("Could not load your trips.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not load your trips.", "member"));
       const data = (await res.json()) as { items?: ProviderTrip[] };
       setTrips(Array.isArray(data.items) ? data.items : []);
     } catch (e: unknown) {
@@ -301,7 +302,7 @@ function ProviderTripsSection() {
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ nextStatus }),
       });
-      if (!res.ok) throw new Error("Could not update the trip.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not update the trip.", "member"));
       await load();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not update the trip.");
@@ -310,7 +311,9 @@ function ProviderTripsSection() {
     }
   }
 
-  if (loading || trips.length === 0) return null;
+  // A failed load still renders the section with its reason: a provider with trips in progress must
+  // not lose the controls silently.
+  if (loading || (trips.length === 0 && !error)) return null;
 
   return (
     <div style={{ marginBottom: 28 }}>
@@ -355,7 +358,7 @@ function OfferForm({ requestId, onSent }: { requestId: string; onSent: () => voi
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ note: note.trim() || null, proposedAmount }),
       });
-      if (!res.ok) throw new Error("Could not send your offer. Please try again.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not send your offer. Please try again.", "member"));
       onSent();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not send your offer.");
@@ -449,7 +452,7 @@ export function TrustTransportHelpTab() {
       setError(null);
       try {
         const res = await fetch("/api/trust-transport/requests/available");
-        if (!res.ok) throw new Error("Could not load open requests.");
+        if (!res.ok) throw new Error(await responseFailureText(res, "Could not load open requests.", "member"));
         const data = (await res.json()) as { items?: AvailableRequest[] };
         if (active) setItems(Array.isArray(data.items) ? data.items : []);
       } catch (e: unknown) {

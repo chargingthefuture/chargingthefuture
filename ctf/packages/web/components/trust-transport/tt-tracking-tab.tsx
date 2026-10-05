@@ -5,6 +5,7 @@ import { Car, Navigation, MessageCircle, Check, X, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { useTheme } from "@/hooks/useTheme";
+import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 
@@ -27,7 +28,7 @@ function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepte
     setError(null);
     try {
       const res = await fetch(`/api/trust-transport/requests/${requestId}/offers`);
-      if (!res.ok) throw new Error("Could not load offers.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not load offers.", "member"));
       const data = (await res.json()) as { items?: TtOffer[] };
       setOffers(Array.isArray(data.items) ? data.items : []);
     } catch (e: unknown) {
@@ -46,7 +47,7 @@ function RequestOffers({ requestId, onAccepted }: { requestId: string; onAccepte
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ requestId }),
       });
-      if (!res.ok) throw new Error("Could not accept this offer.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not accept this offer.", "member"));
       onAccepted();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not accept this offer.");
@@ -112,7 +113,7 @@ function CompletionConfirm({ tripId, myConfirmedAtIso, otherConfirmedAtIso, onCo
     setError(null);
     try {
       const res = await fetch(`/api/trust-transport/trips/${tripId}/complete`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Could not confirm completion.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not confirm completion.", "member"));
       onConfirmed();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not confirm completion.");
@@ -271,7 +272,7 @@ function CancelRequestButton({ requestId, onCancelled }: { requestId: string; on
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error("Could not cancel this request.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not cancel this request.", "member"));
       onCancelled();
     } catch (e: unknown) {
       setCancelError(e instanceof Error ? e.message : "Could not cancel this request.");

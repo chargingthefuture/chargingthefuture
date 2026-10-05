@@ -5,6 +5,8 @@ import { Car } from "lucide-react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
+import { failureText, responseFailureText } from "@/lib/errors/client-failure";
+import { reportError } from "@/lib/observability/report";
 import { BG, deriveRideTypes, getTrustTransportTokens, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
 import { TrustTransportBookTab } from "./tt-book-tab";
 import { TrustTransportTrackingTab } from "./tt-tracking-tab";
@@ -46,6 +48,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [modes, setModes] = useState<Mode[]>([]);
   const [requests, setRequests] = useState<TripRequest[]>([]);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState<Tab>("book");
   const [rideType, setRideType] = useState("ride");
@@ -72,13 +75,22 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const t = getTrustTransportTokens(theme);
 
   async function fetchRequests() {
-    const res = await fetch("/api/trust-transport/requests");
-    if (res.ok) {
+    // A failed load keeps whatever list was already shown and says why, so Tracking and Direct Line
+    // never read "No active trips" to a member whose trips simply did not load (rule 137).
+    try {
+      const res = await fetch("/api/trust-transport/requests");
+      if (!res.ok) {
+        setRequestsError(await responseFailureText(res, "Could not load your trips.", "member"));
+        return;
+      }
       // The API wraps the list as { ok, items, page, ... } — the array is .items,
       // not the top-level body. Reading the body directly made `requests` an
       // object, so requests.map(...) in the tracking/chat tabs threw.
       const data = (await res.json()) as { items?: TripRequest[] };
       setRequests(Array.isArray(data.items) ? data.items : []);
+      setRequestsError(null);
+    } catch (e: unknown) {
+      setRequestsError(failureText(e, { area: "trust-transport", op: "fetch_requests", fallback: "Could not load your trips.", audience: "member" }));
     }
   }
 
@@ -96,6 +108,10 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           const data = (await modesRes.json()) as { modes?: unknown };
           const rawModes: unknown[] = Array.isArray(data.modes) ? data.modes : [];
           setModes(rawModes.map((m) => (typeof m === "string" ? { id: m, name: m } : (m as Mode))));
+        } else {
+          // Booking still works from the built-in ride types, so this is not shown; report it so the
+          // failed load is not lost.
+          reportError(new Error(await responseFailureText(modesRes, "Could not load TrustTransport modes.")), { area: "trust-transport", op: "fetch_modes" });
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to load TrustTransport.");
@@ -124,7 +140,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify(buildBookingBody({ rideType, pickup: from.trim(), dropoff: to.trim(), priceCurrency, priceAmount, acceptedCurrencies })),
       });
-      if (!res.ok) throw new Error("Failed to create request");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to create request", "member"));
       setBooked(true);
       await fetchRequests();
     } catch (e: unknown) {
@@ -149,7 +165,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setChatLoading(true);
     try {
       const res = await fetch(`/api/trust-transport/trips/${req.tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Failed to fetch chat credentials");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to fetch chat credentials", "member"));
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");
       if (activeChatReqRef.current !== req.id) return;
@@ -210,12 +226,15 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); setAcceptedCurrencies([]); }}
         />
       )}
-      {tab === "tracking" && (
+      {requestsError && (tab === "tracking" || tab === "chat") && (
+        <div role="alert" style={{ margin: "12px 14px 0", fontSize: 13, color: "#EF4444" }}>{requestsError}</div>
+      )}
+      {tab === "tracking" && !(requestsError && requests.length === 0) && (
         <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} onAccepted={() => void fetchRequests()} onCancelled={() => void fetchRequests()} onCompletionConfirmed={() => void fetchRequests()} />
       )}
       {tab === "help" && <TrustTransportHelpTab />}
       {tab === "earnings" && <TrustTransportEarningsTab />}
-      {tab === "chat" && (
+      {tab === "chat" && !(requestsError && requests.length === 0) && (
         <TrustTransportChatTab
           requests={requests}
           selectedRequest={selectedRequest}
