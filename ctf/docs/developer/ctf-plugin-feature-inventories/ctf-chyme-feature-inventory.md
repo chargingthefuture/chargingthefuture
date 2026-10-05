@@ -25,9 +25,9 @@ Lifecycle/governance references applied:
 4. Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
 5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including ServiceCredits reclaim dependency queueing in existing reclaim/outbox tables.
 6. ServiceCredits peer tipping: a **Tip** action on every other participant's tile sends ServiceCredits from the signed-in member to that participant via `POST /api/chyme/service-credits` (origin_plugin `chyme`). The transfer delivers immediately and is recognized in GDP as Chyme peer tips. The action never appears on the local member's own tile or on a listen-only guest (no wallet).
-7. Back Channel (spec #1746): start a free, private 1:1 audio call with another member who is in the same live room right now, using the **Back Channel** action on their participant tile. They get an invite they can accept or decline — nobody is cold-called. Once accepted, you talk one-to-one in a small call panel while the room stays open behind you; hanging up ends it with no history kept. It is always free — a note points you to Foundation if you want a call with ServiceCredits attached. You can't Back Channel someone you've blocked (or who blocked you), and it never appears on your own tile.
+7. Back Channel (spec #1746): start a free, private 1:1 audio call with another member who is in the same live room right now, using the **Back Channel** action on their participant tile. They get an invite they can accept or decline — nobody is cold-called. Once accepted, you talk one-to-one in a small call panel while the room stays open behind you; hanging up ends it with no history kept. It is always free — a note points you to Foundation if you want a call with ServiceCredits attached. You can't Back Channel someone you've blocked (or who blocked you), and it never appears on your own tile. If an invite, accept, decline, hang-up or join is refused (blocked, the room is not live, the invite lapsed, Back Channel paused), the screen says "Could not <what failed>: <the reason>" in the invite prompt, the call screen, or a notice at the top, on web and Android.
 8. Web UI surface includes participant list, join-call action, chat panel, the per-participant tip action (`chyme-tip-dialog.tsx`), the per-participant Back Channel action (`chyme-back-channel-layer.tsx`), and deletion actions.
-9. Android UI surface includes room summary, participant roster, chat send/read, join action, the per-participant tip action (`ChymeTipModal.tsx`), the per-participant Back Channel action with a bottom-sheet invite and full-screen call (`ChymeBackChannelInviteSheet.tsx` / `ChymeBackChannelCall.tsx`), and deletion actions using runtime-configured provider-neutral identity headers.
+9. Android UI surface includes room summary, participant roster, chat send/read, join action, the per-participant tip action (`ChymeTipModal.tsx`), the per-participant Back Channel action with a bottom-sheet invite and full-screen call (`ChymeBackChannelInviteSheet.tsx` / `ChymeBackChannelCall.tsx`), and deletion actions using runtime-configured provider-neutral identity headers. Leave posts `POST /api/chyme/leave` (2026-10-05), so the member stops counting at once, as on the web.
 10. **Private "Weavers of the Commons" room (web, contributor-gated).** A second Chyme room, `chyme-contributors-room`, reachable from an in-shell room switcher next to the main room. It is the Chyme counterpart to the gated Commons chat channel: only contributor-eligible members (and admins) may join, gated exactly like the Commons channel — the contributor-access channel-open switch **and** the member's eligibility flag, or admin. A member who fails either gets a bare 404 from the room read, and the switcher tab shows the "how it's earned" explainer (`WeaversBadge` + a link to `/apps/directory/weavers-of-the-commons`) — the same no-shaming pattern; non-eligible members never see a locked/absence state. It is an **audio + room-chat MVP**: live audio (join/speak/listen/presence/hand-raise) and its own room text chat. ServiceCredits tips and Back Channel 1:1 calls are intentionally **not** offered in the private room yet (Back Channel invites are scoped to the main room's presence). The room is addressed by a `?room=contributors` query param threaded through the client (`ChymeShell` → `ChymeLiveShell` → `ChymeRoomView` → `ChymeAudioRoom`). Each opened room stays **mounted** (hidden with `display:none` when it is not the active one) rather than being remounted on switch, so switching rooms never tears down a live audio call. Android: out of scope (Commons/contributor surfaces are web-only per rule 105; the native app is narrowed to the main Chyme room).
 11. **Rooms rail + in-room layout (web, owner request 2026-07-23).** The room switcher at the top of the shell is a horizontal, left-to-right scroller of room cards (the open Main Room and the private Weavers of the Commons room), so it stays one compact row instead of a full-height card that repeated the room title and wasted vertical space on phones. Selecting a card switches the room shown below without disconnecting any room already joined (see feature 10). A **"Get the Android app"** card appears in the rail on non-Android browsers and links to the repo's GitHub Releases page filtered to the mobile releases (`https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile`), where the APK is downloaded (owner decision 2026-07-23 — APK is distributed via GitHub releases only, not an app store; filter added 2026-08-18 so the newest APK sits at the top now that wallpaper releases share the page); on an Android device the card is hidden and the rail is just the list of rooms. Inside a room, the audio controls (mute / raise hand / leave) sit directly **below** the participant avatars and **above** the room chat, so a member can mute/unmute while talking without hunting past the avatars or scrolling the chat.
 
@@ -60,6 +60,9 @@ Lifecycle/governance references applied:
     credited from it) and posts `POST /api/chyme/public/leave` on close or when the listener
     presses **Leave** (2026-09-20 — the control beside refresh in the **Live Rooms** row, shown
     only while sound is on). A refusal shows the server's own reason with a "Try again" control.
+    A heartbeat that answers the listener is off the roster (`CHYME_GUEST_IDENTITY_MISSING`, the
+    row pruned while the tab was hidden) re-admits the page through the listen route, or shows the
+    refusal, rather than playing on uncounted (2026-10-05).
 
 15. **Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19).**
     Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
@@ -88,7 +91,8 @@ Lifecycle/governance references applied:
     the call and the count at once, and a later Join answers "An admin removed you from this room.
     You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
-    Chyme admin screen.
+    Chyme admin screen. Both apps read that heartbeat answer (2026-10-05): a removed member still on
+    the room screen stops beating and sees the same sentence in place of the stage, with Leave.
 18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
     on and no room is live, the Chyme page shows a "While you wait for someone to go live" card: computer-voice
     (text-to-speech) readings of posts from the blog, on a loop, with a **Play readings**
@@ -438,6 +442,21 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   and files stood in for: a first load that fails then plays from the start; a reading that always
   fails hands over to the next; three failing readings show the error. Not checked in Safari: no
   Safari engine was available. Test script CH-24 updated.
+- 2026-10-05: **Refused room and Back Channel actions now say why, and Android Leave frees the spot
+  (code review #2720, #2721, #2722, #2724, #2725).** The Back Channel invite, accept, decline,
+  hang-up and join calls on web and Android had no catch, so a refusal (blocked, room not live,
+  invite lapsed, Back Channel paused) left the screen unchanged; each controller now keeps the
+  route's reason and shows it in the invite prompt, the call screen, or a notice at the top. The
+  Back Channel heartbeat effect depended on the `activeCall` object, which every 3-second poll
+  replaces, so it beat every poll instead of every 30 seconds; it now keys on the call id. Android
+  Leave never posted `/api/chyme/leave`, so the member held a spot for the 45-second presence
+  window; it now posts it and refreshes the room. A removed member still on the room screen got
+  every heartbeat refused in silence (web showed the wrong "connection dropped" advice); both apps
+  now read `CHYME_REMOVED_FROM_ROOM` (and `CHYME_ROOM_FULL`, for the heartbeat cap check of #2727),
+  stop beating, and show the server's sentence in place of the stage. The signed-out listener page ignored the public heartbeat's `CHYME_GUEST_IDENTITY_MISSING`
+  answer and played on uncounted after its row was pruned; it now re-admits itself through the
+  listen route. No route, schema, or contract change. Test script CH-4, CH-7, CH-12 and CH-23
+  updated.
 - 2026-09-30: **The signed-in idle room no longer repeats the participant count (owner directive).**
   With nobody in the room, an "On Stage · 0 Participants" block and "No participants yet." sat
   under the readings card, repeating the header's "0 participants · Signed in as …" line.
