@@ -649,9 +649,10 @@
     {
       "name": "what-works",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T02:41:07.460Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:21:15.076Z",
+      "lastRunIssues": 5,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:21:15.076Z"
     },
     {
       "name": "workforce",
