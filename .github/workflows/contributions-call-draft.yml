@@ -1,0 +1,54 @@
+name: Contributions — Draft the twice-yearly call post
+
+# On 5 April and 5 October, asks production to write the "Contribute if you can" Commons post as an
+# unpublished draft, with today's sign-up count, approved-member count and hosting cost filled in.
+# The owner checks the figures and publishes it from /admin/feed-announcements. Nothing here
+# publishes. Recurring: it has a next run every six months. Owner decision, 2026-10-05.
+#
+# What it needs (Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_APP_URL secret — the production base URL. Already used by the image build.
+#   CRON_SECRET secret — must match the CRON_SECRET the app reads at runtime.
+#
+# Nothing here prints a figure: the run summary shows only that a draft was written and how many
+# cost lines on /admin/expenses have no amount yet.
+
+on:
+  schedule:
+    - cron: '17 13 5 4,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contributions-call-draft
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Write the draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the draft route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::The Contributions call draft needs NEXT_PUBLIC_APP_URL and CRON_SECRET in GitHub Actions secrets."
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/call-draft.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/admin-expenses/contributions-call-draft" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          summary=$(jq -r 'if .ok then "Draft written. Check and publish it on /admin/feed-announcements. Cost lines with no amount: \(.unpricedLines)." else "Failed: \(.message // "no message")" end' /tmp/call-draft.json 2>/dev/null || echo "The response was not JSON.")
+          echo "${summary}"
+          echo "${summary}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${code}" != "201" ]; then
+            echo "::error::The Contributions call draft failed with HTTP ${code}."
+            exit 1
+          fi
