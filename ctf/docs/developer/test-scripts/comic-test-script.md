@@ -313,7 +313,8 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 - Step 4: the entry is active again and retrievable — off/on is reversible. The exception: an entry
   from a contribution its member withdrew (CMC-C5) cannot be switched back on. The screen shows "This
   entry came from a contribution its member withdrew, so it cannot be switched back on.", the entry
-  stays off, and the Audit log shows the attempt as refused.
+  stays off, and the Audit log shows the attempt as **Refused**, "Because its member withdrew the
+  contribution."
 - Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐

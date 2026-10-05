@@ -52,7 +52,7 @@ export async function PUT(request: Request, { params }: RouteProps) {
         targetType: 'knowledge_entry',
         targetId: entryId,
         result: 'failure',
-        errorCategory: 'conflict',
+        errorCategory: 'contribution_withdrawn',
         metadata: { active: body.active },
       });
       return NextResponse.json(
