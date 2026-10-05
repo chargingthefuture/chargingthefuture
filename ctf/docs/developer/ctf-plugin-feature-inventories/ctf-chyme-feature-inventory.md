@@ -343,6 +343,14 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
    nature: the signed-out listener path (guest identity, heartbeat, leave, refusal reasons), the
    connection-aware Join pill (Android's foreground service already keeps the call alive), and the
    admin usage screen (admin surfaces are web-only).
+10. **Android sign-in and sign-out (2026-10-05).** The Android shell (`packages/mobile/App.tsx`) shows
+    a "You are not signed in" card with a **Sign in** button above the content while nobody is
+    signed in, wired to the Clerk sign-in flow in `src/auth/auth-context.tsx`; a signed-out member
+    can still listen to a room as a guest. The Account & Data screen carries a **Sign out** button
+    (with a confirm) that clears the stored session from the device keychain. The shell's content
+    view is keyed on the signed-in member's id, so signing out or in unmounts every Chyme screen
+    holding a Stream client, and each one leaves its call and disconnects. Controls live in
+    `packages/mobile/src/components/shared/SessionControls.tsx`.
 6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_ROOM_KEY` / "Chyme Main Room") plus the hardcoded contributor room (`CHYME_CONTRIBUTORS_ROOM_KEY`, 2026-07-23). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
 
 ## Seed Coverage Status
@@ -426,6 +434,12 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-05: **Android app can sign in and sign out (code review #2737).** The auth context built
+  the Clerk sign-in flow and a sign-out, but no screen called either, so a fresh install could only
+  listen as a guest and a signed-in member could never sign out. The shell now shows a sign-in card
+  while signed out and Account & Data has a Sign out button; signing out clears the stored session,
+  and keying the content view on the member's id tears down every Stream client the Chyme screens
+  hold. No route, schema, or contract change. Android app test script AN-1 and AN-7 updated.
 - 2026-09-30: **A reading that will not load no longer ends the loop (owner report).** On an iPhone
   the card showed "The recording could not be loaded (the file or its address is not playable, code
   4)." for a reading a laptop played. The file is on the blog and is an ordinary MP3; what differs

@@ -20,9 +20,11 @@ end.
 ## AN-1 — Launch and sign in (Clerk)
 
 1. Install and open the app. You should see the "Exit Their Economy / Exit The Psyop" loading screen,
-   then the sign-in flow.
-2. Sign in with the approved test account through the Clerk hosted flow.
-3. Expect to land in the app shell with the **Chyme** pill selected by default (not a Home feed).
+   then the app shell with the **Chyme** pill selected and a **You are not signed in** card with a
+   **Sign in** button above the content. The card shows on every pill while signed out.
+2. Tap **Sign in** and sign in with the approved test account through the Clerk hosted flow.
+3. Expect to land back in the app shell with the **Chyme** pill selected by default (not a Home
+   feed) and the sign-in card gone.
 
 ## AN-2 — Unlock wall
 
@@ -89,7 +91,13 @@ second test member in the same room.
 1. Open the **Account & Data** pill.
 2. Confirm the account/settings content loads.
 3. Toggle the theme if a toggle is present; confirm the app re-themes.
-4. Sign out from here and confirm you return to the sign-in flow.
+4. Scroll to the bottom: under **Signed in as** your username (or email), tap **Sign out**. A confirm
+   asks **Sign out of this device?**; **Stay signed in** closes it with nothing changed.
+5. Tap **Sign out** again and choose **Sign out**. Expect the shell to show the **You are not signed
+   in** card, and the Account & Data pill to no longer list your data.
+6. Close and reopen the app: you are still signed out (the stored session was cleared).
+7. Join a room on Chyme, switch to Account & Data, and sign out. Go back to Chyme: you are not in
+   the room as a member and the Android "Chyme live audio" notification is gone.
 
 ## AN-8 — Blocked members
 
