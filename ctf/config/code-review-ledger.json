@@ -419,9 +419,10 @@
     {
       "name": "plugins",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-15T08:39:32.823Z",
-      "lastRunIssues": 5,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:30:17.133Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:30:17.133Z"
     },
     {
       "name": "presence",
