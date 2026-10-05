@@ -101,9 +101,10 @@
     {
       "name": "chyme",
       "type": "plugin",
-      "lastReviewedAt": null,
-      "lastRunIssues": 0,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T01:19:42.471Z",
+      "lastRunIssues": 13,
+      "partial": false,
+      "updatedAt": "2026-10-05T01:19:42.471Z"
     },
     {
       "name": "click-log",
