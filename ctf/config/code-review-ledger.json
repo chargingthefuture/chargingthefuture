@@ -541,9 +541,10 @@
     {
       "name": "skills-taxonomy",
       "type": "plugin",
-      "lastReviewedAt": "2026-06-27T02:29:37.457Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:18:50.658Z",
+      "lastRunIssues": 3,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:18:50.658Z"
     },
     {
       "name": "socket-relay",
