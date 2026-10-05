@@ -5,6 +5,7 @@ import {
   QUORA_SURVEY_ACTION,
   QUORA_SURVEY_ACTION_LABEL,
   QUORA_SURVEY_EARLIEST_YEAR,
+  QUORA_SURVEY_LATEST_YEAR,
   QUORA_SURVEY_REASON,
   QUORA_SURVEY_REASON_LABEL,
   QUORA_SURVEY_TOPIC,
@@ -57,7 +58,7 @@ function yearOptions(): number[] {
   // Built from the constant rather than from the clock so the list is identical on the server and
   // in the browser; a year list that differs between the two is a hydration mismatch.
   const years: number[] = [];
-  for (let year = QUORA_SURVEY_EARLIEST_YEAR + 100; year >= QUORA_SURVEY_EARLIEST_YEAR; year -= 1) {
+  for (let year = QUORA_SURVEY_LATEST_YEAR; year >= QUORA_SURVEY_EARLIEST_YEAR; year -= 1) {
     years.push(year);
   }
   return years;

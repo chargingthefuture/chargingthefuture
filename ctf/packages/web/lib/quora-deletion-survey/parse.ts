@@ -8,6 +8,7 @@
 import {
   QUORA_SURVEY_ACTION,
   QUORA_SURVEY_EARLIEST_YEAR,
+  QUORA_SURVEY_LATEST_YEAR,
   QUORA_SURVEY_HANDLE_MAX_LENGTH,
   QUORA_SURVEY_MAX_ACCOUNTS,
   QUORA_SURVEY_REASON,
@@ -69,8 +70,9 @@ function asOptionalYear(value: unknown): number | null {
   const year = Math.round(value);
   // The upper bound is generous rather than "this year": the server clock and the person's
   // clock can disagree across a new year, and rejecting a December report on January 1 would
-  // lose a real answer over a time zone.
-  if (year < QUORA_SURVEY_EARLIEST_YEAR || year > QUORA_SURVEY_EARLIEST_YEAR + 100) return null;
+  // lose a real answer over a time zone. It is the database's own bound, so a year the parser keeps
+  // is one the insert accepts.
+  if (year < QUORA_SURVEY_EARLIEST_YEAR || year > QUORA_SURVEY_LATEST_YEAR) return null;
   return year;
 }
 

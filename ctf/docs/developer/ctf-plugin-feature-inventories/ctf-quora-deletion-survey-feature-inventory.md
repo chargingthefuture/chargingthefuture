@@ -142,7 +142,7 @@ makes a member's second response findable at all.
 | `handle` | TEXT | The only required field on an account row; capped at 200 characters |
 | `action` | TEXT | `account_deleted` / `account_suspended` / `answers_removed` / `space_removed` / `posting_blocked` |
 | `removed_month` | INTEGER NULL | 1-12, or null for "not sure" |
-| `removed_year` | INTEGER NULL | 2005-2100 at the database, offered from 2010 in the form |
+| `removed_year` | INTEGER NULL | 2005-2100 at the database, offered and parsed from 2010 to 2100 |
 | `stated_reason` | TEXT | `none_given` / `spam` / `harassment` / `misinformation` / `impersonation` / `adult_content` / `ban_evasion` / `other` / `do_not_recall` |
 | `appealed` | BOOLEAN | Defaults to FALSE |
 | `reinstated` | BOOLEAN | Defaults to FALSE |
@@ -373,6 +373,13 @@ this is not a plugin. The steps that matter:
   `metadata.source` naming the survey on submissions that came this way.
 
 ## Change Log
+
+- 2026-10-05: **A year the form offers is a year the table accepts.** The year list and the parser
+  ran up to 2110, but the `removed_year` CHECK stops at 2100. Picking 2101 to 2110, the first ten
+  entries of the list, passed the parser, failed the insert, and lost the entire response behind
+  "Your response could not be saved". The list, the parser and the command contract now stop at
+  2100, from one constant (`QUORA_SURVEY_LATEST_YEAR`) next to the earliest year. A year past it
+  becomes null, as the parser's comment always said.
 
 - 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
   found this survey had none. The `QUORA_DELETION_SURVEY_*` contracts are written from the routes,
