@@ -46,11 +46,11 @@ export async function POST(request: Request, context: RouteContext) {
     return auth.response;
   }
   const { id } = await context.params;
-  const product = await getProductById(id);
-  if (!product || product.status !== 'approved') {
-    return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
-  }
   try {
+    const product = await getProductById(id);
+    if (!product || product.status !== 'approved') {
+      return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
+    }
     await addEndorsement(id, auth.gate.auth.userId);
     const state = await getProductEndorsementState(id, auth.gate.auth.userId);
     logWhatWorksAudit({
@@ -76,11 +76,11 @@ export async function DELETE(request: Request, context: RouteContext) {
     return auth.response;
   }
   const { id } = await context.params;
-  const product = await getProductById(id);
-  if (!product || product.status !== 'approved') {
-    return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
-  }
   try {
+    const product = await getProductById(id);
+    if (!product || product.status !== 'approved') {
+      return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
+    }
     await removeEndorsement(id, auth.gate.auth.userId);
     const state = await getProductEndorsementState(id, auth.gate.auth.userId);
     logWhatWorksAudit({

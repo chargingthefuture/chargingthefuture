@@ -16,6 +16,7 @@ import {
   whatWorksError,
 } from '../../../_lib';
 import { recordWhatWorksAdminAudit } from 'lib/what-works/audit';
+import { failureResponse } from 'lib/errors/failure';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -144,21 +145,32 @@ export async function PATCH(request: Request, context: RouteContext) {
     return gate.response;
   }
   const { id } = await context.params;
-  const existing = await getProductById(id);
-  if (!existing) {
-    return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
-  }
+  try {
+    const existing = await getProductById(id);
+    if (!existing) {
+      return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
+    }
 
-  const body = await parseJsonBody(request);
-  if (!body) {
-    return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
-  }
+    const body = await parseJsonBody(request);
+    if (!body) {
+      return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
+    }
 
-  const action = readTrimmedString(body.action);
-  if (action === null) {
-    return handleProductEdit(id, body, gate.auth.userId);
+    const action = readTrimmedString(body.action);
+    if (action === null) {
+      return await handleProductEdit(id, body, gate.auth.userId);
+    }
+    return await handleProductModeration(id, body, action, gate.auth.userId);
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not update the item',
+      error,
+      code: 'what_works_admin_product_update_failed',
+      area: 'what-works',
+      op: 'admin_product_update',
+      extra: { id },
+    });
   }
-  return handleProductModeration(id, body, action, gate.auth.userId);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
@@ -171,20 +183,31 @@ export async function DELETE(request: Request, context: RouteContext) {
     return gate.response;
   }
   const { id } = await context.params;
-  const existing = await getProductById(id);
-  if (!existing) {
-    return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
+  try {
+    const existing = await getProductById(id);
+    if (!existing) {
+      return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
+    }
+    await deleteProduct(id);
+    await recordWhatWorksAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'what-works.admin.product.delete',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'product',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not delete the item',
+      error,
+      code: 'what_works_admin_product_delete_failed',
+      area: 'what-works',
+      op: 'admin_product_delete',
+      extra: { id },
+    });
   }
-  await deleteProduct(id);
-  await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
-    command: 'what-works.admin.product.delete',
-    status: 'allow',
-    reason: 'admin_route_guard',
-    targetType: 'product',
-    targetId: id,
-    result: 'success',
-    errorCategory: null,
-  });
-  return NextResponse.json({ ok: true });
 }

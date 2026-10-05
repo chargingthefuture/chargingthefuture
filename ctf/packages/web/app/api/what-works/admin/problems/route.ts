@@ -9,6 +9,7 @@ import {
   whatWorksError,
 } from '../../_lib';
 import { logWhatWorksAudit, recordWhatWorksAdminAudit } from 'lib/what-works/audit';
+import { failureResponse } from 'lib/errors/failure';
 
 // The problem fields once required-field and length checks have passed.
 type ValidatedProblem = {
@@ -50,7 +51,18 @@ export async function GET() {
   if (!gate.allowed) {
     return gate.response;
   }
-  const problems = await listAdminProblems();
+  let problems: Awaited<ReturnType<typeof listAdminProblems>>;
+  try {
+    problems = await listAdminProblems();
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not load the problem list',
+      error,
+      code: 'what_works_admin_problem_list_failed',
+      area: 'what-works',
+      op: 'admin_problem_list',
+    });
+  }
   logWhatWorksAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.problem.list',
@@ -85,13 +97,24 @@ export async function POST(request: Request) {
   }
   const { title, emoji, context, sortOrder } = validated.data;
 
-  const problem = await createProblem({
-    title,
-    emoji,
-    context,
-    sortOrder,
-    createdBy: gate.auth.userId,
-  });
+  let problem: Awaited<ReturnType<typeof createProblem>>;
+  try {
+    problem = await createProblem({
+      title,
+      emoji,
+      context,
+      sortOrder,
+      createdBy: gate.auth.userId,
+    });
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not create the problem',
+      error,
+      code: 'what_works_admin_problem_create_failed',
+      area: 'what-works',
+      op: 'admin_problem_create',
+    });
+  }
   await recordWhatWorksAdminAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.problem.create',

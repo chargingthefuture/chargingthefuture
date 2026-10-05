@@ -10,6 +10,7 @@ import {
   whatWorksError,
 } from '../../../_lib';
 import { recordWhatWorksAdminAudit } from 'lib/what-works/audit';
+import { failureResponse } from 'lib/errors/failure';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -74,34 +75,45 @@ export async function PATCH(request: Request, context: RouteContext) {
     return gate.response;
   }
   const { id } = await context.params;
-  const existing = await getProblemById(id);
-  if (!existing) {
-    return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
-  }
+  try {
+    const existing = await getProblemById(id);
+    if (!existing) {
+      return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
+    }
 
-  const body = await parseJsonBody(request);
-  if (!body) {
-    return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
-  }
+    const body = await parseJsonBody(request);
+    if (!body) {
+      return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
+    }
 
-  const built = buildProblemPatch(body);
-  if ('error' in built) {
-    return built.error;
-  }
-  const patch = built.data;
+    const built = buildProblemPatch(body);
+    if ('error' in built) {
+      return built.error;
+    }
+    const patch = built.data;
 
-  const problem = await updateProblem(id, patch);
-  await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
-    command: 'what-works.admin.problem.update',
-    status: 'allow',
-    reason: 'admin_route_guard',
-    targetType: 'problem',
-    targetId: id,
-    result: 'success',
-    errorCategory: null,
-  });
-  return NextResponse.json({ ok: true, problem });
+    const problem = await updateProblem(id, patch);
+    await recordWhatWorksAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'what-works.admin.problem.update',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'problem',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+    return NextResponse.json({ ok: true, problem });
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not update the problem',
+      error,
+      code: 'what_works_admin_problem_update_failed',
+      area: 'what-works',
+      op: 'admin_problem_update',
+      extra: { id },
+    });
+  }
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
@@ -114,20 +126,31 @@ export async function DELETE(request: Request, context: RouteContext) {
     return gate.response;
   }
   const { id } = await context.params;
-  const existing = await getProblemById(id);
-  if (!existing) {
-    return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
+  try {
+    const existing = await getProblemById(id);
+    if (!existing) {
+      return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
+    }
+    await deleteProblem(id);
+    await recordWhatWorksAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'what-works.admin.problem.delete',
+      status: 'allow',
+      reason: 'admin_route_guard',
+      targetType: 'problem',
+      targetId: id,
+      result: 'success',
+      errorCategory: null,
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not delete the problem',
+      error,
+      code: 'what_works_admin_problem_delete_failed',
+      area: 'what-works',
+      op: 'admin_problem_delete',
+      extra: { id },
+    });
   }
-  await deleteProblem(id);
-  await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
-    command: 'what-works.admin.problem.delete',
-    status: 'allow',
-    reason: 'admin_route_guard',
-    targetType: 'problem',
-    targetId: id,
-    result: 'success',
-    errorCategory: null,
-  });
-  return NextResponse.json({ ok: true });
 }

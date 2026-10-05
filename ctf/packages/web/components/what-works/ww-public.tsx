@@ -13,6 +13,9 @@ import {
   type WhatWorksProblem, type WhatWorksStats,
 } from './ww-shared';
 import { WhatWorksLoading } from './ww-loading';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
+
+const PREVIEW_FAILED = 'The preview of the list could not load. Refresh the page to try again.';
 
 const trustItems = (t: WhatWorksTokens): { icon: ReactNode; title: string; detail: string }[] => [
   { icon: <BadgeCheck size={15} color={t.ACCENT} />, title: 'Survivor-verified', detail: 'Used by a real member who said it helped.' },
@@ -26,16 +29,24 @@ export function WhatWorksPublic() {
   const TRUST = trustItems(t);
   const [loading, setLoading] = useState(true);
   const [problems, setProblems] = useState<WhatWorksProblem[]>([]);
+  // A failed preview load is shown as a failure, never as the empty-list line.
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const res = await fetch('/api/what-works/public');
-        if (res.ok) {
-          const data = (await res.json()) as { problems: WhatWorksProblem[]; stats: WhatWorksStats };
-          if (active) setProblems(data.problems ?? []);
+        if (!res.ok) {
+          const message = await responseFailureText(res, PREVIEW_FAILED, 'member');
+          if (active) setLoadError(message);
+          return;
         }
+        const data = (await res.json()) as { problems: WhatWorksProblem[]; stats: WhatWorksStats };
+        if (active) setProblems(data.problems ?? []);
+      } catch (caught) {
+        const message = failureText(caught, { area: 'what-works', op: 'public_preview', fallback: PREVIEW_FAILED, audience: 'member' });
+        if (active) setLoadError(message);
       } finally {
         if (active) setLoading(false);
       }
@@ -101,7 +112,9 @@ export function WhatWorksPublic() {
             <span style={{ fontSize: 12, color: t.MUTED }}>· publicly readable — no account needed to browse</span>
           </div>
 
-          {problems.length === 0 ? (
+          {loadError ? (
+            <div role="alert" style={{ fontSize: 13, color: '#fecaca', padding: '8px 0 24px' }}>{loadError}</div>
+          ) : problems.length === 0 ? (
             <div style={{ fontSize: 13, color: t.MUTED, padding: '8px 0 24px' }}>The list is just getting started. Be the first to add what worked for you.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
