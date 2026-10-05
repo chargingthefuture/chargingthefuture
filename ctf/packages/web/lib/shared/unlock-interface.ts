@@ -11,6 +11,10 @@ export { getUnlockAccessTier } from 'lib/unlock/access';
 // help box say the same thing (2026-09-26). Pure data.
 export { QUORA_URL_HELP_STEPS, type QuoraUrlHelpCase } from 'lib/unlock/quora-url-help-steps';
 export { normalizeQuoraProfileUrl } from 'lib/unlock/quora-url';
+// The app-wide block a spam-denylisted Quora URL gets on submission (2026-10-05). The knowledge library
+// opens an Unlock submission from a contribution, and without the same block that route was a way
+// around the denylist.
+export { applyDenylistBlockIfSpam } from 'lib/unlock/denylist-block';
 export {
   createOrUpdateUnlockSubmission,
   getUnlockStatusForUser,
