@@ -591,9 +591,10 @@
     {
       "name": "trust",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-01T10:28:02.892Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:23:52.411Z",
+      "lastRunIssues": 4,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:23:52.412Z"
     },
     {
       "name": "trust-transport",
