@@ -156,12 +156,18 @@ export async function claimCohortAsTrainer(input: {
     return { status: 'not_eligible', reason: eligibility.reason };
   }
 
-  await queryDb(
+  const claimed = await queryDb(
     `UPDATE skill_up_cohorts
      SET created_by_user_id = $2, updated_at = NOW()
      WHERE id = $1::uuid AND created_by_user_id = $3`,
     [input.cohortId, input.trainerUserId, SKILL_UP_AUTO_COHORT_ACTOR_ID],
   );
+  // Two people can pass the read above at the same moment; the guard in the WHERE lets only the
+  // first update through. The second changed nothing, so it gets no backfill, no audit row naming it
+  // the trainer, and no success.
+  if ((claimed.rowCount ?? 0) === 0) {
+    return { status: 'already_claimed' };
+  }
 
   // Backfill the trainer of record onto enrollments written while the cohort had none. Without this
   // their milestone releases would have no trainer to grant to. Only rows not already assigned.
