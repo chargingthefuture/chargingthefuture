@@ -129,6 +129,7 @@ Cross-plugin read dependencies (read-only):
 8. Rate limiting and command-level throttling for high-frequency actions.
 9. Quota-aware degradation: preserve core send/receive/active thread reliability under red quota threshold.
 10. **Provider-only price on a quote (2026-07-21).** Only the quote's provider may attach `quoted_amount` + `quoted_currency`, and only on the `provider_responded` transition. The repository (`updateQuoteRequestState`) enforces this: a non-provider attempting `provider_responded` is denied (`policy_denied` → 403), and a missing/invalid amount or currency on that transition is rejected (`invalid_payload` → 400). The survivor may still move the quote through its lifecycle but can never set the price. The price is persisted only on `provider_responded` (a later `closed` transition leaves the amount/currency untouched and only stamps `settled_at`). The provider-only price form is hidden from the survivor in the UI as well, but the server check is authoritative. The `closed` transition is open to either party and is sent by the "Mark the work done" control on a priced quote row (2026-09-23); it is what stamps `settled_at` and therefore what puts the engagement into GDP recognition.
+11. **A block applies to a thread that already exists (2026-10-05).** Besides thread create and the ring, `isBlockedBetweenTx` now runs on the Direct Line token (`GET .../threads/:threadId/token`), message send, call-session create and quote-request create, through `assertThreadPairNotBlockedTx` in `lib/foundation/repository.ts`. Each answers 403 with neutral copy and writes nothing, so the other member gets no notification. `GET /api/foundation/providers/:providerId` hides a provider blocked either way relative to the reader and answers the same 404 as an unknown id. What this does not do: a Stream token already issued before the block keeps working until it expires, and the pair stays on the Stream channel; closing that needs a channel membership change on block, which is not built.
 
 ## Web and Android Delivery Status
 
@@ -184,6 +185,7 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-10-05: **A block now stops contact on a thread that was opened before it (#2956).** The block was checked only when a thread was created and when a call rang, so on an older thread the blocked member could still get a Direct Line token and keep writing, send a message, request a quote, schedule a call, and open the provider through a shared link. Those five paths now refuse a blocked pair with neutral copy (Security item 11). No schema change; the access policy contract adds `blocked_contact_pair` to the five commands. Test script step for blocks extended.
 - 2026-10-03: **Direct Line message box stayed one line, so long messages scrolled out of view (bug
   fix, owner report).** The shared chat panel (`components/shared/stream-chat-panel.tsx`) rendered
   Stream's `MessageInput` without `grow`, and Stream pins the textarea to one row when `grow` is
