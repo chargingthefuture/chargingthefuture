@@ -374,6 +374,13 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-10-05: **A failed hand-off to Unlock is reported.** `surveyRespondentNeedsUnlock` caught a
+  failed Unlock status read and returned "no offer" with nothing logged, so a broken read would
+  have removed the verification offer from every confirmation screen without trace.
+  `linkSurveyRespondentToUnlock` turned a failed status read, submission write or audit write into
+  a 503 for the member and recorded it nowhere. Both now call `reportError` (ops `needs-unlock`
+  and `unlock-link`) before returning; what the member sees is unchanged.
+
 - 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
   found this survey had none. The `QUORA_DELETION_SURVEY_*` contracts are written from the routes,
   the repository and the deletion registry. CI job `contract-coverage-gate` now fails on any API
