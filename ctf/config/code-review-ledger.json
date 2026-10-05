@@ -514,9 +514,10 @@
     {
       "name": "service-credits",
       "type": "plugin",
-      "lastReviewedAt": "2026-07-13T09:51:55.954Z",
-      "lastRunIssues": 8,
-      "partial": false
+      "lastReviewedAt": "2026-10-05T12:34:07.745Z",
+      "lastRunIssues": 14,
+      "partial": false,
+      "updatedAt": "2026-10-05T12:34:07.745Z"
     },
     {
       "name": "share",
