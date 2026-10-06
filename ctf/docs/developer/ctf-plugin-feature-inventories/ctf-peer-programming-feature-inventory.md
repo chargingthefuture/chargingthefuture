@@ -134,7 +134,9 @@ to the env flag, then the default. With no admin setting and no env override, th
    version also ran between 2026-06-23 and 2026-07-20, when the Android surface was removed under
    rule 105 — see Web and Android Delivery Status.)
 2. Camera and microphone start enabled, so joining puts the member on screen; mute, camera toggle,
-   and leave controls are on the call, and leaving returns to the Session tab.
+   and leave controls are on the call, and leaving returns to the Session tab. When the camera or
+   microphone does not start, a short notice above the tiles says which one and why: blocked for
+   this site (with how to allow it), not found, or the browser's own reason.
 3. One call per cohort, members only: `POST /api/peer-programming/session/join` resolves the cohort
    from the signed-in member and the call id is derived from the cohort id, so every member of a
    cohort lands in the same call and no one can join another cohort's call. A member listening in on
@@ -250,7 +252,7 @@ to the env flag, then the default. With no admin setting and no env override, th
 - `POST /api/peer-programming/session/join` — Mint live video session credentials (GetStream) for the caller's own cohort. The cohort is resolved server-side from the signed-in member, so only a cohort member gets a call token and the call is always scoped to that member's cohort. Returns 404 when the caller has no cohort and 503 when Stream is not configured.
 
 - `GET /api/peer-programming/goals` — The goal board for the caller's own cohort: `{ cohortId, ended, goals, names, finishedLastDay, viewerUserId, taskHoldHours, maxOpenGoals }`. `maxOpenGoals` echoes `PEER_PROGRAMMING_MAX_OPEN_GOALS` (10) so the client hides "+ Add your goal" at the cap. Joins the standing Cohort 1 after the access gate, like `/room`. `goals` holds every open goal and goals reached in the last 14 days, each with its tasks (each task now also carries `takenAtIso`, null unless it is currently held); `names` maps goal owners and helpers to resolved usernames (best-effort); `finishedLastDay` counts tasks finished in the cohort in the last 24 hours; `taskHoldHours` echoes `PEER_PROGRAMMING_TASK_HOLD_HOURS` so the client states the hold rule and a held card's actual deadline instead of hardcoding the number. `cohortId` is null when the caller has no cohort.
-- `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_open_goal_limit` when the caller already has 10 open goals (`PEER_PROGRAMMING_MAX_OPEN_GOALS`, counted in the same statement as the insert); 409 `peer_programming_cohort_ended` on an ended cohort. Audited as `peer-programming.goal.create`.
+- `POST /api/peer-programming/goals` — Post a goal. Body `{ title, tasks? }` (title up to 200 characters, each task up to 300, at most 30). 201 `{ goalId }`; 409 `peer_programming_open_goal_limit` when the caller already has 10 open goals (`PEER_PROGRAMMING_MAX_OPEN_GOALS`, counted in the same statement as the insert); 409 `peer_programming_cohort_ended` on an ended cohort. The goal and its tasks are written in one transaction, so a 503 leaves nothing on the board. Audited as `peer-programming.goal.create`; a failed audit write after the goal is saved goes to `reportError` and the answer is still 201.
 - `POST /api/peer-programming/goals/[goalId]` — The goal owner only. Body `{ action: "add_task", description }` or `{ action: "close", outcome: "reached" | "withdrawn" }`. Audited as `peer-programming.goal.task.add` / `peer-programming.goal.close`.
 - `POST /api/peer-programming/goals/tasks/[taskId]` — Body `{ action, result?, description? }`. A member of the goal's cohort other than its owner may `take` an open task (or one held past 24 hours unfinished), and the holder may `release` it or `finish` it with a `result` (up to 1000 characters). The goal owner may mark a finished result `helped`, `keep` it without that mark, or `send_back` it, remove a task nobody has finished (`remove`), or fix a typo in an open task's words with `edit` and a `description` (up to 300 characters, same cap as `add_task`) — `edit` is gated on the task reading truly "open" (nobody holds it, or a hold has lapsed), narrower than `remove`'s "nobody has finished it yet", so the words can never change out from under a member already holding or who has finished the task. Each action is one conditional update, so two members pressing at once cannot both succeed; the loser gets 409 `peer_programming_task_unavailable` with what happened. `finish` notifies the goal owner. Audited as `peer-programming.goal.task.<action>`.
 
@@ -389,7 +391,23 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
   The count now adds `cohort_id = $2` and stays in the same statement as the insert. Old goals are
   kept with their status unchanged on purpose, because the stats read them; nothing withdraws or
   deletes them. No schema, route contract or board change.
-
+- 2026-10-05: **Failures say why, and a failed goal post leaves nothing behind (code-review #2894,
+  #2899, #2901, #2903).** (1) The room shell now shows the route's own reason when the room load, a
+  message post or a feedback send fails, instead of a fixed sentence (`responseFailureText`). A failed
+  post, and the two client-side checks before it, show a notice above the composer rather than
+  replacing the entire room with the full-page error, so the tabs and the typed message stay on
+  screen. The composer stops at 2000 characters (`PEER_PROGRAMMING_MAX_MESSAGE_LENGTH`), the same cap
+  the messages route enforces. (2) `createGoal` writes the goal and its tasks in one transaction
+  (`withDbTransaction`). Before, a failed task insert left the goal on the board behind a 503, and
+  pressing Post goal again put up a second copy and used a second slot under the cap. The audit row
+  after it is now recorded with `reportError` on failure rather than turned into a 503 for a goal
+  that was saved. (3) The admin "Member feedback" inbox shows the load failure and its reason in
+  place of "No feedback yet.", the four refreshes after a save, assignment run, mode change or cohort
+  end report a failure with `reportError`, and `ppAdminMutate` names the reason when a request never
+  answers. (4) In a live session, a camera or microphone that does not start now shows a notice
+  naming the device and the browser's reason (a blocked permission says how to allow it); anything
+  other than a missing device is reported. No schema change; the goal route's success and error
+  answers are unchanged apart from the audit case above.
 - 2026-10-04: **Signed-out description names the goal board (owner report).** The public header
   in `peer-programming-public-shell.tsx` described only the weekly cohorts. It now opens with "A
   global mastermind with a goal board: each member posts their goals, and everyone helps each other

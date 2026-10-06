@@ -528,7 +528,7 @@ contracts:
   - pluginId: peer-programming
     command: goal.create
     version: 1.0.0
-    description: Post a goal with its first tasks on the caller's own cohort board. Up to 10 open goals per member (PEER_PROGRAMMING_MAX_OPEN_GOALS), counted in the same statement as the insert; an eleventh is refused with 409 peer_programming_open_goal_limit. Route POST /api/peer-programming/goals.
+    description: Post a goal with its first tasks on the caller's own cohort board. Up to 10 open goals per member (PEER_PROGRAMMING_MAX_OPEN_GOALS), counted in the same statement as the insert; an eleventh is refused with 409 peer_programming_open_goal_limit. The goal and its tasks are written in one transaction, so a failure leaves nothing behind. Route POST /api/peer-programming/goals.
     inputSchema:
       title:
         type: string

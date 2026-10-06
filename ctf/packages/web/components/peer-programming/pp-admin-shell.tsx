@@ -20,7 +20,8 @@ import { ppAdminMutate } from './pp-admin-shared';
 import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 import { PeerProgrammingAdminTopicForm } from './pp-admin-topic-form';
 import { PeerProgrammingAdminAssignments } from './pp-admin-assignments';
-import { responseFailureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { reportError } from 'lib/observability/report';
 
 // Admin design tokens (shared admin look from the design system) come from the theme-aware
 // PeerProgramming tokens: accent (mint), page background, panel/header, admin card surface, and
@@ -109,6 +110,7 @@ type AdminData = {
   mode: SingleOpenCohortMode | null;
   savingMode: boolean;
   feedback: FeedbackItem[];
+  feedbackError: string | null;
   endingCohortId: string | null;
   submitTopic: (draft: TopicDraft) => Promise<void>;
   runAssignment: (input: AssignmentInput) => Promise<void>;
@@ -128,6 +130,9 @@ function usePeerProgrammingAdmin(): AdminData {
   const [mode, setMode] = useState<SingleOpenCohortMode | null>(null);
   const [savingMode, setSavingMode] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  // Why the feedback inbox could not be read, shown in place of "No feedback yet." so a failed read
+  // is never mistaken for an empty inbox.
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [endingCohortId, setEndingCohortId] = useState<string | null>(null);
 
   const loadTopic = useCallback(async () => {
@@ -157,16 +162,22 @@ function usePeerProgrammingAdmin(): AdminData {
     setMode(data.mode ?? null);
   }, []);
 
-  // The feedback inbox is best-effort: a failure leaves it empty rather than failing the entire admin
-  // page (the topic/cohort tools must still load).
+  // The feedback inbox is best-effort: a failure is shown in the inbox itself rather than failing the
+  // entire admin page (the topic/cohort tools must still load).
   const loadFeedback = useCallback(async () => {
     try {
       const res = await fetch('/api/peer-programming/admin/feedback');
-      if (!res.ok) return;
+      if (!res.ok) {
+        setFeedbackError(await responseFailureText(res, 'Could not load the member feedback.'));
+        return;
+      }
       const data = (await res.json()) as { ok: boolean; feedback: FeedbackItem[] };
       setFeedback(data.feedback ?? []);
-    } catch {
-      // best-effort
+      setFeedbackError(null);
+    } catch (caught) {
+      setFeedbackError(
+        failureText(caught, { area: 'peer-programming', op: 'admin_feedback_load', fallback: 'Could not load the member feedback.' }),
+      );
     }
   }, []);
 
@@ -204,8 +215,9 @@ function usePeerProgrammingAdmin(): AdminData {
         setNotice(draft.publish ? 'Topic published.' : 'Draft saved.');
         try {
           await loadTopic();
-        } catch {
-          // The save succeeded; a refresh failure is non-fatal.
+        } catch (caught) {
+          // The save succeeded; a refresh failure is non-fatal, but it is recorded.
+          reportError(caught, { area: 'peer-programming', op: 'admin_topic_refresh' });
         }
       }
       setSavingTopic(false);
@@ -234,8 +246,9 @@ function usePeerProgrammingAdmin(): AdminData {
         setNotice('Weekly assignment complete.');
         try {
           await loadCohorts();
-        } catch {
-          // The assignment succeeded; a cohort-list refresh failure is non-fatal.
+        } catch (caught) {
+          // The assignment succeeded; a cohort-list refresh failure is non-fatal, but it is recorded.
+          reportError(caught, { area: 'peer-programming', op: 'admin_assignment_refresh' });
         }
       }
       setRunningAssignment(false);
@@ -264,8 +277,9 @@ function usePeerProgrammingAdmin(): AdminData {
         setNotice(modeToggleNotice(enabled));
         try {
           await Promise.all([loadMode(), loadCohorts()]);
-        } catch {
-          // The save succeeded; a refresh failure is non-fatal.
+        } catch (caught) {
+          // The save succeeded; a refresh failure is non-fatal, but it is recorded.
+          reportError(caught, { area: 'peer-programming', op: 'admin_mode_refresh' });
         }
       }
       setSavingMode(false);
@@ -291,8 +305,9 @@ function usePeerProgrammingAdmin(): AdminData {
         setNotice('Cohort ended. Its conversation is now read-only.');
         try {
           await loadCohorts();
-        } catch {
-          // The end succeeded; a cohort-list refresh failure is non-fatal.
+        } catch (caught) {
+          // The end succeeded; a cohort-list refresh failure is non-fatal, but it is recorded.
+          reportError(caught, { area: 'peer-programming', op: 'admin_cohort_end_refresh' });
         }
       }
       setEndingCohortId(null);
@@ -312,6 +327,7 @@ function usePeerProgrammingAdmin(): AdminData {
     mode,
     savingMode,
     feedback,
+    feedbackError,
     endingCohortId,
     submitTopic,
     runAssignment,
@@ -466,7 +482,7 @@ function FeedbackRow({ t, item }: { t: Tokens; item: FeedbackItem }) {
   );
 }
 
-function FeedbackSection({ t, feedback }: { t: Tokens; feedback: FeedbackItem[] }) {
+function FeedbackSection({ t, feedback, error }: { t: Tokens; feedback: FeedbackItem[]; error: string | null }) {
   return (
     <AdminSection t={t}>
       <h2 style={{ fontSize: 15, fontWeight: 800, color: t.TITLE, margin: '0 0 4px' }}>
@@ -476,7 +492,9 @@ function FeedbackSection({ t, feedback }: { t: Tokens; feedback: FeedbackItem[] 
         What members sent from PeerProgramming, newest first. This is an inbox to read, not a
         queue to clear — the admin dot flags feedback that arrived since you last opened this page.
       </p>
-      {feedback.length === 0 ? (
+      {error ? (
+        <p role="alert" style={{ fontSize: 13, color: '#EF4444', margin: 0 }}>{error}</p>
+      ) : feedback.length === 0 ? (
         <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>No feedback yet.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -890,7 +908,7 @@ export function PeerProgrammingAdminShell() {
           </div>
         ) : (
           <>
-            <FeedbackSection t={t} feedback={admin.feedback} />
+            <FeedbackSection t={t} feedback={admin.feedback} error={admin.feedbackError} />
             <SingleOpenCohortSection
               t={t}
               mode={admin.mode}

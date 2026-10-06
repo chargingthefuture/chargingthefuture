@@ -12,7 +12,7 @@
 | **Surfaces** | web only (`/apps/peer-programming`, `/admin/peer-programming`) — no Android surface |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
-| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
+| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05: added PP-2c, a blocked-device check under PP-10, and the failure line in PP-A10 |
 
 ---
 
@@ -132,6 +132,26 @@ Result: web ☐
 4. Press Send.
 
 **Expected:** The page does not zoom on focus. The text wraps onto new lines instead of scrolling sideways. The box grows one line at a time up to six lines, then stops growing and scrolls inside itself. The send button stays at the bottom right of the box as it grows. After sending, the box clears and shrinks back to one line.
+
+Result: web ☐
+
+---
+
+### PP-2c — A failed post keeps the room and says why (added 2026-10-05)
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Signed in as a cohort member with the composer showing (as in PP-2).
+
+**Steps:**
+1. Paste a block of text longer than 2000 characters into the message box.
+2. With dev tools set to offline (or the network blocked), type a short message and press Send.
+3. Turn the network back on.
+
+**Expected:** In step 1 the box stops taking text at 2000 characters. In step 2 a red line appears
+just above the message box saying why the post failed; the tabs, the message list and the typed
+message all stay on screen, and the page is not replaced by red text. When the route refuses a post
+(for example in an ended cohort), the line shows the route's own reason, not a fixed sentence.
 
 Result: web ☐
 
@@ -299,6 +319,8 @@ Result: web ☐
 3. Allow camera and microphone permissions if prompted.
 
 **Expected:** A video call UI appears with your own camera tile. Controls for mute, camera toggle, and leave are visible. Leaving the call returns to the Session tab without an error.
+
+**Also (added 2026-10-05):** block the camera for the site in the browser's site settings and join again. You still join the call, and a notice above the tiles says the camera is blocked for this site, gives the browser's reason, and says how to allow it. Do the same for the microphone. On a computer with no camera, the notice says no camera was found.
 
 Result: web ☐
 
@@ -712,7 +734,7 @@ Result: web ☐
 1. Navigate to `/admin/peer-programming`.
 2. Find the "Member feedback" panel.
 
-**Expected:** The panel lists recent feedback, newest first — each row shows the author (a resolved name or a short `Member <id>` fallback), the time, and the note text, and nothing else. In particular there are **no** category labels next to the author: the feedback box has no category picker, so `issue_type` and `suggestion_category` are the fixed string "general" on every row and used to print "general general" on each one. With no feedback it shows "No feedback yet." A load failure leaves the panel empty without breaking the rest of the admin page. (The admin-landing tile shows a "new to review" dot when feedback arrived since you last opened this area; opening the area clears it.)
+**Expected:** The panel lists recent feedback, newest first — each row shows the author (a resolved name or a short `Member <id>` fallback), the time, and the note text, and nothing else. In particular there are **no** category labels next to the author: the feedback box has no category picker, so `issue_type` and `suggestion_category` are the fixed string "general" on every row and used to print "general general" on each one. With no feedback it shows "No feedback yet." A load failure shows a red line in the panel with the reason (never "No feedback yet.") without breaking the rest of the admin page. (The admin-landing tile shows a "new to review" dot when feedback arrived since you last opened this area; opening the area clears it.)
 
 Result: web ☐
 
