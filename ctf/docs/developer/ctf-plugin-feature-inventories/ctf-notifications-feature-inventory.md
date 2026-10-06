@@ -136,6 +136,15 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-10-05: **Device alerts and switch saves say when they did not work (#2633, #2635).** Turning on a
+  device-ping category posted the browser's push subscription without checking the answer, so a refused
+  or failed save still read as success, and a browser already holding a subscription never sent it
+  again, which left a device whose first save failed (or a second account on a shared browser) with no
+  alerts and no way to fix it. The panel now checks the subscribe answer and shows the route's reason,
+  and sends an existing browser subscription again (the save upserts on `(user_id, endpoint)`). A
+  preference save that fails now shows the route's reason as well as putting the switch back, and a
+  failed first read of the preferences shows a note where the Manage section would be. No route,
+  contract or schema change.
 - 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
   `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
   after a message is stored — deduped per (member, message), never the sender, deep-linked to the room.
