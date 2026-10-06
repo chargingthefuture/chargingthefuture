@@ -98,6 +98,20 @@ card's text from the SkillsHunt admin screen, so if you see the old sentence, ch
 before filing it as a bug.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-1b · A failed load says so instead of reading as empty (added 2026-10-05)
+**Role:** member, then admin · **Surfaces:** web
+**Steps:**
+1. Open Directory, then use the browser's network tools to make `GET /api/directory/list` fail and
+   refresh the list.
+2. Open a shared profile link for a profile id that does not exist.
+3. Make the profile read fail and open the edit form.
+4. As an admin, make the takedown list and Audit log reads fail on `/admin/directory`.
+**Expected:** Step 1 shows the route's message (or a reported failure) where "No profiles yet" would
+be, and a list already on screen stays. Step 2 says above the browse view that the shared profile
+could not be opened. Step 3 shows the profile route's message. In step 4 the takedown panel shows the
+route's reason instead of a fixed sentence, and both panels name the failure.
+**Result:** web ☐ — notes:
+
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -478,6 +492,19 @@ passed as $3 and referenced nowhere, and Postgres refused the statement. All thr
 one transaction, so the header counts read 0 as well. The gate
 `ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
 **Result:** web ☐ mobile ☐ — notes:
+
+### DIR-A1e · A saved profile keeps its source and handle; the invite queue counts only pending skills (added 2026-10-05)
+**Role:** admin · **Surfaces:** web
+**Precondition:** a community-generated profile with an unclaimed handle, and a profile whose
+proposed skill labels include one already promoted by the taxonomy apply run.
+**Steps:**
+1. On `/admin/directory`, edit the community-generated profile and save. Do not reload.
+2. Open `/admin/directory/invite-queue` and find the profile with the promoted label.
+**Expected:** After step 1 the row still shows its source and handle and keeps its **Remove at
+person's request** button, without a reload. In step 2 the promoted label is not counted under
+"Pending review"; only labels still pending review are, so the person stays in the group their
+pending labels put them in.
+**Result:** web ☐ — notes:
 
 ### DIR-A2 · Attach an unclaimed profile (two places)
 **Role:** admin · **Surfaces:** web
