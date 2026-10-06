@@ -199,7 +199,7 @@ separate.
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
 - `POST /api/skill-up/milestones/[milestoneId]/release`
-- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400.
+- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400. Sends through the canonical `createTransfer` from `lib/shared/credits-interface.ts`, so a frozen or trading-restricted sender is refused with 403 `skill_up_account_restricted`. Returns `{ ok, transfer: { id, senderUserId, recipientUserId, amount, status, escrowHoldId, externalLedgerTransactionId, rail } }`.
 - `POST /api/skill-up/disputes`
 - `POST /api/skill-up/disputes/[disputeId]/resolve` — admin, or the trainer assigned to the dispute's cohort (per `dispute.resolve` `trainerAssignmentOrAdmin`).
 - `POST /api/skill-up/admin/adjust-credits` — audit event records `targetContext` (`targetUserId`, `governanceTicketId`) per the `admin.adjust_credits` audit contract.
@@ -364,7 +364,16 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
+  #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the
+  wallet freeze check, the command idempotency record and the external ledger post. It now imports
+  `createTransfer` from `lib/shared/credits-interface.ts` and the copy is deleted. The route's
+  `transfer` response is now the canonical camelCase shape (`recipientUserId`, `amount` as a number)
+  instead of the raw table row; nothing in the app reads it. A refused sender gets 403
+  `skill_up_account_restricted`.
+
 - 2026-10-05: **Three ways to sign off or move credits outside one's own cohort were closed** (code-review findings #2925, #2927, #2929). **Sign-off scope:** the validate and release routes checked that the caller trained the cohort named in the request body, then acted on whichever enrollment the body named, so a trainer of one cohort could validate and release an enrollment in another. Both routes now read the cohort from the enrollment, require the milestone to belong to it, and refuse anybody signing off their own enrollment; the body's `cohortId` is gone, and with it the admin queue's note for a row with no cohort id, which only existed because the routes needed one. **Trainer of record:** `POST /enroll` accepted `assignedTrainerId` from the learner and preferred it over the cohort's trainer, so a crafted request chose who received the minted trainer credits. The field is removed and the trainer always comes from the cohort; a trainer who enrolls in their own cohort, before or after claiming it, is not made their own trainer of record. **Dispute adjustments:** a cohort's trainer could resolve a dispute with an adjustment naming any source and destination member. Adjustments are now admin-only and limited to the learner and assigned trainer of the disputed enrollment. Tests in `lib/skill-up/sign-off-scope.test.ts`. No schema change.
+
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
   registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface
