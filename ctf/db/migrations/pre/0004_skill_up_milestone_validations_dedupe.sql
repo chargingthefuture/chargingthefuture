@@ -1,4 +1,4 @@
--- 0003_skill_up_milestone_validations_dedupe.sql  (pre-schema migration)
+-- 0004_skill_up_milestone_validations_dedupe.sql  (pre-schema migration)
 --
 -- Why: validateMilestone writes skill_up_milestone_validations with
 -- ON CONFLICT (enrollment_id, milestone_id), and Postgres refuses that clause unless a unique index

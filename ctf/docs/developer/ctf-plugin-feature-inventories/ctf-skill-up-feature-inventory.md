@@ -199,7 +199,7 @@ separate.
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
 - `POST /api/skill-up/milestones/[milestoneId]/release`
-- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400.
+- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400. Sends through the canonical `createTransfer` from `lib/shared/credits-interface.ts`, so a frozen or trading-restricted sender is refused with 403 `skill_up_account_restricted`. Returns `{ ok, transfer: { id, senderUserId, recipientUserId, amount, status, escrowHoldId, externalLedgerTransactionId, rail } }`.
 - `POST /api/skill-up/disputes`
 - `POST /api/skill-up/disputes/[disputeId]/resolve` — admin, or the trainer assigned to the dispute's cohort (per `dispute.resolve` `trainerAssignmentOrAdmin`).
 - `POST /api/skill-up/admin/adjust-credits` — audit event records `targetContext` (`targetUserId`, `governanceTicketId`) per the `admin.adjust_credits` audit contract.
@@ -353,7 +353,16 @@ that exist today.
 
 ## Change Log
 
-- 2026-10-05: **Milestone validation could never succeed** (code-review finding #2923). `validateMilestone` wrote `skill_up_milestone_validations` with `ON CONFLICT (enrollment_id, milestone_id)`, and no unique index covered those columns, so Postgres refused every call and `POST /milestones/:id/validate` answered 503. With no validation row, release refused too, so no milestone returned a deposit or granted trainer credits. `schema.sql` now creates `uq_skill_up_milestone_validations_enrollment_milestone`, and `db/migrations/pre/0003_skill_up_milestone_validations_dedupe.sql` runs before it to leave one row per pair on a database that already held duplicates (keeping a released row first, then a validated one, then the newest), so the index build cannot stop the schema load. The upsert's update branch now skips a row that is already `released` — before, a repeat validate would have reset it to `validated` and erased its release time — and the call is refused instead. It also returns the id of the row it wrote rather than a fresh id that matched nothing on a repeat, and sets `validated_at` on the first insert. Verified against a scratch Postgres: the migration keeps the intended row and re-runs as a no-op, `schema.demo.sql` loads on a blank database and on one carrying the old table name, and a repeat upsert returns the same id while a released row stays released.
+- 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
+  #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the
+  wallet freeze check, the command idempotency record and the external ledger post. It now imports
+  `createTransfer` from `lib/shared/credits-interface.ts` and the copy is deleted. The route's
+  `transfer` response is now the canonical camelCase shape (`recipientUserId`, `amount` as a number)
+  instead of the raw table row; nothing in the app reads it. A refused sender gets 403
+  `skill_up_account_restricted`.
+
+- 2026-10-05: **Milestone validation could never succeed** (code-review finding #2923). `validateMilestone` wrote `skill_up_milestone_validations` with `ON CONFLICT (enrollment_id, milestone_id)`, and no unique index covered those columns, so Postgres refused every call and `POST /milestones/:id/validate` answered 503. With no validation row, release refused too, so no milestone returned a deposit or granted trainer credits. `schema.sql` now creates `uq_skill_up_milestone_validations_enrollment_milestone`, and `db/migrations/pre/0004_skill_up_milestone_validations_dedupe.sql` runs before it to leave one row per pair on a database that already held duplicates (keeping a released row first, then a validated one, then the newest), so the index build cannot stop the schema load. The upsert's update branch now skips a row that is already `released` — before, a repeat validate would have reset it to `validated` and erased its release time — and the call is refused instead. It also returns the id of the row it wrote rather than a fresh id that matched nothing on a repeat, and sets `validated_at` on the first insert. Verified against a scratch Postgres: the migration keeps the intended row and re-runs as a no-op, `schema.demo.sql` loads on a blank database and on one carrying the old table name, and a repeat upsert returns the same id while a released row stays released.
+
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
   registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface

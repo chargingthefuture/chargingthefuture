@@ -538,6 +538,25 @@ Result: web ☐
 
 ---
 
+### LU-13b — A transfer from a frozen wallet is refused (added 2026-10-05)
+
+**Role:** member, then admin · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1 with a balance; an admin has frozen this member's wallet
+(SC-A6 in the ServiceCredits script).
+
+**Steps:**
+1. Attempt `POST /api/skill-up/transfers` to another member, amount 10, with a valid idempotency key.
+
+**Expected:**
+- The server returns HTTP 403 `skill_up_account_restricted`.
+- No transfer record is created and both balances are unchanged.
+- After the admin unfreezes the wallet, the same request succeeds and its `transfer` response carries
+  `recipientUserId` and a numeric `amount`.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### LU-A1 — Admin KPI cards and cohort overview
