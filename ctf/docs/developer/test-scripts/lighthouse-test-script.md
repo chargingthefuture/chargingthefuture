@@ -375,6 +375,21 @@ the seeker) and their block list, plus any blocks other members had placed on th
 other members sent to the departed member's listings remain visible to those seekers, but the host
 now reads as a deleted member rather than showing the old account.
 
+### LH-DEL2 · Deleting LightHouse data removes the profile row; the export leaves out blocks placed on you (added 2026-10-05)
+
+**Role:** two members, A and B · **Surfaces:** web, api/data
+**Steps:**
+1. As member B, block member A from one of B's listings and write a reason.
+2. As member A, download the data export from the account area.
+3. As member A, fill in seeker details with a phone number and Signal link, then delete only the
+   LightHouse data from the account area.
+4. Open LightHouse again as member A.
+**Expected:** The export in step 2 holds A's own LightHouse rows and nothing about B's block: no
+blocker id and no reason. After step 3 the `lighthouse_profiles` row for A is gone, not just stamped
+with `service_deleted_at`, so the phone number and Signal link are no longer stored. In step 4 A sees
+the empty seeker setup, as after the plugin's own delete.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
