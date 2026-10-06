@@ -310,6 +310,15 @@ member active only in Fireside is seen by being read, which is what the plugin i
   host shows the screen's own sentence with the status code instead of the parser's message
   (#2738). Tests: `lib/fireside/paged-lists.test.ts`.
 
+- 2026-10-05: **The export feed refuses a cursor of the wrong shape instead of reporting the
+  database down.** `parseExportCursor` (`lib/fireside/export-review.ts`) checked only that a `|` had
+  text on both sides, so a cursor such as `abc|def` reached the query, failed the `timestamptz` and
+  `uuid` casts, and came back as a 503 `fireside_persistence_unavailable`, which a build retries
+  forever (#2754). It now also requires the left half to be a timestamp in the shape the feed writes
+  and the right half to be a UUID, so the route's existing check answers 400 with its sentence about
+  what a cursor is. Tests: `lib/fireside/export-feed.test.ts`; test script FS-12 now
+  tries `abc|def`.
+
 - 2026-09-20: **A member can search the conversation, and nobody who was answered goes untold.**
   Owner request: close the last two recorded gaps.
 
