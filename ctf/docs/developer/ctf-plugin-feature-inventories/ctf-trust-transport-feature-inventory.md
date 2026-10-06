@@ -167,14 +167,14 @@ User routes:
 - `GET /api/trust-transport/requests/:requestId` — Request detail.
 - `GET /api/trust-transport/requests/:requestId/offers` — Offers on a request.
 - `POST /api/trust-transport/requests/:requestId/offers` — Make an offer on an open request (one pending offer per provider per request; re-offering updates it).
-- `POST /api/trust-transport/offers/:offerId/accept` — Accept an offer, opening a trip.
+- `POST /api/trust-transport/offers/:offerId/accept` — Accept an offer, opening a trip. The Stream chat channel is set up after the commit on a best-effort basis: a Stream failure is reported and the accept still succeeds (the chat route sets the channel up on first open).
 - `GET /api/trust-transport/trips` — Trips the caller is fulfilling (provider side), with the now-revealed pickup/drop-off, so they can advance the lifecycle.
 - `POST /api/trust-transport/trips/:tripId/status` — Advance trip status one forward step (assigned → en_route → picked_up → delivered), or set a terminal state. A non-admin cannot set `completed` here — completion requires mutual confirmation (below). Admins keep a direct override to `completed`.
 - `POST /api/trust-transport/trips/:tripId/complete` — Record the caller's completion confirmation for a `delivered` trip. Only the requester or provider may call it. The trip transitions to `completed` (and settlement fires) only once **both** parties have confirmed — neither can complete a trip alone, because completion moves value (a ServiceCredits transfer, or a recorded off-platform fiat/crypto settlement).
 - `POST /api/trust-transport/trips/:tripId/proof` — Capture pickup/delivery proof.
 - `POST /api/trust-transport/trips/:tripId/chat` — Mint Stream chat credentials for the trip thread: chat channel (`channelId`/`streamChannelId`) and participant token. Text chat only — no video.
-- `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control.
-- `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order.
+- `POST /api/trust-transport/trips/:tripId/emergency-stop` — Safety emergency-stop control. Writes the `trust-transport.trip.status.update` audit event (`nextStatus: emergency_frozen`).
+- `POST /api/trust-transport/orders/:orderId/cancel` — Cancel an order. Writes the `trust-transport.trip.status.update` audit event against the request (`nextStatus: canceled`).
 - `GET /api/trust-transport/earnings` — The caller's **recorded** earnings from completed trips, per currency (read-only). Not a withdrawable balance: for anything other than ServiceCredits the payment is arranged peer-to-peer off-platform, so there is nothing to withdraw. The same figures feed the GDP recognition layer. (The `POST /payouts/requests` and `GET /payouts` routes were removed 2026-07-08.)
 - `POST /api/trust-transport/service-credits` — Cross-user ServiceCredits transfer for trip economics (rejects self-transfer; emits a `trust-transport.service-credits.transfer` audit event).
 
@@ -324,6 +324,14 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
   network error. The signed-out page now says "Settle with ServiceCredits." and the Earnings intro
   says ServiceCredits are sent to the wallet and anything else agreed is arranged between the two
   people, so credits are no longer described as a payment. No schema, route, or contract change.
+- 2026-10-05: **An offer accept no longer fails on a Stream error, and emergency stop and order cancel
+  are audited.** `acceptOffer` set up the trip's Stream channel after the transaction committed with
+  no guard, so a Stream refusal turned a committed accept into a 503: the route skipped its audit row
+  and the provider notification, and a retry was refused because the request was no longer open. The
+  channel setup is now caught and reported; the accept answers with the trip and the chat route sets
+  the channel up on first open. `POST /trips/:tripId/emergency-stop` and `POST /orders/:orderId/cancel`
+  now write the `trust-transport.trip.status.update` audit event (`nextStatus` `emergency_frozen` or
+  `canceled`), as the status route already did. No schema or contract change.
 - 2026-09-18: **Stream failures say what failed and why (cross-plugin pass).** The trip chat route's
   error message is now "Could not set up the chat channel: <Stream's reason>" built by the shared
   helper `lib/shared/stream-error-text.ts` (Stream's message kept, `api_key` redacted, capped) instead
