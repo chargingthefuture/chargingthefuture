@@ -28,6 +28,12 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function asStringArray(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((code): code is string => typeof code === 'string')
+    : null;
+}
+
 function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   return {
     title: asStringOr(body.title, ''),
@@ -41,6 +47,10 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
     bedrooms: asNumber(body.bedrooms),
     bathrooms: asNumber(body.bathrooms),
     monthlyRent: asNumber(body.monthlyRent),
+    // updateProperty writes both of these on every save, so leaving them out of the parse stored a
+    // null rent currency and an empty accepted-currency list on every admin hide or restore.
+    rentCurrency: asString(body.rentCurrency),
+    acceptedCurrencies: asStringArray(body.acceptedCurrencies),
     availableFromIso: asString(body.availableFromIso),
     amenities: body.amenities,
     houseRules: body.houseRules,
