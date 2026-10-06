@@ -7,7 +7,9 @@ import { BarChart2, Clock } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getWeeklyPerformanceTokens, type WpWeek, formatWeekRange } from "./wp-shared";
 
-export function WeeklyPerformanceEmptyMain({ week, isCurrent = false }: { week: WpWeek | null; isCurrent?: boolean }) {
+// `loading` is a read still in flight. The metrics route always returns the full metric set, so for
+// a past week the "no activity" text is only true once a read has finished and returned nothing.
+export function WeeklyPerformanceEmptyMain({ week, isCurrent = false, loading = false }: { week: WpWeek | null; isCurrent?: boolean; loading?: boolean }) {
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
   return (
@@ -18,12 +20,14 @@ export function WeeklyPerformanceEmptyMain({ week, isCurrent = false }: { week: 
             <BarChart2 size={28} style={{ color: t.ACCENT, opacity: 0.4 }} />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: t.TITLE }}>
-            {isCurrent ? "Weekly numbers are loading" : "No activity recorded for this week"}
+            {isCurrent || loading ? "Weekly numbers are loading" : "No activity recorded for this week"}
           </div>
           <div style={{ fontSize: 13, color: t.MUTED, maxWidth: 440, lineHeight: 1.6 }}>
             {isCurrent
               ? "Numbers update live as members use the platform this week. They'll appear here in a moment."
-              : "No member activity was recorded during this week."}
+              : loading
+                ? "This week's numbers will appear here in a moment."
+                : "No member activity was recorded during this week."}
           </div>
           {week && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 20, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.BORDER_SOLID}` }}>

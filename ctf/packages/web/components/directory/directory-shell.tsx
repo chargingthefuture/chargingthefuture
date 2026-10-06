@@ -12,7 +12,7 @@ import { DirectoryBrowse } from "./directory-browse";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const DEFAULT_REWARD_CARD: SkillsHuntRewardCard = {
   title: "Help grow the Directory",
@@ -170,11 +170,62 @@ function DirectoryHeader({
   );
 }
 
+const LIST_LOAD_ERROR = "Could not load the Directory.";
+const SHARED_PROFILE_ERROR = "Could not open the shared profile.";
+
+// One read of a Directory route for the browse view. "aborted" means a newer load or an unmount
+// replaced it; "error" carries the text to show: the route's message, or for a thrown failure the
+// fallback once the error has been reported (rule 137).
+type DirectoryRead<T> = { kind: "aborted" } | { kind: "error"; message: string } | { kind: "ok"; body: T };
+
+async function readDirectoryRoute<T>(url: string, signal: AbortSignal, fallback: string, op: string): Promise<DirectoryRead<T>> {
+  try {
+    const res = await fetch(url, { signal });
+    if (signal.aborted) return { kind: "aborted" };
+    if (!res.ok) return { kind: "error", message: await responseFailureText(res, fallback, "member") };
+    return { kind: "ok", body: (await res.json()) as T };
+  } catch (caught) {
+    if (signal.aborted) return { kind: "aborted" };
+    return { kind: "error", message: failureText(caught, { area: "directory", op, fallback, audience: "member" }) };
+  }
+}
+
+// The list route filters by sector UUID (`sectorId`) and search text (`q`). activeFilter holds the
+// sector *name* shown on the chip, so map it to its id.
+function listQuery(activeFilter: string, sectors: Sector[], debouncedQuery: string): string {
+  const params = new URLSearchParams();
+  if (activeFilter !== "All") {
+    const sectorId = sectors.find((s) => s.name === activeFilter)?.id;
+    if (sectorId) params.append("sectorId", sectorId);
+  }
+  if (debouncedQuery) params.append("q", debouncedQuery);
+  return params.toString();
+}
+
+function listFailedWithNothingShown(error: string | null, memberCount: number, loading: boolean): boolean {
+  return error !== null && memberCount === 0 && !loading;
+}
+
+function DirectoryLoadErrors({ messages }: { messages: (string | null)[] }) {
+  const shown = messages.filter((m): m is string => Boolean(m));
+  if (shown.length === 0) return null;
+  return (
+    <div role="alert" style={{ margin: "12px 16px 0", fontSize: 13, color: "#EF4444" }}>
+      {shown.map((m) => <div key={m}>{m}</div>)}
+    </div>
+  );
+}
+
 export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: string; isAdmin: boolean; initialProfileId?: string }) {
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  // A failed list load, shown in place of "No profiles yet" so an outage never reads as an empty
+  // Directory (rule 137).
+  const [membersError, setMembersError] = useState<string | null>(null);
+  // A shared profile link that could not be opened.
+  const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [query, setQuery] = useState("");
@@ -244,29 +295,24 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
     const controller = new AbortController();
     async function fetchMembers() {
       setLoadingMembers(true);
-      try {
-        const params = new URLSearchParams();
-        // The list route filters by sector UUID (`sectorId`) and search text (`q`).
-        // activeFilter holds the sector *name* shown on the chip, so map it to its id.
-        if (activeFilter !== "All") {
-          const sectorId = sectors.find((s) => s.name === activeFilter)?.id;
-          if (sectorId) params.append("sectorId", sectorId);
-        }
-        if (debouncedQuery) params.append("q", debouncedQuery);
-        const res = await fetch(`/api/directory/list?${params.toString()}`, { signal: controller.signal });
-        if (res.ok && !controller.signal.aborted) {
-          const data = await res.json() as { items?: DirectoryListItem[] };
-          const mapped = (data.items ?? []).map(mapListItemToMember);
-          setMembers(mapped);
-          // Keep the open detail view in sync with the refreshed list (e.g. after the owner
-          // saves edits), so the profile reflects the saved values without re-selecting.
-          setSelected((prev) => (prev ? mapped.find((m) => m.id === prev.id) ?? prev : prev));
-        }
-      } catch {
-        // AbortError is expected on unmount/re-fetch
-      } finally {
-        if (!controller.signal.aborted) setLoadingMembers(false);
+      const read = await readDirectoryRoute<{ items?: DirectoryListItem[] }>(
+        `/api/directory/list?${listQuery(activeFilter, sectors, debouncedQuery)}`,
+        controller.signal,
+        LIST_LOAD_ERROR,
+        "fetch_members",
+      );
+      if (read.kind === "aborted") return;
+      setLoadingMembers(false);
+      if (read.kind === "error") {
+        setMembersError(read.message);
+        return;
       }
+      setMembersError(null);
+      const mapped = (read.body.items ?? []).map(mapListItemToMember);
+      setMembers(mapped);
+      // Keep the open detail view in sync with the refreshed list (e.g. after the owner
+      // saves edits), so the profile reflects the saved values without re-selecting.
+      setSelected((prev) => (prev ? mapped.find((m) => m.id === prev.id) ?? prev : prev));
     }
     void fetchMembers();
     return () => controller.abort();
@@ -280,16 +326,19 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
     if (!initialProfileId) return;
     const controller = new AbortController();
     (async () => {
-      try {
-        const res = await fetch(`/api/directory/profiles/${encodeURIComponent(initialProfileId)}`, { signal: controller.signal });
-        if (!res.ok || controller.signal.aborted) return;
-        const data = (await res.json()) as { member?: DirectoryListItem };
-        const item = data.member;
-        if (!item) return;
-        setSelected(mapListItemToMember(item));
-      } catch {
-        // Aborted or unavailable: the browse view stays open instead of the deep-linked detail.
+      const read = await readDirectoryRoute<{ member?: DirectoryListItem }>(
+        `/api/directory/profiles/${encodeURIComponent(initialProfileId)}`,
+        controller.signal,
+        SHARED_PROFILE_ERROR,
+        "open_shared_profile",
+      );
+      if (read.kind === "aborted") return;
+      // The browse view stays open either way; a failure says the shared profile could not be opened.
+      if (read.kind === "error" || !read.body.member) {
+        setDeepLinkError(read.kind === "error" ? read.message : SHARED_PROFILE_ERROR);
+        return;
       }
+      setSelected(mapListItemToMember(read.body.member));
     })();
     return () => controller.abort();
   }, [initialProfileId]);
@@ -351,7 +400,9 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
     );
   }
 
-  const content = (
+  // A failed load with nothing to show keeps the empty state off the screen: "No profiles yet" would
+  // be false.
+  const content = listFailedWithNothingShown(membersError, members.length, loadingMembers) ? null : (
     <DirectoryBrowse
       rewardCard={rewardCard}
       loadingMembers={loadingMembers}
@@ -392,6 +443,7 @@ export function DirectoryShell({ userId, isAdmin, initialProfileId }: { userId: 
           onRefresh={() => setRefreshKey((k) => k + 1)}
           onOpenProfileEditor={() => setShowProfileEditor(true)}
         />
+        <DirectoryLoadErrors messages={[deepLinkError, membersError]} />
         {content}
         {profileEditor}
       </div>
