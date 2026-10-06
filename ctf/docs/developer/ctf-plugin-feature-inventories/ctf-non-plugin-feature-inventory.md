@@ -30,8 +30,8 @@
 - Driven by the account deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`,
   validated against `schema.sql` in CI). See `ctf/docs/developer/ACCOUNT_DELETION_REGISTRY.md`.
 - `ctf/packages/web/lib/account/deletion-engine.ts` — pure planner that turns each registry entry
-  into delete / idempotent soft-delete SQL (or nothing for retained money/audit tables); checked by
-  `ctf/scripts/check-deletion-engine.mjs`.
+  into delete / idempotent soft-delete / pseudonymize SQL (or nothing for retained money/audit
+  tables); all three statement shapes are checked by `ctf/scripts/check-deletion-engine.mjs`.
 - `ctf/packages/web/lib/account/deletion-orchestrator.ts` — runs a service-scope or full-account
   deletion in a single transaction, records one `account_deletion_events` row, logs an
   `[account.audit]` line. Money is settled only by the existing ServiceCredits reclaim flow, never
