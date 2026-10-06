@@ -9,6 +9,7 @@ export function WeeklyPerformanceDashboardMain({
   metrics,
   comparison,
   isCurrent = false,
+  loading = false,
 }: {
   week: WpWeek | null;
   metrics: WpMetric[];
@@ -16,14 +17,15 @@ export function WeeklyPerformanceDashboardMain({
   onRefresh: () => Promise<void>;
   isMobile?: boolean;
   isCurrent?: boolean;
+  loading?: boolean;
 }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
       {metrics.length === 0 ? (
-        <WeeklyPerformanceEmptyMain week={week} isCurrent={isCurrent} />
+        <WeeklyPerformanceEmptyMain week={week} isCurrent={isCurrent} loading={loading} />
       ) : (
         <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: "24px" }}>
-          <WeeklyPerformanceMetricCards metrics={metrics} comparison={comparison} />
+          <WeeklyPerformanceMetricCards metrics={metrics} comparison={comparison} isCurrent={isCurrent} />
         </div>
       )}
     </div>
