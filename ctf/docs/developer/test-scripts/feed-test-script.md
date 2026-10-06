@@ -1085,7 +1085,8 @@ second browser window signed in as a different member (or signed out) so you can
 - Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
 - Step 3: the post is **gone** from the member timeline — and so are its replies, since the entire item
   drops out. This is the check that matters: before this feature the status column was ignored, so a
-  hidden post stayed visible.
+  hidden post stayed visible. It must not reappear with its text under a generic `hub-system` handle
+  either; that is how a hidden post looked when only its detail was dropped (#2960).
 - Step 4: it is absent from the signed-out public list too, not just the member view.
 - Step 5: the hidden post is listed there — hiding must not be a one-way door.
 - Step 6/7: the post is back in the member timeline, replies and all. Nothing was deleted.

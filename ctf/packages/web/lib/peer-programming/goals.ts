@@ -203,8 +203,10 @@ export async function getTaskWithGoal(taskId: string): Promise<TaskWithGoal | nu
 }
 
 // Post a goal with its first tasks. Throws 'open_goal_limit' when the member already has
-// PEER_PROGRAMMING_MAX_OPEN_GOALS open goals. The count and the insert are one statement, so the
-// check reads the table as the insert sees it; two submits landing in the same instant could still
+// PEER_PROGRAMMING_MAX_OPEN_GOALS open goals in this cohort (the caller's current one), counted in
+// the same statement as the insert so the check reads the table as the insert sees it. Open goals
+// left on an ended or earlier cohort are read-only and off the member's board, so they do not count;
+// they are kept unchanged on purpose, because the stats read them. Two submits at once could still
 // pass one goal over the cap, which costs nothing worse than one extra goal.
 //
 // The goal and its tasks are written in one transaction, so a failed task insert leaves nothing on
@@ -221,7 +223,7 @@ export async function createGoal(input: {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title)
        SELECT $1, $2, $3, $4
-       WHERE (SELECT COUNT(*) FROM peer_programming_goals WHERE owner_user_id = $3 AND status = 'open') < $5
+       WHERE (SELECT COUNT(*) FROM peer_programming_goals WHERE owner_user_id = $3 AND cohort_id = $2 AND status = 'open') < $5
        RETURNING id`,
       [goalId, input.cohortId, input.ownerUserId, input.title, PEER_PROGRAMMING_MAX_OPEN_GOALS],
     );
