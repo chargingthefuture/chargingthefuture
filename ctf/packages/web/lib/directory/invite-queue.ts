@@ -136,6 +136,9 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
           array_agg(skill_label ORDER BY skill_label) AS pending_skills,
           count(*) AS pending_count
         FROM directory_profile_proposed_skills
+        -- Only labels still awaiting review: the taxonomy apply run marks a promoted label
+        -- status = 'promoted' and keeps the row, and every other reader filters on 'pending'.
+        WHERE status = 'pending' AND btrim(skill_label) <> ''
         GROUP BY profile_id::text
       )
       SELECT
