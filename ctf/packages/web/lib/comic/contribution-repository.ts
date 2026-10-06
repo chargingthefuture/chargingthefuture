@@ -127,6 +127,12 @@ export async function countRecentContributions(
 // row it produced, in one transaction. Deactivating (not deleting) matches how curation works in
 // comic_knowledge_entries everywhere else — but the effect the member was promised is the one that
 // matters: the assistant stops quoting them.
+//
+// "Produced" means the rows whose contribution_id is this contribution — the same rows account
+// deletion removes by ON DELETE CASCADE. An entry whose text was already in the library points at a
+// row somebody else put there (another member's contribution, or the owner's own import), and that
+// row stays on: their consent still covers it. Without this, submitting a copy of an existing entry
+// and withdrawing it would switch off writing the member has no say over.
 export async function withdrawContribution(
   userId: string,
   contributionId: string,
@@ -142,10 +148,7 @@ export async function withdrawContribution(
 
     await client.query(
       `UPDATE comic_knowledge_entries SET active = FALSE
-       WHERE id IN (
-         SELECT knowledge_entry_id FROM comic_contribution_entries
-         WHERE contribution_id = $1::uuid AND knowledge_entry_id IS NOT NULL
-       )`,
+       WHERE contribution_id = $1::uuid`,
       [contributionId],
     );
 
@@ -330,7 +333,9 @@ export async function acceptContribution(input: {
         );
       } else {
         alreadyPresent++;
-        // Point at the row that already carries this text, so a later withdrawal still reaches it.
+        // Point at the row that already carries this text, so the entry records where it went. That
+        // row belongs to whoever put the text there first, so withdrawing THIS contribution leaves it
+        // on (see withdrawContribution).
         await client.query(
           `UPDATE comic_contribution_entries
            SET knowledge_entry_id = (SELECT id FROM comic_knowledge_entries WHERE content_hash = $2 AND source_ref IS NULL LIMIT 1)

@@ -245,7 +245,9 @@ reveals the explanation and the list. Step 2: the panel lists every denylisted U
 `unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
 longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
 submissions only; a member already blocked for that URL stays blocked until their submission is
-re-reviewed. A non-admin cannot reach the route.
+re-reviewed. A non-admin cannot reach the route. If a remove is refused, the panel shows the route's
+own sentence (for example "Spam denylist update unavailable."), not only "Remove failed (503)."
+(added 2026-10-05).
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2e · Duplicate account — blocked, but their real account is untouched
@@ -392,6 +394,18 @@ not by itself proof of anything (Quora sometimes deletes accounts), so there is 
 penalty; the admin decides and Revoke is the manual action.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A5c · A rejected or revoked member loses access even where Unleash is set up (added 2026-10-05)
+**Role:** admin / reviewer, then the member · **Surfaces:** web
+**Precondition:** an environment with Unleash configured and the `feature-unlock-quora-onboarding`
+flag turned on; a test member who was approved.
+**Steps:**
+1. As the admin, use **Revoke reward** on that member (UNLOCK-A5), or reject their submission.
+2. As the member, reload the app and open a gated plugin such as Directory.
+**Expected:** The member is on support-only access and the gated plugin refuses them, matching what
+the admin screen shows. The stored submission decides whenever one exists; the Unleash flag only
+counts for a member with no submission. Approving a member no longer adds them to the flag.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A6 · Search the submissions list
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** the All view has several submissions (the demo seed / a real queue with 30+ rows).
@@ -417,11 +431,16 @@ queue has at least one row.
 1. As a member, open the Unlock screen (submission form or status view) and drag the content down.
 2. Have the reviewer change the submission's status on web, then pull down again on the device.
 3. As an admin, open Unlock Admin, drag the queue down, and watch the list while it refreshes.
+4. (Added 2026-10-05.) As a member with a pending submission, turn on airplane mode and pull down on
+   the Android Unlock screen, then turn it off and pull down again.
 **Expected:** On both screens a refresh spinner appears at the top and the data re-pulls
 (`GET /api/unlock/status` for the member screen; `GET /api/unlock/admin/submissions` for the queue).
 The full-screen loading state does **not** flash — the current content stays visible until the fresh
 data lands, then the member screen reflects the new review status. The spinner stops when the pull
-completes, including on a failed request.
+completes, including on a failed request. Step 4: the failed pull keeps the "Pending Review" status
+view on screen (it does not switch to "Submit your Quora profile URL") and shows a red line under the
+header starting "Your verification status could not be read:" with the reason; the next successful
+pull removes the line.
 **Result:** android ☐ — notes:
 
 ---
@@ -477,7 +496,7 @@ this line with the rest of their data (see UNLOCK-A2c for the deletion walk).
 **Precondition:** a test account that submitted a Quora URL and has not been reviewed yet. This is the
 case that was broken: a waiting member has a stored `pending_readonly` tier, which passes no gate.
 **Steps:**
-1. Sign in. You land on the Verification Status screen showing "Pending Review".
+1. Sign in. You land on the Unlock status screen showing "Pending Review".
 2. Find "Can't find your Quora profile URL?" and press **Ask for help in the Commons**.
 3. Watch what happens on screen.
 4. Repeat on Android.
@@ -505,7 +524,7 @@ working, not a bug.
 ### UNLOCK-A8d · An approved member is not offered help they do not need
 **Role:** member with an **approved** submission · **Surfaces:** web + mobile-responsive, android
 **Steps:**
-1. Sign in as an approved member and open the Verification Status screen.
+1. Sign in as an approved member and open the Unlock status screen.
 2. Look below the "Approved — full access unlocked" card.
 **Expected:** No "Can't find your Quora profile URL?" card and no "Ask for help in the Commons" button.
 An approved member already has the Commons, so the button would grant access they hold and record a
@@ -631,6 +650,23 @@ not have to guess whether silence means they are in trouble. The last paragraph 
 account rather than this app alone, and that it is not a deletion and can be lifted. Pressing again
 closes it.
 **Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-M5 · Sign out from the Unlock screen (Android)
+**Role:** member (signed in, not yet verified, held at the Unlock wall) · **Surfaces:** android
+**Precondition:** a signed-in account the Android app sends to the full-screen Unlock screen (no
+submission and no help request, or a pending or rejected submission).
+**Steps:**
+1. Open the app and land on the Unlock screen. Scroll to the bottom.
+2. Find **Signed in as** your username (or email) and a **Sign out** button below everything else on
+   the screen. Check that the rest of the screen reads and looks as before.
+3. Tap **Sign out**, then **Stay signed in**.
+4. Tap **Sign out** again, then **Sign out**.
+5. Close and reopen the app.
+**Expected:** Step 2: the button is the last thing on the screen, after "What gets unlocked". Step 3:
+the confirm closes and nothing changes. Step 4: the Unlock screen goes away and the app shell shows
+with the **You are not signed in** card and its **Sign in** button. Step 5: you are still signed out.
+Signing back in with the same account brings the Unlock screen back with your place unchanged.
+**Result:** android ☐ — notes:
 
 ---
 

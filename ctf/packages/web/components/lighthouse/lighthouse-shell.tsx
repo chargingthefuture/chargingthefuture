@@ -15,17 +15,24 @@ import { LighthouseHost } from "./lighthouse-host";
 import { LighthouseSeekerProfile } from "./lighthouse-seeker-profile";
 import { LighthousePropertyDetail } from "./lighthouse-property-detail";
 import { LighthouseLoadingSkeleton } from "./lighthouse-loading-skeleton";
+import { ListReadError, tabReadFailure, useLighthouseLists } from "./lighthouse-list-reads";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
-/** GET a list endpoint and return its `items`; [] when the request fails or has no items. */
-async function fetchItems<T>(url: string): Promise<T[]> {
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = (await res.json()) as { items?: T[] };
-  return data.items ?? [];
+const CHAT_OPEN_FAILURE = "Could not open Direct Line.";
+
+/** The chat route answered and said no (a pending match, a missing match, chat not configured). */
+class ChatRefusal extends Error {}
+
+/** Ask the chat route for Stream credentials; a refusal carries the route's own reason. */
+async function requestChatCredentials(matchId: string): Promise<ChatCredentials> {
+  const res = await fetch(`/api/lighthouse/matches/${matchId}/chat`, { method: "POST" });
+  if (!res.ok) throw new ChatRefusal(await responseFailureText(res, CHAT_OPEN_FAILURE, 'member'));
+  const data = await res.json() as ChatCredentials & { ok?: boolean; message?: string };
+  if (!data.ok) throw new ChatRefusal(data.message || CHAT_OPEN_FAILURE);
+  return data;
 }
 
 function LighthouseTabContent({
@@ -50,6 +57,7 @@ function LighthouseTabContent({
   onSelectMatch,
   onEditHandled,
   onListYourPlace,
+  onMatchUpdated,
 }: {
   tab: Tab;
   visibleProperties: Property[];
@@ -76,6 +84,7 @@ function LighthouseTabContent({
   onSelectMatch: (match: Match | null) => void;
   onEditHandled: () => void;
   onListYourPlace: () => void;
+  onMatchUpdated: () => void;
 }) {
   return (
     <>
@@ -100,7 +109,7 @@ function LighthouseTabContent({
         />
       )}
       {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} />
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} onMatchUpdated={onMatchUpdated} />
       )}
       {tab === "chat" && (
         <LighthouseChat
@@ -126,10 +135,10 @@ function LighthouseTabContent({
 
 export function LighthouseShell({ userId, username, isAdmin }: { userId: string; username: string | null; isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
-  const [properties, setProperties] = useState<Property[]>([]);
+  const lists = useLighthouseLists();
+  const { properties, matches, reloadListings, reloadMatches } = lists;
   const [wantedPostings, setWantedPostings] = useState<WantedPosting[]>([]);
   const [wantedError, setWantedError] = useState<string | null>(null);
-  const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("browse");
   const [search, setSearch] = useState("");
@@ -151,12 +160,9 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     if (initial) setLoading(true);
     setError(null);
     try {
-      // Browse shows all active public listings to seekers, so it reads the public listings
-      // endpoint — not the current user's own listings. The Host tab loads the user's own
-      // listings itself (LighthouseHost fetches /api/lighthouse/my-properties).
-      setProperties(await fetchItems<Property>("/api/lighthouse/properties"));
-
-      setMatches(await fetchItems<Match>("/api/lighthouse/matches"));
+      // Listings and matches each report their own failed read (useLighthouseLists).
+      await reloadListings();
+      await reloadMatches();
 
       // Published housing needs — the demand side. Read separately from the listings so a failure
       // here shows on the Wanted tab alone and never blanks out browse; an empty list and a failed
@@ -184,7 +190,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     } finally {
       if (initial) setLoading(false);
     }
-  }, []);
+  }, [reloadListings, reloadMatches]);
 
   useEffect(() => {
     void fetchAll(true);
@@ -194,14 +200,13 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     if (tab === "chat" && selectedMatch) {
       setChatLoading(true);
       setChatError(null);
-      fetch(`/api/lighthouse/matches/${selectedMatch.id}/chat`, { method: "POST" })
-        .then(async (res) => {
-          if (!res.ok) throw new Error("Failed to fetch chat credentials");
-          const data = await res.json() as ChatCredentials & { ok?: boolean; message?: string };
-          if (!data.ok) throw new Error(data.message || "No chat credentials");
-          setChatCredentials(data);
-        })
-        .catch((err) => setChatError(err instanceof Error ? err.message : String(err)))
+      requestChatCredentials(selectedMatch.id)
+        .then(setChatCredentials)
+        .catch((err) => setChatError(
+          err instanceof ChatRefusal
+            ? err.message
+            : failureText(err, { area: 'lighthouse', op: 'open_chat', fallback: CHAT_OPEN_FAILURE, audience: 'member' }),
+        ))
         .finally(() => setChatLoading(false));
     } else {
       setChatCredentials(null);
@@ -219,15 +224,6 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
 
   const currencyMap: CurrencyMap = {};
   for (const currency of currencies) currencyMap[currency.code] = currency;
-
-  async function reloadMatches() {
-    try {
-      const matchRes = await fetch("/api/lighthouse/matches");
-      setMatches(matchRes.ok ? (await matchRes.json()).items ?? [] : []);
-    } catch {
-      // Best-effort refresh; the Matches tab still reloads on next open.
-    }
-  }
 
   if (selectedProperty) {
     return (
@@ -265,6 +261,8 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
     return haystack.includes(search.trim().toLowerCase());
   });
 
+  const readFailure = tabReadFailure(tab, lists);
+
   function toggleSave(id: string) {
     setSaved((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
@@ -292,6 +290,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       onSelectMatch={setSelectedMatch}
       onEditHandled={() => setEditPropertyId(null)}
       onListYourPlace={() => setTab("host")}
+      onMatchUpdated={() => void reloadMatches()}
     />
   );
 
@@ -346,7 +345,9 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
             </div>
           )}
         </div>
-        {content}
+        {readFailure.message ? <ListReadError message={readFailure.message} /> : null}
+        {/* With nothing read yet, the error stands in for the empty state rather than beside it. */}
+        {readFailure.message && readFailure.nothingToShow ? null : content}
       </div>
     );
 }

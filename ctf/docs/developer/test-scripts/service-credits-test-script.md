@@ -162,6 +162,25 @@ Result: web ☐
 
 ---
 
+### SC-3a — Send to a recipient no account holds is refused
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 10 credits available. Pick a username no member has (for example `nobody-here-12345`).
+
+**Steps:**
+1. Open the Send panel and note the available balance.
+2. Enter the unknown username and the amount 5, then send.
+3. Enter Recipient's username with a leading `@` (for example `@ada`) and the amount 5, then send.
+
+**Expected:**
+- Step 2 shows "No member has that username or ID. Check the recipient and try again; nothing was sent." The balance is unchanged and no "Transfer out" row appears.
+- Step 3 completes like SC-3: the `@` is accepted and the credits reach Recipient's wallet.
+
+Result: web ☐
+
+---
+
 ### SC-4 — Send blocked when balance is insufficient (balance rail)
 
 **Role:** member
@@ -175,6 +194,27 @@ Result: web ☐
 4. Attempt to submit.
 
 **Expected:** On the web send panel the submit button is disabled or an inline error appears before submission ("Insufficient balance" or equivalent). On android the send attempt returns an error message. The transfer does not go through. The balance is unchanged.
+
+Result: web ☐
+
+---
+
+### SC-4a — A second press after a failed send does not send twice
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 20 credits available, and a Recipient account. Browser developer tools open on the Network tab.
+
+**Steps:**
+1. Open the Send panel, enter Recipient and the amount 10.
+2. Set the Network tab to Offline, press Send, and note the error.
+3. Set the Network tab back to Online and press Send again without changing anything.
+4. Check Sender's Recent Transactions.
+5. Send another 5 to the same Recipient, but block the wallet request (right-click `/api/service-credits/wallet` in the Network tab and block it) before pressing Send.
+
+**Expected:**
+- Steps 2 and 3 send the same idempotency key in the request body; Recent Transactions shows one "Transfer out" of 10, not two.
+- Step 5 shows "Credits sent successfully!" and clears the form, with a gray note that the balance could not be refreshed. No red error appears.
 
 Result: web ☐
 
@@ -349,6 +389,26 @@ Result: web ☐
 
 ---
 
+### SC-13 — Ledger writes are stored on a database built from schema.sql (added 2026-10-05)
+
+**Role:** member, then admin
+**Surfaces:** web, api/data
+**Precondition:** a test database built from `ctf/schema.sql` with the pre migrations applied.
+
+**Steps:**
+1. As a member, send credits to another member (SC-3).
+2. Repeat the same send request with the same idempotency key.
+3. As an admin, apply a dispute adjustment (SC-A7) and run a treasury fee collection (SC-A4).
+
+**Expected:** Each step completes instead of failing with a database error. Step 2 returns the first
+send and moves no more credits. `service_credits_transfers`,
+`service_credits_dispute_adjustments` and `service_credits_treasury_events` each hold one new row per
+action, and the external ledger status card (SC-A10) shows no posting without a matching row here.
+
+Result: web ☐
+
+---
+
 ### SC-R1 — Record a send as an ongoing arrangement
 
 **Role:** member
@@ -491,6 +551,23 @@ Result: web ☐
 7. Confirm the response shows `frozen: false`.
 
 **Expected:** Freeze succeeds and the member's wallet is blocked (verified in SC-11). Unfreeze succeeds and restores spend ability. The reason field is accepted (optional but not rejected when supplied).
+
+Result: web ☐
+
+---
+
+### SC-A6a — The wallet freeze leaves a wider restriction alone
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** A test member who is restricted at scope `all` or `contact` (for example through the Unlock or TrustTransport admin restriction), and is not otherwise frozen.
+
+**Steps:**
+1. In the wallet status section, enter that member's user ID and select Freeze, then submit.
+2. Enter the same user ID, select Unfreeze, then submit.
+3. Check that the member's original restriction is still in place where it was set.
+
+**Expected:** Both submissions are refused with "This account has an active restriction of a wider scope (all or contact) set outside ServiceCredits. The wallet freeze cannot replace or lift it." The member's `all` or `contact` restriction is unchanged.
 
 Result: web ☐
 

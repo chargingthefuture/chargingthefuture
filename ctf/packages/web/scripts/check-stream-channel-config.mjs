@@ -24,13 +24,17 @@
 //
 //   ... -- pnpm --dir ctf/packages/web run check:stream-channel-config -- --fix
 //
+// The owner has no terminal, so the workflow `check-stream-channel-config.yml` runs this from the
+// Actions tab, with a checkbox for --fix.
+//
 // Exit code: 0 when no channel type blocks sending, 1 when one does (or when --fix could not repair
 // it). A credential pair that is entirely unset is skipped, not failed — Stream-backed features
 // degrade by design when unconfigured.
 
-// The channel types this app sends into. 'messaging' carries every plugin chat; the two 'ctf-gated'
-// types carry the gated contributor channel.
-const CHANNEL_TYPES = ['messaging', 'ctf-gated', 'ctf-gated-system'];
+// The channel types this app sends into. 'messaging' carries the plugin chats; 'livestream' carries
+// the Beacon event chat (BEACON_CHAT_CHANNEL_TYPE); the two 'ctf-gated' types carry the gated
+// contributor channel.
+const CHANNEL_TYPES = ['messaging', 'livestream', 'ctf-gated', 'ctf-gated-system'];
 
 const PAIRS = [
   { label: 'production', keyVar: 'STREAM_API_KEY', secretVar: 'STREAM_API_SECRET' },

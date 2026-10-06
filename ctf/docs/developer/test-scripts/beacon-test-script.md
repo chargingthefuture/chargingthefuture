@@ -169,6 +169,21 @@ call `DELETE /api/beacon/<id>` directly against a `live` or `ended` event it mus
 there too, with `policy_status = 'allow'`.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A1c · Event history shows Eastern Time and recovers a missed recording
+**Role:** admin · **Surfaces:** web (admin surface)
+**Steps:**
+1. Open `/admin/beacon` and look at Event history.
+2. Find an `ended` event and read the line under its title.
+3. If it shows `recording ready`, press `Replay`.
+4. Find an `ended` event that showed no recording before, reload the page, and read its line again.
+**Expected:** Every row shows a time in Eastern Time after its status, e.g.
+`ended · Oct 6, 2026, 3:05 PM ET`: when the event went live, or when it was created for a draft.
+Step 3 opens `/api/beacon/replays/<id>/recording` and plays the recording. In step 4, if Stream holds
+a recording for that event, the row now reads `recording ready`, a `Replay` button appears, and the
+replay is posted to the Commons once (a second reload posts nothing more). If Stream holds none, the
+row reads `no recording found`.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A2 · Go Live (both input paths)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
@@ -226,6 +241,19 @@ Commons. An empty player after a minute means egress never started — check tha
 reaching the app and that `call.session_participant_joined` is enabled in the Stream dashboard, which
 is the setting this case is really testing. Before 2026-08-10 this case failed by design: only an
 in-browser screen-share started egress.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2d · A refused start-broadcast is shown on the host stage
+**Role:** admin · **Surfaces:** web (admin surface, desktop)
+**Precondition:** a live event, opened in the admin screen, with Stream set up so the refusal can be
+forced (for example a Stream app whose recording or HLS is turned off).
+**Steps:**
+1. Press Share screen and pick a window.
+2. Read the line next to the Stop sharing button.
+**Expected:** When start-broadcast is refused, the line reads "The public broadcast and recording did
+not start:" followed by the route's reason, in red, instead of "Your screen is live to the
+broadcast." Stopping and sharing again retries. When it succeeds the line reads "Your screen is live
+to the broadcast." as before.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A3 · Moderate the chat

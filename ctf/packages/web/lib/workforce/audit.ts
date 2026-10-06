@@ -9,8 +9,6 @@ export const WORKFORCE_AUDIT_WORKSPACE = 'global';
 // (the command contracts put several at 2.0.0). Falls back to 1.0.0 for anything not listed.
 const WORKFORCE_COMMAND_VERSIONS: Record<string, string> = {
   'workforce.dashboard.fetch': '2.0.0',
-  'workforce.profile.fetch': '2.0.0',
-  'workforce.profile.delete': '2.0.0',
   'workforce.occupations.list': '2.0.0',
   'workforce.occupations.detail.fetch': '2.0.0',
   'workforce.report.skillLevel.fetch': '2.0.0',

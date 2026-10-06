@@ -169,8 +169,18 @@ the host tab.
    the private match chat channel on host acceptance. The no-seeker-profile (`policy_denied`),
    duplicate (`duplicate_match`), and blocked-pair (`blocked_pair`) cases are surfaced inline.
 3. Role-specific match list views for seekers and hosts are preserved.
-4. Host accept/reject actions with host response are preserved.
-5. Seeker cancellation permissions remain policy-controlled.
+4. **Host accept/decline is on the Matches tab (web, 2026-10-05).** A pending request on a listing
+   the reader hosts shows **Accept** and **Decline**, which call `PUT /api/lighthouse/matches/:id`
+   with `x-ctf-csrf: 1` and re-read the list on success. Both buttons disable while one saves, and
+   the route's error message is shown under them. Accepting is what opens the match chat in Direct
+   Line. An accepted or completed match shows the green tick.
+5. **Allowed status moves (2026-10-05).** A host may move a match `pending → accepted | rejected`
+   and `accepted → completed`; a seeker may move `pending | accepted → canceled`. Anything else from
+   a host or seeker answers 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION`, so a withdrawn or declined
+   request cannot be reopened and a stay cannot be marked completed without being accepted. The row
+   is read `FOR UPDATE` so a cancel and an accept arriving together are decided in turn. Admins are
+   not limited by this table. The table is `lib/lighthouse/match-transitions.ts`. The seeker cancel
+   has no button yet; it is reachable through the route only.
 6. Status lifecycle parity target:
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
@@ -271,7 +281,7 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 
 - `GET /api/lighthouse/matches`
 - `POST /api/lighthouse/matches`
-- `PUT /api/lighthouse/matches/:id`
+- `PUT /api/lighthouse/matches/:id` — status change; 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION` for a move the table in §1.5 item 5 does not allow
 
 ### 3.4 Admin APIs
 
@@ -362,6 +372,19 @@ Contract expectations:
    reusing the profile row mapping, which is what keeps that true as the table grows. `GET
    /api/lighthouse/wanted` is member-gated, has no write method, and hides postings in both
    directions of a block.
+9. **Deleting LightHouse data deletes the profile row** (2026-10-05). Account deletion and the
+   account area's LightHouse delete remove the `lighthouse_profiles` row, phone number and Signal
+   link included, the same as the plugin's own delete; only `lighthouse_user_extension` keeps a
+   `service_deleted_at` stamp, as the rejoin marker. The data export leaves out the blocks other
+   members placed on the member (`lighthouse_blocks` by `blocked_user_id`): those rows, and the
+   reason written on them, are the blocker's.
+10. **The exact address is shown only once a stay is agreed** (2026-10-05). `GET
+   /api/lighthouse/properties` and `GET /api/lighthouse/properties/:id` return `addressLine` and
+   `zipCode` only to the host, an admin or operations reader, and a seeker whose match on that
+   listing is `accepted`; every other reader gets `null` for both and still sees city, state and
+   country. The rule is applied in the SQL (`exactAddressColumnsSql` in
+   `lib/lighthouse/repository.ts`), so the columns never leave the database for a reader who may
+   not have them. `GET /api/lighthouse/my-properties` and the admin listing read are unchanged.
 
 ## 6) Web and Android Delivery Status
 
@@ -392,9 +415,59 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    Stream chat channel. Cutting an existing thread when one side blocks the other needs a decision on
    what happens to the match itself (canceled? left in place, muted?), so it is recorded here rather
    than guessed at.
+5. **`lighthouse_profiles.service_deleted_at` is no longer set by anything** (2026-10-05). Deletion
+   now removes the row, `post/0050` removed the rows that held a stamp, and saving a profile writes
+   NULL. The column is still read by the Wanted query and named in the predicate of
+   `idx_lighthouse_profiles_wanted_public`, and the revision running during a deploy reads it, so it
+   is dropped (with the index rebuilt without it and the two code references removed) in the
+   release after this one has shipped, the same sequence `post/0048` used.
 
 ## 9) Change Log
 
+- 2026-10-05: **Account deletion deletes the LightHouse profile row; the data export leaves out
+  blocks placed on the member.** The account deletion registry soft-deleted `lighthouse_profiles`,
+  so deleting an account, or only its LightHouse data from the account area, kept the phone number,
+  Signal link, bio, housing needs and budget, while the plugin's own delete removed the row (#2700).
+  The registry now deletes it, and `post/0050_lighthouse_profiles_delete_soft_deleted.sql` removes
+  the rows already left behind. The data export read the registry's `lighthouse_blocks` entry keyed
+  on `blocked_user_id` as the member's own rows and so returned who had blocked them and the reason
+  written (#2699); that entry is now marked `notExported(...)`, and deletion still removes it.
+- 2026-10-05: **A listing's street address and postal code no longer go to every member (#2810).**
+  The browse and detail reads returned both fields to any approved member from the moment a listing
+  was created, though no member screen showed them, so a host who typed their home address had
+  handed it to every member, including people they would never accept. The two reads now return
+  them only to the host, an admin, and a seeker whose match on that listing is accepted, and `null`
+  to everyone else (§5 item 10). City, state and country are unchanged for browsing. The host's edit
+  form still prefills from the detail read, because the host is the owner. No schema or screen
+  change; the access policy contract gains `exactAddressDisclosure` on `lighthouse.property.create`.
+- 2026-10-05: **A host can now answer a stay request (#2813), and a finished request cannot be
+  reopened (#2815).** No screen called the match update route, so every request stayed `pending`
+  and the match chat never opened for anyone. The Matches tab now shows Accept and Decline on a
+  pending request for the listing's host (§1.5 item 4). The route also checked only who was asking
+  and for which status, so a host could accept a request the seeker had withdrawn or mark a pending
+  one completed; it now allows only the moves in §1.5 item 5 and locks the row while deciding. The
+  status icon showed a red cross for an accepted match because it only knew the old `approved`
+  value; it now shows the green tick. No schema change. Test script step LH-4b added.
+- 2026-10-05: **Member screens tell a failed read from an empty one, and read the codes the routes
+  really send (#2821, #2823, #2824, #2825, #2831).** No schema or contract change.
+  - Request to stay compared the answer against `policy_denied`, `profile_not_found` and
+    `duplicate_match`, but the matches route sends the `LIGHTHOUSE_ERROR_CODE` values. A seeker with
+    no details saw "Operation denied by policy." instead of the button to the details form, and a
+    repeat request showed an error instead of the existing-request note. It now compares against
+    the constants.
+  - The Matches card checked for an `approved` status that does not exist, so accepted and
+    completed matches showed the red cross. `approved` is gone from the card.
+  - Your details: a failed read (anything other than the 404 for no profile yet) left a blank form
+    whose save overwrote every stored field. The form now shows what failed, keeps Save off, and
+    offers Try again.
+  - Browse, Matches and the Direct Line picker read through `useLighthouseLists`
+    (`lighthouse-list-reads.tsx`): a failed read shows the route's reason instead of an empty
+    list, and a failed refresh keeps the list already shown. The host tab does the same for
+    `/api/lighthouse/my-properties` and drops the count while the read has failed.
+    `getHostQuoraUrl` reports its error before returning null.
+  - Direct Line shows the chat route's own refusal (for example "Chat is only available for accepted
+    matches."). `POST /api/lighthouse/matches/:matchId/chat` now catches a failed match read
+    (reported, 503) and names the missing Stream configuration in its two 500 answers.
 - 2026-10-05: **An admin hiding or restoring a listing no longer wipes its currencies (#2818).**
   The admin page sends the full listing with `rentCurrency` and `acceptedCurrencies`, but the admin
   route's parser dropped both, and `updateProperty` then stored a null rent currency and deleted every
