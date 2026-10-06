@@ -22,10 +22,15 @@ type RedirectRow = {
  * - /apps/socket-relay/public/{legacyId} → /apps/socket-relay/public/{newId}
  *
  * Uses legacy_profile_redirects table to resolve ID mappings during migration.
+ *
+ * `redirect()` works by throwing, so every call to it sits outside the
+ * try/catch below. Inside the try, the catch would swallow the redirect and
+ * send every mapped link to the plugin shell instead.
  */
 export default async function LegacyProfileRedirectPage({ params }: LegacyProfileRedirectProps) {
   const { pluginSlug, scope, id } = await params;
 
+  let newId: string | null = null;
   try {
     // Query the legacy redirect mapping table
     const result = await queryDb<RedirectRow>(
@@ -39,27 +44,21 @@ export default async function LegacyProfileRedirectPage({ params }: LegacyProfil
       `,
       [pluginSlug, scope, id]
     );
-
-    if (!result.rows || result.rows.length === 0) {
-      // No mapping found - the legacy entity may have been deleted or not migrated yet
-      // For Directory, the legacy URL pattern is /apps/directory/public/{id}
-      // but new pattern is just /apps/directory - so redirect to shell
-      if (pluginSlug === 'directory') {
-        redirect(`/apps/${pluginSlug}`);
-      }
-      // For other plugins, redirect to the plugin shell; user can navigate from there
-      redirect(`/apps/${pluginSlug}`);
-    }
-
-    const { current_entity_id: newId } = result.rows[0];
-
-    // Construct the new URL based on plugin-specific routing patterns
-    const newUrl = `${pluginSlug === 'directory' ? `/apps/${pluginSlug}/${newId}` : `/apps/${pluginSlug}/${scope}/${newId}`}`;
-
-    redirect(newUrl);
+    newId = result.rows?.[0]?.current_entity_id ?? null;
   } catch (error) {
-    // If database query fails, redirect to plugin shell as fallback
-    console.error('Legacy profile redirect lookup failed:', error);
+    // The lookup failed (including an id that is not a uuid): fall back to the plugin shell below.
+    console.error(
+      `Legacy profile redirect lookup failed for plugin "${pluginSlug}", scope "${scope}"; sending the visitor to the plugin shell:`,
+      error
+    );
+  }
+
+  if (!newId) {
+    // No mapping found (the legacy entity may have been deleted or not migrated yet)
+    // or the lookup failed: send the visitor to the plugin shell to navigate from there.
     redirect(`/apps/${pluginSlug}`);
   }
+
+  // Construct the new URL based on plugin-specific routing patterns
+  redirect(pluginSlug === 'directory' ? `/apps/${pluginSlug}/${newId}` : `/apps/${pluginSlug}/${scope}/${newId}`);
 }

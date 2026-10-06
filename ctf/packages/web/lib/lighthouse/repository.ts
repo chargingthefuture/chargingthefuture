@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   LIGHTHOUSE_DEFAULT_PAGE,
   LIGHTHOUSE_DEFAULT_PAGE_SIZE,
@@ -630,6 +631,29 @@ function hideBlockedHostsSql(viewer: string): string {
           )`;
 }
 
+// The street address and postal code are the one part of a listing that says where somebody lives,
+// so a read returns them only to the host, an admin, and a seeker whose match on that listing is
+// accepted. Everyone else browsing sees city, state and country and nothing finer. Done in SQL so the
+// columns never leave the database for a reader who may not have them.
+function exactAddressColumnsSql(viewer: string, viewerIsAdmin: string): string {
+  const mayRead = `(
+            ${viewerIsAdmin}::boolean = TRUE
+            OR lighthouse_properties.host_user_id = ${viewer}::text
+            OR EXISTS (
+              SELECT 1
+              FROM lighthouse_matches m
+              WHERE m.property_id = lighthouse_properties.id
+                AND m.seeker_user_id = ${viewer}::text
+                AND m.status = 'accepted'
+            )
+          )`;
+  return `CASE WHEN ${mayRead} THEN address_line ELSE NULL END AS address_line,
+          city,
+          state,
+          country,
+          CASE WHEN ${mayRead} THEN zip_code ELSE NULL END AS zip_code`;
+}
+
 export async function listProperties(input: {
   page?: number;
   pageSize?: number;
@@ -639,12 +663,15 @@ export async function listProperties(input: {
   // Who is browsing. When set, listings from members they have blocked (or who blocked them) are
   // left out. Optional so a caller with no signed-in viewer keeps the previous behavior.
   viewerUserId?: string | null;
+  // Admins read the exact address on every listing; see exactAddressColumnsSql.
+  viewerIsAdmin?: boolean;
 }): Promise<{ items: LighthouseProperty[]; total: number; pagination: { page: number; pageSize: number } }> {
   const paging = normalizePage(input.page, input.pageSize);
   const country = normalizeNullableText(input.country);
   const city = normalizeNullableText(input.city);
   const onlyActive = input.onlyActive !== false;
   const viewerUserId = normalizeNullableText(input.viewerUserId);
+  const viewerIsAdmin = input.viewerIsAdmin === true;
 
   const [countResult, rows] = await Promise.all([
     queryDb<CountRow>(
@@ -666,11 +693,7 @@ export async function listProperties(input: {
           title,
           description,
           property_type,
-          address_line,
-          city,
-          state,
-          country,
-          zip_code,
+          ${exactAddressColumnsSql('$6', '$7')},
           bedrooms,
           bathrooms,
           monthly_rent,
@@ -690,7 +713,7 @@ export async function listProperties(input: {
         ORDER BY updated_at DESC
         OFFSET $4 LIMIT $5
       `,
-      [onlyActive, country, city, paging.offset, paging.pageSize, viewerUserId],
+      [onlyActive, country, city, paging.offset, paging.pageSize, viewerUserId, viewerIsAdmin],
     ),
   ]);
 
@@ -704,7 +727,10 @@ export async function listProperties(input: {
   };
 }
 
-export async function getPropertyById(propertyId: string): Promise<LighthouseProperty | null> {
+export async function getPropertyById(
+  propertyId: string,
+  viewer: { userId: string; isAdmin: boolean },
+): Promise<LighthouseProperty | null> {
   const result = await queryDb<LighthousePropertyRow>(
     `
       SELECT
@@ -713,11 +739,7 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
         title,
         description,
         property_type,
-        address_line,
-        city,
-        state,
-        country,
-        zip_code,
+        ${exactAddressColumnsSql('$2', '$3')},
         bedrooms,
         bathrooms,
         monthly_rent,
@@ -733,7 +755,7 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
       WHERE id = $1::uuid
       LIMIT 1
     `,
-    [propertyId],
+    [propertyId, viewer.userId, viewer.isAdmin],
   );
 
   if (!result.rows[0]) {
@@ -779,8 +801,9 @@ export async function listMyProperties(userId: string): Promise<LighthouseProper
 }
 
 // Quora profile URL for a member, read from their Unlock verification submission (the single place
-// a member's Quora link is captured; one row per user_id). Best-effort: any failure yields null so
-// the self-hosting header simply omits the Quora link. Self-service hosting (2026-06-18).
+// a member's Quora link is captured; one row per user_id). Best-effort: a failure is reported and
+// yields null, so the self-hosting header omits the Quora link instead of failing the listings read.
+// Self-service hosting (2026-06-18).
 export async function getHostQuoraUrl(userId: string): Promise<string | null> {
   try {
     const result = await queryDb<{ quora_profile_url: string | null }>(
@@ -793,7 +816,8 @@ export async function getHostQuoraUrl(userId: string): Promise<string | null> {
       [userId],
     );
     return result.rows[0]?.quora_profile_url ?? null;
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'get_host_quora_url' });
     return null;
   }
 }

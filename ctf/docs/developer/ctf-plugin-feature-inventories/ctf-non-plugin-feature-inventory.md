@@ -42,7 +42,11 @@
   `SELECT * FROM <table> WHERE <userColumn> = $1` (the authenticated user id is always the bound
   parameter, never inlined); `retain` tables (money ledgers, audit trails, shared content) have no
   user column and are skipped — the MVP export scope, stated honestly in the file's `notes`.
-  Checked without a DB by `ctf/scripts/check-export-engine.mjs` (wired into CI beside the deletion
+  Entries wrapped in `notExported(...)` in the registry are skipped too: rows matched by the
+  member's id that are not the member's own. Two exist: blocks other members placed on the member
+  (`lighthouse_blocks.blocked_user_id`, with the blocker's id and reason) and profiles the member
+  nominated (`directory_profiles.nominated_by_user_id`, the nominee's profile). Deletion still acts
+  on both. Checked without a DB by `ctf/scripts/check-export-engine.mjs` (wired into CI beside the deletion
   engine check). The orchestrator assembles the self-describing envelope
   `{ exportVersion: 1, generatedAtIso, userId, scope, services[], notes[] }` in ONE transaction so
   the file is a consistent snapshot; each service carries
@@ -224,7 +228,7 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 ### 1.11 Legacy Profile URL Redirects
 
-1. Old `/platform` profile URLs are mapped to current rewrite URLs by the catch-all page route `/apps/[pluginSlug]/[scope]/[id]` (`ctf/packages/web/app/apps/[pluginSlug]/[scope]/[id]/page.tsx`) — e.g. `/apps/directory/public/{legacyId}` → `/apps/directory/{newId}`, `/apps/lighthouse/property/{legacyId}` → `/apps/lighthouse/property/{newId}`. On a miss (deleted or not-yet-migrated entity) it falls back to the plugin shell `/apps/{pluginSlug}`. This is a server-rendered page, not an API route.
+1. Old `/platform` profile URLs are mapped to current rewrite URLs by the catch-all page route `/apps/[pluginSlug]/[scope]/[id]` (`ctf/packages/web/app/apps/[pluginSlug]/[scope]/[id]/page.tsx`) — e.g. `/apps/directory/public/{legacyId}` → `/apps/directory/{newId}`, `/apps/lighthouse/property/{legacyId}` → `/apps/lighthouse/property/{newId}`. On a miss (deleted or not-yet-migrated entity) it falls back to the plugin shell `/apps/{pluginSlug}`; a failed lookup is logged with the plugin and scope and falls back the same way. Every `redirect()` call sits outside the lookup's `try`/`catch`, because `redirect()` works by throwing. The lighthouse and socket-relay destinations have no page of their own, so they re-enter this route and end on the plugin shell after a second lookup. This is a server-rendered page, not an API route.
 2. **Data model — `legacy_profile_redirects`**: composite primary key `(plugin_slug TEXT, scope TEXT, legacy_entity_id UUID)` mapping to `current_entity_id` (uuid) with `created_at` (timestamptz, default now). Read-only during migration; no API route writes it (populated out-of-band).
 
 ### 1.12 Public Terms and Privacy Policy Page
@@ -347,6 +351,8 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-05: **Data export no longer hands a member rows that are not theirs; account deletion removes the LightHouse profile row.** The export read every registry entry with a user column as the member's own rows, so it returned the LightHouse blocks other members had placed on the member (blocker id and free-text reason, #2699) and the full Directory profile of everyone the member had nominated, claimed profiles included (#2643). A new `exportable: false` flag on a registry entry, set with `notExported(...)`, keeps such an entry out of the export while deletion still acts on it; `check-export-engine.mjs` now renders pseudonymize entries too, asserts the engine skips flagged entries, and fails if either of the two pairs loses its flag. Separately, account deletion soft-deleted `lighthouse_profiles` and kept the phone number and Signal link, while the plugin's own delete removed the row; the registry now deletes it (#2700), and `post/0050` removes the rows the soft delete left behind.
+- 2026-10-05: **Legacy profile redirects reach their mapped address (§1.11).** The page called `redirect()` inside the lookup's `try`, so the catch swallowed the redirect, logged a false lookup failure, and sent every old link to the plugin shell. The lookup now resolves the mapped id inside the `try` and the redirects run after it. No schema or route change.
 - 2026-10-05: **Contributed Writing no longer shares the Contributions tile's dot (§1.14).** The admin
   landing keyed each tile on the last segment of its href, and `/admin/contributions` and
   `/admin/comic/contributions` both ended in `contributions`, so Contributed Writing lit up for a
