@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
+import { BEACON_CHAT_CHANNEL_TYPE, BEACON_MUTE_MINUTES, BEACON_STREAM_CALL_TYPE } from './constants';
 
 // Beacon's Stream Video integration. Beacon is a one-way `livestream`: only the admin host
 // publishes; everyone else watches. Watching is public over HLS (no user token needed), which is
@@ -422,7 +422,14 @@ export async function moderateBeaconChat(input: {
     const channel = chatClient.channel(BEACON_CHAT_CHANNEL_TYPE, channelId);
     const target = input.targetUserId ? beaconStreamUserId(input.targetUserId) : null;
     if (input.action === 'mute' && target) {
-      await chatClient.muteUser(target, beaconStreamUserId(input.hostUserId));
+      // A timed ban on this event's channel. Stream's muteUser is a personal mute: only the host
+      // stopped seeing the member, who could still post to every other viewer. The timed ban stops
+      // the member posting to anyone for BEACON_MUTE_MINUTES, then lifts on its own.
+      await channel.banUser(target, {
+        banned_by_id: beaconStreamUserId(input.hostUserId),
+        timeout: BEACON_MUTE_MINUTES,
+        reason: 'beacon_mute',
+      });
       return true;
     }
     if (input.action === 'ban' && target) {

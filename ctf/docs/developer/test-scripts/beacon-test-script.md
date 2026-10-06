@@ -249,7 +249,8 @@ to the broadcast." as before.
 2. Ban a member from the event chat.
 3. Enable slow-mode.
 **Expected:** Each action takes effect in the live chat and is recorded in the admin audit trail. The
-admin is the channel moderator.
+admin is the channel moderator. After step 1, watch from a second signed-in member as well: the muted
+member cannot post for 10 minutes, and nobody (not only the admin) sees new messages from them.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A4 · End the event
@@ -257,7 +258,9 @@ admin is the channel moderator.
 **Steps:**
 1. Press End on the live event.
 **Expected:** The broadcast stops and the call ends reliably (so Stream billing stops); status flips
-to `ended`. When the recording is ready, the replay auto-posts to the Commons (idempotent).
+to `ended`. When the recording is ready, the replay auto-posts to the Commons (idempotent). The
+ended event offers no Go Live, and its chat no longer hands out a token (the route answers 409), so
+nobody can post under it after the broadcast.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A5 · Event history

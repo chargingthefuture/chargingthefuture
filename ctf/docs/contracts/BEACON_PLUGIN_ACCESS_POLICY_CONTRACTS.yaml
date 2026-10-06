@@ -203,6 +203,7 @@ policies:
       - event_not_found
       - stream_not_configured
       - another_event_live
+      - event_not_draft
 
   - pluginId: beacon
     command: event.start-broadcast
@@ -227,6 +228,7 @@ policies:
       - insufficient_role
       - event_not_found
       - stream_not_configured
+      - event_not_live
 
   - pluginId: beacon
     command: event.end
@@ -250,6 +252,7 @@ policies:
     denyConditions:
       - insufficient_role
       - event_not_found
+      - event_not_live
 
   - pluginId: beacon
     command: event.delete

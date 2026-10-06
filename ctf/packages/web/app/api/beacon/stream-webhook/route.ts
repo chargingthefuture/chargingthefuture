@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { BEACON_ERROR_CODE } from 'lib/beacon/constants';
 import {
   getBeaconEventByCallId,
+  insertBeaconAudit,
   postBeaconReplayNotice,
   recordBeaconRecording,
 } from 'lib/beacon/repository';
@@ -90,13 +91,44 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
 
   // Store the URL (no-op when already set), then re-read so the post helper sees the URL even if
   // this delivery raced an earlier one.
-  const updated = (await recordBeaconRecording(event.id, recordingUrl)) ?? {
+  const stored = await recordBeaconRecording(event.id, recordingUrl);
+  const updated = stored ?? {
     ...event,
     recordingUrl,
   };
-  await postBeaconReplayNotice(updated);
+  const commonsRecordingPostId = await postBeaconReplayNotice(updated);
+
+  // The audit record of the ingest (BEACON_PLUGIN_AUDIT_CONTRACTS.yaml, event.stream-webhook.ingest).
+  // The recording URL is not copied into the row; it is on the event. `recordingStored` is false on a
+  // redelivery that found the URL already set.
+  await insertBeaconAudit({
+    actorId: 'system',
+    command: 'beacon.event.stream-webhook.ingest',
+    policyStatus: 'allow',
+    reason: 'ok',
+    targetType: 'event',
+    targetId: event.id,
+    metadata: { commonsRecordingPostId, recordingStored: stored !== null },
+  });
 
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
+}
+
+// A deny row for a refused delivery. Nothing from the body or the signature is stored, and a failed
+// write is reported without changing the 401.
+async function auditRefusedDelivery(signature: string | null): Promise<void> {
+  try {
+    await insertBeaconAudit({
+      actorId: 'system',
+      command: 'beacon.event.stream-webhook.ingest',
+      policyStatus: 'deny',
+      reason: signature ? 'invalid_signature' : 'missing_signature',
+      targetType: 'webhook',
+      targetId: 'stream',
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'beacon', op: 'stream_webhook_deny_audit' });
+  }
 }
 
 // Stream Video webhook. Verifies the signature, then acts on three events:
@@ -129,6 +161,7 @@ export async function POST(request: Request) {
 
   const verified = await verifyBeaconWebhookSignature(rawBody, signature);
   if (!verified) {
+    await auditRefusedDelivery(signature);
     return NextResponse.json(
       { ok: false, code: BEACON_ERROR_CODE.webhookSignatureInvalid, message: 'Invalid webhook signature.' },
       { status: 401 },

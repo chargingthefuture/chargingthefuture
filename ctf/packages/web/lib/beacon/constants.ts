@@ -27,3 +27,7 @@ export const BEACON_MAX_DESCRIPTION_LENGTH = 2000;
 
 // Slow-mode default cooldown (seconds) when the admin enables it without naming a value.
 export const BEACON_DEFAULT_SLOW_MODE_SECONDS = 10;
+
+// How long a chat mute lasts. A mute is a timed ban on the event's chat channel, so the member
+// cannot post there for this many minutes; a ban lasts until it is lifted.
+export const BEACON_MUTE_MINUTES = 10;
