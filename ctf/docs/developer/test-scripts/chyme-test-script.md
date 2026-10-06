@@ -139,9 +139,12 @@ the android tile keeps the ✋ up (and drops it within ~15s of them lowering it)
 1. Open the Tip action on another participant's tile, enter an amount, send.
 2. Try to tip yourself.
 3. Try to tip an amount above the limit.
+4. Have an admin freeze your wallet (SC-A6 in the ServiceCredits script), then tip again.
 **Expected:** The tip sends ServiceCredits from you to that participant and delivers immediately. The
 Tip action never appears on your own tile or on a listen-only guest. Self-tip is rejected (400). An
-amount that is not a finite number above 0, or above the maximum (10000), is rejected (400).
+amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
+from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
+2026-10-05).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
@@ -654,6 +657,19 @@ live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_ad
 calls they started and calls they received. The call log is ephemeral and has no history screen, so
 there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
 registry entries.
+
+### CH-25 · Sign in, and sign out leaves the room (android)
+**Role:** signed out, then member · **Surfaces:** android
+**Steps:**
+1. On a fresh install (or after signing out), open the app on the **Chyme** pill.
+2. Tap **Sign in** on the **You are not signed in** card above the room list and sign in.
+3. Join the room, then open **Account & Data**, scroll down, tap **Sign out** and confirm.
+4. Go back to the **Chyme** pill.
+**Expected:** Step 1: the sign-in card shows above the room list, and listening as a guest still
+works. Step 2: the card goes away and you can speak, react and tip as yourself. Step 4: you are no
+longer in the room as a member, the Android "Chyme live audio" notification is gone, and the sign-in
+card is back. The same steps are in the Android app test script (AN-1, AN-7).
+**Result:** android ☐ — notes:
 
 ---
 

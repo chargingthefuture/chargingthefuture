@@ -32,6 +32,7 @@ import { useTheme, type ThemeTokens } from "../../theme";
 import { interFamily } from "../../components/ui";
 import { getApiBaseUrl } from "../../auth/authedFetch";
 import { reportError } from '../../observability/report';
+import { SignOutButton } from '../../components/shared/SessionControls';
 import {
   fetchAccountServices,
   deleteServiceData,
@@ -232,6 +233,7 @@ export function AccountData() {
         <TouchableOpacity style={s.retryBtn} onPress={() => load()} accessibilityRole="button">
           <Text style={s.retryText}>Retry</Text>
         </TouchableOpacity>
+        <SignOutButton />
       </View>
     );
   }
@@ -291,6 +293,8 @@ export function AccountData() {
             onContinue={() => setConfirmOpen(true)}
           />
         )}
+
+        <SignOutButton />
 
         <LegalFooter s={s} />
       </ScrollView>
