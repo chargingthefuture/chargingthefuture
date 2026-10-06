@@ -11,7 +11,7 @@ import { getLighthouseTokens, type Match, type Property } from "./shared";
 // something that carries on month after month. LightHouse only ever sees this one moment — it never
 // sees the rent that changes hands later — so this is where the member is offered the chance to record
 // that it is ongoing, right on the match, instead of being sent to another app to type it in again.
-const ACCEPTED_MATCH_STATUSES = new Set(["accepted", "approved", "completed"]);
+const ACCEPTED_MATCH_STATUSES = new Set(["accepted", "completed"]);
 
 function StatusIcon({ status }: { status: string }) {
   const { theme } = useTheme();

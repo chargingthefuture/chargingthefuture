@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
+import { reportError } from 'lib/observability/report';
 import {
   LIGHTHOUSE_DEFAULT_PAGE,
   LIGHTHOUSE_DEFAULT_PAGE_SIZE,
@@ -780,8 +781,9 @@ export async function listMyProperties(userId: string): Promise<LighthouseProper
 }
 
 // Quora profile URL for a member, read from their Unlock verification submission (the single place
-// a member's Quora link is captured; one row per user_id). Best-effort: any failure yields null so
-// the self-hosting header simply omits the Quora link. Self-service hosting (2026-06-18).
+// a member's Quora link is captured; one row per user_id). Best-effort: a failure is reported and
+// yields null, so the self-hosting header omits the Quora link instead of failing the listings read.
+// Self-service hosting (2026-06-18).
 export async function getHostQuoraUrl(userId: string): Promise<string | null> {
   try {
     const result = await queryDb<{ quora_profile_url: string | null }>(
@@ -794,7 +796,8 @@ export async function getHostQuoraUrl(userId: string): Promise<string | null> {
       [userId],
     );
     return result.rows[0]?.quora_profile_url ?? null;
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'get_host_quora_url' });
     return null;
   }
 }
