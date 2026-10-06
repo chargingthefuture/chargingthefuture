@@ -9,6 +9,7 @@
 // opening this file is one copy-paste away from publishing a handle, and the answer to "may I"
 // should be on screen before the handle is.
 
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import {
   QUORA_SURVEY_ACTION_LABEL,
   QUORA_SURVEY_REASON_LABEL,
@@ -42,12 +43,21 @@ export const SURVEY_CSV_HEADERS = [
   'other_notes',
 ] as const;
 
+// A spreadsheet runs a cell as a formula when it starts with one of these, quoted or not.
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
 // Quote every field and double any embedded quote. Survey free text contains commas, line
 // breaks, and quotation marks as a matter of course, and a spreadsheet that splits one person's
 // account into two rows is worse than no export.
-function csvCell(value: string | number | boolean | null): string {
+//
+// Text that would start a formula gets a leading single quote, which a spreadsheet reads as "this
+// is text". The handles and notes are typed by members nobody has verified yet (the survey is an
+// Unlock exception), and the one person who opens this file is an admin. Only strings are guarded:
+// the numeric columns are never negative, and booleans are written by the app.
+export function csvCell(value: string | number | boolean | null): string {
   if (value === null) return '""';
-  return `"${String(value).replace(/"/g, '""')}"`;
+  const text = typeof value === 'string' && FORMULA_LEAD.test(value) ? `'${value}` : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function topicLabels(topics: QuoraSurveyTopic[]): string {
@@ -58,7 +68,8 @@ function responseCells(response: SurveyResponseWithAccounts): (string | boolean 
   return [
     response.id,
     // Empty when the account that sent this was deleted, never because the answer was anonymous.
-    response.user_id,
+    // Account deletion writes the placeholder rather than NULL, so both read as deleted here.
+    response.user_id === DELETED_MEMBER_PLACEHOLDER ? null : response.user_id,
     response.created_at,
     response.consent_publish_handles,
     response.consent_quote,

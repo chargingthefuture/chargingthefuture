@@ -13,6 +13,7 @@ import {
   QUORA_SURVEY_PUBLIC_PATH,
 } from 'lib/quora-deletion-survey/constants';
 import type { SurveyResponseWithAccounts, SurveyTotals } from 'lib/quora-deletion-survey/repository';
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import { getSurveyTokens } from './survey-theme';
 
 const LOAD_FAILED = 'The survey responses could not be loaded.';
@@ -187,7 +188,7 @@ function ResponseCard({
       </div>
 
       <div style={{ fontSize: 12, color: tokens.MUTED, marginTop: 4 }}>
-        {response.user_id
+        {response.user_id && response.user_id !== DELETED_MEMBER_PLACEHOLDER
           ? `member ${response.user_id}`
           : 'member account deleted — the answer was kept, the account id was cleared'}
         {response.has_current_profile === null

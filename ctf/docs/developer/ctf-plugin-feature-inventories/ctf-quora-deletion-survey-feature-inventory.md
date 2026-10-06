@@ -339,6 +339,9 @@ this is not a plugin. The steps that matter:
 7. Download the CSV. One row per reported removal, the zero-removal response present with empty
    account columns, and free text containing commas and quotes still inside its own cell. The
    `has_current_profile` cell is empty for a response that skipped that question.
+7b. Send a response whose handle is `=1+1` and whose notes start with `@`. In the downloaded CSV
+   both cells start with a single quote, and a spreadsheet shows them as text rather than running
+   them as formulas.
 8. Skip the current-account question entirely and send. The confirmation screen shows no
    verification offer, and the stored row has NULL rather than FALSE in `has_current_profile`.
 9. As a member with no Unlock submission, answer yes to the current-account question, give a Quora
@@ -351,6 +354,9 @@ this is not a plugin. The steps that matter:
 11. As a member who already has an Unlock submission, answer the same way. No offer is shown at
    all, and a request sent to the verification route directly leaves the existing submission
    untouched.
+12. Have two members each send one response, then delete both accounts. "Members who answered
+   twice" does not change, each card reads "member account deleted", and both `member_id` cells in
+   the CSV are empty.
 
 ## Gaps & Known Technical Debt
 
@@ -374,6 +380,15 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-10-05: **The CSV export cannot run a formula, and deleted members read as deleted.** A
+  handle or note that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is now written
+  with a leading single quote, so a spreadsheet shows it as text instead of running it. The
+  people typing those cells have not been verified, and the person opening the file is an admin.
+  Account deletion writes the placeholder `deleted_member` into `user_id`, not NULL, and the
+  survey code expected NULL. As a result, "Members who answered twice" counted every two departed
+  members as one repeat, the admin card showed `member deleted_member`, and the CSV `member_id`
+  cell carried the placeholder. All three now treat the placeholder as a deleted account. The
+  deletion contract's paragraph on the placeholder is updated to match.
 - 2026-10-05: **A failed hand-off to Unlock is reported.** `surveyRespondentNeedsUnlock` caught a
   failed Unlock status read and returned "no offer" with nothing logged, so a broken read would
   have removed the verification offer from every confirmation screen without trace.
@@ -386,7 +401,6 @@ this is not a plugin. The steps that matter:
   the sending member's id, and the form itself says so. The description now says the same thing:
   the answer is saved with the account you sign in with, and the form asks for no way to reach
   you. Correction of a false statement only; the in-page copy is unchanged.
-
 - 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
   found this survey had none. The `QUORA_DELETION_SURVEY_*` contracts are written from the routes,
   the repository and the deletion registry. CI job `contract-coverage-gate` now fails on any API

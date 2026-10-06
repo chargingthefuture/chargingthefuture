@@ -3,6 +3,7 @@
 // A response and its account rows are written in one transaction: a half-saved response would
 // report a person as having lost nothing, which is worse than no row at all.
 
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
 import {
@@ -60,7 +61,8 @@ export type SurveyAccountRow = {
 
 export type SurveyResponseRow = {
   id: string;
-  // NULL means the account that sent this was deleted, never that the response was anonymous.
+  // NULL or DELETED_MEMBER_PLACEHOLDER means the account that sent this was deleted, never that
+  // the response was anonymous. Account deletion writes the placeholder.
   user_id: string | null;
   targeted_individual: QuoraSurveyTargetedIndividual;
   any_account_removed: boolean;
@@ -200,12 +202,15 @@ export async function getSurveyTotals(): Promise<SurveyTotals> {
          WHERE consent_publish_handles = TRUE) AS consenting,
        -- Members who sent more than one response. The reason the member id is on the row:
        -- without it a person answering twice is indistinguishable from two people answering, and
-       -- a count quoted in a post would be wrong with nothing to show that it was.
+       -- a count quoted in a post would be wrong with nothing to show that it was. Account
+       -- deletion overwrites the id with one shared placeholder, so departed members are left out:
+       -- grouped together, two of them who each answered once would count as one repeat.
        (SELECT COUNT(*)::text FROM (
           SELECT user_id FROM quora_deletion_survey_responses
-           WHERE user_id IS NOT NULL
+           WHERE user_id IS NOT NULL AND user_id <> $1
            GROUP BY user_id HAVING COUNT(*) > 1
         ) AS repeats) AS repeat_respondents`,
+    [DELETED_MEMBER_PLACEHOLDER],
   );
 
   const row = result.rows[0];
