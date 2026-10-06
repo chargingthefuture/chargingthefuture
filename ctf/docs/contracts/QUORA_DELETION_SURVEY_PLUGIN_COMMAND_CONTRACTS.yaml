@@ -81,8 +81,8 @@ commands:
               removedYear:
                 type: [integer, 'null']
                 minimum: 2010
-                maximum: 2110
-                description: Out-of-range values become null, not an error.
+                maximum: 2100
+                description: Out-of-range values become null, not an error. The maximum is the removed_year CHECK in schema.sql.
               statedReason:
                 type: string
                 enum: [none_given, spam, harassment, misinformation, impersonation, adult_content, ban_evasion, other, do_not_recall]
