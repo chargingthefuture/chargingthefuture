@@ -49,9 +49,9 @@ policies:
       - actor_not_authenticated
       - cross_workspace_access
 
-  # One Percent's desk reads one claimed profile by id (owner decision, 2026-10-02). Machine only:
-  # the caller is a consumer in DIRECTORY_SERVICE_TOKENS, never a member, and the read answers only
-  # for a claimed profile.
+  # One Percent's desk reads one profile by id (owner decisions, 2026-10-02 and 2026-10-06). Machine
+  # only: the caller is a consumer in DIRECTORY_SERVICE_TOKENS, never a member. The read answers for
+  # a profile claimed or not and says which.
   - pluginId: directory
     command: directory.profile.service.get
     version: 1.0.0

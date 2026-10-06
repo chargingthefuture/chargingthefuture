@@ -623,7 +623,7 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 
 ---
 
-### DIR-A9 · One Percent reads one claimed profile, and nothing else
+### DIR-A9 · One Percent reads one profile, claimed or not, and nothing else
 
 **Role:** none — a service credential, not a person · **Surfaces:** web (API only — no UI)
 
@@ -643,12 +643,13 @@ id and an unclaimed one from the admin list.
 7. Repeat step 1 many times in quick succession.
 
 **Expected:**
-- Step 1: **200**, `{ profile }` with name, headline, job title, sector, skill names, profile
-  address, city, state and country. No bio, no payment address, no account id.
-- Steps 2 and 3: the same **404**. An unclaimed profile reads exactly like a missing one.
+- Step 1: **200**, `{ profile }` with `claimed: true`, name, headline, job title, sector, skill
+  names, profile address, city, state and country. No bio, no payment address, no account id.
+- Step 2: **200**, the same fields with `claimed: false`. No nominator.
+- Step 3: **404**.
 - Steps 4, 5 and 6: **401** naming `DIRECTORY_SERVICE_TOKENS`. The taxonomy credential doesn't
   open this route, and there's no member path.
-- Step 6a: `contact` gives the same **404** as an unclaimed profile, with no word about a restriction. `trading` still gives **200**.
+- Step 6a: `contact` gives the same **404** as a missing profile, with no word about a restriction. `trading` still gives **200**.
 - Step 7: eventually **429**.
 - The audit lines carry `service:<name>` as the actor and the command `directory.profile.service.get`.
 **Result:** web ☐ — notes:
