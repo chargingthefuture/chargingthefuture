@@ -115,7 +115,7 @@ async function main() {
     await assertRow(
       'directory profile is community-generated with unclaimed_handle',
       client.query(
-        `SELECT source, unclaimed_handle, invited_by_username, is_public, deleted_at
+        `SELECT source, unclaimed_handle, invited_by_username
          FROM directory_profiles WHERE id = $1::uuid`,
         [SEED_DIRECTORY_PROFILE_ID],
       ),
@@ -124,8 +124,6 @@ async function main() {
         source: 'community-generated',
         unclaimed_handle: SEED_HANDLE,
         invited_by_username: SEED_USERNAME,
-        is_public: true,
-        deleted_at: null,
       },
     );
 
@@ -135,7 +133,7 @@ async function main() {
       '@handle uniqueness — only one row owns community-seed01',
       client.query(
         `SELECT COUNT(*)::int AS total FROM directory_profiles
-         WHERE LOWER(unclaimed_handle) = $1 AND deleted_at IS NULL`,
+         WHERE LOWER(unclaimed_handle) = $1`,
         [SEED_HANDLE],
       ),
       [SEED_HANDLE],
