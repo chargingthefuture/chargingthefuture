@@ -233,7 +233,8 @@ fixed filters as `lib/weekly-performance/live-metrics.ts`, all-time and grouped 
 delivered the value — `foundation_call_sessions` (callee), `socket_relay_fulfillments`
 (fulfiller), `trust_transport_trips` (provider), `lighthouse_matches` (host),
 `service_credits_transfers` (sender; chyme tips and direct sends separately by `origin_plugin`),
-`contributions_submissions` (USD sum per contributor), `skills_hunt_submissions` (submitter),
+`contributions_submissions` (two sums per contributor: confirmed gift-card dollars, and the set
+value of confirmed Quora comments and GitHub stars, which is not money), `skills_hunt_submissions` (submitter),
 `what_works_products` (suggested_by) / `what_works_endorsements` (user), `skill_up_enrollments`
 (learner) / `skill_up_disbursements` (trainer), `recurring_activities` (both sides of an active
 confirmed tie), `peer_programming_messages` (author, once per distinct week), `beacon_events` +
@@ -358,6 +359,20 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-10-06 — Contributions split into a money event and a non-money event (owner decision; issue
+  #2982). Only real money counts toward a dollar figure. `value.contributions_confirmed_usd` summed
+  `confirmed_amount_usd` over every confirmed submission, and for a Quora comment or GitHub star that
+  column holds the admin's set value per non-money contribution (`non_monetary_unit_value_usd`,
+  default 1), so each comment or star was being read as a confirmed dollar on the Weekly Performance
+  card. The dollar event is now gift cards only, and comments and stars are a fifteenth event,
+  `value.contributions_non_money_confirmed` (plugin `contributions`, delivering, `sum` aggregate,
+  `rows` on the dashboard). No member's score moves: the new event sums the same set value at the
+  same default weight of 0.1, the distinct-plugins gate still sees one plugin, and the daily
+  exchange count still includes those rows. `effectiveWeight` gives the new key the dollar key's
+  stored override when it has none of its own (`WEIGHT_INHERITS_FROM` in `weights.ts`), so a weight
+  the owner set before the split keeps applying to comments and stars; the config editor now shows
+  that effective weight rather than the default, and saving the form writes it as the new key's own.
 
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had the command, access-policy and audit contracts but not the deletion one that rule 114

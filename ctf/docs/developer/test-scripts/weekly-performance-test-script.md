@@ -123,9 +123,10 @@ is no "set active week" action and no per-week status.
    (progress bar toward 2,000,000); **Value delivered** — one card per plugin's defining event
    (Foundation answered calls, SocketRelay successful closes, TrustTransport completed trips,
    Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
-   USD, SkillsHunt accepted nominations, WhatWorks approved tools, SkillUp
+   USD (confirmed gift cards only), Contributions non-money confirmed (confirmed Quora comments and
+   GitHub stars, read in "contributions", never in USD), SkillsHunt accepted nominations, WhatWorks approved tools, SkillUp
    completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters, PeerProgramming goal cards that helped (read in "cards") — the fourteen events of the
+   posters, PeerProgramming goal cards that helped (read in "cards") — the fifteen events of the
    shared value-event list, so no endorsement or Beacon card appears); **Adoption** — Active Members, Daily Active
    Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
    incidents + distinct

@@ -121,7 +121,7 @@ function windowCount(table: string, dateColumn: string, filter = ''): (weekStart
 // copy of each event's SQL, which is how it kept counting two events the 2026-09-20 decision had
 // removed. Now adding, removing or redefining a value event happens in one file and every reading
 // follows. The dashboard's question is how many times an event happened in the week, so each card
-// applies the event's occurrence rule (rows, distinct members, distinct ties, or a sum of dollars)
+// applies the event's occurrence rule (rows, distinct members, distinct ties, or a sum of gift-card dollars)
 // to the rows whose own timestamp falls in the window.
 
 // The unit each card is read in. A dashboard concern, so it lives here rather than in the shared
@@ -134,6 +134,7 @@ const VALUE_EVENT_UNITS: Record<ContributorValueEventKey, string> = {
   'value.chyme_tips_sent': 'tips',
   'value.service_credits_peer_sends': 'sends',
   'value.contributions_confirmed_usd': 'USD',
+  'value.contributions_non_money_confirmed': 'contributions',
   'value.skills_hunt_nominations_accepted': 'nominations',
   'value.what_works_tools_approved': 'tools',
   'value.skill_up_completions': 'completions',
