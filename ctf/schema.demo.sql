@@ -33,11 +33,8 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
   -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
-  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
-  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
-  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
   -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
   -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
@@ -45,8 +42,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
   -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
   -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
-  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
-  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- them. Real columns (not metadata) so the shared-trends aggregate can unnest them as coarse
   -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
   -- columns are superseded: backfilled into the arrays below, kept for history, no longer
   -- read or written by the app.
@@ -54,9 +50,15 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   scheme_tag TEXT,
   problem_tags TEXT[] NOT NULL DEFAULT '{}',
   scheme_tags TEXT[] NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, metadata_hash)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Each logged incident is its own row (2026-10-05). The table used to carry a generated
+-- metadata_hash column with UNIQUE (user_id, metadata_hash), so a member's second incident with the
+-- same note and location as an earlier one (most often two incidents with no note and no location,
+-- both stored as '{}') was refused and the create failed. Dropping the column also drops that
+-- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
@@ -10868,4 +10870,23 @@ BEGIN
     FOREIGN KEY (parent_comment_id) REFERENCES fireside_comments(id) ON DELETE SET NULL;
   RAISE NOTICE 'fireside_comments.parent_comment_id now sets NULL on delete (was %).', fk_name;
 END $$;
+
+
+-- ── post migration: 0053_click_log_drop_metadata_hash_dedupe.sql ──
+-- post/0053: Let a member log a second ClickLog incident with the same note and location.
+--
+-- Why: click_log_incidents carried metadata_hash, a generated md5 of the metadata JSON, and
+-- UNIQUE (user_id, metadata_hash). The date, tags and share flag sit outside the metadata, so two
+-- incidents with the same note and location collided. An incident logged with no note and no
+-- location is stored as '{}', so a member could log one such incident and every later one failed
+-- with a unique violation the create route did not catch. Each incident is a separate event and
+-- gets its own row.
+--
+-- What it does: drops metadata_hash. The unique constraint is defined on that column, so it goes
+-- with it, whichever name it carries (older databases created it before the clicklog_ ->
+-- click_log_ rename). Nothing else read the column. No row changes. schema.sql runs the same
+-- statement and no longer creates the column or the constraint.
+--
+-- Safe to re-run: IF EXISTS makes every run after the first a no-op.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 
