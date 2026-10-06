@@ -31,10 +31,8 @@ export async function createIncident(input: CreateIncidentInput): Promise<ClickL
 // Edits an incident's note and tags in place. Owner-scoped only (the user_id condition — no
 // admin variant: the note is the member's private content). The date (created_at) and location
 // (metadata latitude/longitude) are immutable by design, so the SQL only replaces the 'notes'
-// key inside metadata and never touches the coordinate keys. A null note removes the key; the
-// generated metadata_hash column recomputes automatically, so an edit that makes this row's
-// metadata identical to another of the member's rows violates UNIQUE (user_id, metadata_hash) —
-// the route maps that to a readable 409.
+// key inside metadata and never touches the coordinate keys. A null note removes the key. Two of a
+// member's incidents may carry identical metadata: each incident is its own row.
 // A tagged incident is always shared (owner decision, 2026-08-18: tags exist to feed the trend
 // data), so saving with a non-empty tag list turns shared_with_owner on — the editor states this
 // before save. Saving with both lists empty leaves the member's share choice as it stands.

@@ -111,18 +111,41 @@ export async function listKnowledgeEntriesForAdmin(options: ListKnowledgeOptions
   };
 }
 
-// Flip one entry's active flag. Returns the updated entry, or null when the id matches nothing.
-export async function setKnowledgeEntryActive(entryId: string, active: boolean): Promise<ComicKnowledgeAdminEntry | null> {
+export type SetKnowledgeEntryActiveResult =
+  | { status: 'updated'; entry: ComicKnowledgeAdminEntry }
+  | { status: 'not_found' }
+  // The entry came from a contribution its member withdrew. Withdrawal promised the assistant would
+  // stop quoting them, so curation cannot switch it back on; switching it off stays allowed.
+  | { status: 'withdrawn' };
+
+// Flip one entry's active flag. Switching ON is refused for a row whose contribution was withdrawn,
+// inside the same UPDATE, so a withdrawal that lands between a read and this write cannot be undone.
+export async function setKnowledgeEntryActive(entryId: string, active: boolean): Promise<SetKnowledgeEntryActiveResult> {
   const result = await queryDb<KnowledgeRow>(
     `UPDATE comic_knowledge_entries
      SET active = $2
      WHERE id = $1::uuid
+       AND (
+         $2 = FALSE
+         OR NOT EXISTS (
+           SELECT 1 FROM comic_contributions c
+           WHERE c.id = comic_knowledge_entries.contribution_id AND c.status = 'withdrawn'
+         )
+       )
      RETURNING id, source, entry_type, title, question,
                LEFT(content, $3) AS snippet,
                LENGTH(content) AS content_length,
                active, authored_at, created_at`,
     [entryId, active, SNIPPET_LENGTH],
   );
+  if (result.rows[0]) {
+    return { status: 'updated', entry: mapRow(result.rows[0]) };
+  }
 
-  return result.rows[0] ? mapRow(result.rows[0]) : null;
+  // Nothing updated: either the id matches no row, or the guard above refused it.
+  const exists = await queryDb<{ id: string }>(
+    `SELECT id FROM comic_knowledge_entries WHERE id = $1::uuid`,
+    [entryId],
+  );
+  return exists.rows.length > 0 ? { status: 'withdrawn' } : { status: 'not_found' };
 }

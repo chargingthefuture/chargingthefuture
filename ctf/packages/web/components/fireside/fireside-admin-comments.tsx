@@ -136,7 +136,7 @@ function SearchBox({
 }
 
 export function FiresideAdminComments({ t }: { t: PluginShellTokens }) {
-  const [page, setPage] = useUrlPage("comments");
+  const { page, setPage, adoptPage, ready } = useUrlPage("comments");
   // `draft` is what is typed; `query` is what was actually searched for. Keeping them apart is why
   // typing does not fire a query against the entire table on every keystroke.
   const [draft, setDraft] = useState("");
@@ -155,30 +155,31 @@ export function FiresideAdminComments({ t }: { t: PluginShellTokens }) {
       const params = new URLSearchParams({ page: String(wanted) });
       if (search) params.set("q", search);
       const res = await fetch(`/api/fireside/admin/comments?${params.toString()}`);
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not load recent comments.");
-      }
-      const data = (await res.json()) as {
+      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
         comments: AdminComment[];
         page: number;
         lastPage: number;
         total: number;
-      };
+      } | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load recent comments (${res.status}).`);
       setComments(data.comments);
       setLastPage(data.lastPage);
       setTotal(data.total);
       // The server clamps an out-of-range page and answers with the one it used, so a linked page
-      // number past the end lands on the last page rather than on nothing.
-      if (data.page !== wanted) setPage(data.page);
+      // number past the end lands on the last page rather than on nothing. It replaces the
+      // address-bar entry rather than adding one, so Back still leaves the list.
+      if (data.page !== wanted) adoptPage(data.page);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load recent comments.");
     } finally {
       setLoading(false);
     }
-  }, [setPage]);
+  }, [adoptPage]);
 
-  useEffect(() => { void load(page, query); }, [load, page, query]);
+  // Waits for the address bar to be read, so a linked page is the only page asked for.
+  useEffect(() => { if (ready) void load(page, query); }, [load, page, query, ready]);
 
   async function moderate(id: string, action: "remove" | "restore") {
     setBusyId(id);
@@ -190,8 +191,8 @@ export function FiresideAdminComments({ t }: { t: PluginShellTokens }) {
         body: JSON.stringify({ action, reason: "From the recent comments list." }),
       });
       if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not change that comment.");
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? `Could not change that comment (${res.status}).`);
       }
       await load(page, query);
     } catch (e) {

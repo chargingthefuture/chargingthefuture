@@ -1035,7 +1035,7 @@ function useChatBootstrapEffect(params: {
   }, [userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 }
 
-// A message posted outside the composer (an admin's picture, from CommonsImageShare) joins the stream
+// A message posted outside the composer (an admin's picture, from CommonsImageSharePanel) joins the stream
 // straight away rather than on the next poll.
 function useAddSavedMessage(setMessages: Dispatch<SetStateAction<ChatMessage[]>>, currentUserId: string) {
   return useCallback(

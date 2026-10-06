@@ -4,8 +4,8 @@ import { useState } from 'react';
 import type { ContributorAccessTokens } from './contributor-access-shared';
 import {
   CONTRIBUTOR_VALUE_EVENT_KEYS,
-  DEFAULT_WEIGHTS,
   EVENT_LABEL,
+  effectiveWeight,
   type ContributorValueEventKey,
 } from 'lib/contributor-access/weights';
 
@@ -37,7 +37,9 @@ type FormState = {
 function toFormState(config: ContributorAccessConfigView): FormState {
   const weights: Record<string, string> = {};
   for (const key of CONTRIBUTOR_VALUE_EVENT_KEYS) {
-    weights[key] = String(config.weights[key] ?? DEFAULT_WEIGHTS[key]);
+    // effectiveWeight, not the default, so a key that inherits another key's override shows the
+    // weight it is actually scored at.
+    weights[key] = String(effectiveWeight(key, config.weights));
   }
   return {
     threshold: String(config.threshold),

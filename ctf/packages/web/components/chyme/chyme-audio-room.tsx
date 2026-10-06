@@ -24,6 +24,7 @@ import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, type ChymeModerationContext } from './chyme-moderation';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
+import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
 // speak, so the plain "default" call type — where members may publish audio
@@ -192,9 +193,21 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
       void fetch(`/api/chyme/heartbeat${roomScopeQuery(roomScope)}`, {
         method: 'POST',
         headers: { 'x-ctf-csrf': '1' },
-      }).catch(() => {
-        /* best-effort keepalive */
-      });
+      })
+        .then(async (res) => {
+          if (res.ok) return;
+          // The server will not keep this member present: an admin removed them, or they dropped out
+          // of the count and the room is now at its cap. Every later beat would be refused too, so
+          // stop beating and show its reason in place of the stage (with Leave), as a join refusal is.
+          const body = (await res.json().catch(() => null)) as { code?: string; message?: string } | null;
+          if (body?.code === CHYME_ERROR_CODE.removedFromRoom || body?.code === CHYME_ERROR_CODE.roomFull) {
+            setErrorMessage(body.message ?? 'The room did not keep you in the call.');
+            setStatus('error');
+          }
+        })
+        .catch(() => {
+          /* best-effort keepalive */
+        });
     };
     ping();
     // 35s keeps a visible member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS)

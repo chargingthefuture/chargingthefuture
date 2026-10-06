@@ -6,7 +6,7 @@ import type { WorkforceBucketDetail, WorkforceGroupedReportItem } from '../../li
 import { WorkforceMemberList } from './workforce-member-list';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 type DrilldownKind = 'sector' | 'skill-level';
 
@@ -29,7 +29,10 @@ function BucketRow({ kind, item }: { kind: DrilldownKind; item: WorkforceGrouped
       try {
         const res = await fetch(`/api/workforce/reports/${kind}/${encodeURIComponent(item.bucket)}`);
         if (!res.ok) {
-          throw new Error(`Request failed (${res.status}).`);
+          // The catch below keeps its plain sentence for a request that never answered; an answer
+          // that is an error shows what the route said instead.
+          setError(await responseFailureText(res, 'Could not load members for this bucket.'));
+          return;
         }
         const json = (await res.json()) as { detail?: WorkforceBucketDetail | null };
         setDetail(json.detail ?? { ...item, matchedMembers: [] });

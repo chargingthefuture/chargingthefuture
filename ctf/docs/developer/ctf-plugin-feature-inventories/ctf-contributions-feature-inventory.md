@@ -306,6 +306,17 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-06: **Only real money counts as money given (owner decision; issue #2982).** Outside this
+  plugin, the Weekly Performance card `value.contributions_confirmed_usd`, the registry metric
+  `wp_value_contributions_confirmed_usd`, and Contributor Access read `confirmed_amount_usd` over
+  every confirmed submission, so the set value of a Quora comment or GitHub star
+  (`non_monetary_unit_value_usd`) was counted as a confirmed dollar. Those readers now restrict the
+  dollar sum to `kind = 'gift_card'`, the same rule the drive's own money total
+  (`fetchCycleProgress`) and the `contributions_fiat_confirmed_total` /
+  `contributions_cycle_fiat_confirmed` metrics already followed. Comments and stars are counted on
+  their own, never as dollars; Contributor Access scores them exactly as before (its inventory has
+  the detail). No change to this plugin's routes, schema, contracts, or credit grants.
+
 - 2026-08-09: **Gift-card claims are integer dollars, $1 to $500, and credit grants are rounded**
   (owner decision, from the #2141 review discussion). Two independent changes, made together because
   they were raised together:

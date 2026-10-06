@@ -169,6 +169,21 @@ call `DELETE /api/beacon/<id>` directly against a `live` or `ended` event it mus
 there too, with `policy_status = 'allow'`.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A1c · Event history shows Eastern Time and recovers a missed recording
+**Role:** admin · **Surfaces:** web (admin surface)
+**Steps:**
+1. Open `/admin/beacon` and look at Event history.
+2. Find an `ended` event and read the line under its title.
+3. If it shows `recording ready`, press `Replay`.
+4. Find an `ended` event that showed no recording before, reload the page, and read its line again.
+**Expected:** Every row shows a time in Eastern Time after its status, e.g.
+`ended · Oct 6, 2026, 3:05 PM ET`: when the event went live, or when it was created for a draft.
+Step 3 opens `/api/beacon/replays/<id>/recording` and plays the recording. In step 4, if Stream holds
+a recording for that event, the row now reads `recording ready`, a `Replay` button appears, and the
+replay is posted to the Commons once (a second reload posts nothing more). If Stream holds none, the
+row reads `no recording found`.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A2 · Go Live (both input paths)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
@@ -239,6 +254,23 @@ forced (for example a Stream app whose recording or HLS is turned off).
 not start:" followed by the route's reason, in red, instead of "Your screen is live to the
 broadcast." Stopping and sharing again retries. When it succeeds the line reads "Your screen is live
 to the broadcast." as before.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2e · A screen-share broadcast produces a recording, and the event chat accepts messages
+**Role:** admin · **Surfaces:** web (admin surface, desktop)
+**Precondition:** a draft event, and the "Check — Stream Chat Settings" workflow last ran green.
+**Steps:**
+1. Press Go Live, then Share screen and pick a window. Leave it live for at least a minute.
+2. Type a message in the event chat and send it.
+3. Press End. Wait a few minutes, then reload the admin screen and read the event's line in Event
+   history.
+**Expected:** Step 1: the line next to Stop sharing reads "Your screen is live to the broadcast." Step
+2: the message posts. It must not show "Message Failed · Unauthorized" or "pending messages not
+enabled for this app"; that text means "Mark Messages Pending" is on again for the `livestream`
+channel type, and the workflow with fix ticked turns it off. Step 3: the line reads `recording ready`
+with a Replay button, and the replay is posted to the Commons once. `no recording found` minutes after
+the end means recording never started. Until 2026-10-06 every event ended that way, because
+recording was requested with a second go-live instead of Stream's start-recording request.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A3 · Moderate the chat

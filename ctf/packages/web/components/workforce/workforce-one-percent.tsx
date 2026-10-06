@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorkforceTokens } from './workforce-shared';
 import { SharePicture } from '@/components/shared/share-picture';
 import { captureScreen } from 'lib/share/capture-screen';
+import { responseFailureText } from 'lib/errors/client-failure';
 import { computeOwnEstimate } from '@/lib/workforce/one-percent';
 import type {
   OnePercentCard,
@@ -367,9 +368,9 @@ export function WorkforceOnePercent({ t }: { t: WorkforceTokens }) {
     async function load() {
       try {
         const res = await fetch('/api/workforce/one-percent', { signal: controller.signal });
-        const body = (await res.json()) as Payload & { message?: string };
-        if (!res.ok) throw new Error(body.message ?? 'Could not work out your 1%.');
-        setData(body);
+        // A deny body carries code and reason but no message, so read every field the route may send.
+        if (!res.ok) throw new Error(await responseFailureText(res, 'Could not work out your 1%.'));
+        setData((await res.json()) as Payload);
       } catch (e) {
         if (controller.signal.aborted) return;
         setError(e instanceof Error ? e.message : 'Could not work out your 1%.');

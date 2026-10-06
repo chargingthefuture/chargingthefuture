@@ -295,23 +295,45 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
 // Start the public HLS broadcast and the recording once a publisher is actually live. Returns false
 // when Stream is not configured.
 //
-// Source: Stream Video HLS docs (getstream.io/video/docs/api/streaming/hls/), confirmed 2026-06-21.
-// go_live is idempotent on an already-live call: calling POST /api/v2/video/call/{type}/{id}/go_live
-// again with start_hls + start_recording starts the HLS broadcast and recording now that media is
-// present, which avoids guessing standalone start-HLS/start-recording endpoint names. start_hls
-// begins the public HLS broadcast (the response carries `egress.hls.playlist_url`, read by
-// getBeaconHlsPlaybackUrl) and start_recording feeds the recording-ready webhook.
+// Each is started through its own endpoint: POST /api/v2/video/call/{type}/{id}/start_broadcasting
+// (HLS; the call then carries `egress.hls.playlist_url`, read by getBeaconHlsPlaybackUrl) and
+// POST .../start_recording (which feeds the recording-ready webhook). These are the paths Stream's own
+// client uses for call.startHLS() and call.startRecording() (@stream-io/video-client 1.47.0). This
+// used to send a second go_live with start_hls + start_recording to a call that was already live,
+// and no recording was ever made for any event, so every ended event showed "no recording found".
+//
+// Both are attempted even when the first one fails, so a broadcast that is already on air still gets
+// its recording started. Stream answers a start for something already running with an error naming
+// it as already running; that is the state this function exists to reach, so it counts as success.
+// Any other refusal is thrown after both attempts, naming each one that failed.
 export async function startBeaconBroadcastEgress(eventId: string): Promise<boolean> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
     return false;
   }
   const callId = beaconCallIdForEvent(eventId);
-  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
-    method: 'POST',
-    body: { start_hls: true, start_recording: true },
-  });
+  const base = `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}`;
+  const failures: string[] = [];
+  for (const endpoint of ['start_broadcasting', 'start_recording']) {
+    try {
+      await streamVideoFetch(ctx, `${base}/${endpoint}`, { method: 'POST', body: {} });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isAlreadyRunningRefusal(message)) {
+        failures.push(message);
+      }
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(failures.join(' | '));
+  }
   return true;
+}
+
+// Stream's refusal to start an egress that is already running reads "... already ..." (for example
+// "call is already being recorded"). Matched loosely because the exact wording is Stream's.
+function isAlreadyRunningRefusal(message: string): boolean {
+  return /already/i.test(message);
 }
 
 // Return the public HLS playback URL for the live call so anonymous viewers can watch with no token.

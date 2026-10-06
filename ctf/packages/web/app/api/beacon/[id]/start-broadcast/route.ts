@@ -12,7 +12,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 // Admin: start the public HLS broadcast and recording once a host is publishing media to the
 // livestream call. Go-live only flips the call out of backstage; this starts the egress (HLS +
 // recording) at the moment media exists, which is when the in-browser screen-share host begins
-// sharing. Idempotent — go_live with the egress flags can be called again safely.
+// sharing. Safe to call again: a start for something already running counts as success.
 export async function POST(request: Request, context: RouteContext) {
   const csrfDeny = ensureBeaconMutationCsrf(request);
   if (csrfDeny) {
