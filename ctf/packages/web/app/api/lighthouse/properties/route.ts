@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { ensureLighthouseAdmin } from 'lib/lighthouse/policy';
 import {
   createProperty,
   insertLighthouseAudit,
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
   try {
     // Pass the browsing member so listings from anyone they have blocked (or who blocked them) are
     // left out — a block hides the person as well as stopping contact.
-    const result = await listProperties({ page, pageSize, country, city, onlyActive, viewerUserId: gate.auth.userId });
+    const result = await listProperties({ page, pageSize, country, city, onlyActive, viewerUserId: gate.auth.userId, viewerIsAdmin: ensureLighthouseAdmin(gate.auth) === null });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'properties' });

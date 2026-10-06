@@ -368,6 +368,13 @@ Contract expectations:
    `service_deleted_at` stamp, as the rejoin marker. The data export leaves out the blocks other
    members placed on the member (`lighthouse_blocks` by `blocked_user_id`): those rows, and the
    reason written on them, are the blocker's.
+10. **The exact address is shown only once a stay is agreed** (2026-10-05). `GET
+   /api/lighthouse/properties` and `GET /api/lighthouse/properties/:id` return `addressLine` and
+   `zipCode` only to the host, an admin or operations reader, and a seeker whose match on that
+   listing is `accepted`; every other reader gets `null` for both and still sees city, state and
+   country. The rule is applied in the SQL (`exactAddressColumnsSql` in
+   `lib/lighthouse/repository.ts`), so the columns never leave the database for a reader who may
+   not have them. `GET /api/lighthouse/my-properties` and the admin listing read are unchanged.
 
 ## 6) Web and Android Delivery Status
 
@@ -415,6 +422,14 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   the rows already left behind. The data export read the registry's `lighthouse_blocks` entry keyed
   on `blocked_user_id` as the member's own rows and so returned who had blocked them and the reason
   written (#2699); that entry is now marked `notExported(...)`, and deletion still removes it.
+- 2026-10-05: **A listing's street address and postal code no longer go to every member (#2810).**
+  The browse and detail reads returned both fields to any approved member from the moment a listing
+  was created, though no member screen showed them, so a host who typed their home address had
+  handed it to every member, including people they would never accept. The two reads now return
+  them only to the host, an admin, and a seeker whose match on that listing is accepted, and `null`
+  to everyone else (§5 item 10). City, state and country are unchanged for browsing. The host's edit
+  form still prefills from the detail read, because the host is the owner. No schema or screen
+  change; the access policy contract gains `exactAddressDisclosure` on `lighthouse.property.create`.
 - 2026-10-05: **Member screens tell a failed read from an empty one, and read the codes the routes
   really send (#2821, #2823, #2824, #2825, #2831).** No schema or contract change.
   - Request to stay compared the answer against `policy_denied`, `profile_not_found` and
