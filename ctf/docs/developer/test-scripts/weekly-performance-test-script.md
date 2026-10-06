@@ -151,7 +151,9 @@ is no "set active week" action and no per-week status.
    hard delete since 2026-09-21); it must never read 0 while the Directory has listings. The "This
    week vs last week" chart shows the counts only — the two goal rows are not drawn there, because
    at their scale nothing else was visible. A goal card whose prior week has no stored snapshot
-   reads "No prior-week snapshot" rather than a delta.
+   reads "No prior-week snapshot" rather than a delta. Open a past week from before 2026-07-18
+   (when goal snapshots began): both goal cards read "Not captured" with no progress bar and the
+   line "No snapshot was stored for this week" — never 0.
    Until 2026-09-21 the table also carried a v2 foreign key to the `users` mirror, which v3 never
    writes, so every member who joined after v2 stopped was refused a sign-in row on every request and
    these two cards read zero for them. `post/0034` dropped the key and rebuilt those members' days
@@ -166,7 +168,8 @@ is no "set active week" action and no per-week status.
    test account through the manual `Delete Account (manual)` workflow: the card must not move, because
    nobody chose to leave; the event row that run writes carries `summary.initiatedBy = 'operator'` and
    is skipped. Deleting the same account twice can never add two. If the week-over-week line under the
-   card shows a rise, it is red with an up arrow — up is bad on this one card only.
+   card shows a rise, it is red with an up arrow — up is bad on this one card only. A week with
+   no change ("0 vs last week") is gray with no arrow, on this card and every other.
    All three are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    SkillUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
@@ -174,6 +177,12 @@ is no "set active week" action and no per-week status.
    (`GET /api/weekly-performance/metrics?weekStartDate=...&compareWeekStartDate=...`).
 3. On the current week, leave the dashboard open: it silently re-fetches about every 60s and on tab
    focus, so the numbers refresh without a manual reload. Past weeks are settled and do not poll.
+4. Pick a past week in the picker and watch the screen while it loads: it reads "Weekly numbers
+   are loading", never "No activity recorded for this week", until the cards appear.
+5. Call `GET /api/weekly-performance/metrics?weekStartDate=2026-02-30` and again with a real date
+   that is not a Monday (e.g. `2026-10-07`): each answers 400 with a message naming
+   `weekStartDate`. A bad `compareWeekStartDate` answers 400 `invalid_comparison_window`, naming
+   that parameter.
 **Expected:** Metric cards render humanized labels from `metric_key` (acronyms read correctly: GDP,
 USD) and real values computed live for the selected week window from upstream tables. The two Goal
 cards show a compact value (e.g. "1.2K"), a progress bar, and "% of the 300B/2M goal"; opening the
