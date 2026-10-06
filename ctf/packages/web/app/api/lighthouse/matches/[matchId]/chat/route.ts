@@ -19,8 +19,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
 
   const userId = gate.auth.userId;
 
-  // Fetch matches for this user and find the one with matchId
-  const matches = await listMatches(userId);
+  // Fetch matches for this user and find the one with matchId. A database failure here is answered
+  // and reported instead of escaping the handler as an unlogged 500.
+  let matches: Awaited<ReturnType<typeof listMatches>>;
+  try {
+    matches = await listMatches(userId);
+  } catch (e) {
+    reportError(e, { area: 'lighthouse', op: 'matches_matchid_chat_list_matches' });
+    return NextResponse.json(
+      { ok: false, message: 'Could not read your matches, so the chat could not be opened. Try again shortly.' },
+      { status: 503 },
+    );
+  }
   const match = matches.find((m) => m.id === matchId);
   if (!match) {
     return NextResponse.json({ ok: false, message: 'Match not found or access denied' }, { status: 404 });
@@ -44,14 +54,17 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ma
       hostDisplayName: buildIdentityDisplayName(null, match.hostUserId),
     });
     if (!streamChannelId) {
-      return NextResponse.json({ ok: false, message: 'Unable to create chat channel' }, { status: 500 });
+      // The Stream helpers return null only when no Stream credentials are configured.
+      reportError(new Error('LightHouse chat channel not created: Stream credentials are not configured'), { area: 'lighthouse', op: 'matches_matchid_chat_channel' });
+      return NextResponse.json({ ok: false, message: 'Unable to create chat channel: the chat service (Stream) is not configured.' }, { status: 500 });
     }
     const credentials = await createLighthouseParticipantToken(
       userId,
       buildIdentityDisplayName(gate.auth.username, userId),
     );
     if (!credentials) {
-      return NextResponse.json({ ok: false, message: 'Unable to create participant token' }, { status: 500 });
+      reportError(new Error('LightHouse chat token not created: Stream credentials are not configured'), { area: 'lighthouse', op: 'matches_matchid_chat_token' });
+      return NextResponse.json({ ok: false, message: 'Unable to create participant token: the chat service (Stream) is not configured.' }, { status: 500 });
     }
     // Single canonical key: `streamChannelId` is the real Stream channel id. Web and mobile both
     // read this one key.
