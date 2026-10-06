@@ -304,6 +304,19 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **Recording is started through Stream's own start-recording endpoint (owner report).**
+  Every ended event, including one ended minutes earlier, showed "no recording found": no recording was
+  ever made, so neither the recording-ready webhook nor the recovery lookup had anything to find.
+  `startBeaconBroadcastEgress` started HLS and recording by sending a second `go_live` to a call that
+  was already live. It now calls `POST .../start_broadcasting` and `POST .../start_recording`, the
+  paths Stream's own client uses, and attempts both even when one fails, so a broadcast already on
+  air still gets its recording. A refusal naming something as already running counts as success; any
+  other refusal is thrown with both messages, so the host stage and Sentry show the real reason. The
+  participant-joined webhook comment no longer describes every failure as "already running". Events
+  already ended have no recording to recover. The Beacon chat's "pending messages not enabled for this
+  app" refusal is a Stream setting on the `livestream` channel type, repaired by the
+  "Check — Stream Chat Settings" workflow with fix ticked, not by code. No schema, route or contract
+  change.
 - 2026-10-06: **Missed recordings are recovered, and the admin history shows Eastern Time (owner
   report).** Two ended events showed no recording. An event only got its recording address from
   Stream's recording-ready webhook, so a missed delivery left it with none: no replay post and nothing
