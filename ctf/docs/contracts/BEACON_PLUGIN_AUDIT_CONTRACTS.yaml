@@ -170,3 +170,26 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Written by the Stream webhook (actorId `stream-webhook`) and shown in the admin history's Log for
+  # the event: publisher-joined (feed and recording asked to start), recording started / stopped /
+  # failed, recording ready. A failure carries Stream's reason in policyDecision.reason.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: stream-webhook
+    pluginId: beacon
+    command: stream.recording-lifecycle
+    commandVersion: 1.0.0
+    purpose: recording_diagnostics
+    policyDecision:
+      status: allow_or_deny
+      reason: stream_reported_reason
+    dataClassesAccessed:
+      - beacon_event_record
+    targetContext:
+      eventId: beacon_event_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

@@ -47,7 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
       actorId: gate.auth.userId,
       command: 'beacon.event.start-broadcast',
       policyStatus: 'allow',
-      reason: 'ok',
+      reason: 'ok: public feed and recording started',
       targetType: 'event',
       targetId: event.id,
       metadata: {},
@@ -56,6 +56,20 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'beacon', op: 'start_broadcast', extra: { eventId: id } });
-    return beaconErrorResponse(`Could not start the public broadcast: ${error instanceof Error ? error.message : 'unknown error'}`);
+    const reason = error instanceof Error ? error.message : 'unknown error';
+    // Written to the event's log so the admin history shows why the recording never started.
+    try {
+      await insertBeaconAudit({
+        actorId: gate.auth.userId,
+        command: 'beacon.event.start-broadcast',
+        policyStatus: 'deny',
+        reason: `Starting the public feed or recording failed: ${reason}`,
+        targetType: 'event',
+        targetId: id,
+      });
+    } catch (auditError) {
+      reportError(auditError, { area: 'beacon', op: 'start_broadcast_log', extra: { eventId: id } });
+    }
+    return beaconErrorResponse(`Could not start the public broadcast: ${reason}`);
   }
 }

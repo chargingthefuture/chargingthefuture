@@ -20,6 +20,7 @@ import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-but
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
+import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
 import { reportError } from 'lib/observability/report';
 
 type BeaconEvent = {
@@ -33,6 +34,9 @@ type BeaconEvent = {
   commonsLivePostId: string | null;
   commonsRecordingPostId: string | null;
   createdAtIso: string;
+  // Admin list only: what Stream said when asked for a missing recording, and the event's log.
+  recordingLookup?: string;
+  log?: BeaconEventLogEntry[];
 };
 
 type IngestResponse = {
@@ -207,6 +211,7 @@ function EventHistoryRow({
           {event.recordingUrl ? ' · recording ready' : ''}
           {event.status === 'ended' && !event.recordingUrl ? ' · no recording found' : ''}
         </div>
+        <BeaconEventLog title={event.title} recordingLookup={event.recordingLookup} log={event.log ?? []} t={t} />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {event.recordingUrl ? (

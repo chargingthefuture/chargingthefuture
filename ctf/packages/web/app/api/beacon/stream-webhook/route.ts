@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { BEACON_ERROR_CODE } from 'lib/beacon/constants';
 import {
   getBeaconEventByCallId,
+  insertBeaconAudit,
   postBeaconReplayNotice,
   recordBeaconRecording,
 } from 'lib/beacon/repository';
@@ -60,6 +61,12 @@ async function handleParticipantJoined(payload: Record<string, unknown>): Promis
 
   try {
     const started = await startBeaconBroadcastEgress(event.id);
+    await logWebhookStep(
+      event.id,
+      'beacon.stream.publisher-joined',
+      started,
+      started ? 'ok: public feed and recording started' : 'Live video is not configured.',
+    );
     return NextResponse.json({ ok: true, handled: started }, { status: 200 });
   } catch (error) {
     // startBeaconBroadcastEgress already treats "already running" as success, so reaching here is a
@@ -70,8 +77,56 @@ async function handleParticipantJoined(payload: Record<string, unknown>): Promis
       op: 'start_egress_on_participant_joined',
       extra: { eventId: event.id, callId },
     });
+    await logWebhookStep(
+      event.id,
+      'beacon.stream.publisher-joined',
+      false,
+      `Starting the public feed or recording failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return NextResponse.json({ ok: true, handled: false }, { status: 200 });
   }
+}
+
+// Write one line to the event's log, which the admin history shows under the event. A failed write
+// is reported and never fails the webhook: the log explains the broadcast, it is not part of it.
+async function logWebhookStep(eventId: string, command: string, ok: boolean, reason: string): Promise<void> {
+  try {
+    await insertBeaconAudit({
+      actorId: 'stream-webhook',
+      command,
+      policyStatus: ok ? 'allow' : 'deny',
+      reason,
+      targetType: 'event',
+      targetId: eventId,
+    });
+  } catch (error) {
+    reportError(error, { area: 'beacon', op: 'webhook_log', extra: { eventId, command } });
+  }
+}
+
+// Stream's recording lifecycle events: started, stopped, failed. The app does nothing with them
+// except write them to the event's log, so the admin history shows whether Stream ever began
+// recording and, when it failed, what it said. Field names are read defensively because the failure
+// payload is not documented in detail; any string among them is kept as the reason.
+const RECORDING_LIFECYCLE_COMMANDS: Record<string, string> = {
+  'call.recording_started': 'beacon.stream.recording-started',
+  'call.recording_stopped': 'beacon.stream.recording-stopped',
+  'call.recording_failed': 'beacon.stream.recording-failed',
+};
+
+async function handleRecordingLifecycle(type: string, payload: Record<string, unknown>): Promise<NextResponse> {
+  const callId = extractCallId(payload);
+  const event = callId.length > 0 ? await getBeaconEventByCallId(callId) : null;
+  if (!event) {
+    return NextResponse.json({ ok: true, handled: false }, { status: 200 });
+  }
+  const failed = type === 'call.recording_failed';
+  const said = ['reason', 'error', 'message']
+    .map((key) => payload[key])
+    .find((value): value is string => typeof value === 'string' && value.length > 0);
+  const reason = failed ? `Stream reported the recording failed${said ? `: ${said}` : ' and gave no reason.'}` : 'ok';
+  await logWebhookStep(event.id, RECORDING_LIFECYCLE_COMMANDS[type], !failed, reason);
+  return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
 
 // Handle the recording-ready payload: store the URL and post the replay. A payload missing a call id
@@ -94,17 +149,19 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
     ...event,
     recordingUrl,
   };
+  await logWebhookStep(event.id, 'beacon.stream.recording-ready', true, 'ok');
   await postBeaconReplayNotice(updated);
 
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
 
-// Stream Video webhook. Verifies the signature, then acts on three events:
+// Stream Video webhook. Verifies the signature, then acts on these events:
 //
 //   - `call.session_participant_joined` — a publisher is now on the call, so start the public HLS
 //     feed and the recording. This is what carries a phone-only RTMP broadcast, which otherwise
 //     starts neither.
 //   - `call.recording_ready` — store the recording URL and post the replay to the Commons.
+//   - `call.recording_started` / `_stopped` / `_failed` — written to the event's log only.
 //   - `call.session_participant_left` — for ANY call, not only Beacon's: this is the one URL Stream
 //     sends every call event to, and the event carries how long the participant was in the session,
 //     which is one participant's minutes. Credited to the Stream Video minute meter by the surface
@@ -150,6 +207,9 @@ export async function POST(request: Request) {
     }
     if (type === 'call.recording_ready') {
       return await handleRecordingReady(payload);
+    }
+    if (type in RECORDING_LIFECYCLE_COMMANDS) {
+      return await handleRecordingLifecycle(type, payload);
     }
     if (type === 'call.session_participant_left') {
       const credited = await recordParticipantLeftUsage(payload);

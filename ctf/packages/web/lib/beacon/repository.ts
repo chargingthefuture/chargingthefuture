@@ -279,6 +279,59 @@ export async function insertBeaconAudit(input: {
   );
 }
 
+// One line of an event's history as the admin sees it: each lifecycle step the app took or Stream
+// reported, whether it worked, and the reason when it did not. Read from the audit trail, which the
+// routes and the Stream webhook write, so the history page can say why an event has no recording
+// without anybody opening the hosting logs.
+export type BeaconEventLogEntry = {
+  atIso: string;
+  command: string;
+  ok: boolean;
+  reason: string;
+};
+
+type BeaconEventLogRow = {
+  target_id: string;
+  created_at: Date;
+  command: string;
+  policy_status: string;
+  reason: string;
+};
+
+// The most recent log entries for each event, oldest first within an event. Capped per event so a
+// long list stays a short read.
+export async function listBeaconEventLogs(
+  eventIds: string[],
+  perEvent = 12,
+): Promise<Map<string, BeaconEventLogEntry[]>> {
+  const logs = new Map<string, BeaconEventLogEntry[]>();
+  if (eventIds.length === 0) {
+    return logs;
+  }
+  const result = await queryDb<BeaconEventLogRow>(
+    `SELECT target_id, created_at, command, policy_status, reason FROM (
+       SELECT target_id, created_at, command, policy_status, reason,
+              ROW_NUMBER() OVER (PARTITION BY target_id ORDER BY created_at DESC) AS rn
+         FROM beacon_events_admin_audit_trail
+        WHERE target_type = 'event' AND target_id = ANY($1::text[])
+     ) recent
+     WHERE rn <= $2
+     ORDER BY target_id, created_at ASC`,
+    [eventIds, perEvent],
+  );
+  for (const row of result.rows) {
+    const entries = logs.get(row.target_id) ?? [];
+    entries.push({
+      atIso: toIso(row.created_at) ?? '',
+      command: row.command,
+      ok: row.policy_status === 'allow',
+      reason: row.reason,
+    });
+    logs.set(row.target_id, entries);
+  }
+  return logs;
+}
+
 // Commons notices carry the full web address, not a bare `/apps/beacon` path. A member reading the
 // post in the mobile feed or in Commons can tap it and land on the broadcast; a path fragment only
 // works if the reader already knows the domain and types it in. Same shape as the announcement link
