@@ -15,6 +15,11 @@ export const DIRECTORY_ERROR_CODE = {
   serviceUnauthorized: 'DIRECTORY_SERVICE_UNAUTHORIZED',
 } as const;
 
+// The message both save routes return with quoraUrlSuppressed (HTTP 409), so a member and an admin
+// read the same reason and know a retry will not help.
+export const QUORA_URL_SUPPRESSED_MESSAGE =
+  "This Quora profile was removed from the Directory at the person's request, so it cannot be listed again until an admin lifts that block.";
+
 // Reason required when an admin takes down a profile at the person's request, or when lifting a
 // suppression (override). Kept short but non-empty so the audit trail always records a why.
 export const DIRECTORY_MAX_TAKEDOWN_REASON_LENGTH = 500;

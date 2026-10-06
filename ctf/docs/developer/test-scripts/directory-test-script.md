@@ -577,11 +577,15 @@ nomination, so it carries a Quora URL. Note its Quora URL.
    takedown is matched on a canonical form, not on the exact characters recorded (fixed 2026-09-18;
    before that, dropping `www.` was enough to get a taken-down profile re-listed). Also confirm an
    unrelated Quora profile is still **not** blocked.
+5b. Before lifting it, sign in as a member and save your own Directory profile with that Quora URL.
 **Expected:** The takedown deletes the profile and blocks its Quora URL from being listed (auto-gen
 from a SkillsHunt accept, or admin/member add) until an admin lifts it, whichever way that URL is
 written. The block is enforced
 regardless of SkillsHunt state. A regular delete (DIR-A3) does **not** block re-adding. Takedown and
-override each require a reason and record an audit line. On android this case is **blocked** — the RN
+override each require a reason and record an audit line. Since 2026-10-05 the member save in step
+5b and the admin create in step 4(b) both answer 409 `DIRECTORY_QUORA_URL_SUPPRESSED` with a message
+that the profile was removed at the person's request and an admin has to lift the block, never a 503
+"Unable to save profile.", and each refusal is an audit line. On android this case is **blocked** — the RN
 admin screen has delete only.
 **Result:** web ☐ mobile ☐ android ⛔ — notes:
 
@@ -610,6 +614,7 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 3. Try a takedown on a **claimed** profile (it should be refused), then refresh the panel.
 4. Lift a Quora URL block from the takedown list, then refresh the panel.
 5. Deactivate an announcement, then refresh the panel.
+6. Edit an existing profile on `/admin/directory` and save, then refresh the panel.
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the action in plain words ("Created a
   profile", "Removed a profile at the person's request", "Lifted a Quora URL block"), with the
@@ -618,6 +623,7 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
   has claimed it". An action that did not happen is recorded, not dropped.
 - Step 4: a "Lifted a Quora URL block" entry appears.
 - Step 5: it reads "Took down an announcement", **not** "Saved an announcement".
+- Step 6: an "Edited a profile" entry appears (`directory.admin.profile.update`, added 2026-10-05).
 - Nothing an admin did in this session is missing from the list.
 **Result:** web ☐ mobile ☐ — notes:
 

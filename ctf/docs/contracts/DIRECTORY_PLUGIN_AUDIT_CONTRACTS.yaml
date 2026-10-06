@@ -83,6 +83,33 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written by PUT /api/directory/admin/profiles/:id on success, not-found and failure. An admin edit
+  # can rewrite a claimed member's name, headline, location, Quora address and skills.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: directory
+    command: directory.admin.profile.update
+    commandVersion: 1.0.0
+    purpose: admin_profile_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_profile_metadata
+      - admin_mutation_audit_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      profileId: profile_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal

@@ -78,7 +78,7 @@ Implemented routes:
 - Admin:
   - `GET /api/directory/admin/profiles` — one page of admin profiles. Query: `page`, `pageSize` (capped by `DIRECTORY_MAX_PAGE_SIZE`), `includeInactive`, `q` (free-text search), `claimed` (`all` | `claimed` | `unclaimed`; anything else falls back to `all`). Search and the claim filter are applied in SQL across the **entire** collection, not just the page on screen — `q` matches first name, last name, the two joined, headline, job title, and the system-assigned unclaimed handle, punctuation-insensitively (same collapsing as the member browse search). Returns `{ items, pagination: { page, pageSize, total }, unclaimedTotal }`; `total` counts the filtered set (so it drives the pager) and `unclaimedTotal` counts unclaimed profiles across the entire collection for the header line.
   - `POST /api/directory/admin/profiles`
-  - `PUT /api/directory/admin/profiles/:id`
+  - `PUT /api/directory/admin/profiles/:id` — admin edit. Every outcome (success, not-found, failure) writes a `directory.admin.profile.update` row to `directory_admin_audit_trail`.
   - `PUT /api/directory/admin/profiles/:id/assign`
   - `DELETE /api/directory/admin/profiles/:id`
   - `POST /api/directory/admin/profiles/:id/takedown` — remove a community-generated (unclaimed) profile **at the person's request** and suppress its Quora URL. Body `{ reason }` (required). Deletes the profile and its skill rows, inserts the normalized Quora URL into `directory_suppressed_quora_urls`, and writes a `directory.admin.profile.takedown` audit event. Denies (409) a claimed, non-community-generated, or URL-less profile; use the ordinary delete for those. **Distinct from delete** (which is for duplicates/accidents and does not block re-adding).
@@ -240,6 +240,18 @@ Seeded content:
 - 2026-10-05: **Two Directory queries outside the app still read dropped columns.** The paste-ready invite-queue SQL (`ctf/scripts/sql/directory-invite-queue.sql`) still tested `p.is_active`, which `post/0033` dropped, so pasting it into the Neon dashboard failed with a missing-column error. Its remaining conditions were also attached to the job-title join instead of a `WHERE`, so once the column error was gone every profile would have come back, already-written handles included. They are now a `WHERE` clause matching `lib/directory/invite-queue.ts`: a profile with a Quora address that has no invite post yet. The weekly community stats script counted profiles with `WHERE deleted_at IS NULL`, which failed the same way and dropped every Directory number from the drafted post; it now counts every row, since a listing that exists is a live one.
 - 2026-10-02: **One Percent reads claimed profiles by id (owner decision).** New `GET /api/directory/service/profiles/:id` for One Percent's operator desk, behind a new `DIRECTORY_SERVICE_TOKENS` credential list kept apart from `TAXONOMY_SERVICE_TOKENS`. Claimed profiles only, minus owners restricted with scope `all` or `contact`, one at a time, with name, headline, job title, sector, skill names, profile address and location. `resolveServiceConsumer` now takes the setting to check. Contracts: `directory.profile.service.get` in the command, access policy and audit files. No member-facing change.
 - 2026-10-02: **One Percent reads a client's own claimed profile by their account (owner decision).** New `GET /api/directory/service/accounts/:accountId/profile`, sharing the by-id read's query, gate and fields (`getClaimedProfileForAccountService` in `lib/directory/service-read.ts`). Contracts: `directory.profile.service.by-account.get` in the command, access policy and audit files. No member-facing change.
+- 2026-10-05: **A taken-down Quora address is refused with a 409 on save, and admin edits are
+  audited.** `assertQuoraUrlNotSuppressed` throws `directory_quora_url_suppressed`, which this
+  inventory and the test script already described as a 409, but neither save route mapped it: the
+  member save (`PUT /api/directory/profile`) answered 503 "Unable to save profile." and the admin
+  create (`POST /api/directory/admin/profiles`) 503 "Unable to create profile.", both reported to
+  error tracking as faults. Both now answer 409 `DIRECTORY_QUORA_URL_SUPPRESSED` with a message saying
+  the profile was removed at the person's request and an admin has to lift the block, audit it as a
+  deny (`quora_url_suppressed`, category `policy`), and no longer report it. `PUT
+  /api/directory/admin/profiles/:id` now writes a `directory.admin.profile.update` row to
+  `directory_admin_audit_trail` on success, not-found and failure (it had none, so the Audit log tab
+  never showed admin edits), and the takedown-override route records a failure row when it throws.
+  The `directory.admin.profile.update` event was added to the audit contract. No schema change.
 - 2026-10-05: **A failed Directory load says so instead of reading as empty.** The browse list
   ignored a failed `GET /api/directory/list` and dropped every thrown error as if it were an abort,
   so a member saw "No profiles yet" when the list had not loaded and nothing was reported. It now
