@@ -9,7 +9,7 @@ import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
 import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // The full editable shape of a directory profile. GET /api/directory/profile returns the
 // caller's own profile with the taxonomy IDs (sectorId, jobTitleId, skills[].id) needed to
@@ -79,6 +79,8 @@ type LoadedProfileData = {
   jobTitles: JobTitleOption[];
   skills: SkillOption[];
   profile: OwnProfile | null;
+  // What the profile route said when it refused, shown instead of the fixed sentence.
+  message?: string;
 };
 
 const LOAD_ERROR_MESSAGE = "Could not load your profile. Please try again.";
@@ -166,7 +168,8 @@ async function loadProfileData(signal: AbortSignal): Promise<LoadedProfileData |
   if (signal.aborted) return null;
 
   if (!profileRes.ok) {
-    return { ok: false, sectors: [], jobTitles: [], skills: [], profile: null };
+    const message = await responseFailureText(profileRes, LOAD_ERROR_MESSAGE, "member");
+    return { ok: false, sectors: [], jobTitles: [], skills: [], profile: null, message };
   }
 
   const profileData = (await profileRes.json()) as { profile?: OwnProfile | null };
@@ -555,7 +558,7 @@ export function DirectoryProfileEdit({
         const data = await loadProfileData(controller.signal);
         if (!data || controller.signal.aborted) return;
         if (!data.ok) {
-          setLoadState({ kind: "error", message: LOAD_ERROR_MESSAGE });
+          setLoadState({ kind: "error", message: data.message ?? LOAD_ERROR_MESSAGE });
           return;
         }
         setSectors(data.sectors);
@@ -564,9 +567,9 @@ export function DirectoryProfileEdit({
         setHadProfile(Boolean(data.profile));
         setForm(profileToForm(data.profile));
         setLoadState({ kind: "ready" });
-      } catch {
+      } catch (caught) {
         if (!controller.signal.aborted) {
-          setLoadState({ kind: "error", message: LOAD_ERROR_MESSAGE });
+          setLoadState({ kind: "error", message: failureText(caught, { area: "directory", op: "load_own_profile", fallback: LOAD_ERROR_MESSAGE, audience: "member" }) });
         }
       }
     }
