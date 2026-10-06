@@ -2490,6 +2490,8 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   -- published is only the need itself (what they are looking for, where, when, budget range and the
   -- short intro) — never the phone number, never the Signal link, and never the member id.
   is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Account deletion now deletes this row outright, as the plugin's own delete does. Rows an older
+  -- account deletion only stamped here are removed by post/0050.
   service_deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -10796,4 +10798,19 @@ ALTER TABLE IF EXISTS skills_hunt_rounds DROP COLUMN IF EXISTS reward_per_user_r
 --
 -- Safe to re-run: IF EXISTS makes every run after the first a no-op.
 DROP INDEX IF EXISTS uq_peer_programming_goals_one_open;
+
+
+-- ── post migration: 0050_lighthouse_profiles_delete_soft_deleted.sql ──
+-- post/0050: Remove LightHouse profile rows that account deletion only soft-deleted.
+--
+-- Until this change, deleting an account (or only its LightHouse data) from the account area
+-- stamped lighthouse_profiles.service_deleted_at and kept the row, phone number and Signal link
+-- included, while the plugin's own delete removed the row outright. The account deletion registry
+-- now deletes the row too. This removes the rows the old path left behind.
+--
+-- Safe: a row with service_deleted_at set belongs to a member who deleted their LightHouse data
+-- and has not come back (saving a profile again clears the column), nothing references
+-- lighthouse_profiles by foreign key, and the rejoin marker LightHouse reads is on
+-- lighthouse_user_extension, which this does not touch. Re-running deletes nothing new.
+DELETE FROM lighthouse_profiles WHERE service_deleted_at IS NOT NULL;
 
