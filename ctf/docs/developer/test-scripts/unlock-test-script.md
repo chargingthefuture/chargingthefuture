@@ -245,7 +245,9 @@ reveals the explanation and the list. Step 2: the panel lists every denylisted U
 `unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
 longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
 submissions only; a member already blocked for that URL stays blocked until their submission is
-re-reviewed. A non-admin cannot reach the route.
+re-reviewed. A non-admin cannot reach the route. If a remove is refused, the panel shows the route's
+own sentence (for example "Spam denylist update unavailable."), not only "Remove failed (503)."
+(added 2026-10-05).
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2e · Duplicate account — blocked, but their real account is untouched
@@ -429,11 +431,16 @@ queue has at least one row.
 1. As a member, open the Unlock screen (submission form or status view) and drag the content down.
 2. Have the reviewer change the submission's status on web, then pull down again on the device.
 3. As an admin, open Unlock Admin, drag the queue down, and watch the list while it refreshes.
+4. (Added 2026-10-05.) As a member with a pending submission, turn on airplane mode and pull down on
+   the Android Unlock screen, then turn it off and pull down again.
 **Expected:** On both screens a refresh spinner appears at the top and the data re-pulls
 (`GET /api/unlock/status` for the member screen; `GET /api/unlock/admin/submissions` for the queue).
 The full-screen loading state does **not** flash — the current content stays visible until the fresh
 data lands, then the member screen reflects the new review status. The spinner stops when the pull
-completes, including on a failed request.
+completes, including on a failed request. Step 4: the failed pull keeps the "Pending Review" status
+view on screen (it does not switch to "Submit your Quora profile URL") and shows a red line under the
+header starting "Your verification status could not be read:" with the reason; the next successful
+pull removes the line.
 **Result:** android ☐ — notes:
 
 ---
@@ -643,6 +650,23 @@ not have to guess whether silence means they are in trouble. The last paragraph 
 account rather than this app alone, and that it is not a deletion and can be lifted. Pressing again
 closes it.
 **Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-M5 · Sign out from the Unlock screen (Android)
+**Role:** member (signed in, not yet verified, held at the Unlock wall) · **Surfaces:** android
+**Precondition:** a signed-in account the Android app sends to the full-screen Unlock screen (no
+submission and no help request, or a pending or rejected submission).
+**Steps:**
+1. Open the app and land on the Unlock screen. Scroll to the bottom.
+2. Find **Signed in as** your username (or email) and a **Sign out** button below everything else on
+   the screen. Check that the rest of the screen reads and looks as before.
+3. Tap **Sign out**, then **Stay signed in**.
+4. Tap **Sign out** again, then **Sign out**.
+5. Close and reopen the app.
+**Expected:** Step 2: the button is the last thing on the screen, after "What gets unlocked". Step 3:
+the confirm closes and nothing changes. Step 4: the Unlock screen goes away and the app shell shows
+with the **You are not signed in** card and its **Sign in** button. Step 5: you are still signed out.
+Signing back in with the same account brings the Unlock screen back with your place unchanged.
+**Result:** android ☐ — notes:
 
 ---
 
