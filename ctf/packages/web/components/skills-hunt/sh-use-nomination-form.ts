@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MAX_SKILLS, type SkillsHuntRound } from "./sh-shared";
 import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
+import { nameFromQuoraProfileUrl } from "lib/skills-hunt/name-from-quora-url";
 import type { ScoutFormModel } from "./sh-scout-tab";
 
 // A nomination is ready to submit once the round is open, the full name is plausible, there is at
@@ -48,6 +49,10 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [quora, setQuora] = useState("");
+  // The last name filled in from a Quora link. A pasted link fills Full Name while the field is
+  // empty or still holds that guess, so pasting a corrected link updates it, and a name the scout
+  // typed themselves is never overwritten.
+  const [guessedName, setGuessedName] = useState("");
   const [country, setCountry] = useState("");
   const [stateRegion, setStateRegion] = useState("");
   const [city, setCity] = useState("");
@@ -127,8 +132,17 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     }
   }
 
+  function changeQuora(value: string) {
+    setQuora(value);
+    const guess = nameFromQuoraProfileUrl(value);
+    if (guess && (fullName.trim() === "" || fullName === guessedName)) {
+      setFullName(guess);
+      setGuessedName(guess);
+    }
+  }
+
   function resetForm() {
-    setFullName(""); setBio(""); setQuora("");
+    setFullName(""); setBio(""); setQuora(""); setGuessedName("");
     setCountry(""); setStateRegion(""); setCity("");
     setSkills([]); setProposed([]); setFreeText("");
     setSubmitted(false); setSubmitError(null);
@@ -137,7 +151,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const form: ScoutFormModel = {
     fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, freeText, openCategory,
     submitting, submitError, allSkillCount, canAddMore,
-    onFullName: setFullName, onBio: setBio, onQuora: setQuora,
+    onFullName: setFullName, onBio: setBio, onQuora: changeQuora,
     onCountry: setCountry, onState: setStateRegion, onCity: setCity,
     onToggleSkill: toggleSkill,
     onAddOccupationSkills: addOccupationSkills,
