@@ -5928,6 +5928,47 @@ $sc_cmd_idem_command_nullable$;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
 
+-- The ServiceCredits ledger upserts three more tables on targets no index backed, so Postgres refused
+-- each statement ("no unique or exclusion constraint matching the ON CONFLICT specification"):
+-- every transfer insert (member send, plugin send, escrow release, fee collection, dispute
+-- adjustment, deletion reclaim) on (sender_user_id, idempotency_key); the deletion reclaim's wallet
+-- tombstone on (account_id, deletion_request_id); and its treasury event on (event_type, actor_id,
+-- idempotency_key). Any rows already sharing one of those keys are given distinct keys first by
+-- ctf/db/migrations/pre/0003_service_credits_unique_index_dedupe.sql, so these never fail on an
+-- existing database. The index on transfers is also what enforces per-sender replay protection.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_transfers_sender_idem
+  ON service_credits_transfers (sender_user_id, idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_wallet_tombstones_account_request
+  ON service_credits_wallet_tombstones (account_id, deletion_request_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_idem
+  ON service_credits_treasury_events (event_type, actor_id, idempotency_key);
+-- Legacy NOT NULL columns the v3 code never writes, which refused every insert into their tables:
+-- an escrow hold has no transfer until it is released (releaseEscrow sets transfer_id then), and a
+-- dispute adjustment records its case and amount in dispute_case_id and amount. Nothing reads
+-- dispute_id or adjustment_amount.
+DO $sc_legacy_not_null_relax$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_escrow_holds' AND column_name = 'transfer_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_escrow_holds ALTER COLUMN transfer_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'dispute_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN dispute_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'adjustment_amount' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN adjustment_amount DROP NOT NULL;
+  END IF;
+END
+$sc_legacy_not_null_relax$;
+
 -- socket_relay_messages (1 missing)
 ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
 -- Idempotency key backing sendFulfillmentMessage's `ON CONFLICT (fulfillment_id, sender_user_id,

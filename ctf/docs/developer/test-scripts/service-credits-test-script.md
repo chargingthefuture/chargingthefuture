@@ -349,6 +349,26 @@ Result: web ☐
 
 ---
 
+### SC-13 — Ledger writes are stored on a database built from schema.sql (added 2026-10-05)
+
+**Role:** member, then admin
+**Surfaces:** web, api/data
+**Precondition:** a test database built from `ctf/schema.sql` with the pre migrations applied.
+
+**Steps:**
+1. As a member, send credits to another member (SC-3).
+2. Repeat the same send request with the same idempotency key.
+3. As an admin, apply a dispute adjustment (SC-A7) and run a treasury fee collection (SC-A4).
+
+**Expected:** Each step completes instead of failing with a database error. Step 2 returns the first
+send and moves no more credits. `service_credits_transfers`,
+`service_credits_dispute_adjustments` and `service_credits_treasury_events` each hold one new row per
+action, and the external ledger status card (SC-A10) shows no posting without a matching row here.
+
+Result: web ☐
+
+---
+
 ### SC-R1 — Record a send as an ongoing arrangement
 
 **Role:** member
