@@ -85,8 +85,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## User Features (viewer surface, `/apps/beacon`)
 
 1. **Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.
-2. **Idle state.** When nothing is live, a calm "No live event right now" screen (with the last
-   replay, if any).
+2. **Idle state.** When nothing is live, a calm "No live event right now" screen with a "Missed it?
+   Watch the recordings" button that opens the blog's streams page in a new tab, plus the last replay,
+   if any. A signed-out visitor's page has extra space at the bottom so the invite cards fixed to the
+   bottom corner never cover the button or the replay.
 3. **Live chat (members).** Signed-in members post chat messages during the event; anonymous viewers
    see a "sign in to chat" prompt.
 4. **Live reactions (members).** Signed-in members send reactions during the event.
@@ -304,6 +306,12 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **Recordings link on the idle screen (owner request).** A visitor who missed the live
+  broadcast had no way from Beacon to the past ones. The "No live event right now" card now carries a
+  "Missed it? Watch the recordings" button to the blog's streams page (`BLOG_STREAMS_PAGE_URL`). The
+  signed-out page gains 260px of bottom padding so the invite cards (`InvitesPopup`, fixed bottom-left
+  on public plugin pages) can be scrolled clear of everything on it. Web only; the Android app has no
+  Beacon surface (rule 105).
 - 2026-10-06: **Recording is started through Stream's own start-recording endpoint (owner report).**
   Every ended event, including one ended minutes earlier, showed "no recording found": no recording was
   ever made, so neither the recording-ready webhook nor the recovery lookup had anything to find.

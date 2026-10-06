@@ -60,8 +60,10 @@ recording URL.
 **Steps:**
 1. Open `/apps/beacon` with no live event.
 2. Open the last replay.
-**Expected:** The idle screen shows "No live event right now" plus the last replay. Opening the replay
-plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
+**Expected:** The idle screen shows "No live event right now", a "Missed it? Watch the recordings"
+button, and the last replay. The button opens the blog's streams page in a new tab. Signed out on a
+phone, scrolling to the bottom moves the button and the replay clear of the invite cards in the corner.
+Opening the replay plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
 Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
 "Member view" pill opening `/apps/beacon`.
 **Result:** web ☐ mobile ☐ — notes:
