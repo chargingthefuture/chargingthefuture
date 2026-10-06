@@ -13,6 +13,7 @@ import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
+import { reportError } from 'lib/observability/report';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
@@ -174,15 +175,23 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
+  // The first failure of a run is reported; the rest of the run is not, so a viewer whose connection
+  // drops for a while sends one report rather than one every 15 seconds.
+  const pollFailingRef = useRef(false);
   const loadCurrent = useCallback(async () => {
     try {
       const res = await fetch('/api/beacon/current', { cache: 'no-store' });
       if (res.ok) {
         const data = (await res.json()) as CurrentResponse;
         setCurrent(data);
+        pollFailingRef.current = false;
       }
-    } catch {
+    } catch (error) {
       // Network blip — keep the last known state and try again on the next poll.
+      if (!pollFailingRef.current) {
+        pollFailingRef.current = true;
+        reportError(error, { area: 'beacon', op: 'viewer_current_poll' });
+      }
     } finally {
       setLoading(false);
     }
