@@ -3888,6 +3888,11 @@ ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS re
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One validation row per enrollment and milestone. validateMilestone upserts with
+-- ON CONFLICT (enrollment_id, milestone_id), which Postgres refuses without this index. Existing
+-- duplicates are removed first by db/migrations/pre/0004_skill_up_milestone_validations_dedupe.sql.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_milestone_validations_enrollment_milestone
+  ON skill_up_milestone_validations (enrollment_id, milestone_id);
 
 CREATE TABLE IF NOT EXISTS skill_up_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -96,8 +96,8 @@ export function DisputeResolveControl({ dispute, t, onDone }: {
 
 // Validate (approve the learner's milestone) and Release (settle the escrowed credits) for one
 // pending validation. Release only makes sense after validate; the route enforces order, so the
-// buttons stay simple and the server stays the referee. A row without a cohort id cannot be acted
-// on here (both routes require it) — it stays visible with a note instead of a broken button.
+// buttons stay simple and the server stays the referee. The routes read the cohort from the
+// enrollment, so only the enrollment id is sent.
 export function ValidationActions({ validation, t, onDone }: {
   validation: AdminValidation;
   t: SkillUpTokens;
@@ -107,12 +107,12 @@ export function ValidationActions({ validation, t, onDone }: {
   const [error, setError] = useState<string | null>(null);
 
   async function run(action: 'validate' | 'release') {
-    if (busyAction || !validation.cohortId) return;
+    if (busyAction) return;
     setBusyAction(action);
     setError(null);
     const outcome = await postSkillUpAction(
       `/api/skill-up/milestones/${validation.milestoneId}/${action}`,
-      { enrollmentId: validation.enrollmentId, cohortId: validation.cohortId, idempotencyKey: `${action}-${validation.id}` },
+      { enrollmentId: validation.enrollmentId, idempotencyKey: `${action}-${validation.id}` },
       action === 'validate' ? 'Could not validate the milestone' : 'Could not release the milestone credits',
     );
     setBusyAction(null);
@@ -121,10 +121,6 @@ export function ValidationActions({ validation, t, onDone }: {
       return;
     }
     onDone();
-  }
-
-  if (!validation.cohortId) {
-    return <div style={{ marginTop: 8, fontSize: 12, color: t.MUTED }}>No cohort recorded on this validation — handle it via the API.</div>;
   }
 
   return (
