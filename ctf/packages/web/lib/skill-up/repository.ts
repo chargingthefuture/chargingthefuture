@@ -795,19 +795,27 @@ export async function validateMilestone(input: {
       throw new Error('rate_limit_exceeded');
     }
 
-    const validationId = randomUUID();
-    await client.query(
-      `INSERT INTO skill_up_milestone_validations (id, enrollment_id, milestone_id, validated_by_user_id, validation_note, status)
-       VALUES ($1, $2::uuid, $3::uuid, $4, $5, 'validated')
+    // One row per enrollment and milestone (uq_skill_up_milestone_validations_enrollment_milestone).
+    // A row that is already released is the record that its credits moved, so a repeat validate
+    // leaves it alone and is refused rather than resetting it to validated.
+    const upserted = await client.query<{ id: string }>(
+      `INSERT INTO skill_up_milestone_validations (id, enrollment_id, milestone_id, validated_by_user_id, validation_note, status, validated_at)
+       VALUES ($1, $2::uuid, $3::uuid, $4, $5, 'validated', NOW())
        ON CONFLICT (enrollment_id, milestone_id)
        DO UPDATE SET
          validated_by_user_id = EXCLUDED.validated_by_user_id,
          validation_note = EXCLUDED.validation_note,
          status = 'validated',
          validated_at = NOW(),
-         released_at = NULL`,
-      [validationId, input.enrollmentId, input.milestoneId, input.actorId, input.validationNote ?? ''],
+         updated_at = NOW()
+       WHERE skill_up_milestone_validations.status <> 'released'
+       RETURNING id::text`,
+      [randomUUID(), input.enrollmentId, input.milestoneId, input.actorId, input.validationNote ?? ''],
     );
+    const validationId = upserted.rows[0]?.id;
+    if (!validationId) {
+      throw new Error('invalid_state');
+    }
 
     const response = { validationId, status: 'validated' as const };
     await writeCommandIdempotency(client, input.actorId, 'skill-up.milestone.validate', input.idempotencyKey, response);
