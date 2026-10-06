@@ -109,8 +109,17 @@ async function streamVideoFetch(
   if (text.length > 0) {
     try {
       parsed = JSON.parse(text) as Record<string, unknown>;
-    } catch {
+    } catch (parseError) {
       parsed = {};
+      // A failed status is reported below with the status itself. A success with a body that is not
+      // JSON is unexpected, and the caller would otherwise read an empty result without knowing why.
+      if (response.ok) {
+        reportError(parseError, {
+          area: 'beacon',
+          op: 'stream_video_response_parse',
+          extra: { path: path.split('?')[0], status: response.status },
+        });
+      }
     }
   }
   if (!response.ok) {

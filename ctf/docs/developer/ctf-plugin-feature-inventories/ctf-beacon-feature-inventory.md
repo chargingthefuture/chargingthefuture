@@ -323,6 +323,13 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   token is minted only for a live event, as the access policy already said. The Stream webhook now
   writes the `event.stream-webhook.ingest` audit row its contract asks for, allow on a stored
   recording and deny on a rejected signature.
+- 2026-10-05: **A failed start-broadcast is shown to the admin (#2668).** The host stage sent
+  `POST /api/beacon/[id]/start-broadcast` with only a network `.catch`, so a refusal (Stream, CSRF or
+  origin) was dropped and the admin read "Your screen is live to the broadcast." while no public feed
+  or recording had started. It now reads the response, reports a refusal, and shows the route's
+  message in place of that line; stopping and restarting the share retries. Silent catches in the
+  admin shell, the viewer poll (first failure of a run only) and the Stream response parser now
+  report what failed; the two unmount cleanups in the host stage carry a `no-trace` reason.
 - 2026-09-29: **Every recorded broadcast is listed publicly, with a podcast feed.** Owner request: a
   record of past streams on the blog that anybody can watch, which also serves as a self-hosted
   podcast. Added `GET /api/beacon/replays` (paged list), `GET /api/beacon/replays/feed` (RSS with
