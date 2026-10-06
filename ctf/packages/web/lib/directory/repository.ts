@@ -1768,7 +1768,9 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -1932,7 +1934,9 @@ export async function updateAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -2040,7 +2044,9 @@ export async function assignAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
