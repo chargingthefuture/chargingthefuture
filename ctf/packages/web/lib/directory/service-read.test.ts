@@ -118,6 +118,14 @@ describe('getClaimedProfileForAccountService', () => {
     expect(params).toEqual(['user_inventedAccount0001']);
   });
 
+  it('picks the same listing every time for an account that owns two', async () => {
+    queryDb.mockResolvedValue({ rows: [] });
+    const { getClaimedProfileForAccountService } = await import('./service-read');
+    await getClaimedProfileForAccountService('user_inventedAccount0001');
+    const [sql] = queryDb.mock.calls[0];
+    expect(String(sql)).toMatch(/ORDER BY p\.created_at ASC, p\.id::text ASC\s+LIMIT 1/);
+  });
+
   it('never queries for something that could not be an account id', async () => {
     const { getClaimedProfileForAccountService } = await import('./service-read');
     expect(await getClaimedProfileForAccountService("user_x' OR '1'='1")).toBeNull();
