@@ -838,21 +838,29 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     await syncTrustTransportOfferPresence(row.provider_user_id, row.id, row.status);
   }
 
-  const streamChannelId = await ensureTrustTransportTripChannel({
-    tripId: created.trip.id,
-    requesterUserId: created.trip.requesterUserId,
-    providerUserId: created.trip.providerUserId,
-  });
+  // Best-effort chat setup after the commit. The trip already exists, so a Stream failure here must
+  // not turn the accept into an error: that would skip the route's audit row and provider notification,
+  // and a retry would then be refused because the request is no longer open. A failure leaves
+  // stream_channel_id empty and the chat route sets the channel up on first open.
+  try {
+    const streamChannelId = await ensureTrustTransportTripChannel({
+      tripId: created.trip.id,
+      requesterUserId: created.trip.requesterUserId,
+      providerUserId: created.trip.providerUserId,
+    });
 
-  if (streamChannelId) {
-    await queryDb(
-      `UPDATE trust_transport_trips
-       SET stream_channel_id = $2, updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [created.trip.id, streamChannelId],
-    );
+    if (streamChannelId) {
+      await queryDb(
+        `UPDATE trust_transport_trips
+         SET stream_channel_id = $2, updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [created.trip.id, streamChannelId],
+      );
 
-    created.trip.streamChannelId = streamChannelId;
+      created.trip.streamChannelId = streamChannelId;
+    }
+  } catch (error) {
+    reportError(error, { area: 'trust-transport', op: 'offer_accept_stream_channel', extra: { tripId: created.trip.id } });
   }
 
   return created;
