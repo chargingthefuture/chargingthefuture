@@ -189,6 +189,8 @@ Result: web ☐
 - Step 5: A text chat input is available. Sending a message works. There is no video call button or video room.
 - If the chat cannot be set up, the message reads "Could not set up the chat channel: <Stream's reason>"
   (since 2026-09-18; scrubbed and capped, never the raw exception text).
+- Since 2026-10-05 the chat request carries the `x-ctf-csrf: 1` header (check in devtools), and a
+  `POST /api/trust-transport/trips/:tripId/chat` sent without it is refused with 403.
 
 Result: web ☐
 
