@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
 -- same note and location as an earlier one (most often two incidents with no note and no location,
 -- both stored as '{}') was refused and the create failed. Dropping the column also drops that
 -- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
--- older databases). Mirrored in db/migrations/post/0051_click_log_drop_metadata_hash_dedupe.sql.
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
 ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
@@ -10822,8 +10822,8 @@ DROP INDEX IF EXISTS uq_peer_programming_goals_one_open;
 DELETE FROM lighthouse_profiles WHERE service_deleted_at IS NOT NULL;
 
 
--- ── post migration: 0051_click_log_drop_metadata_hash_dedupe.sql ──
--- post/0051: Let a member log a second ClickLog incident with the same note and location.
+-- ── post migration: 0053_click_log_drop_metadata_hash_dedupe.sql ──
+-- post/0053: Let a member log a second ClickLog incident with the same note and location.
 --
 -- Why: click_log_incidents carried metadata_hash, a generated md5 of the metadata JSON, and
 -- UNIQUE (user_id, metadata_hash). The date, tags and share flag sit outside the metadata, so two

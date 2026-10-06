@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
 -- same note and location as an earlier one (most often two incidents with no note and no location,
 -- both stored as '{}') was refused and the create failed. Dropping the column also drops that
 -- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
--- older databases). Mirrored in db/migrations/post/0051_click_log_drop_metadata_hash_dedupe.sql.
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
 ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;

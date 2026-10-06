@@ -192,7 +192,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `scheme_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which named schemes were used; each slug validated against `lib/click-log/tags.ts` (schemes started from the owner's "A post for each gang stalker game" Discourse thread, now deprecated — `tags.ts` is the living canonical list and grows there; slugs are never renamed or reused so trend history stays comparable); at most 10. Real column, excluded from the `metadata_hash` dedupe.
   - `problem_tag TEXT` / `scheme_tag TEXT` (nullable) — the superseded singular tag columns (2026-08-02 → 2026-08-13): backfilled into the arrays by guarded `UPDATE`s in `schema.sql`, kept for history, no longer read or written by the app.
   - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
-  - No uniqueness rule on the incident content: each logged incident is its own row, so a member can log any number of incidents with the same note and location, including none. The generated `metadata_hash` column and its `UNIQUE (user_id, metadata_hash)` were dropped on 2026-10-05 (`post/0051_click_log_drop_metadata_hash_dedupe.sql`).
+  - No uniqueness rule on the incident content: each logged incident is its own row, so a member can log any number of incidents with the same note and location, including none. The generated `metadata_hash` column and its `UNIQUE (user_id, metadata_hash)` were dropped on 2026-10-05 (`post/0053_click_log_drop_metadata_hash_dedupe.sql`).
   - Indexes: `user_id`, `created_at DESC`, partial `created_at DESC WHERE shared_with_owner` (for the trends aggregate)
 - Table: `click_log_preferences`
   - `user_id TEXT PRIMARY KEY`
@@ -330,7 +330,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   no location is stored as `{}`. A member could log one bare incident; the next failed with an
   uncaught unique violation, answered as a bare 500, and the screen showed its generic failure
   text. The column and the rule are dropped (`schema.sql` and
-  `post/0051_click_log_drop_metadata_hash_dedupe.sql`; the constraint goes with the column it was
+  `post/0053_click_log_drop_metadata_hash_dedupe.sql`; the constraint goes with the column it was
   defined on). Nothing else read the column. The edit route's 409 for an edit that matched another
   incident's note and location could no longer happen and is removed, and the demo seed no longer
   names the constraint in its `ON CONFLICT`. The form already blocks a second submit while the
