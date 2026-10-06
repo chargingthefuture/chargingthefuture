@@ -100,11 +100,15 @@ Result: web ☐
 1. As S, search providers with a query that would match P.
 2. As S, attempt to open a connection thread to P directly (`POST /api/foundation/connections/threads` with P's provider id).
 3. If a thread between S and P existed from before the block, try to start an instant call on it.
+4. On that same older thread, as S: open Direct Line (or the Quotes tab's chat), send a message, request a quote, and schedule a call.
+5. As S, open P's shared provider link (`/apps/foundation/provider/<P's profile id>`).
 
 **Expected:**
 - Step 1: P is absent from S's search results.
 - Step 2: 403 with the neutral message "This provider is not available to you." — never wording that names a block.
 - Step 3: the ring is refused with "This call is not available right now." — a block created after the thread existed still stops new calls.
+- Step 4: Direct Line shows "Could not open this Direct Line." (the route answers 403 "This conversation is not available right now."), a message send is refused with the same route message, the quote is refused ("This provider is not available to you."), and the call is refused ("This call is not available right now."). P gets no notification for any of them.
+- Step 5: the page shows the same "This provider's profile could not be found." as for an id that matches nobody.
 - Neither member gets any signal that a block exists.
 
 Result: web ☐
@@ -808,6 +812,25 @@ Result: web ☐
 6. Observe the control's state after disabling.
 
 **Expected:** Step 4: the control shows "On for this device" (enabled state). The browser's service worker is registered, and a push subscription is stored server-side via POST `/api/foundation/push/subscribe` (kind `'web'`). Step 6: the subscription is removed via POST `/api/foundation/push/unsubscribe`. The control returns to the "off" state. At no step does a raw error appear — the states covered are: unsupported browser, push not configured, permission denied, enabled, disabled, error.
+
+Result: web ☐
+
+---
+
+### FDN-37b — Ring push on the lock screen follows discreet pings
+
+**Role:** Member (provider, to receive call alerts) and a second member to ring them
+**Surface:** Web
+
+**Precondition:** FDN-37 done, so call alerts are on for the provider's device. Discreet pings are on in the provider's notification settings (the default). VAPID keys are configured.
+
+**Steps:**
+1. Lock the provider's device, or put the browser in the background.
+2. As the second member, ring the provider.
+3. Read the push on the provider's lock screen, then tap it.
+4. Turn discreet pings off in the provider's notification settings and ring again.
+
+**Expected:** Step 3: the push reads "Charging The Future" / "You have a new update." and names neither the caller nor Foundation; tapping it opens `/apps/foundation`, where the incoming-call overlay shows the caller's name with answer and decline. Step 4: the push reads "Incoming call" / "<caller> is calling you on Foundation". If the settings cannot be read, the push stays discreet.
 
 Result: web ☐
 

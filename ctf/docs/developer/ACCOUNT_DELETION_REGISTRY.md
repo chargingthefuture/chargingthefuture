@@ -100,6 +100,13 @@ and are settled by the existing reclaim flow (`markFullAccountDeletionRequested`
 `enqueueServiceCreditsDeletionReclaim` → the service-credits adapter outbox). The full-account route
 calls that reclaim flow first, then runs the orchestrator; the engine never moves credits.
 
+One step before the engine does move credits, and only back to the member: the orchestrator's
+`runPreDeletionSettlements` refunds any SkillUp deposit still held in escrow to the member's own
+wallet before the SkillUp enrollments are deleted, for both scopes. The enrollment rows are the only
+way back to those holds, so deleting them first would leave the credits held for good. It runs
+outside the deletion transaction because the refund posts to the external ledger; a failure stops
+the deletion, and each refund is idempotent per escrow, so a retry returns only what is still held.
+
 ## API routes
 
 - `DELETE /api/account/services/:slug` — delete just one plugin's data. The `:slug` is validated

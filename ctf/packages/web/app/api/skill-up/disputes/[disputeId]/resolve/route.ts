@@ -23,6 +23,23 @@ const resolveSchema = z.object({
   idempotencyKey: z.string().min(3),
 });
 
+// dispute.resolve is permitted for admins and for the trainer assigned to the dispute's
+// cohort (per the access policy contract's trainerAssignmentOrAdmin rule).
+async function denyUnlessTrainerOrAdmin(
+  auth: { userId: string; isAdmin: boolean },
+  disputeId: string,
+): Promise<NextResponse | null> {
+  if (auth.isAdmin) {
+    return null;
+  }
+  const cohortId = await getDisputeCohortId(disputeId);
+  const trainerForScope = cohortId ? await isTrainerForCohort(auth.userId, cohortId) : false;
+  if (trainerForScope) {
+    return null;
+  }
+  return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'Assigned trainer or admin role required to resolve disputes.' }, { status: 403 });
+}
+
 export async function POST(request: Request, { params }: RouteProps) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -36,14 +53,9 @@ export async function POST(request: Request, { params }: RouteProps) {
 
   const resolvedParams = await params;
 
-  // dispute.resolve is permitted for admins and for the trainer assigned to the dispute's
-  // cohort (per the access policy contract's trainerAssignmentOrAdmin rule).
-  if (!gate.auth.isAdmin) {
-    const cohortId = await getDisputeCohortId(resolvedParams.disputeId);
-    const trainerForScope = cohortId ? await isTrainerForCohort(gate.auth.userId, cohortId) : false;
-    if (!trainerForScope) {
-      return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'Assigned trainer or admin role required to resolve disputes.' }, { status: 403 });
-    }
+  const scopeDeny = await denyUnlessTrainerOrAdmin(gate.auth, resolvedParams.disputeId);
+  if (scopeDeny) {
+    return scopeDeny;
   }
 
   let body: unknown;
@@ -56,6 +68,12 @@ export async function POST(request: Request, { params }: RouteProps) {
   const parsed = resolveSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, code: 'skill_up_invalid_payload', message: 'Invalid resolve payload.', issues: parsed.error.issues }, { status: 400 });
+  }
+
+  // A credit adjustment moves credits between wallets, so only an admin may attach one. A trainer
+  // can still resolve a dispute in their cohort, just without moving anybody's credits.
+  if (parsed.data.adjustment && !gate.auth.isAdmin) {
+    return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'Only an admin can attach a credit adjustment when resolving a dispute.' }, { status: 403 });
   }
 
   try {
