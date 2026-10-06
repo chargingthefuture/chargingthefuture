@@ -12,6 +12,8 @@ import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
 
 type Props = {
   problems: WhatWorksProblemOption[];
+  // Why the problem list is empty when its load failed; shown in the form's error line.
+  optionsError?: string | null;
   // Problem to open the form on, when the member started from that problem's own section.
   // Empty string means no preselection — they pick from the dropdown.
   initialProblemId?: string;
@@ -172,7 +174,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
   );
 }
 
-export function WhatWorksSuggestPanel({ problems, initialProblemId = '', isFirst, onSubmit, onBack }: Props) {
+export function WhatWorksSuggestPanel({ problems, optionsError = null, initialProblemId = '', isFirst, onSubmit, onBack }: Props) {
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
   const inputStyle = makeInputStyle(t);
@@ -213,7 +215,7 @@ export function WhatWorksSuggestPanel({ problems, initialProblemId = '', isFirst
       inputStyle={inputStyle}
       problems={problems}
       isFirst={isFirst}
-      error={error}
+      error={error ?? optionsError}
       problemId={problemId}
       setProblemId={setProblemId}
       name={name}

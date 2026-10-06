@@ -3,6 +3,7 @@ import { listAdminProducts } from 'lib/what-works/repository';
 import { isWhatWorksProductStatus } from 'lib/what-works/constants';
 import { requireWhatWorksAdminAccess } from '../../_lib';
 import { logWhatWorksAudit } from 'lib/what-works/audit';
+import { failureResponse } from 'lib/errors/failure';
 
 // Moderation queue. Defaults to pending suggestions; `?status=` narrows the list.
 // Submitter identity is intentionally never returned — admins moderate content, not people.
@@ -14,7 +15,18 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const statusParam = url.searchParams.get('status');
   const status = statusParam && isWhatWorksProductStatus(statusParam) ? statusParam : undefined;
-  const products = await listAdminProducts(status);
+  let products: Awaited<ReturnType<typeof listAdminProducts>>;
+  try {
+    products = await listAdminProducts(status);
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not load the suggestion queue',
+      error,
+      code: 'what_works_admin_product_list_failed',
+      area: 'what-works',
+      op: 'admin_product_list',
+    });
+  }
   logWhatWorksAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.product.list',

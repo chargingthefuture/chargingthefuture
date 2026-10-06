@@ -150,6 +150,23 @@ already picked in the dropdown. Signed out at `/plugin/what-works`, the preview 
 empty problem.
 **Result:** web ☐ mobile ☐ — notes:
 
+### WW-9 · A failed load says what failed (added 2026-10-05)
+**Role:** member, then signed-out visitor, then admin · **Surfaces:** all
+**Precondition:** a way to make a request fail — browser dev tools set to offline, or request
+blocking on `/api/what-works*`.
+**Steps:**
+1. As a member, block `/api/what-works/problems`, open `/apps/what-works` and tap **Suggest a tool**.
+2. Unblock it. Mark a tool **Helpful** after an admin has removed that tool in another session.
+3. Signed out, block `/api/what-works/public` and open `/plugin/what-works`.
+4. As an admin, block nothing and approve, edit, or delete a tool; then go offline and try again.
+**Expected:** Step 1: the suggest form shows a red line saying the list of problems could not
+load, instead of an empty dropdown with no reason. Step 2: the list shows "That item could not be
+found." rather than "Could not update. Try again." Step 3: the preview shows a red line saying it
+could not load, and never "The list is just getting started." Step 4: the actions work; when a
+database call fails the admin banner names the action and the reason (for example "Could not delete
+the item: …") instead of "Request failed (500)."
+**Result:** web ☐ mobile ☐ — notes:
+
 ---
 
 ### Account deletion clears endorsements
