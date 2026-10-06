@@ -157,6 +157,26 @@ function BroadcastSection({
   );
 }
 
+// When the event happened, in Eastern Time: when it went live for a broadcast event, when it was
+// created for a draft. "Oct 6, 2026, 3:05 PM ET".
+const EASTERN_TIME = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+function formatEventTimeEt(event: BeaconEvent): string | null {
+  const iso = event.startedAtIso ?? event.createdAtIso;
+  const date = iso ? new Date(iso) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return `${EASTERN_TIME.format(date)} ET`;
+}
+
 // One event row in the history list, with Replay / Open / two-step Delete controls.
 function EventHistoryRow({
   event,
@@ -183,12 +203,14 @@ function EventHistoryRow({
         <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
         <div style={{ fontSize: 12, color: t.SUBTLE }}>
           {event.status}
+          {formatEventTimeEt(event) ? ` · ${formatEventTimeEt(event)}` : ''}
           {event.recordingUrl ? ' · recording ready' : ''}
+          {event.status === 'ended' && !event.recordingUrl ? ' · no recording found' : ''}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {event.recordingUrl ? (
-          <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
+          <a href={`/api/beacon/replays/${event.id}/recording`} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
         ) : null}
         {event.status !== 'ended' ? (
           <button type="button" onClick={() => onOpen(event.id)} style={chipButtonStyle(t)}>Open</button>
