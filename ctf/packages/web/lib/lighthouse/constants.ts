@@ -15,6 +15,7 @@ export const LIGHTHOUSE_ERROR_CODE = {
   notOwner: 'LIGHTHOUSE_NOT_OWNER',
   policyDenied: 'LIGHTHOUSE_POLICY_DENIED',
   duplicateMatch: 'LIGHTHOUSE_DUPLICATE_MATCH',
+  invalidTransition: 'LIGHTHOUSE_INVALID_MATCH_TRANSITION',
   blockedPair: 'LIGHTHOUSE_BLOCKED_PAIR',
   announcementInvalidTargeting: 'LIGHTHOUSE_ANNOUNCEMENT_INVALID_TARGETING',
 } as const;
