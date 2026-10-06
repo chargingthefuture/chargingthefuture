@@ -158,7 +158,7 @@ User routes:
 - `GET /api/service-credits/wallet` → `{ ok, wallet }` — the signed-in member's own wallet: `availableBalance`, `escrowBalance`, and (since 2026-08-27) their mutual-credit line — `mutualCreditEnabled` (is the rail on at all), `creditLimit` (their per-account override if an admin granted one, else the flat policy `defaultLimit`), and `creditFloor` (`-(creditLimit)` while the rail is on, 0 otherwise). The line is read-only here: `getMemberCreditStanding` reuses the same policy and limit reads the transfer path uses, and the transfer path still resolves the floor itself, so nothing on this route widens or narrows what a send may do. Bare credit quantities only; never a fiat figure.
 - `GET /api/service-credits/transactions` → `{ ok, entries }` — the caller's own recent wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200). Backs the wallet "Recent Transactions" list. Bare credit quantities only; never a fiat figure.
 - `GET /api/service-credits/transactions` → `{ ok, entries, total, limit, offset }` — one page of the caller's own wallet ledger entries (a read projection of `service_credits_ledger_entries`), newest first, scoped to the signed-in member. Optional `?limit=` (default 50, capped 200) and `?offset=` (default 0; negative or non-numeric treated as 0). `total` is the member's full entry count across all pages, so the caller can show "Page N of M". Backs the wallet "Recent Transactions" list, which is paged 10 rows at a time. Bare credit quantities only; never a fiat figure.
-- `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit)
+- `POST /api/service-credits/transfers` — body now accepts an optional `rail` (`'balance'` default, or `'mutual_credit'` to pay past zero down to the member's credit limit). `recipientUserId` is what the member typed in the Send form, a username (a leading `@` is accepted) or an account id; the route resolves it against Clerk (`lib/service-credits/recipient.ts`) before anything is written and sends to the resolved account id. A value no account holds is refused with 404 `service_credits_recipient_not_found`, and a check that cannot run (no Clerk key, Clerk unreachable) with 503 `service_credits_recipient_lookup_unavailable`. Neither creates a wallet row or moves credits.
 - `GET /api/service-credits/circulation` → `{ ok, metrics }` — public, aggregate, non-identifying circulation numbers (in circulation, total issued/burned, treasury balance, velocity, outstanding mutual-credit debt). No fiat figure.
 - `POST /api/service-credits/escrows` — create an escrow hold. Restricted to the `service`/`system`/`dispute_moderator` roles (or admin) via `requireServiceCreditsServiceAccess`, per the access-policy contract — not a self-service member action. `amount` must be a finite number greater than 0 (else 400).
 - `POST /api/service-credits/escrows/:escrowId/release` — release a held escrow. Same `service`/`system`/`dispute_moderator`/admin restriction as the hold route.
@@ -177,7 +177,7 @@ Admin routes (every mutation requires the `x-ctf-csrf: '1'` header and admin acc
 - `GET /api/service-credits/admin/circulation` → `{ ok, metrics }` — the public circulation numbers plus the operator levers: mint budget remaining/ceiling/minted-this-period, whether issuance enforcement is on, top-5 concentration share, open-dispute count, and whether a treasury wallet is configured.
 - `POST /api/service-credits/admin/credit-limits` ← `{ targetUserId, creditLimit }` → `{ ok, creditLimit: { targetUserId, creditLimit } }` — grant or revoke a member's mutual-credit limit, capped by the policy `mutualCredit.maxLimit`.
 - `GET /api/service-credits/admin/credit-limits?targetUserId=<id>` → `{ ok, creditLimit: { targetUserId, creditLimit, isDefault, frozen } }` — read a member's mutual-credit limit (the flat policy default or a per-account override) and freeze state. No behavioral score is computed or returned.
-- `POST /api/service-credits/admin/wallet-status` ← `{ targetUserId, frozen, reason? }` → `{ ok, walletStatus: { targetUserId, frozen } }` — freeze or unfreeze a wallet. A frozen wallet cannot spend on either rail.
+- `POST /api/service-credits/admin/wallet-status` ← `{ targetUserId, frozen, reason? }` → `{ ok, walletStatus: { targetUserId, frozen } }` — freeze or unfreeze a wallet. A frozen wallet cannot spend on either rail. The freeze only writes or lifts a `trading` restriction: when the member already has an active `all` or `contact` restriction, both freeze and unfreeze return 409 `service_credits_restriction_scope_conflict` and that restriction is left as it is.
 
 Endpoint/contract gap: a prior route map line referenced `GET /api/service-credits/admin/audit-events`; no such route exists in code (it was never built). It has been removed from this list. There is still **no list/queue endpoint for open disputes** (the admin dispute UI is an operator-driven form keyed on a known case ID). The prior gap "no admin read endpoint for circulation/issuance totals" is now **closed** by the public and admin circulation endpoints above.
 
@@ -219,15 +219,15 @@ Extension entity:
 Domain tables:
 
 1. `service_credits_wallets`
-2. `service_credits_transfers` — one row per member-to-member transfer. Columns: `id` UUID PK, `sender_user_id` TEXT, `recipient_user_id` TEXT, `amount` NUMERIC, `status` TEXT (`pending` | `completed` | `canceled` | `disputed`), `idempotency_key` TEXT (unique per `sender_user_id`), `completed_at` TIMESTAMPTZ, `origin_plugin` TEXT, `reason_code` TEXT, `created_at` TIMESTAMPTZ default now. **A direct send now delivers immediately**: `createTransfer` debits the sender and credits the recipient in one step and writes the row as `completed` (it no longer parks the funds in the sender's escrow as `pending`, which previously meant the recipient never received the credits). `origin_plugin` records the initiating surface — `service-credits` for a direct send from the "Send Credits" form, or the plugin slug for a plugin-mediated move (e.g. `chyme` tip, `foundation` call charge) — and `reason_code` the finer intent; together they let GDP recognition count genuine direct peer-to-peer activity and attribute plugin transfers to each plugin rather than blindly summing the ledger. The separate `createEscrowHold` / `releaseEscrow` / `refundEscrow` functions remain the hold-then-resolve path for real escrow use cases.
-3. `service_credits_escrow_holds`
+2. `service_credits_transfers` — one row per member-to-member transfer. Columns: `id` UUID PK, `sender_user_id` TEXT, `recipient_user_id` TEXT, `amount` NUMERIC, `status` TEXT (`pending` | `completed` | `canceled` | `disputed`), `idempotency_key` TEXT (unique per `sender_user_id`, enforced by `uq_service_credits_transfers_sender_idem`), `completed_at` TIMESTAMPTZ, `origin_plugin` TEXT, `reason_code` TEXT, `created_at` TIMESTAMPTZ default now. **A direct send now delivers immediately**: `createTransfer` debits the sender and credits the recipient in one step and writes the row as `completed` (it no longer parks the funds in the sender's escrow as `pending`, which previously meant the recipient never received the credits). `origin_plugin` records the initiating surface — `service-credits` for a direct send from the "Send Credits" form, or the plugin slug for a plugin-mediated move (e.g. `chyme` tip, `foundation` call charge) — and `reason_code` the finer intent; together they let GDP recognition count genuine direct peer-to-peer activity and attribute plugin transfers to each plugin rather than blindly summing the ledger. The separate `createEscrowHold` / `releaseEscrow` / `refundEscrow` functions remain the hold-then-resolve path for real escrow use cases.
+3. `service_credits_escrow_holds` — `transfer_id` is nullable: a hold has no transfer until `releaseEscrow` sets it.
 4. `service_credits_governance_events` — `governance_ticket_id` is **TEXT** (a free-text ticket reference such as `unlock:submission:5`, `skill-up:<cohort>:completion:<id>`, `contribution-<id>`, or an operator-typed ticket), not a UUID. A legacy UUID-typed column is converted to TEXT by a guarded block in `schema.sql`.
-5. `service_credits_treasury_events`
-6. `service_credits_dispute_adjustments`
+5. `service_credits_treasury_events` — unique on (`event_type`, `actor_id`, `idempotency_key`), the deletion reclaim's replay target.
+6. `service_credits_dispute_adjustments` — the case and amount live in `dispute_case_id` and `amount`; the legacy `dispute_id` and `adjustment_amount` columns are nullable and unread.
 7. `service_credits_command_idempotency`
 8. `service_credits_adapter_outbox`
 9. `service_credits_account_deletion_reclaims`
-10. `service_credits_wallet_tombstones`
+10. `service_credits_wallet_tombstones` — unique on (`account_id`, `deletion_request_id`); `user_id` holds the same account id.
 11. `service_credits_credit_limits` — per-account mutual-credit limit (`user_id` PK, `credit_limit` NUMERIC default 0, `updated_by_user_id`, `updated_at`). The most negative a wallet's `available_balance` may reach is `-credit_limit`; absent a row the limit is the treasury policy `mutualCredit.defaultLimit` (0 by default, so new accounts cannot go negative).
 12. `service_credits_ledger_entries` — the per-member ledger of individual credit movements; the read model behind `GET /api/service-credits/transactions`. Columns: `id` UUID PK (`gen_random_uuid()`), `user_id` TEXT, `entry_type` TEXT, `amount` NUMERIC, `reference_type` TEXT, `reference_id` TEXT, `accounting_scope` TEXT (e.g. `service_credits_non_gdp` — keeps circulation credits out of the GDP accounting boundary), `metadata` JSONB default `{}`, `created_at` TIMESTAMPTZ default now. Every non-mint credit movement (transfers-in, escrow releases, seed allocations) is recorded here, which is why a wallet's cached `available_balance` can legitimately exceed the sum of mint events in `service_credits_governance_events`.
 13. `service_credits_admin_audit_trail` — append-only admin/operator audit trail for ServiceCredits admin commands (wallet status/freeze, credit limits, governance mint/burn, treasury fees, dispute adjustments, escrow operations). One row per admin policy decision: actor, command, allow/deny status, reason, target, and metadata. This is the durable evidence behind the §5 audit controls and is the table the treasury-mint reward path writes alongside `service_credits_governance_events`.
@@ -262,7 +262,7 @@ Domain tables:
 10. Per-period mint budget (the keystone monetary-policy rule): treasury-rail minting is bounded per rolling window when `issuance.enforce` is on, denied with `mint_budget_exceeded` over budget. Off by default so a live earn reward is never silently frozen; mutual-credit issuance is bounded separately and does not draw on this budget. See the ServiceCredits monetary policy spec.
 11. Mutual-credit abuse defense: new accounts have a credit limit of 0 (cannot go negative), so a bad actor cannot draw an unsecured line on signup. A limit is granted only by an admin, capped by policy `mutualCredit.maxLimit`, and revocable instantly (set to 0). A negative balance at account deletion is a treasury-absorbed `mutual_credit_default`, kept minor by small limits. Total system exposure is bounded by the sum of granted limits.
 12. No credit or social score: the mutual-credit limit is flat and equal — every member gets the same line (`mutualCredit.defaultLimit`), not a number computed from behavior. A per-account override exists for two deliberate human decisions only (raise for a known partner, or set to 0 to revoke). Abuse is bounded by small caps, the wallet freeze, and disputes — never by ranking people. This preserves the platform's standing commitment (including the Trust plugin) that no credit/social score exists.
-13. Wallet freeze: an admin can freeze a wallet via `POST /api/service-credits/admin/wallet-status`. As of 2026-06-15 this is backed by the platform-wide account-restriction signal (`account_restrictions`, `trading` scope) rather than the retired `service_credits_wallets.is_frozen` column; the transfer path rejects a restricted sender with `account_restricted` before any balance/rail check, on both rails. This is the trust & safety lever for a risk-flagged account, distinct from the credit limit. See `ctf/docs/developer/specs/account-restrictions-spec.md`.
+13. Wallet freeze: an admin can freeze a wallet via `POST /api/service-credits/admin/wallet-status`. As of 2026-06-15 this is backed by the platform-wide account-restriction signal (`account_restrictions`, `trading` scope) rather than the retired `service_credits_wallets.is_frozen` column; the transfer path rejects a restricted sender with `account_restricted` before any balance/rail check, on both rails. Every plugin send (Chyme tips, SkillUp transfers, Foundation, LightHouse, SocketRelay, TrustTransport) goes through the same `createTransfer`, so the freeze holds on all of them. A member has one `account_restrictions` row, so the freeze uses `restrictAccountAtScope` / `liftAccountRestrictionAtScope` (`lib/auth/account-restrictions.ts`), which never replace or lift an `all` or `contact` restriction set elsewhere. This is the trust & safety lever for a risk-flagged account, distinct from the credit limit. See `ctf/docs/developer/specs/account-restrictions-spec.md`.
 
 ---
 
@@ -302,7 +302,36 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-05: **Ledger inserts now fit the schema (code review #2898, #2900, #2902).** Six inserts
+  into `service_credits_transfers` upsert on (`sender_user_id`, `idempotency_key`), the deletion
+  reclaim's tombstone on (`account_id`, `deletion_request_id`) and its treasury event on
+  (`event_type`, `actor_id`, `idempotency_key`), and no index in this repository backed any of the
+  three, so Postgres refused every member send, plugin send, escrow release, fee collection,
+  dispute adjustment and reclaim. `schema.sql` now creates the three unique indexes, and
+  `db/migrations/pre/0003_service_credits_unique_index_dedupe.sql` first gives any rows that share
+  a key distinct keys (nothing is deleted, no amount changes) so the index cannot fail on an
+  existing database. Escrow holds and dispute adjustments were also refused by legacy NOT NULL
+  columns the code never writes (`escrow_holds.transfer_id`, `dispute_adjustments.dispute_id` and
+  `adjustment_amount`); those are now nullable. The reclaim's tombstone and reclaim-record inserts
+  now write the NOT NULL `user_id` (the account id). `createEscrowHold` and
+  `applyDisputeAdjustment` now post to Formance after their local writes, like the reclaim, so a
+  local failure no longer leaves a posting in the external ledger with nothing behind it here. The
+  daily reclaim sweep now exits 1 when any execute fails, so a failed reclaim shows as a red run.
+
 - 2026-10-01: **SkillsHunt sends credits at the end of a round, not on each accept (owner decision).** A SkillsHunt round is now points only: accepting a nomination no longer mints ServiceCredits (the per-accept reward and its per-scout cap are removed from SkillsHunt). When a round closes, an admin sends its end-of-round award: the scouts whose final score reached the round's points bar share its ServiceCredits pool in proportion to their points. Each share is minted from the treasury through `mintGrant` with the new grant reason `skills_hunt_round_award` (actor `skills-hunt-incentive-system`, idempotency key `skills-hunt-round-award-<roundId>-<userId>`) and recorded in `service_credits_admin_audit_trail` as `service-credits.governance.mint.grant.skills-hunt`. Credits already sent per accept stay sent. The Earn tab card for SkillsHunt (`components/service-credits/service-credits.constants.ts`) now reads "Nominate survivors to earn points. When a round ends, scouts above its points bar share its ServiceCredits." with "End of round" in place of "Per acceptance". See the SkillsHunt inventory for the award rules.
+
+- 2026-10-05: **Sends reach a real account, every plugin send honours the freeze, and the freeze
+  leaves wider restrictions alone (code review #2895, #2875, #2904).** The transfer route credited
+  whatever text was in the recipient field, so a username or a typo moved the sender's credits into
+  a new wallet keyed by that text, which no account can sign in as. It now resolves the value to a
+  real account through Clerk and refuses an unknown one (404) or an unrunnable check (503) before
+  any wallet row is written. Chyme tips and SkillUp transfers used a second copy of `createTransfer`
+  in `lib/shared/service-credits/` that skipped the restriction check, the command idempotency
+  record and the external ledger post; both now import the canonical one from
+  `lib/shared/credits-interface.ts`, and the copy and its only dependency (`decimal.js`) are
+  deleted. The wallet freeze overwrote a member's single `account_restrictions` row with `trading`
+  and unfreeze lifted any scope; it now refuses both with 409 when an `all` or `contact`
+  restriction is in place.
 
 - 2026-08-28: **The Earn tab's fundraiser card no longer names a month.** It read "The next one
   starts in July", which was still on the screen at the end of August. A hard-coded date in static
@@ -311,6 +340,16 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
   drive shows when one is actually running. Copy only: one string in
   `service-credits.constants.ts`, no schema, route, contract, transfer, or ledger change. The
   2026-06-19 entry below still quotes the old wording and is left as written, being a dated record.
+
+- 2026-10-05: **A second press of Send no longer sends twice (code review #2905).** The Send
+  panel made a new idempotency key on every press, so the server's replay protection never
+  covered a retry, and a balance refresh that failed after a completed send showed its error in
+  red with the form still filled in, which read as a failed send. The panel now keeps one key for
+  a filled-in send and reuses it on a retry, so a second press after an error or a lost response
+  returns the first transfer. Changing the recipient, amount or rail, or completing the send, makes
+  a new key. A completed send now always shows "Credits sent successfully!" and clears the form;
+  if the balance cannot be re-read afterwards, a separate gray note says the figure shown may be
+  out of date. Web only (`sc-send-panel.tsx`); no route, contract or ledger change.
 
 - 2026-08-27: **Saving the treasury policy did nothing on a database with no policy row yet.**
   `updateTreasuryConfig` ran a bare `UPDATE service_credits_treasury_config ... WHERE id = TRUE`, and

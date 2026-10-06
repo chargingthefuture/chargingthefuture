@@ -1,4 +1,4 @@
-import { authedFetchJson } from '../../auth/authedFetch';
+import { authedFetch, authedFetchJson } from '../../auth/authedFetch';
 
 export function chymeHandle(username: string | null, userId: string): string {
   return username ? '@' + username : 'user-' + userId.slice(0, 8);
@@ -120,14 +120,37 @@ export async function postChymeJoin(): Promise<ChymeJoinResponse> {
   });
 }
 
-// Presence heartbeat. The audio room pings this on a 35s interval while joined so the member's
-// last_seen_at stays fresh inside the 45s presence window and they keep counting as present.
-// Matches the web room's heartbeat ping.
-export async function postChymeHeartbeat(): Promise<{ ok: true }> {
-  return authedFetchJson('/api/chyme/heartbeat', {
+// Explicit leave: drops the member's presence row so they stop counting as in the room at once,
+// instead of holding a spot until the 45s presence window lapses. Matches the web room's Leave.
+export async function postChymeLeave(): Promise<{ ok: true }> {
+  return authedFetchJson('/api/chyme/leave', {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
+}
+
+// Presence heartbeat. The audio room pings this on a 35s interval while joined so the member's
+// last_seen_at stays fresh inside the 45s presence window and they keep counting as present.
+// Matches the web room's heartbeat ping. A refusal comes back as a value rather than a throw, so the
+// room can read its code: CHYME_REMOVED_FROM_ROOM (an admin removed the member) and CHYME_ROOM_FULL
+// (the member dropped out of the count and the room is at its cap) mean every later beat will be
+// refused too. A network failure still throws.
+export const CHYME_HEARTBEAT_STOP_CODES: readonly string[] = ['CHYME_REMOVED_FROM_ROOM', 'CHYME_ROOM_FULL'];
+
+export type ChymeHeartbeatResult = { ok: boolean; code: string | null; message: string | null };
+
+export async function postChymeHeartbeat(): Promise<ChymeHeartbeatResult> {
+  const response = await authedFetch('/api/chyme/heartbeat', {
+    method: 'POST',
+    headers: { 'x-ctf-csrf': '1' },
+  });
+  if (response.ok) return { ok: true, code: null, message: null };
+  const body = (await response.json().catch(() => null)) as { code?: unknown; message?: unknown } | null;
+  return {
+    ok: false,
+    code: typeof body?.code === 'string' ? body.code : null,
+    message: typeof body?.message === 'string' ? body.message : `The heartbeat was refused (status ${response.status}).`,
+  };
 }
 
 // Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing

@@ -213,7 +213,9 @@ contracts:
       executed, and THE UPLOADED FILE IS NEVER STORED. Inbox messages, drafts, and profile data are
       dropped by an allowlist before any human reads the submission. Nothing accepted here is visible
       to the assistant until a human promotes it into comic_knowledge_entries. Rate-limited to 5 per
-      member per 24 hours. The audit records the CONSENT, never the content.
+      member per 24 hours. The audit records the CONSENT, never the content. A Quora profile URL
+      that opens an Unlock submission meets the same spam denylist as the Unlock screen: a denylisted
+      URL places the same app-wide account restriction and is audited deny/spam_denylisted.
     inputSchema:
       kind:
         type: string
@@ -248,6 +250,8 @@ contracts:
       - comic_contribution_entries
       - unlock_verification_submissions
       - unlock_audit_log
+      - account_restrictions
+      - account_restrictions_audit
     purpose: assistant_knowledge_contribution
     retentionClass: transactional_long_lived
     idempotency: false
@@ -260,6 +264,8 @@ contracts:
       so another member's id is indistinguishable from one that does not exist. Marks the contribution
       withdrawn and deactivates every comic_knowledge_entries row it produced in the SAME transaction,
       so there is no window in which it reads as withdrawn while the assistant is still quoting it.
+      Produced means contribution_id is this contribution: a row it only pointed at because the text
+      was already in the library belongs to whoever put it there, and stays on.
       This command is what makes the consent form's promise of withdrawal real, and it is only
       possible because the assistant retrieves from a table at answer time rather than being trained
       on the text — words in model weights could not be withdrawn.
@@ -446,7 +452,9 @@ contracts:
       Admin. Switch one grounding entry on or off for retrieval — the write half of knowledge
       curation. Deactivating never deletes: the row stays (history, withdrawal, deletion contracts
       all still reach it) and retrieval simply skips inactive rows; the entry can be switched back
-      on. Implemented by PUT /api/comic/admin/knowledge/:entryId (CSRF-guarded).
+      on, except an entry whose contribution its member withdrew — switching that on is refused with
+      409 COMIC_CONFLICT, since withdrawal promised the assistant would stop quoting them.
+      Implemented by PUT /api/comic/admin/knowledge/:entryId (CSRF-guarded).
     inputSchema:
       entryId:
         type: string

@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason |
 
 ## How to run this
 
@@ -112,8 +112,10 @@ unbounded dump or an error from an odd `limit`.
 disabled before the call joins, so no camera prompt fires on any surface, including the iOS PWA). You
 join muted; the **microphone** permission is only requested when you press Unmute (not on join). While
 in the call you keep counting as present (the heartbeat refreshes your row every 35 seconds). On leave,
-your row is dropped and you disappear from the participant list — and any raised hand clears. The room
-shows "Live" only while at least one fresh member is present.
+your row is dropped and you disappear from the participant list — and any raised hand clears (on
+Android too since 2026-10-05: its Leave posts `/api/chyme/leave` like the web, instead of holding
+the spot for the 45-second presence window). The room shows "Live" only while at least one fresh
+member is present.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-5 · Raise and lower hand (persistent)
@@ -137,9 +139,12 @@ the android tile keeps the ✋ up (and drops it within ~15s of them lowering it)
 1. Open the Tip action on another participant's tile, enter an amount, send.
 2. Try to tip yourself.
 3. Try to tip an amount above the limit.
+4. Have an admin freeze your wallet (SC-A6 in the ServiceCredits script), then tip again.
 **Expected:** The tip sends ServiceCredits from you to that participant and delivers immediately. The
 Tip action never appears on your own tile or on a listen-only guest. Self-tip is rejected (400). An
-amount that is not a finite number above 0, or above the maximum (10000), is rejected (400).
+amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
+from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
+2026-10-05).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
@@ -155,6 +160,8 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
    45 seconds (inside the presence window, so the server still reports the room as live).
 6. Listen again, then press **Leave** in the **Live Rooms** row. Watch what a signed-in member in
    the room sees on their stage.
+7. Listen again on a desktop browser, then switch to another tab for over three minutes while a
+   second signed-out browser taps to listen. Come back to the first tab.
 **Expected:** Before the tap the room heading shows, under it the line "The room is live. Tap below
 to listen; sign in to speak." (never "You're listening live" before the tap), and a single **Tap to
 listen** button with the attendance line and the line "Phones only play sound after a tap. You will hear the room and
@@ -224,6 +231,14 @@ is gone again the moment you press it. Pressing it stops the audio, drops you of
 member in the room sees your "You (listening)" tile disappear), and returns the view to the **Tap to
 listen** button with one fewer guest in the attendance line. No page reload and no tab close is
 needed, and tapping **Tap to listen** again puts you back in the room.
+
+In step 7 the hidden tab stopped beating, and the second browser's tap pruned the first one's
+listener row (rows not seen for three minutes are dropped on the next admission). Since 2026-10-05
+the first tab's next heartbeat, as soon as it is visible again, answers that it is off the roster:
+the page shows "Connecting to the live room…" for a moment, re-admits itself through
+`/api/chyme/public/listen`, and returns to "Listening live" with the attendance line counting it
+again. If no guest spot is free by then, the note shows the server's refusal with **Try again**
+instead of playing on uncounted.
 
 "No public rooms right now" appears **only** when the server said the room is not live. If the live
 check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads
@@ -361,7 +376,13 @@ If the call cannot connect, the panel reads "Could not connect to the call: <Str
 and Android, since 2026-09-18) rather than a bare sentence; and if the accept or join route itself
 fails, its message reads "Unable to accept Back Channel: <reason>" / "Unable to join Back Channel:
 <reason>". "Stream service is not configured" now appears only when Stream credentials are absent,
-never for a Stream refusal.
+never for a Stream refusal. Since 2026-10-05 a refused invite, accept, decline, hang-up or join is
+never silent: the screen shows "Could not <what failed>: <the route's reason>" (for example "Could
+not accept the Back Channel: This Back Channel invite is no longer available."). An accept or
+decline failure shows inside the incoming prompt, a hang-up failure in the call panel (Android) or
+a notice at the top (web), and an invite or join failure in a notice at the top with **Dismiss**.
+The next action clears it. While a call is live each side posts the Back Channel heartbeat every 30
+seconds, not on every 3-second state poll.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-13 · Decline sends nothing back
@@ -586,7 +607,9 @@ for A and B now read **Let speak**. Step 4: within one room poll (15s) A's micro
 returns and A can unmute; after **Listening** A's microphone is off again and the notice is back.
 Step 5: B drops from the call and from the count at once; B's Join answers "An admin removed you
 from this room. You can come back once an admin lets you back in." in place of the stage (web
-error banner; android alert); the admin screen lists B with the room and time; after **Let back
+error banner; android alert). If B stays on the room screen instead, B's next heartbeat (within 35
+seconds) shows that same sentence in place of the stage with **Leave**, on web and Android, rather
+than "The live connection dropped…" or a silent stage; the admin screen lists B with the room and time; after **Let back
 in** B's Join works. Step 6: everyone's microphone control is back and A can unmute. Step 7: the
 action is recorded and the control shows one amber line beginning "Recorded, but Stream did not
 apply it in the call:" with Stream's reason — never a silent failure and never a 500. Every step
@@ -634,6 +657,19 @@ live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_ad
 calls they started and calls they received. The call log is ephemeral and has no history screen, so
 there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
 registry entries.
+
+### CH-25 · Sign in, and sign out leaves the room (android)
+**Role:** signed out, then member · **Surfaces:** android
+**Steps:**
+1. On a fresh install (or after signing out), open the app on the **Chyme** pill.
+2. Tap **Sign in** on the **You are not signed in** card above the room list and sign in.
+3. Join the room, then open **Account & Data**, scroll down, tap **Sign out** and confirm.
+4. Go back to the **Chyme** pill.
+**Expected:** Step 1: the sign-in card shows above the room list, and listening as a guest still
+works. Step 2: the card goes away and you can speak, react and tip as yourself. Step 4: you are no
+longer in the room as a member, the Android "Chyme live audio" notification is gone, and the sign-in
+card is back. The same steps are in the Android app test script (AN-1, AN-7).
+**Result:** android ☐ — notes:
 
 ---
 

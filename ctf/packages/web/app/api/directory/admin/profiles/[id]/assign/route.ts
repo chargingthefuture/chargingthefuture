@@ -68,6 +68,30 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
+    if (profile === 'account_has_profile') {
+      await recordDirectoryAdminAudit({
+        actorId: gate.auth.userId,
+        command: 'directory.admin.profile.assign',
+        status: 'deny',
+        reason: 'account_already_owns_profile',
+        targetType: 'profile',
+        targetId: id,
+        result: 'failure',
+        errorCategory: 'claimed_guard',
+        metadata: { assignedUserId: userId },
+      });
+
+      return NextResponse.json(
+        {
+          ok: false,
+          code: DIRECTORY_ERROR_CODE.conflict,
+          message:
+            'That account already owns a Directory profile, and an account can own only one. Delete this unclaimed profile instead, or have the member delete their own profile before attaching this one.',
+        },
+        { status: 409 },
+      );
+    }
+
     if (!profile) {
       await recordDirectoryAdminAudit({
         actorId: gate.auth.userId,

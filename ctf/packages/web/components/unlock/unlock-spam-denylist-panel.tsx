@@ -69,9 +69,10 @@ export function UnlockSpamDenylistPanel({ initialEntries }: { initialEntries: Sp
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify({ quoraProfileUrlNormalized: normalized }),
       });
-      const data = (await res.json().catch(() => null)) as { ok?: boolean; reason?: string; code?: string } | null;
+      // The route and the CSRF guard answer with `message`; the auth gate with `reason`/`code`.
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; message?: string; reason?: string; code?: string } | null;
       if (!res.ok) {
-        setError(data?.reason ?? data?.code ?? `Remove failed (${res.status}).`);
+        setError(data?.message ?? data?.reason ?? data?.code ?? `Remove failed (${res.status}).`);
         return;
       }
       setConfirmUrl(null);

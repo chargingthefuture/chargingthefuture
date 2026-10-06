@@ -559,6 +559,25 @@ Result: web ☐
 
 ---
 
+### LU-13b — A transfer from a frozen wallet is refused (added 2026-10-05)
+
+**Role:** member, then admin · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1 with a balance; an admin has frozen this member's wallet
+(SC-A6 in the ServiceCredits script).
+
+**Steps:**
+1. Attempt `POST /api/skill-up/transfers` to another member, amount 10, with a valid idempotency key.
+
+**Expected:**
+- The server returns HTTP 403 `skill_up_account_restricted`.
+- No transfer record is created and both balances are unchanged.
+- After the admin unfreezes the wallet, the same request succeeds and its `transfer` response carries
+  `recipientUserId` and a numeric `amount`.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### LU-A1 — Admin KPI cards and cohort overview
@@ -773,12 +792,15 @@ Result: web ☐
 **Precondition:** Trainee 1 is enrolled in the seed cohort (LU-3 done). Signed in as seed admin.
 
 **Steps:**
-1. As admin, open `/admin/skill-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/skill-up/milestones/[milestoneId]/validate` with enrollment ID, cohort ID, and a unique idempotency key — the only path for a non-admin trainer.)
+1. As admin, open `/admin/skill-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/skill-up/milestones/[milestoneId]/validate` with enrollment ID and a unique idempotency key — the only path for a non-admin trainer; the cohort is read from the enrollment.)
+2. (API variant, as the trainer of a different cohort) Send the same request for this enrollment. Then, as trainee 1, send it for their own enrollment.
 
 **Expected:**
 - The validation succeeds and the queue re-pulls via refresh.
 - A second identical API request with the same idempotency key returns the same validation ID without creating a duplicate record.
-- Note: the member SkillUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
+- Validating the same milestone again with a new idempotency key updates the same row (same validation ID). Once the milestone has been released (LU-A8), a further validate is refused with 409 and the release stays recorded.
+- Step 2: both requests are refused with 403 — a trainer of another cohort cannot sign off this enrollment, and nobody signs off their own.
+- Note: the member SkillUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the trainer of the enrollment's own cohort or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
 
@@ -816,10 +838,13 @@ Result: web ☐
    `POST /api/skill-up/disputes/[disputeId]/resolve` directly — the form is deliberately
    comment-only (moving credits from free-typed ids is an error magnet; adjustment cases go
    through the ServiceCredits admin). If used, replay the same request (same idempotency key) once.
+4. (API-only variant) As the cohort's trainer, send a resolve with an `adjustment`. As admin, send
+   one whose source or destination is a member who is not the enrollment's learner or trainer.
 
 **Expected:**
 - Step 2: the dispute leaves the Open disputes list after the refresh; an empty comment keeps the button disabled.
 - The API replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
+- Step 4: the trainer's request is refused with 403, and the admin's is refused with 400; no credits move in either case.
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
 
 Result: web ☐
@@ -866,6 +891,18 @@ Result: web ☐
 **Expected:** Deleting the account removes the member's enrollments (existing behavior).
 Disbursements from cohort escrow and any disputes (with their comments) are retained — the record
 of why cohort balances moved survives the account.
+
+---
+
+### Deleting SkillUp data returns deposits still held
+
+**Precondition:** A member enrolled in a cohort with a deposit, with at least one milestone not yet released. Note the wallet balance and the amount still held.
+
+**Steps:**
+1. From the account area, delete only the SkillUp data.
+2. Check the member's wallet.
+
+**Expected:** The deletion completes, the enrollment is gone, and the amount that was still held is back in the member's spendable balance with nothing left held. Deleting the entire account does the same before the account's credits are reclaimed.
 
 ---
 
