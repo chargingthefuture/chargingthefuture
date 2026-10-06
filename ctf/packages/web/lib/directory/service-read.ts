@@ -3,6 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 import { resolveServiceConsumer } from 'lib/auth/service-consumer';
 import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
+import { OWNED_PROFILE_ORDER_SQL } from 'lib/directory/profile-claim';
 
 // One Percent reads claimed Directory profiles, one at a time, for the owner's desk (owner
 // decision, 2026-10-02; the "One Percent is the paid tier" section of CLAUDE.md). The limits that
@@ -121,6 +122,7 @@ async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: st
             AND r.is_restricted
             AND r.restriction_scope IN ('all', 'contact')
         )
+      ORDER BY ${OWNED_PROFILE_ORDER_SQL}
       LIMIT 1
     `,
     [value],

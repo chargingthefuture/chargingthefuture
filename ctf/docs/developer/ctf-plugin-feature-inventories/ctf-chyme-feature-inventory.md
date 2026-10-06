@@ -188,7 +188,7 @@ Chyme plugin routes:
 - `POST /api/chyme/public/heartbeat` — **public, unauthenticated.** The listener's presence keepalive, every 35s while listening (visible tab only, like the member heartbeat). Identified by the guest cookie: **400** `CHYME_GUEST_IDENTITY_MISSING` without it, **404** with the same code when the guest's roster row is gone (the page then re-admits itself through the listen route). Refreshes `chyme_guest_listeners.last_seen_at` and credits the gap to the minute meter (surface `chyme:guest`). Answers with the room's current `participantCount` and `guestCount`, which is what keeps the listener's own attendance line right as people arrive and leave — the beat is already a round trip every 35s, so the counts cost no extra request. CSRF header required; per-IP rate limited.
 - `POST /api/chyme/public/leave` — **public, unauthenticated.** Drops the guest's roster row so the spot frees at once rather than at the end of the presence window; the cookie stays so the browser keeps its one Stream identity. Always `ok` when there is no cookie. CSRF header required; per-IP rate limited.
 - `GET /api/chyme/public/messages` — **public, unauthenticated, read-only** (owner directive, 2026-09-18: a signed-out visitor can read the room chat and signs in to write). Returns the one default room's recent messages (`ok`, `isLive`, `messages`; optional `?limit` clamped to 1–100, default 50) only while the room is live; when nobody is in the call it answers `isLive: false` with an empty list. Per-IP rate limit like the room route (the page polls every ten seconds). A failed database read returns 503 with the reason. There is no POST: writing still needs a signed-in, approved member via `POST /api/chyme/messages`.
-- `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
+- `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which calls the canonical `createTransfer` from `lib/shared/credits-interface.ts` — Chyme owns no credits ledger. A sender whose wallet is frozen or whose account is restricted from trading is refused with 403 `chyme_account_restricted`. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
 
 Admin routes (2026-09-19). All `requireChymeAdminAccess` (`requiredRoles: ['admin']`); the mutations
 take the same-origin `x-ctf-csrf: '1'` header and accept `?room=contributors`; every mutation writes a
@@ -343,6 +343,14 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
    nature: the signed-out listener path (guest identity, heartbeat, leave, refusal reasons), the
    connection-aware Join pill (Android's foreground service already keeps the call alive), and the
    admin usage screen (admin surfaces are web-only).
+10. **Android sign-in and sign-out (2026-10-05).** The Android shell (`packages/mobile/App.tsx`) shows
+    a "You are not signed in" card with a **Sign in** button above the content while nobody is
+    signed in, wired to the Clerk sign-in flow in `src/auth/auth-context.tsx`; a signed-out member
+    can still listen to a room as a guest. The Account & Data screen carries a **Sign out** button
+    (with a confirm) that clears the stored session from the device keychain. The shell's content
+    view is keyed on the signed-in member's id, so signing out or in unmounts every Chyme screen
+    holding a Stream client, and each one leaves its call and disconnects. Controls live in
+    `packages/mobile/src/components/shared/SessionControls.tsx`.
 6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_ROOM_KEY` / "Chyme Main Room") plus the hardcoded contributor room (`CHYME_CONTRIBUTORS_ROOM_KEY`, 2026-07-23). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
 
 ## Seed Coverage Status
@@ -425,6 +433,20 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
     app's foreground service is the answer for a long sit.
 
 ## Change Log
+
+- 2026-10-05: **Tips go through the canonical ServiceCredits transfer (code review #2875).**
+  `sendServiceCredits` imported a second copy of `createTransfer` that skipped the wallet freeze
+  check, the command idempotency record and the external ledger post, so a member whose wallet an
+  admin had frozen could still tip. It now imports `createTransfer` from
+  `lib/shared/credits-interface.ts` like every other plugin, and the copy is deleted. The tip route
+  answers a refused sender with 403 `chyme_account_restricted` instead of a 500.
+
+- 2026-10-05: **Android app can sign in and sign out (code review #2737).** The auth context built
+  the Clerk sign-in flow and a sign-out, but no screen called either, so a fresh install could only
+  listen as a guest and a signed-in member could never sign out. The shell now shows a sign-in card
+  while signed out and Account & Data has a Sign out button; signing out clears the stored session,
+  and keying the content view on the member's id tears down every Stream client the Chyme screens
+  hold. No route, schema, or contract change. Android app test script AN-1 and AN-7 updated.
 
 - 2026-09-30: **A reading that will not load no longer ends the loop (owner report).** On an iPhone
   the card showed "The recording could not be loaded (the file or its address is not playable, code

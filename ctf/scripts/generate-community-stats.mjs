@@ -101,9 +101,9 @@ const STAT_PROVIDERS = [
       // directory_profiles.id is varchar on the production (v2-cloned) database
       // while directory_profile_skills.profile_id is uuid, so every join across
       // the two must cast both sides to text (see repository.ts, PR #534).
+      // A row that exists is a listed person: every way a listing goes away is a hard delete.
       const profiles = await client.query(
-        `SELECT COUNT(*)::int AS n FROM directory_profiles
-         WHERE deleted_at IS NULL`,
+        `SELECT COUNT(*)::int AS n FROM directory_profiles`,
       );
       // Skills at least one active member has listed. Joined to the taxonomy and filtered to
       // is_active so this counts the same population as the catalog total below — otherwise a skill

@@ -10,7 +10,6 @@ const enrollSchema = z.object({
   idempotencyKey: z.string().min(3),
   depositCredits: z.number().min(0).optional(),
   allowWithoutDeposit: z.boolean().optional(),
-  assignedTrainerId: z.string().optional().nullable(),
 });
 
 export async function POST(request: Request) {

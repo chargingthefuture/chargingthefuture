@@ -817,6 +817,25 @@ Result: web ☐
 
 ---
 
+### FDN-37b — Ring push on the lock screen follows discreet pings
+
+**Role:** Member (provider, to receive call alerts) and a second member to ring them
+**Surface:** Web
+
+**Precondition:** FDN-37 done, so call alerts are on for the provider's device. Discreet pings are on in the provider's notification settings (the default). VAPID keys are configured.
+
+**Steps:**
+1. Lock the provider's device, or put the browser in the background.
+2. As the second member, ring the provider.
+3. Read the push on the provider's lock screen, then tap it.
+4. Turn discreet pings off in the provider's notification settings and ring again.
+
+**Expected:** Step 3: the push reads "Charging The Future" / "You have a new update." and names neither the caller nor Foundation; tapping it opens `/apps/foundation`, where the incoming-call overlay shows the caller's name with answer and decline. Step 4: the push reads "Incoming call" / "<caller> is calling you on Foundation". If the settings cannot be read, the push stays discreet.
+
+Result: web ☐
+
+---
+
 ### FDN-38 — Admin: capacity policy change is versioned and audited
 
 **Role:** Admin
