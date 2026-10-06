@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:lighthouse` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab and the budget currency picker — LH-10, LH-10b and LH-11) |
+| **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab and the budget currency picker — LH-10, LH-10b and LH-11; hand-updated 2026-10-05 for failed reads — LH-12) |
 
 > Status spelling: since 2026-07-31 every stored status reads `canceled` (US spelling); if a step shows the British form anywhere, that is a bug.
 
@@ -247,6 +247,24 @@ width a long label like "ServiceCredits" stays inside the card instead of spilli
 the same as it hides their listings.
 **Result:** web ☐ mobile ☐ — notes:
 
+### LH-12 · A failed read says so instead of looking empty
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Browse with the network cut (browser dev tools → offline), or while
+   `/api/lighthouse/properties` answers an error. Do the same on **Matches** with
+   `/api/lighthouse/matches`, and on **List** with `/api/lighthouse/my-properties`.
+2. With listings already on screen, cut the network and press refresh.
+3. Open **You** while `/api/lighthouse/profile` fails (an error other than "no profile yet").
+4. On **Direct Line**, pick a match that is still pending.
+**Expected:** Each tab shows a red message saying what could not be loaded, using the route's own
+reason when it gave one, and never "no listings", "No matches yet." or "Your listings (0)". A failed
+refresh keeps the list already showing and adds the message above it. On **You**, the message says
+saving is off, **Save** is disabled, and **Try again** reads the details again. Save comes back once
+the read succeeds, so stored phone, Signal link, budget and Wanted posting are never overwritten by
+a blank form. Direct Line shows "Chat is only available for accepted matches." instead of a fixed
+chat error.
+**Result:** web ☐ — notes:
+
 ---
 
 ### LH-DEL · Account deletion clears the Stream chat copy (privacy)
@@ -315,9 +333,13 @@ CSRF guard; an unknown status is refused with a readable error rather than silen
 ### LH-A3 · Property moderation
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. Hide a listing from the admin Properties tab, then restore it.
-**Expected:** Hide/restore flips the listing's active state and preserves both currency fields. The
-write is CSRF-guarded and the change is reflected in the list.
+1. Pick a listing whose rent is in ServiceCredits (or any non-USD currency) and that accepts
+   ServiceCredits.
+2. Hide it from the admin Properties tab, then restore it.
+3. Open the listing as a member.
+**Expected:** Hide/restore flips the listing's active state and preserves both currency fields: the
+rent still reads in its own currency (never a "$" figure for ServiceCredits) and the listing still
+shows "Accepts ServiceCredits". The write is CSRF-guarded and the change is reflected in the list.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-A4 · Audit trail
