@@ -19,6 +19,12 @@ type AcceptResponse = { ok: true; callId: string } & ChymeBackChannelJoinCredent
 
 const EMPTY_STATE: ChymeBackChannelState = { incomingInvite: null, outgoingInvite: null, activeCall: null };
 
+// "Could not send the invite: This room is not live." — what failed, then the route's reason.
+function describeFailure(what: string, error: unknown): string {
+  const reason = error instanceof Error && error.message ? error.message : 'no reason was given.';
+  return `Could not ${what}: ${reason}`;
+}
+
 export type BackChannelController = {
   incomingInvite: ChymeBackChannelState['incomingInvite'];
   outgoingInvite: ChymeBackChannelState['outgoingInvite'];
@@ -26,6 +32,10 @@ export type BackChannelController = {
   // Join credentials for the current active call (null until minted). Matched to activeCall.callId.
   joinCredentials: (ChymeBackChannelJoinCredentials & { callId: string }) | null;
   busy: boolean;
+  // The reason the last invite, accept, decline, hang-up or /join failed, in the route's own words.
+  // Cleared when the next action starts and when the member dismisses it.
+  error: string | null;
+  clearError: () => void;
   sendInvite: (recipientUserId: string) => Promise<void>;
   accept: (callId: string) => Promise<void>;
   decline: (callId: string) => Promise<void>;
@@ -36,6 +46,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
   const [state, setState] = useState<ChymeBackChannelState>(EMPTY_STATE);
   const [joinCredentials, setJoinCredentials] = useState<(ChymeBackChannelJoinCredentials & { callId: string }) | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
   const joiningRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -98,21 +110,24 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
           streamUserId: creds.streamUserId,
           streamToken: creds.streamToken,
         });
-      } catch {
+      } catch (joinError) {
         joiningRef.current = null;
+        setError(describeFailure('connect to the Back Channel', joinError));
       }
     })();
   }, [state.activeCall, joinCredentials?.callId]);
 
-  // Heartbeat the live call so it is not reaped.
+  // Heartbeat the live call so it is not reaped. Keyed on the call id, not the activeCall object:
+  // every 3-second poll parses a fresh object, and depending on it would restart this effect (and
+  // send a beat) on every poll instead of every 30 seconds.
+  const activeCallId = state.activeCall?.callId ?? null;
   useEffect(() => {
-    const active = state.activeCall;
-    if (!active) return;
+    if (!activeCallId) return;
     const beat = () => {
       void fetch('/api/chyme/back-channel/heartbeat', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ callId: active.callId }),
+        body: JSON.stringify({ callId: activeCallId }),
       }).catch(() => {
         /* best-effort */
       });
@@ -120,10 +135,11 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
     beat();
     const id = window.setInterval(beat, BACK_CHANNEL_HEARTBEAT_MS);
     return () => window.clearInterval(id);
-  }, [state.activeCall]);
+  }, [activeCallId]);
 
   const sendInvite = useCallback(async (recipientUserId: string) => {
     setBusy(true);
+    setError(null);
     try {
       await requestJson('/api/chyme/back-channel/invite', {
         method: 'POST',
@@ -131,6 +147,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
         body: JSON.stringify({ recipientUserId }),
       });
       await refresh();
+    } catch (actionError) {
+      setError(describeFailure('send the Back Channel invite', actionError));
     } finally {
       setBusy(false);
     }
@@ -138,6 +156,7 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
 
   const accept = useCallback(async (callId: string) => {
     setBusy(true);
+    setError(null);
     try {
       const creds = await requestJson<AcceptResponse>('/api/chyme/back-channel/accept', {
         method: 'POST',
@@ -152,6 +171,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
         streamToken: creds.streamToken,
       });
       await refresh();
+    } catch (actionError) {
+      setError(describeFailure('accept the Back Channel', actionError));
     } finally {
       setBusy(false);
     }
@@ -159,6 +180,7 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
 
   const decline = useCallback(async (callId: string) => {
     setBusy(true);
+    setError(null);
     try {
       await requestJson('/api/chyme/back-channel/decline', {
         method: 'POST',
@@ -166,6 +188,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
         body: JSON.stringify({ callId }),
       });
       await refresh();
+    } catch (actionError) {
+      setError(describeFailure('decline the Back Channel', actionError));
     } finally {
       setBusy(false);
     }
@@ -173,6 +197,7 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
 
   const hangUp = useCallback(async (callId: string) => {
     setBusy(true);
+    setError(null);
     try {
       await requestJson('/api/chyme/back-channel/leave', {
         method: 'POST',
@@ -181,6 +206,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
       });
       setJoinCredentials(null);
       await refresh();
+    } catch (actionError) {
+      setError(describeFailure('hang up the Back Channel', actionError));
     } finally {
       setBusy(false);
     }
@@ -192,6 +219,8 @@ export function useBackChannel(currentUser: CurrentUser, enabled: boolean): Back
     activeCall: state.activeCall,
     joinCredentials,
     busy,
+    error,
+    clearError,
     sendInvite,
     accept,
     decline,

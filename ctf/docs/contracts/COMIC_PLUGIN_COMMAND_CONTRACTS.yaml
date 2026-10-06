@@ -213,7 +213,9 @@ contracts:
       executed, and THE UPLOADED FILE IS NEVER STORED. Inbox messages, drafts, and profile data are
       dropped by an allowlist before any human reads the submission. Nothing accepted here is visible
       to the assistant until a human promotes it into comic_knowledge_entries. Rate-limited to 5 per
-      member per 24 hours. The audit records the CONSENT, never the content.
+      member per 24 hours. The audit records the CONSENT, never the content. A Quora profile URL
+      that opens an Unlock submission meets the same spam denylist as the Unlock screen: a denylisted
+      URL places the same app-wide account restriction and is audited deny/spam_denylisted.
     inputSchema:
       kind:
         type: string
@@ -248,6 +250,8 @@ contracts:
       - comic_contribution_entries
       - unlock_verification_submissions
       - unlock_audit_log
+      - account_restrictions
+      - account_restrictions_audit
     purpose: assistant_knowledge_contribution
     retentionClass: transactional_long_lived
     idempotency: false

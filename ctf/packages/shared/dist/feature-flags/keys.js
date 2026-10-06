@@ -27,12 +27,12 @@ export function releaseFlagKey(agent, fixName) {
 }
 // Vendor-neutral evaluation context. The web/mobile/agent flag clients map this onto
 // their provider's native context (e.g. Unleash Context: userId + properties).
-// Per-user unlock feature flags. Admin approval grants the matching flag to the user
-// via Unleash targeting (see lib/feature-flags/unleash-admin.ts). The flag evaluation
-// falls back to the DB approval status for users approved before flag-driven gating.
+// Per-user unlock feature flags. The stored Unlock submission decides access whenever the
+// member has one (see lib/unlock/access.ts); this flag is read only for a member with no
+// submission, so a member added to it by hand in Unleash still gets full access.
 export const UNLOCK_FLAGS = {
     // Controls access to the Quora-profile-verification onboarding flow.
-    // OFF (default) = user is in pending/review; ON = user has full access.
+    // ON = full access for a member with no stored submission; ignored once one exists.
     QUORA_ONBOARDING: 'feature-unlock-quora-onboarding',
     // The early-Commons A/B experiment flag (`feature-unlock-early-commons-access`) was removed on
     // 2026-08-19. Giving a not-yet-verified member the Commons is no longer a rollout percentage —
