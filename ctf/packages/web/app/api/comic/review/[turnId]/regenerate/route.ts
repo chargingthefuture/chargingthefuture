@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { recordComicAdminAudit } from 'lib/comic/audit';
+import { recordComicAdminAudit, reviewActionFailure } from 'lib/comic/audit';
 import { regenerateComicDraft } from 'lib/comic/repository';
 import { reportError } from 'lib/observability/report';
 
@@ -42,6 +42,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   } catch (error) {
     reportError(error, { area: 'comic', op: 'review_turnid_regenerate' });
     const code = error instanceof Error ? error.message : 'unknown_error';
+    const failure = reviewActionFailure(code);
+    await recordComicAdminAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'comic',
+      command: 'comic.review.regenerate',
+      status: failure.status,
+      reason: code,
+      targetType: 'comic_review_queue',
+      targetId: reviewId,
+      result: 'failure',
+      errorCategory: failure.errorCategory,
+    });
 
     if (code === 'review_not_found') {
       return NextResponse.json(

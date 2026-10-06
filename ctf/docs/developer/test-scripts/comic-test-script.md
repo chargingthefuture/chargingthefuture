@@ -361,11 +361,21 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 2. Read the newest entries.
 3. `PUT /api/comic/admin/knowledge/<a uuid that does not exist>` with `{ "active": true }`, then reopen the panel.
 4. Regenerate a draft answer on `/admin/comic`, then reopen the panel.
+5. With the same review item open in two tabs, approve it in one, then approve it again in the other.
+   Then accept a contribution that its member has just withdrawn (or that was already decided).
+   Reopen the panel.
+6. Disconnect the network and expand the Audit log panel.
 
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the decision in plain words — "Decided on a contribution", "Switched a knowledge entry on or off", "Regenerated a draft answer" — with the admin's id, what it was done to, and the local date and time. A decline shows its reason from the metadata; a knowledge toggle says "switched on" or "switched off".
 - Step 3: the 404 appears in the list marked **Refused**, reading "Because the record was not there". An action that did not happen is recorded, not dropped. This is the case worth checking: before 2026-08-28 the knowledge route wrote nothing at all, not even a log line, so switching an entry off left no trace whatever.
 - Step 4: a "Regenerated a draft answer" row appears.
+- Step 5: the second approve shows "Resolved a review turn" marked **Refused**, "Because it had
+  already been decided", and the accept shows "Decided on a contribution" marked **Refused**,
+  "Because the record was not there". A refused resolve, regenerate or contribution review is
+  recorded like the ones that went through (added 2026-10-05).
+- Step 6: the panel says "Could not load the audit trail." followed by the reason in brackets, not
+  the sentence alone (added 2026-10-05).
 - Nothing an admin did in this session is missing from the list.
 
 **Note:** the member-facing actions — asking, rating, contributing, withdrawing — deliberately write no audit row. A row per message would be volume, not accountability. Their absence here is correct, not a gap.

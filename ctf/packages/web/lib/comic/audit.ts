@@ -52,6 +52,20 @@ export function logComicAudit(event: ComicAuditEvent): void {
 // and a reviewer repeating an accept or decline they have already made is worse than a gap in the
 // trail. A failure is reported through the observability channel instead, and the log line still
 // carries the event.
+// The audit status and error category for a review-queue action (resolve, regenerate) that threw
+// one of the repository's error codes. A refusal — the item is gone, already decided, or the payload
+// was invalid — is a `deny`; anything else is a failed write the guard allowed, as on the other
+// admin routes. Shared so the two routes record the same refusal the same way.
+export function reviewActionFailure(
+  code: string,
+  invalidPayloadCodes: ReadonlySet<string> = new Set(),
+): { status: 'allow' | 'deny'; errorCategory: string } {
+  if (code === 'review_not_found') return { status: 'deny', errorCategory: 'not_found' };
+  if (code === 'review_already_resolved') return { status: 'deny', errorCategory: 'already_reviewed' };
+  if (invalidPayloadCodes.has(code)) return { status: 'deny', errorCategory: 'invalid_payload' };
+  return { status: 'allow', errorCategory: 'persistence_error' };
+}
+
 export async function recordComicAdminAudit(event: ComicAuditEvent): Promise<void> {
   logComicAudit(event);
   try {

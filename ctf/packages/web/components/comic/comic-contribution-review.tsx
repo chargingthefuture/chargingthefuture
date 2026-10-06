@@ -44,7 +44,7 @@ type ReviewResult = {
   message?: string;
   promoted?: number;
   alreadyPresent?: number;
-  grant?: { status: string; amount?: number };
+  grant?: { status: string; amount?: number; reason?: string };
 };
 
 type ReviewAction = 'accept' | 'decline';
@@ -67,7 +67,7 @@ function grantLine(grant: ReviewResult['grant']): string {
     return 'No credits: this member is not verified yet. The writing is in the library; the grant can be made once they finish Unlock.';
   }
   if (grant?.status === 'already_granted') return 'Credits were already granted for this contribution.';
-  return 'The credits grant did not go through — retry it by hand.';
+  return `The credits grant did not go through (${grant?.reason ?? 'no reason given'}) — retry it by hand.`;
 }
 
 function acceptNotice(data: ReviewResult | null): string {
