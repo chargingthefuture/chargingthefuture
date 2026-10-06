@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, CheckCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { failureText } from 'lib/errors/client-failure';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type { TrustTransportIncident, TrustTransportMarketConfig } from 'lib/trust-transport/types';
@@ -75,8 +76,10 @@ async function adminMutate(url: string, method: 'POST' | 'PUT', body?: unknown):
     if (res.ok) return { ok: true };
     const data = (await res.json().catch(() => null)) as { message?: string; reason?: string; code?: string } | null;
     return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
-  } catch {
-    return { ok: false, message: 'Network error. Try again.' };
+  } catch (error) {
+    // The request never answered (or its body could not be read): report the caught value and name
+    // it, rather than calling every client-side failure a network error (rule 137).
+    return { ok: false, message: failureText(error, { area: 'trust-transport', op: 'admin_mutate', fallback: 'The request did not finish.', extra: { url } }) };
   }
 }
 

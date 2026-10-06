@@ -96,7 +96,7 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 
 ### 1.6 Earnings and Completion History
 
-1. ServiceCredits earned on a completed trip are paid straight to the member's ServiceCredits wallet (a real on-platform transfer requester → provider).
+1. ServiceCredits earned on a completed trip are sent straight to the member's ServiceCredits wallet (a real on-platform transfer requester → provider).
 2. For any other settlement (fiat/crypto/barter), the platform has **no payment processing** — the payment is arranged peer-to-peer, off-platform, directly between the two people. There is no platform payout. The Earnings tab shows a **read-only record** of what completed trips were worth, per currency; the same figures are recognized by the GDP layer (`lib/gdp/recognition.ts`) as community economic activity. (Owner decision, 2026-07-08: the fiat/crypto "withdrawable balance + payout request" flow was removed — it implied a platform-issued payout that cannot exist.)
 3. Reputation is transparent completion history only — the record of whether each trip was successfully completed or not, and a count of completed trips. There are no ratings, reviews, star scores, written feedback, or reliability badges of any kind. (Owner directive: rating of people is not allowed.)
 
@@ -313,6 +313,17 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-10-05: **Member screens show the route's reason, and credits wording corrected.** Every
+  member fetch in the shell, Tracking, Help and Earnings tabs now shows the `message` the route
+  returned (through the shared `responseFailureText` helper) instead of a fixed sentence, falling
+  back to the old sentence only when the body carries none. A failed `GET /requests` no longer leaves
+  Tracking and Direct Line reading "No active trips": the reason is shown and the old list is kept.
+  A failed `GET /modes` is reported (booking still works from the built-in ride types). The
+  provider's "Trips you're helping with" section now renders its load error instead of disappearing.
+  Both admin `adminMutate` helpers report a thrown failure and name it, instead of calling it a
+  network error. The signed-out page now says "Settle with ServiceCredits." and the Earnings intro
+  says ServiceCredits are sent to the wallet and anything else agreed is arranged between the two
+  people, so credits are no longer described as a payment. No schema, route, or contract change.
 - 2026-10-05: **An offer accept no longer fails on a Stream error, and emergency stop and order cancel
   are audited.** `acceptOffer` set up the trip's Stream channel after the transaction committed with
   no guard, so a Stream refusal turned a committed accept into a 503: the route skipped its audit row

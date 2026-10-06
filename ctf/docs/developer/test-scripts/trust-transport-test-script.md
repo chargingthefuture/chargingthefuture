@@ -306,7 +306,7 @@ Result: web ☐
 1. Open the **Earnings** tab.
 2. Read the intro copy and the per-currency cards.
 
-**Expected:** A per-currency card shows the total you&apos;ve earned across completed trips (e.g. `24.50 USD`). The tab makes clear this is a **record**, not a withdrawable balance: the copy says ServiceCredits are paid to your wallet, and other payment is arranged directly between you and the other person off-platform (the platform doesn&apos;t hold or pay out that money), and that these amounts count toward community economic activity. There is **no** "Available balance" withdrawable framing, **no** currency selector + amount + "Request a payout" form, and **no** "Payout history" section. (The `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes no longer exist — a call to either returns 404.)
+**Expected:** A per-currency card shows the total you&apos;ve earned across completed trips (e.g. `24.50 USD`). The tab makes clear this is a **record**, not a withdrawable balance: the copy says ServiceCredits are sent to your wallet, and anything else you agreed (cash, a bank transfer, crypto) is arranged directly between you and the other person off-platform (the platform doesn&apos;t hold or pay out that money), and that these amounts count toward community economic activity. There is **no** "Available balance" withdrawable framing, **no** currency selector + amount + "Request a payout" form, and **no** "Payout history" section. (The `POST /api/trust-transport/payouts/requests` and `GET /api/trust-transport/payouts` routes no longer exist — a call to either returns 404.)
 
 Result: web ☐
 

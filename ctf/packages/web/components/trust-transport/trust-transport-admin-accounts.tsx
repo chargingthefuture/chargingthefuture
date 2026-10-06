@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ShieldOff, ShieldCheck } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { failureText } from 'lib/errors/client-failure';
 import { getTrustTransportTokens, type TrustTransportTokens } from './tt-shared';
 
 // Admin design tokens (shared admin look) come from the shared theme getter; the default theme
@@ -29,8 +30,10 @@ async function adminMutate(url: string, body?: unknown): Promise<{ ok: boolean; 
     if (res.ok) return { ok: true };
     const data = (await res.json().catch(() => null)) as { message?: string; reason?: string; code?: string } | null;
     return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
-  } catch {
-    return { ok: false, message: 'Network error. Try again.' };
+  } catch (error) {
+    // The request never answered (or its body could not be read): report the caught value and name
+    // it, rather than calling every client-side failure a network error (rule 137).
+    return { ok: false, message: failureText(error, { area: 'trust-transport', op: 'admin_accounts_mutate', fallback: 'The request did not finish.', extra: { url } }) };
   }
 }
 

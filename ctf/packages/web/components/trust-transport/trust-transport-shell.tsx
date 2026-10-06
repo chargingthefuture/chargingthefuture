@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Car } from "lucide-react";
-import { BackChevronButton } from "@/lib/nav/back-history";
 import { AppLoading } from "@/components/shared/app-loading";
 import { useTheme } from "@/hooks/useTheme";
+import { failureText, responseFailureText } from "@/lib/errors/client-failure";
+import { reportError } from "@/lib/observability/report";
 import { BG, deriveRideTypes, getTrustTransportTokens, type ChatCreds, type Mode, type Tab, type TripRequest } from "./tt-shared";
 import { TrustTransportBookTab } from "./tt-book-tab";
-import { TrustTransportTrackingTab } from "./tt-tracking-tab";
 import { TrustTransportHelpTab } from "./tt-help-tab";
 import { TrustTransportEarningsTab } from "./tt-earnings-tab";
-import { TrustTransportChatTab } from "./tt-chat-tab";
-import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
-import { MobileTopActions } from "@/components/shared/mobile-top-actions";
-import { RefreshButton } from "@/components/shared/refresh-button";
+import { TrustTransportHeader, TrustTransportTripTabs } from "./tt-shell-parts";
 
 // Build the create-request body from the booking form. The API expects mode + title + details (both
 // required) and optional pickup/dropoff cities — not fromLocation/toLocation. Settlement: the chosen
@@ -46,6 +42,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [modes, setModes] = useState<Mode[]>([]);
   const [requests, setRequests] = useState<TripRequest[]>([]);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [tab, setTab] = useState<Tab>("book");
   const [rideType, setRideType] = useState("ride");
@@ -72,13 +69,22 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const t = getTrustTransportTokens(theme);
 
   async function fetchRequests() {
-    const res = await fetch("/api/trust-transport/requests");
-    if (res.ok) {
+    // A failed load keeps whatever list was already shown and says why, so Tracking and Direct Line
+    // never read "No active trips" to a member whose trips simply did not load (rule 137).
+    try {
+      const res = await fetch("/api/trust-transport/requests");
+      if (!res.ok) {
+        setRequestsError(await responseFailureText(res, "Could not load your trips.", "member"));
+        return;
+      }
       // The API wraps the list as { ok, items, page, ... } — the array is .items,
       // not the top-level body. Reading the body directly made `requests` an
       // object, so requests.map(...) in the tracking/chat tabs threw.
       const data = (await res.json()) as { items?: TripRequest[] };
       setRequests(Array.isArray(data.items) ? data.items : []);
+      setRequestsError(null);
+    } catch (e: unknown) {
+      setRequestsError(failureText(e, { area: "trust-transport", op: "fetch_requests", fallback: "Could not load your trips.", audience: "member" }));
     }
   }
 
@@ -96,6 +102,10 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           const data = (await modesRes.json()) as { modes?: unknown };
           const rawModes: unknown[] = Array.isArray(data.modes) ? data.modes : [];
           setModes(rawModes.map((m) => (typeof m === "string" ? { id: m, name: m } : (m as Mode))));
+        } else {
+          // Booking still works from the built-in ride types, so this is not shown; report it so the
+          // failed load is not lost.
+          reportError(new Error(await responseFailureText(modesRes, "Could not load TrustTransport modes.")), { area: "trust-transport", op: "fetch_modes" });
         }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to load TrustTransport.");
@@ -124,7 +134,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify(buildBookingBody({ rideType, pickup: from.trim(), dropoff: to.trim(), priceCurrency, priceAmount, acceptedCurrencies })),
       });
-      if (!res.ok) throw new Error("Failed to create request");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to create request", "member"));
       setBooked(true);
       await fetchRequests();
     } catch (e: unknown) {
@@ -149,7 +159,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     setChatLoading(true);
     try {
       const res = await fetch(`/api/trust-transport/trips/${req.tripId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      if (!res.ok) throw new Error("Failed to fetch chat credentials");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Failed to fetch chat credentials", "member"));
       const data = (await res.json()) as ChatCreds;
       if (!data.ok) throw new Error(data.message ?? "No chat credentials");
       if (activeChatReqRef.current !== req.id) return;
@@ -210,53 +220,27 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           onReset={() => { setBooked(false); setFrom(""); setTo(""); setPriceCurrency("FREE"); setPriceAmount(""); setRequiresAmount(false); setAcceptedCurrencies([]); }}
         />
       )}
-      {tab === "tracking" && (
-        <TrustTransportTrackingTab requests={requests} onBook={() => setTab("book")} onChat={openChat} onAccepted={() => void fetchRequests()} onCancelled={() => void fetchRequests()} onCompletionConfirmed={() => void fetchRequests()} />
-      )}
       {tab === "help" && <TrustTransportHelpTab />}
       {tab === "earnings" && <TrustTransportEarningsTab />}
-      {tab === "chat" && (
-        <TrustTransportChatTab
-          requests={requests}
-          selectedRequest={selectedRequest}
-          chatCredentials={chatCredentials}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          onSelect={(r) => void fetchChatForRequest(r)}
-          onBook={() => setTab("book")}
-        />
-      )}
+      <TrustTransportTripTabs
+        tab={tab}
+        requests={requests}
+        requestsError={requestsError}
+        selectedRequest={selectedRequest}
+        chatCredentials={chatCredentials}
+        chatLoading={chatLoading}
+        chatError={chatError}
+        onBook={() => setTab("book")}
+        onChat={openChat}
+        onSelectChat={(r) => void fetchChatForRequest(r)}
+        onTripsChanged={() => void fetchRequests()}
+      />
     </>
   );
 
-    const tabs: { key: Tab; label: string }[] = [
-      { key: "book", label: "Book" },
-      { key: "tracking", label: "Tracking" },
-      { key: "help", label: "Help" },
-      { key: "earnings", label: "Earnings" },
-      { key: "chat", label: "Direct Line" },
-    ];
     return (
       <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          {/* flexWrap: this row carries the plugin actions plus the three global ones, which
-              together overflow a 390px phone — the last control was clipped off the right
-              edge and the title collapsed to nothing. Wrapping reflows instead of cutting
-              off; on a wider viewport it still renders as one line. */}
-          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", rowGap: 6, gap: 10, padding: "10px 14px" }}>
-            <BackChevronButton accent={t.ACCENT} />
-            <Car size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>TrustTransport</span>
-            <PluginAdminButton href="/admin/trust-transport" isAdmin={isAdmin} accent={t.ACCENT} />
-            <RefreshButton onRefresh={() => fetchRequests()} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          <div style={{ display: "flex", gap: 6, padding: "0 12px 8px" }}>
-            {tabs.map(({ key, label }) => (
-              <button key={key} onClick={() => setTab(key)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, background: tab === key ? t.ACCENT_TINT_BG : "transparent", border: `1px solid ${tab === key ? t.ACCENT_TAB_BORDER : t.BORDER_STRONG}`, color: tab === key ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
-        </div>
+        <TrustTransportHeader t={t} isAdmin={isAdmin} tab={tab} onTab={setTab} onRefresh={() => fetchRequests()} />
         {content}
       </div>
     );
