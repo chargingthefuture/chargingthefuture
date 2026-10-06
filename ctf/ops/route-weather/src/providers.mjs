@@ -132,14 +132,20 @@ async function sampleNWS(lat, lon, etaEpoch) {
   };
 }
 
+// Active NWS alert names at a point, as { events, failed }. A failed lookup (HTTP error, rate
+// limit, network error, unexpected response) is not the same as "no active alerts", so it comes
+// back with `failed` set to the reason and the report says the alerts could not be checked
+// instead of calling the stop clear.
 export async function fetchUSAlerts(lat, lon) {
   try {
     const data = await getJson(`https://api.weather.gov/alerts/active?point=${lat},${lon}`, NWS_HEADERS);
-    return (data.features || [])
-      .map((f) => f.properties?.event)
-      .filter(Boolean);
-  } catch {
-    return [];
+    if (!Array.isArray(data?.features)) throw new Error('NWS alerts response had no features list');
+    const events = data.features.map((f) => f.properties?.event).filter(Boolean);
+    return { events, failed: null };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`[route-weather] NWS alert lookup failed: ${reason}`);
+    return { events: [], failed: reason };
   }
 }
 

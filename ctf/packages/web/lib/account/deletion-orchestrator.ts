@@ -12,11 +12,14 @@
 // Money is deliberately out of scope here. ServiceCredits wallets/ledgers are `retain` in the
 // registry and are settled by the existing reclaim flow (`markFullAccountDeletionRequested` →
 // `enqueueServiceCreditsDeletionReclaim` → the service-credits adapter outbox). The full-account
-// route calls that reclaim flow alongside this orchestrator; this file never moves credits.
+// route calls that reclaim flow alongside this orchestrator. One exception, in
+// `runPreDeletionSettlements`: a SkillUp deposit still held in escrow is returned to the member's
+// own wallet before their enrollments are deleted, because those rows are the only way back to it.
 
 import type { PoolClient } from 'pg';
 import { withDbTransaction } from 'lib/db/postgres';
 import { DIRECTORY_MEMBER_DELETION_REASON, removeClaimedDirectoryProfile } from 'lib/directory/repository';
+import { refundHeldDepositsBeforeDataDeletion } from 'lib/skill-up/repository';
 import { withdrawAnsweredCommentsForDeletion } from 'lib/fireside/repository';
 import { logAccountAudit } from './audit';
 import {
@@ -168,6 +171,19 @@ async function runInTransactionSteps(client: PoolClient, userId: string, slugs: 
   }
 }
 
+/**
+ * Steps that move credits and so cannot run inside the deletion transaction: the ServiceCredits
+ * escrow refund opens its own transaction and posts to the external ledger. They run BEFORE the
+ * transaction because the plan deletes the rows they start from. A failure throws and stops the
+ * deletion, which the member (or the sign-in provider's retry) can run again; each refund is
+ * idempotent per escrow, so a second run returns only what is still held.
+ */
+async function runPreDeletionSettlements(userId: string, slugs: readonly string[]): Promise<void> {
+  if (slugs.includes('skill-up')) {
+    await refundHeldDepositsBeforeDataDeletion(userId);
+  }
+}
+
 export async function deleteServiceScopeData(
   slug: string,
   userId: string,
@@ -201,6 +217,7 @@ export async function deleteServiceScopeData(
   }
 
   try {
+    await runPreDeletionSettlements(userId, [entry.slug]);
     const { result, tables } = await withDbTransaction(async (client) => {
       await runInTransactionSteps(client, userId, [entry.slug]);
       const tableResults = await executeEntry(client, entry, userId);
@@ -265,6 +282,10 @@ export async function deleteAllAccountData(
   initiatedBy: DeletionInitiator = 'member',
 ): Promise<AccountDeletionResult> {
   try {
+    await runPreDeletionSettlements(
+      userId,
+      (accountDeletionRegistry as readonly PluginDeletionEntry[]).map((entry) => entry.slug),
+    );
     const { result, tables } = await withDbTransaction(async (client) => {
       const allResults: DeletionTableResult[] = [];
       await runInTransactionSteps(
