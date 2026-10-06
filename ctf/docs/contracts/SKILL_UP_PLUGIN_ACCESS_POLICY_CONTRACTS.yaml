@@ -123,6 +123,8 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - trainer_not_assigned
+      - milestone_not_in_enrollment_cohort
+      - self_sign_off
       - rate_limit_exceeded
 
   - pluginId: skill-up
@@ -147,6 +149,9 @@ policies:
       containsPHI: false
       requiresAdditionalAudit: true
     denyConditions:
+      - trainer_not_assigned
+      - milestone_not_in_enrollment_cohort
+      - self_sign_off
       - milestone_not_validated
       - escrow_missing
       - invalid_release_state
@@ -199,6 +204,8 @@ policies:
     denyConditions:
       - insufficient_role
       - dispute_not_open
+      - adjustment_requires_admin
+      - adjustment_outside_dispute_parties
 
   - pluginId: skill-up
     command: admin.adjust_credits

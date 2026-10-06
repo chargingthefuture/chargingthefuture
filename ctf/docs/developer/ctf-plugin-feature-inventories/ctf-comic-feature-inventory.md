@@ -333,7 +333,10 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
   member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an
   approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`.
-  Best-effort and run *after* the contribution is stored, so a failure cannot lose the writing.
+  A URL on the spam denylist gets the same app-wide block (`applyDenylistBlockIfSpam`, shared with
+  `POST /api/unlock/submission`) and is audited `deny`/`spam_denylisted`.
+  Best-effort and run *after* the contribution is stored, so a failure cannot lose the writing; a
+  failure is reported, and the receipt tells the member to finish verification on the Unlock screen.
   Accepts either
   **`kind=links`** (the default: pasted posts, each with a quora.com URL as provenance — nothing is
   fetched) or **`kind=export`** (a Quora export `.zip`, multipart, 25 MB cap), plus the consent
@@ -824,6 +827,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-05: **Contributing no longer gets round the Unlock spam denylist, and a failed link to Unlock is said out loud.** `linkContributionToUnlock` opened the Unlock submission but ignored the status it came back with, so a Quora URL on the spam denylist was marked spam with no app-wide block and audited as `allow`/`ok`. It now applies the same block as the Unlock screen's own route — the helper moved from that route into `lib/unlock/denylist-block.ts` and is shared through `lib/shared/unlock-interface.ts` — and audits `deny`/`spam_denylisted`, with the submission id in the audit metadata. Both catches in `lib/comic/contribution-unlock-link.ts` now report the error (`contribution_unlock_status_check`, `contribution_unlock_link`). On `/knowledge`, the receipt has a line for the `failed` outcome (writing received, verification could not be started from here, finish it on the Unlock screen), and a failed load of "What you have sent" shows a line saying so instead of the section vanishing with its Withdraw buttons. The review dashboard reports a failed training-count or plugin-list load and shows the reason where the counter or picker would be. No schema, route-shape or contract change.
 
 - 2026-10-05: **Withdrawing a contribution switches off only what that contribution put in the library, and curation cannot switch it back on.** An entry whose text was already in the library points at the existing row instead of making a new one, and `withdrawContribution` switched off every row its entries pointed at — so a member could switch off another member's entry, or the owner's imported writing, by sending a copy of it and withdrawing. The update now matches on `comic_knowledge_entries.contribution_id`, the same column account deletion cascades on. Separately, `setKnowledgeEntryActive` let an admin switch a withdrawn contribution's entry back on from `/admin/comic/knowledge`; switching on is now refused inside the same UPDATE when the row's contribution is withdrawn, and `PUT /api/comic/admin/knowledge/[entryId]` answers 409 with a plain reason and an audit row. No schema change.
 

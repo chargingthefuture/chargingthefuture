@@ -1,9 +1,11 @@
 import {
+  applyDenylistBlockIfSpam,
   createOrUpdateUnlockSubmission,
   getUnlockStatusForUser,
   insertUnlockAudit,
   normalizeQuoraProfileUrl,
 } from 'lib/shared/unlock-interface';
+import { reportError } from 'lib/observability/report';
 
 // Contributing to the knowledge library is a route INTO verification, not something gated behind it
 // (owner decision, 2026-07-29).
@@ -34,9 +36,11 @@ export async function needsQuoraProfileUrl(userId: string): Promise<boolean> {
   try {
     const status = await getUnlockStatusForUser(userId);
     return !status.hasSubmission;
-  } catch {
+  } catch (error) {
     // If the check fails, do not ask. A contribution is still worth having, and a member who does
-    // have a URL on file must never be prompted for a second one because of a transient error.
+    // have a URL on file must never be prompted for a second one because of a transient error. The
+    // failure is reported so a page that stopped asking for everyone can be traced to its cause.
+    reportError(error, { area: 'comic', op: 'contribution_unlock_status_check' });
     return false;
   }
 }
@@ -69,25 +73,41 @@ export async function linkContributionToUnlock(input: {
       return { status: 'invalid_url' };
     }
 
-    await createOrUpdateUnlockSubmission({
+    const submission = await createOrUpdateUnlockSubmission({
       userId: input.userId,
       quoraProfileUrl: raw,
       quoraProfileUrlNormalized: normalized,
     });
+
+    // A URL on the spam denylist comes back marked spam. It gets the same app-wide block the Unlock
+    // screen's own route applies, or contributing would be a way around the denylist.
+    const spam = submission.reviewStatus === 'spam';
+    await applyDenylistBlockIfSpam(submission.reviewStatus, input.userId);
 
     // Audited as a normal Unlock submission so the queue and the trail read the same as any other,
     // with the contribution named in metadata so a reviewer can see where it came from.
     await insertUnlockAudit({
       actorUserId: input.userId,
       command: 'unlock.verification.submit',
-      policyStatus: 'allow',
-      reason: 'ok',
+      policyStatus: spam ? 'deny' : 'allow',
+      reason: spam ? 'spam_denylisted' : 'ok',
       targetUserId: input.userId,
-      metadata: { source: 'comic_knowledge_contribution', contributionId: input.contributionId },
+      metadata: {
+        source: 'comic_knowledge_contribution',
+        contributionId: input.contributionId,
+        submissionId: submission.id,
+      },
     });
 
     return { status: 'submitted' };
-  } catch {
+  } catch (error) {
+    // The contribution is already stored, so this stays a `failed` outcome rather than an error
+    // response — but the cause is reported, or a broken link to Unlock could not be diagnosed.
+    reportError(error, {
+      area: 'comic',
+      op: 'contribution_unlock_link',
+      extra: { contributionId: input.contributionId },
+    });
     return { status: 'failed' };
   }
 }

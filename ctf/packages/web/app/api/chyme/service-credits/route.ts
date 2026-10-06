@@ -73,6 +73,11 @@ export async function POST(request: Request) {
     const tx = await sendServiceCredits(gate.identity.userId, toUserId, amount, message, idempotencyKey);
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
   } catch (error) {
+    // A sender whose wallet an admin froze (or whose account is restricted from trading) is refused by
+    // the shared transfer path; that is a decision, not a fault.
+    if (error instanceof Error && error.message === 'account_restricted') {
+      return NextResponse.json({ ok: false, code: 'chyme_account_restricted', message: 'This account is restricted from sending credits.' }, { status: 403 });
+    }
     reportError(error, { area: 'chyme', op: 'service_credits' });
     return NextResponse.json({ ok: false, message: (error as Error).message }, { status: 500 });
   }
