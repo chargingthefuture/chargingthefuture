@@ -33,11 +33,8 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
   -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
-  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
-  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
-  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
   -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
   -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
@@ -45,8 +42,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
   -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
   -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
-  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
-  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- them. Real columns (not metadata) so the shared-trends aggregate can unnest them as coarse
   -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
   -- columns are superseded: backfilled into the arrays below, kept for history, no longer
   -- read or written by the app.
@@ -54,9 +50,15 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   scheme_tag TEXT,
   problem_tags TEXT[] NOT NULL DEFAULT '{}',
   scheme_tags TEXT[] NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, metadata_hash)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Each logged incident is its own row (2026-10-05). The table used to carry a generated
+-- metadata_hash column with UNIQUE (user_id, metadata_hash), so a member's second incident with the
+-- same note and location as an earlier one (most often two incidents with no note and no location,
+-- both stored as '{}') was refused and the create failed. Dropping the column also drops that
+-- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
@@ -7789,7 +7791,11 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   thread_id UUID NOT NULL REFERENCES fireside_threads(id) ON DELETE CASCADE,
   -- Threading is one level deep on purpose: a reply to a comment, and no reply to a reply. Deeper
   -- nesting is unreadable at phone width, which is the only width this app has.
-  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  -- SET NULL, not CASCADE: a reply another member wrote is theirs and outlives the comment it
+  -- answers. Account deletion empties and keeps a comment somebody answered, so its replies keep
+  -- their parent; this key is the backstop for any comment row that is deleted (post/0051 changed
+  -- an existing database).
+  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE SET NULL,
   author_user_id TEXT NOT NULL,
   -- The name printed beside the comment, written at creation the way other tables here denormalize
   -- an author_username. Stored rather than joined: the public read must not touch an identity table
@@ -10818,4 +10824,69 @@ DROP INDEX IF EXISTS uq_peer_programming_goals_one_open;
 -- lighthouse_profiles by foreign key, and the rejoin marker LightHouse reads is on
 -- lighthouse_user_extension, which this does not touch. Re-running deletes nothing new.
 DELETE FROM lighthouse_profiles WHERE service_deleted_at IS NOT NULL;
+
+
+-- ── post migration: 0051_fireside_comments_parent_set_null.sql ──
+-- post/0051: A deleted comment no longer takes the replies under it.
+--
+-- fireside_comments.parent_comment_id was declared ON DELETE CASCADE. Account deletion removes a
+-- member's comments with a plain DELETE, so Postgres also deleted every reply other members had
+-- written under them, and the reactions on those replies. Those replies belong to people who
+-- deleted nothing. Account deletion now empties and keeps a comment somebody answered, so its
+-- replies keep their parent; this key, ON DELETE SET NULL from here on, is the backstop, so any
+-- comment row that is deleted leaves the replies under it on the post as comments of their own.
+--
+-- Guarded: acts only while the key on parent_comment_id still cascades, so a re-run, or a database
+-- created from the current schema.sql, does nothing. The constraint is found by its column rather
+-- than by name, so a database whose key carries a different generated name is fixed too.
+DO $$
+DECLARE
+  fk_name text;
+BEGIN
+  IF to_regclass('fireside_comments') IS NULL THEN
+    RAISE NOTICE 'fireside_comments does not exist in this database; nothing to do.';
+    RETURN;
+  END IF;
+
+  SELECT con.conname INTO fk_name
+    FROM pg_constraint con
+    JOIN pg_attribute att
+      ON att.attrelid = con.conrelid AND att.attnum = ANY (con.conkey)
+   WHERE con.conrelid = to_regclass('fireside_comments')
+     AND con.contype = 'f'
+     AND con.confdeltype = 'c'
+     AND array_length(con.conkey, 1) = 1
+     AND att.attname = 'parent_comment_id'
+   LIMIT 1;
+
+  IF fk_name IS NULL THEN
+    RAISE NOTICE 'fireside_comments.parent_comment_id does not cascade on delete; nothing to change.';
+    RETURN;
+  END IF;
+
+  EXECUTE format('ALTER TABLE fireside_comments DROP CONSTRAINT %I', fk_name);
+  ALTER TABLE fireside_comments
+    ADD CONSTRAINT fireside_comments_parent_comment_id_fkey
+    FOREIGN KEY (parent_comment_id) REFERENCES fireside_comments(id) ON DELETE SET NULL;
+  RAISE NOTICE 'fireside_comments.parent_comment_id now sets NULL on delete (was %).', fk_name;
+END $$;
+
+
+-- ── post migration: 0053_click_log_drop_metadata_hash_dedupe.sql ──
+-- post/0053: Let a member log a second ClickLog incident with the same note and location.
+--
+-- Why: click_log_incidents carried metadata_hash, a generated md5 of the metadata JSON, and
+-- UNIQUE (user_id, metadata_hash). The date, tags and share flag sit outside the metadata, so two
+-- incidents with the same note and location collided. An incident logged with no note and no
+-- location is stored as '{}', so a member could log one such incident and every later one failed
+-- with a unique violation the create route did not catch. Each incident is a separate event and
+-- gets its own row.
+--
+-- What it does: drops metadata_hash. The unique constraint is defined on that column, so it goes
+-- with it, whichever name it carries (older databases created it before the clicklog_ ->
+-- click_log_ rename). Nothing else read the column. No row changes. schema.sql runs the same
+-- statement and no longer creates the column or the constraint.
+--
+-- Safe to re-run: IF EXISTS makes every run after the first a no-op.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 

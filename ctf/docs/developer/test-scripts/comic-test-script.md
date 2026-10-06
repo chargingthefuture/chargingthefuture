@@ -43,6 +43,14 @@ the tests worth running slowly.
   so two conflicting URLs cannot reach one account by this route.
 - Step 6 → the writing is still kept and the receipt says verification did not start. Losing
   someone's writing over a malformed link would be the wrong trade.
+- If the Unlock submission cannot be opened at all (database unreachable at that moment), the
+  receipt says the writing was received but verification could not be started from here, and to
+  finish it on the Unlock screen. It never shows "Received" with no word about verification.
+- A fresh account that gives a Quora profile URL already on the Unlock spam denylist is blocked
+  app-wide, exactly as if it had used the Unlock screen, and the Unlock audit row reads
+  `deny` / `spam_denylisted` (added 2026-10-05).
+- If "What you have sent" cannot be loaded, a red line says so and that Withdraw is unavailable
+  until the page is reloaded, rather than the section disappearing silently.
 
 **Result:** web ☐
 
