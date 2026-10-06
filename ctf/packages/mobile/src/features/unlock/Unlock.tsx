@@ -393,7 +393,7 @@ function StatusView({
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
     >
       <View style={[s.header, { marginBottom: 16 }]}>
-        <Text style={s.headerTitle}>Verification Status</Text>
+        <Text style={s.headerTitle}>Unlock</Text>
         <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color + '50' }]}>
           <Text style={[s.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
         </View>

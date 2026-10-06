@@ -371,7 +371,7 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    admin card links to.
 4. Auditable moderation and reward grant traces.
 5. Plugin remains hidden from end-user plugin registry navigation.
-6. **Unlock is the single source of truth for full app access (hard cutover, 2026-06-09).** The old v2 `isApproved` flag — which came from an `x-ctf-user-approved` header the middleware never set, so it defaulted to true for everyone — has been removed entirely from the request identity, the bearer-token identity, and the access decision. The central gate `evaluatePluginAccess` now resolves the Unlock tier via `getUnlockAccessTier` (Unleash flag, then DB tier with lazy expiry) and enforces a single `minUnlockTier` option:
+6. **Unlock is the single source of truth for full app access (hard cutover, 2026-06-09).** The old v2 `isApproved` flag — which came from an `x-ctf-user-approved` header the middleware never set, so it defaulted to true for everyone — has been removed entirely from the request identity, the bearer-token identity, and the access decision. The central gate `evaluatePluginAccess` now resolves the Unlock tier via `getUnlockAccessTier` (the stored DB tier with lazy expiry; the Unleash flag only for a member with no submission row) and enforces a single `minUnlockTier` option:
    - `approved_full` (default): only fully-approved members or admins may enter. Every plugin route, the Chyme service routes, and all admin pages use this. A not-yet-verified member is denied with reason `unlock_required` and sent into the Unlock flow.
    - `support_only`: approved or `locked_support_only` members may enter. Used by the Commons general channel (`/api/commons/**`), which is the support surface for not-yet-verified members — they can read and post there to ask for help (for example, finding their Quora profile link).
    - `any_authenticated`: any signed-in member may enter regardless of tier. Used by the Unlock submission/status/help-request routes (so a gated member can always submit or ask for help) and the account/profile/deletion routes (so a gated member can always see and delete their own data, i.e. exercise the right to be forgotten).
@@ -466,6 +466,10 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-10-06: **Status screen header reads "Unlock".** The header on the web and Android status screen said "Verification Status", which wrapped to two lines beside the Admin and Approved badges and did not match the feature name. It now reads "Unlock". The manual test script refers to it as the Unlock status screen.
+
+- 2026-10-05: **A rejected or revoked member kept full access wherever Unleash was set up (#2778).** `getUnlockAccessTier` asked the `feature-unlock-quora-onboarding` flag first and returned full access when it was on. Approval added the member to the flag, and no rejection, reward revoke or re-submission ever took them out, so the admin screen said support-only while every gate let them in. The stored submission row is now read first and decides whenever it exists; the flag is read only for a member with no row, which keeps a member added to it by hand in the Unleash dashboard working. Approval no longer writes to the flag, because nothing reads it for a member with a row, so `grantUnleashFlagForUser` and `lib/feature-flags/unleash-admin.ts` were removed. Existing flag entries can stay in Unleash; they have no effect on anybody with a submission. Test: `lib/unlock/access.test.ts`. No schema, route or contract change.
 
 - 2026-10-05: **Sign out from the Android Unlock screen (owner directive).** The Unlock wall covers
   the entire Android app, so a signed-in member held there had no way to sign out: the Sign out button

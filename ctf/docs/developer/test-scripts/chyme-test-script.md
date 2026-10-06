@@ -137,9 +137,12 @@ the android tile keeps the ✋ up (and drops it within ~15s of them lowering it)
 1. Open the Tip action on another participant's tile, enter an amount, send.
 2. Try to tip yourself.
 3. Try to tip an amount above the limit.
+4. Have an admin freeze your wallet (SC-A6 in the ServiceCredits script), then tip again.
 **Expected:** The tip sends ServiceCredits from you to that participant and delivers immediately. The
 Tip action never appears on your own tile or on a listen-only guest. Self-tip is rejected (400). An
-amount that is not a finite number above 0, or above the maximum (10000), is rejected (400).
+amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
+from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
+2026-10-05).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
