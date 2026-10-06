@@ -257,7 +257,7 @@ contracts:
   - pluginId: directory
     command: directory.admin.profile.assign
     version: 1.0.0
-    description: Assign an unclaimed directory profile to a target user under admin role guard.
+    description: Assign an unclaimed directory profile to a target user under admin role guard. Refused (409) when the profile is already claimed, or when the target account already owns a claimed profile; an account owns at most one.
     inputSchema:
       profileId:
         type: string
