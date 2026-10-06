@@ -159,6 +159,25 @@ function isCountedKind(kind: string): kind is FiresideCountedKind {
   return (FIRESIDE_COUNTED_KINDS as readonly string[]).includes(kind);
 }
 
+function addViewerReaction(
+  viewer: Map<string, FiresideAnyReactionKind[]>,
+  commentId: string,
+  kind: FiresideAnyReactionKind,
+): void {
+  if (!(FIRESIDE_ALL_REACTION_KINDS as readonly string[]).includes(kind)) return;
+  viewer.set(commentId, [...(viewer.get(commentId) ?? []), kind]);
+}
+
+function addCountedReaction(
+  counts: Map<string, Record<FiresideCountedKind, number>>,
+  commentId: string,
+  kind: FiresideCountedKind,
+): void {
+  const existing = counts.get(commentId) ?? emptyReactionCounts();
+  existing[kind] += 1;
+  counts.set(commentId, existing);
+}
+
 async function readReactions(commentIds: string[], viewerUserId: string | null): Promise<{
   counts: Map<string, Record<FiresideCountedKind, number>>;
   viewer: Map<string, FiresideAnyReactionKind[]>;
@@ -174,17 +193,24 @@ async function readReactions(commentIds: string[], viewerUserId: string | null):
     [commentIds],
   );
 
+  // A reaction counts once the person who left it is approved, the same rule as a comment
+  // (fireside.reaction.toggle in the access policy): an unverified account pressing Agree is how a
+  // brigade would work. This used to count every row, so a press from an account that had never
+  // finished Unlock changed the number for every reader at once. Approval makes everything they
+  // have left count, because nothing here is stored differently — only read differently.
+  const approved = await listUnlockedUserIds(result.rows.map((row) => row.reactor_user_id));
+
   for (const row of result.rows) {
     const mine = viewerUserId != null && row.reactor_user_id === viewerUserId;
     // A downvote reaches the viewer list and never the counts. Somebody sees their own; nobody
     // sees a total.
-    if (mine && (FIRESIDE_ALL_REACTION_KINDS as readonly string[]).includes(row.kind)) {
-      viewer.set(row.comment_id, [...(viewer.get(row.comment_id) ?? []), row.kind]);
-    }
+    if (mine) addViewerReaction(viewer, row.comment_id, row.kind);
     if (!isCountedKind(row.kind)) continue;
-    const existing = counts.get(row.comment_id) ?? emptyReactionCounts();
-    existing[row.kind] += 1;
-    counts.set(row.comment_id, existing);
+    // The viewer's own reaction counts in what they are shown while they wait, the way their own
+    // held comment is shown to them, so a pressed button never sits beside a number it did not move.
+    // Nobody else's view includes it.
+    if (!mine && !approved.has(row.reactor_user_id)) continue;
+    addCountedReaction(counts, row.comment_id, row.kind);
   }
   return { counts, viewer };
 }
