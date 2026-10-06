@@ -4,12 +4,12 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   applyDisputeAdjustment,
   createEscrowHold,
+  createTransfer,
   getOrCreateWallet,
   mintGrant,
   refundEscrow,
   releaseEscrow,
 } from 'lib/shared/credits-interface';
-import { createTransfer } from 'lib/shared/service-credits/createTransfer';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import {
   SKILL_UP_AUTO_COHORT_ACTOR_ID,

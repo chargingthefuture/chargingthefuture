@@ -199,7 +199,7 @@ separate.
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
 - `POST /api/skill-up/milestones/[milestoneId]/release`
-- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400.
+- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400. Sends through the canonical `createTransfer` from `lib/shared/credits-interface.ts`, so a frozen or trading-restricted sender is refused with 403 `skill_up_account_restricted`. Returns `{ ok, transfer: { id, senderUserId, recipientUserId, amount, status, escrowHoldId, externalLedgerTransactionId, rail } }`.
 - `POST /api/skill-up/disputes`
 - `POST /api/skill-up/disputes/[disputeId]/resolve` — admin, or the trainer assigned to the dispute's cohort (per `dispute.resolve` `trainerAssignmentOrAdmin`).
 - `POST /api/skill-up/admin/adjust-credits` — audit event records `targetContext` (`targetUserId`, `governanceTicketId`) per the `admin.adjust_credits` audit contract.
@@ -354,7 +354,16 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
+  #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the
+  wallet freeze check, the command idempotency record and the external ledger post. It now imports
+  `createTransfer` from `lib/shared/credits-interface.ts` and the copy is deleted. The route's
+  `transfer` response is now the canonical camelCase shape (`recipientUserId`, `amount` as a number)
+  instead of the raw table row; nothing in the app reads it. A refused sender gets 403
+  `skill_up_account_restricted`.
+
 - 2026-10-05: **Deleting SkillUp data left deposits held with no way back** (code-review finding #2933). The deletion registry deleted `skill_up_enrollments` and nothing returned the deposits those enrollments still held, while every path that could — leaving a cohort, a cohort closing — starts from the enrollment row. A member who deleted only SkillUp kept their wallet with up to the deposit per cohort stuck in it, and a full-account reclaim would wait on holds that could never clear. The deletion orchestrator now runs `refundHeldDepositsBeforeDataDeletion` before the deletion transaction, for both scopes: every deposit ServiceCredits still holds is refunded to the member's own wallet (reason `skill_up_data_deleted`, one fixed idempotency key per escrow) and its row marked `refunded`. It runs outside the transaction because the refund posts to the external ledger, and before it because the plan removes the rows it starts from. A failed refund stops the deletion so it can be run again. `skill_up_enrollment_milestone_escrows` is now listed as retained in the registry and the deletion contract. Test-script case added.
+
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
   registry entry. No code change; CI job `contract-coverage-gate` now fails on any API surface
