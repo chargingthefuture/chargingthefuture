@@ -56,6 +56,7 @@ policies:
       - directory_write_attempt_detected
       - cross_workspace_access
       - region_not_permitted
+      - blocked_contact_pair
 
   - pluginId: foundation
     command: foundation.connection.thread.create
@@ -112,6 +113,7 @@ policies:
       - actor_not_thread_participant
       - cross_workspace_access
       - stream_quota_red_state
+      - blocked_contact_pair
 
   - pluginId: foundation
     command: foundation.connection.message.send
@@ -143,6 +145,7 @@ policies:
       - region_not_permitted
       - stream_quota_red_state
       - rate_limit_exceeded
+      - blocked_contact_pair
 
   - pluginId: foundation
     command: foundation.connection.call.session.create
@@ -174,6 +177,7 @@ policies:
       - region_not_permitted
       - stream_video_minutes_budget_exceeded
       - rate_limit_exceeded
+      - blocked_contact_pair
 
   - pluginId: foundation
     command: foundation.connection.instant-call.ring
@@ -327,6 +331,7 @@ policies:
       - thread_not_active
       - region_not_permitted
       - rate_limit_exceeded
+      - blocked_contact_pair
 
   - pluginId: foundation
     command: foundation.quote.request.state.update

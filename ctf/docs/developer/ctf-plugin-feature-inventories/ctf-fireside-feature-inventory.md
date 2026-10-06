@@ -163,7 +163,7 @@ about that quota.
 | Table | Key columns | Notes |
 |---|---|---|
 | `fireside_threads` | `id`, `post_repo`, `post_slug`, `post_title`, `is_closed` | One per post, unique on `(post_repo, post_slug)`, created lazily on first comment. The blog holds hundreds of pages and most will never be commented on. |
-| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `edited_at`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `edited_at` is null until the author rewrites the comment and is what the "edited" mark is drawn from; the earlier wording is not kept anywhere, so there is no version history to read, export or delete. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the entire table instead. |
+| `fireside_comments` | `id`, `thread_id`, `parent_comment_id`, `author_user_id`, `author_username`, `body`, `edited_at`, `status`, `export_to_blog`, `export_review`, `export_reviewed_by`, `export_reviewed_at`, `export_refusal_reason`, `withdrawn_body`, `removed_by`, `removed_at`, `removal_reason` | `parent_comment_id` references `fireside_comments(id)` `ON DELETE SET NULL` (CASCADE until `post/0051`), so deleting a comment row never deletes a reply under it. `status` is `visible` / `removed` / `withdrawn`. `export_review` is `not_requested` / `pending` / `approved` / `refused`, constrained in the database: it holds the admin's half of the two keys on copying a comment to the blog, while `export_to_blog` holds the author's half. `author_username` is written at creation so the public read touches no identity table. `edited_at` is null until the author rewrites the comment and is what the "edited" mark is drawn from; the earlier wording is not kept anywhere, so there is no version history to read, export or delete. `withdrawn_body` is the author's own copy of a comment they took down and is returned by one query only — `listOwnComments`, scoped to the caller; the select behind the public thread read does not contain the column at all. Indexed by thread, by author, by `(export_review, created_at)` for the admin queue, and by a GIN index on `to_tsvector('english', body)` for search. That configuration has to match the one the query uses or Postgres quietly scans the entire table instead. |
 | `fireside_reactions` | `id`, `comment_id`, `reactor_user_id`, `kind` | Unique on `(comment_id, reactor_user_id, kind)`, so pressing twice removes rather than duplicating. `kind` is one of the three reactions or one of the two votes, constrained in the database. A `downvote` row is stored and is never returned as a count: `FIRESIDE_COUNTED_KINDS` in `lib/fireside/constants.ts` has no such member, and every count is built from that list rather than from whatever the table happens to hold. |
 | `fireside_audit_events` | `id`, `actor_id`, `command`, `policy_status`, `reason`, `target_type`, `target_id`, `result`, `metadata` | One row per write. |
 
@@ -199,7 +199,10 @@ faults in two weeks came from a rule written in two places that disagreed.
   row, and without this a rewrite would be a way to put any text at all into a permanently archived
   build under somebody's yes to something else.
 - Deletion: same rights as the Commons, from the same account screen. Comments and reactions are
-  deleted outright; threads and audit rows are retained and the deletion contract says why.
+  deleted outright; threads and audit rows are retained and the deletion contract says why. Replies
+  other members wrote under a deleted member's comments are kept: a comment somebody else answered
+  is emptied and kept the way taking it down does (author id overwritten with `deleted_member`), so
+  its replies stay under it, marked as answering a comment that is no longer shown.
 - A comment already exported into the blog build cannot be recalled from a web archive. Two separate
   people have to agree before one gets there: the author asks, which is off by default and nobody
   else can turn on, and an admin approves. Neither key does anything alone, an author can withdraw
@@ -276,6 +279,22 @@ member active only in Fireside is seen by being read, which is what the plugin i
    the room, which is a different thing to offer members.
 
 ## Change Log
+
+- 2026-10-05: **Deleting an account no longer deletes other members' replies.**
+  `fireside_comments.parent_comment_id` was `ON DELETE CASCADE`, so the plain delete account deletion
+  runs on a member's comments also deleted every reply other members had written under them, with
+  the reactions on those replies, and the thread count and admin list shrank by rows the departed
+  member never wrote (#2746). The deletion orchestrator now runs
+  `withdrawAnsweredCommentsForDeletion` (in `lib/fireside/repository.ts`) inside the deletion
+  transaction before the registry's plan: a comment of the member's that somebody else answered is
+  emptied and kept the way withdrawal keeps one, with the author id overwritten by the shared
+  `deleted_member` placeholder, the printed name and both copies of the words emptied and the blog
+  request cleared. The replies keep their parent and read as they do under a comment taken down.
+  The plan's delete removes every other comment. As a backstop the key is now `ON DELETE SET NULL`
+  in `schema.sql`, changed on an existing database by
+  `post/0051_fireside_comments_parent_set_null.sql`, so no deletion of a comment can take a reply.
+  Tests: `lib/fireside/deletion-keeps-replies.test.ts`. The deletion contract and test script
+  FS-10 say what happens to those replies.
 
 - 2026-10-05: **A reaction from somebody not yet approved no longer moves the public count.**
   The access policy for `fireside.reaction.toggle` and user features 2 and 5 have always said a reaction

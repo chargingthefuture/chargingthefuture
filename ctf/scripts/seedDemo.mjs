@@ -1102,11 +1102,15 @@ async function seedClickLog(c) {
     { uid: PEER_1, meta: { latitude: 37.7749, longitude: -122.4194 } },
   ];
 
+  // Re-runnable: an incident already seeded for the member (same metadata) is not inserted again.
+  // The table has no unique rule on metadata, so the check is in the statement itself.
   for (const { uid, meta } of incidents) {
     await c.query(
       `INSERT INTO click_log_incidents (user_id, metadata)
-       VALUES ($1, $2::jsonb)
-       ON CONFLICT (user_id, metadata_hash) DO NOTHING`,
+       SELECT $1, $2::jsonb
+       WHERE NOT EXISTS (
+         SELECT 1 FROM click_log_incidents WHERE user_id = $1 AND metadata = $2::jsonb
+       )`,
       [uid, JSON.stringify(meta)],
     );
   }

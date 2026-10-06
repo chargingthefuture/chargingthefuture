@@ -4,6 +4,7 @@
 // those and adds a ceiling, and this repository already carries a CI gate about that quota.
 
 import { randomUUID } from 'node:crypto';
+import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
 // Through the platform interface, never lib/unlock directly — plugins stay isolated (rule 112,
 // enforced by check-plugin-boundaries.mjs).
@@ -714,6 +715,49 @@ export async function withdrawOwnComment(userId: string, commentId: string): Pro
     [commentId, userId],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Account deletion, for the comments somebody else has answered: empty them and keep the row, the
+ * same as the author taking a comment down, so the replies under them keep their parent.
+ *
+ * The registry's plain delete of `fireside_comments` by author then removes every other comment the
+ * member wrote. Without this step that delete took the replies other members had written under
+ * them as well (the key cascaded until post/0051, and is SET NULL now), and a reply is its author's,
+ * not the departed member's. Kept this way, a reply reads exactly as one under a comment that was
+ * taken down: still on the page, marked as answering a comment that is no longer shown.
+ *
+ * Nothing of the departed member stays on the row: the id is overwritten with the shared
+ * placeholder, the printed name and both copies of the words are emptied, and the blog request is
+ * cleared. An admin removal keeps its status and its record, which is the moderation audit; every
+ * other comment becomes `withdrawn`, which no public read, search or export returns. Runs inside the
+ * deletion transaction, before the registry's plan.
+ */
+export async function withdrawAnsweredCommentsForDeletion(
+  client: PoolClient,
+  userId: string,
+  placeholderUserId: string,
+): Promise<number> {
+  const result = await client.query(
+    `UPDATE fireside_comments c
+        SET status = CASE WHEN c.status = 'removed' THEN 'removed' ELSE 'withdrawn' END,
+            author_user_id = $2,
+            author_username = '',
+            body = '',
+            withdrawn_body = NULL,
+            edited_at = NULL,
+            export_to_blog = FALSE,
+            export_review = 'not_requested', export_reviewed_by = NULL, export_reviewed_at = NULL,
+            export_refusal_reason = NULL,
+            updated_at = NOW()
+      WHERE c.author_user_id = $1
+        AND EXISTS (
+          SELECT 1 FROM fireside_comments r
+           WHERE r.parent_comment_id = c.id AND r.author_user_id <> $1
+        )`,
+    [userId, placeholderUserId],
+  );
+  return result.rowCount ?? 0;
 }
 
 /** Why an edit was refused, in a word the route turns into a sentence. */
