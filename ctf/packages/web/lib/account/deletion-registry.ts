@@ -660,6 +660,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skill_up_enrollments', 'user_id', 'Your cohort enrollments.'),
       del('skill_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       retain('skill_up_audit_events', 'Audit log; retained for compliance.'),
+      // Any deposit still held is returned to the member's wallet before this entry runs
+      // (deletion-orchestrator.ts → refundHeldDepositsBeforeDataDeletion), and the row is marked
+      // refunded. The rows stay as the record of what each deposit did.
+      retain('skill_up_enrollment_milestone_escrows', 'Per-milestone deposit holds; any still held are returned to your wallet first, then kept as the ledger record.'),
       // Burn-down batch 3 (ledger/disputes): credit disbursements and the disputes over them are the
       // record of why cohort escrow balances moved — retained for ledger integrity, like the
       // ServiceCredits ledger they feed.
@@ -729,6 +733,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Everything you wrote under a blog post, and every reaction you left.',
     serviceScopeSupported: true,
     tables: [
+      // Replies other members wrote under these comments stay. A comment somebody else answered is
+      // emptied and kept before this runs (`runInTransactionSteps` in the orchestrator), so it no
+      // longer carries this member's id and the delete skips it; and parent_comment_id is ON DELETE
+      // SET NULL (post/0051), so no deleted comment can take a reply with it.
       del('fireside_comments', 'author_user_id', 'Your comments, including any still waiting on approval.'),
       del('fireside_reactions', 'reactor_user_id', 'Your reactions.'),
       // A thread is a reference to a blog post, not anything about a person; an empty one holds

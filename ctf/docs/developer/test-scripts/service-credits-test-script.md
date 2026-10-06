@@ -199,6 +199,27 @@ Result: web ☐
 
 ---
 
+### SC-4a — A second press after a failed send does not send twice
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 20 credits available, and a Recipient account. Browser developer tools open on the Network tab.
+
+**Steps:**
+1. Open the Send panel, enter Recipient and the amount 10.
+2. Set the Network tab to Offline, press Send, and note the error.
+3. Set the Network tab back to Online and press Send again without changing anything.
+4. Check Sender's Recent Transactions.
+5. Send another 5 to the same Recipient, but block the wallet request (right-click `/api/service-credits/wallet` in the Network tab and block it) before pressing Send.
+
+**Expected:**
+- Steps 2 and 3 send the same idempotency key in the request body; Recent Transactions shows one "Transfer out" of 10, not two.
+- Step 5 shows "Credits sent successfully!" and clears the form, with a gray note that the balance could not be refreshed. No red error appears.
+
+Result: web ☐
+
+---
+
 ### SC-5 — Send on mutual credit rail
 
 **Role:** member
