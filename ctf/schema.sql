@@ -2494,6 +2494,8 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   -- published is only the need itself (what they are looking for, where, when, budget range and the
   -- short intro) — never the phone number, never the Signal link, and never the member id.
   is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Account deletion now deletes this row outright, as the plugin's own delete does. Rows an older
+  -- account deletion only stamped here are removed by post/0050.
   service_deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

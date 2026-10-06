@@ -73,6 +73,10 @@ When user deletes Lighthouse usage only:
 
 - Delete immediately:
   - `lighthouse_user_extension`
+  - `lighthouse_profiles` — the row is deleted, not soft-deleted, so the phone number, Signal link,
+    bio, housing needs and budget go with it. This matches the plugin's own delete (`deleteProfile`).
+    The rejoin marker is `lighthouse_user_extension.service_deleted_at`, so nothing needs the profile
+    row kept. `post/0050` removed the rows the earlier soft delete had left behind.
   - user-scoped goals, milestones, and progress events
   - `lighthouse_matches` where the member is the **seeker** (`seeker_user_id`) — their own stay requests
   - `lighthouse_blocks` where the member is the **blocker** (`blocker_user_id`) — the block list they created
@@ -96,6 +100,13 @@ account does, a returning person would arrive on a new Clerk id the old row coul
 collapsing several blocked ids into the shared placeholder would violate the table's
 `UNIQUE (blocker_user_id, blocked_user_id)` the moment one blocker had blocked two departed members.
 Abuse evidence lives in `member_safety_reports`, which is retained, not here.
+
+### Data export
+
+The account data export reads the same registry entries, but the blocks other members placed on
+you (`lighthouse_blocks` matched by `blocked_user_id`) are **not exported**. Those rows were written
+by the blocker, and who blocked you and the reason they wrote are theirs, the same as the
+product-wide `member_blocks`. The blocks you created (`blocker_user_id`) are exported.
 - Retain for compliance/fraud/finance:
   - `lighthouse_deletion_events`
 - Never touch (must remain):
@@ -169,3 +180,4 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-10-05: Account deletion now deletes the `lighthouse_profiles` row instead of soft-deleting it, as the plugin's own delete does (#2700), and the data export no longer returns blocks other members placed on the member (#2699).
