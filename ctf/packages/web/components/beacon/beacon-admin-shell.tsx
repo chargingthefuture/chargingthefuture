@@ -20,6 +20,7 @@ import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-but
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
+import { reportError } from 'lib/observability/report';
 
 type BeaconEvent = {
   id: string;
@@ -63,7 +64,8 @@ async function adminMutate<T = unknown>(url: string, method: 'POST' | 'DELETE', 
     const data = (await res.json().catch(() => null)) as (T & { message?: string; code?: string }) | null;
     if (res.ok) return { ok: true, data: data as T };
     return { ok: false, data: null, message: data?.message ?? data?.code ?? `Request failed (${res.status}).` };
-  } catch {
+  } catch (error) {
+    reportError(error, { area: 'beacon', op: 'admin_mutate', extra: { url, method } });
     return { ok: false, data: null, message: 'Network error. Try again.' };
   }
 }
@@ -303,6 +305,16 @@ function useBeaconAdmin() {
     setEvents(data.events ?? []);
   }, []);
 
+  // Refresh the list after an action. The action itself already succeeded and said so, so a failed
+  // refresh is reported rather than shown over the success notice.
+  const refreshEvents = useCallback(async () => {
+    try {
+      await loadEvents();
+    } catch (error) {
+      reportError(error, { area: 'beacon', op: 'admin_events_refresh' });
+    }
+  }, [loadEvents]);
+
   useEffect(() => {
     void (async () => {
       try {
@@ -345,10 +357,10 @@ function useBeaconAdmin() {
       setTitle('');
       setDescription('');
       setActiveEventId(result.data.event.id);
-      try { await loadEvents(); } catch { /* non-fatal */ }
+      await refreshEvents();
     }
     setCreating(false);
-  }, [title, description, loadEvents]);
+  }, [title, description, refreshEvents]);
 
   // Delete a draft. Drafts only — the route refuses anything else, and the button below is only
   // rendered for drafts, so this is the second of three guards (UI, route, SQL predicate).
@@ -364,11 +376,11 @@ function useBeaconAdmin() {
       // If the deleted draft was the one open in the Broadcast panel, close the panel — otherwise it
       // keeps showing controls for an event that no longer exists.
       setActiveEventId((current) => (current === eventId ? null : current));
-      try { await loadEvents(); } catch { /* non-fatal */ }
+      await refreshEvents();
     }
     setConfirmDeleteId(null);
     setDeletingId(null);
-  }, [loadEvents]);
+  }, [refreshEvents]);
 
   // Fetch the RTMP ingest + host token. Used to populate the broadcaster panel before going live.
   const loadIngest = useCallback(async (eventId: string) => {
@@ -419,9 +431,12 @@ function useBeaconAdmin() {
           streamToken: chatData.streamToken,
         });
       }
-    } catch { /* chat is additive; broadcast still works */ }
-    try { await loadEvents(); } catch { /* non-fatal */ }
-  }, [loadIngest, loadEvents]);
+    } catch (error) {
+      // Chat is additive; the broadcast still works without the admin's chat view.
+      reportError(error, { area: 'beacon', op: 'admin_chat_token', extra: { eventId } });
+    }
+    await refreshEvents();
+  }, [loadIngest, refreshEvents]);
 
   const endEvent = useCallback(async (eventId: string) => {
     setError(null);
@@ -434,8 +449,8 @@ function useBeaconAdmin() {
     setHost(null);
     setChat(null);
     setIngest(null);
-    try { await loadEvents(); } catch { /* non-fatal */ }
-  }, [loadEvents]);
+    await refreshEvents();
+  }, [refreshEvents]);
 
   const moderate = useCallback(async (eventId: string, action: 'mute' | 'ban' | 'slow_mode', extra?: { targetUserId?: string; cooldownSeconds?: number }) => {
     setError(null);
