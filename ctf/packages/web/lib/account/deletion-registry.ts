@@ -51,6 +51,14 @@ export type OwnedTable = {
    * otherwise keep naming them after their id is gone.
    */
   readonly clearColumns?: readonly string[];
+  /**
+   * Set to `false` when the data export must NOT read this table by its user column, although the
+   * deletion engine still acts on it. The export reads every other user-scoped entry as rows the
+   * member owns; this marks the entries where that is untrue, because the rows matched by the user
+   * column were written by someone else about the member (a block another member placed) or are
+   * another person's record (a profile the member nominated). Use `notExported(...)` to set it.
+   */
+  readonly exportable?: false;
   /** Plain-language note for reviewers / audit. */
   readonly note?: string;
   /** Set when a human decision is still needed before this table's handling is final. */
@@ -103,6 +111,19 @@ const soft = (table: string, userColumn: string, softDeleteColumn: string, note?
   softDeleteColumn,
   note,
 });
+
+/**
+ * Keep an entry out of the member's data export while the deletion engine still acts on it.
+ *
+ * The export reads `SELECT * FROM <table> WHERE <userColumn> = $1` for every user-scoped entry, on
+ * the premise that a row matched by the member's id is the member's own. Two kinds of entry break
+ * that premise: a row another member wrote ABOUT this member (a block, with its free-text reason,
+ * which is the blocker's private boundary), and another person's record the member is only named
+ * on (a Directory profile they nominated, which after a claim holds the claimant's bio, payment
+ * addresses and location). Deleting or pseudonymizing those rows is right; handing them to the
+ * member in a file is not.
+ */
+const notExported = (owned: OwnedTable): OwnedTable => ({ ...owned, exportable: false });
 
 /**
  * The value written over a departed member's id when a row is pseudonymized. A single constant, not a
@@ -228,12 +249,16 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // what happens to the table, and "deleted" is what happens.
       del('directory_profiles', 'claimed_by_user_id', 'The directory listing you claimed.'),
       // A profile you nominated belongs to the person it is about: it stays, and your id and handle
-      // on it are overwritten, so the Directory stops naming you as its nominator.
-      pseudo(
-        'directory_profiles',
-        'nominated_by_user_id',
-        ['invited_by_username'],
-        'Profiles you nominated for other people — the profile stays, your identity on it does not.',
+      // on it are overwritten, so the Directory stops naming you as its nominator. Not exported: the
+      // row is that person's profile, and once claimed it holds their bio, payment addresses and
+      // location, none of which is the nominator's data.
+      notExported(
+        pseudo(
+          'directory_profiles',
+          'nominated_by_user_id',
+          ['invited_by_username'],
+          'Profiles you nominated for other people — the profile stays, your identity on it does not.',
+        ),
       ),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
@@ -403,8 +428,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // blocked ids to the shared placeholder would break the table's UNIQUE (blocker, blocked) the
       // moment one blocker had blocked two departed members. Abuse EVIDENCE lives in
       // member_safety_reports, not here.
-      del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
-      soft('lighthouse_profiles', 'user_id', 'service_deleted_at', 'Your LightHouse profile.'),
+      // Not exported: these rows were written by the blocker, and who blocked the member and why is
+      // the blocker's to keep, the same as member_blocks, which is keyed on the blocker only.
+      notExported(
+        del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
+      ),
+      // A hard delete, the same as the plugin's own delete (`deleteProfile`): the row holds the phone
+      // number and Signal link, and the rejoin marker lives on lighthouse_user_extension below.
+      del('lighthouse_profiles', 'user_id', 'Your LightHouse profile.'),
       soft('lighthouse_user_extension', 'user_id', 'service_deleted_at', 'Your LightHouse plugin extension record.'),
       retain(
         'lighthouse_properties',
