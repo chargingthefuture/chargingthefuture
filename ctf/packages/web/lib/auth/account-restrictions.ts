@@ -157,6 +157,73 @@ export async function unrestrictAccount(input: {
   });
 }
 
+// Apply a restriction of exactly this scope without replacing a different one. A member has a single
+// account_restrictions row, so a plain restrictAccount at 'trading' would overwrite an active 'all' or
+// 'contact' restriction set elsewhere and give that member back what it blocked. This writes only when
+// there is no active restriction or the active one already has this scope; otherwise it changes
+// nothing and reports the scope already in place. The check and the write are one statement.
+export async function restrictAccountAtScope(input: {
+  targetUserId: string;
+  actorId: string;
+  reason?: string | null;
+  scope: RestrictionScope;
+}): Promise<{ applied: true } | { applied: false; existingScope: RestrictionScope }> {
+  const reason = input.reason ?? null;
+  // The write and its audit row go in one transaction, like restrictAccount above.
+  const applied = await withDbTransaction(async (client) => {
+    const written = await client.query<{ user_id: string }>(
+      `INSERT INTO account_restrictions
+         (user_id, is_restricted, restriction_scope, restricted_at, restricted_by_user_id, restriction_reason, updated_at)
+       VALUES ($1, TRUE, $2, NOW(), $3, $4, NOW())
+       ON CONFLICT (user_id)
+       DO UPDATE SET is_restricted = TRUE, restriction_scope = EXCLUDED.restriction_scope,
+         restricted_at = NOW(), restricted_by_user_id = EXCLUDED.restricted_by_user_id,
+         restriction_reason = EXCLUDED.restriction_reason, updated_at = NOW()
+       WHERE account_restrictions.is_restricted = FALSE OR account_restrictions.restriction_scope = EXCLUDED.restriction_scope
+       RETURNING user_id`,
+      [input.targetUserId, input.scope, input.actorId, reason],
+    );
+    if (written.rows.length === 0) return false;
+    await insertAccountRestrictionAudit(client, input.actorId, 'restrict', input.targetUserId, input.scope, reason);
+    return true;
+  });
+
+  if (!applied) {
+    const existing = await getAnyAccountRestriction(input.targetUserId);
+    return { applied: false, existingScope: existing.scope ?? input.scope };
+  }
+  return { applied: true };
+}
+
+// Lift a restriction only when the active one has exactly this scope, so a plugin's own lever (the
+// ServiceCredits wallet freeze) can never lift an 'all' or 'contact' restriction set elsewhere.
+// Returns lifted: false with the scope in place when a different active restriction blocks it, and
+// lifted: false with no scope when there was nothing active to lift.
+export async function liftAccountRestrictionAtScope(input: {
+  targetUserId: string;
+  actorId: string;
+  scope: RestrictionScope;
+}): Promise<{ lifted: true } | { lifted: false; existingScope: RestrictionScope | null }> {
+  // The lift and its audit row go in one transaction, like unrestrictAccount above.
+  const lifted = await withDbTransaction(async (client) => {
+    const result = await client.query<{ user_id: string }>(
+      `UPDATE account_restrictions SET is_restricted = FALSE, updated_at = NOW()
+       WHERE user_id = $1 AND is_restricted = TRUE AND restriction_scope = $2
+       RETURNING user_id`,
+      [input.targetUserId, input.scope],
+    );
+    if (result.rows.length === 0) return false;
+    await insertAccountRestrictionAudit(client, input.actorId, 'unrestrict', input.targetUserId, input.scope, null);
+    return true;
+  });
+
+  if (!lifted) {
+    const existing = await getAnyAccountRestriction(input.targetUserId);
+    return { lifted: false, existingScope: existing.isRestricted ? existing.scope ?? null : null };
+  }
+  return { lifted: true };
+}
+
 export type AccountRestrictionAuditEntry = {
   id: string;
   actorId: string;

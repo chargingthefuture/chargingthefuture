@@ -513,10 +513,13 @@ pending labels put them in.
    profile.
 2. From `/admin/directory`, assign an unclaimed profile to a user id.
 3. Try to attach a profile that another member already claimed.
+4. Try to attach a different unclaimed profile to the account you used in step 2, which now owns one.
 **Expected:** Both the inline control and the dedicated page assign an unclaimed profile. After
 attach, the profile reads as claimed and the inline section stops rendering. Reassigning a profile
 that is already claimed by another member is blocked (a `409` / claimed-profile guard, recorded as a
-deny event) — an admin cannot silently overwrite another member's claim.
+deny event) — an admin cannot silently overwrite another member's claim. Step 4 is refused with a
+`409` saying the account already owns a Directory profile and can own only one; the second profile
+stays unclaimed, and the audit log shows the refusal (#2833).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2b · A profile keeps its nominator after it is claimed (added 2026-09-30)
@@ -530,6 +533,16 @@ deny event) — an admin cannot silently overwrite another member's claim.
 profile is recorded as its nominator (`directory_profiles.nominated_by_user_id`). After the attach in
 step 3 the number does not change: claiming hides the "Community-generated profile" line, but the
 nomination stays.
+**Result:** web ☐ — notes:
+
+### DIR-A2c · A nominator's data export leaves out the profiles they nominated (added 2026-10-05)
+**Role:** admin who has created or nominated at least one profile · **Surfaces:** web
+**Steps:**
+1. As that admin, download the data export from the account area.
+2. Search the export for the name of a profile they created or nominated.
+**Expected:** The export holds the admin's own Directory profile, if any, and none of the profiles
+they nominated: no nominee bio, payment address or location. Deleting the admin's account still
+clears their id from those profiles' nominator field.
 **Result:** web ☐ — notes:
 
 ### DIR-A3 · Unclaimed-only delete
@@ -705,6 +718,24 @@ the Advocacy placeholder and one carrying only that placeholder.
   people without the numbers means the numbers get copied forward from an older reading instead.
 - Step 6: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
   object from the public sources it was built from, which is why it is admin-only here.
+**Result:** web ☐ mobile ☐ — notes:
+
+### DIR-A7b · The paste-ready invite queue SQL runs in the Neon dashboard (added 2026-10-05)
+**Role:** owner · **Surfaces:** operational (Neon dashboard, no app UI)
+**Precondition:** The same profiles as DIR-A7, plus one profile with no Quora address.
+**Steps:**
+1. Paste the contents of `ctf/scripts/sql/directory-invite-queue.sql` into the Neon SQL editor for
+   production and run it.
+2. Compare the rows with the Invite queue screen from DIR-A7.
+3. In the weekly community stats draft (or the `draft-needed` issue the no-credit route files), read
+   the Directory lines.
+**Expected:**
+- Step 1: the statement runs and returns rows. Before 2026-10-05 it stopped with a missing-column
+  error, because it still tested a column that was dropped from `directory_profiles`.
+- Step 2: the profile with no Quora address is absent, and nobody already written about appears,
+  matching the screen.
+- Step 3: the Directory section carries the profile count, the distinct-skills count, the coverage
+  line toward 650 and the most-listed skills, rather than a skipped note.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A8 · Pending skill proposals list, and dropping a chip after a non-promotion

@@ -42,7 +42,11 @@
   `SELECT * FROM <table> WHERE <userColumn> = $1` (the authenticated user id is always the bound
   parameter, never inlined); `retain` tables (money ledgers, audit trails, shared content) have no
   user column and are skipped — the MVP export scope, stated honestly in the file's `notes`.
-  Checked without a DB by `ctf/scripts/check-export-engine.mjs` (wired into CI beside the deletion
+  Entries wrapped in `notExported(...)` in the registry are skipped too: rows matched by the
+  member's id that are not the member's own. Two exist: blocks other members placed on the member
+  (`lighthouse_blocks.blocked_user_id`, with the blocker's id and reason) and profiles the member
+  nominated (`directory_profiles.nominated_by_user_id`, the nominee's profile). Deletion still acts
+  on both. Checked without a DB by `ctf/scripts/check-export-engine.mjs` (wired into CI beside the deletion
   engine check). The orchestrator assembles the self-describing envelope
   `{ exportVersion: 1, generatedAtIso, userId, scope, services[], notes[] }` in ONE transaction so
   the file is a consistent snapshot; each service carries
@@ -347,6 +351,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-05: **Data export no longer hands a member rows that are not theirs; account deletion removes the LightHouse profile row.** The export read every registry entry with a user column as the member's own rows, so it returned the LightHouse blocks other members had placed on the member (blocker id and free-text reason, #2699) and the full Directory profile of everyone the member had nominated, claimed profiles included (#2643). A new `exportable: false` flag on a registry entry, set with `notExported(...)`, keeps such an entry out of the export while deletion still acts on it; `check-export-engine.mjs` now renders pseudonymize entries too, asserts the engine skips flagged entries, and fails if either of the two pairs loses its flag. Separately, account deletion soft-deleted `lighthouse_profiles` and kept the phone number and Signal link, while the plugin's own delete removed the row; the registry now deletes it (#2700), and `post/0050` removes the rows the soft delete left behind.
 - 2026-10-05: **Admin account restrictions refuse an unknown id, say when there was nothing to lift,
   and write the change and its audit row together (§1.7).** `POST /api/admin/account-restrictions/restrict`
   accepted any string, so a mistyped or space-padded id answered ok while the real account kept full
@@ -356,8 +361,9 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
   writes the audit row only then, and returns `changed`, and the unrestrict route answers 404
   `not_restricted` when nothing changed. Both writers ran the change and the audit insert as two
   separate writes, so a failed audit insert left a saved change reported as a failure with no record
-  (#2658); both now run inside `withDbTransaction`. The other callers of `unrestrictAccount`
-  (ServiceCredits wallet unfreeze, the Unlock review sync, TrustTransport restore) no longer add an
+  (#2658); both now run inside `withDbTransaction`, and so do `restrictAccountAtScope` and
+  `liftAccountRestrictionAtScope`, which the ServiceCredits wallet freeze and unfreeze use. The other
+  callers of `unrestrictAccount` (the Unlock review sync, TrustTransport restore) no longer add an
   `unrestrict` audit row for an account that was not restricted. Tests:
   `lib/auth/account-restrictions.test.ts`.
 - 2026-10-05: **Twice-yearly Contributions call drafted from live figures (§1.17).** Owner decision: an exception to the feature freeze, because hosting is paid out of pocket and the app goes offline without help. New route `POST /api/internal/admin-expenses/contributions-call-draft` (item 6d) and new recurring workflow `contributions-call-draft.yml` (5 April and 5 October). It writes the "Contribute if you can" Commons post as a draft with sign-ups, approved members, cost per person and the monthly total filled in; the owner checks and publishes it from `/admin/feed-announcements`, and the admin landing's Feed & Announcements tile carries a dot until it is published. No schema change.
