@@ -14,6 +14,7 @@ import {
   type ProviderView, type QuoteView,
 } from "./foundation-ui";
 import { ConnectNowButton, InstantCallAvailabilityBadge, canOfferConnectNow, acceptsInstantCalls } from "./foundation-connect-now";
+import type { QuoteTransitionResult } from "./foundation-quote-actions";
 
 // Render a quoted price in its own currency. ServiceCredits always renders by its label (never a
 // fiat symbol, never a fiat equivalent); every other currency shows the amount then the code.
@@ -36,7 +37,7 @@ function isQuoteAmountValid(amount: string, parsed: number, currency: string): b
 function QuoteRespondForm({
   onRespond, accent, subtle, inputBg,
 }: {
-  onRespond: (amount: number, currency: string) => Promise<boolean>;
+  onRespond: (amount: number, currency: string) => Promise<QuoteTransitionResult>;
   accent: string;
   subtle: string;
   inputBg: string;
@@ -55,12 +56,12 @@ function QuoteRespondForm({
     if (!valid || busy) return;
     setBusy(true);
     setError(null);
-    const ok = await onRespond(parsed, currency);
+    const result = await onRespond(parsed, currency);
     setBusy(false);
-    if (ok) {
+    if (result === true) {
       setAmount("");
     } else {
-      setError("Could not send the quote. Try again.");
+      setError(result);
     }
   };
 
@@ -295,7 +296,7 @@ function QuoteCloseForm({
   quote: q, onClose, accent, subtle,
 }: {
   quote: QuoteView;
-  onClose: (quote: QuoteView) => Promise<boolean>;
+  onClose: (quote: QuoteView) => Promise<QuoteTransitionResult>;
   accent: string;
   subtle: string;
 }) {
@@ -307,12 +308,12 @@ function QuoteCloseForm({
     if (busy) return;
     setBusy(true);
     setError(null);
-    const ok = await onClose(q);
+    const result = await onClose(q);
     setBusy(false);
-    if (ok) {
+    if (result === true) {
       setConfirming(false);
     } else {
-      setError("Could not mark the work done. Try again.");
+      setError(result);
     }
   };
 
@@ -365,7 +366,7 @@ function QuoteCloseSlot({
   quote: q, onClose, accent, subtle,
 }: {
   quote: QuoteView;
-  onClose?: (quote: QuoteView) => Promise<boolean>;
+  onClose?: (quote: QuoteView) => Promise<QuoteTransitionResult>;
   accent: string;
   subtle: string;
 }) {
@@ -390,8 +391,8 @@ function QuoteCard({
   quote: QuoteView;
   viewerUserId?: string | null;
   onOpenDirectLine: (quote: QuoteView) => void;
-  onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
-  onClose?: (quote: QuoteView) => Promise<boolean>;
+  onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<QuoteTransitionResult>;
+  onClose?: (quote: QuoteView) => Promise<QuoteTransitionResult>;
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
@@ -466,9 +467,9 @@ export function QuotesPanel({
   onBrowse: () => void;
   onOpenDirectLine: (quote: QuoteView) => void;
   // Provider responds to a 'requested' quote with a price; returns whether the POST succeeded.
-  onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<boolean>;
+  onRespond?: (quote: QuoteView, quotedAmount: number, quotedCurrency: string) => Promise<QuoteTransitionResult>;
   // Either party marks a priced quote delivered, which settles it; returns whether the POST succeeded.
-  onClose?: (quote: QuoteView) => Promise<boolean>;
+  onClose?: (quote: QuoteView) => Promise<QuoteTransitionResult>;
 }) {
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
