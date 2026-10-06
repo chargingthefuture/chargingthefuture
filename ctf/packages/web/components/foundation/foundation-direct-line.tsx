@@ -6,6 +6,7 @@ import { MarkRecurringControl } from "@/components/shared/mark-recurring-control
 import { StreamChatPanel } from "@/components/shared/stream-chat-panel";
 import { useTheme } from "@/hooks/useTheme";
 import { FONT, getFoundationTokens } from "./foundation-ui";
+import { failureText } from "@/lib/errors/client-failure";
 
 // Stream credentials a member needs to connect to one connection thread's Direct Line channel.
 export interface DirectLineCredentials {
@@ -64,6 +65,18 @@ function DirectLineFrame({
   );
 }
 
+const DIRECT_LINE_FAILURE = "Could not open this Direct Line.";
+
+// What to show when the token route did not hand back credentials: the fixed text for the two
+// codes whose server message is not written for a member, otherwise what the route said (with its
+// reference, so a screenshot can be matched to the report), and only then the screen's sentence.
+function directLineFailureText(body: { code?: string; message?: string; reference?: string }): string {
+  if (body.code === "FOUNDATION_NOT_THREAD_PARTICIPANT") return "You don't have access to this Direct Line.";
+  if (body.code === "FOUNDATION_STREAM_UNAVAILABLE") return "The Direct Line is temporarily unavailable. Try again shortly.";
+  const text = body.message?.trim() || DIRECT_LINE_FAILURE;
+  return body.reference ? `${text} [ref ${body.reference}]` : text;
+}
+
 // The Direct Line opened straight after a successful Request Quote, using the credentials the thread
 // POST already returned — no extra round trip needed.
 export function DirectLineFromQuote({
@@ -117,6 +130,8 @@ export function DirectLineFromThread({
         const body = (await res.json().catch(() => ({}))) as {
           ok?: boolean;
           code?: string;
+          message?: string;
+          reference?: string;
           streamApiKey?: string;
           streamToken?: string;
           streamUserId?: string;
@@ -135,16 +150,10 @@ export function DirectLineFromThread({
           });
           return;
         }
-        const message =
-          body.code === "FOUNDATION_NOT_THREAD_PARTICIPANT"
-            ? "You don't have access to this Direct Line."
-            : body.code === "FOUNDATION_STREAM_UNAVAILABLE"
-              ? "The Direct Line is temporarily unavailable. Try again shortly."
-              : "Could not open this Direct Line.";
-        setState({ status: "error", message });
+        setState({ status: "error", message: directLineFailureText(body) });
       })
-      .catch(() => {
-        if (active) setState({ status: "error", message: "Could not open this Direct Line." });
+      .catch((caught) => {
+        if (active) setState({ status: "error", message: failureText(caught, { area: "foundation", op: "direct_line_open", fallback: DIRECT_LINE_FAILURE, audience: "member" }) });
       });
     return () => {
       active = false;
